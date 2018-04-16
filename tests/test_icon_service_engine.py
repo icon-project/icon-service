@@ -18,19 +18,39 @@
 """
 
 
+import os
+import shutil
 import unittest
 
+from iconservice.base.address import Address
 from iconservice.icon_service_engine import IconServiceEngine
+
 
 class TestIconServiceEngine(unittest.TestCase):
     def setUp(self):
-        self._engine = IconServiceEngine()
-        self._from = f'hx{"0" * 40}'
-        self._to = f'hx{"1" * 40}'
-        self._icon_score_address = f'cx{"2" * 40}'
+        self._state_db_root_path = 'dbs'
+        self._icon_score_root_path = 'scores'
+
+        engine = IconServiceEngine()
+        engine.open(icon_score_root_path=self._icon_score_root_path,
+                    state_db_root_path=self._state_db_root_path)
+        self._engine = engine
+        self._from = Address.from_string(f'hx{"0" * 40}')
+        self._to = Address.from_string(f'hx{"1" * 40}')
+        self._icon_score_address = Address.from_string(f'cx{"2" * 40}')
 
     def tearDown(self):
-        self._engine = None
+        self._engine.close()
+        shutil.rmtree(self._icon_score_root_path)
+        shutil.rmtree(self._state_db_root_path)
+
+    def test_icx_get_balance(self):
+        method = 'icx_getBalance'
+        params = {'address': self._from}
+
+        balance = self._engine.call(method, params)
+        self.assertTrue(isinstance(balance, int))
+        self.assertEqual(0, balance)
 
     def test_icx_transfer(self):
         method = 'icx_sendTransaction'
@@ -46,14 +66,7 @@ class TestIconServiceEngine(unittest.TestCase):
         ret = self._engine.call(method, params)
         self.assertTrue(ret)
 
-    def test_icx_get_balance(self):
-        method = 'icx_getBalance'
-        params = {'address': self._from}
-
-        balance = self._engine.call(method, params)
-        self.assertTrue(isinstance(balance, int))
-        self.assertEqual(0, balance)
-
+    '''
     def test_score_invoke(self):
         method = 'icx_sendTransaction'
         params = {
@@ -74,7 +87,9 @@ class TestIconServiceEngine(unittest.TestCase):
 
         ret = self._engine.call(method, params)
         self.assertTrue(ret)
+    '''
 
+    '''
     def test_score_query(self):
         method = 'icx_call'
         params = {
@@ -92,3 +107,4 @@ class TestIconServiceEngine(unittest.TestCase):
         balance = self._engine.call(method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(0, balance)
+    '''

@@ -18,6 +18,7 @@
 from ..base.address import Address
 from ..base.message import Message
 from ..base.transaction import Transaction
+from ..icx.icx_engine import IcxEngine
 
 
 class IconScoreContext(object):
@@ -26,6 +27,7 @@ class IconScoreContext(object):
 
     def __init__(self,
                  score_address: Address=None,
+                 icx_engine: IcxEngine=None,
                  tx: Transaction=None,
                  msg: Message=None,
                  db=None) -> None:
@@ -35,17 +37,22 @@ class IconScoreContext(object):
         self.__tx = tx
         self.__msg = msg
         self.__db = db
+        self.__icx_engine = icx_engine
 
     @property
     def db(self):
         return self.__db
 
     @property
-    def msg(self):
+    def icx(self) -> IcxEngine:
+        return self.__icx_engine
+
+    @property
+    def msg(self) -> Message:
         return self.__msg
 
     @property
-    def tx(self):
+    def tx(self) -> Transaction:
         return self.__tx
 
     def gasleft(self) -> int:
