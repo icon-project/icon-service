@@ -18,9 +18,9 @@
 
 import unittest
 
-from icx.icx_error import IcxError
-from icx.icx_account import AccountType, Account
-from icx.icx_address import Address
+from iconservice.base.address import Address
+from iconservice.icx.icx_error import IcxError
+from iconservice.icx.icx_account import AccountType, Account
 
 
 class TestAccountType(unittest.TestCase):

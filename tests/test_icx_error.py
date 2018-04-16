@@ -18,7 +18,7 @@
 
 import unittest
 
-from icx.icx_error import Code, IcxError
+from iconservice.icx.icx_error import Code, IcxError
 
 
 class TestCode(unittest.TestCase):

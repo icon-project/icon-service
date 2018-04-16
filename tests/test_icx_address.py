@@ -3,9 +3,9 @@
 
 import unittest
 
-from icx.icx_address import Address, AddressPrefix
-from icx.icx_address import is_icon_address_valid
-from icx.icx_address import split_icon_address
+from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import is_icon_address_valid
+from iconservice.base.address import split_icon_address
 
 
 class TestAddress(unittest.TestCase):

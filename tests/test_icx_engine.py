@@ -19,14 +19,14 @@ import logging
 import unittest
 import shutil
 
-from icx.icx_config import FIXED_FEE
-from icx.icx_error import IcxError
-from icx.icx_engine import IcxEngine
-from icx.icx_account import Account
-from icx.icx_address import Address
-from icx.icx_db import PlyvelDatabase
-from icx.icx_logger import IcxLogger
-from icx.icx_storage import IcxStorage
+from iconservice.base.address import Address
+from iconservice.database.db import PlyvelDatabase
+from iconservice.icx.icx_config import FIXED_FEE
+from iconservice.icx.icx_error import IcxError
+from iconservice.icx.icx_engine import IcxEngine
+from iconservice.icx.icx_account import Account
+from iconservice.icx.icx_logger import IcxLogger
+from iconservice.icx.icx_storage import IcxStorage
 
 
 class TestIcxEngine(unittest.TestCase):
@@ -41,9 +41,7 @@ class TestIcxEngine(unittest.TestCase):
         self.total_supply = 10 ** 20  # 100 icx
 
         logger = IcxLogger()
-        storage = IcxStorage(db)
-
-        self.engine.open(storage, logger)
+        self.engine.open(db, logger)
 
         self.engine.init_genesis_account(self.genesis_address, self.total_supply)
         self.engine.init_fee_treasury_account(self.fee_treasury_address, 0)

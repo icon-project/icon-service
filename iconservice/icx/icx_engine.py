@@ -39,7 +39,7 @@ class IcxEngine(object):
         self.__genesis_address: Address = None
         self.__fee_treasury_address: Address = None
 
-    def open(self, storage: IcxStorage, logger: IcxLogger) -> None:
+    def open(self, db: object, logger: IcxLogger=None) -> None:
         """Open engine
 
         Get necessary parameters from caller and begin to use storage(leveldb)
@@ -47,10 +47,9 @@ class IcxEngine(object):
         :param storage: IcxStorage object to access state db
         :param logger: IcxLogger to log debugging info.
         """
-        if not isinstance(storage, IcxStorage):
-            raise IcxError(Code.INTERNAL_ERROR)
-
         self.close()
+
+        storage = IcxStorage(db)
         self.__storage = storage
         self.__logger = logger
 
@@ -170,7 +169,7 @@ class IcxEngine(object):
         """
         return self.__total_supply_amount
 
-    def transfer(self, _from: str, _to: str, _amount: int, _fee: int) -> int:
+    def transfer(self, _from: Address, _to: Address, _amount: int, _fee: int) -> int:
         """Transfer the amount of icx to an account indicated by _to address
 
         :param _from: (string)

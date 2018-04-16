@@ -19,10 +19,10 @@
 import unittest
 import shutil
 
-from icx.icx_account import Account
-from icx.icx_address import Address
-from icx.icx_db import PlyvelDatabase
-from icx.icx_storage import IcxStorage
+from iconservice.base.address import Address
+from iconservice.icx.icx_account import Account
+from iconservice.icx.icx_db import PlyvelDatabase
+from iconservice.icx.icx_storage import IcxStorage
 
 
 class TestIcxStorage(unittest.TestCase):
