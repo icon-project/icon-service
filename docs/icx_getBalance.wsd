@@ -1,0 +1,21 @@
+@startuml icx_getBalance sequence diagram
+
+actor Client
+participant JsonRpcServer
+participant PeerOuterService
+participant ScoreService
+participant Score
+database LevelDB
+
+Client -> JsonRpcServer: [jsonrpc] balance request
+JsonRpcServer -> PeerOuterService: [grpc] request
+PeerOuterService -> ScoreService: [grpc] request
+ScoreService -> Score: [call] query(params)
+Score -> LevelDB: [call] get(address)
+LevelDB -> Score: balance response
+Score -> ScoreService: response
+ScoreService -> PeerOuterService: [grpc] response
+PeerOuterService -> JsonRpcServer: [grpc] response
+JsonRpcServer -> Client: [jsonrpc] balance response
+
+@enduml

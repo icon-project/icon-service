@@ -1,0 +1,54 @@
+@startuml icx_sendTransaction sequence diagram
+
+actor Client
+participant JsonRpcServer
+participant PeerOuterService
+participant TXPool
+participant BlockManager
+participant PeerService
+participant ScoreService
+participant Score
+participant DBWrapper
+database LevelDB
+
+group tx collection
+
+Client -> JsonRpcServer: [jsonrpc] transfer request
+JsonRpcServer -> JsonRpcServer: tx validation
+JsonRpcServer -> PeerOuterService: [grpc] request
+PeerOuterService -> TXPool
+JsonRpcServer -> Client: [jsonrpc] tx_hash
+
+end
+
+group during block consensus
+
+BlockManager -> TXPool: [call] get_tx()
+TXPool -> BlockManager: tx
+BlockManager -> PeerService: [call] score_invoke(block)
+PeerService -> ScoreService: [grpc] score_invoke(block)
+
+group tx invoke loop
+
+ScoreService -> Score: [call] invoke(params)
+Score -> DBWrapper: [call] put(address, amount)
+Score -> ScoreService: invoke result
+
+end
+
+ScoreService -> PeerService: [grpc] invoke result
+PeerService -> BlockManager: invoke result 
+
+end
+
+group after block confirmation
+
+PeerOuterService -> BlockManager: [call] confirm_block(block_hash)
+BlockManager -> PeerService: [call] write_precommit_state(block_hash, block_height)
+PeerService -> ScoreService: [grpc] write_precommit_state(block_hash, block_height)
+ScoreService -> DBWrapper: [call] put(precommit_state)
+DBWrapper -> LevelDB: [call] put(precommit_state)
+
+end
+
+@enduml
