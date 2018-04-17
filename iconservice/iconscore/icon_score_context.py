@@ -34,18 +34,14 @@ class IconScoreContext(object):
         """Constructor
         """
         self.__score_address = score_address
-        self.__tx = tx
-        self.__msg = msg
         self.__db = db
         self.__icx_engine = icx_engine
+        self.__tx = tx
+        self.__msg = msg
 
     @property
     def db(self):
         return self.__db
-
-    @property
-    def icx(self) -> IcxEngine:
-        return self.__icx_engine
 
     @property
     def msg(self) -> Message:
@@ -66,11 +62,12 @@ class IconScoreContext(object):
         """
         return 0
 
-    def balance(self) -> int:
+    def get_balance(self, address Address) -> int:
         """Returns the icx balance of context owner (icon score)
 
         :return: the icx amount of balance
         """
+        return self.__icx_engine.get_balance(address)
 
     def address(self) -> Address:
         """The address of the current icon score
@@ -79,7 +76,7 @@ class IconScoreContext(object):
         """
         self.__score_address
 
-    def transfer(self, to: Address, amount: int) -> None:
+    def transfer(self, to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
 
         If failed, an exception will be raised.
@@ -87,6 +84,7 @@ class IconScoreContext(object):
         :param to: recipient address
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
+        self.__icx_engine._transfer(self.address, to, amount)
 
     def send(self, to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -95,6 +93,12 @@ class IconScoreContext(object):
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         :return: True(success), False(failure)
         """
+        try:
+            return self.__icx_engine._transfer(self.address, to, amount)
+        except:
+            pass
+
+        return False
 
     def call(self, *args, **kwargs) -> object:
         """Call the functions provided by other icon scores.

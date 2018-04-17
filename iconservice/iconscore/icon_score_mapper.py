@@ -46,7 +46,7 @@ class IconScoreInfo(object):
         return self.__icon_score_address
 
     @property
-    def icon_score(self) -> IconScoreBase:
+    def icon_score(self) -> object:
         return self.__icon_score
 
     @property

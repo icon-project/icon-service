@@ -13,31 +13,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from .address import Address
-
-
-class Transaction(object):
-    """Contains transaction info
-    """
-
-    def __init__(self, tx_hash: str=None, origin: Address=None) -> None:
-        """Transaction class for icon score context
-        """
-        self.__hash = tx_hash
-        self.__origin = origin
-
-    @property
-    def origin(self) -> Address:
-        """transaction creator
-
-        :return:
-        """
-        return self.__origin
-
-    @property
-    def hash(self) -> str:
-        """transaction hash
-        """
-        return self.__hash

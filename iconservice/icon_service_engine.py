@@ -158,9 +158,9 @@ class IconServiceEngine(object):
 
         return self.__icx_engine.transfer(
             _from=context.tx.origin,
-            _to: Address=to,
-            _amount: int=context.msg.value,
-            _fee: int=fee)
+            _to=to,
+            _amount=context.msg.value,
+            _fee=fee)
 
     def __get_db(self, icon_score_address: Address) -> PlyvelDatabase:
         """

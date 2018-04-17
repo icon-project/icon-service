@@ -169,7 +169,7 @@ class IcxEngine(object):
         """
         return self.__total_supply_amount
 
-    def transfer(self, _from: Address, _to: Address, _amount: int, _fee: int) -> int:
+    def transfer(self, _from: Address, _to: Address, _amount: int, _fee: int) -> bool:
         """Transfer the amount of icx to an account indicated by _to address
 
         :param _from: (string)
@@ -227,3 +227,26 @@ class IcxEngine(object):
              f'fee_treasury: {fee_account.address} '
              f'fee_amount: {fee_account.icx}')
         logd(self.__logger, 'send_transaction() end')
+
+        return True
+
+    def _transfer(self, _from: Address, _to: Address, _amount: int) -> bool:
+        """Transfer the amount of icx to an account indicated by _to address
+
+        :param _from: (string)
+        :param _to: (string)
+        :param _amount: (int) the amount of coin in loop to transfer
+        :exception: IcxError
+        """
+        # get account info from state db.
+        from_account = self.__storage.get_account(_from)
+        to_account = self.__storage.get_account(_to)
+
+        from_account.withdraw(_amount)
+        to_account.deposit(_amount)
+
+        # write newly updated state into state db.
+        self.__storage.put_account(from_account.address, from_account)
+        self.__storage.put_account(to_account.address, to_account)
+
+        return True
