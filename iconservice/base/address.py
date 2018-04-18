@@ -133,6 +133,13 @@ class Address(object):
         """
         return f'{str(self.__prefix)}{self.__body.hex()}'
 
+    def __hash__(self) -> int:
+        """Returns a hash value for this object
+
+        :return: hash value
+        """
+        return hash(self.__prefix.to_bytes(1, 'big') + self.__body)
+
     @staticmethod
     def from_string(address: str):
         """Create Address object from 42-char address

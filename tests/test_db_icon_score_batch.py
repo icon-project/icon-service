@@ -17,7 +17,7 @@
 
 import unittest
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.database.icon_score_batch import IconScoreBatch
 
 
@@ -35,9 +35,30 @@ class TestIconScoreBatch(unittest.TestCase):
     def tearDown(self):
         self.icon_score_batch = None
 
-    def test_address(self):
-        address = Address.from_string(f'hx{"0" * 40}')
+    def test_address_property(self):
+        address = Address.from_string(f'cx{"0" * 40}')
         self.assertEqual(address, self.icon_score_batch.address)
 
     def test_get_item(self):
-        pass
+        address = Address.from_string(f'hx{"1" * 40}')
+        self.assertEqual(100, self.icon_score_batch[address])
+        address = Address.from_string(f'hx{"2" * 40}')
+        self.assertEqual(200, self.icon_score_batch[address])
+
+    def test_len(self):
+        self.assertEqual(2, len(self.icon_score_batch))
+
+    def test_put_item(self):
+        icon_score_batch = IconScoreBatch(self.address)
+        address = Address.from_string(f'hx{"3" * 40}')
+        icon_score_batch[address] = 300
+        self.assertEqual(300, icon_score_batch[address])
+
+    def test_iter(self):
+        i = 0
+        for key in self.icon_score_batch:
+            self.assertTrue(isinstance(key, Address))
+            self.assertEqual(AddressPrefix.EOA, key.prefix)
+            i += 1
+
+        self.assertEqual(len(self.icon_score_batch), i)

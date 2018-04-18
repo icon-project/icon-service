@@ -19,35 +19,34 @@ from ..base.address import Address
 from .icon_score_batch import IconScoreBatch
 
 
-class TransactionBatch(object):
-    """
+class TransactionBatch(dict):
+    """Contains the states changed by a transaction.
     """
     def __init__(self, hash: str) -> None:
-        """
+        """Constructor
+
+        :param hash: tx_hash
         """
         self.__hash = hash
-        self.__icon_score_batches = {}
 
     @property
     def hash(self) -> str:
-        """
+        """tx_hash
         """
         return self.__hash
 
-    def get(self, address: Address) -> IconScoreBatch:
+    def put(self, address: Address, key: object, value: object) -> None:
         """
-        """
-        return self.__icon_score_batches.get(address, None)
-
-    def put(self, address: Address, key: bytes, value: bytes):
-        """
+        :param address: icon_score_address
+        :param key: a key of state
+        :param value: a value of state
         """
         icon_score_batch = None
 
-        if address in self.__icon_score_batches:
-            icon_score_batch = self.__icon_score_batches[address]
+        if address in self:
+            icon_score_batch = self[address]
         else:
             icon_score_batch = IconScoreBatch(address)
-            self.__icon_score_batches[address] = icon_score_batch
+            self[address] = icon_score_batch
 
-        icon_score_batch.put(key, value)
+        icon_score_batch[key] = value

@@ -70,6 +70,17 @@ class TestAddress(unittest.TestCase):
         self.assertEqual(a.prefix, AddressPrefix.CONTRACT)
         self.assertEqual(a.body, bytes.fromhex(body))
 
+    def test_hash(self):
+        a1 = Address.from_string('hx00c3f694d84074f9145cd0bfa497290ce2d8052f')
+        a2 = Address.from_string('hx00c3f694d84074f9145cd0bfa497290ce2d8052f')
+        self.assertEqual(a1, a2)
+        self.assertEqual(hash(a1), hash(a2))
+        self.assertFalse(a1 is a2)
+
+        table = {}
+        table[a1] = 100
+        self.assertEqual(table[a1], table[a2])
+
 
 if __name__ == '__main__':
     unittest.main()
