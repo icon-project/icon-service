@@ -14,3 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from collections.abc import MutableMapping
+
+from ..base.address import Address
+
+
+class IconScoreBatch(MutableMapping):
+    """
+    """
+    def __init__(self, address: Address) -> None:
+        self.__address = address
+        self.__states = {}
+
+    @property
+    def address(self) -> Address:
+        return self.__address
+
+    def get(self, key: bytes) -> bytes:
+        if key in self.__states:
+            return self.__states[key]
+        else:
+            return None
+
+    def put(self, key: bytes, value: bytes) -> None:
+        self.__states[key] = value

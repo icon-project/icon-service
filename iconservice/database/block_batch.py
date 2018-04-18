@@ -14,3 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from .transaction_batch import TransactionBatch
+
+class BlockBatch(object):
+    """
+    """
+    def __init__(self, height, hash=None):
+        """
+        """
+        self.__height = height
+        self.__hash = hash
+        self.__icon_score_batches = {}
+
+    @property
+    def block_height(self):
+        return self.__height
+
+    @property
+    def hash(self):
+        return self.__hash
+
+    def get(self, address: Address, key: bytes, value: bytes) -> bytes:
+
+    def merge(self, tx_batch: TransactionBatch) -> None:

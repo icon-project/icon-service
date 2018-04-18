@@ -16,12 +16,10 @@
 
 
 from .. base.address import Address, AddressPrefix
-from .icon_score_base import IconScoreBase
-from .icon_score_context import IconScoreContext
 
 
 class IconScoreInfo(object):
-    """Contains information on an icon score managed in IconScoreStorage
+    """Contains information on one icon score
     """
 
     def __init__(self,
@@ -31,10 +29,10 @@ class IconScoreInfo(object):
                  db: object=None) -> None:
         """Constructor
 
-        :param icon_score:
-        :param owner:
-        :param icon_score_address:
-        :
+        :param icon_score: icon score object
+        :param owner: icon score uploader address
+        :param icon_score_address: contract address
+        :param db: state db for an icon score
         """
         self.__icon_score = icon_score
         self.__icon_score_address = icon_score_address
@@ -43,14 +41,20 @@ class IconScoreInfo(object):
 
     @property
     def icon_score_address(self) -> Address:
+        """Icon score address
+        """
         return self.__icon_score_address
 
     @property
     def icon_score(self) -> object:
+        """Icon score object
+        """
         return self.__icon_score
 
     @property
     def owner(self) -> Address:
+        """Icon score uploader address
+        """
         return self.__owner
 
     @property
@@ -61,7 +65,10 @@ class IconScoreInfo(object):
 
 
 class IconScoreMapper(object):
-    """Manages IconScore objects
+    """Icon score information mapping table
+
+    key: icon_score_address
+    value: IconScoreInfo
     """
     def __init__(self):
         """Constructor
@@ -78,14 +85,12 @@ class IconScoreMapper(object):
 
     def put(self,
             icon_score_address: Address,
-            icon_score: IconScoreBase,
-            owner: Address) -> None:
+            info: IconScoreInfo) -> None:
         """
+        :param icon_score_address:
+        :param info: IconScoreInfo
         """
-        info = self.get(icon_score_address)
-        if info is None:
-            info = IconScoreInfo(icon_score_address, icon_score, owner)
-            self.__icon_score_infos[icon_score_address] = info
+        self.__icon_score_infos[icon_score_address] = info
 
     def delete(self, icon_score_address: Address):
         """Delete icon score from mapper
