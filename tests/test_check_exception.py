@@ -1,9 +1,6 @@
 import unittest
 
-from check_exception import check_exception
-from exception_code import ExceptionCode
-from base_exception import IcxException
-from exception import ExternalException, PayableException
+from iconservice.base.exception import *
 
 
 class TestCheckException(unittest.TestCase):
@@ -42,7 +39,7 @@ class TestCheckException(unittest.TestCase):
         #self.check_call_check_external_exception_func1()
 
     @check_exception
-    def check_icx_error_func1(self, code : ExceptionCode):
+    def check_icx_error_func1(self, code: ExceptionCode):
             raise IcxException(code)
 
     def loop_icx_error_func1(self):
