@@ -62,7 +62,7 @@ class IconScoreContext(object):
         """
         return 0
 
-    def get_balance(self, address Address) -> int:
+    def get_balance(self, address: Address) -> int:
         """Returns the icx balance of context owner (icon score)
 
         :return: the icx amount of balance

@@ -16,7 +16,7 @@
 
 
 from .icon_score_context import IconScoreContext
-from .icon_score_mapper import IconScoreMapper
+from .icon_score_info_mapper import IconScoreInfoMapper
 from ..base.address import Address, AddressPrefix
 from ..utils import call_method
 
@@ -51,10 +51,10 @@ class IconScoreEngine(object):
     - IconScore
     """
 
-    def __init__(self, icon_score_mapper: IconScoreMapper) -> None:
+    def __init__(self, icon_score_info_mapper: IconScoreInfoMapper) -> None:
         """Constructor
         """
-        self.__icon_score_mapper = icon_score_mapper
+        self.__icon_score_info_mapper = icon_score_info_mapper
 
     def invoke(self,
                icon_score_address: Address,
@@ -62,7 +62,7 @@ class IconScoreEngine(object):
                params: dict) -> bool:
         """
         """
-        icon_score_info = self.__icon_score_mapper.get(icon_score_address)
+        icon_score_info = self.__icon_score_info_mapper.get(icon_score_address)
         return call_icon_score_method(
             icon_score_info.icon_score,
             icon_score_info.icon_score_context,
@@ -75,7 +75,7 @@ class IconScoreEngine(object):
               params: dict) -> object:
         """
         """
-        icon_score_info = self.__icon_score_mapper.get(icon_score_address)
+        icon_score_info = self.__icon_score_info_mapper.get(icon_score_address)
         return call_icon_score_method(
             icon_score_info.icon_score,
             icon_score_info.icon_score_context,

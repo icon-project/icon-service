@@ -23,7 +23,7 @@ from .base.transaction import Transaction
 from .database.db import PlyvelDatabase
 from .database.db_factory import DatabaseFactory
 from .icx.icx_engine import IcxEngine
-from .iconscore.icon_score_mapper import IconScoreMapper
+from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
 from .utils import trace
 
@@ -85,7 +85,7 @@ class IconServiceEngine(object):
 
         :param state_db_root_path:
         """
-        self.__icon_score_mapper = IconScoreMapper()
+        self.__icon_score_mapper = IconScoreInfoMapper()
 
     def close(self):
         self.__icx_engine.close()

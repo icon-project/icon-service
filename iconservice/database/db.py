@@ -58,3 +58,10 @@ class PlyvelDatabase(object):
         if self.__db:
             self.__db.close()
             self.__db = None
+
+    @property
+    def closed(self) -> bool:
+        if self.__db is None:
+            return True
+        else:
+            return self.__db.closed

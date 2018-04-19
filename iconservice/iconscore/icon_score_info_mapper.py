@@ -16,11 +16,13 @@
 
 
 from .. base.address import Address, AddressPrefix
+from ..database.db_factory import DatabaseFactory
 
 
 class IconScoreInfo(object):
     """Contains information on one icon score
     """
+    __db_factory = None
 
     def __init__(self,
                  icon_score: object,
@@ -61,10 +63,18 @@ class IconScoreInfo(object):
     def db(self) -> object:
         """State db for icon score
         """
+        if self.__db is None or self.__db.closed:
+            self.__db = self.__db_factory.create_by_address(
+                self.__icon_score_address)
+
         return self.__db
 
+    @classmethod
+    def set_db_factory(cls, db_factory: DatabaseFactory) -> None:
+        cls.__db_factory = db_factory
 
-class IconScoreMapper(object):
+
+class IconScoreInfoMapper(dict):
     """Icon score information mapping table
 
     key: icon_score_address
@@ -73,38 +83,34 @@ class IconScoreMapper(object):
     def __init__(self):
         """Constructor
         """
-        self.__icon_score_infos = {}
 
-    def get(self, icon_score_address: Address) -> IconScoreInfo:
+    def __getitem__(self, icon_score_address: Address) -> IconScoreInfo:
         """
         """
-        if icon_score_address in self.__icon_score_infos:
-            return self.__icon_score_infos[icon_score_address]
-        else:
-            return None
+        self.__check_key_type(icon_score_address)
+        return super().__getitem__(icon_score_address)
 
-    def put(self,
-            icon_score_address: Address,
-            info: IconScoreInfo) -> None:
+    def __setitem__(self,
+                    icon_score_address: Address,
+                    info: IconScoreInfo) -> None:
         """
         :param icon_score_address:
         :param info: IconScoreInfo
         """
-        self.__icon_score_infos[icon_score_address] = info
+        self.__check_key_type(icon_score_address)
+        self.__check_value_type(info)
+        super().__setitem__(icon_score_address, info)
 
-    def delete(self, icon_score_address: Address):
-        """Delete icon score from mapper
+    def __check_key_type(self, address: Address) -> None:
+        """Check if key type is an icon score address type or not.
 
-        :param icon_score_address:
+        :param address: icon score address
         """
-        if icon_score_address in self.__icon_score_infos:
-            del self.__icon_score_infos[icon_score_address]
+        if not isinstance(address, Address):
+            raise KeyError(f'{address} is not Address type.')
+        if address.prefix != AddressPrefix.CONTRACT:
+            raise KeyError(f'{address} is not an icon score address.')
 
-    def contains(self, icon_score_address: Address) -> bool:
-        """Check if the icon score indicated by address is present or not.
-
-        :param icon_score_address: icon score address
-        :return:
-        """
-        return icon_score_address.prefix == AddressPrefix.CONTRACT and \
-            icon_score_address in self.__icon_score_infos
+    def __check_value_type(self, info: IconScoreInfo) -> None:
+        if not isinstance(info, IconScoreInfo):
+            raise ValueError(f'{info} is not IconScoreInfo type.')

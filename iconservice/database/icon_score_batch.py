@@ -19,11 +19,17 @@ from ..base.address import Address
 
 
 class IconScoreBatch(dict):
-    """
+    """Contains precommit states for an icon score
     """
     def __init__(self, address: Address) -> None:
+        """Constructor
+
+        :param address: icon_score_address
+        """
         self.__address = address
 
     @property
     def address(self) -> Address:
+        """icon_score_address
+        """
         return self.__address

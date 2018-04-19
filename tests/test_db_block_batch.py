@@ -20,11 +20,9 @@ import unittest
 from iconservice.base.address import Address
 from iconservice.database.block_batch import BlockBatch
 from iconservice.database.transaction_batch import TransactionBatch
-from iconservice.utils import trace
 
 
 class TestBlockBatch(unittest.TestCase):
-    @trace
     def setUp(self):
         self.batch = BlockBatch(
             height=0,
@@ -69,7 +67,6 @@ class TestBlockBatch(unittest.TestCase):
         address = Address.from_string(f'hx{"1" * 40}')
         self.assertEqual(1, self.batch[score_address][address])
 
-    @trace
     def test_put(self):
         score_address = Address.from_string(f'cx{"0" * 40}')
         self.assertEqual(1, len(self.batch[score_address]))

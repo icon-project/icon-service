@@ -20,11 +20,12 @@
 
 import unittest
 
-from iconscore.icon_score_engine import IconScoreEngine
-from iconscore.icon_score_mapper import IconScoreMapper
+from iconservice.iconscore.icon_score_engine import IconScoreEngine
+from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 
 
 class TestIconScoreEngine(unittest.TestCase):
+    """
     def setUp(self):
         self._engine = IconScoreEngine()
         self._from = f'hx{"0" * 40}'
@@ -56,3 +57,4 @@ class TestIconScoreEngine(unittest.TestCase):
         balance = self._engine.query(address, method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(0, balance)
+    """
