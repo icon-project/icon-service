@@ -20,6 +20,10 @@ import unittest
 
 from iconservice.icx.icx_error import Code, IcxError
 
+# "int[]"
+# "string"
+# "address"
+# "bool"
 
 class TestCode(unittest.TestCase):
     def test_code(self):
