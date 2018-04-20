@@ -100,13 +100,3 @@ class IconScoreInstaller(object):
         with open(archive_path, 'rb') as f:
             byte_data = f.read()
         return byte_data
-
-
-def main():
-    installer = IconScoreInstaller('/Users/lp1709no01/Desktop/')
-    address = Address('cx', bytes.fromhex("1234123412341234123412341234123412341234"))
-    installer.install(address, IconScoreInstaller.read_zipfile_as_byte('/Users/lp1709no01/Desktop/ziptest/abcd.zip'))
-
-
-if __name__ == "__main__":
-    main()
