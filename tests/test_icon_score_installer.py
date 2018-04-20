@@ -1,0 +1,26 @@
+import unittest
+from icon.iconservice.iconscore.icon_score_installer import *
+from icon.iconservice.base.address import Address
+
+
+class TestICONSCOREINSTALLER(unittest.TestCase):
+    def setUp(self):
+        self.installer = IconScoreInstaller('/Users/lp1709no01/Desktop/')
+        self.address = Address('cx', bytes.fromhex("1234123412341234123412341234123412341234"))
+        self.archive_path = "/Users/lp1709no01/Desktop/ziptest/abcd.zip"
+        self.install_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
+
+    def test_write_zipfile_with_bytes(self):
+        self.installer.write_zipfile_with_bytes(self.install_path,
+                                                self.installer.read_zipfile_as_byte(self.archive_path))
+        pass
+
+    def test_remove_exists_archive(self):
+        pass
+
+    def test_extract_files(self):
+        pass
+
+
+if __name__ == "__main__":
+    unittest.main()
