@@ -21,7 +21,7 @@ from .base.address import Address
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.db import PlyvelDatabase
-from .database.db_factory import DatabaseFactory
+from .database.factory import DatabaseFactory
 from .icx.icx_engine import IcxEngine
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
@@ -90,7 +90,6 @@ class IconServiceEngine(object):
     def close(self):
         self.__icx_engine.close()
 
-    @trace
     def call(self,
              method: str,
              params: dict) -> object:
@@ -118,7 +117,6 @@ class IconServiceEngine(object):
         except Exception as e:
             print(e)
 
-    @trace
     def __handle_icx_getBalance(self, params: dict) -> int:
         """Returns the icx balance of the given address
 

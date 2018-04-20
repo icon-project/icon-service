@@ -20,7 +20,7 @@ import shutil
 import unittest
 
 from iconservice.base.address import Address
-from iconservice.database.db_factory import DatabaseFactory
+from iconservice.database.factory import DatabaseFactory
 from iconservice.database.context_db import ReadOnlyContextDatabase 
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfo
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper 

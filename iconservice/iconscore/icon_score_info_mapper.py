@@ -15,8 +15,8 @@
 # limitations under the License.
 
 
-from .. base.address import Address, AddressPrefix
-from ..database.db_factory import DatabaseFactory
+from ..base.address import Address, AddressPrefix
+from ..database.factory import DatabaseFactory
 
 
 class IconScoreInfo(object):
