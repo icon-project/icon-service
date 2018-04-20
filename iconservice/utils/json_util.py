@@ -32,9 +32,9 @@ def check_type(str_value):
 def convert_value(str_value):
     if not isinstance(str_value, str):
         return str(str_value)
-    if check_type(str_value) is 1:
+    if check_type(str_value) is CONST_FOR_ADDRESS_CODE:
         return Address(str_value[:2], bytes.fromhex(str_value[2:]))
-    elif check_type(str_value) is 2:
+    elif check_type(str_value) is CONST_FOR_INT_CODE:
         return int(str_value, 0)
     else:
         return str(str_value)
