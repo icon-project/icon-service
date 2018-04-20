@@ -18,7 +18,7 @@
 import unittest
 
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.database.icon_score_batch import IconScoreBatch
+from iconservice.database.batch import IconScoreBatch
 
 
 class TestIconScoreBatch(unittest.TestCase):

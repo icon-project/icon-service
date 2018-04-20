@@ -18,8 +18,7 @@
 import unittest
 
 from iconservice.base.address import Address
-from iconservice.database.block_batch import BlockBatch
-from iconservice.database.transaction_batch import TransactionBatch
+from iconservice.database.batch import BlockBatch, TransactionBatch
 
 
 class TestBlockBatch(unittest.TestCase):

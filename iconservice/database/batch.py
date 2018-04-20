@@ -16,8 +16,50 @@
 
 
 from ..base.address import Address
-from .transaction_batch import TransactionBatch
-from .icon_score_batch import IconScoreBatch
+
+
+class IconScoreBatch(dict):
+    """Contains precommit states for an icon score
+    """
+    def __init__(self, address: Address) -> None:
+        """Constructor
+
+        :param address: icon_score_address
+        """
+        self.__address = address
+
+    @property
+    def address(self) -> Address:
+        """icon_score_address
+        """
+        return self.__address
+
+
+class TransactionBatch(dict):
+    """Contains the states changed by a transaction.
+    """
+    def __init__(self, hash: str=None) -> None:
+        """Constructor
+
+        :param hash: tx_hash
+        """
+        self.hash = hash
+
+    def put(self, address: Address, key: object, value: object) -> None:
+        """
+        :param address: icon_score_address
+        :param key: a key of state
+        :param value: a value of state
+        """
+        icon_score_batch = None
+
+        if address in self:
+            icon_score_batch = self[address]
+        else:
+            icon_score_batch = IconScoreBatch(address)
+            self[address] = icon_score_batch
+
+        icon_score_batch[key] = value
 
 
 class BlockBatch(dict):
