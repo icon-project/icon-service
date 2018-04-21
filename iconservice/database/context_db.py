@@ -150,7 +150,7 @@ class ContextDatabase(object):
         self._tx_batch.clear()
 
     def start_block(self, height: int, hash: str) -> None:
-        """Begin to change states with a block 
+        """Begin to change states with a block
         """
         self._block_batch.clear()
         self._block_batch.height = height

@@ -32,7 +32,9 @@ class IconScoreInfo(object):
         """Constructor
 
         :param icon_score: icon score object
-        :param owner: icon score uploader address
+        :param owner:
+            the address of user
+            who creates a tx for installing this icon_score
         :param icon_score_address: contract address
         :param db: state db for an icon score
         """
@@ -55,7 +57,7 @@ class IconScoreInfo(object):
 
     @property
     def owner(self) -> Address:
-        """Icon score uploader address
+        """The address of user who creates a tx for installing this icon_score
         """
         return self.__owner
 

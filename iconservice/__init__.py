@@ -11,4 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Package for objects which are related with Score service"""
+"""Package for objects which are related with Icon Services"""
+
+from .icon_service_engine import IconServiceEngine
+from .icon_outer_service import IconOuterService
+from .icon_service import IconService
