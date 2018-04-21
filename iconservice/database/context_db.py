@@ -20,7 +20,7 @@ from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .batch import BlockBatch, TransactionBatch
 
 
-def __get_from_batch(key: bytes, batch: dict) -> bytes:
+def _get_from_batch(batch: dict, key: bytes) -> bytes:
     """
     """
     if batch:
@@ -69,19 +69,15 @@ class ContextDatabase(object):
     This db will be provided to IconScore made by 3-party
     through a IconScoreContext
     """
-    def __init__(self,
-                 icon_score_address: Address,
-                 icon_score_info_mapper: IconScoreInfoMapper) -> None:
+    def __init__(self, icon_score_info_mapper: IconScoreInfoMapper) -> None:
         """Constructor
 
-        :param icon_score_address: the current icon score address
         :param icon_score_info_mapper: To get state db for an icon score
         """
-        self._icon_score_address = icon_score_address
+        self._icon_score_address = None
         self._icon_score_info_mapper = icon_score_info_mapper
-
         self._tx_batch = TransactionBatch()
-        self._block_batch = None
+        self._block_batch = BlockBatch()
         self._score_db = None
 
     def get(self, key: bytes) -> bytes:
@@ -95,17 +91,27 @@ class ContextDatabase(object):
         :param key:
         :return: a value for a given key
         """
-        value = __get_from_batch(key, self._tx_batch)
-        if value is None:
-            value = __get_from_batch(key, self._block_batch)
-            if value is None:
-                value = self._score_db.get(key)
+        assert(self._icon_score_address)
 
-        return value
+        # get value from tx_batch
+        icon_score_batch = self._tx_batch[self._icon_score_address]
+        value = _get_from_batch(icon_score_batch, key)
+        if value:
+            return value
+
+        # get value from block_batch
+        icon_score_batch = self._block_batch[self._icon_score_address]
+        value = _get_from_batch(icon_score_batch, key)
+        if value:
+            return value
+
+        # get value from state_db
+        return self._score_db.get(key)
 
     @property
     def icon_score_address(self) -> Address:
-        """Returns the address of the current icon score which uses this database now
+        """Returns the address of the icon score
+        which possesses this database at this time
 
         "return: icon_score_address
         """
@@ -123,8 +129,9 @@ class ContextDatabase(object):
     def put(self, key: bytes, value: bytes) -> None:
         """Update a new state to TransactionBatch
         """
-        assert(self._tx_batch)
-        self._tx_batch[key] = value
+        assert(self._tx_batch is not None)
+        assert(self._icon_score_address)
+        self._tx_batch.put(self._icon_score_address, key, value)
 
     def start_transaction(self, tx_hash: str) -> None:
         """Begin to update states for a transaction
@@ -138,22 +145,36 @@ class ContextDatabase(object):
         self._tx_batch.clear()
 
     def rollback_transaction(self) -> None:
-        """Rollback the current states for the current transaction
+        """Rollback the changed states for the current transaction
         """
         self._tx_batch.clear()
 
-    def commit(self) -> None:
-        """Write updated states in a BlockBatch to StateDB
+    def start_block(self, height: int, hash: str) -> None:
+        """Begin to change states with a block 
         """
-        for icon_score_batch in self._block_batch:
-            address = icon_score_batch.address
-            score_db = self._icon_score_info_mapper[address].db
+        self._block_batch.clear()
+        self._block_batch.height = height
+        self._block_batch.hash = hash
+
+    def end_block(self) -> None:
+        """End to change states with a block
+        """
+        # Do nothing
+
+    def commit(self) -> None:
+        """Write changed states in a BlockBatch to StateDB
+        """
+        for icon_score_address in self._block_batch:
+            score_db = self._icon_score_info_mapper[icon_score_address].db
+            icon_score_batch = self._block_batch[icon_score_address]
 
             for key in icon_score_batch:
                 score_db.put(key, icon_score_batch[key])
 
+        self._block_batch.clear()
+
     def rollback(self) -> None:
-        """Remove updated states in a BlockBatch
+        """Rollback updated states in a BlockBatch
         """
         self._tx_batch.clear()
         self._block_batch.clear()

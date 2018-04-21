@@ -71,6 +71,10 @@ class IconScoreInfo(object):
 
     @classmethod
     def set_db_factory(cls, db_factory: DatabaseFactory) -> None:
+        """DatabaseFactory will be shared among all IconScoreInfo instances
+
+        :param db_factory: state_db creator
+        """
         cls.__db_factory = db_factory
 
 

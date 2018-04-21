@@ -20,6 +20,9 @@ from ..base.address import Address
 
 class IconScoreBatch(dict):
     """Contains precommit states for an icon score
+
+    key: state key
+    value: state value
     """
     def __init__(self, address: Address) -> None:
         """Constructor
@@ -37,6 +40,9 @@ class IconScoreBatch(dict):
 
 class TransactionBatch(dict):
     """Contains the states changed by a transaction.
+
+    key: Score Address
+    value: IconScoreBatch
     """
     def __init__(self, hash: str=None) -> None:
         """Constructor
@@ -53,35 +59,56 @@ class TransactionBatch(dict):
         """
         icon_score_batch = None
 
-        if address in self:
-            icon_score_batch = self[address]
+        if address in self: icon_score_batch = self[address]
         else:
             icon_score_batch = IconScoreBatch(address)
             self[address] = icon_score_batch
 
         icon_score_batch[key] = value
 
+    def __getitem__(self, key: Address) -> IconScoreBatch:
+        """Get IconScoreBatch instance indicated by address
+
+        :param key: icon_score_address
+        """
+        if key in self:
+            return super().__getitem__(key)
+        else:
+            return None
+
+    def __setitem__(self,
+                    key: Address,
+                    value: IconScoreBatch) -> None:
+        """operator[] overriding
+
+        :param key: icon_score_address
+        :param value: IconScoreBatch object
+        """
+        if not isinstance(key, Address):
+            raise ValueError('key is not Address type')
+        if not isinstance(value, IconScoreBatch):
+            raise ValueError('value is not IconScoreBatch type')
+
+        super().__setitem__(key, value)
+
+    def clear(self):
+        self.hash = None
+        super().clear()
+
 
 class BlockBatch(dict):
-    """
+    """Contains the states changed by a block
+
     key: Address
     value: IconScoreBatch
     """
-    def __init__(self, height, hash=None):
+    def __init__(self, height=-1, hash=None):
         """
         """
-        self.__height = height
-        self.__hash = hash
+        self.height = height
+        self.hash = hash
 
-    @property
-    def height(self):
-        return self.__height
-
-    @property
-    def hash(self):
-        return self.__hash
-
-    def put(self, address: Address, key: object, value: object) -> None:
+    def put(self, address: Address, key: bytes, value: bytes) -> None:
         """
         :param address: icon_score_address
         :param key: a key of state
@@ -98,7 +125,29 @@ class BlockBatch(dict):
         icon_score_batch[key] = value
 
     def put_tx_batch(self, tx_batch: TransactionBatch) -> None:
+        """Put the states of tx_batch
+
+        :param tx_batch:
+        """
         for icon_score_address in tx_batch:
+            assert(isinstance(icon_score_address, Address))
             icon_score_batch = tx_batch[icon_score_address]
+
             for key in icon_score_batch:
-                self.put(icon_score_address, key, icon_score_batch[key])
+                value = icon_score_batch[key]
+                self.put(icon_score_address, key, value)
+
+    def __getitem__(self, key: Address) -> IconScoreBatch:
+        """Get IconScoreBatch object indicated by address
+
+        :param key: icon_score_address
+        """
+        if key in self:
+            return super().__getitem__(key)
+        else:
+            return None
+
+    def clear(self):
+        self.height = -1
+        self.hash = None
+        super().clear()
