@@ -1,11 +1,7 @@
 from ..base.address import Address
 
-CONST_FOR_ADDRESS_CODE = 1
-CONST_FOR_INT_CODE = 2
-CONST_FOR_STR_CODE = 3
 
-
-def convert_dict_values(json_dict):
+def convert_dict_values(json_dict: dict) -> dict:
     json_dictionary = {}
 
     for key in json_dict:
@@ -17,24 +13,58 @@ def convert_dict_values(json_dict):
     return json_dictionary
 
 
-def check_type(str_value):
-    if not isinstance(str_value, str):
-        return CONST_FOR_STR_CODE
-    prefix = str_value[:2]
-    if len(str_value) == 42 and (prefix == "cx" or prefix == "hx"):
-        return CONST_FOR_ADDRESS_CODE
-    elif prefix == "0x":
-        return CONST_FOR_INT_CODE
+def convert_value(str_value_with_type: str):
+    specified_type = str_value_with_type.split(" -> ")[-1]
+    separator_index = str_value_with_type.rfind(" -> ")
+    value = str_value_with_type[:separator_index]
+    if specified_type == "int":
+        return int(value, 0)
+    elif specified_type == "string":
+        return value
+    elif specified_type == "bool":
+        return bool(value)
+    elif specified_type == "address":
+        return Address(value[:2], bytes.fromhex(value[2:]))
+    elif specified_type == "int_array":
+        tmp_str_array = _convert_into_str_array(value)
+        return [int(a, 0) for a in tmp_str_array.split(",")]
+    elif specified_type == "bool_array":
+        tmp_str_array = _convert_into_str_array(value)
+        return [string_to_bool(a) for a in tmp_str_array.split(",")]
+    elif specified_type == "string_array":
+        return get_str_array_from_str(value[1:-1])
+    elif specified_type == "address_array":
+        tmp_str_array = _convert_into_str_array(value)
+        return [Address(a[:2], bytes.fromhex(a[2:])) for a in tmp_str_array.split(",")]
     else:
-        return CONST_FOR_STR_CODE
+        raise Exception
 
 
-def convert_value(str_value):
-    if not isinstance(str_value, str):
-        return str(str_value)
-    if check_type(str_value) is CONST_FOR_ADDRESS_CODE:
-        return Address(str_value[:2], bytes.fromhex(str_value[2:]))
-    elif check_type(str_value) is CONST_FOR_INT_CODE:
-        return int(str_value, 0)
-    else:
-        return str(str_value)
+def _convert_into_str_array(str_array: str) -> str:
+    return str_array[1:-1].replace('"', '').replace("'", '').replace(' ', '')
+
+
+def string_to_bool(str_bool: str) -> bool:
+    if bool(str_bool) is False or str_bool == "False":
+        return False
+    return True
+
+
+def get_str_array_from_str(string: str):
+    quotes_count = 0
+    quotes = string[0]
+    str_array = []
+    element = ''
+    for index, char in enumerate(string, 1):
+        if char == quotes:
+            quotes_count += 1
+        else:
+            if quotes_count == 0:
+                continue
+            element += char
+        if quotes_count == 2:
+            quotes_count = 0
+            str_array.append(element)
+            element = ''
+
+    return str_array
