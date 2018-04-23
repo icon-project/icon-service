@@ -43,7 +43,7 @@ class IconScoreInstaller(object):
                     os.path.join(self.icon_score_root_path, str(address)))
 
     @staticmethod
-    def extract_files(install_path, archive_path):
+    def extract_files(install_path: str, archive_path: str) -> str:
         try:
             zip_file = zipfile.ZipFile(archive_path, 'r')
             file_name_list = zip_file.namelist()
