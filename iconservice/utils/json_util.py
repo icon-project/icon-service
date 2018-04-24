@@ -39,27 +39,28 @@ def convert_value(str_value_with_type: str):
     elif specified_type == "address":
         return Address(value[:2], bytes.fromhex(value[2:]))
     elif specified_type == "int_array":
-        tmp_str_array = _convert_into_str_array(value)
-        return [int(a, 0) for a in tmp_str_array.split(",")]
+        tmp_str_array = eval(value)
+        return [int(a, 0) for a in tmp_str_array]
     elif specified_type == "bool_array":
-        tmp_str_array = _convert_into_str_array(value)
-        return [string_to_bool(a) for a in tmp_str_array.split(",")]
+        tmp_str_array = eval(value)
+        return [string_to_bool(a) for a in tmp_str_array]
     elif specified_type == "string_array":
-        return get_str_array_from_str(value[1:-1])
+        return eval(value)
     elif specified_type == "address_array":
         tmp_str_array = _convert_into_str_array(value)
-        return [Address(a[:2], bytes.fromhex(a[2:])) for a in tmp_str_array.split(",")]
+        return [Address(a[:2], bytes.fromhex(a[2:])) for a in tmp_str_array]
     else:
         raise Exception
 
 
-def _convert_into_str_array(str_array: str) -> str:
+def _convert_into_str_array(str_array: str) -> list:
     """Used inside convert_value function. This function will remove quotes, double quotes and space from the string.
 
     :param str_array:
     :return:
     """
-    return str_array[1:-1].replace('"', '').replace("'", '').replace(' ', '')
+    string_array = str_array[1:-1]
+    return string_array.replace('"', '').replace("'", '').replace(' ', '').split(",")
 
 
 def string_to_bool(str_bool: str) -> bool:
@@ -71,28 +72,3 @@ def string_to_bool(str_bool: str) -> bool:
     if bool(str_bool) is False or str_bool == "False":
         return False
     return True
-
-
-def get_str_array_from_str(string: str):
-    """Returns str array.
-
-    :param string: string that enclose the array with only strings as members.
-    :return:
-    """
-    quotes_count = 0
-    quotes = string[0]
-    str_array = []
-    element = ''
-    for index, char in enumerate(string, 1):
-        if char == quotes:
-            quotes_count += 1
-        else:
-            if quotes_count == 0:
-                continue
-            element += char
-        if quotes_count == 2:
-            quotes_count = 0
-            str_array.append(element)
-            element = ''
-
-    return str_array
