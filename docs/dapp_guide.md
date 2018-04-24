@@ -98,11 +98,11 @@ super().__init__()
 ##### VariableForDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
 예시) 상태DB에 'name'키로 'theloop'를 기입하고 싶다.<br/>
 ```python
-VariableForDB('name', context.db, variable_type=str).set('theloop')
+VariableForDB('name', db, variable_type=str).set('theloop')
 ```
 아까 기록한 'name'키에대한 값을 읽어오고 싶다.<br/>
 ```python
-name = VariableForDB('name', context.db, variable_type=str).get()
+name = VariableForDB('name', db, variable_type=str).get()
 print(name) ##'theloop'
 ```
 
