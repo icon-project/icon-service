@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2017-2018 theloop Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
 import abc
 from functools import wraps
@@ -9,8 +25,8 @@ CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
 
 
-# TODO external을 사용하기 위한 컨텍스트 클래스 최상단에 붙여준다.
 # score decorator는 반드시 최종 클래스에만 붙어야 한다.
+# 상속 불가
 # 클래스를 한번 감싸서 진행하는 것이기 때문에, 데코레이터 상속이 되버리면 미정의 동작이 발생
 # TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
 
@@ -29,7 +45,6 @@ def score(cls):
     return __wrapper
 
 
-# TODO 외부에서 부를때 다음 키워드가 없다면 부를 수 없게 해야한다.
 def external(func):
     cls_name, func_name = str(func.__qualname__).split('.')
 
@@ -50,10 +65,6 @@ def external(func):
     return __wrapper
 
 
-# TODO payable 기능구현
-# TODO 1. 함수에서 icx거래가 가능. 즉 그 함수에서 Context의 value값이 없다면 해당 함수가 실행 되지 않는다. (롤백)
-# TODO 2. 만약 스코어 주소로 전송이 들어오면 '_'함수를 콜한다. 다음에서도 Context를 체크하여 함수를 진행.
-# TODO 3. 익명함수를 미리 선언 할 수가 없는거 같아서 다음처럼 '_'대신 명시적으로 만들었다. 그리고 ERC20 인터페이스에 선언 예정 (이름이 맞는지는 검수필요)
 def payable(func):
     cls_name, func_name = str(func.__qualname__).split('.')
 
