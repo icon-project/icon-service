@@ -14,5 +14,5 @@
 """Package for objects which are related with Icon Services"""
 
 from .icon_service_engine import IconServiceEngine
-from .icon_outer_service import IconOuterService
-from .icon_service import IconService
+# from .icon_outer_service import IconOuterService
+# from .icon_service import IconService

@@ -45,5 +45,5 @@ class DatabaseFactory(object):
         :return:
         """
         path = os.path.join(self.__state_db_root_path, name)
-        db = PlyvelDatabase(path=path, create_if_missing=True)
-        return db
+        db = PlyvelDatabase.make_db(path=path, create_if_missing=True)
+        return PlyvelDatabase(db)

@@ -42,11 +42,11 @@ class IconServiceEngine(object):
         :param state_db_root_path:
         """
         # jsonrpc handlers
-        self.__handlers = {
-            'icx_getBalance': self.__handle_icx_getBalance,
-            'icx_getTotalSupply': self.__handle_icx_getTotalSupply,
-            'icx_call': self.__handle_icx_call,
-            'icx_sendTransaction': self.__handle_icx_sendTransaction
+        self._handlers = {
+            'icx_getBalance': self._handle_icx_getBalance,
+            'icx_getTotalSupply': self._handle_icx_getTotalSupply,
+            'icx_call': self._handle_icx_call,
+            'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
         # data_type handlers
@@ -66,33 +66,34 @@ class IconServiceEngine(object):
         if not os.path.isdir(state_db_root_path):
             os.mkdir(state_db_root_path)
 
-        self.__db_factory = DatabaseFactory(state_db_root_path)
-        self.__init_icx_engine(self.__db_factory)
-        self.__init_icon_score_mapper(state_db_root_path)
+        self._db_factory = DatabaseFactory(state_db_root_path)
+        self._init_icx_engine(self._db_factory)
+        self._init_icon_score_mapper(state_db_root_path)
 
-    def __init_icx_engine(self, db_factory: DatabaseFactory) -> None:
+    def _init_icx_engine(self, db_factory: DatabaseFactory) -> None:
         """Initialize icx_engine
 
         :param db_factory:
         """
         db = db_factory.create_by_name('icon_dex.db')
 
-        self.__icx_engine = IcxEngine()
-        self.__icx_engine.open(db)
+        self._icx_engine = IcxEngine()
+        self._icx_engine.open(db)
 
-    def __init_icon_score_mapper(self, state_db_root_path: str) -> None:
+    def _init_icon_score_mapper(self, state_db_root_path: str) -> None:
         """Initialize icon_score_mapper
 
         :param state_db_root_path:
         """
         self.__icon_score_mapper = IconScoreInfoMapper()
 
-    def close(self):
-        self.__icx_engine.close()
+    def close(self) -> None:
+        self._icx_engine.close()
 
     def call(self,
              method: str,
-             params: dict) -> object:
+             params: dict,
+             context: IconScoreContext=None) -> object:
         """Call invoke and query requests in jsonrpc format
 
         This method is designed to be called in icon_outer_service.py.
@@ -109,31 +110,30 @@ class IconServiceEngine(object):
                 (dict) result or error object in jsonrpc response
         """
         try:
-            handler = self.__handlers[method]
-            print(f'handler: {handler}')
+            handler = self._handlers[method]
             return handler(params)
         except KeyError as ke:
             print(ke)
         except Exception as e:
             print(e)
 
-    def __handle_icx_getBalance(self, params: dict) -> int:
+    def _handle_icx_getBalance(self, params: dict) -> int:
         """Returns the icx balance of the given address
 
         :param params:
         :return: icx balance in loop
         """
         address = params['address']
-        return self.__icx_engine.get_balance(address)
+        return self._icx_engine.get_balance(address)
 
-    def __handle_icx_getTotalSupply(self) -> int:
+    def _handle_icx_getTotalSupply(self) -> int:
         """Returns the amount of icx total supply
 
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.__icx_engine.get_total_supply()
+        return self._icx_engine.get_total_supply()
 
-    def __handle_icx_call(self, params: dict) -> object:
+    def _handle_icx_call(self, params: dict) -> object:
         """Handles an icx_call jsonrpc request
         :param params:
         :return:
@@ -141,31 +141,29 @@ class IconServiceEngine(object):
         context = self.__get_context(params)
         calldata = params['data']
 
-        return self.__icon_score_engine.call(context, calldata)
+        # return self.__icon_score_engine.call(context, calldata)
 
-    def __handle_icx_sendTransaction(self, params: dict) -> bool:
+    def _handle_icx_sendTransaction(self,
+                                    params: dict,
+                                    context: IconScoreContext=None) -> object:
         """Handles an icx_sendTransaction jsonrpc request
 
+        * EOA to EOA
+        * EOA to Score
+
         :param params: jsonrpc params
-        :return: True(success) False(Failure)
+        :return: undefined
         """
-        to = params['to']
-        fee = params['fee']
-        context = self.__get_context(params)
-        calldata = params['data']
+        _from: Address = params['from']
+        _to: Address = params['to']
+        _value: int = params['value']
+        _fee: int = params['fee']
 
-        return self.__icx_engine.transfer(
-            _from=context.tx.origin,
-            _to=to,
-            _amount=context.msg.value,
-            _fee=fee)
-
-    def __get_db(self, icon_score_address: Address) -> PlyvelDatabase:
-        """
-        """
-        db = self.__icon_score_mapper
-
-        return self.__db_factory.create(icon_score_address)
+        return self._icx_engine.transfer(
+            _from=_from,
+            _to=_to,
+            _amount=_value,
+            _fee=_fee)
 
     def __get_context(self, params: dict) -> IconScoreContext:
         _from = params['from']
@@ -175,7 +173,6 @@ class IconServiceEngine(object):
 
         tx = Transaction(tx_hash=tx_hash, origin=_from)
         msg = Message(sender=_from, value=value)
-        db = self.__get_db(to)
-        context = IconScoreContext(tx=tx, msg=msg, db=db)
+        context = IconScoreContext(tx=tx, msg=msg)
 
         return context

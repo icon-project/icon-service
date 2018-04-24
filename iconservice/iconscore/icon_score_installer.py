@@ -70,7 +70,7 @@ class IconScoreInstaller(object):
                 IconScoreInstaller._extract_files(file_name_list, install_path, zip_file)
                 return zip_root_name
 
-            IconScoreInstaller._extract_files(file_name_list, install_path+'/temp', zip_file)
+            IconScoreInstaller._extract_files(file_name_list, install_path + '/temp', zip_file)
             return 'temp'
 
         except FileNotFoundError:

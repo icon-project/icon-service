@@ -36,20 +36,12 @@ class IconScoreContext(object):
         self.__score_address = score_address
         self.__db = db
         self.__icx_engine = icx_engine
-        self.__tx = tx
-        self.__msg = msg
+        self.tx = tx
+        self.msg = msg
 
     @property
     def db(self):
         return self.__db
-
-    @property
-    def msg(self) -> Message:
-        return self.__msg
-
-    @property
-    def tx(self) -> Transaction:
-        return self.__tx
 
     def gasleft(self) -> int:
         """Returns the amount of gas left
