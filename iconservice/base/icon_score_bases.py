@@ -24,20 +24,27 @@ from .message import Message
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
-
+CONST_CLASS_PAYABLES = '__payables'
+CONST_PAYABLE_FLAG = '__payable_flag'
 
 # score decorator는 반드시 최종 클래스에만 붙어야 한다.
 # 상속 불가
 # 클래스를 한번 감싸서 진행하는 것이기 때문에, 데코레이터 상속이 되버리면 미정의 동작이 발생
 # TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
 
+
 def score(cls):
     setattr(cls, CONST_CLASS_EXTERNALS, dict())
+    setattr(cls, CONST_CLASS_PAYABLES, dict())
 
     for c in inspect.getmro(cls):
         custom_funcs = [value for key, value in inspect.getmembers(c, predicate=inspect.isfunction) if not key.startswith('__')]
         external_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
-        getattr(cls, CONST_CLASS_EXTERNALS).update(external_funcs)
+        payable_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
+        if external_funcs:
+            getattr(cls, CONST_CLASS_EXTERNALS).update(external_funcs)
+        if payable_funcs:
+            getattr(cls, CONST_CLASS_PAYABLES).update(payable_funcs)
 
     @wraps(cls)
     def __wrapper(*args, **kwargs):
@@ -46,45 +53,36 @@ def score(cls):
     return __wrapper
 
 
-def external(func):
-    cls_name, func_name = str(func.__qualname__).split('.')
+def external(readonly=False):
+    def __inner_func(func):
+        cls_name, func_name = str(func.__qualname__).split('.')
+        if not inspect.isfunction(func):
+            raise ExternalException("isn't function", func, cls_name)
+        setattr(func, CONST_EXTERNAL_FLAG, int(readonly))
 
-    if not inspect.isfunction(func):
-        raise ExternalException("isn't function", func, cls_name)
-
-    setattr(func, CONST_EXTERNAL_FLAG, 0)
-
-    @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
-
-        if not (isinstance(calling_obj, IconScoreBase)):
-            raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
-
-        res = func(calling_obj, *args, **kwargs)
-        return res
-
-    return __wrapper
+        @wraps(func)
+        def __wrapper(calling_obj: object, *args, **kwargs):
+            if not (isinstance(calling_obj, IconScoreBase)):
+                raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
+            res = func(calling_obj, *args, **kwargs)
+            return res
+        return __wrapper
+    return __inner_func
 
 
 def payable(func):
     cls_name, func_name = str(func.__qualname__).split('.')
-
     if not inspect.isfunction(func):
         raise PayableException("isn't function", func, cls_name)
+    setattr(func, CONST_PAYABLE_FLAG, 0)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
 
         if not (isinstance(calling_obj, IconScoreBase)):
             raise PayableException('is Not derived of ContractBase', func_name, cls_name)
-
-        # 0 it's ok
-        # if not context.msg.value > 0:
-        #     raise PayableException('have to context.value > 0', func_name, cls_name)
-
         res = func(calling_obj, *args, **kwargs)
         return res
-
     return __wrapper
 
 
@@ -110,7 +108,7 @@ class IconScoreBase(IconScoreObject):
         super().genesis_init(*args, **kwargs)
 
     @abc.abstractmethod
-    def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
+    def __init__(self, db: DB, *args, **kwargs) -> None:
         super().__init__(db, *args, **kwargs)
         self.__context = None
 
@@ -120,15 +118,23 @@ class IconScoreBase(IconScoreObject):
 
     @classmethod
     def get_api(cls) -> dict:
-        if not hasattr(cls, CONST_CLASS_EXTERNALS):
-            return dict()
+        return cls.__get_attr_dict(CONST_CLASS_EXTERNALS)
 
-        return dict(getattr(cls, CONST_CLASS_EXTERNALS))
+    @classmethod
+    def __get_attr_dict(cls, attr: str) -> dict:
+        if not hasattr(cls, attr):
+            return dict()
+        return dict(getattr(cls, attr))
 
     def call_method(self, func_name: str, *args, **kwargs):
 
         if func_name not in self.get_api():
             raise ExternalException(f"can't call", func_name, type(self).__name__)
+
+        if self.msg.value > 0:
+            payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
+            if func_name not in payable_dict:
+                raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
 
         score_func = getattr(self, func_name)
         return score_func(*args, **kwargs)
