@@ -15,19 +15,24 @@
 # limitations under the License.
 
 import plyvel
+from iconservice.base.icon_score_bases import IconScoreDatabase
 
 
-class PlyvelDatabase(object):
+class PlyvelDatabase(IconScoreDatabase):
     """Plyvel database wrapper
     """
 
-    def __init__(self, path: str, create_if_missing: bool=True) -> None:
+    @staticmethod
+    def make_db(path: str, create_if_missing: bool=True) -> plyvel.DB:
+        return plyvel.DB(path, create_if_missing=create_if_missing)
+
+    def __init__(self, db: plyvel.DB) -> None:
         """Constructor
 
         :param path: db directory path
         :param create_if_missing: if not exist, create db in path
         """
-        self.__db = plyvel.DB(path, create_if_missing=create_if_missing)
+        self.__db = db
 
     def get(self, key: bytes) -> bytes:
         """Get value from db using key
@@ -41,7 +46,7 @@ class PlyvelDatabase(object):
         """Put value into db using key.
 
         :param key: (bytes): db key
-            value(bytes): db에 저장할 데이터
+        :param value: (bytes): db에 저장할 데이터
         """
         self.__db.put(key, value)
 
@@ -58,3 +63,14 @@ class PlyvelDatabase(object):
         if self.__db:
             self.__db.close()
             self.__db = None
+
+    def get_sub_db(self, key: bytes) -> IconScoreDatabase:
+        """Get Prefixed db
+
+        :param key: (bytes): prefixed_db key
+        """
+
+        return PlyvelDatabase(self.__db.prefixed_db(key))
+
+    def iterator(self) -> iter:
+        return self.__db.iterator()
