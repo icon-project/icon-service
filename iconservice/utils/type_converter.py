@@ -79,25 +79,3 @@ class TypeConverter(object):
                 return value.encode('utf-8')
         except KeyError:
             return value
-
-    @staticmethod
-    def _convert_into_str_array(str_array: str) -> list:
-        """Used inside convert_value function. This function will remove quotes, double quotes and space from the string.
-
-        :param str_array:
-        :return:
-        """
-        string_array = str_array[1:-1]
-        return string_array.replace('"', '').replace("'", '').replace(' ', '').split(",")
-
-    @staticmethod
-    def string_to_bool(str_bool: str) -> bool:
-        """Convert str_bool to bool value. This function will returns False When argument is 'False'
-
-        :param str_bool: ex) 'True', 'False'
-        :return:
-        """
-        if bool(str_bool) is False or str_bool == "False":
-            return False
-        return True
-
