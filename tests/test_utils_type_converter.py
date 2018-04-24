@@ -17,8 +17,8 @@
 
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix
-from iconservice.utils.type_converter import TypeConverter
+from icon.iconservice.base.address import Address, AddressPrefix
+from icon.iconservice.utils.type_converter import TypeConverter
 
 
 class TestTypeConverter(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestTypeConverter(unittest.TestCase):
         _str_array1 = ["asdf", 'qwer', 'qwer', 'zxcv']
         _unknown = "asdf"
         converter = TypeConverter(type_table)
-        _data = b'1234'
+        _data = bytes.fromhex("0x1232"[2:])
 
         params = {
             "from": str(_from),
@@ -62,7 +62,7 @@ class TestTypeConverter(unittest.TestCase):
             "str_array1": _str_array1,
             "data": {
                 "value": "0x1234",
-                "data": _data.decode('utf-8')
+                "data": "0x1232"
             },
             "unknown": _unknown
         }
