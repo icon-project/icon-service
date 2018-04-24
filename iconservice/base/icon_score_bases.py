@@ -74,6 +74,10 @@ def payable(func):
     cls_name, func_name = str(func.__qualname__).split('.')
     if not inspect.isfunction(func):
         raise PayableException("isn't function", func, cls_name)
+
+    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_PAYABLE_FLAG) > 0:
+            raise PayableException("have to non readonly", func, cls_name)
+
     setattr(func, CONST_PAYABLE_FLAG, 0)
 
     @wraps(func)
@@ -124,7 +128,7 @@ class IconScoreBase(IconScoreObject):
     def __get_attr_dict(cls, attr: str) -> dict:
         if not hasattr(cls, attr):
             return dict()
-        return dict(getattr(cls, attr))
+        return getattr(cls, attr)
 
     def call_method(self, func_name: str, *args, **kwargs):
 
