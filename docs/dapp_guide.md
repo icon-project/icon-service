@@ -26,11 +26,11 @@ class SampleToken(IconScoreBase):
         self._total_supply.set(total_supply)
         self._balances[self.msg.sender] = total_supply
 
-    @external
+    @external(readonly=True)
     def total_supply(self) -> int:
         return int(self._total_supply.get())
 
-    @external
+    @external(readonly=True)
     def balance_of(self, addr_from: Address) -> int:
         var = self._balances[addr_from]
         if var is None:
@@ -46,7 +46,7 @@ class SampleToken(IconScoreBase):
         self._balances[_addr_to] = _value
         return True
 
-    @external
+    @external()
     def transfer(self, addr_to: Address, value: int) -> bool:
         return self._transfer(self.msg.sender, addr_to, value)
 
@@ -125,6 +125,8 @@ print(test_dict2['key1']['key2']) ## get 'a'
 다음 데코레이터가 붙은 함수들만 외부에서 호출이 가능합니다.<br/>
 즉 API(Application Python Interface)에 등록되는 함수는 해당 데코레이터가 붙은 함수만 등록됩니다.<br/>
 external 데코레이터가 없는 함수를 호출하면 해당 call은 실패합니다.<br/>
+external(readonly=True) 라면 이 함수는 읽기전용 db만 접근 가능합니다. 솔리티디상에서는 view의 의미입니다. <br/>
+만약 payable이 없는 함수인데 msg.value값이 있다면 해당 call은 실패합니다.<br/>
 
 #### payable 데코레이터(@payable)
 다음 데코레이터가 붙은 함수들만 icx 코인 거래가 가능합니다.<br/>
