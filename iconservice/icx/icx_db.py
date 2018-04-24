@@ -15,10 +15,9 @@
 # limitations under the License.
 
 import plyvel
-from iconservice.base.icon_score_bases import IconScoreDatabase
 
 
-class PlyvelDatabase(IconScoreDatabase):
+class PlyvelDatabase():
     """Plyvel database wrapper
     """
 
@@ -63,14 +62,3 @@ class PlyvelDatabase(IconScoreDatabase):
         if self.__db:
             self.__db.close()
             self.__db = None
-
-    def get_sub_db(self, key: bytes) -> IconScoreDatabase:
-        """Get Prefixed db
-
-        :param key: (bytes): prefixed_db key
-        """
-
-        return PlyvelDatabase(self.__db.prefixed_db(key))
-
-    def iterator(self) -> iter:
-        return self.__db.iterator()

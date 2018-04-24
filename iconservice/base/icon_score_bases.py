@@ -18,6 +18,7 @@ import inspect
 import abc
 from functools import wraps
 from ..iconscore.icon_score_context import IconScoreContext
+from ..database.db import IconServiceDatabase
 from .exception import ExternalException, PayableException
 from .message import Message
 
@@ -87,33 +88,6 @@ def payable(func):
     return __wrapper
 
 
-class IconScoreDatabase(abc.ABC):
-
-    @abc.abstractmethod
-    def get(self, key: bytes):
-        pass
-
-    @abc.abstractmethod
-    def put(self, key: bytes, value: bytes):
-        pass
-
-    @abc.abstractmethod
-    def delete(self, key: bytes):
-        pass
-
-    @abc.abstractmethod
-    def close(self):
-        pass
-
-    @abc.abstractmethod
-    def get_sub_db(self, key: bytes):
-        pass
-
-    @abc.abstractmethod
-    def iterator(self):
-        pass
-
-
 class IconScoreObject(abc.ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
@@ -136,7 +110,7 @@ class IconScoreBase(IconScoreObject):
         super().genesis_init(*args, **kwargs)
 
     @abc.abstractmethod
-    def __init__(self, db: IconScoreDatabase, *args, **kwargs) -> None:
+    def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
         super().__init__(db, *args, **kwargs)
         self.__context = None
 
