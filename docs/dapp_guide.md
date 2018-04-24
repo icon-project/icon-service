@@ -109,7 +109,7 @@ print(name) ##'theloop'
 ##### ContainerForDB('DB에 접근할 key' '접근할 db', '컨테이너의 키에 대한 뎁스', '반환될 type')으로 사용가능합니다.<br/>
 예시1) 상태DB에 파이썬 dict의 형식을 사용하고 싶다. test_dict1['key'] <br/>
 ```python
-test_dict1 = ContainerForDB('test_dict1', db, limit_depth=1, value_type=int) <br/>
+test_dict1 = ContainerForDB('test_dict1', db, limit_depth=1, value_type=int)
 test_dict1['key'] = 1 ## set
 print(test_dict1['key']) ## get 1
 ```
