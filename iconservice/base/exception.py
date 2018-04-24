@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import traceback
 from enum import IntEnum, unique
 from functools import wraps
@@ -48,11 +49,11 @@ class ExceptionCode(IntEnum):
 class IconServiceBaseException(BaseException):
 
     def __init__(self, message: str):
-        self._message = message
+        self.__message = message
 
     @property
     def message(self):
-        return self._message
+        return self.__message
 
 
 class IcxException(IconServiceBaseException):
@@ -63,30 +64,30 @@ class IcxException(IconServiceBaseException):
         if message is None or message == '':
             message = str(code)
 
-        super(IcxException, self).__init__(message)
-        self._code = code
+        super().__init__(message)
+        self.__code = code
 
     @property
     def code(self):
-        return self._code
+        return self.__code
 
     def __str__(self):
         return f'msg: {self.message} code: {self.code}'
 
 
-class ScoreBaseException(IconServiceBaseException):
+class IconScoreBaseException(IconServiceBaseException):
     def __init__(self, message: str, func_name: str, cls_name: str) -> None:
-        super(ScoreBaseException, self).__init__(message)
-        self._func_name = func_name
-        self._cls_name = cls_name
+        super().__init__(message)
+        self.__func_name = func_name
+        self.__cls_name = cls_name
 
     @property
     def func_name(self):
-        return self._func_name
+        return self.__func_name
 
     @property
     def cls_name(self):
-        return self._cls_name
+        return self.__cls_name
 
     def __str__(self):
         return f'msg: {self.message} func: {self.func_name} cls: {self.cls_name}'
@@ -99,7 +100,7 @@ def check_exception(func):
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ScoreBaseException:
+        except IconScoreBaseException:
             log_call_stack = traceback.format_stack()
             log_exec = traceback.format_exc()
             # TODO replace log function
@@ -121,10 +122,10 @@ def check_exception(func):
     return _wrapper
 
 
-class ExternalException(ScoreBaseException):
+class ExternalException(IconScoreBaseException):
     pass
 
 
-class PayableException(ScoreBaseException):
+class PayableException(IconScoreBaseException):
     pass
 
