@@ -122,9 +122,9 @@ print(test_dict2['key1']['key2']) ## get 'a'
 
 #### external 데코레이터(@external)
 이 데코레이터가 붙은 함수들만 외부에서 호출이 가능합니다.<br/>
-즉 API에 등록되는 함수는 해당 데코레이터가 붙은 함수만 등록됩니다.<br/>
+즉 외부에서 호출 가능한 API에는 이 데코레이터가 붙은 함수들만 등록됩니다.<br/>
 external 데코레이터가 없는 함수를 호출하면 해당 call은 실패합니다.<br/>
-external(readonly=True) 라면 이 함수는 읽기전용 db만 접근 가능합니다. solidity의 view 키워드 의미와 같습니다. <br/>
+external(readonly=True) 라면 이 함수는 읽기전용 db만 접근 가능합니다. Solidity의 view 키워드 의미와 같습니다. <br/>
 만약 payable이 없는 함수인데 msg.value 값이 있다면 해당 call은 실패합니다.<br/>
 만약 payable이 있는 상태이나 external(readonly=True) 라면 해당 call은 실패합니다.<br/>
 
@@ -138,4 +138,3 @@ external(readonly=True) 라면 이 함수는 읽기전용 db만 접근 가능합
 이 함수가 구현되지 않는다면 해당 계약서는 icx가 전송되면 실패가 됩니다.
 
 이 함수에는 external 데코레이터를 붙일 수 없습니다.<br/>
-외부에서 call하는 것을 막고 싶다면 payable만 붙여주시면 됩니다.<br/>
