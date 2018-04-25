@@ -79,7 +79,7 @@ def payable(func):
     if not inspect.isfunction(func):
         raise PayableException("isn't function", func, cls_name)
 
-    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_PAYABLE_FLAG) > 0:
+    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_EXTERNAL_FLAG) > 0:
             raise PayableException("have to non readonly", func, cls_name)
 
     setattr(func, CONST_PAYABLE_FLAG, 0)
@@ -139,8 +139,7 @@ class IconScoreBase(IconScoreObject):
         if func_name not in self.get_api():
             raise ExternalException(f"can't external call", func_name, type(self).__name__)
 
-        payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
-        self.__check_payable(func_name, payable_dict)
+        self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
         score_func = getattr(self, func_name)
         return score_func(*args, **kwargs)
@@ -157,8 +156,6 @@ class IconScoreBase(IconScoreObject):
         if func_name not in payable_dict:
             if self.msg.value > 0:
                 raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
-        elif getattr(payable_dict[func_name], CONST_EXTERNAL_FLAG) > 0:
-                raise PayableException(f"can't locate readonly external", func_name, type(self).__name__)
 
     def set_context(self, context: IconScoreContext) -> None:
         self.__context = context
