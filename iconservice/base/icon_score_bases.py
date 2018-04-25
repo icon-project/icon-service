@@ -17,10 +17,10 @@
 import inspect
 import abc
 from functools import wraps
-from ..iconscore.icon_score_context import IconScoreContext
-from ..database.db import IconServiceDatabase
-from .exception import ExternalException, PayableException
-from .message import Message
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.database.db import IconServiceDatabase
+from iconservice.base.exception import ExternalException, PayableException
+from iconservice.base.message import Message
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
@@ -112,7 +112,7 @@ class IconScoreBase(IconScoreObject):
         super().genesis_init(*args, **kwargs)
 
     @abc.abstractmethod
-    def __init__(self, db: DB, *args, **kwargs) -> None:
+    def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
         super().__init__(db, *args, **kwargs)
         self.__context = None
 
@@ -133,12 +133,15 @@ class IconScoreBase(IconScoreObject):
     def call_method(self, func_name: str, *args, **kwargs):
 
         if func_name not in self.get_api():
-            raise ExternalException(f"can't call", func_name, type(self).__name__)
+            raise ExternalException(f"can't external call", func_name, type(self).__name__)
 
-        if self.msg.value > 0:
-            payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
-            if func_name not in payable_dict:
+        payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
+        if func_name not in payable_dict:
+            if self.msg.value > 0:
                 raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
+        else:
+            if getattr(payable_dict[func_name], CONST_EXTERNAL_FLAG) > 0:
+                raise PayableException(f"can't locate readonly external", func_name, type(self).__name__)
 
         score_func = getattr(self, func_name)
         return score_func(*args, **kwargs)
