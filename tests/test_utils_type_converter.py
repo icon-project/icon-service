@@ -14,10 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import unittest
 
-from icon.iconservice.base.address import Address, AddressPrefix
 from icon.iconservice.utils.type_converter import TypeConverter
 
 
