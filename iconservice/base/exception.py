@@ -76,6 +76,11 @@ class IcxException(IconServiceBaseException):
 
 
 class IconScoreBaseException(IconServiceBaseException):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class IconScoreException(IconScoreBaseException):
     def __init__(self, message: str, func_name: str, cls_name: str) -> None:
         super().__init__(message)
         self.__func_name = func_name
@@ -100,6 +105,8 @@ def check_exception(func):
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except IconScoreException:
+            pass
         except IconScoreBaseException:
             log_call_stack = traceback.format_stack()
             log_exec = traceback.format_exc()
@@ -122,10 +129,10 @@ def check_exception(func):
     return _wrapper
 
 
-class ExternalException(IconScoreBaseException):
+class ExternalException(IconScoreException):
     pass
 
 
-class PayableException(IconScoreBaseException):
+class PayableException(IconScoreException):
     pass
 
