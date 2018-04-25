@@ -25,7 +25,7 @@ from .database.factory import DatabaseFactory
 from .icx.icx_engine import IcxEngine
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
-from .utils import trace
+from .iconscore.icon_score_context import IconScoreContextFactory
 
 
 class IconServiceEngine(object):
@@ -49,13 +49,6 @@ class IconServiceEngine(object):
             'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
-        # data_type handlers
-        # self.__data_type_handlers = {
-        #     'install': self.__install_icon_score,
-        #     'update': self.__update_icon_score,
-        #     'call': self.__call_icon_score
-        # }
-
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
@@ -67,6 +60,8 @@ class IconServiceEngine(object):
             os.mkdir(state_db_root_path)
 
         self._db_factory = DatabaseFactory(state_db_root_path)
+        self._context_factory = IconScoreContextFactory(max_size=5)
+
         self._init_icx_engine(self._db_factory)
         self._init_icon_score_mapper(state_db_root_path)
 
@@ -92,8 +87,7 @@ class IconServiceEngine(object):
 
     def call(self,
              method: str,
-             params: dict,
-             context: IconScoreContext=None) -> object:
+             params: dict) -> object:
         """Call invoke and query requests in jsonrpc format
 
         This method is designed to be called in icon_outer_service.py.
@@ -159,20 +153,14 @@ class IconServiceEngine(object):
         _value: int = params['value']
         _fee: int = params['fee']
 
-        return self._icx_engine.transfer(
-            _from=_from,
-            _to=_to,
-            _amount=_value,
-            _fee=_fee)
-
-    def __get_context(self, params: dict) -> IconScoreContext:
+    def _get_context(self, params: dict) -> IconScoreContext:
         _from = params['from']
         to = params['to']
         tx_hash = params['tx_hash']
         value = params.get('value', 0)
 
-        tx = Transaction(tx_hash=tx_hash, origin=_from)
-        msg = Message(sender=_from, value=value)
-        context = IconScoreContext(tx=tx, msg=msg)
+        context = self._context_factory.create()
+        context.tx = Transaction(tx_hash=tx_hash, origin=_from)
+        context.msg = Message(sender=_from, value=value)
 
         return context

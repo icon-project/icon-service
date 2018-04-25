@@ -21,6 +21,7 @@ from ..iconscore.icon_score_context import IconScoreContext
 from ..database.db import IconServiceDatabase
 from .exception import ExternalException, PayableException
 from .message import Message
+from .transaction import Transaction
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
@@ -149,3 +150,7 @@ class IconScoreBase(IconScoreObject):
     @property
     def msg(self) -> Message:
         return self.__context.msg
+
+    @property
+    def tx(self) -> Transaction:
+        return self.__context.tx

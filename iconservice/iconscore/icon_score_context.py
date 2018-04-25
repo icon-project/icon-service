@@ -15,6 +15,8 @@
 # limitations under the License.
 
 
+from threading import Lock
+
 from ..base.address import Address
 from ..base.message import Message
 from ..base.transaction import Transaction
@@ -26,16 +28,23 @@ class IconScoreContext(object):
     """
 
     def __init__(self,
+                 readonly: bool=False,
                  score_address: Address=None,
                  icx_engine: IcxEngine=None,
                  tx: Transaction=None,
                  msg: Message=None,
                  db=None) -> None:
         """Constructor
+
+        :param readonly: whether state change is possible or not
+        :param icx_engine:
+        :param tx: initial transaction info
+        :param msg: message call info
         """
+        self.readonly = readonly
         self.__score_address = score_address
         self.__db = db
-        self.__icx_engine = icx_engine
+        self._icx_engine = icx_engine
         self.tx = tx
         self.msg = msg
 
@@ -59,7 +68,7 @@ class IconScoreContext(object):
 
         :return: the icx amount of balance
         """
-        return self.__icx_engine.get_balance(address)
+        return self._icx_engine.get_balance(address)
 
     def address(self) -> Address:
         """The address of the current icon score
@@ -76,7 +85,7 @@ class IconScoreContext(object):
         :param to: recipient address
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        self.__icx_engine._transfer(self.address, to, amount)
+        self._icx_engine._transfer(self.address, to, amount)
 
     def send(self, to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -86,7 +95,7 @@ class IconScoreContext(object):
         :return: True(success), False(failure)
         """
         try:
-            return self.__icx_engine._transfer(self.address, to, amount)
+            return self._icx_engine._transfer(self.address, to, amount)
         except:
             pass
 
@@ -111,3 +120,26 @@ class IconScoreContext(object):
 
         :param message: error log message
         """
+
+    def clear(self) -> None:
+        pass
+
+
+class IconScoreContextFactory(object):
+    def __init__(self, max_size: int) -> None:
+        self._lock = Lock()
+        self._queue = []
+        self._max_size = max_size
+
+    def create(self) -> IconScoreContext:
+        with self._lock:
+            if len(self._queue) > 0:
+                return self._queue.pop()
+
+        return IconScoreContext()
+
+    def destroy(self, context: IconScoreContext) -> None:
+        with self._lock:
+            if len(self._queue) < self._max_size:
+                context.clear()
+                self._queue.append(context)

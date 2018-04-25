@@ -17,12 +17,13 @@
 
 from ..base.address import Address, AddressPrefix
 from ..database.factory import DatabaseFactory
+from .icon_score_base import IconScoreBase
 
 
 class IconScoreInfo(object):
     """Contains information on one icon score
     """
-    __db_factory = None
+    _db_factory = None
 
     def __init__(self,
                  icon_score: object,
@@ -38,38 +39,11 @@ class IconScoreInfo(object):
         :param icon_score_address: contract address
         :param db: state db for an icon score
         """
-        self.__icon_score = icon_score
-        self.__icon_score_address = icon_score_address
-        self.__owner = owner
-        self.__db = db
-
-    @property
-    def icon_score_address(self) -> Address:
-        """Icon score address
-        """
-        return self.__icon_score_address
-
-    @property
-    def icon_score(self) -> object:
-        """Icon score object
-        """
-        return self.__icon_score
-
-    @property
-    def owner(self) -> Address:
-        """The address of user who creates a tx for installing this icon_score
-        """
-        return self.__owner
-
-    @property
-    def db(self) -> object:
-        """State db for icon score
-        """
-        if self.__db is None or self.__db.closed:
-            self.__db = self.__db_factory.create_by_address(
-                self.__icon_score_address)
-
-        return self.__db
+        self._icon_score = None
+        self._readonly_icon_score = None
+        self._icon_score_address = icon_score_address
+        self._owner = owner
+        self._db = db
 
     @classmethod
     def set_db_factory(cls, db_factory: DatabaseFactory) -> None:
@@ -77,7 +51,39 @@ class IconScoreInfo(object):
 
         :param db_factory: state_db creator
         """
-        cls.__db_factory = db_factory
+        cls._db_factory = db_factory
+
+    @property
+    def icon_score_address(self) -> Address:
+        """Icon score address
+        """
+        return self._icon_score_address
+
+    def get_icon_score(self, readonly) -> IconScoreBase:
+        """Returns IconScoreBase object
+
+        If IconScoreBase object is None, Create it here.
+        """
+        if readonly:
+            return self._readonly_icon_score
+        else:
+            return self._icon_score
+
+    @property
+    def owner(self) -> Address:
+        """The address of user who creates a tx for installing this icon_score
+        """
+        return self._owner
+
+    @property
+    def db(self) -> object:
+        """State db for icon score
+        """
+        if self._db is None or self._db.closed:
+            self._db = self._db_factory.create_by_address(
+                self._icon_score_address)
+
+        return self._db
 
 
 class IconScoreInfoMapper(dict):
