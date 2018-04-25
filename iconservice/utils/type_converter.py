@@ -60,13 +60,13 @@ class TypeConverter(object):
         try:
             value_type = self.param_type_table[key]
             if value_type == TypeConverter.CONST_INT:
-                return int(value, 0)
+                return int(str(value), 0)
             elif value_type == TypeConverter.CONST_STRING:
                 return value
             elif value_type == TypeConverter.CONST_BOOL:
                 return value == "True" or value is True
             elif value_type == TypeConverter.CONST_ADDRESS:
-                return Address(value[:2], bytes.fromhex(value[2:]))
+                return Address.from_string(value)
             elif value_type == TypeConverter.CONST_INT_ARRAY:
                 return value
             elif value_type == TypeConverter.CONST_BOOL_ARRAY:
@@ -74,9 +74,8 @@ class TypeConverter(object):
             elif value_type == TypeConverter.CONST_STRING_ARRAY:
                 return value
             elif value_type == TypeConverter.CONST_ADDRESS_ARRAY:
-                return [Address(a[:2], bytes.fromhex(a[2:])) for a in value]
+                return [Address.from_string(a) for a in value]
             elif value_type == TypeConverter.CONST_BYTES:
                 return bytes.fromhex(value[2:])
-
         except KeyError:
             return value
