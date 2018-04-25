@@ -39,6 +39,11 @@ class CallClass(IconScoreBase):
     def func6(self):
         pass
 
+    # @external()
+    @payable
+    def fallback(self):
+        pass
+
 
 class TestCallMethod(unittest.TestCase):
 
@@ -68,6 +73,12 @@ class TestCallMethod(unittest.TestCase):
         self.ins.set_context(self.test_context)
         self.assertRaises(PayableException, self.ins.call_method, 'func1')
         self.assertRaises(PayableException, self.ins.call_method, 'func2')
+        self.assertRaises(PayableException, self.ins.call_method, 'func3')
+        # self.assertRaises(PayableException, self.ins.call_method, 'func4')
+        self.assertRaises(ExternalException, self.ins.call_method, 'func5')
+        self.assertRaises(ExternalException, self.ins.call_method, 'func6')
+
+        self.ins.set_context(self.empty_context)
         self.assertRaises(PayableException, self.ins.call_method, 'func3')
         # self.assertRaises(PayableException, self.ins.call_method, 'func4')
         self.assertRaises(ExternalException, self.ins.call_method, 'func5')
