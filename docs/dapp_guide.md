@@ -51,7 +51,7 @@ class SampleToken(IconScoreBase):
         return self._transfer(self.msg.sender, addr_to, value)
 
     @payable
-    def icx_fallback(self) -> None:
+    def fallback(self) -> None:
         pass
 ```
 
@@ -133,8 +133,8 @@ external(readonly=True) 라면 이 함수는 읽기전용 db만 접근 가능합
 0이 들어와도 문제가 없습니다. <br/>
 
 #### fallback
-이 함수는 해당 계약서에 icx 코인이 전송이 되었을 때 호출되는 함수입니다.<br/>
-주로 관련 거래에 대한 로그를 출력하기 위하여 작성합니다.<br/>
-이 함수가 구현되지 않는다면 해당 계약서는 icx가 전송되면 실패가 됩니다.
-
-이 함수에는 external 데코레이터를 붙일 수 없습니다.<br/>
+만약 잘못된 함수를 call 한다고 하면 해당 fallback 함수가 호출됩니다.<br/>
+데이터 없이 순수한 icx코인만 해당 계약서에 이체가 되었다면 해당 fallback 함수가 호출됩니다.<br/>
+fallback 함수는 external을 사용할 수 없습니다.(외부 계약서 및, 유저가 호출 불가)<br/>
+만약 icx가 이체가 되었는데, payable을 붙이지 않은 기본 fallback 함수가 호출되었다면<br/>
+payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
