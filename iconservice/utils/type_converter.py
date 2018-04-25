@@ -77,5 +77,6 @@ class TypeConverter(object):
                 return [Address(a[:2], bytes.fromhex(a[2:])) for a in value]
             elif value_type == TypeConverter.CONST_BYTES:
                 return bytes.fromhex(value[2:])
+
         except KeyError:
             return value
