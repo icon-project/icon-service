@@ -34,14 +34,22 @@ class IconScoreInstaller(object):
     def __init__(self, icon_score_root_path: str) -> None:
         self.icon_score_root_path = icon_score_root_path
 
-    def install(self, address: Address, data: bytes) -> None:
+    def install(self, address: Address, data: bytes, block_height: int, transaction_index: int) -> None:
         """Install score.
 
         :param address: contract address
         :param data: The byte value of the zip file.
+        :param block_height:
+        :param transaction_index:
         :return:
         """
-        install_path = os.path.join(self.icon_score_root_path, str(address))
+        str_block_height = str(block_height)
+        str_transaction_index = str(transaction_index)
+        str_address = str(address)
+        score_id = str_block_height + "_" + str_transaction_index
+        install_path = os.path.join(self.icon_score_root_path, str_address, score_id)
+        if not os.path.exists(str_address):
+            os.makedirs(str_address)
         zip_path = IconScoreInstaller.write_zipfile_with_bytes(install_path, data)
         zip_root_directory_name = IconScoreInstaller.extract_files(self.icon_score_root_path, zip_path)
 
@@ -143,3 +151,13 @@ class IconScoreInstaller(object):
         with open(archive_path, 'rb') as f:
             byte_data = f.read()
         return byte_data
+
+
+def main():
+    installer = IconScoreInstaller('./')
+    address = Address.from_string("hx1234123412341234213412341234123412342134")
+    installer.install(address, IconScoreInstaller.read_zipfile_as_byte('mock.zip'), 1234, 19)
+
+
+if __name__ == "__main__":
+    main()
