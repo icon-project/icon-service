@@ -56,6 +56,10 @@ class IconServiceBaseException(BaseException):
         return self.__message
 
 
+class DatabaseException(IconServiceBaseException):
+    pass
+
+
 class IcxException(IconServiceBaseException):
     """Defines Icx Errors
     """
@@ -128,4 +132,5 @@ class ExternalException(IconScoreBaseException):
 
 class PayableException(IconScoreBaseException):
     pass
+
 
