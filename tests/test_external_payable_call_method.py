@@ -1,6 +1,6 @@
 import unittest
 from iconservice.iconscore.icon_score_base import IconScoreBase, score, external, payable
-# from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContext, Message
 from iconservice.base.exception import ExternalException, PayableException
 
@@ -49,10 +49,8 @@ class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
         self.ins = CallClass(None)
-        # self.test_context = IconScoreContext(Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
-        # self.empty_context = IconScoreContext(Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
-        self.test_context = IconScoreContext(msg=Message('test1', 1))
-        self.empty_context = IconScoreContext(msg=Message('test2', 0))
+        self.test_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
+        self.empty_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
         pass
 
     def tearDown(self):

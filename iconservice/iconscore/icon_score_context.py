@@ -29,7 +29,6 @@ class IconScoreContext(object):
 
     def __init__(self,
                  readonly: bool = False,
-                 score_address: Address = None,
                  icx_engine: IcxEngine = None,
                  tx: Transaction = None,
                  msg: Message = None) -> None:
@@ -43,17 +42,8 @@ class IconScoreContext(object):
         self.readonly = readonly
         self.tx = tx
         self.msg = msg
-        self.__score_address = score_address
         self.__icx_engine = icx_engine
         self.__score_mapper = IconScoreInfoMapper()
-
-    @property
-    def address(self) -> Address:
-        """The address of the current icon score
-
-        :return: the address of context owner
-        """
-        return self.__score_address
 
     def gasleft(self) -> int:
         """Returns the amount of gas left
@@ -81,7 +71,7 @@ class IconScoreContext(object):
         :param to: recipient address
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.__icx_engine.transfer(self.address, to, amount)
+        return self.__icx_engine.transfer(self.msg.sender, to, amount)
 
     def send(self, to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -91,7 +81,7 @@ class IconScoreContext(object):
         :return: True(success), False(failure)
         """
         try:
-            return self.__icx_engine.transfer(self.address, to, amount)
+            return self.__icx_engine.transfer(self.msg.sender, to, amount)
         except:
             pass
 
@@ -107,7 +97,7 @@ class IconScoreContext(object):
         :return:
         """
 
-        call_method(addr_from=self.address, addr_to=addr_to, score_mapper=self.__score_mapper,
+        call_method(addr_from=self.msg.sender, addr_to=addr_to, score_mapper=self.__score_mapper,
                     readonly=self.readonly, func_name=func_name, *args, **kwargs)
 
     def selfdestruct(self, recipient: Address) -> None:
