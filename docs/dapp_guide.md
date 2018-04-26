@@ -93,19 +93,16 @@ super().__init__()
 계약서가 최초 배포되었을 때 상태 DB에 write할 내용을 구현합니다.<br/>
 이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 update, delete 시에는 호출되지 않습니다.<br/>
 
-#### VarDB, ListDB, DictDB
+#### VarDB, DictDB
 해당 클래스는 상태 DB에 관련한 값을 좀 더 편리하게 사용하게 하는 유틸리티 클래스입니다.<br/>
-키 값은 숫자, 문자 모두 가능하며, 반환될 type은 integer(정수), str(문자), Address(주소 객체)만 가능합니다. <br/>
-파이썬의 컨테이너(List, Dict, etc..)와 비슷하게 동작할수 있게 구현된 ContainerDB가 기본으로 제공이 되며,<br/>
-유저의 편의를 위하여 ContainerDB를 한번 더 wrapping하여 구현된 ListDB와 DictDB도 함께 제공됩니다.<br/>
-따라서 wrapping한 클래스(ListDB, DictDB)의 내부구현은 같습니다.<br/>
-List처럼 사용하고 싶다면 ListDB, Dict처럼 사용하고 싶다면 DictDB를 사용하길 권장합니다.<br/>
+키 값은 숫자, 문자 모두 가능하며, 반환될 type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
+파이썬의 Dict와 비슷하게 동작할수 있게 구현된 DictDB가 제공됩니다.
 
-##### VarDB 와 ListDB, DictDB의 차이첨
+##### VarDB 와 DictDB의 차이첨
 내부구현은 셋 다 동일합니다. <br/>
-다만 VariableDB에서는 ListDB, DictDB에서 필요없는 기능을 제거한 버전입니다.<br/>
+다만 VarDB에서는 DictDB에서 필요없는 기능을 제거한 버전입니다.<br/>
 키 == 변수명 으로 동일한 경우라면 VarDB를 사용하길 권장합니다.<br/>
-ListDB는 순서보장이 되며, DictDB는 순서보장이 되지 않습니다.<br/>
+DictDB는 순서보장이 되지 않습니다.<br/>
 
 ##### VarDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
 예시) 상태 DB에 'name' 키로 'theloop' 값을 기록할 때:<br/>
@@ -131,21 +128,6 @@ print(test_dict1['key']) ## get 1
 test_dict2 = DictDB('test_dict2', db, depth=2, value_type=str)
 test_dict2['key1']['key2'] = 'a' ## set
 print(test_dict2['key1']['key2']) ## get 'a'
-```
-
-##### ListDB('DB에 접근할 key' '접근할 db', '반환될 type', '컨테이너의 인덱스에 대한 뎁스(기본값 1)')으로 사용가능합니다.<br/>
-예시1) 상태 DB에 파이썬 list의 형식을 사용할 때 (test_list1['index'] 형식): <br/>
-```python
-test_list1 = ListDB('test_list1', db, value_type=int)
-test_list1[0] = 1 ## set
-print(test_list1[0]) ## get 1
-```
-
-예시2) 이차원 배열 형식 (test_list2['index1']['index2']):<br/>
-```python
-test_list2 = ListDB('test_list2', db, depth=2, value_type=str)
-test_list2[0][0] = 'a' ## set
-print(test_list2[0][0]) ## get 'a'
 ```
 
 #### external 데코레이터 (@external)
