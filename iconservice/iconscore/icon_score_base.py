@@ -18,12 +18,12 @@ import inspect
 import abc
 from functools import wraps
 
-from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.database.db import IconServiceDatabase
-from iconservice.base.exception import ExternalException, PayableException
-from iconservice.base.message import Message
-from iconservice.base.transaction import Transaction
-from iconservice.base.address import Address
+from .icon_score_context import IconScoreContext
+from ..database.db import IconServiceDatabase
+from ..base.exception import ExternalException, PayableException
+from ..base.message import Message
+from ..base.transaction import Transaction
+from ..base.address import Address
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'

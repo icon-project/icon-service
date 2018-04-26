@@ -18,7 +18,7 @@
 
 from ..base.address import Address
 from .icon_score_base import IconScoreBase
-from .icon_score_context import IconScoreContext
+from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 
 
@@ -40,17 +40,17 @@ class IconScoreEngine(object):
             'update': self.__update,
             'call': self.__call_in_invoke
         }
-        self._icon_score_info_mapper = icon_score_info_mapper
+        self.__icon_score_info_mapper = icon_score_info_mapper
 
-    def _get_icon_score(self,
-                        address: Address,
-                        readonly: bool) -> IconScoreBase:
+    def __get_icon_score(self,
+                         address: Address,
+                         readonly: bool) -> IconScoreBase:
         """
         :param address:
         :param readonly:
         :return: IconScoreBase object
         """
-        info = self._icon_score_info_mapper[address]
+        info = self.__icon_score_info_mapper[address]
         return info.get_icon_score(readonly)
 
     def invoke(self,
@@ -66,7 +66,7 @@ class IconScoreEngine(object):
         :param data: calldata
         """
         if data_type == 'call':
-            self.__call_in_invoke(icon_score_address, context, data)
+            self.__call(icon_score_address, context, data)
         elif data_type == 'install':
             self.__install(context.address, data)
         elif data_type == 'update':
@@ -88,10 +88,10 @@ class IconScoreEngine(object):
         """
         pass
 
-    def __call_in_invoke(self,
-                        icon_score_address: Address,
-                        context: IconScoreContext,
-                        calldata: dict) -> object:
+    def __call(self,
+               icon_score_address: Address,
+               context: IconScoreContext,
+               calldata: dict) -> object:
         """Handle jsonrpc
 
         :param icon_score_address:
@@ -99,11 +99,12 @@ class IconScoreEngine(object):
         :param calldata:
         """
         # TODO: Call external method of iconscore
-        pass
+        return call_method(addr_to=icon_score_address, score_mapper=self.__icon_score_info_mapper,
+                           readonly=context.readonly, func_name=str(), *(), **{})
 
     def __fallback(self,
-                  icon_score_address: Address,
-                  context: IconScoreContext):
+                   icon_score_address: Address,
+                   context: IconScoreContext):
         """When an IconScore receives some coins and calldata is None,
         fallback function is called.
 
@@ -111,7 +112,8 @@ class IconScoreEngine(object):
         :param context:
         """
         # TODO: Call fallback method of iconscore
-        pass
+        call_fallback(addr_to=icon_score_address, score_mapper=self.__icon_score_info_mapper,
+                      readonly=context.readonly)
 
     def query(self,
               icon_score_address: Address,
@@ -123,17 +125,4 @@ class IconScoreEngine(object):
         Handles messagecall of icx_call
         """
         if data_type == 'call':
-            return self.__call_in_query(icon_score_address, context, data)
-
-    def __call_in_query(self,
-                       icon_score_address: Address,
-                       context: IconScoreContext,
-                       calldata: dict):
-        """Run an external method of iconscore indicated by icon_score_address
-        without state changing
-
-        :param icon_score_address:
-        :param context:
-        :param calldata:
-        """
-        pass
+            return self.__call(icon_score_address, context, data)

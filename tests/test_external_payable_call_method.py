@@ -1,5 +1,5 @@
 import unittest
-from iconservice.base.icon_score_base import IconScoreBase, score, external, payable
+from iconservice.iconscore.icon_score_base import IconScoreBase, score, external, payable
 # from iconservice.base.address import Address, AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContext, Message
 from iconservice.base.exception import ExternalException, PayableException
