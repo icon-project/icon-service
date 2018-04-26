@@ -1,71 +1,61 @@
 import unittest
-from icon.iconservice.iconscore.icon_score_installer import *
-from icon.iconservice.base.address import Address
+from iconservice.iconscore.icon_score_installer import *
+from iconservice.base.address import Address
 
 
-class TestICONSCOREINSTALLER(unittest.TestCase):
+class TestIConScoreInstaller(unittest.TestCase):
     def setUp(self):
-
         self.installer = IconScoreInstaller('./')
-        self.address = Address('cx', bytes.fromhex("1234123412341234123412341234123412341234"))
-        self.package_path = './'
-        self.archive_files('./', './test.zip')
-        self.archive_path = "./test.zip"
-        self.install_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
+        self.address = Address.from_string("cx1234123412341234123412341234123412342134")
+        self.archive_path = "tests/test.zip"
+        self.archive_path2 = "tests/test_bad.zip"
+        self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
 
-    @staticmethod
-    def archive_files(package_path: str, archive_path: str) -> bool:
-        if os.path.isfile(package_path):
-            print(f"{package_path} MUST be a directory. enter package path")
-            return False
-        flag = False
-        with zipfile.ZipFile(archive_path, mode='a', compression=zipfile.ZIP_DEFLATED) as score_archive:
-            for current_dir, dirs, files in os.walk(package_path):
-                if current_dir.endswith('__pycache__'):
-                    continue
-                for file in files:
-                    flag = True
-                    if file.startswith('.'):
-                        continue
-                    if os.path.islink(file):
-                        continue
-                    score_archive.write(os.path.join(current_dir, file))
-        if flag is False:
-            os.remove(archive_path)
-            return False
-        return True
+        self.installer2 = IconScoreInstaller('/')
 
-    def test_write_zipfile_with_bytes_case1(self):
+    def test_write_zipfile_with_bytes(self):
+        test_zip_path = self.score_root_path + "zip"
         write_file_first_time_result = self.installer.\
-            write_zipfile_with_bytes(self.install_path, self.installer.read_zipfile_as_byte(self.archive_path))
-        self.assertTrue(os.path.isfile(self.install_path))
+            write_zipfile_with_bytes(test_zip_path, self.installer.read_zipfile_as_byte(self.archive_path))
+        self.assertTrue(os.path.isfile(test_zip_path))
 
-        write_file_second_time_result = self.installer.\
-            write_zipfile_with_bytes(self.install_path, self.installer.read_zipfile_as_byte(self.archive_path))
-        self.assertEqual(CONST_FILE_EXISTS_ERROR__CODE, write_file_second_time_result)
+        self.assertRaises(ScoreInstallWriteZipfileException, self.installer.write_zipfile_with_bytes
+                          , test_zip_path, self.installer.read_zipfile_as_byte(self.archive_path))
 
-        self.installer.remove_exists_archive(self.install_path)
+        self.installer.remove_exists_archive(test_zip_path)
 
-        write_file_with_exist_directory_path =\
-            self.installer.write_zipfile_with_bytes('./'
-                                                    , self.installer.read_zipfile_as_byte(self.archive_path))
-        self.assertEqual(CONST_IS_A_DIRECTORY_ERROR_CODE, write_file_with_exist_directory_path)
-
-        write_file_with_unauthorized_path_result = \
-            self.installer\
-                .write_zipfile_with_bytes('/unauthorized', self.installer.read_zipfile_as_byte(self.archive_path))
-        self.assertEqual(CONST_PERMISSION_ERROR_CODE, write_file_with_unauthorized_path_result)
-        self.installer.remove_exists_archive(self.archive_path)
+        self.assertRaises(ScoreInstallWriteZipfileException, self.installer.write_zipfile_with_bytes,
+                          './', self.installer.read_zipfile_as_byte(self.archive_path))
 
     def test_remove_exists_archive(self):
-        self.installer.write_zipfile_with_bytes(self.install_path
+        test_zip_path = self.score_root_path + "zip"
+        self.installer.write_zipfile_with_bytes(test_zip_path
                                                 , self.installer.read_zipfile_as_byte(self.archive_path))
-        self.installer.remove_exists_archive(self.install_path)
-        self.assertFalse(os.path.isfile(self.install_path))
-        self.installer.remove_exists_archive(self.archive_path)
+        self.installer.remove_exists_archive(test_zip_path)
+        self.assertFalse(os.path.isfile(test_zip_path))
 
-    def test_extract_files(self):
-        pass
+    def test_install(self):
+        block_height1, transaction_index1 = 1234, 12
+        score_id = str(block_height1) + "_" + str(transaction_index1)
+        self.installer.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path)
+                               , block_height1, transaction_index1)
+        install_path = os.path.join(self.score_root_path, score_id)
+        self.assertEqual(True, os.path.exists(install_path))
+
+        ret1 = self.installer.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path)
+                                      , block_height1, transaction_index1)
+        self.assertEqual(CONST_SCORE_EXISTS_ERROR_CODE, ret1)
+
+        self.installer.remove_exists_archive(os.path.join('./', str(self.address)))
+
+        ret2 = self.installer.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path2)
+                                      , block_height1, transaction_index1)
+        self.assertEqual(CONST_EXTRACT_FILES_ERROR_CODE, ret2)
+
+        ret3 = self.installer2.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path)
+                                       , block_height1, transaction_index1)
+
+        self.assertEqual(ret3, CONST_PERMISSION_ERROR_CODE)
 
 
 if __name__ == "__main__":
