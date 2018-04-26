@@ -17,7 +17,10 @@
 
 from ..base.address import Address, AddressPrefix
 from ..database.factory import DatabaseFactory
-from .icon_score_base import IconScoreBase
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .icon_score_base import IconScoreBase
 
 
 class IconScoreInfo(object):
@@ -59,7 +62,7 @@ class IconScoreInfo(object):
         """
         return self._icon_score_address
 
-    def get_icon_score(self, readonly) -> IconScoreBase:
+    def get_icon_score(self, readonly) -> 'IconScoreBase':
         """Returns IconScoreBase object
 
         If IconScoreBase object is None, Create it here.
