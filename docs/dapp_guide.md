@@ -13,8 +13,8 @@ class SampleToken(IconScoreBase):
 
     def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._total_supply = VariableForDB(self._TOTAL_SUPPLY, db, variable_type=int)
-        self._balances = ContainerForDB(self._BALANCES, db, limit_depth=1, value_type=int)
+        self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
 
     def genesis_init(self, *args, **kwargs) -> None:
         super().genesis_init(*args, **kwargs)
@@ -90,35 +90,37 @@ super().__init__()
 ```
 
 #### genesis_init
-계약서가 최초 배포되었을 때 상태 DB에 write할 내용을 구현합니다.<br/>
-이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 update, delete 시에는 호출되지 않습니다.<br/>
+계약서가 최초 배포되었을 때 상태 DB에 기록할 내용을 구현합니다.<br/>
+이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 계약서의 업데이트, 삭제 시에는 호출되지 않습니다.<br/>
 
-#### VariableForDB, ContainerForDB
-해당 클래스는 상태 DB에 관련한 값을 좀 더 편리하게 사용하게 하는 유틸리티 클래스입니다.<br/>
-키 값은 숫자, 문자 모두 가능하며, 반환될 type은 integer(정수), str(문자), Address(주소 객체)만 가능합니다. <br/>
+#### VarDB, DictDB
+상태 DB에 읽고 쓰는 작업을 좀 더 편리하게 하기 위한 유틸리티 클래스입니다.<br/>
+키는 숫자, 문자 모두 가능하며, 반환될 value_type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
+VarDB는 단순 키-값 형식의 상태를 저장할 때 사용할 수 있으며, DictDB는 파이썬의 dict와 비슷하게 동작할 수 있게 구현되었습니다. <br/>
+참고로 DictDB는 순서 보장이 되지 않습니다. <br/>
 
-##### VariableForDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
+##### VarDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
 예시) 상태 DB에 'name' 키로 'theloop' 값을 기록할 때:<br/>
 ```python
-VariableForDB('name', db, variable_type=str).set('theloop')
+VarDB('name', db, value_type=str).set('theloop')
 ```
 'name' 키에 대해 기록한 값을 읽어올 때:<br/>
 ```python
-name = VariableForDB('name', db, variable_type=str).get()
+name = VarDB('name', db, value_type=str).get()
 print(name) ##'theloop'
 ```
 
-##### ContainerForDB('DB에 접근할 key' '접근할 db', '컨테이너의 키에 대한 뎁스', '반환될 type')으로 사용가능합니다.<br/>
+##### DictDB('DB에 접근할 key' '접근할 db', '반환될 type', '컨테이너의 키에 대한 뎁스(기본값 1)')으로 사용가능합니다.<br/>
 예시1) 상태 DB에 파이썬 dict의 형식을 사용할 때 (test_dict1['key'] 형식): <br/>
 ```python
-test_dict1 = ContainerForDB('test_dict1', db, limit_depth=1, value_type=int)
+test_dict1 = DictDB('test_dict1', db, value_type=int)
 test_dict1['key'] = 1 ## set
 print(test_dict1['key']) ## get 1
 ```
 
 예시2) 이차원 배열 형식 (test_dict2['key1']['key2']):<br/>
 ```python
-test_dict2 = ContainerForDB('test_dict2', db, limit_depth=2, value_type=str)
+test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
 print(test_dict2['key1']['key2']) ## get 'a'
 ```
@@ -134,10 +136,11 @@ external(readonly=True)라고 선언된 함수는 읽기전용 db에만 접근 �
 #### payable 데코레이터 (@payable)
 이 데코레이터가 붙은 함수들만 icx 코인 거래가 가능합니다.<br/>
 0이 들어와도 문제가 없습니다. <br/>
+만약 payable이 없는 함수에 icx값이 들어있다면 해당 call은 실패합니다.
 
 #### fallback
+fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
 만약 계약서에서 정의되지 않은 함수를 call하거나 데이터 필드가 없는 순수한 icx 코인만 해당 계약서에 <br/>
 이체되었다면 이 fallback 함수가 호출됩니다.<br/>
-fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
 만약 icx 코인이 이체되었는데, payable을 붙이지 않은 기본 fallback 함수가 호출되었다면<br/>
 payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
