@@ -14,7 +14,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.installer2 = IconScoreInstaller('/')
 
     def test_write_zipfile_with_bytes(self):
-        test_zip_path = self.score_root_path + "zip"
+        test_zip_path = self.score_root_path + ".zip"
         write_file_first_time_result = self.installer.\
             write_zipfile_with_bytes(test_zip_path, self.installer.read_zipfile_as_byte(self.archive_path))
         self.assertTrue(os.path.isfile(test_zip_path))
@@ -28,7 +28,7 @@ class TestIConScoreInstaller(unittest.TestCase):
                           './', self.installer.read_zipfile_as_byte(self.archive_path))
 
     def test_remove_exists_archive(self):
-        test_zip_path = self.score_root_path + "zip"
+        test_zip_path = self.score_root_path + ".zip"
         self.installer.write_zipfile_with_bytes(test_zip_path
                                                 , self.installer.read_zipfile_as_byte(self.archive_path))
         self.installer.remove_exists_archive(test_zip_path)
