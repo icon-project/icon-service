@@ -118,7 +118,7 @@ name = VarDB('name', db, variable_type=str).get()
 print(name) ##'theloop'
 ```
 
-##### DictDB('DB에 접근할 key' '접근할 db', '컨테이너의 키에 대한 뎁스(기본값 1)', '반환될 type')으로 사용가능합니다.<br/>
+##### DictDB('DB에 접근할 key' '접근할 db', '반환될 type', '컨테이너의 키에 대한 뎁스(기본값 1)')으로 사용가능합니다.<br/>
 예시1) 상태 DB에 파이썬 dict의 형식을 사용할 때 (test_dict1['key'] 형식): <br/>
 ```python
 test_dict1 = DictDB('test_dict1', db, value_type=int)
@@ -133,7 +133,7 @@ test_dict2['key1']['key2'] = 'a' ## set
 print(test_dict2['key1']['key2']) ## get 'a'
 ```
 
-##### ListDB('DB에 접근할 key' '접근할 db', '컨테이너의 키에 대한 뎁스(기본값 1)', '반환될 type')으로 사용가능합니다.<br/>
+##### ListDB('DB에 접근할 key' '접근할 db', '반환될 type', '컨테이너의 인덱스에 대한 뎁스(기본값 1)')으로 사용가능합니다.<br/>
 예시1) 상태 DB에 파이썬 list의 형식을 사용할 때 (test_list1['index'] 형식): <br/>
 ```python
 test_list1 = ListDB('test_list1', db, value_type=int)
