@@ -25,7 +25,7 @@ from iconservice.database.batch import BlockBatch, TransactionBatch
 class IconServiceDatabase(abc.ABC):
 
     @abc.abstractmethod
-    def get(self, key: bytes):
+    def get(self, key: bytes) -> bytes:
         pass
 
     @abc.abstractmethod
@@ -141,7 +141,7 @@ class ReadOnlyDatabase(IconServiceDatabase):
         raise DatabaseException('close is not allowed')
 
     def get_sub_db(self, key: bytes):
-        return self.__db.get_sub_db()
+        return self.__db.get_sub_db(key)
 
     def iterator(self):
         return self.__db.iterator()
@@ -179,7 +179,7 @@ class WritableDatabase(IconServiceDatabase):
         Search order
         1. TransactionBatch
         2. BlockBatch
-        3. ScoreDB
+        3. StateDB
 
         :param key:
         :return: a value for a given key
@@ -207,7 +207,7 @@ class WritableDatabase(IconServiceDatabase):
         self.__db.close()
 
     def get_sub_db(self, key: bytes):
-        return self.__db.get_sub_db()
+        return self.__db.get_sub_db(key)
 
     def iterator(self):
         return self.__db.iterator()

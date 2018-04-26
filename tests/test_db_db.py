@@ -139,3 +139,9 @@ class TestWritableDatabase(unittest.TestCase):
         self.db.put(b'key0', b'value0')
         value = self.db.get(b'key0')
         self.assertEqual(b'value0', value)
+
+    def test_get_sub_db(self):
+        """Create prefix db
+        """
+        prefix_db = self.db.get_sub_db(b'prefix')
+        self.assertTrue(isinstance(prefix_db, PlyvelDatabase))
