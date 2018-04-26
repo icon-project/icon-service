@@ -129,3 +129,14 @@ class ExternalException(IconScoreBaseException):
 class PayableException(IconScoreBaseException):
     pass
 
+
+class ScoreInstallException(IconServiceBaseException):
+    pass
+
+
+class ScoreInstallExtractException(IconServiceBaseException):
+    pass
+
+
+class ScoreInstallWriteZipfileException(IconServiceBaseException):
+    pass
