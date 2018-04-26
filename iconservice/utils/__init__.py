@@ -22,26 +22,6 @@ import re
 from functools import wraps
 
 
-def call_method(self,
-                instance: object,
-                method_name: str,
-                params: dict=None) -> object:
-    """Call a method of an instance in a generic way.
-
-    :param icon_score:
-    :param method_name:
-    :param params:
-    """
-    method = getattr(instance, method_name)
-    if not isinstance(method, callable):
-        raise ValueError('Invalid method name')
-
-    if params:
-        return method(**params)
-    else:
-        return method()
-
-
 def is_lowercase_hex_string(value: str) -> bool:
     """Check whether value is hexadecimal format or not
 

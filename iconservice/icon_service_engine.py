@@ -153,7 +153,7 @@ class IconServiceEngine(object):
         _value: int = params['value']
         _fee: int = params['fee']
 
-    def _get_context(self, params: dict) -> IconScoreContext:
+    def __get_context(self, params: dict) -> IconScoreContext:
         _from = params['from']
         to = params['to']
         tx_hash = params['tx_hash']

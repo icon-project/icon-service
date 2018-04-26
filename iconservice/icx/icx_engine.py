@@ -169,68 +169,68 @@ class IcxEngine(object):
         """
         return self.__total_supply_amount
 
-    def transfer(self, _from: Address, _to: Address, _amount: int, _fee: int) -> bool:
-        """Transfer the amount of icx to an account indicated by _to address
+    # def transfer(self, _from: Address, _to: Address, _amount: int, _fee: int) -> bool:
+    #     """Transfer the amount of icx to an account indicated by _to address
+    #
+    #     :param _from: (string)
+    #     :param _to: (string)
+    #     :param _amount: (int) the amount of coin in loop to transfer
+    #     :param _fee: (int) transaction fee (0.01 icx)
+    #     :exception: IcxError
+    #     """
+    #     _fee_treasury_address = self.__fee_treasury_address
+    #
+    #     logd(self.__logger,
+    #          f'from: {_from} '
+    #          f'to: {_to} '
+    #          f'amount: {_amount} '
+    #          f'fee: {_fee}')
+    #
+    #     if _from == _to:
+    #         raise IcxError(Code.INVALID_PARAMS)
+    #     if _from == _fee_treasury_address:
+    #         raise IcxError(Code.INVALID_PARAMS)
+    #     if _to == _fee_treasury_address:
+    #         raise IcxError(Code.INVALID_PARAMS)
+    #     if _fee != FIXED_FEE:
+    #         raise IcxError(Code.INVALID_FEE)
+    #
+    #     # get account info from state db.
+    #     from_account = self.__storage.get_account(_from)
+    #     to_account = self.__storage.get_account(_to)
+    #     fee_account = self.__storage.get_account(_fee_treasury_address)
+    #
+    #     logi(self.__logger,
+    #          'before:  '
+    #          f'from: {_from} '
+    #          f'from_amount: {from_account.icx} '
+    #          f'to: {_to} '
+    #          f'to_amount: {to_account.icx} '
+    #          f'fee_treasury: {fee_account.address} '
+    #          f'fee_amount: {fee_account.icx}')
+    #
+    #     from_account.withdraw(_amount + _fee)
+    #     to_account.deposit(_amount)
+    #     fee_account.deposit(_fee)
+    #
+    #     # write newly updated state into state db.
+    #     self.__storage.put_account(from_account.address, from_account)
+    #     self.__storage.put_account(to_account.address, to_account)
+    #     self.__storage.put_account(fee_account.address, fee_account)
+    #
+    #     logi(self.__logger,
+    #          'after: '
+    #          f'from: {_from} '
+    #          f'from_amount: {from_account.icx} '
+    #          f'to: {_to} '
+    #          f'to_amount: {to_account.icx} '
+    #          f'fee_treasury: {fee_account.address} '
+    #          f'fee_amount: {fee_account.icx}')
+    #     logd(self.__logger, 'send_transaction() end')
+    #
+    #     return True
 
-        :param _from: (string)
-        :param _to: (string)
-        :param _amount: (int) the amount of coin in loop to transfer
-        :param _fee: (int) transaction fee (0.01 icx)
-        :exception: IcxError
-        """
-        _fee_treasury_address = self.__fee_treasury_address
-
-        logd(self.__logger,
-             f'from: {_from} '
-             f'to: {_to} '
-             f'amount: {_amount} '
-             f'fee: {_fee}')
-
-        if _from == _to:
-            raise IcxError(Code.INVALID_PARAMS)
-        if _from == _fee_treasury_address:
-            raise IcxError(Code.INVALID_PARAMS)
-        if _to == _fee_treasury_address:
-            raise IcxError(Code.INVALID_PARAMS)
-        if _fee != FIXED_FEE:
-            raise IcxError(Code.INVALID_FEE)
-
-        # get account info from state db.
-        from_account = self.__storage.get_account(_from)
-        to_account = self.__storage.get_account(_to)
-        fee_account = self.__storage.get_account(_fee_treasury_address)
-
-        logi(self.__logger,
-             'before:  '
-             f'from: {_from} '
-             f'from_amount: {from_account.icx} '
-             f'to: {_to} '
-             f'to_amount: {to_account.icx} '
-             f'fee_treasury: {fee_account.address} '
-             f'fee_amount: {fee_account.icx}')
-
-        from_account.withdraw(_amount + _fee)
-        to_account.deposit(_amount)
-        fee_account.deposit(_fee)
-
-        # write newly updated state into state db.
-        self.__storage.put_account(from_account.address, from_account)
-        self.__storage.put_account(to_account.address, to_account)
-        self.__storage.put_account(fee_account.address, fee_account)
-
-        logi(self.__logger,
-             'after: '
-             f'from: {_from} '
-             f'from_amount: {from_account.icx} '
-             f'to: {_to} '
-             f'to_amount: {to_account.icx} '
-             f'fee_treasury: {fee_account.address} '
-             f'fee_amount: {fee_account.icx}')
-        logd(self.__logger, 'send_transaction() end')
-
-        return True
-
-    def _transfer(self, _from: Address, _to: Address, _amount: int) -> bool:
+    def transfer(self, _from: Address, _to: Address, _amount: int) -> bool:
         """Transfer the amount of icx to an account indicated by _to address
 
         :param _from: (string)
