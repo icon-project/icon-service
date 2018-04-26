@@ -17,10 +17,11 @@ import logging
 import os
 import zipfile
 import shutil
+import pip
 
-from icon.iconservice.base.address import Address
-from icon.iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
-from icon.iconservice.base.exception import ScoreInstallWriteZipfileException
+from ..base.address import Address
+from ..base.exception import ScoreInstallException, ScoreInstallExtractException
+from ..base.exception import ScoreInstallWriteZipfileException
 
 CONST_SCORE_EXISTS_ERROR_CODE = 918
 CONST_WRITE_ZIPFILE_ERROR_CODE = 919
@@ -63,6 +64,7 @@ class IconScoreInstaller(object):
             IconScoreInstaller.remove_exists_archive(zip_path)
             shutil.move(os.path.join(self.icon_score_root_path, zip_root_directory_name),
                         install_path)
+            # IconScoreInstaller.install_requirements(install_path)
             return CONST_SUCCESS_INSTALL_SCORE
         except ScoreInstallException as e:
             logging.debug(e.message)
@@ -74,6 +76,16 @@ class IconScoreInstaller(object):
         except PermissionError as pe:
             logging.debug(pe)
             return CONST_PERMISSION_ERROR_CODE
+
+    @staticmethod
+    def install_requirements(install_path: str):
+        for current_dir, dirs, file_list in os.walk(install_path):
+            if 'requirements.txt' in file_list:
+                with open(os.path.join(install_path, 'requirements.txt'), 'r') as requires:
+                    requirements_list_str = requires.read()
+                for package in requirements_list_str.split("\n"):
+                    if bool(package):
+                        pip.main(['install', package])
 
     @staticmethod
     def extract_files(install_path: str, archive_path: str) -> str:
