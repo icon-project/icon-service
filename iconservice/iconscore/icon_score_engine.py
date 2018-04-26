@@ -38,7 +38,7 @@ class IconScoreEngine(object):
         self._handler = {
             'install': self.__install,
             'update': self.__update,
-            'call': self.__call_in_invoke
+            'call': self.__call
         }
         self.__icon_score_info_mapper = icon_score_info_mapper
 
@@ -99,8 +99,10 @@ class IconScoreEngine(object):
         :param calldata:
         """
         # TODO: Call external method of iconscore
-        return call_method(addr_to=icon_score_address, score_mapper=self.__icon_score_info_mapper,
-                           readonly=context.readonly, func_name=str(), *(), **{})
+        return call_method(addr_to=icon_score_address,
+                           score_mapper=self.__icon_score_info_mapper,
+                           readonly=context.readonly,
+                           func_name=str(), *(), **{})
 
     def __fallback(self,
                    icon_score_address: Address,
@@ -112,7 +114,8 @@ class IconScoreEngine(object):
         :param context:
         """
         # TODO: Call fallback method of iconscore
-        call_fallback(addr_to=icon_score_address, score_mapper=self.__icon_score_info_mapper,
+        call_fallback(addr_to=icon_score_address,
+                      score_mapper=self.__icon_score_info_mapper,
                       readonly=context.readonly)
 
     def query(self,

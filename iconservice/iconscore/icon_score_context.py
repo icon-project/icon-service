@@ -155,7 +155,10 @@ def call_method(addr_to: Address, score_mapper: IconScoreInfoMapper,
     try:
         return icon_score.call_method(func_name, *args, **kwargs)
     except (PayableException, ExternalException):
-        call_fallback(addr_to=addr_to, score_mapper=score_mapper, readonly=readonly, addr_from=addr_from)
+        call_fallback(addr_to=addr_to,
+                      score_mapper=score_mapper,
+                      readonly=readonly,
+                      addr_from=addr_from)
         return None
 
 
