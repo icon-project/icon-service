@@ -69,6 +69,11 @@ class PlyvelDatabase(IconServiceDatabase):
         """
         self.__db = db
 
+    @classmethod
+    def from_path(cls, path, create_if_missing=True):
+        plyvel_db = cls.make_db(path, create_if_missing)
+        return PlyvelDatabase(plyvel_db)
+
     def get(self, key: bytes) -> bytes:
         """Get value from db using key
 

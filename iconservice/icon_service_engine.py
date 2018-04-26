@@ -17,15 +17,18 @@
 import json
 import os
 
-from .base.address import Address
+from .base.address import Address, AddressPrefix
+from .base.exception import ExceptionCode, IconException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.db import PlyvelDatabase
 from .database.factory import DatabaseFactory
 from .icx.icx_engine import IcxEngine
+from .iconscore.icon_score_info_mapper import IconScoreInfo
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextFactory
+from .iconscore.icon_score_engine import IconScoreEngine
 
 
 class IconServiceEngine(object):
@@ -62,8 +65,13 @@ class IconServiceEngine(object):
         self._db_factory = DatabaseFactory(state_db_root_path)
         self._context_factory = IconScoreContextFactory(max_size=5)
 
+        self._icon_score_mapper = IconScoreInfoMapper()
+        IconScoreInfo.set_db_factory(self._db_factory)
+
+        self._icon_score_engine = IconScoreEngine(
+            icon_score_root_path, self._icon_score_mapper)
+
         self._init_icx_engine(self._db_factory)
-        self._init_icon_score_mapper(state_db_root_path)
 
     def _init_icx_engine(self, db_factory: DatabaseFactory) -> None:
         """Initialize icx_engine
@@ -75,15 +83,11 @@ class IconServiceEngine(object):
         self._icx_engine = IcxEngine()
         self._icx_engine.open(db)
 
-    def _init_icon_score_mapper(self, state_db_root_path: str) -> None:
-        """Initialize icon_score_mapper
-
-        :param state_db_root_path:
-        """
-        self.__icon_score_mapper = IconScoreInfoMapper()
-
     def close(self) -> None:
         self._icx_engine.close()
+
+    def invoke(self, block: object):
+        pass
 
     def call(self,
              method: str,
@@ -132,10 +136,22 @@ class IconServiceEngine(object):
         :param params:
         :return:
         """
-        context = self.__get_context(params)
-        calldata = params['data']
+        to: Address = params['to']
+        if to.prefix != AddressPrefix.CONTRACT:
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'{str(to)} is not an score address')
 
-        # return self.__icon_score_engine.call(context, calldata)
+        data_type = params.get('data_type', None)
+        if data_type != 'call':
+            raise IconException(ExceptionCode.INVALID_PARAMS)
+
+        data = params.get('data', None)
+        if not isinstance(data, dict):
+            raise IconException(ExceptionCode.INVALID_PARAMS)
+
+        context = self._create_context(params=params, readonly=True)
+        return self._icon_score_engine.query(to, context, data_type, data)
 
     def _handle_icx_sendTransaction(self,
                                     params: dict,
@@ -146,20 +162,34 @@ class IconServiceEngine(object):
         * EOA to Score
 
         :param params: jsonrpc params
-        :return: undefined
+        :return: return value of an IconScoreBase method
+            None is allowed
         """
         _from: Address = params['from']
         _to: Address = params['to']
-        _value: int = params['value']
+        _value: int = params.get('value', 0)
         _fee: int = params['fee']
 
-    def __get_context(self, params: dict) -> IconScoreContext:
+        self._icx_engine.transfer(context.readonly, _from, _to, _value)
+
+        context: IconScoreContext = self._create_context(
+            params=params, readonly=False)
+        _data_type: str = params['data_type']
+        _data: dict = params['data']
+
+        return self._icon_score_engine.invoke(_to, context, _data_type, _data)
+
+    def _create_context(self,
+                        params: dict,
+                        readonly: bool) -> IconScoreContext:
+        """Create an IconScoreContext
+        """
         _from = params['from']
-        to = params['to']
-        tx_hash = params['tx_hash']
+        tx_hash = params.get('tx_hash', None)
         value = params.get('value', 0)
 
         context = self._context_factory.create()
+        context.readonly = readonly
         context.tx = Transaction(tx_hash=tx_hash, origin=_from)
         context.msg = Message(sender=_from, value=value)
 

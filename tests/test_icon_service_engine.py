@@ -64,7 +64,7 @@ class TestIconServiceEngine(unittest.TestCase):
         }
 
         ret = self._engine.call(method, params)
-        self.assertTrue(ret)
+        self.assertIsNone(ret)
 
     '''
     def test_score_invoke(self):

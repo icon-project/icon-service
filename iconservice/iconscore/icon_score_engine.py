@@ -16,7 +16,9 @@
 """IconScoreEngine module
 """
 
-from ..base.address import Address
+
+from ..base.address import Address, AddressPrefix
+from ..base.exception import ExceptionCode, IconException
 from .icon_score_base import IconScoreBase
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
@@ -70,11 +72,11 @@ class IconScoreEngine(object):
         elif data_type == 'install':
             self.__install(context.address, data)
         elif data_type == 'update':
-            self.__install(context.address, data)
+            self.__update(context, data)
         else:
-            pass
+            raise IconException(ExceptionCode.INVALID_PARAMS, "Invalid data type")
 
-    def __install(self, icon_score_address: Address, data: dict) -> bool:
+    def __install(self, icon_score_address: Address, data: bytes) -> bool:
         """Install an icon score
 
         :param data: zipped binary data

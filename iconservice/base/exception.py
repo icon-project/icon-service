@@ -37,6 +37,7 @@ class ExceptionCode(IntEnum):
     LOCKED_ACCOUNT = -40000
     NOT_ENOUGH_BALANCE = -40001
     INVALID_FEE = -40002
+    INVALID_CONTEXT = -40003
 
     def __str__(self) -> str:
         if self.value == self.INVALID_REQUEST:
@@ -60,10 +61,9 @@ class DatabaseException(IconServiceBaseException):
     pass
 
 
-class IcxException(IconServiceBaseException):
+class IconException(IconServiceBaseException):
     """Defines Icx Errors
     """
-
     def __init__(self, code: ExceptionCode, message: str = None) -> None:
         if message is None or message == '':
             message = str(code)
