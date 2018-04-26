@@ -71,13 +71,7 @@ class TestReadOnlyDatabase(unittest.TestCase):
         value = 100
         _db.put(address.body, value.to_bytes(32, 'big'))
 
-        block_batch = BlockBatch(),
-        tx_batch = TransactionBatch()
-
         self.db = ReadOnlyDatabase(_db)
-
-        self.block_batch = block_batch
-        self.tx_batch = tx_batch
 
     def tearDown(self):
         self.db._ReadOnlyDatabase__db.close()
@@ -119,11 +113,12 @@ class TestWritableDatabase(unittest.TestCase):
                                    block_batch=block_batch,
                                    tx_batch=tx_batch)
 
+        self.address = address
         self.block_batch = block_batch
         self.tx_batch = tx_batch
 
     def tearDown(self):
-        self.db._WritableDatabase__db.close()
+        self.db.close()
         rmtree(self.state_db_root_path)
 
     def test_get(self):
@@ -139,6 +134,20 @@ class TestWritableDatabase(unittest.TestCase):
         self.db.put(b'key0', b'value0')
         value = self.db.get(b'key0')
         self.assertEqual(b'value0', value)
+
+        batch = self.tx_batch[self.address]
+        self.assertEqual(b'value0', batch.get(b'key0'))
+
+    def test_write_batch(self):
+        data = {
+            b'key0': b'value0',
+            b'key1': b'value1'
+        }
+        db = self.db
+        db.write_batch(data)
+
+        self.assertEqual(b'value1', db.get(b'key1'))
+        self.assertEqual(b'value0', db.get(b'key0'))
 
     def test_get_sub_db(self):
         """Create prefix db
