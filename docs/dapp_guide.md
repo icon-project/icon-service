@@ -96,8 +96,8 @@ super().__init__()
 #### VariableDB, ContainerDB(ListDB, DictDB)
 해당 클래스는 상태 DB에 관련한 값을 좀 더 편리하게 사용하게 하는 유틸리티 클래스입니다.<br/>
 키 값은 숫자, 문자 모두 가능하며, 반환될 type은 integer(정수), str(문자), Address(주소 객체)만 가능합니다. <br/>
-파이썬의 컨테이너(List, Dict etc..)와 비슷하게 동작할수 있게 구현된 ContainerDB가 기본으로 제공이 되며,<br/>
-유저의 편의를 위하여 ContainerDB를 한번 더 wrapping하여 ListDB와 DictDB도 제공됩니다.<br/>
+파이썬의 컨테이너(List, Dict, etc..)와 비슷하게 동작할수 있게 구현된 ContainerDB가 기본으로 제공이 되며,<br/>
+유저의 편의를 위하여 ContainerDB를 한번 더 wrapping하여 구현된 ListDB와 DictDB도 함께 제공됩니다.<br/>
 따라서 wrapping한 클래스(ListDB, DictDB)의 내부구현은 같습니다.<br/>
 List처럼 사용하고 싶다면 ListDB, Dict처럼 사용하고 싶다면 DictDB를 사용하길 권장합니다.<br/>
 
