@@ -13,8 +13,8 @@ class SampleToken(IconScoreBase):
 
     def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._total_supply = VarDB(self._TOTAL_SUPPLY, db, variable_type=int)
-        self._balances = DictDB(self._BALANCES, db, depth=1, value_type=int)
+        self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
 
     def genesis_init(self, *args, **kwargs) -> None:
         super().genesis_init(*args, **kwargs)
@@ -90,28 +90,23 @@ super().__init__()
 ```
 
 #### genesis_init
-계약서가 최초 배포되었을 때 상태 DB에 write할 내용을 구현합니다.<br/>
-이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 update, delete 시에는 호출되지 않습니다.<br/>
+계약서가 최초 배포되었을 때 상태 DB에 기록할 내용을 구현합니다.<br/>
+이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 계약서의 업데이트, 삭제 시에는 호출되지 않습니다.<br/>
 
 #### VarDB, DictDB
-해당 클래스는 상태 DB에 관련한 값을 좀 더 편리하게 사용하게 하는 유틸리티 클래스입니다.<br/>
-키 값은 숫자, 문자 모두 가능하며, 반환될 type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
-파이썬의 Dict와 비슷하게 동작할수 있게 구현된 DictDB가 제공됩니다.
-
-##### VarDB 와 DictDB의 차이첨
-내부구현은 셋 다 동일합니다. <br/>
-다만 VarDB에서는 DictDB에서 필요없는 기능을 제거한 버전입니다.<br/>
-키 == 변수명 으로 동일한 경우라면 VarDB를 사용하길 권장합니다.<br/>
-DictDB는 순서보장이 되지 않습니다.<br/>
+상태 DB에 읽고 쓰는 작업을 좀 더 편리하게 하기 위한 유틸리티 클래스입니다.<br/>
+키와 값은 숫자, 문자 모두 가능하며, 반환될 type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
+VarDB는 단순 키-값 형식의 상태를 저장할 때 사용할 수 있으며, DictDB는 파이썬의 dict와 비슷하게 동작할 수 있게 구현되었습니다. <br/>
+참고로 DictDB는 순서 보장이 되지 않습니다. <br/>
 
 ##### VarDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
 예시) 상태 DB에 'name' 키로 'theloop' 값을 기록할 때:<br/>
 ```python
-VarDB('name', db, variable_type=str).set('theloop')
+VarDB('name', db, value_type=str).set('theloop')
 ```
 'name' 키에 대해 기록한 값을 읽어올 때:<br/>
 ```python
-name = VarDB('name', db, variable_type=str).get()
+name = VarDB('name', db, value_type=str).get()
 print(name) ##'theloop'
 ```
 
@@ -125,7 +120,7 @@ print(test_dict1['key']) ## get 1
 
 예시2) 이차원 배열 형식 (test_dict2['key1']['key2']):<br/>
 ```python
-test_dict2 = DictDB('test_dict2', db, depth=2, value_type=str)
+test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
 print(test_dict2['key1']['key2']) ## get 'a'
 ```
