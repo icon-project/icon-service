@@ -13,49 +13,64 @@ class TestIConScoreInstaller(unittest.TestCase):
 
         self.installer2 = IconScoreInstaller('/')
 
-    def test_write_zipfile_with_bytes(self):
-        test_zip_path = self.score_root_path + ".zip"
-        write_file_first_time_result = self.installer.\
-            write_zipfile_with_bytes(test_zip_path, self.installer.read_zipfile_as_byte(self.archive_path))
-        self.assertTrue(os.path.isfile(test_zip_path))
-
-        self.assertRaises(ScoreInstallWriteZipfileException, self.installer.write_zipfile_with_bytes
-                          , test_zip_path, self.installer.read_zipfile_as_byte(self.archive_path))
-
-        self.installer.remove_exists_archive(test_zip_path)
-
-        self.assertRaises(ScoreInstallWriteZipfileException, self.installer.write_zipfile_with_bytes,
-                          './', self.installer.read_zipfile_as_byte(self.archive_path))
-
-    def test_remove_exists_archive(self):
-        test_zip_path = self.score_root_path + ".zip"
-        self.installer.write_zipfile_with_bytes(test_zip_path
-                                                , self.installer.read_zipfile_as_byte(self.archive_path))
-        self.installer.remove_exists_archive(test_zip_path)
-        self.assertFalse(os.path.isfile(test_zip_path))
+    @staticmethod
+    def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
+        with open(archive_path, 'rb') as f:
+            byte_data = f.read()
+            return byte_data
 
     def test_install(self):
+        # Case when the user install SCORE first time.
         block_height1, transaction_index1 = 1234, 12
         score_id = str(block_height1) + "_" + str(transaction_index1)
-        self.installer.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path)
-                               , block_height1, transaction_index1)
+        ret1 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+                                      block_height1, transaction_index1)
         install_path = os.path.join(self.score_root_path, score_id)
+        zip_file_info_gen = self.installer.extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
+        file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
+
+        installed_contents = []
+        for directory, dirs, filename in os.walk(install_path):
+            parent_directory_index = directory.rfind('/')
+            parent_dir_name = directory[parent_directory_index+1:]
+            for file in filename:
+                if parent_dir_name == score_id:
+                    installed_contents.append(file)
+                else:
+                    installed_contents.append(f'{parent_dir_name}/{file}')
         self.assertEqual(True, os.path.exists(install_path))
+        self.assertTrue(ret1)
+        self.assertTrue(installed_contents == file_path_list)
 
-        ret1 = self.installer.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path)
-                                      , block_height1, transaction_index1)
-        self.assertEqual(CONST_SCORE_EXISTS_ERROR_CODE, ret1)
+        # Case when the user install SCORE second time.
+        ret2 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+                                      block_height1, transaction_index1)
+        self.assertFalse(ret2)
 
-        self.installer.remove_exists_archive(os.path.join('./', str(self.address)))
+        # Case when installing SCORE with badzipfile Data.
+        block_height2, transaction_index2 = 123, 12
+        score_id2 = str(block_height2) + "_" + str(transaction_index2)
+        ret3 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path2),
+                                      block_height2, transaction_index2)
+        install_path2 = os.path.join(self.score_root_path, score_id2)
+        self.assertFalse(ret3)
+        self.assertFalse(os.path.exists(install_path2))
 
-        ret2 = self.installer.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path2)
-                                      , block_height1, transaction_index1)
-        self.assertEqual(CONST_EXTRACT_FILES_ERROR_CODE, ret2)
+        # Case when The user specifies an installation path that does not have permission.
+        ret4 = self.installer2.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+                                       block_height1, transaction_index1)
+        self.assertFalse(ret4)
 
-        ret3 = self.installer2.install(self.address, self.installer.read_zipfile_as_byte(self.archive_path)
-                                       , block_height1, transaction_index1)
+        self.installer.remove_exists_archive(install_path)
 
-        self.assertEqual(ret3, CONST_PERMISSION_ERROR_CODE)
+    def test_remove_exists_archive(self):
+        block_height1, transaction_index1 = 1234, 12
+        score_id = str(block_height1) + "_" + str(transaction_index1)
+        install_path = os.path.join(self.score_root_path, score_id)
+        self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+                               block_height1, transaction_index1)
+        self.installer.remove_exists_archive(install_path)
+        self.assertFalse(os.path.exists(install_path))
 
 
 if __name__ == "__main__":

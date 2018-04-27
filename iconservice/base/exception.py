@@ -136,7 +136,3 @@ class ScoreInstallException(IconServiceBaseException):
 
 class ScoreInstallExtractException(IconServiceBaseException):
     pass
-
-
-class ScoreInstallWriteZipfileException(IconServiceBaseException):
-    pass

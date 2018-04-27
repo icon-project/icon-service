@@ -19,8 +19,8 @@ import os
 import zipfile
 import shutil
 
-from icon.iconservice.base.address import Address
-from icon.iconservice.base.exception import ScoreInstallException
+from ..base.address import Address
+from ..base.exception import ScoreInstallException, ScoreInstallExtractException
 
 
 class IconScoreInstaller(object):
@@ -47,7 +47,10 @@ class IconScoreInstaller(object):
         install_path = os.path.join(score_root_path, score_id)
         try:
             if os.path.isfile(install_path):
-                raise ScoreInstallException
+                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
+
+            if os.path.isdir(install_path):
+                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
 
             if not os.path.exists(install_path):
                 os.makedirs(install_path)
@@ -61,31 +64,39 @@ class IconScoreInstaller(object):
                     dest.write(file_info_context.read())
             return True
         except ScoreInstallException as e:
-            print(e.message)
+            logging.debug(e.message)
+            return False
+        except ScoreInstallExtractException:
+            os.rmdir(install_path)
             return False
         except PermissionError as pe:
-            print(pe)
+            logging.debug(pe)
             return False
 
     @staticmethod
     def extract_files_gen(data: 'bytes'):
-        with zipfile.ZipFile(io.BytesIO(data)) as memory_zip:
-            for zip_info in memory_zip.infolist():
-                with memory_zip.open(zip_info) as file:
-                    file_path = zip_info.filename
-                    if file_path.find('__MACOSX') != -1:
-                        continue
-                    if file_path.find('__pycache__') != -1:
-                        continue
-                    file_name_start_index = file_path.rfind('/')
-                    if file_name_start_index == len(file_path)-1:
-                        # continue when 'file_path' is a directory.
-                        continue
-                    if file_path.find('/.') != -1:
-                        # continue when 'file_path' is hidden directory or hidden file.
-                        continue
-                    parent_directory = file_path[:file_name_start_index]
-                    yield zip_info.filename, file, parent_directory
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as memory_zip:
+                for zip_info in memory_zip.infolist():
+                    with memory_zip.open(zip_info) as file:
+                        file_path = zip_info.filename
+                        if file_path.find('__MACOSX') != -1:
+                            continue
+                        if file_path.find('__pycache__') != -1:
+                            continue
+                        file_name_start_index = file_path.rfind('/')
+                        if file_name_start_index == len(file_path) - 1:
+                            # continue when 'file_path' is a directory.
+                            continue
+                        if file_path.find('/.') != -1:
+                            # continue when 'file_path' is hidden directory or hidden file.
+                            continue
+                        parent_directory = file_path[:file_name_start_index]
+                        yield zip_info.filename, file, parent_directory
+        except zipfile.BadZipFile:
+            raise ScoreInstallExtractException("Bad zip file.")
+        except zipfile.LargeZipFile:
+            raise ScoreInstallExtractException("Large zip file.")
 
     @staticmethod
     def remove_exists_archive(archive_path: 'str') -> 'None':
@@ -98,20 +109,3 @@ class IconScoreInstaller(object):
             os.remove(archive_path)
         elif os.path.isdir(archive_path):
             shutil.rmtree(archive_path)
-
-    # This method will be removed. written for test.
-    @staticmethod
-    def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
-        with open(archive_path, 'rb') as f:
-            byte_data = f.read()
-            return byte_data
-
-
-def main():
-    installer = IconScoreInstaller('./')
-    address = Address.from_string('cx1234123412341234123412341234123412342134')
-    installer.install(address, IconScoreInstaller.read_zipfile_as_byte('effectivePython.zip'), 124, 12)
-
-
-if __name__ == "__main__":
-    main()
