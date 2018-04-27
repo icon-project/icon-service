@@ -17,7 +17,7 @@
 
 import os
 
-from .db import PlyvelDatabase
+from .db import InternalScoreDatabase
 from ..base.address import Address
 
 
@@ -26,24 +26,17 @@ class DatabaseFactory(object):
     """
 
     def __init__(self, state_db_root_path: str):
-        """
+        """Constructor
         """
         self.__state_db_root_path = state_db_root_path
 
-    def create_by_address(self, address: Address) -> PlyvelDatabase:
+    def create_by_address(self, address: Address) -> InternalScoreDatabase:
         """Create a state db with the given address.
 
         :param address:
         :return: plyvel db object
         """
         name = address.body.hex()
-        return self.create_by_name(name)
-
-    def create_by_name(self, name: str) -> PlyvelDatabase:
-        """
-        :param name:
-        :return:
-        """
         path = os.path.join(self.__state_db_root_path, name)
-        db = PlyvelDatabase.make_db(path=path, create_if_missing=True)
-        return PlyvelDatabase(db)
+
+        return InternalScoreDatabase.from_address_and_path(address, path)

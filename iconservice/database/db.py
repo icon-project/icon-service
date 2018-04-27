@@ -16,10 +16,12 @@
 
 import abc
 import plyvel
+import threading
 
 from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.iconscore.icon_score_context import IconScoreContext
 
 
 class IconServiceDatabase(abc.ABC):
@@ -53,7 +55,7 @@ class IconServiceDatabase(abc.ABC):
         pass
 
 
-class PlyvelDatabase(IconServiceDatabase):
+class PlyvelDatabase(object):
     """Plyvel database wrapper
     """
 
@@ -67,12 +69,7 @@ class PlyvelDatabase(IconServiceDatabase):
         :param path: db directory path
         :param create_if_missing: if not exist, create db in path
         """
-        self.__db = db
-
-    @classmethod
-    def from_path(cls, path, create_if_missing=True):
-        plyvel_db = cls.make_db(path, create_if_missing)
-        return PlyvelDatabase(plyvel_db)
+        self._db = db
 
     def get(self, key: bytes) -> bytes:
         """Get value from db using key
@@ -80,7 +77,7 @@ class PlyvelDatabase(IconServiceDatabase):
         :param key: db key
         :return: value indicated by key otherwise None
         """
-        return self.__db.get(key)
+        return self._db.get(key)
 
     def put(self, key: bytes, value: bytes) -> None:
         """Put value into db using key.
@@ -88,32 +85,32 @@ class PlyvelDatabase(IconServiceDatabase):
         :param key: (bytes): db key
         :param value: (bytes): db에 저장할 데이터
         """
-        self.__db.put(key, value)
+        self._db.put(key, value)
 
     def delete(self, key: bytes) -> None:
         """Delete a row
 
         :param key: delete the row indicated by key.
         """
-        self.__db.delete(key)
+        self._db.delete(key)
 
     def close(self) -> None:
         """Close db
         """
-        if self.__db:
-            self.__db.close()
-            self.__db = None
+        if self._db:
+            self._db.close()
+            self._db = None
 
-    def get_sub_db(self, key: bytes) -> IconServiceDatabase:
+    def get_sub_db(self, key: bytes):
         """Get Prefixed db
 
         :param key: (bytes): prefixed_db key
         """
 
-        return PlyvelDatabase(self.__db.prefixed_db(key))
+        return PlyvelDatabase(self._db.prefixed_db(key))
 
     def iterator(self) -> iter:
-        return self.__db.iterator()
+        return self._db.iterator()
 
     def write_batch(self, states: dict) -> None:
         """bulk data modification
@@ -124,61 +121,32 @@ class PlyvelDatabase(IconServiceDatabase):
         if states is None or len(states) == 0:
             return
 
-        with self.__db.write_batch() as wb:
+        with self._db.write_batch() as wb:
             for key in states:
                 wb.put(key, states[key])
 
 
-class ReadOnlyDatabase(IconServiceDatabase):
-    def __init__(self, db: PlyvelDatabase):
-        self.__db = db
-
-    def get(self, key: bytes) -> bytes:
-        return self.__db.get(key)
-
-    def put(self, key: bytes, value: bytes):
-        raise DatabaseException('put is not allowed')
-
-    def delete(self, key: bytes):
-        raise DatabaseException('delete is not allowed')
-
-    def close(self):
-        raise DatabaseException('close is not allowed')
-
-    def get_sub_db(self, key: bytes):
-        return self.__db.get_sub_db(key)
-
-    def iterator(self):
-        return self.__db.iterator()
-
-    def write_batch(self, states: dict):
-        raise DatabaseException('write_batch is not allowed')
-
-
-class WritableDatabase(IconServiceDatabase):
+class WritableDatabase(PlyvelDatabase):
     """Cache + LevelDB
     """
 
-    def __init__(self,
-                 address: Address,
-                 db: PlyvelDatabase,
-                 block_batch: BlockBatch,
-                 tx_batch: TransactionBatch) -> None:
+    def __init__(self, db: plyvel.DB, address: Address) -> None:
         """Constructor
 
-        :param address: the address of iconscore 
-        :param db: db object is shared with ReadOnlyDatabase
-        :param block_batch:
-        :param tx_batch:
+        :param plyvel_db:
+        :param address: the address of IconScore 
         """
-        self.__address = address
-        self.__db = db
+        self._address = address
+        super().__init__(db)
 
-        # two batch objects are managed in outside
-        self.__block_batch = block_batch
-        self.__tx_batch = tx_batch
+    @property
+    def address(self):
+        return self._address
 
-    def get(self, key: bytes) -> bytes:
+    def get_from_batch(self,
+                       block_batch: BlockBatch,
+                       tx_batch: TransactionBatch,
+                       key: bytes) -> bytes:
         """Returns a value for a given key
 
         Search order
@@ -190,32 +158,96 @@ class WritableDatabase(IconServiceDatabase):
         :return: a value for a given key
         """
         # get value from tx_batch
-        icon_score_batch = self.__tx_batch[self.__address]
+        icon_score_batch = tx_batch[self._address]
         if icon_score_batch:
-            return icon_score_batch.get(key, None)
+            value = icon_score_batch.get(key, None)
+            if value:
+                return value
 
         # get value from block_batch
-        icon_score_batch = self.__block_batch[self.__address]
+        icon_score_batch = block_batch[self._address]
         if icon_score_batch:
-            return icon_score_batch.get(key, None)
+            value = icon_score_batch.get(key, None)
+            if value:
+                return value
 
         # get value from state_db
-        return self.__db.get(key)
+        return super().get(key)
 
-    def put(self, key: bytes, value: bytes):
-        self.__tx_batch.put(self.__address, key, value)
+    def put_to_batch(self, tx_batch: TransactionBatch, key: bytes, value: bytes):
+        tx_batch.put(self._address, key, value)
 
     def delete(self, key: bytes):
         raise DatabaseException('delete is not allowed')
 
-    def close(self):
-        self.__db.close()
+
+class InternalScoreDatabase(WritableDatabase):
+    """Database for an IconScore only used on the inside of iconservice.
+
+    IconScore can't access this database directly.
+    """
+
+    # Thread-local data is data whose values are thread specific
+    _thread_local_data = threading.local()
+
+    @property
+    def context(self):
+        """Returns a different context according to the current thread
+
+        :return: IconScoreContext
+        """
+        return self._thread_local_data.context
+
+    @context.setter
+    def context(self, value: IconScoreContext) -> None:
+        self._thread_local_data.context = value
+
+    def get(self, key: bytes) -> bytes:
+        """
+        """
+        value = None
+        context = self.context
+
+        if context.readonly:
+            value = super().get(key)
+        else:
+            value = super().get_from_batch(context.block_batch,
+                                           context.tx_batch,
+                                           key)
+
+        return value
+
+    def put(self, key: bytes, value: bytes):
+        context = self.context
+
+        if context.readonly:
+            raise DatabaseException('put is not allowed')
+        else:
+            super().put_to_batch(context.tx_batch, key, value)
+
+        return super().put(key, value)
 
     def get_sub_db(self, key: bytes):
-        return self.__db.get_sub_db(key)
+        """Get Prefixed db
 
-    def iterator(self):
-        return self.__db.iterator()
+        :param key: (bytes): prefixed_db key
+        """
+
+        return InternalScoreDatabase(self._db.prefixed_db(key), self._address)
 
     def write_batch(self, states: dict):
-        self.__db.write_batch(states)
+        context = self.context
+
+        if context.readonly:
+            raise DatabaseException('write_batch is not allowed')
+
+        return super().write_batch(states)
+
+    @staticmethod
+    def from_address_and_path(
+            address: Address,
+            path: str,
+            create_if_missing=True) -> 'InternalScoreDatabase':
+        return InternalScoreDatabase(
+            PlyvelDatabase.make_db(path, create_if_missing),
+            address)

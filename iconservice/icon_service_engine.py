@@ -86,10 +86,8 @@ class IconServiceEngine(object):
     def close(self) -> None:
         self._icx_engine.close()
 
-    def invoke(self, block: object):
-        pass
-
     def call(self,
+             context: IconScoreContext,
              method: str,
              params: dict) -> object:
         """Call invoke and query requests in jsonrpc format
@@ -100,6 +98,7 @@ class IconServiceEngine(object):
         invoke: Changes states of icon scores or icx
         query: query states of icon scores or icx without state changing
 
+        :param context:
         :param method: 'icx_sendTransaction' only
         :param params: params in jsonrpc message
         :return:
@@ -109,24 +108,28 @@ class IconServiceEngine(object):
         """
         try:
             handler = self._handlers[method]
-            return handler(params)
+            return handler(context, params)
         except KeyError as ke:
             print(ke)
         except Exception as e:
             print(e)
 
-    def _handle_icx_getBalance(self, params: dict) -> int:
+    def _handle_icx_getBalance(self,
+                               context: IconScoreContext,
+                               params: dict) -> int:
         """Returns the icx balance of the given address
 
+        :param context:
         :param params:
         :return: icx balance in loop
         """
         address = params['address']
         return self._icx_engine.get_balance(address)
 
-    def _handle_icx_getTotalSupply(self) -> int:
+    def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
         """Returns the amount of icx total supply
 
+        :param context:
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
         return self._icx_engine.get_total_supply()
