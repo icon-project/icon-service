@@ -16,7 +16,7 @@
 
 
 from ..base.address import Address, AddressPrefix
-from ..database.factory import DatabaseFactory
+# from ..database.factory import DatabaseFactory
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -43,13 +43,12 @@ class IconScoreInfo(object):
         :param db: state db for an icon score
         """
         self._icon_score = None
-        self._readonly_icon_score = None
         self._icon_score_address = icon_score_address
         self._owner = owner
         self._db = db
 
     @classmethod
-    def set_db_factory(cls, db_factory: DatabaseFactory) -> None:
+    def set_db_factory(cls, db_factory: 'DatabaseFactory') -> None:
         """DatabaseFactory will be shared among all IconScoreInfo instances
 
         :param db_factory: state_db creator
@@ -62,15 +61,13 @@ class IconScoreInfo(object):
         """
         return self._icon_score_address
 
-    def get_icon_score(self, readonly) -> 'IconScoreBase':
+    @property
+    def icon_score(self) -> 'IconScoreBase':
         """Returns IconScoreBase object
 
         If IconScoreBase object is None, Create it here.
         """
-        if readonly:
-            return self._readonly_icon_score
-        else:
-            return self._icon_score
+        return self._icon_score
 
     @property
     def owner(self) -> Address:

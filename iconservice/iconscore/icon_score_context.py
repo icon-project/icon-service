@@ -44,6 +44,8 @@ class IconScoreContext(object):
         self.msg = msg
         self.__icx_engine = icx_engine
         self.__score_mapper = IconScoreInfoMapper()
+        self.block_batch = None
+        self.tx_batch = None
 
     def gasleft(self) -> int:
         """Returns the amount of gas left

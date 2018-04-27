@@ -21,9 +21,8 @@ import unittest
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException
-from iconservice.database.db import PlyvelDatabase
-from iconservice.database.db import WritableDatabase
 from iconservice.database.factory import DatabaseFactory
+from iconservice.database.db import InternalScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from . import create_address, rmtree
@@ -119,4 +118,4 @@ class TestInternalScoreDatabaseOnWriteMode(unittest.TestCase):
         """Create prefix db
         """
         prefix_db = self.db.get_sub_db(b'prefix')
-        self.assertTrue(isinstance(prefix_db, PlyvelDatabase))
+        self.assertTrue(isinstance(prefix_db, InternalScoreDatabase))

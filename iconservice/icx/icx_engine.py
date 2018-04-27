@@ -22,7 +22,6 @@ from .icx_logger import IcxLogger, logd, logi, logw, loge
 from .icx_storage import IcxStorage
 from ..base.address import Address, AddressPrefix
 from ..base.exception import ExceptionCode, IconException
-from ..database.db import PlyvelDatabase
 
 
 class IcxEngine(object):
@@ -40,7 +39,7 @@ class IcxEngine(object):
         self.__genesis_address: Address = None
         self.__fee_treasury_address: Address = None
 
-    def open(self, db: PlyvelDatabase, logger: IcxLogger=None) -> None:
+    def open(self, db: 'InternalScoreDatabase', logger: IcxLogger=None) -> None:
         """Open engine
 
         Get necessary parameters from caller and begin to use storage(leveldb)

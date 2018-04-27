@@ -21,7 +21,6 @@ from .base.address import Address, AddressPrefix
 from .base.exception import ExceptionCode, IconException
 from .base.message import Message
 from .base.transaction import Transaction
-from .database.db import PlyvelDatabase
 from .database.factory import DatabaseFactory
 from .icx.icx_engine import IcxEngine
 from .iconscore.icon_score_info_mapper import IconScoreInfo
@@ -78,7 +77,7 @@ class IconServiceEngine(object):
 
         :param db_factory:
         """
-        db = db_factory.create_by_name('icon_dex.db')
+        db = db_factory.create_by_name('icon_dex')
 
         self._icx_engine = IcxEngine()
         self._icx_engine.open(db)

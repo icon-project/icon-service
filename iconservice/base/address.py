@@ -17,6 +17,7 @@
 """functions and classes to handle address
 """
 
+import hashlib
 from enum import IntEnum
 
 from ..utils import is_lowercase_hex_string
@@ -156,3 +157,11 @@ class Address(object):
         address_body = bytes.fromhex(body)
 
         return Address(address_prefix, address_body)
+
+
+def create_address(prefix: AddressPrefix, data: bytes):
+    hash_value = hashlib.sha3_256(data).digest()
+    return Address(prefix, hash_value[-20:])
+
+
+ICX_ENGINE_ADDRESS = create_address(AddressPrefix.CONTRACT, b'icon_dex')
