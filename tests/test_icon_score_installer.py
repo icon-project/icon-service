@@ -91,6 +91,15 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.installer.remove_existing_score(install_path)
         self.assertFalse(os.path.exists(install_path))
 
+    def test_verify_integrity(self):
+        block_height1, transaction_index1 = 1234, 12
+        score_id = str(block_height1) + "_" + str(transaction_index1)
+        install_path = os.path.join(self.score_root_path, score_id)
+        self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+                               block_height1, transaction_index1)
+        ret = self.installer.verify_score(self.read_zipfile_as_byte(self.archive_path), install_path)
+        self.assertTrue(ret)
+
 
 if __name__ == "__main__":
     unittest.main()
