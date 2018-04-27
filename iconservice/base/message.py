@@ -14,18 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .address import Address
+
 
 class Message(object):
     """Data which is sent to receipt through icx_sendTransaction json-rpc api
     """
 
-    def __init__(self, sender: str=None, value: int=0) -> None:
+    def __init__(self, sender: Address, value: int=0) -> None:
         """Constructor
 
         :param sender: sender of the message (current call)
         :param value: number of loop sent with the message
         """
         # sender of the message (current call)
-        self.sender: str = sender
+        self.sender = sender
         # number of loop sent with the message
-        self.value: int = value
+        self.value = value

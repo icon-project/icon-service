@@ -1,6 +1,6 @@
 import unittest
-from iconservice.base.icon_score_bases import IconScoreBase, score, external, payable
-# from iconservice.base.address import Address, AddressPrefix
+from iconservice.iconscore.icon_score_base import IconScoreBase, score, external, payable
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContext, Message
 from iconservice.base.exception import ExternalException, PayableException
 
@@ -49,10 +49,8 @@ class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
         self.ins = CallClass(None)
-        # self.test_context = IconScoreContext(Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
-        # self.empty_context = IconScoreContext(Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
-        self.test_context = IconScoreContext(msg=Message('test1', 1))
-        self.empty_context = IconScoreContext(msg=Message('test2', 0))
+        self.test_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
+        self.empty_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
         pass
 
     def tearDown(self):
@@ -64,7 +62,7 @@ class TestCallMethod(unittest.TestCase):
         self.ins.set_context(self.empty_context)
         self.ins.call_method('func1')
         self.ins.call_method('func2')
-        # self.ins.call_method('func3')
+        self.ins.call_method('func3')
         self.ins.call_method('func4')
         # self.ins.call_method('func5')
         # self.ins.call_method('func6')
@@ -73,13 +71,13 @@ class TestCallMethod(unittest.TestCase):
         self.ins.set_context(self.test_context)
         self.assertRaises(PayableException, self.ins.call_method, 'func1')
         self.assertRaises(PayableException, self.ins.call_method, 'func2')
-        self.assertRaises(PayableException, self.ins.call_method, 'func3')
+        # self.assertRaises(PayableException, self.ins.call_method, 'func3')
         # self.assertRaises(PayableException, self.ins.call_method, 'func4')
         self.assertRaises(ExternalException, self.ins.call_method, 'func5')
         self.assertRaises(ExternalException, self.ins.call_method, 'func6')
 
         self.ins.set_context(self.empty_context)
-        self.assertRaises(PayableException, self.ins.call_method, 'func3')
+        # self.assertRaises(PayableException, self.ins.call_method, 'func3')
         # self.assertRaises(PayableException, self.ins.call_method, 'func4')
         self.assertRaises(ExternalException, self.ins.call_method, 'func5')
         self.assertRaises(ExternalException, self.ins.call_method, 'func6')
