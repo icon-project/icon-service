@@ -30,7 +30,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.installer2 = IconScoreInstaller('/')
 
     def tearDown(self):
-        IconScoreInstaller.remove_exists_score(self.score_root_path)
+        IconScoreInstaller.remove_existing_score(self.score_root_path)
 
     @staticmethod
     def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
@@ -80,15 +80,15 @@ class TestIConScoreInstaller(unittest.TestCase):
                                        block_height1, transaction_index1)
         self.assertFalse(ret4)
 
-        self.installer.remove_exists_score(install_path)
+        self.installer.remove_existing_score(install_path)
 
-    def test_remove_exists_score(self):
+    def test_remove_existing_score(self):
         block_height1, transaction_index1 = 1234, 12
         score_id = str(block_height1) + "_" + str(transaction_index1)
         install_path = os.path.join(self.score_root_path, score_id)
         self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
                                block_height1, transaction_index1)
-        self.installer.remove_exists_score(install_path)
+        self.installer.remove_existing_score(install_path)
         self.assertFalse(os.path.exists(install_path))
 
 

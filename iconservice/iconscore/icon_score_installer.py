@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import hashlib
+
 import io
 import logging
 import os
@@ -105,7 +105,7 @@ class IconScoreInstaller(object):
             raise ScoreInstallExtractException("Large zip file.")
 
     @staticmethod
-    def remove_exists_score(archive_path: 'str') -> 'None':
+    def remove_existing_score(archive_path: 'str') -> 'None':
         """Remove archive file.
 
         :param archive_path: The path of SCORE archive.
