@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import hashlib
 import io
 import logging
 import os
@@ -57,12 +57,12 @@ class IconScoreInstaller(object):
                 os.makedirs(install_path)
 
             file_info_generator = IconScoreInstaller.extract_files_gen(data)
-
             for name, file_info, parent_directory in file_info_generator:
                 if not os.path.exists(os.path.join(install_path, parent_directory)):
                     os.makedirs(os.path.join(install_path, parent_directory))
                 with file_info as file_info_context, open(os.path.join(install_path, name), 'wb') as dest:
-                    dest.write(file_info_context.read())
+                    contents = file_info_context.read()
+                    dest.write(contents)
             return True
         except ScoreInstallException as e:
             logging.debug(e.message)

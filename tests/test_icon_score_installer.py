@@ -23,6 +23,7 @@ class TestIConScoreInstaller(unittest.TestCase):
     def setUp(self):
         self.installer = IconScoreInstaller('./')
         self.address = Address.from_string('cx' + '1'*40)
+        self.install_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
         self.archive_path = "tests/test.zip"
         self.archive_path2 = "tests/test_bad.zip"
         self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
@@ -56,7 +57,7 @@ class TestIConScoreInstaller(unittest.TestCase):
                     installed_contents.append(f'{parent_dir_name}/{file}')
         self.assertEqual(True, os.path.exists(install_path))
         self.assertTrue(ret1)
-        self.assertTrue(installed_contents == file_path_list)
+        self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
         # Case when the user install SCORE second time.
         ret2 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
@@ -77,7 +78,7 @@ class TestIConScoreInstaller(unittest.TestCase):
                                        block_height1, transaction_index1)
         self.assertFalse(ret4)
 
-        self.installer.remove_exists_archive(install_path)
+        self.installer.remove_exists_archive(self.install_path)
 
     def test_remove_exists_archive(self):
         block_height1, transaction_index1 = 1234, 12
@@ -85,7 +86,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         install_path = os.path.join(self.score_root_path, score_id)
         self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
                                block_height1, transaction_index1)
-        self.installer.remove_exists_archive(install_path)
+        self.installer.remove_exists_archive(self.install_path)
         self.assertFalse(os.path.exists(install_path))
 
 
