@@ -170,7 +170,7 @@ class IconScoreBase(IconScoreObject):
         return self.__context.msg
 
     @property
-    def address(self) -> ():
+    def address(self) -> Address:
         return self.__address
 
     @property
