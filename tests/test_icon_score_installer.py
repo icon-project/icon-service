@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2017-2018 theloop Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
 from iconservice.iconscore.icon_score_installer import *
 from iconservice.base.address import Address
@@ -6,7 +22,7 @@ from iconservice.base.address import Address
 class TestIConScoreInstaller(unittest.TestCase):
     def setUp(self):
         self.installer = IconScoreInstaller('./')
-        self.address = Address.from_string("cx1234123412341234123412341234123412342134")
+        self.address = Address.from_string('cx' + '1'*40)
         self.archive_path = "tests/test.zip"
         self.archive_path2 = "tests/test_bad.zip"
         self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
