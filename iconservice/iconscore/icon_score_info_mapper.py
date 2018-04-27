@@ -16,7 +16,6 @@
 
 
 from ..base.address import Address, AddressPrefix
-# from ..database.factory import DatabaseFactory
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -26,13 +25,10 @@ if TYPE_CHECKING:
 class IconScoreInfo(object):
     """Contains information on one icon score
     """
-    _db_factory = None
-
     def __init__(self,
                  icon_score: object,
                  owner: Address,
-                 icon_score_address: Address,
-                 db: object=None) -> None:
+                 icon_score_address: Address) -> None:
         """Constructor
 
         :param icon_score: icon score object
@@ -45,15 +41,6 @@ class IconScoreInfo(object):
         self._icon_score = None
         self._icon_score_address = icon_score_address
         self._owner = owner
-        self._db = db
-
-    @classmethod
-    def set_db_factory(cls, db_factory: 'DatabaseFactory') -> None:
-        """DatabaseFactory will be shared among all IconScoreInfo instances
-
-        :param db_factory: state_db creator
-        """
-        cls._db_factory = db_factory
 
     @property
     def icon_score_address(self) -> Address:
@@ -74,17 +61,6 @@ class IconScoreInfo(object):
         """The address of user who creates a tx for installing this icon_score
         """
         return self._owner
-
-    @property
-    def db(self) -> object:
-        """State db for icon score
-        """
-        if self._db is None or self._db.closed:
-            self._db = self._db_factory.create_by_address(
-                self._icon_score_address)
-
-        return self._db
-
 
 class IconScoreInfoMapper(dict):
     """Icon score information mapping table

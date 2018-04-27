@@ -18,6 +18,7 @@ from threading import Lock
 from ..base.address import Address
 from ..base.message import Message
 from ..base.transaction import Transaction
+from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
 from ..icx.icx_engine import IcxEngine
 from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
@@ -25,7 +26,7 @@ from ..database.batch import BlockBatch, TransactionBatch
 
 
 class IconScoreContext(object):
-    """Provides the current context to IconScore including state, utilities and so on.
+    """Contains the useful information to process user's jsonrpc request
     """
     icx: IcxEngine = None
     score_mapper: IconScoreInfoMapper = None
@@ -58,7 +59,7 @@ class IconScoreContext(object):
 
         :return: the amount of gas left
         """
-        return 0
+        raise NotImplementedError()
 
     def get_balance(self, address: Address) -> int:
         """Returns the icx balance of context owner (icon score)
@@ -86,12 +87,14 @@ class IconScoreContext(object):
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         :return: True(success), False(failure)
         """
-        try:
-            return self.icx.transfer(addr_from, addr_to, amount)
-        except:
-            pass
+        ret = True
 
-        return False
+        try:
+            self.icx.transfer(addr_from, addr_to, amount)
+        except:
+            ret = False
+
+        return ret
 
     def call(self, addr_from: Address, addr_to: Address, func_name: str, *args, **kwargs) -> None:
         """Call the functions provided by other icon scores.
@@ -104,7 +107,7 @@ class IconScoreContext(object):
         :return:
         """
 
-        call_method(addr_from=addr_from, addr_to=addr_to, score_mapper=self.__score_mapper,
+        call_method(addr_from=addr_from, addr_to=addr_to, score_mapper=self.score_mapper,
                     readonly=self.readonly, func_name=func_name, *args, **kwargs)
 
     def selfdestruct(self, recipient: Address) -> None:
@@ -129,7 +132,11 @@ class IconScoreContext(object):
 
 
 class IconScoreContextFactory(object):
+    """IconScoreContextFactory
+    """
     def __init__(self, max_size: int) -> None:
+        """Constructor
+        """
         self._lock = Lock()
         self._queue = []
         self._max_size = max_size

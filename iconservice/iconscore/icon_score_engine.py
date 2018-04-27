@@ -45,15 +45,14 @@ class IconScoreEngine(object):
         self.__icon_score_info_mapper = icon_score_info_mapper
 
     def __get_icon_score(self,
-                         address: Address,
-                         readonly: bool) -> IconScoreBase:
+                         address: Address) -> IconScoreBase:
         """
         :param address:
         :param readonly:
         :return: IconScoreBase object
         """
         info = self.__icon_score_info_mapper[address]
-        return info.get_icon_score(readonly)
+        return info.icon_score
 
     def invoke(self,
                icon_score_address: Address,

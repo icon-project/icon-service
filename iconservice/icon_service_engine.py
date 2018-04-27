@@ -65,12 +65,14 @@ class IconServiceEngine(object):
         self._context_factory = IconScoreContextFactory(max_size=5)
 
         self._icon_score_mapper = IconScoreInfoMapper()
-        IconScoreInfo.set_db_factory(self._db_factory)
 
         self._icon_score_engine = IconScoreEngine(
             icon_score_root_path, self._icon_score_mapper)
 
         self._init_icx_engine(self._db_factory)
+
+        IconScoreContext.icx = self._icx_engine
+        IconScoreContext.score_mapper = self._icon_score_mapper
 
     def _init_icx_engine(self, db_factory: DatabaseFactory) -> None:
         """Initialize icx_engine
@@ -176,18 +178,17 @@ class IconServiceEngine(object):
             _data: dict = params['data']
             self._icon_score_engine.invoke(_to, context, _data_type, _data)
 
-    def _create_context(self,
-                        params: dict,
-                        readonly: bool) -> IconScoreContext:
-        """Create an IconScoreContext
+    def _set_tx_info_to_context(self,
+                                context: IconScoreContext,
+                                params: dict) -> None:
+        """Set transaction and message info to IconScoreContext
+
+        :param context:
+        :param params: jsonrpc params
         """
         _from = params['from']
         tx_hash = params.get('tx_hash', None)
         value = params.get('value', 0)
 
-        context = self._context_factory.create()
-        context.readonly = readonly
         context.tx = Transaction(tx_hash=tx_hash, origin=_from)
         context.msg = Message(sender=_from, value=value)
-
-        return context
