@@ -21,29 +21,31 @@ from ..base.transaction import Transaction
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
 from ..icx.icx_engine import IcxEngine
 from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
+from ..database.batch import BlockBatch, TransactionBatch
 
 
 class IconScoreContext(object):
     """Provides the current context to IconScore including state, utilities and so on.
     """
+    icx: IcxEngine = None
+    score_mapper: IconScoreInfoMapper = None
 
     def __init__(self,
-                 readonly: bool = False,
-                 icx_engine: IcxEngine = None,
+                 readonly: bool = True,
                  tx: Transaction = None,
-                 msg: Message = None) -> None:
+                 msg: Message = None,
+                 block_batch: BlockBatch = None,
+                 tx_batch: TransactionBatch = None) -> None:
         """Constructor
 
         :param readonly: whether state change is possible or not
-        :param icx_engine:
+        :param icx:
         :param tx: initial transaction info
         :param msg: message call info
         """
         self.readonly = readonly
         self.tx = tx
         self.msg = msg
-        self.__icx_engine = icx_engine
-        self.__score_mapper = IconScoreInfoMapper()
         self.block_batch = None
         self.tx_batch = None
 
@@ -63,7 +65,7 @@ class IconScoreContext(object):
 
         :return: the icx amount of balance
         """
-        return self.__icx_engine.get_balance(address)
+        return self.icx.get_balance(address)
 
     def transfer(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
@@ -74,7 +76,7 @@ class IconScoreContext(object):
         :param addr_to:
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.__icx_engine.transfer(addr_from, addr_to, amount)
+        return self.icx.transfer(addr_from, addr_to, amount)
 
     def send(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -85,7 +87,7 @@ class IconScoreContext(object):
         :return: True(success), False(failure)
         """
         try:
-            return self.__icx_engine.transfer(addr_from, addr_to, amount)
+            return self.icx.transfer(addr_from, addr_to, amount)
         except:
             pass
 
@@ -118,7 +120,12 @@ class IconScoreContext(object):
         """
 
     def clear(self) -> None:
-        pass
+        """Set instance member variables to None
+        """
+        self.tx = None
+        self.msg = None
+        self.block_batch = None
+        self.tx_batch = None
 
 
 class IconScoreContextFactory(object):

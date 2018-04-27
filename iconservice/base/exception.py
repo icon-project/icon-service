@@ -69,14 +69,14 @@ class IconException(IconServiceBaseException):
             message = str(code)
 
         super().__init__(message)
-        self.__code = code
+        self._code = code
 
     @property
     def code(self):
-        return self.__code
+        return self._code
 
     def __str__(self):
-        return f'msg: {self.message} code: {self.code}'
+        return f'{self.message} ({self.code})'
 
 
 class IconScoreBaseException(IconServiceBaseException):

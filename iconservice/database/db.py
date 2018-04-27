@@ -136,12 +136,8 @@ class WritableDatabase(PlyvelDatabase):
         :param plyvel_db:
         :param address: the address of IconScore 
         """
-        self._address = address
         super().__init__(db)
-
-    @property
-    def address(self):
-        return self._address
+        self.address = address
 
     def get_from_batch(self,
                        block_batch: BlockBatch,
@@ -196,7 +192,10 @@ class InternalScoreDatabase(WritableDatabase):
 
         :return: IconScoreContext
         """
-        return self._thread_local_data.context
+        if hasattr(self._thread_local_data, 'context'):
+            return self._thread_local_data.context
+        else:
+            return None
 
     @context.setter
     def context(self, value: IconScoreContext) -> None:
@@ -208,7 +207,7 @@ class InternalScoreDatabase(WritableDatabase):
         value = None
         context = self.context
 
-        if context.readonly:
+        if context is None or context.readonly:
             value = super().get(key)
         else:
             value = super().get_from_batch(context.block_batch,
@@ -220,7 +219,7 @@ class InternalScoreDatabase(WritableDatabase):
     def put(self, key: bytes, value: bytes):
         context = self.context
 
-        if context.readonly:
+        if context is None or context.readonly:
             raise DatabaseException('put is not allowed')
         else:
             super().put_to_batch(context.tx_batch, key, value)
@@ -233,12 +232,11 @@ class InternalScoreDatabase(WritableDatabase):
         :param key: (bytes): prefixed_db key
         """
 
-        return InternalScoreDatabase(self._db.prefixed_db(key), self._address)
+        return InternalScoreDatabase(self._db.prefixed_db(key), self.address)
 
     def write_batch(self, states: dict):
         context = self.context
-
-        if context.readonly:
+        if context is None or context.readonly:
             raise DatabaseException('write_batch is not allowed')
 
         return super().write_batch(states)

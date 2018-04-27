@@ -52,6 +52,7 @@ class IcxEngine(object):
         storage = IcxStorage(db)
         self.__storage = storage
         self.__logger = logger
+        self.__db = db
 
         self.__load_genesis_account_from_storage(storage)
         self.__load_fee_treasury_account_from_storage(storage)
@@ -170,12 +171,11 @@ class IcxEngine(object):
         return self.__total_supply_amount
 
     def transfer_with_fee(self,
-                          is_context_readonly: bool,
                           _from: Address,
                           _to: Address,
                           _amount: int,
                           _fee: int) -> bool:
-        if is_context_readonly:
+        if self.context.readonly:
             raise IconException(
                 ExceptionCode.INVALID_CONTEXT,
                 'icx transfer is not allowed on readonly context')
@@ -244,11 +244,10 @@ class IcxEngine(object):
         return True
 
     def transfer(self,
-                 is_context_readonly: bool,
                  _from: Address,
                  _to: Address,
                  _amount: int) -> bool:
-        if is_context_readonly:
+        if self.context.readonly:
             raise IconException(
                 ExceptionCode.INVALID_CONTEXT,
                 'icx transfer is not allowed on readonly context')
@@ -275,3 +274,19 @@ class IcxEngine(object):
             self.__storage.put_account(to_account.address, to_account)
 
         return True
+
+    @property
+    def context(self) -> 'IconScoreContext':
+        """context is saved in thread local data
+
+        :param value:
+        """
+        return self.__db.context
+
+    @context.setter
+    def context(self, value: 'IconScoreContext') -> None:
+        """context is saved in thread local data
+
+        :param value:
+        """
+        self.__db.context = value

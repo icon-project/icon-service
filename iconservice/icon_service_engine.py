@@ -17,7 +17,7 @@
 import json
 import os
 
-from .base.address import Address, AddressPrefix
+from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
 from .base.exception import ExceptionCode, IconException
 from .base.message import Message
 from .base.transaction import Transaction
@@ -78,6 +78,7 @@ class IconServiceEngine(object):
         :param db_factory:
         """
         db = db_factory.create_by_name('icon_dex')
+        db.address = ICX_ENGINE_ADDRESS
 
         self._icx_engine = IcxEngine()
         self._icx_engine.open(db)
@@ -93,6 +94,7 @@ class IconServiceEngine(object):
 
         This method is designed to be called in icon_outer_service.py.
         We assume that all param values have been already converted to the proper types.
+        (types: Address, int, str, bool, bytes and array)
 
         invoke: Changes states of icon scores or icx
         query: query states of icon scores or icx without state changing
@@ -105,6 +107,9 @@ class IconServiceEngine(object):
             icx_getBalance, icx_getTotalSupply, icx_call:
                 (dict) result or error object in jsonrpc response
         """
+        # NOTICE: context is saved on thread local data
+        self._icx_engine.context = context
+
         try:
             handler = self._handlers[method]
             return handler(context, params)
@@ -123,6 +128,7 @@ class IconServiceEngine(object):
         :return: icx balance in loop
         """
         address = params['address']
+
         return self._icx_engine.get_balance(address)
 
     def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
@@ -133,31 +139,22 @@ class IconServiceEngine(object):
         """
         return self._icx_engine.get_total_supply()
 
-    def _handle_icx_call(self, params: dict) -> object:
+    def _handle_icx_call(self,
+                         context: IconScoreContext,
+                         params: dict) -> object:
         """Handles an icx_call jsonrpc request
         :param params:
         :return:
         """
         to: Address = params['to']
-        if to.prefix != AddressPrefix.CONTRACT:
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
-                f'{str(to)} is not an score address')
-
         data_type = params.get('data_type', None)
-        if data_type != 'call':
-            raise IconException(ExceptionCode.INVALID_PARAMS)
-
         data = params.get('data', None)
-        if not isinstance(data, dict):
-            raise IconException(ExceptionCode.INVALID_PARAMS)
 
-        context = self._create_context(params=params, readonly=True)
         return self._icon_score_engine.query(to, context, data_type, data)
 
     def _handle_icx_sendTransaction(self,
-                                    params: dict,
-                                    context: IconScoreContext=None) -> object:
+                                    context: IconScoreContext,
+                                    params: dict) -> object:
         """Handles an icx_sendTransaction jsonrpc request
 
         * EOA to EOA
@@ -172,14 +169,12 @@ class IconServiceEngine(object):
         _value: int = params.get('value', 0)
         _fee: int = params['fee']
 
-        self._icx_engine.transfer(context.readonly, _from, _to, _value)
+        self._icx_engine.transfer(_from, _to, _value)
 
-        context: IconScoreContext = self._create_context(
-            params=params, readonly=False)
-        _data_type: str = params['data_type']
-        _data: dict = params['data']
-
-        return self._icon_score_engine.invoke(_to, context, _data_type, _data)
+        if _to.prefix == AddressPrefix.CONTRACT:
+            _data_type: str = params['data_type']
+            _data: dict = params['data']
+            self._icon_score_engine.invoke(_to, context, _data_type, _data)
 
     def _create_context(self,
                         params: dict,

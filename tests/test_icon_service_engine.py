@@ -23,7 +23,9 @@ import shutil
 import unittest
 
 from iconservice.base.address import Address
+from iconservice.base.exception import IconException
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 
 
 class TestIconServiceEngine(unittest.TestCase):
@@ -39,20 +41,25 @@ class TestIconServiceEngine(unittest.TestCase):
         self._to = Address.from_string(f'hx{"1" * 40}')
         self._icon_score_address = Address.from_string(f'cx{"2" * 40}')
 
+        factory = IconScoreContextFactory(max_size=1)
+        self.context = factory.create()
+
     def tearDown(self):
         self._engine.close()
         shutil.rmtree(self._icon_score_root_path)
         shutil.rmtree(self._state_db_root_path)
 
     def test_icx_get_balance(self):
+        context = self.context
         method = 'icx_getBalance'
         params = {'address': self._from}
 
-        balance = self._engine.call(method, params)
+        balance = self._engine.call(context, method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(0, balance)
 
     def test_icx_transfer(self):
+        context = self.context
         method = 'icx_sendTransaction'
         params = {
             'from': self._from,
@@ -63,8 +70,8 @@ class TestIconServiceEngine(unittest.TestCase):
             'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
         }
 
-        ret = self._engine.call(method, params)
-        self.assertIsNone(ret)
+        with self.assertRaises(IconException):
+            self._engine.call(context, method, params)
 
     '''
     def test_score_invoke(self):
