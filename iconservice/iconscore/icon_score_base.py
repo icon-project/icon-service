@@ -123,6 +123,7 @@ class IconScoreBase(IconScoreObject):
     def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
         super().__init__(db, *args, **kwargs)
         self.__context = None
+        self.__address = db.address
 
         if not self.get_api():
             raise ExternalException('empty abi! have to position decorator(@init_abi) above class definition',
@@ -169,9 +170,19 @@ class IconScoreBase(IconScoreObject):
         return self.__context.msg
 
     @property
+    def address(self) -> ():
+        return self.__address
+
+    @property
     def tx(self) -> Transaction:
         return self.__context.tx
 
     def call(self, addr_to: Address, func_name: str, *args, **kwargs):
         return self.__context.call(addr_to, func_name, *args, **kwargs)
+
+    def transfer(self, addr_to: Address, amount: int):
+        return self.__context.transfer(self.__address, addr_to, amount)
+
+    def send(self, addr_to: Address, amount: int):
+        return self.__context.send(self.__address, addr_to, amount)
 

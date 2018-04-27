@@ -63,33 +63,36 @@ class IconScoreContext(object):
         """
         return self.__icx_engine.get_balance(address)
 
-    def transfer(self, to: Address, amount: int) -> bool:
+    def transfer(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
 
         If failed, an exception will be raised.
 
-        :param to: recipient address
+        :param addr_from:
+        :param addr_to:
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.__icx_engine.transfer(self.msg.sender, to, amount)
+        return self.__icx_engine.transfer(addr_from, addr_to, amount)
 
-    def send(self, to: Address, amount: int) -> bool:
+    def send(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
 
-        :param to: recipient address
+        :param addr_from:
+        :param addr_to: recipient address
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         :return: True(success), False(failure)
         """
         try:
-            return self.__icx_engine.transfer(self.msg.sender, to, amount)
+            return self.__icx_engine.transfer(addr_from, addr_to, amount)
         except:
             pass
 
         return False
 
-    def call(self, addr_to: Address, func_name: str, *args, **kwargs) -> None:
+    def call(self, addr_from: Address, addr_to: Address, func_name: str, *args, **kwargs) -> None:
         """Call the functions provided by other icon scores.
 
+        :param addr_from:
         :param addr_to:
         :param func_name:
         :param args:
@@ -97,7 +100,7 @@ class IconScoreContext(object):
         :return:
         """
 
-        call_method(addr_from=self.msg.sender, addr_to=addr_to, score_mapper=self.__score_mapper,
+        call_method(addr_from=addr_from, addr_to=addr_to, score_mapper=self.__score_mapper,
                     readonly=self.readonly, func_name=func_name, *args, **kwargs)
 
     def selfdestruct(self, recipient: Address) -> None:

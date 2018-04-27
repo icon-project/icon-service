@@ -52,6 +52,11 @@ class IconServiceDatabase(abc.ABC):
     def write_batch(self, states: dict):
         pass
 
+    @property
+    # @abc.abstractmethod
+    def address(self):
+        return None
+
 
 class PlyvelDatabase(IconServiceDatabase):
     """Plyvel database wrapper
