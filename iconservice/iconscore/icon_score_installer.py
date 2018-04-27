@@ -33,7 +33,7 @@ class IconScoreInstaller(object):
 
     def install(self, address: 'Address', data: 'bytes', block_height: 'int', transaction_index: 'int') -> 'bool':
         """Install score.
-
+        Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
         :param address: contract address
         :param data: The byte value of the zip file.
         :param block_height:
@@ -76,6 +76,11 @@ class IconScoreInstaller(object):
 
     @staticmethod
     def extract_files_gen(data: 'bytes'):
+        """Yield (filename, file_information, parent_directory_name) tuple.
+
+        :param data: The byte value of the zip file.
+        :return:
+        """
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as memory_zip:
                 for zip_info in memory_zip.infolist():
@@ -100,7 +105,7 @@ class IconScoreInstaller(object):
             raise ScoreInstallExtractException("Large zip file.")
 
     @staticmethod
-    def remove_exists_archive(archive_path: 'str') -> 'None':
+    def remove_exists_score(archive_path: 'str') -> 'None':
         """Remove archive file.
 
         :param archive_path: The path of SCORE archive.
