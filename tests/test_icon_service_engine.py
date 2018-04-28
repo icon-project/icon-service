@@ -22,10 +22,26 @@ import os
 import shutil
 import unittest
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import IconException
+from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from . import create_address
+
+
+factory = IconScoreContextFactory(max_size=1)
+
+
+def _create_context(readonly=True):
+    context = factory.create()
+    context.readonly = readonly
+
+    if not readonly:
+        context.block_batch = BlockBatch()
+        context.tx_batch = TransactionBatch()
+
+    return context
 
 
 class TestIconServiceEngine(unittest.TestCase):
@@ -37,12 +53,29 @@ class TestIconServiceEngine(unittest.TestCase):
         engine.open(icon_score_root_path=self._icon_score_root_path,
                     state_db_root_path=self._state_db_root_path)
         self._engine = engine
+
+        self._genesis_address = create_address(
+            AddressPrefix.EOA, b'genesis')
+        self._treasury_address = create_address(
+            AddressPrefix.EOA, b'treasury')
+
         self._from = Address.from_string(f'hx{"0" * 40}')
         self._to = Address.from_string(f'hx{"1" * 40}')
         self._icon_score_address = Address.from_string(f'cx{"2" * 40}')
 
-        factory = IconScoreContextFactory(max_size=1)
-        self.context = factory.create()
+        accounts = [
+            {
+                'name': 'god',
+                'address': self._genesis_address,
+                'balance': 100 * 10 ** 18
+            },
+            {
+                'name': 'treasury',
+                'address': self._treasury_address,
+                'balance': 0
+            }
+        ]
+        self._engine.genesis_invoke(accounts)
 
     def tearDown(self):
         self._engine.close()
@@ -50,7 +83,7 @@ class TestIconServiceEngine(unittest.TestCase):
         shutil.rmtree(self._state_db_root_path)
 
     def test_icx_get_balance(self):
-        context = self.context
+        context = _create_context()
         method = 'icx_getBalance'
         params = {'address': self._from}
 
@@ -59,19 +92,22 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(0, balance)
 
     def test_icx_transfer(self):
-        context = self.context
-        method = 'icx_sendTransaction'
-        params = {
-            'from': self._from,
-            'to': self._to,
-            'value': 2 * 10 ** 18,
-            'fee': 10 ** 16,
-            'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
-            'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
+        context = _create_context(readonly=False)
+        block_height = 1
+        block_hash = None
+
+        tx = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'from': self._genesis_address,
+                'to': self._to,
+                'value': 1 * 10 ** 18,
+                'fee': 10 ** 16,
+                'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+            }
         }
 
-        with self.assertRaises(IconException):
-            self._engine.call(context, method, params)
+        self._engine.invoke(block_height, block_hash, [tx, tx])
 
     '''
     def test_score_invoke(self):

@@ -178,7 +178,7 @@ class Account(object):
 
         """
         if not isinstance(value, int) or value <= 0:
-            raise IconException(Code.INVALID_PARAMS)
+            raise IconException(ExceptionCode.INVALID_PARAMS)
 
         self.__icx += value
 
@@ -188,9 +188,9 @@ class Account(object):
         :param value: coin amount to withdraw
         """
         if not isinstance(value, int) or value <= 0:
-            raise IconException(Code.INVALID_PARAMS)
+            raise IconException(ExceptionCode.INVALID_PARAMS)
         if self.__icx < value:
-            raise IconException(Code.NOT_ENOUGH_BALANCE)
+            raise IconException(ExceptionCode.NOT_ENOUGH_BALANCE)
 
         self.__icx -= value
 

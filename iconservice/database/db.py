@@ -154,14 +154,14 @@ class WritableDatabase(PlyvelDatabase):
         :return: a value for a given key
         """
         # get value from tx_batch
-        icon_score_batch = tx_batch[self._address]
+        icon_score_batch = tx_batch[self.address]
         if icon_score_batch:
             value = icon_score_batch.get(key, None)
             if value:
                 return value
 
         # get value from block_batch
-        icon_score_batch = block_batch[self._address]
+        icon_score_batch = block_batch[self.address]
         if icon_score_batch:
             value = icon_score_batch.get(key, None)
             if value:
@@ -171,7 +171,7 @@ class WritableDatabase(PlyvelDatabase):
         return super().get(key)
 
     def put_to_batch(self, tx_batch: TransactionBatch, key: bytes, value: bytes):
-        tx_batch.put(self._address, key, value)
+        tx_batch.put(self.address, key, value)
 
     def delete(self, key: bytes):
         raise DatabaseException('delete is not allowed')

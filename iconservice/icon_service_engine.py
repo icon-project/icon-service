@@ -19,9 +19,11 @@ import os
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
 from .base.exception import ExceptionCode, IconException
+from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.factory import DatabaseFactory
+from .database.batch import BlockBatch, TransactionBatch
 from .icx.icx_engine import IcxEngine
 from .iconscore.icon_score_info_mapper import IconScoreInfo
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
@@ -91,6 +93,73 @@ class IconServiceEngine(object):
     def close(self) -> None:
         self._icx_engine.close()
 
+    def genesis_invoke(self, accounts: list) -> None:
+        size = len(accounts)
+
+        genesis_account = accounts[0]
+        self._icx_engine.init_genesis_account(
+            address=genesis_account['address'],
+            amount=genesis_account['balance'])
+
+        fee_treasury_account = accounts[1]
+        self._icx_engine.init_fee_treasury_account(
+            address=fee_treasury_account['address'],
+            amount=fee_treasury_account['balance'])
+
+    def invoke(self,
+               block_height: int,
+               block_hash: str,
+               transactions) -> 'list':
+        """Process transactions in a block sent by loopchain
+
+        :param block_height:
+        :param block_hash:
+        :param transactions: transactions in a block
+        :return: The results of transactions
+        """
+        # Remaining part of a IconScoreContext will be set in each handler.
+        context = self._context_factory.create()
+        context.readonly = False
+        context.block = Block(block_height, block_hash)
+        context.block_batch = BlockBatch(block_height, block_hash)
+        context.tx_batch = TransactionBatch()
+
+        # NOTICE: context is saved on thread local data
+        self._icx_engine.context = context
+
+        for tx in transactions:
+            try:
+                method = tx['method']
+                params = tx['params']
+                result = self.call(context, method, params)
+
+                context.block_batch.put_tx_batch(context.tx_batch)
+                context.tx_batch.clear()
+            except:
+                raise NotImplementedError('TODO: tx exception handling')
+
+    def query(self, method: str, params: dict) -> object:
+        """Process a query message call from outside
+
+        State change is not allowed in a query message call
+
+        * icx_getBalance
+        * icx_getTotalSupply
+        * icx_call
+
+        :param method:
+        :param params:
+        :return: the result of query
+        """
+        context = self._context_factory.create()
+        context.readonly = True
+        context.block = None
+
+        # NOTICE: context is saved on thread local data
+        self._icx_engine.context = context
+
+        return self.call(context, method, params)
+
     def call(self,
              context: IconScoreContext,
              method: str,
@@ -112,9 +181,6 @@ class IconServiceEngine(object):
             icx_getBalance, icx_getTotalSupply, icx_call:
                 (dict) result or error object in jsonrpc response
         """
-        # NOTICE: context is saved on thread local data
-        self._icx_engine.context = context
-
         try:
             handler = self._handlers[method]
             return handler(context, params)
@@ -160,7 +226,7 @@ class IconServiceEngine(object):
     def _handle_icx_sendTransaction(self,
                                     context: IconScoreContext,
                                     params: dict) -> object:
-        """Handles an icx_sendTransaction jsonrpc request
+        """icx_sendTransaction message handler
 
         * EOA to EOA
         * EOA to Score
@@ -190,8 +256,14 @@ class IconServiceEngine(object):
         :param params: jsonrpc params
         """
         _from = params['from']
-        tx_hash = params.get('tx_hash', None)
-        value = params.get('value', 0)
+        _tx_hash = params.get('tx_hash', None)
+        _value = params.get('value', 0)
 
-        context.tx = Transaction(tx_hash=tx_hash, origin=_from)
-        context.msg = Message(sender=_from, value=value)
+        context.tx = Transaction(tx_hash=_tx_hash, origin=_from)
+        context.msg = Message(sender=_from, value=_value)
+
+    def commit(self):
+        pass
+
+    def rollback(self):
+        pass

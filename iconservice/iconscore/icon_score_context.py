@@ -16,6 +16,7 @@
 
 from threading import Lock
 from ..base.address import Address
+from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
@@ -33,6 +34,7 @@ class IconScoreContext(object):
 
     def __init__(self,
                  readonly: bool = True,
+                 block: Block = None,
                  tx: Transaction = None,
                  msg: Message = None,
                  block_batch: BlockBatch = None,
@@ -45,6 +47,7 @@ class IconScoreContext(object):
         :param msg: message call info
         """
         self.readonly = readonly
+        self.block = block
         self.tx = tx
         self.msg = msg
         self.block_batch = None
@@ -125,11 +128,37 @@ class IconScoreContext(object):
     def clear(self) -> None:
         """Set instance member variables to None
         """
+        self.block = None
         self.tx = None
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
 
+    def commit(self) -> None:
+        """Write changed states in block_batch to StateDB
+
+        It is called on write_precommit message from loopchain
+        """
+        if self.readonly:
+            raise IconException(
+                ExceptionCode.INTERNAL_ERROR,
+                'Commit is not possbile on readonly context')
+
+        if self.block_batch is None:
+            raise IconException(
+                ExceptionCode.INTERNAL_ERROR, 'Commit failure: BlockBatch is None')
+
+        block_batch = self.block_batch
+        for icon_score_address in block_batch:
+            info = self.score_mapper[icon_score_address]
+            info.icon_score.db.write_batch(block_batch)
+
+    def rollback(self) -> None:
+        """Rollback changed states in block_batch
+
+        It will be done to clear data in block_batch in IconScoreContextFactory.destroy()
+        """
+        # Nothing to do
 
 class IconScoreContextFactory(object):
     """IconScoreContextFactory
