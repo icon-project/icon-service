@@ -55,6 +55,8 @@ class AccountFlag(IntEnum):
     LOCKED = 0x01
     # Is community representative
     C_REP = 0x02
+    # Is this score installed successfully?
+    INSTALLED = 0x04
 
 
 class Account(object):
@@ -72,7 +74,8 @@ class Account(object):
                  address: Address=None,
                  icx: int=0,
                  locked: bool=False,
-                 c_rep: bool=False) -> None:
+                 c_rep: bool=False,
+                 installed: bool=False) -> None:
         """Constructor
         """
         self.__type = account_type
@@ -80,6 +83,7 @@ class Account(object):
         self.__icx = icx
         self.__locked = locked
         self.__c_rep = c_rep
+        self.__installed = installed
 
     @property
     def address(self) -> Address:
@@ -146,6 +150,18 @@ class Account(object):
         :param value: True(c_rep) False(not c_rep)
         """
         self.__c_rep = bool(value)
+
+    @property
+    def installed(self) -> bool:
+        """Is this score installed successfully?
+        """
+        return self.__installed
+
+    @installed.setter
+    def installed(self, value: bool) -> None:
+        """Is this score installed successfully?
+        """
+        self.__installed = bool(value)
 
     @property
     def icx(self) -> int:

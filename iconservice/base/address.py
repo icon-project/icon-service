@@ -141,6 +141,14 @@ class Address(object):
         """
         return hash(self.__prefix.to_bytes(1, 'big') + self.__body)
 
+    @property
+    def is_contract(self) -> bool:
+        """Is this a contract address?
+
+        :return: True(contract) False(Not contract)
+        """
+        return self.prefix == AddressPrefix
+
     @staticmethod
     def from_string(address: str):
         """Create Address object from 42-char address

@@ -54,7 +54,10 @@ class IconServiceEngine(object):
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
-        """
+        """Get necessary paramters and initialize
+
+        :param icon_score_root_path:
+        :param state_db_root_path:
         """
         if not os.path.isdir(icon_score_root_path):
             os.mkdir(icon_score_root_path)
@@ -173,7 +176,7 @@ class IconServiceEngine(object):
 
         self._icx_engine.transfer(_from, _to, _value)
 
-        if _to.prefix == AddressPrefix.CONTRACT:
+        if _to.is_contract:
             _data_type: str = params['data_type']
             _data: dict = params['data']
             self._icon_score_engine.invoke(_to, context, _data_type, _data)

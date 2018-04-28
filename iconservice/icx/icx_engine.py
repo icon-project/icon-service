@@ -177,7 +177,7 @@ class IcxEngine(object):
                           _fee: int) -> bool:
         if self.context.readonly:
             raise IconException(
-                ExceptionCode.INVALID_CONTEXT,
+                ExceptionCode.INVALID_REQUEST,
                 'icx transfer is not allowed on readonly context')
 
         return self._transfer_with_fee(_from, _to, _amount, _fee)
@@ -249,7 +249,7 @@ class IcxEngine(object):
                  _amount: int) -> bool:
         if self.context.readonly:
             raise IconException(
-                ExceptionCode.INVALID_CONTEXT,
+                ExceptionCode.INVALID_REQUEST,
                 'icx transfer is not allowed on readonly context')
 
         return self._transfer(_from, _to, _amount)
@@ -290,3 +290,11 @@ class IcxEngine(object):
         :param value:
         """
         self.__db.context = value
+
+    def get_account(self, address: Address) -> Account:
+        """Returns the instance of Account indicated by address
+
+        :param address:
+        :return: Account
+        """
+        return self.__storage.get_account(address)

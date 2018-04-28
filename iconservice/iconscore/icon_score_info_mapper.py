@@ -26,9 +26,8 @@ class IconScoreInfo(object):
     """Contains information on one icon score
     """
     def __init__(self,
-                 icon_score: object,
-                 owner: Address,
-                 icon_score_address: Address) -> None:
+                 icon_score: 'IconScoreBase',
+                 owner: Address) -> None:
         """Constructor
 
         :param icon_score: icon score object
@@ -36,17 +35,15 @@ class IconScoreInfo(object):
             the address of user
             who creates a tx for installing this icon_score
         :param icon_score_address: contract address
-        :param db: state db for an icon score
         """
-        self._icon_score = None
-        self._icon_score_address = icon_score_address
+        self._icon_score = icon_score
         self._owner = owner
 
     @property
-    def icon_score_address(self) -> Address:
+    def address(self) -> Address:
         """Icon score address
         """
-        return self._icon_score_address
+        return self._icon_score.address
 
     @property
     def icon_score(self) -> 'IconScoreBase':
@@ -65,15 +62,20 @@ class IconScoreInfo(object):
 class IconScoreInfoMapper(dict):
     """Icon score information mapping table
 
+    This instance should be used as a singletone
+
     key: icon_score_address
     value: IconScoreInfo
     """
-    def __init__(self):
+    def __init__(self) -> None:
         """Constructor
         """
 
     def __getitem__(self, icon_score_address: Address) -> IconScoreInfo:
-        """
+        """operator[] overriding
+
+        :param icon_score_address:
+        :return: IconScoreInfo instance
         """
         self.__check_key_type(icon_score_address)
         return super().__getitem__(icon_score_address)
@@ -96,7 +98,7 @@ class IconScoreInfoMapper(dict):
         """
         if not isinstance(address, Address):
             raise KeyError(f'{address} is not Address type.')
-        if address.prefix != AddressPrefix.CONTRACT:
+        if address.is_contract:
             raise KeyError(f'{address} is not an icon score address.')
 
     def __check_value_type(self, info: IconScoreInfo) -> None:
