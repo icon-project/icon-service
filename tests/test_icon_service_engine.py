@@ -22,10 +22,12 @@ import os
 import shutil
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.exception import IconException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from . import create_address
 
@@ -33,11 +35,10 @@ from . import create_address
 factory = IconScoreContextFactory(max_size=1)
 
 
-def _create_context(readonly=True):
-    context = factory.create()
-    context.readonly = readonly
+def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
+    context = factory.create(context_type)
 
-    if not readonly:
+    if context.type == IconScoreContextType.INVOKE:
         context.block_batch = BlockBatch()
         context.tx_batch = TransactionBatch()
 
@@ -59,15 +60,16 @@ class TestIconServiceEngine(unittest.TestCase):
         self._treasury_address = create_address(
             AddressPrefix.EOA, b'treasury')
 
-        self._from = Address.from_string(f'hx{"0" * 40}')
+        self._from = self._genesis_address
         self._to = Address.from_string(f'hx{"1" * 40}')
         self._icon_score_address = Address.from_string(f'cx{"2" * 40}')
+        self._total_supply = 100 * 10 ** 18
 
         accounts = [
             {
                 'name': 'god',
                 'address': self._genesis_address,
-                'balance': 100 * 10 ** 18
+                'balance': self._total_supply
             },
             {
                 'name': 'treasury',
@@ -82,26 +84,68 @@ class TestIconServiceEngine(unittest.TestCase):
         shutil.rmtree(self._icon_score_root_path)
         shutil.rmtree(self._state_db_root_path)
 
-    def test_icx_get_balance(self):
-        context = _create_context()
+    def test_query(self):
+        method = 'icx_getBalance'
+        params = {'address': self._from}
+
+        balance = self._engine.query(method, params)
+        self.assertTrue(isinstance(balance, int))
+        self.assertEqual(self._total_supply, balance)
+
+    def test_call_in_query(self):
+        context = factory.create(IconScoreContextType.QUERY)
         method = 'icx_getBalance'
         params = {'address': self._from}
 
         balance = self._engine.call(context, method, params)
         self.assertTrue(isinstance(balance, int))
-        self.assertEqual(0, balance)
+        self.assertEqual(self._total_supply, balance)
 
-    def test_icx_transfer(self):
-        context = _create_context(readonly=False)
+    def test_call_in_invoke(self):
+        context = _create_context(IconScoreContextType.INVOKE)
+
+        _from = self._genesis_address
+        _to = self._to
+        value = 1 * 10 ** 18
+
+        method = 'icx_sendTransaction'
+        params = {
+            'from': _from,
+            'to': _to,
+            'value': value,
+            'fee': 10 ** 16,
+            'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+        }
+
+        self._engine._icx_engine.context = context
+        self._engine.call(context, method, params)
+
+        tx_batch = context.tx_batch
+        self.assertEqual(1, len(tx_batch))
+        self.assertTrue(ICX_ENGINE_ADDRESS in tx_batch)
+
+        icon_score_batch = tx_batch[ICX_ENGINE_ADDRESS]
+        self.assertEqual(2, len(icon_score_batch))
+
+        balance = int.from_bytes(
+            icon_score_batch[_to.body][-32:], 'big')
+        self.assertEqual(value, balance)
+
+        balance = int.from_bytes(
+            icon_score_batch[_from.body][-32:], 'big')
+        self.assertEqual(self._total_supply - value, balance)
+
+    def test_invoke(self):
         block_height = 1
         block_hash = None
+        value = 1 * 10 ** 18
 
         tx = {
             'method': 'icx_sendTransaction',
             'params': {
                 'from': self._genesis_address,
                 'to': self._to,
-                'value': 1 * 10 ** 18,
+                'value': value,
                 'fee': 10 ** 16,
                 'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
             }

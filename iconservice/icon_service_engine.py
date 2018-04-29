@@ -28,6 +28,7 @@ from .icx.icx_engine import IcxEngine
 from .iconscore.icon_score_info_mapper import IconScoreInfo
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
+from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
 
@@ -94,7 +95,10 @@ class IconServiceEngine(object):
         self._icx_engine.close()
 
     def genesis_invoke(self, accounts: list) -> None:
-        size = len(accounts)
+        context = self._context_factory.create(IconScoreContextType.GENESIS)
+
+        # NOTICE: context is saved on thread local data
+        self._icx_engine.context = context
 
         genesis_account = accounts[0]
         self._icx_engine.init_genesis_account(
@@ -118,8 +122,7 @@ class IconServiceEngine(object):
         :return: The results of transactions
         """
         # Remaining part of a IconScoreContext will be set in each handler.
-        context = self._context_factory.create()
-        context.readonly = False
+        context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = Block(block_height, block_hash)
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
@@ -151,8 +154,7 @@ class IconServiceEngine(object):
         :param params:
         :return: the result of query
         """
-        context = self._context_factory.create()
-        context.readonly = True
+        context = self._context_factory.create(IconScoreContextType.QUERY)
         context.block = None
 
         # NOTICE: context is saved on thread local data

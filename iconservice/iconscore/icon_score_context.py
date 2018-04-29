@@ -15,6 +15,8 @@
 # limitations under the License.
 
 from threading import Lock
+from enum import IntEnum, unique
+
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
@@ -26,6 +28,12 @@ from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 from ..database.batch import BlockBatch, TransactionBatch
 
 
+@unique
+class IconScoreContextType(IntEnum):
+    GENESIS = 0
+    INVOKE = 1
+    QUERY = 2
+
 class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
@@ -33,6 +41,7 @@ class IconScoreContext(object):
     score_mapper: IconScoreInfoMapper = None
 
     def __init__(self,
+                 context_type: IconScoreContextType = IconScoreContextType.QUERY,
                  readonly: bool = True,
                  block: Block = None,
                  tx: Transaction = None,
@@ -46,12 +55,16 @@ class IconScoreContext(object):
         :param tx: initial transaction info
         :param msg: message call info
         """
-        self.readonly = readonly
+        self.type: IconScoreContextType = context_type
         self.block = block
         self.tx = tx
         self.msg = msg
         self.block_batch = None
         self.tx_batch = None
+
+    @property
+    def readonly(self):
+        return self.type == IconScoreContextType.QUERY
 
     def gasleft(self) -> int:
         """Returns the amount of gas left
@@ -170,12 +183,12 @@ class IconScoreContextFactory(object):
         self._queue = []
         self._max_size = max_size
 
-    def create(self) -> IconScoreContext:
+    def create(self, context_type: IconScoreContextType) -> IconScoreContext:
         with self._lock:
             if len(self._queue) > 0:
                 return self._queue.pop()
 
-        return IconScoreContext()
+        return IconScoreContext(context_type)
 
     def destroy(self, context: IconScoreContext) -> None:
         with self._lock:

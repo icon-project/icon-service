@@ -22,6 +22,7 @@ from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 
 
 class IconServiceDatabase(abc.ABC):
@@ -207,7 +208,9 @@ class InternalScoreDatabase(WritableDatabase):
         value = None
         context = self.context
 
-        if context is None or context.readonly:
+        if context is None \
+                or context.readonly \
+                or context.type == IconScoreContextType.GENESIS:
             value = super().get(key)
         else:
             value = super().get_from_batch(context.block_batch,
@@ -216,28 +219,28 @@ class InternalScoreDatabase(WritableDatabase):
 
         return value
 
-    def put(self, key: bytes, value: bytes):
+    def put(self, key: bytes, value: bytes) -> None:
         context = self.context
 
         if context is None or context.readonly:
             raise DatabaseException('put is not allowed')
-        else:
+        elif context.type == IconScoreContextType.INVOKE:
             super().put_to_batch(context.tx_batch, key, value)
+        else:
+            super().put(key, value)
 
-        return super().put(key, value)
-
-    def get_sub_db(self, key: bytes):
+    def get_sub_db(self, key: bytes) -> 'InternalScoreDatabase':
         """Get Prefixed db
 
         :param key: (bytes): prefixed_db key
         """
-
         return InternalScoreDatabase(self._db.prefixed_db(key), self.address)
 
     def write_batch(self, states: dict):
         context = self.context
         if context is None or context.readonly:
-            raise DatabaseException('write_batch is not allowed')
+            raise DatabaseException(
+                'write_batch is not allowed on readonly context')
 
         return super().write_batch(states)
 
