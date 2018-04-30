@@ -98,7 +98,10 @@ class IconScoreInstaller(object):
                             # continue when 'file_path' is hidden directory or hidden file.
                             continue
                         parent_directory = file_path[:file_name_start_index]
-                        yield zip_info.filename, file, parent_directory
+                        if file_name_start_index == -1:
+                            yield zip_info.filename, file, ''
+                        else:
+                            yield zip_info.filename, file, parent_directory
         except zipfile.BadZipFile:
             raise ScoreInstallExtractException("Bad zip file.")
         except zipfile.LargeZipFile:

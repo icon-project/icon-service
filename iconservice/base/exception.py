@@ -140,9 +140,9 @@ class PayableException(IconScoreException):
     pass
 
 
-class ScoreInstallException(IconScoreException):
+class ScoreInstallException(IconScoreBaseException):
     pass
 
 
-class ScoreInstallExtractException(IconScoreException):
+class ScoreInstallExtractException(IconScoreBaseException):
     pass
