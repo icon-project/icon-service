@@ -22,8 +22,9 @@ import unittest
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException
 from iconservice.database.factory import DatabaseFactory
-from iconservice.database.db import InternalScoreDatabase
+from iconservice.database.db import ContextDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from . import create_address, rmtree
 
@@ -57,7 +58,7 @@ class TestPlyvelDatabase(unittest.TestCase):
 """
 
 
-class TestInternalScoreDatabaseOnWriteMode(unittest.TestCase):
+class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def setUp(self):
         state_db_root_path = 'state_db'
         self.state_db_root_path = state_db_root_path
@@ -68,7 +69,7 @@ class TestInternalScoreDatabaseOnWriteMode(unittest.TestCase):
         factory = DatabaseFactory(state_db_root_path)
         context_factory = IconScoreContextFactory(max_size=2)
 
-        context = context_factory.create()
+        context = context_factory.create(IconScoreContextType.INVOKE)
         context.readonly = False
         context.block_batch = BlockBatch()
         context.tx_batch = TransactionBatch()
@@ -113,9 +114,3 @@ class TestInternalScoreDatabaseOnWriteMode(unittest.TestCase):
 
         self.assertEqual(b'value1', db.get(b'key1'))
         self.assertEqual(b'value0', db.get(b'key0'))
-
-    def test_get_sub_db(self):
-        """Create prefix db
-        """
-        prefix_db = self.db.get_sub_db(b'prefix')
-        self.assertTrue(isinstance(prefix_db, InternalScoreDatabase))

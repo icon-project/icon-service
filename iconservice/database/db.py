@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import abc
+import hashlib
 import plyvel
 import threading
 
@@ -23,6 +24,7 @@ from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.utils import sha3_256
 
 
 class IconServiceDatabase(abc.ABC):
@@ -127,11 +129,16 @@ class PlyvelDatabase(object):
                 wb.put(key, states[key])
 
 
-class WritableDatabase(PlyvelDatabase):
-    """Cache + LevelDB
+class ContextDatabase(PlyvelDatabase):
+    """Database for an IconScore only used on the inside of iconservice.
+
+    IconScore can't access this database directly.
+    Cache + LevelDB
     """
 
-    def __init__(self, db: plyvel.DB, address: Address) -> None:
+    def __init__(self,
+                 db: plyvel.DB,
+                 address: Address) -> None:
         """Constructor
 
         :param plyvel_db:
@@ -140,9 +147,21 @@ class WritableDatabase(PlyvelDatabase):
         super().__init__(db)
         self.address = address
 
+    def get(self, context: IconScoreContext, key: bytes) -> bytes:
+        """
+        """
+        value = None
+
+        if context.readonly \
+                or context.type == IconScoreContextType.GENESIS:
+            value = super().get(key)
+        else:
+            value = self.get_from_batch(context, key)
+
+        return value
+
     def get_from_batch(self,
-                       block_batch: BlockBatch,
-                       tx_batch: TransactionBatch,
+                       context: IconScoreContext,
                        key: bytes) -> bytes:
         """Returns a value for a given key
 
@@ -154,6 +173,9 @@ class WritableDatabase(PlyvelDatabase):
         :param key:
         :return: a value for a given key
         """
+        block_batch = context.block_batch
+        tx_batch = context.tx_batch
+
         # get value from tx_batch
         icon_score_batch = tx_batch[self.address]
         if icon_score_batch:
@@ -171,74 +193,32 @@ class WritableDatabase(PlyvelDatabase):
         # get value from state_db
         return super().get(key)
 
-    def put_to_batch(self, tx_batch: TransactionBatch, key: bytes, value: bytes):
-        tx_batch.put(self.address, key, value)
-
-    def delete(self, key: bytes):
-        raise DatabaseException('delete is not allowed')
-
-
-class InternalScoreDatabase(WritableDatabase):
-    """Database for an IconScore only used on the inside of iconservice.
-
-    IconScore can't access this database directly.
-    """
-
-    # Thread-local data is data whose values are thread specific
-    _thread_local_data = threading.local()
-
-    @property
-    def context(self):
-        """Returns a different context according to the current thread
-
-        :return: IconScoreContext
-        """
-        if hasattr(self._thread_local_data, 'context'):
-            return self._thread_local_data.context
-        else:
-            return None
-
-    @context.setter
-    def context(self, value: IconScoreContext) -> None:
-        self._thread_local_data.context = value
-
-    def get(self, key: bytes) -> bytes:
+    def put(self,
+            context: IconScoreContext,
+            key: bytes,
+            value: bytes) -> None:
         """
         """
-        value = None
-        context = self.context
-
-        if context is None \
-                or context.readonly \
-                or context.type == IconScoreContextType.GENESIS:
-            value = super().get(key)
-        else:
-            value = super().get_from_batch(context.block_batch,
-                                           context.tx_batch,
-                                           key)
-
-        return value
-
-    def put(self, key: bytes, value: bytes) -> None:
-        context = self.context
-
-        if context is None or context.readonly:
+        if context.readonly:
             raise DatabaseException('put is not allowed')
         elif context.type == IconScoreContextType.INVOKE:
-            super().put_to_batch(context.tx_batch, key, value)
+            self.put_to_batch(context, key, value)
         else:
             super().put(key, value)
 
-    def get_sub_db(self, key: bytes) -> 'InternalScoreDatabase':
-        """Get Prefixed db
+    def put_to_batch(self, context: IconScoreContext, key: bytes, value: bytes):
+        context.tx_batch.put(self.address, key, value)
 
-        :param key: (bytes): prefixed_db key
-        """
-        return InternalScoreDatabase(self._db.prefixed_db(key), self.address)
+    def delete(self, context: IconScoreContext, key: bytes):
+        if context.readonly:
+            raise DatabaseException('delete is not allowed')
+        else:
+            super().delete(key)
 
-    def write_batch(self, states: dict):
-        context = self.context
-        if context is None or context.readonly:
+    def write_batch(self,
+                    context: IconScoreContext,
+                    states: dict):
+        if context.readonly:
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
@@ -248,7 +228,37 @@ class InternalScoreDatabase(WritableDatabase):
     def from_address_and_path(
             address: Address,
             path: str,
-            create_if_missing=True) -> 'InternalScoreDatabase':
-        return InternalScoreDatabase(
+            create_if_missing=True) -> 'ContextDatabase':
+        return ContextDatabase(
             PlyvelDatabase.make_db(path, create_if_missing),
             address)
+
+
+class ScoreDatabase(object):
+    """It is used in IconScore
+
+    IconScore developer will get and use ScoreDatabase instance in IconScore
+    """
+    def __init__(self, icon_score: 'IconScoreBase', prefix: bytes=b'') -> None:
+        """
+        """
+        self.__prefix = prefix
+        self.__icon_score = icon_score
+
+    def get(self, key: bytes) -> bytes:
+        key = self.__hash_key(key)
+        return self.__icon_score.get_from_db(key)
+
+    def put(self, key: bytes, value: bytes):
+        key = self.__hash_key(key)
+        self.__icon_score.put_to_db(key, value)
+
+    def get_sub_db(self, prefix: bytes) -> 'ScoreDatabase':
+        return ScoreDatabase(self.__icon_score, prefix)
+
+    def delete(self, key: bytes):
+        key = self.__hash_key(key)
+        self.__icon_score.delete_from_db(key)
+
+    def __hash_key(self, key: bytes):
+        key = sha3_256(self.__prefix + key)

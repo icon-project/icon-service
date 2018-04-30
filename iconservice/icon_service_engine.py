@@ -95,6 +95,11 @@ class IconServiceEngine(object):
         self._icx_engine.close()
 
     def genesis_invoke(self, accounts: list) -> None:
+        """Process the list of account info in the genesis block
+
+        :param accounts: account infos in the genesis block
+        """
+
         context = self._context_factory.create(IconScoreContextType.GENESIS)
 
         # NOTICE: context is saved on thread local data
@@ -134,12 +139,13 @@ class IconServiceEngine(object):
             try:
                 method = tx['method']
                 params = tx['params']
-                result = self.call(context, method, params)
+                self.call(context, method, params)
 
                 context.block_batch.put_tx_batch(context.tx_batch)
-                context.tx_batch.clear()
             except:
                 raise NotImplementedError('TODO: tx exception handling')
+
+            context.tx_batch.clear()
 
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
@@ -201,7 +207,6 @@ class IconServiceEngine(object):
         :return: icx balance in loop
         """
         address = params['address']
-
         return self._icx_engine.get_balance(address)
 
     def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
@@ -219,11 +224,15 @@ class IconServiceEngine(object):
         :param params:
         :return:
         """
-        to: Address = params['to']
-        data_type = params.get('data_type', None)
-        data = params.get('data', None)
+        _from: Address = params['from']
+        _to: Address = params['to']
+        _data_type = params.get('data_type', None)
+        _data = params.get('data', None)
 
-        return self._icon_score_engine.query(to, context, data_type, data)
+        context.tx = Transaction(origin=_from)
+        context.msg = Message(sender=_from)
+
+        return self._icon_score_engine.query(_to, context, _data_type, _data)
 
     def _handle_icx_sendTransaction(self,
                                     context: IconScoreContext,
@@ -244,7 +253,7 @@ class IconServiceEngine(object):
 
         self._icx_engine.transfer(_from, _to, _value)
 
-        if _to.is_contract:
+        if _to is None or _to.is_contract:
             _data_type: str = params['data_type']
             _data: dict = params['data']
             self._icon_score_engine.invoke(_to, context, _data_type, _data)
@@ -265,7 +274,12 @@ class IconServiceEngine(object):
         context.msg = Message(sender=_from, value=_value)
 
     def commit(self):
+        """Write updated states in a context.block_batch to StateDB
+        when the candidate block has been confirmed
+        """
         pass
 
     def rollback(self):
+        """Delete updated states in a context.block_batch and 
+        """
         pass

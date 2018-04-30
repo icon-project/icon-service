@@ -186,3 +186,5 @@ class IconScoreBase(IconScoreObject):
     def send(self, addr_to: Address, amount: int):
         return self.__context.send(self.__address, addr_to, amount)
 
+    def revert(self) -> None:
+        return self.__context.revert(self.__address)

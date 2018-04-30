@@ -42,7 +42,6 @@ class IconScoreContext(object):
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
-                 readonly: bool = True,
                  block: Block = None,
                  tx: Transaction = None,
                  msg: Message = None,
@@ -50,10 +49,12 @@ class IconScoreContext(object):
                  tx_batch: TransactionBatch = None) -> None:
         """Constructor
 
-        :param readonly: whether state change is possible or not
-        :param icx:
+        :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
+        :param block:
         :param tx: initial transaction info
         :param msg: message call info
+        :param block_batch:
+        :param tx_batch:
         """
         self.type: IconScoreContextType = context_type
         self.block = block
@@ -173,6 +174,7 @@ class IconScoreContext(object):
         """
         # Nothing to do
 
+
 class IconScoreContextFactory(object):
     """IconScoreContextFactory
     """
@@ -186,7 +188,9 @@ class IconScoreContextFactory(object):
     def create(self, context_type: IconScoreContextType) -> IconScoreContext:
         with self._lock:
             if len(self._queue) > 0:
-                return self._queue.pop()
+                context = self._queue.pop()
+                context.type = context_type
+                return context
 
         return IconScoreContext(context_type)
 

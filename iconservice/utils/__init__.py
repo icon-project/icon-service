@@ -19,6 +19,7 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import re
+import hashlib
 from functools import wraps
 
 
@@ -45,3 +46,7 @@ def trace(func):
         print('%s(%r, %r) -> %r' % (func.__name__, args, kwargs, result))
         return result
     return wrapper
+
+
+def sha3_256(data: bytes):
+    return hashlib.sha3_256(data).digest()
