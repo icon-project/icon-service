@@ -25,6 +25,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.address = Address.from_string('cx' + '1'*40)
         self.archive_path = "tests/test.zip"
         self.archive_path2 = "tests/test_bad.zip"
+        self.archive_path3 = "tests/test_uncovered.zip"
         self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
 
         self.installer2 = IconScoreInstaller('/')
@@ -67,7 +68,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.assertFalse(ret2)
 
         # Case when installing SCORE with badzipfile Data.
-        block_height2, transaction_index2 = 123, 12
+        block_height2, transaction_index2 = 123, 13
         score_id2 = str(block_height2) + "_" + str(transaction_index2)
         ret3 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path2),
                                       block_height2, transaction_index2)
@@ -80,7 +81,14 @@ class TestIConScoreInstaller(unittest.TestCase):
                                        block_height1, transaction_index1)
         self.assertFalse(ret4)
 
-        self.installer.remove_existing_score(install_path)
+
+        # Case when the user try to install scores without directories.
+
+        ret5 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path3),
+                                      block_height1, transaction_index2)
+        score_id3 = str(block_height1) + "_" + str(transaction_index2)
+        install_path3 = os.path.join(self.score_root_path, score_id3)
+        self.assertEqual(True, os.path.exists(install_path3))
 
     def test_remove_existing_score(self):
         block_height1, transaction_index1 = 1234, 12
