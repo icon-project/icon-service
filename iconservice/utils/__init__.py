@@ -21,6 +21,7 @@ Functions and classes in this module don't have any external dependencies.
 import re
 import hashlib
 from functools import wraps
+import threading
 
 
 def is_lowercase_hex_string(value: str) -> bool:

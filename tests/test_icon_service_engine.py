@@ -117,7 +117,7 @@ class TestIconServiceEngine(unittest.TestCase):
             'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
         }
 
-        self._engine._icx_engine.context = context
+        self._engine.put_context(context)
         self._engine.call(context, method, params)
 
         tx_batch = context.tx_batch

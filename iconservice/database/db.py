@@ -130,7 +130,7 @@ class PlyvelDatabase(object):
 
 
 class ContextDatabase(PlyvelDatabase):
-    """Database for an IconScore only used on the inside of iconservice.
+    """Database for an IconScore only used in the inside of iconservice.
 
     IconScore can't access this database directly.
     Cache + LevelDB
@@ -148,17 +148,18 @@ class ContextDatabase(PlyvelDatabase):
         self.address = address
 
     def get(self, context: IconScoreContext, key: bytes) -> bytes:
-        """
-        """
-        value = None
+        """Returns value indicated by key from batch or StateDB
 
-        if context.readonly \
+        :param context:
+        :param key:
+        :return: value
+        """
+        if context is None \
+                or context.readonly \
                 or context.type == IconScoreContextType.GENESIS:
-            value = super().get(key)
+            return  super().get(key)
         else:
-            value = self.get_from_batch(context, key)
-
-        return value
+            return self.get_from_batch(context, key)
 
     def get_from_batch(self,
                        context: IconScoreContext,
@@ -197,7 +198,11 @@ class ContextDatabase(PlyvelDatabase):
             context: IconScoreContext,
             key: bytes,
             value: bytes) -> None:
-        """
+        """put value to StateDB or catch according to contex type
+
+        :param context:
+        :param key:
+        :param value:
         """
         if context.readonly:
             raise DatabaseException('put is not allowed')
@@ -234,13 +239,16 @@ class ContextDatabase(PlyvelDatabase):
             address)
 
 
-class ScoreDatabase(object):
+class IconScoreDatabase(object):
     """It is used in IconScore
 
-    IconScore developer will get and use ScoreDatabase instance in IconScore
+    IconScore can access its states only through IconScoreDatabase
     """
     def __init__(self, icon_score: 'IconScoreBase', prefix: bytes=b'') -> None:
-        """
+        """Constructor
+
+        :param icon_score:
+        :param prefix:
         """
         self.__prefix = prefix
         self.__icon_score = icon_score
@@ -253,12 +261,14 @@ class ScoreDatabase(object):
         key = self.__hash_key(key)
         self.__icon_score.put_to_db(key, value)
 
-    def get_sub_db(self, prefix: bytes) -> 'ScoreDatabase':
-        return ScoreDatabase(self.__icon_score, prefix)
+    def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
+        return IconScoreDatabase(self.__icon_score, self.__prefix + prefix)
 
     def delete(self, key: bytes):
         key = self.__hash_key(key)
         self.__icon_score.delete_from_db(key)
 
     def __hash_key(self, key: bytes):
+        """All key is hashed and stored to StateDB
+        """
         key = sha3_256(self.__prefix + key)

@@ -22,12 +22,14 @@ from .icx_logger import IcxLogger, logd, logi, logw, loge
 from .icx_storage import IcxStorage
 from ..base.address import Address, AddressPrefix
 from ..base.exception import ExceptionCode, IconException
+from ..iconscore import ContextGetter
 
 
-class IcxEngine(object):
+class IcxEngine(ContextGetter):
     """Manages the balances of icon accounts
 
     The basic unit of icx coin is loop. (1 icx == 1e18 loop)
+    _context property is inherited from ContextGetter
     """
 
     def __init__(self) -> None:
@@ -39,7 +41,7 @@ class IcxEngine(object):
         self.__genesis_address: Address = None
         self.__fee_treasury_address: Address = None
 
-    def open(self, db: 'InternalScoreDatabase', logger: IcxLogger=None) -> None:
+    def open(self, db: 'ContextDatabase', logger: IcxLogger=None) -> None:
         """Open engine
 
         Get necessary parameters from caller and begin to use storage(leveldb)
@@ -175,7 +177,7 @@ class IcxEngine(object):
                           _to: Address,
                           _amount: int,
                           _fee: int) -> bool:
-        if self.context.readonly:
+        if self._context.readonly:
             raise IconException(
                 ExceptionCode.INVALID_REQUEST,
                 'icx transfer is not allowed on readonly context')
@@ -247,7 +249,7 @@ class IcxEngine(object):
                  _from: Address,
                  _to: Address,
                  _amount: int) -> bool:
-        if self.context.readonly:
+        if self._context.readonly:
             raise IconException(
                 ExceptionCode.INVALID_REQUEST,
                 'icx transfer is not allowed on readonly context')
@@ -274,22 +276,6 @@ class IcxEngine(object):
             self.__storage.put_account(to_account.address, to_account)
 
         return True
-
-    @property
-    def context(self) -> 'IconScoreContext':
-        """context is saved in thread local data
-
-        :param value:
-        """
-        return self.__db.context
-
-    @context.setter
-    def context(self, value: 'IconScoreContext') -> None:
-        """context is saved in thread local data
-
-        :param value:
-        """
-        self.__db.context = value
 
     def get_account(self, address: Address) -> Account:
         """Returns the instance of Account indicated by address

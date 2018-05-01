@@ -17,13 +17,14 @@
 from .icx_account import Account
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address
+from ..iconscore import ContextGetter
 
 
-class IcxStorage(object):
+class IcxStorage(ContextGetter):
     """Icx coin state manager embedding a state db wrapper
     """
 
-    def __init__(self, db: object) -> None:
+    def __init__(self, db: 'ContextDatabase', ) -> None:
         """Constructor
 
         :param db: (Database) state db wrapper
@@ -31,7 +32,7 @@ class IcxStorage(object):
         self.__db = db
 
     @property
-    def db(self) -> object:
+    def db(self) -> 'ContextDatabase':
         """Returns state db wrapper.
 
         :return: (Database) state db wrapper
@@ -46,7 +47,7 @@ class IcxStorage(object):
             default encoding: utf8
         """
         key = name.encode()
-        value = self.__db.get(key)
+        value = self.__db.get(self._context, key)
         if value:
             return value.decode()
         else:
@@ -61,7 +62,7 @@ class IcxStorage(object):
         """
         key = name.encode()
         value = text.encode()
-        self.__db.put(key, value)
+        self.__db.put(self._context, key, value)
 
     def get_account(self, address: Address) -> Account:
         """Returns the account indicated by address.
@@ -74,7 +75,7 @@ class IcxStorage(object):
         account = None
 
         key = address.body
-        value = self.__db.get(key)
+        value = self.__db.get(self._context, key)
 
         if value:
             account = Account.from_bytes(value)
@@ -92,7 +93,7 @@ class IcxStorage(object):
         """
         key = address.body
         value = account.to_bytes()
-        self.__db.put(key, value)
+        self.__db.put(self._context, key, value)
 
     def delete_account(self, address: Address) -> None:
         """Delete account info from db.
@@ -100,7 +101,7 @@ class IcxStorage(object):
         :param address: account address
         """
         key = address.body
-        self.__db.delete(key)
+        self.__db.delete(self._context, key)
 
     def get_total_supply(self) -> int:
         """Get the total supply
@@ -108,7 +109,7 @@ class IcxStorage(object):
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
         key = b'total_supply'
-        value = self.__db.get(key)
+        value = self.__db.get(self._context, key)
 
         amount = 0
         if value:
@@ -123,7 +124,7 @@ class IcxStorage(object):
         """
         key = b'total_supply'
         value = value.to_bytes(BALANCE_BYTE_SIZE, DATA_BYTE_ORDER)
-        self.__db.put(key, value)
+        self.__db.put(self._context, key, value)
 
     def is_address_present(self, address: Address) -> bool:
         """Check whether value indicated by address is present or not.
@@ -133,7 +134,7 @@ class IcxStorage(object):
         :return: True(present) False(not present)
         """
         key = address.body
-        value = self.__db.get(key)
+        value = self.__db.get(self._context, key)
 
         return bool(value)
 
