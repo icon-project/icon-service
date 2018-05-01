@@ -17,14 +17,13 @@
 from .icx_account import Account
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address
-from ..iconscore import ContextGetter
 
 
-class IcxStorage(ContextGetter):
+class IcxStorage(object):
     """Icx coin state manager embedding a state db wrapper
     """
 
-    def __init__(self, db: 'ContextDatabase', ) -> None:
+    def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
 
         :param db: (Database) state db wrapper
@@ -39,7 +38,7 @@ class IcxStorage(ContextGetter):
         """
         return self.__db
 
-    def get_text(self, name: str) -> str:
+    def get_text(self, context: 'IconScoreContext', name: str) -> str:
         """Return text format value from db
 
         :return: (str or None)
@@ -47,26 +46,33 @@ class IcxStorage(ContextGetter):
             default encoding: utf8
         """
         key = name.encode()
-        value = self.__db.get(self._context, key)
+        value = self.__db.get(context, key)
         if value:
             return value.decode()
         else:
             return None
 
-    def put_text(self, name: str, text: str) -> None:
+    def put_text(self,
+                 context: 'IconScoreContext',
+                 name: str,
+                 text: str) -> None:
         """save text to db with name as a key
         All text are utf8 encoded.
 
+        :param context:
         :param name: db key
         :param text: db value
         """
         key = name.encode()
         value = text.encode()
-        self.__db.put(self._context, key, value)
+        self.__db.put(context, key, value)
 
-    def get_account(self, address: Address) -> Account:
+    def get_account(self,
+                    context: 'IconScoreContext',
+                    address: Address) -> Account:
         """Returns the account indicated by address.
 
+        :param context:
         :param address: account address
         :return: (Account)
             If the account indicated by address is not present,
@@ -75,7 +81,7 @@ class IcxStorage(ContextGetter):
         account = None
 
         key = address.body
-        value = self.__db.get(self._context, key)
+        value = self.__db.get(context, key)
 
         if value:
             account = Account.from_bytes(value)
@@ -85,7 +91,10 @@ class IcxStorage(ContextGetter):
         account.address = address
         return account
 
-    def put_account(self, address: Address, account: Account) -> None:
+    def put_account(self,
+                    context: 'IconScoreContext',
+                    address: Address,
+                    account: Account) -> None:
         """Put account info to db.
 
         :param address: account address
@@ -93,23 +102,26 @@ class IcxStorage(ContextGetter):
         """
         key = address.body
         value = account.to_bytes()
-        self.__db.put(self._context, key, value)
+        self.__db.put(context, key, value)
 
-    def delete_account(self, address: Address) -> None:
+    def delete_account(self,
+                       context: 'IconScoreContext',
+                       address: Address) -> None:
         """Delete account info from db.
 
+        :param context:
         :param address: account address
         """
         key = address.body
-        self.__db.delete(self._context, key)
+        self.__db.delete(context, key)
 
-    def get_total_supply(self) -> int:
+    def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply
 
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
         key = b'total_supply'
-        value = self.__db.get(self._context, key)
+        value = self.__db.get(context, key)
 
         amount = 0
         if value:
@@ -117,30 +129,38 @@ class IcxStorage(ContextGetter):
 
         return amount
 
-    def put_total_supply(self, value: int) -> None:
+    def put_total_supply(self,
+                         context: 'IconScoreContext',
+                         value: int) -> None:
         """Save the total supply to db
 
+        :param context:
         :param value: coin total supply
         """
         key = b'total_supply'
         value = value.to_bytes(BALANCE_BYTE_SIZE, DATA_BYTE_ORDER)
-        self.__db.put(self._context, key, value)
+        self.__db.put(context, key, value)
 
-    def is_address_present(self, address: Address) -> bool:
+    def is_address_present(self,
+                           context: 'IconScoreContext',
+                           address: Address) -> bool:
         """Check whether value indicated by address is present or not.
 
+        :param context:
         :param address: account address
-
         :return: True(present) False(not present)
         """
         key = address.body
-        value = self.__db.get(self._context, key)
+        value = self.__db.get(context, key)
 
         return bool(value)
 
-    def close(self) -> None:
+    def close(self,
+              context: 'IconScoreContext') -> None:
         """Close the embedded database.
+
+        :param context:
         """
         if self.__db:
-            self.__db.close()
+            self.__db.close(context)
             self.__db = None

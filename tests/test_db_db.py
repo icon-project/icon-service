@@ -90,7 +90,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.context = context
 
     def tearDown(self):
-        self.db.close()
+        self.db.close(self.context)
         rmtree(self.state_db_root_path)
 
     def test_get(self):

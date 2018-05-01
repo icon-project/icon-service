@@ -18,6 +18,7 @@
 import unittest
 
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 
 
@@ -30,21 +31,23 @@ class TestIconScoreContextFactory(unittest.TestCase):
 
     def test_create_and_destroy(self):
         factory = self.factory
-        contexts = []
+        self.assertEqual(0, len(factory._queue))
 
         for _ in range(3):
-            context = factory.create()
+            context = factory.create(IconScoreContextType.QUERY)
             self.assertTrue(isinstance(context, IconScoreContext))
             self.assertEqual(0, len(factory._queue))
-            contexts.append(context)
+            self.assertTrue(context.readonly)
+            factory.destroy(context)
 
-        for context in contexts:
-            self.factory.destroy(context)
-
-        self.assertEqual(2, len(factory._queue))
-
-        context = factory.create()
         self.assertEqual(1, len(factory._queue))
 
-        context = factory.create()
+        context = factory.create(IconScoreContextType.INVOKE)
         self.assertEqual(0, len(factory._queue))
+        self.assertEqual(IconScoreContextType.INVOKE, context.type)
+        self.factory.destroy(context)
+
+        context = factory.create(IconScoreContextType.GENESIS)
+        self.assertEqual(0, len(factory._queue))
+        self.assertEqual(IconScoreContextType.GENESIS, context.type)
+        self.factory.destroy(context)

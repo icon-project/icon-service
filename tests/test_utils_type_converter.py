@@ -16,7 +16,7 @@
 
 import unittest
 
-from icon.iconservice.utils.type_converter import TypeConverter
+from iconservice.utils.type_converter import TypeConverter
 
 
 class TestTypeConverter(unittest.TestCase):

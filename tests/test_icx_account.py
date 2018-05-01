@@ -19,7 +19,7 @@
 import unittest
 
 from iconservice.base.address import Address
-from iconservice.icx.icx_error import IcxError
+from iconservice.base.exception import IconException
 from iconservice.icx.icx_account import AccountType, Account
 
 
@@ -63,12 +63,12 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(0, account1.icx)
 
         # wrong value
-        self.assertRaises(IcxError, account1.deposit, -10)
-        self.assertRaises(IcxError, account1.deposit, 0)
+        self.assertRaises(IconException, account1.deposit, -10)
+        self.assertRaises(IconException, account1.deposit, 0)
 
-        self.assertRaises(IcxError, account1.withdraw, -11234)
-        self.assertRaises(IcxError, account1.withdraw, 0)
-        self.assertRaises(IcxError, account1.withdraw, 1)
+        self.assertRaises(IconException, account1.withdraw, -11234)
+        self.assertRaises(IconException, account1.withdraw, 0)
+        self.assertRaises(IconException, account1.withdraw, 1)
 
     def test_account_from_bytes_to_bytes(self):
         account = Account()

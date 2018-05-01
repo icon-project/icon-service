@@ -31,10 +31,9 @@ from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore import ContextContainer
 
 
-class IconServiceEngine(ContextContainer):
+class IconServiceEngine(object):
     """The entry of all icon service related components
 
     It MUST NOT have any loopchain dependencies.
@@ -103,9 +102,6 @@ class IconServiceEngine(ContextContainer):
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
 
-        # NOTICE: context is saved on thread local data
-        self.put_context(context)
-
         genesis_account = accounts[0]
         self._icx_engine.init_genesis_account(
             address=genesis_account['address'],
@@ -115,6 +111,8 @@ class IconServiceEngine(ContextContainer):
         self._icx_engine.init_fee_treasury_account(
             address=fee_treasury_account['address'],
             amount=fee_treasury_account['balance'])
+
+        self._context_factory.destroy(context)
 
     def invoke(self,
                block_height: int,
@@ -133,9 +131,6 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
 
-        # NOTICE: context is saved on thread local data
-        self.put_context(context)
-
         for tx in transactions:
             try:
                 method = tx['method']
@@ -147,6 +142,8 @@ class IconServiceEngine(ContextContainer):
                 raise NotImplementedError('TODO: tx exception handling')
 
             context.tx_batch.clear()
+
+        self._context_factory.destroy(context)
 
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
@@ -162,12 +159,12 @@ class IconServiceEngine(ContextContainer):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
-        context.block = None
 
-        # NOTICE: context is saved on thread local data
-        self.put_context(context)
+        ret = self.call(context, method, params)
 
-        return self.call(context, method, params)
+        self._context_factory.destroy(context)
+
+        return ret
 
     def call(self,
              context: IconScoreContext,

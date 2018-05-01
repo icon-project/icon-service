@@ -64,7 +64,7 @@ class IcxEngine(ContextGetter):
         """Close resources
         """
         if self.__storage:
-            self.__storage.close()
+            self.__storage.close(self._context)
             self.__storage = None
 
     def init_genesis_account(self, address: Address, amount: int) -> None:
@@ -74,6 +74,7 @@ class IcxEngine(ContextGetter):
         :param address: account address
         :param amount: the initial balance of genesis_account
         """
+        context = self._context
         account = Account(account_type=AccountType.GENESIS,
                           address=address,
                           icx=amount)
@@ -83,14 +84,14 @@ class IcxEngine(ContextGetter):
             'address': str(address)
         }
         text = json.dumps(obj)
-        self.__storage.put_text('genesis', text)
+        self.__storage.put_text(context, 'genesis', text)
 
-        self.__storage.put_account(account.address, account)
+        self.__storage.put_account(context, account.address, account)
         self.__genesis_address = address
 
         # icx amount of genesis account is equal to total supply at the first time.
         self.__total_supply_amount = account.icx
-        self.__storage.put_total_supply(self.__total_supply_amount)
+        self.__storage.put_total_supply(context, self.__total_supply_amount)
 
     def init_fee_treasury_account(self, address: Address, amount: int=0) -> None:
         """Initialize fee treasury account with genesis block.
@@ -98,6 +99,7 @@ class IcxEngine(ContextGetter):
         :param address: account address
         :param amount: the initial balance of fee_treasury_account
         """
+        context = self._context
         account = Account(account_type=AccountType.TREASURY,
                           address=address,
                           icx=amount)
@@ -108,9 +110,9 @@ class IcxEngine(ContextGetter):
             'address': str(address)
         }
         text = json.dumps(obj)
-        self.__storage.put_text('fee_treasury', text)
+        self.__storage.put_text(context, 'fee_treasury', text)
 
-        self.__storage.put_account(account.address, account)
+        self.__storage.put_account(context, account.address, account)
         self.__fee_treasury_address = address
 
     def __load_genesis_account_from_storage(self, storage: IcxStorage) -> None:
@@ -118,7 +120,7 @@ class IcxEngine(ContextGetter):
 
         :param storage: (IcxStorage) state db wrapper
         """
-        text = storage.get_text('genesis')
+        text = storage.get_text(self._context, 'sgenesis')
         if text:
             obj = json.loads(text)
             self.__genesis_address = Address.from_string(obj['address'])
@@ -129,7 +131,7 @@ class IcxEngine(ContextGetter):
 
         :param storage: state db manager
         """
-        text = storage.get_text('fee_treasury')
+        text = storage.get_text(self._context, 'fee_treasury')
         if text:
             obj = json.loads(text)
             self.__fee_treasury_address = Address.from_string(obj['address'])
@@ -142,7 +144,7 @@ class IcxEngine(ContextGetter):
         """
         logd(self.__logger, '__load_total_supply_amount() start')
 
-        self.__total_supply_amount = storage.get_total_supply()
+        self.__total_supply_amount = storage.get_total_supply(self._context)
         logi(self.__logger, f'total_supply: {self.__total_supply_amount}')
 
         logd(self.__logger, '__load_total_supply_amount() end')
@@ -154,7 +156,7 @@ class IcxEngine(ContextGetter):
         :return: the balance of address in loop (1 icx  == 1e18 loop)
         """
 
-        account = self.__storage.get_account(address)
+        account = self.__storage.get_account(self._context, address)
 
         # If the address is not present, its balance is 0.
         # Unit: loop (1 icx == 1e18 loop)
@@ -193,6 +195,7 @@ class IcxEngine(ContextGetter):
         :param _fee: (int) transaction fee (0.01 icx)
         :exception: IconException
         """
+        context = self._context
         _fee_treasury_address = self.__fee_treasury_address
 
         logd(self.__logger,
@@ -211,9 +214,9 @@ class IcxEngine(ContextGetter):
             raise IconException(ExceptionCode.INVALID_FEE)
 
         # get account info from state db.
-        from_account = self.__storage.get_account(_from)
-        to_account = self.__storage.get_account(_to)
-        fee_account = self.__storage.get_account(_fee_treasury_address)
+        from_account = self.__storage.get_account(context, _from)
+        to_account = self.__storage.get_account(context, _to)
+        fee_account = self.__storage.get_account(context, _fee_treasury_address)
 
         logi(self.__logger,
              'before:  '
@@ -229,9 +232,9 @@ class IcxEngine(ContextGetter):
         fee_account.deposit(_fee)
 
         # write newly updated state into state db.
-        self.__storage.put_account(from_account.address, from_account)
-        self.__storage.put_account(to_account.address, to_account)
-        self.__storage.put_account(fee_account.address, fee_account)
+        self.__storage.put_account(context, from_account.address, from_account)
+        self.__storage.put_account(context, to_account.address, to_account)
+        self.__storage.put_account(context, fee_account.address, fee_account)
 
         logi(self.__logger,
              'after: '
@@ -254,26 +257,31 @@ class IcxEngine(ContextGetter):
                 ExceptionCode.INVALID_REQUEST,
                 'icx transfer is not allowed on readonly context')
 
-        return self._transfer(_from, _to, _amount)
+        return self._transfer(self._context, _from, _to, _amount)
 
-    def _transfer(self, _from: Address, _to: Address, _amount: int) -> bool:
+    def _transfer(self,
+                  context: 'IconScoreContext',
+                  _from: Address,
+                  _to: Address,
+                  _amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by _to address
 
+        :param context:
         :param _from: icx sender
         :param _to: icx receiver
         :param _amount: the amount of coin in loop to transfer
         """
         if _from != _to and _amount > 0:
             # get account info from state db.
-            from_account = self.__storage.get_account(_from)
-            to_account = self.__storage.get_account(_to)
+            from_account = self.__storage.get_account(context, _from)
+            to_account = self.__storage.get_account(context, _to)
 
             from_account.withdraw(_amount)
             to_account.deposit(_amount)
 
             # write newly updated state into state db.
-            self.__storage.put_account(from_account.address, from_account)
-            self.__storage.put_account(to_account.address, to_account)
+            self.__storage.put_account(context, from_account.address, from_account)
+            self.__storage.put_account(context, to_account.address, to_account)
 
         return True
 
@@ -283,4 +291,4 @@ class IcxEngine(ContextGetter):
         :param address:
         :return: Account
         """
-        return self.__storage.get_account(address)
+        return self.__storage.get_account(self._context, address)

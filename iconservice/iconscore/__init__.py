@@ -17,8 +17,11 @@
 
 import threading
 
+from ..base.exception import ExceptionCode, IconException
+
 
 _thread_local_data = threading.local()
+
 
 class ContextContainer(object):
     """ContextContainer mixin
@@ -26,14 +29,26 @@ class ContextContainer(object):
     Every class inherit ContextContainer can share IconScoreContext instance
     in the current thread.
     """
-    def get_context(self) -> 'IconScoreContext':
+    def _get_context(self) -> 'IconScoreContext':
         return getattr(_thread_local_data, 'context', None)
 
-    def put_context(self, value: 'IconScoreContext') -> None:
-        _thread_local_data.context = value
+    def _put_context(self, value: 'IconScoreContext') -> None:
+        setattr(_thread_local_data, 'context', value)
+
+    def _delete_context(self, context: 'IconScoreContext') -> None:
+        """Delete the context of the current thread
+        """
+        if context is not _thread_local_data.context:
+            raise IconException(
+                ExceptionCode.INTERNAL_ERROR,
+                'Critical error in context management')
+
+        del _thread_local_data.context
 
 
 class ContextGetter(object):
+    """The class which refers to IconScoreContext should inherit ContextGetter
+    """
     @property
     def _context(self):
         return getattr(_thread_local_data, 'context', None)

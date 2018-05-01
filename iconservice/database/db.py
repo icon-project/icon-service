@@ -220,6 +220,13 @@ class ContextDatabase(PlyvelDatabase):
         else:
             super().delete(key)
 
+    def close(self, context: IconScoreContext) -> None:
+        if context is not None and context.readonly:
+            raise DatabaseException(
+                'close is not allowed on readonly context')
+
+        return super().close()
+
     def write_batch(self,
                     context: IconScoreContext,
                     states: dict):

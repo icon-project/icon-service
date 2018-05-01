@@ -23,9 +23,11 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
-from ..icx.icx_engine import IcxEngine
-from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
+from ..base.exception import ExceptionCode, IconException
 from ..database.batch import BlockBatch, TransactionBatch
+from ..icx.icx_engine import IcxEngine
+from . import ContextContainer
+from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 
 
 @unique
@@ -175,7 +177,7 @@ class IconScoreContext(object):
         # Nothing to do
 
 
-class IconScoreContextFactory(object):
+class IconScoreContextFactory(ContextContainer):
     """IconScoreContextFactory
     """
     def __init__(self, max_size: int) -> None:
@@ -186,19 +188,25 @@ class IconScoreContextFactory(object):
         self._max_size = max_size
 
     def create(self, context_type: IconScoreContextType) -> IconScoreContext:
+        context = None
+
         with self._lock:
             if len(self._queue) > 0:
                 context = self._queue.pop()
                 context.type = context_type
-                return context
+            else:
+                context = IconScoreContext(context_type)
 
-        return IconScoreContext(context_type)
+        self._put_context(context)
+        return context
 
     def destroy(self, context: IconScoreContext) -> None:
         with self._lock:
             if len(self._queue) < self._max_size:
                 context.clear()
                 self._queue.append(context)
+
+        self._delete_context(context)
 
 
 def call_method(addr_to: Address, score_mapper: IconScoreInfoMapper,
