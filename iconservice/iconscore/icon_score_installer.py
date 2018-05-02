@@ -42,7 +42,7 @@ class IconScoreInstaller(object):
         """
         str_block_height = str(block_height)
         str_transaction_index = str(transaction_index)
-        str_address = str(address)
+        str_address = str(address.body.hex())
         score_id = str_block_height + "_" + str_transaction_index
         score_root_path = os.path.join(self.icon_score_root_path, str_address)
         install_path = os.path.join(score_root_path, score_id)
