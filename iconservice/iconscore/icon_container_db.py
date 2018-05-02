@@ -2,7 +2,7 @@ import collections
 from typing import TypeVar, Optional, Any, Union, Tuple
 from ..base.address import Address
 from ..base.exception import IconScoreBaseException
-from ..database.db import InternalScoreDatabase
+from ..database.db import IconScoreDatabase
 
 K = TypeVar('K', int, str, Address)
 V = TypeVar('V', int, str, Address, bytes, bool)
@@ -75,7 +75,7 @@ class ContainerUtil(object):
 class ContainerDBBase(object):
 
     @staticmethod
-    def put_to_db(db: InternalScoreDatabase, db_key: str, container: iter) -> None:
+    def put_to_db(db: IconScoreDatabase, db_key: str, container: iter) -> None:
         sub_db = db.get_sub_db(ContainerUtil.encode_key(db_key))
         if isinstance(container, dict):
             ContainerDBBase.__put_to_db_internal(sub_db, container.items())
@@ -83,7 +83,7 @@ class ContainerDBBase(object):
             ContainerDBBase.__put_to_db_internal(sub_db, enumerate(container))
 
     @staticmethod
-    def get_from_db(db: InternalScoreDatabase, db_key: str, *args, value_type: type) -> Optional[K]:
+    def get_from_db(db: IconScoreDatabase, db_key: str, *args, value_type: type) -> Optional[K]:
         sub_db = db.get_sub_db(ContainerUtil.encode_key(db_key))
         *args, last_arg = args
         for arg in args:
@@ -95,7 +95,7 @@ class ContainerDBBase(object):
         return ContainerUtil.decode_object(byte_key, value_type)
 
     @staticmethod
-    def __put_to_db_internal(db: InternalScoreDatabase, iters: iter) -> None:
+    def __put_to_db_internal(db: IconScoreDatabase, iters: iter) -> None:
         for key, value in iters:
             sub_db = db.get_sub_db(ContainerUtil.encode_key(key))
             if isinstance(value, dict):
@@ -110,7 +110,7 @@ class ContainerDBBase(object):
 
 class DictDB(object):
 
-    def __init__(self, var_key: str, db: InternalScoreDatabase, value_type: type, depth: int=1) -> None:
+    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type, depth: int=1) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
         self.__value_type = value_type
         self.__depth = depth
@@ -170,7 +170,7 @@ class DictDB(object):
         return ContainerUtil.decode_object(value, self.__value_type)
 
     @staticmethod
-    def __find_sub_db_from_keys(db: InternalScoreDatabase, keys: Tuple[K, ...]) -> InternalScoreDatabase:
+    def __find_sub_db_from_keys(db: IconScoreDatabase, keys: Tuple[K, ...]) -> IconScoreDatabase:
         sub_db = db
         for key in keys:
             sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
@@ -179,7 +179,7 @@ class DictDB(object):
 
 class VarDB(object):
 
-    def __init__(self, var_key: str, db: InternalScoreDatabase, value_type: type) -> None:
+    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type) -> None:
         self.__db = db
         self.__var_byte_key = ContainerUtil.encode_key(var_key)
         self.__value_type = value_type
