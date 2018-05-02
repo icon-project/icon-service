@@ -18,10 +18,11 @@
 
 
 from ..base.address import Address, AddressPrefix
-from ..base.exception import ExceptionCode, IconException
+from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
 from .icon_score_base import IconScoreBase
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
+from .icon_score_loader import IconScoreLoader
 
 
 class IconScoreEngine(object):
@@ -44,15 +45,20 @@ class IconScoreEngine(object):
         }
         self.__icon_score_info_mapper = icon_score_info_mapper
 
-    def __get_icon_score(self,
-                         address: Address) -> IconScoreBase:
+    def __get_icon_score(self, address: Address) -> IconScoreBase:
         """
         :param address:
-        :param readonly:
         :return: IconScoreBase object
         """
-        info = self.__icon_score_info_mapper[address]
-        return info.icon_score
+
+        icon_score_info = self.__icon_score_info_mapper.get(address)
+        if icon_score_info is None:
+            loader = IconScoreLoader()
+            loader.load_score(address)
+            raise IconScoreBaseException("icon_score_info is None")
+
+        icon_score = icon_score_info.icon_score
+        return icon_score
 
     def invoke(self,
                icon_score_address: Address,
@@ -69,7 +75,7 @@ class IconScoreEngine(object):
         if data_type == 'call':
             self.__call(icon_score_address, context, data)
         elif data_type == 'install':
-            self.__install(context.address, data)
+            self.__install(context, data)
         elif data_type == 'update':
             self.__update(context, data)
         else:

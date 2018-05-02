@@ -23,10 +23,15 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
-from ..base.exception import ExceptionCode, IconException
+from ..icx.icx_engine import IcxEngine
+from .icon_score_info_mapper import IconScoreInfoMapper
 from ..database.batch import BlockBatch, TransactionBatch
-from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 
+from typing import Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .icon_score_base import IconScoreBase
 
 _thread_local_data = threading.local()
 
@@ -37,13 +42,16 @@ class ContextContainer(object):
     Every class inherit ContextContainer can share IconScoreContext instance
     in the current thread.
     """
-    def _get_context(self) -> 'IconScoreContext':
+    @staticmethod
+    def _get_context() -> 'IconScoreContext':
         return getattr(_thread_local_data, 'context', None)
 
-    def _put_context(self, value: 'IconScoreContext') -> None:
+    @staticmethod
+    def _put_context(value: 'IconScoreContext') -> None:
         setattr(_thread_local_data, 'context', value)
 
-    def _delete_context(self, context: 'IconScoreContext') -> None:
+    @staticmethod
+    def _delete_context(context: 'IconScoreContext') -> None:
         """Delete the context of the current thread
         """
         if context is not _thread_local_data.context:
@@ -242,36 +250,29 @@ class IconScoreContextFactory(ContextContainer):
         self._delete_context(context)
 
 
-def call_method(addr_to: Address, score_mapper: IconScoreInfoMapper,
-                readonly: bool, func_name: str, addr_from: object=None, *args, **kwargs) -> object:
+def call_method(addr_to: Address, icon_score: 'IconScoreBase',
+                func_name: str, addr_from: Optional[Address]=None, *args, **kwargs) -> object:
 
-    icon_score_info = __get_icon_score_info(addr_from, addr_to, score_mapper)
-    icon_score = icon_score_info.get_icon_score(readonly)
+    if not __check_myself(addr_from, addr_to):
+        raise IconScoreBaseException("call function myself")
 
     try:
         return icon_score.call_method(func_name, *args, **kwargs)
     except (PayableException, ExternalException):
         call_fallback(addr_to=addr_to,
-                      score_mapper=score_mapper,
-                      readonly=readonly,
+                      icon_score=icon_score,
                       addr_from=addr_from)
         return None
 
 
-def call_fallback(addr_to: Address, score_mapper: IconScoreInfoMapper,
-                  readonly: bool, addr_from: object=None) -> None:
+def call_fallback(addr_to: Address, icon_score: 'IconScoreBase',
+                  addr_from: Optional[Address]=None) -> None:
 
-    icon_score_info = __get_icon_score_info(addr_from, addr_to, score_mapper)
-    icon_score = icon_score_info.get_icon_score(readonly)
+    if not __check_myself(addr_from, addr_to):
+        raise IconScoreBaseException("call function myself")
+
     icon_score.call_fallback()
 
 
-def __get_icon_score_info(addr_from: object, addr_to: Address, score_mapper: IconScoreInfoMapper) -> IconScoreInfo:
-    if addr_from == addr_to:
-        raise IconScoreBaseException("call function myself")
-
-    icon_score_info = score_mapper.get(addr_to)
-    if icon_score_info is None:
-        raise IconScoreBaseException("icon_score_info is None")
-
-    return icon_score_info
+def __check_myself(addr_from: Optional[Address], addr_to: Address) -> bool:
+    return addr_from == addr_to
