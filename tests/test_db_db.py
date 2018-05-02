@@ -123,3 +123,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         self.assertEqual(b'value1', db.get(context, b'key1'))
         self.assertEqual(b'value0', db.get(context, b'key0'))
+
+
+class TestIconScoreDatabase(unittest.TestCase):
+    pass
