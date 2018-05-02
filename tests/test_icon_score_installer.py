@@ -30,8 +30,8 @@ class TestIConScoreInstaller(unittest.TestCase):
 
         self.installer2 = IconScoreInstaller('/')
 
-    # def tearDown(self):
-    #     IconScoreInstaller.remove_existing_score(self.score_root_path)
+    def tearDown(self):
+        IconScoreInstaller.remove_existing_score(self.score_root_path)
 
     @staticmethod
     def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
