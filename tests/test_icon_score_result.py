@@ -47,6 +47,8 @@ class TestIconBlockResult(unittest.TestCase):
 
 
 class TestJsonSerializer(unittest.TestCase):
+    SAMPLE_SERIALIZED_RESULT = b'[{"txHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "blockHeight": 0, "to": "hx0000000000000000000000000000000000000000", "contractAddress": null, "stepUsed": 0, "status": 1}, {"txHash": "0x1111111111111111111111111111111111111111111111111111111111111111", "blockHeight": 0, "to": null, "contractAddress": "cx1111111111111111111111111111111111111111", "stepUsed": 0, "status": 1}, {"txHash": "0x2222222222222222222222222222222222222222222222222222222222222222", "blockHeight": 0, "to": "cx1111111111111111111111111111111111111111", "contractAddress": null, "stepUsed": 0, "status": 0}]'
+
     def setUp(self):
         self._json_serializer = JsonSerializer()
 
@@ -63,7 +65,7 @@ class TestJsonSerializer(unittest.TestCase):
         # EOA to EOA
         # {
         #     "txHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        #     "blockNumber": 0,
+        #     "blockHeight": 0,
         #     "to": "hx0000000000000000000000000000000000000000",
         #     "contractAddress": null,
         #     "stepUsed": 0,
@@ -75,7 +77,7 @@ class TestJsonSerializer(unittest.TestCase):
         # Install Score
         # {
         #     "txHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
-        #     "blockNumber": 0,
+        #     "blockHeight": 0,
         #     "to": null,
         #     "contractAddress": "cx1111111111111111111111111111111111111111",
         #     "stepUsed": 0,
@@ -87,7 +89,7 @@ class TestJsonSerializer(unittest.TestCase):
         # EOA to CA
         # {
         #     "txHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
-        #     "blockNumber": 0,
+        #     "blockHeight": 0,
         #     "to": "cx1111111111111111111111111111111111111111",
         #     "contractAddress": null,
         #     "stepUsed": 0,
@@ -99,5 +101,5 @@ class TestJsonSerializer(unittest.TestCase):
         serialized = self._json_serializer.serialize(transaction_results)
 
         # The result string should be
-        # [{"txHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "blockNumber": 0, "to": "hx0000000000000000000000000000000000000000", "contractAddress": null, "stepUsed": 0, "status": 1}, {"txHash": "0x1111111111111111111111111111111111111111111111111111111111111111", "blockNumber": 0, "to": null, "contractAddress": "cx1111111111111111111111111111111111111111", "stepUsed": 0, "status": 1}, {"txHash": "0x2222222222222222222222222222222222222222222222222222222222222222", "blockNumber": 0, "to": "cx1111111111111111111111111111111111111111", "contractAddress": null, "stepUsed": 0, "status": 0}]
-        assert serialized == b'[{"txHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "blockNumber": 0, "to": "hx0000000000000000000000000000000000000000", "contractAddress": null, "stepUsed": 0, "status": 1}, {"txHash": "0x1111111111111111111111111111111111111111111111111111111111111111", "blockNumber": 0, "to": null, "contractAddress": "cx1111111111111111111111111111111111111111", "stepUsed": 0, "status": 1}, {"txHash": "0x2222222222222222222222222222222222222222222222222222222222222222", "blockNumber": 0, "to": "cx1111111111111111111111111111111111111111", "contractAddress": null, "stepUsed": 0, "status": 0}]'
+        # [{"txHash": "0x0000000000000000000000000000000000000000000000000000000000000000", "blockHeight": 0, "to": "hx0000000000000000000000000000000000000000", "contractAddress": null, "stepUsed": 0, "status": 1}, {"txHash": "0x1111111111111111111111111111111111111111111111111111111111111111", "blockHeight": 0, "to": null, "contractAddress": "cx1111111111111111111111111111111111111111", "stepUsed": 0, "status": 1}, {"txHash": "0x2222222222222222222222222222222222222222222222222222222222222222", "blockHeight": 0, "to": "cx1111111111111111111111111111111111111111", "contractAddress": null, "stepUsed": 0, "status": 0}]
+        assert serialized == TestJsonSerializer.SAMPLE_SERIALIZED_RESULT

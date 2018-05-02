@@ -103,7 +103,7 @@ class JsonSerializer(Serializer):
                 new_dict = {}
                 for key, value in obj.__dict__.items():
                     if(key == "block"):
-                        new_dict["blockNumber"] = value.height
+                        new_dict["blockHeight"] = value.height
                     else:
                         new_dict[JsonSerializer.Encoder.underscore_to_camel(key)] = value
                 return new_dict
