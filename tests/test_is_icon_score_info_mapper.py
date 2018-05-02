@@ -18,6 +18,7 @@
 import unittest
 
 from iconservice.base.address import Address
+from iconservice.base.exception import IconException
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfo
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 
@@ -34,9 +35,9 @@ class TestIconScoreInfoMapper(unittest.TestCase):
     def test_setitem(self):
         info = IconScoreInfo(icon_score=None, owner=self.address)
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(IconException):
             self.mapper[self.address] = None
-        with self.assertRaises(ValueError):
+        with self.assertRaises(IconException):
             self.mapper[self.score_address] = 1
 
         score_address = Address.from_string(f'cx{"1" * 40}')

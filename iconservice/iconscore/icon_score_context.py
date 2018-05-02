@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from threading import Lock
+import threading
 from enum import IntEnum, unique
 
 from ..base.address import Address
@@ -25,9 +25,41 @@ from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
 from ..base.exception import ExceptionCode, IconException
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icx.icx_engine import IcxEngine
-from . import ContextContainer
 from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
+
+
+_thread_local_data = threading.local()
+
+
+class ContextContainer(object):
+    """ContextContainer mixin
+    
+    Every class inherit ContextContainer can share IconScoreContext instance
+    in the current thread.
+    """
+    def _get_context(self) -> 'IconScoreContext':
+        return getattr(_thread_local_data, 'context', None)
+
+    def _put_context(self, value: 'IconScoreContext') -> None:
+        setattr(_thread_local_data, 'context', value)
+
+    def _delete_context(self, context: 'IconScoreContext') -> None:
+        """Delete the context of the current thread
+        """
+        if context is not _thread_local_data.context:
+            raise IconException(
+                ExceptionCode.INTERNAL_ERROR,
+                'Critical error in context management')
+
+        del _thread_local_data.context
+
+
+class ContextGetter(object):
+    """The class which refers to IconScoreContext should inherit ContextGetter
+    """
+    @property
+    def _context(self):
+        return getattr(_thread_local_data, 'context', None)
 
 
 @unique
@@ -36,10 +68,11 @@ class IconScoreContextType(IntEnum):
     INVOKE = 1
     QUERY = 2
 
+
 class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
-    icx: IcxEngine = None
+    icx: 'IcxEngine' = None
     score_mapper: IconScoreInfoMapper = None
 
     def __init__(self,
@@ -183,7 +216,7 @@ class IconScoreContextFactory(ContextContainer):
     def __init__(self, max_size: int) -> None:
         """Constructor
         """
-        self._lock = Lock()
+        self._lock = threading.Lock()
         self._queue = []
         self._max_size = max_size
 

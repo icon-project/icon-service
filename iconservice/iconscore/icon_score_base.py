@@ -19,13 +19,12 @@ import abc
 from functools import wraps
 
 
-from .icon_score_context import IconScoreContext
+from .icon_score_context import ContextGetter, IconScoreContext
 from ..database.db import IconServiceDatabase
 from ..base.exception import ExternalException, PayableException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
-from ..iconscore import ContextGetter
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'

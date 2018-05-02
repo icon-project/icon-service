@@ -99,11 +99,14 @@ class IconScoreEngine(object):
         :param context:
         :param calldata:
         """
+        method: str = calldata['method']
+        params: dict = calldata['params']
+
         # TODO: Call external method of iconscore
         return call_method(addr_to=icon_score_address,
                            score_mapper=self.__icon_score_info_mapper,
                            readonly=context.readonly,
-                           func_name=str(), *(), **{})
+                           func_name=method, *(), **params)
 
     def __fallback(self,
                    icon_score_address: Address,

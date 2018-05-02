@@ -22,7 +22,7 @@ import shutil
 from iconservice.base.address import Address
 from iconservice.base.exception import IconException
 from iconservice.database.db import ContextDatabase
-from iconservice.iconscore import ContextContainer
+from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.icx.icx_config import FIXED_FEE
@@ -49,8 +49,10 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         logger = IcxLogger()
         self.engine.open(db, logger)
 
-        self.engine.init_genesis_account(self.genesis_address, self.total_supply)
-        self.engine.init_fee_treasury_account(self.fee_treasury_address, 0)
+        self.engine.init_genesis_account(
+            self.context, self.genesis_address, self.total_supply)
+        self.engine.init_fee_treasury_account(
+            self.context, self.fee_treasury_address, 0)
 
     def tearDown(self):
         self.engine.close()
@@ -62,26 +64,31 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
     def test_get_balance(self):
         address = Address.from_string('hx0123456789012345678901234567890123456789')
-        balance = self.engine.get_balance(address)
+        balance = self.engine.get_balance(self.context, address)
 
         self.assertEqual(0, balance)
 
     def test_get_total_supply(self):
-        total_supply = self.engine.get_total_supply()
+        total_supply = self.engine.get_total_supply(self.context)
 
         self.assertEqual(self.total_supply, total_supply)
 
     def test_transfer(self):
+        context = self.context
         amount = 10 ** 18  # 1 icx
         _from = self.genesis_address
 
-        self.engine.transfer(_from=_from,
+        self.engine.transfer(_context=context,
+                             _from=_from,
                              _to=self.to,
                              _amount=amount)
 
-        from_balance = self.engine.get_balance(self.genesis_address)
-        fee_treasury_balance = self.engine.get_balance(self.fee_treasury_address)
-        to_balance = self.engine.get_balance(self.to)
+        from_balance = self.engine.get_balance(
+            context, self.genesis_address)
+        fee_treasury_balance = self.engine.get_balance(
+            context, self.fee_treasury_address)
+        to_balance = self.engine.get_balance(
+            context, self.to)
 
         self.assertEqual(amount, to_balance)
         self.assertEqual(0, fee_treasury_balance)
@@ -90,17 +97,19 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             from_balance + to_balance + fee_treasury_balance)
 
     def test_transfer_with_fee(self):
+        context = self.context
         amount = 10 ** 18  # 1 icx
         _from = self.genesis_address
 
-        self.engine.transfer_with_fee(_from=_from,
+        self.engine.transfer_with_fee(_context=context,
+                                      _from=_from,
                                       _to=self.to,
                                       _amount=amount,
                                       _fee=FIXED_FEE)
 
-        from_balance = self.engine.get_balance(self.genesis_address)
-        fee_treasury_balance = self.engine.get_balance(self.fee_treasury_address)
-        to_balance = self.engine.get_balance(self.to)
+        from_balance = self.engine.get_balance(context, self.genesis_address)
+        fee_treasury_balance = self.engine.get_balance(context, self.fee_treasury_address)
+        to_balance = self.engine.get_balance(context, self.to)
 
         self.assertEqual(amount, to_balance)
         self.assertEqual(FIXED_FEE, fee_treasury_balance)

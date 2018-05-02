@@ -104,11 +104,13 @@ class IconServiceEngine(object):
 
         genesis_account = accounts[0]
         self._icx_engine.init_genesis_account(
+            context=context,                
             address=genesis_account['address'],
             amount=genesis_account['balance'])
 
         fee_treasury_account = accounts[1]
         self._icx_engine.init_fee_treasury_account(
+            context=context,                
             address=fee_treasury_account['address'],
             amount=fee_treasury_account['balance'])
 
@@ -205,7 +207,7 @@ class IconServiceEngine(object):
         :return: icx balance in loop
         """
         address = params['address']
-        return self._icx_engine.get_balance(address)
+        return self._icx_engine.get_balance(context, address)
 
     def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
         """Returns the amount of icx total supply
@@ -213,7 +215,7 @@ class IconServiceEngine(object):
         :param context:
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self._icx_engine.get_total_supply()
+        return self._icx_engine.get_total_supply(context)
 
     def _handle_icx_call(self,
                          context: IconScoreContext,
@@ -249,7 +251,7 @@ class IconServiceEngine(object):
         _value: int = params.get('value', 0)
         _fee: int = params['fee']
 
-        self._icx_engine.transfer(_from, _to, _value)
+        self._icx_engine.transfer(context, _from, _to, _value)
 
         if _to is None or _to.is_contract:
             _data_type: str = params['data_type']
