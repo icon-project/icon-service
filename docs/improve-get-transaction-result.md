@@ -96,6 +96,18 @@
 }
 ```
 
+##### Example of serialized results
+```json
+[{
+    "txHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "blockNumber": 0,
+    "to": "hx0000000000000000000000000000000000000000",
+    "contractAddress": null,
+    "stepUsed": 0,
+    "status": 1
+  }]
+```
+
 #### On error
 * `code`: an error code
 * `message`: a string providing a short description of the error

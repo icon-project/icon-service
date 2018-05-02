@@ -58,20 +58,23 @@ class IconScoreEngine(object):
                icon_score_address: Address,
                context: IconScoreContext,
                data_type: str,
-               data: dict) -> None:
+               data: dict) -> Address:
         """Handle calldata contained in icx_sendTransaction message
 
         :param icon_score_address:
         :param context:
         :param data_type:
         :param data: calldata
+        :return: A newly created contract address if `data_type` is `install`, otherwise None.
         """
         if data_type == 'call':
             self.__call(icon_score_address, context, data)
+            return None
         elif data_type == 'install':
-            self.__install(context.address, data)
+            return self.__install(context.address, data)
         elif data_type == 'update':
             self.__update(context, data)
+            return None
         else:
             raise IconException(ExceptionCode.INVALID_PARAMS, "Invalid data type")
 
@@ -79,6 +82,7 @@ class IconScoreEngine(object):
         """Install an icon score
 
         :param data: zipped binary data
+        :return: newly created contract address
         """
         pass
 

@@ -26,6 +26,7 @@ from ..base.exception import IconScoreBaseException, PayableException, ExternalE
 from ..icx.icx_engine import IcxEngine
 from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 from ..database.batch import BlockBatch, TransactionBatch
+from .icon_score_result import IconBlockResult
 
 
 @unique
@@ -61,6 +62,7 @@ class IconScoreContext(object):
         self.msg = msg
         self.block_batch = None
         self.tx_batch = None
+        self.block_result = None
 
     @property
     def readonly(self):

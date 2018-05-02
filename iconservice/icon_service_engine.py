@@ -31,6 +31,7 @@ from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_result import IconBlockResult, TransactionResult, JsonSerializer
 
 
 class IconServiceEngine(object):
@@ -126,20 +127,15 @@ class IconServiceEngine(object):
         context.block = Block(block_height, block_hash)
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
+        context.block_result = IconBlockResult(JsonSerializer())
 
         # NOTICE: context is saved on thread local data
         self._icx_engine.context = context
 
         for tx in transactions:
-            try:
-                method = tx['method']
-                params = tx['params']
-                result = self.call(context, method, params)
-
-                context.block_batch.put_tx_batch(context.tx_batch)
-                context.tx_batch.clear()
-            except:
-                raise NotImplementedError('TODO: tx exception handling')
+            method = tx['method']
+            params = tx['params']
+            self.call(context, method, params)
 
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
@@ -237,6 +233,7 @@ class IconServiceEngine(object):
         :return: return value of an IconScoreBase method
             None is allowed
         """
+        _tx_hash = params['tx_hash']
         _from: Address = params['from']
         _to: Address = params['to']
         _value: int = params.get('value', 0)
@@ -244,10 +241,50 @@ class IconServiceEngine(object):
 
         self._icx_engine.transfer(_from, _to, _value)
 
-        if _to.is_contract:
+        if _to is None or _to.is_contract:
+            # EOA to Score
             _data_type: str = params['data_type']
             _data: dict = params['data']
-            self._icon_score_engine.invoke(_to, context, _data_type, _data)
+            _tx_result = self.__handle_score_invoke(
+                _tx_hash, _to, context, _data_type, _data)
+        else:
+            # EOA to EOA
+            _tx_result = TransactionResult(
+                _tx_hash, context.block, _to, TransactionResult.SUCCESS)
+
+        context.block_result.append(_tx_result)
+
+
+    def __handle_score_invoke(self,
+                              tx_hash: str,
+                              to: Address,
+                              context: IconScoreContext,
+                              data_type: str,
+                              data: dict) ->TransactionResult:
+        """Handle score invocation
+
+        :param tx_hash: transaction hash
+        :param to: a recipient address
+        :param context:
+        :param data_type:
+        :param data: calldata
+        :return: A result of the score transaction
+        """
+        tx_result = TransactionResult(tx_hash, context.block, to)
+        try:
+            contract_address = self._icon_score_engine.invoke(
+                to, context, data_type, data)
+
+            context.block_batch.put_tx_batch(context.tx_batch)
+            context.tx_batch.clear()
+
+            tx_result.contract_address = contract_address
+            tx_result.status = TransactionResult.SUCCESS
+        except:
+            tx_result.status = TransactionResult.FAILURE
+
+        return tx_result
+
 
     def _set_tx_info_to_context(self,
                                 context: IconScoreContext,
