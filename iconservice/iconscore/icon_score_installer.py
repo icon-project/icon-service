@@ -46,6 +46,7 @@ class IconScoreInstaller(object):
         score_id = str_block_height + "_" + str_transaction_index
         score_root_path = os.path.join(self.icon_score_root_path, str_address)
         install_path = os.path.join(score_root_path, score_id)
+
         try:
             if os.path.isfile(install_path):
                 raise ScoreInstallException(f'{install_path} is a file. Check your path.')
@@ -55,6 +56,7 @@ class IconScoreInstaller(object):
 
             if not os.path.exists(install_path):
                 os.makedirs(install_path)
+
             file_info_generator = IconScoreInstaller.extract_files_gen(data)
             for name, file_info, parent_directory in file_info_generator:
                 if not os.path.exists(os.path.join(install_path, parent_directory)):
