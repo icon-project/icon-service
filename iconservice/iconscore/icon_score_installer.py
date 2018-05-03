@@ -107,23 +107,6 @@ class IconScoreInstaller(object):
             raise ScoreInstallExtractException("Large zip file.")
 
     @staticmethod
-    def verify_score(data: 'bytes', install_path: 'str') -> 'bool':
-        file_info_generator = IconScoreInstaller.extract_files_gen(data)
-        zip_file_contents_list = []
-        installed_contents_list = []
-        for file_name, file_info, parent_directory in file_info_generator:
-            with file_info as file:
-                contents = file.read()
-                zip_file_contents_list.append(hashlib.sha3_256(contents).digest())
-        for directory, dirs, files in os.walk(install_path):
-            for file in files:
-                with open(os.path.join(directory, file), mode='rb') as f:
-                    contents =f.read()
-                    installed_contents_list.append(hashlib.sha3_256(contents).digest())
-
-        return zip_file_contents_list == installed_contents_list
-
-    @staticmethod
     def remove_existing_score(archive_path: 'str') -> 'None':
         """Remove archive file.
 

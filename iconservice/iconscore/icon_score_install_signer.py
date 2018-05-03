@@ -46,15 +46,3 @@ class ScoreInstallSigner(object):
         signature, recovery_id = self.sign_recoverable(tx_hash)
 
         return bytes(bytearray(signature) + recovery_id.to_bytes(1, 'big'))
-
-
-class SignVerifier(object):
-
-    def __init__(self, data, raw=True):
-        self.__public_key = PublicKey(data, raw, FLAG_VERIFY)
-
-    def verify(self, tx_hash: 'bytes', signature: 'bytes'):
-        public_key = self.__public_key
-
-        signature = public_key.ecdsa_deserialize(signature)
-        return public_key.ecdsa_verify(tx_hash, signature, True)
