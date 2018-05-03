@@ -31,7 +31,6 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address.body.hex()))
         self.installer2 = IconScoreInstaller('/')
 
-
     @staticmethod
     def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
         with open(archive_path, 'rb') as f:
@@ -79,7 +78,6 @@ class TestIConScoreInstaller(unittest.TestCase):
         ret4 = self.installer2.install(self.address, self.read_zipfile_as_byte(self.archive_path),
                                        block_height1, transaction_index1)
         self.assertFalse(ret4)
-
 
         # Case when the user try to install scores without directories.
 
