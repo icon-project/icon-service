@@ -48,9 +48,13 @@ class TestIconScoreEngine(unittest.TestCase):
         self.__ensure_dir(db_path)
         self._db_factory = DatabaseFactory(db_path)
         self._icon_score_mapper = IconScoreInfoMapper()
+        self._icx_storage = None
 
         self._engine = IconScoreEngine(
-            self._ROOT_SCORE_PATH, self._icon_score_mapper, self._db_factory)
+            self._ROOT_SCORE_PATH,
+            self._icx_storage,
+            self._icon_score_mapper,
+            self._db_factory)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
         self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'test')

@@ -17,6 +17,8 @@
 """
 
 
+from collections import namedtuple
+
 from ..base.address import Address, AddressPrefix, create_address
 from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
 from .icon_score_base import IconScoreBase
@@ -55,6 +57,11 @@ class IconScoreEngine(object):
         self.__icon_score_info_mapper = icon_score_info_mapper
         self.__db_factory = db_factory
 
+        self._Task = namedtuple(
+            'Task',
+            ('type', 'address', 'owner', 'data', 'block_height', 'tx_index'))
+        self._tasks = []
+
     def __get_icon_score(self, address: Address) -> IconScoreBase:
         """
         :param address:
@@ -71,34 +78,6 @@ class IconScoreEngine(object):
         icon_score = icon_score_info.icon_score
         return icon_score
 
-    def __create_icon_score_database(self, address: Address) -> 'IconScoreDatabase':
-        """Create IconScoreDatabase instance
-        with icon_score_address and ContextDatabase
-            
-        :param address: icon_score_address    
-        """
-        context_db = self.__db_factory.create_by_address(address)
-        score_db = IconScoreDatabase(context_db)
-        return score_db
-
-    def __load_score_wrapper(self, address: Address) -> object:
-        """Load IconScoreBase subclass from IconScore python package
-
-        :param address: icon_score_address
-        :return: IconScoreBase subclass (NOT instance)
-        """
-        loader = IconScoreLoader(self.__icon_score_root_path)
-        score_wrapper = loader.load_score(address.body.hex())
-        if score_wrapper is None:
-            raise IconScoreBaseException(f'score_wrapper load Fail {address}')
-
-        return score_wrapper
-
-    def __add_score_to_mapper(self, icon_score) -> None:
-        info = IconScoreInfo(icon_score)
-        self.__icon_score_info_mapper[icon_score.address] = info
-        return info
-
     def invoke(self,
                icon_score_address: Address,
                context: IconScoreContext,
@@ -113,13 +92,34 @@ class IconScoreEngine(object):
         """
         if data_type == 'call':
             self.__call(context, icon_score_address, data)
-        elif data_type == 'install':
-            # context.tx.origin is the owner of icon_score to install
-            self.__install(context, icon_score_address, data)
-        elif data_type == 'update':
-            self.__update(context, icon_score_address, data)
+        elif data_type == 'install' or data_type == 'update':
+            self.__put_task(context, data_type, icon_score_address, data)
         else:
-            raise IconException(ExceptionCode.INVALID_PARAMS, "Invalid data type")
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'Invalid data type ({data_type})')
+
+    def __put_task(self,
+                   context: 'IconScoreContext',
+                   data_type: str,
+                   icon_score_address: Address,
+                   data: dict) -> None:
+        """Queue a deferred task to install, update or remove a score
+
+        :param context:
+        :param data_type:
+        :param icon_score_address:
+        :param data:
+        """
+        task = self._Task(
+            type=data_type,
+            address=icon_score_address,
+            owner=context.tx.origin,
+            data=data,
+            block_height=context.block.height,
+            tx_index=context.tx.index
+        )
+        self._tasks.append(task)
 
     def __install(self,
                   context: 'IconScoreContext',
@@ -130,7 +130,7 @@ class IconScoreEngine(object):
         Owner check has been already done in IconServiceEngine
 
         Process Order
-        - Install IconScore package to file system
+        - Install IconScore package file to file system
         - Load IconScore wrapper
         - Create Database
         - Create an IconScore instance with address, owner and database
@@ -207,3 +207,72 @@ class IconScoreEngine(object):
         """
         if data_type == 'call':
             return self.__call(icon_score_address, context, data)
+
+    def commit(self, context: 'IconScoreContext') -> None:
+        """It is called when the previous block has been confirmed
+        
+        Execute a deferred tasks in queue (install, update or remove an score)
+
+        Process Order
+        - Install IconScore package file to file system
+        - Load IconScore wrapper
+        - Create Database
+        - Create an IconScore instance with owner and database
+        - Execute IconScoreBase.genesis_invoke() only if task.type is 'install'
+        - Add IconScoreInfo to IconScoreInfoMapper
+        - Write the owner of score to icx database
+
+        :param context:
+        """
+        for task in self._tasks:
+            # TODO: install score package to 'address/block_height_tx_index' directory
+
+            score_wrapper = self.__load_score_wrapper(task.address)
+            score_db = self.__create_icon_score_database(task.address)
+
+            icon_score = score_wrapper(score_db, owner=task.owner)
+            if task.type == 'install':
+                icon_score.genesis_init()
+
+            self.__add_score_to_mapper(icon_score)
+            self.__icx_storage.put_score_owner(context, task.owner)
+
+        self._tasks.clear()
+
+    def __create_icon_score_database(self,
+                                     address: Address) -> 'IconScoreDatabase':
+        """Create IconScoreDatabase instance
+        with icon_score_address and ContextDatabase
+            
+        :param address: icon_score_address    
+        """
+        context_db = self.__db_factory.create_by_address(address)
+        score_db = IconScoreDatabase(context_db)
+        return score_db
+
+    def __load_score_wrapper(self, address: Address) -> object:
+        """Load IconScoreBase subclass from IconScore python package
+
+        :param address: icon_score_address
+        :return: IconScoreBase subclass (NOT instance)
+        """
+        loader = IconScoreLoader(self.__icon_score_root_path)
+        score_wrapper = loader.load_score(address.body.hex())
+        if score_wrapper is None:
+            raise IconScoreBaseException(f'score_wrapper load Fail {address}')
+
+        return score_wrapper
+
+    def __add_score_to_mapper(self, icon_score) -> None:
+        info = IconScoreInfo(icon_score)
+        self.__icon_score_info_mapper[icon_score.address] = info
+        return info
+
+    def rollback(self) -> None:
+        """It is called when the previous block has been canceled
+
+        Rollback install, update or remove tasks cached in the previous block
+
+        :param context:
+        """
+        self._tasks.clear()
