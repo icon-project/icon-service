@@ -26,8 +26,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.archive_path = "tests/test.zip"
         self.archive_path2 = "tests/test_bad.zip"
         self.archive_path3 = "tests/test_uncovered.zip"
-        self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address))
-
+        self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address.body.hex()))
         self.installer2 = IconScoreInstaller('/')
 
     def tearDown(self):
