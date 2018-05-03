@@ -26,8 +26,6 @@ from .icon_score_loader import IconScoreLoader
 from ..database.factory import DatabaseFactory
 from ..database.db import IconScoreDatabase
 
-TEST_OWNER = create_address(AddressPrefix.EOA, b'owner')
-
 
 class IconScoreEngine(object):
     """Calls external functions provided by each IconScore
@@ -35,12 +33,15 @@ class IconScoreEngine(object):
 
     def __init__(self,
                  icon_score_root_path: str,
+                 icx_storage: 'IcxStorage',
                  icon_score_info_mapper: IconScoreInfoMapper,
                  db_factory: DatabaseFactory) -> None:
         """Constructor
 
         :param icon_score_root_path:
+        :param icx_storage: Get IconScore owner info from icx_storage
         :param icon_score_info_mapper:
+        :param db_factory:
         """
         # handlers for processing calldata
         self._handler = {
@@ -48,9 +49,11 @@ class IconScoreEngine(object):
             'update': self.__update,
             'call': self.__call
         }
+
+        self.__icon_score_root_path = icon_score_root_path
+        self.__icx_storage = icx_storage
         self.__icon_score_info_mapper = icon_score_info_mapper
         self.__db_factory = db_factory
-        self.__icon_score_root_path = icon_score_root_path
 
     def __get_icon_score(self, address: Address) -> IconScoreBase:
         """
@@ -58,7 +61,7 @@ class IconScoreEngine(object):
         :return: IconScoreBase object
         """
 
-        icon_score_info = self.__icon_score_info_mapper.get(address)
+        icon_score_info = self.__icon_score_info_mapper[address]
         if icon_score_info is None:
             if not self.__db_factory.is_exist(address):
                 raise IconScoreBaseException("icon_score_info is None")
@@ -68,37 +71,32 @@ class IconScoreEngine(object):
         icon_score = icon_score_info.icon_score
         return icon_score
 
-    def __install_score(self, address: Address, owner: Address):
+    def __create_icon_score_database(self, address: Address) -> 'IconScoreDatabase':
+        """Create IconScoreDatabase instance
+        with icon_score_address and ContextDatabase
+            
+        :param address: icon_score_address    
+        """
+        context_db = self.__db_factory.create_by_address(address)
+        score_db = IconScoreDatabase(context_db)
+        return score_db
+
+    def __load_score_wrapper(self, address: Address) -> object:
+        """Load IconScoreBase subclass from IconScore python package
+
+        :param address: icon_score_address
+        :return: IconScoreBase subclass (NOT instance)
+        """
         loader = IconScoreLoader(self.__icon_score_root_path)
         score_wrapper = loader.load_score(address.body.hex())
         if score_wrapper is None:
             raise IconScoreBaseException(f'score_wrapper load Fail {address}')
 
-        context_db = self.__db_factory.create_by_address(address)
-        score_db = IconScoreDatabase(context_db)
+        return score_wrapper
 
-        score = score_wrapper(score_db, owner)
-        score.genesis_init()
-
-        info = IconScoreInfo(score, owner)
-        self.__icon_score_info_mapper[address] = info
-        return info
-
-    def __load_score(self, address: Address):
-        loader = IconScoreLoader()
-        score_wrapper = loader.load_score(address.body.hex())
-        if score_wrapper is None:
-            raise IconScoreBaseException(f'score_wrapper load Fail {address}')
-
-        context_db = self.__db_factory.create_by_address(address)
-        score_db = IconScoreDatabase(context_db)
-
-        # TODO have to get owner from anywhere.
-        owner = address
-        score = score_wrapper(score_db, owner)
-
-        info = IconScoreInfo(score, owner)
-        self.__icon_score_info_mapper[Address] = info
+    def __add_score_to_mapper(self, icon_score) -> None:
+        info = IconScoreInfo(icon_score)
+        self.__icon_score_info_mapper[icon_score.address] = info
         return info
 
     def invoke(self,
@@ -114,33 +112,62 @@ class IconScoreEngine(object):
         :param data: calldata
         """
         if data_type == 'call':
-            self.__call(icon_score_address, context, data)
+            self.__call(context, icon_score_address, data)
         elif data_type == 'install':
-            # TODO have to owner setting!
-            self.__install(icon_score_address, TEST_OWNER, data)
+            # context.tx.origin is the owner of icon_score to install
+            self.__install(context, icon_score_address, data)
         elif data_type == 'update':
-            self.__update(icon_score_address, data)
+            self.__update(context, icon_score_address, data)
         else:
             raise IconException(ExceptionCode.INVALID_PARAMS, "Invalid data type")
 
-    def __install(self, icon_score_address: Address, owner: Address, data: dict):
+    def __install(self,
+                  context: 'IconScoreContext',
+                  icon_score_address: Address,
+                  data: dict) -> None:
         """Install an icon score
 
-        :param data: zipped binary data
+        Owner check has been already done in IconServiceEngine
+
+        Process Order
+        - Install IconScore package to file system
+        - Load IconScore wrapper
+        - Create Database
+        - Create an IconScore instance with address, owner and database
+        - Execute IconScoreBase.genesis_invoke()
+        - Register IconScoreInfo to IconScoreInfoMapper
+
+        :param icon_score_address:
+        :param owner:
+        :param data: zipped binary data + mime_type
         """
+        # Install IconScore package
 
-        self.__install_score(icon_score_address, owner)
+        score_wrapper = self.__load_score_wrapper(icon_score_address)
+        score_db = self.__create_icon_score_database(icon_score_address)
 
-    def __update(self, icon_score_address: Address, data: dict) -> bool:
+        icon_score = score_wrapper(score_db, owner=context.tx.origin)
+        icon_score.genesis_init()
+
+        self.__add_score_to_mapper(icon_score)
+
+    def __update(self,
+                 context: 'IconScoreContext',
+                 icon_score_address: Address,
+                 data: dict) -> bool:
         """Update an icon score
 
-        :param data: zipped binary data
+        Owner check has been already done in IconServiceEngine
+
+        :param icon_score_address:
+        :param owner:
+        :param data: zipped binary data + mime_type
         """
-        pass
+        raise NotImplementedError('Score update is not implemented')
 
     def __call(self,
-               icon_score_address: Address,
                context: IconScoreContext,
+               icon_score_address: Address,
                calldata: dict) -> object:
         """Handle jsonrpc
 
@@ -152,8 +179,9 @@ class IconScoreEngine(object):
         params: dict = calldata['params']
 
         # TODO: Call external method of iconscore
+        icon_score = self.__get_icon_score(icon_score_address)
         return call_method(addr_to=icon_score_address,
-                           icon_score=self.__get_icon_score(icon_score_address),
+                           icon_score=icon_score,
                            func_name=method, *(), **params)
 
     def __fallback(self, icon_score_address: Address):
@@ -164,8 +192,9 @@ class IconScoreEngine(object):
         """
 
         # TODO: Call fallback method of iconscore
+        icon_score = self.__get_icon_score(icon_score_address)
         call_fallback(addr_to=icon_score_address,
-                      icon_score=self.__get_icon_score(icon_score_address))
+                      icon_score=icon_score)
 
     def query(self,
               icon_score_address: Address,

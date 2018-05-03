@@ -25,20 +25,15 @@ if TYPE_CHECKING:
 
 class IconScoreInfo(object):
     """Contains information on one icon score
+
+    If this class is not necessary anymore, Remove it
     """
-    def __init__(self,
-                 icon_score: 'IconScoreBase',
-                 owner: Address) -> None:
+    def __init__(self, icon_score: 'IconScoreBase') -> None:
         """Constructor
 
         :param icon_score: icon score object
-        :param owner:
-            the address of user
-            who creates a tx for installing this icon_score
-        :param icon_score_address: contract address
         """
         self._icon_score = icon_score
-        self._owner = owner
 
     @property
     def address(self) -> Address:
@@ -58,7 +53,7 @@ class IconScoreInfo(object):
     def owner(self) -> Address:
         """The address of user who creates a tx for installing this icon_score
         """
-        return self._owner
+        return self._icon_score.owner
 
 
 class IconScoreInfoMapper(dict):

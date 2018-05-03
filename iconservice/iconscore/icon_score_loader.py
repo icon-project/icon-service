@@ -15,7 +15,9 @@
 # limitations under the License.
 
 import json
-import os, sys, importlib.machinery
+import os
+import sys
+import importlib.machinery
 from collections import defaultdict
 from ..base.address import Address
 
