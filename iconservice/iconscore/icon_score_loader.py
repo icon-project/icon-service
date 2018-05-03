@@ -51,8 +51,8 @@ class IconScoreLoader(object):
         return getattr(module, call_class_name)
 
     @staticmethod
-    def __get_last_version_path(score_root_path: str, address: Address):
-        address_path = os.path.join(score_root_path, str(address))
+    def __get_last_version_path(score_root_path: str, address_body: str):
+        address_path = os.path.join(score_root_path, str(address_body))
 
         tmp_dict = defaultdict(list)
         for dir_name in os.listdir(address_path):
@@ -65,8 +65,8 @@ class IconScoreLoader(object):
         last_version = '{}_{}'.format(last_block_height, last_tx_index)
         return os.path.join(address_path, last_version)
 
-    def load_score(self, address: Address):
-        last_version_path = self.__get_last_version_path(self.__score_root_path, address)
+    def load_score(self, address_body: str):
+        last_version_path = self.__get_last_version_path(self.__score_root_path, address_body)
         score_package_info = self.__load_json(last_version_path)
         score_main_file_path = os.path.join(last_version_path, score_package_info["main_file"] + ".py")
         score = self.__load_user_score_module(score_main_file_path, score_package_info["main_score"])

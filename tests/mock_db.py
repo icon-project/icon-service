@@ -1,7 +1,7 @@
-from iconservice.database.db import InternalScoreDatabase
+from iconservice.database.db import IconScoreDatabase
 
 
-class MockDB(InternalScoreDatabase):
+class MockDB(IconScoreDatabase):
 
     @staticmethod
     def make_dict():
@@ -25,7 +25,7 @@ class MockDB(InternalScoreDatabase):
     def close(self):
         pass
 
-    def get_sub_db(self, key: bytes) -> InternalScoreDatabase:
+    def get_sub_db(self, key: bytes) -> IconScoreDatabase:
         if key not in self.__db:
             sub_db = MockDB(MockDB.make_dict())
             self.__db[key] = sub_db
