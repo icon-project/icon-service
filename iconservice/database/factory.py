@@ -49,5 +49,4 @@ class DatabaseFactory(object):
         """
         path = os.path.join(self.__state_db_root_path, name)
 
-        return ContextDatabase.from_address_and_path(address=None,
-                                                           path=path)
+        return ContextDatabase.from_address_and_path(address=None, path=path)

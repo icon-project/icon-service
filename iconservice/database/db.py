@@ -22,6 +22,7 @@ import threading
 from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.utils import sha3_256
@@ -246,36 +247,41 @@ class ContextDatabase(PlyvelDatabase):
             address)
 
 
-class IconScoreDatabase(object):
+class IconScoreDatabase(ContextGetter):
     """It is used in IconScore
 
     IconScore can access its states only through IconScoreDatabase
     """
-    def __init__(self, icon_score: 'IconScoreBase', prefix: bytes=b'') -> None:
+    def __init__(self, context_db: 'ContextDatabase', prefix: bytes=b'') -> None:
         """Constructor
 
-        :param icon_score:
+        :param context_db: ContextDatabase
         :param prefix:
         """
         self.__prefix = prefix
-        self.__icon_score = icon_score
+        self.__context_db = context_db
+
+    @property
+    def address(self):
+        return self.__context_db.address
 
     def get(self, key: bytes) -> bytes:
         key = self.__hash_key(key)
-        return self.__icon_score.get_from_db(key)
+        return self.__context_db.get(self._context, key)
 
     def put(self, key: bytes, value: bytes):
         key = self.__hash_key(key)
-        self.__icon_score.put_to_db(key, value)
+        self.__context_db.put(self._context, key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
-        return IconScoreDatabase(self.__icon_score, self.__prefix + prefix)
+        return IconScoreDatabase(self.__context_db, self.__prefix + prefix)
 
     def delete(self, key: bytes):
-        key = self.__hash_key(key)
-        self.__icon_score.delete_from_db(key)
+        # key = self.__hash_key(key)
+        # self.__context_db.delete(self._context, key)
+        raise NotImplementedError('delete is not implemented')
 
     def __hash_key(self, key: bytes):
         """All key is hashed and stored to StateDB
         """
-        key = sha3_256(self.__prefix + key)
+        return sha3_256(self.__prefix + key)
