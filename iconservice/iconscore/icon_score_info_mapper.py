@@ -60,6 +60,7 @@ class IconScoreInfo(object):
         """
         return self._owner
 
+
 class IconScoreInfoMapper(dict):
     """Icon score information mapping table
 
