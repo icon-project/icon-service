@@ -9,7 +9,6 @@ class MockDB(IconScoreDatabase):
 
     def __init__(self, dict_obj: dict):
         self.__db = dict_obj
-        self.address = None
 
     def put(self, key: bytes, value: bytes) -> bytes:
         self.__db[key] = value
