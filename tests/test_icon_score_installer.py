@@ -18,19 +18,18 @@ import unittest
 from iconservice.iconscore.icon_score_installer import *
 from iconservice.base.address import Address
 
+DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
+
 
 class TestIConScoreInstaller(unittest.TestCase):
     def setUp(self):
         self.installer = IconScoreInstaller('./')
         self.address = Address.from_string('cx' + '1'*40)
-        self.archive_path = "tests/test.zip"
-        self.archive_path2 = "tests/test_bad.zip"
-        self.archive_path3 = "tests/test_uncovered.zip"
+        self.archive_path = os.path.join(DIRECTORY_PATH, 'test.zip')
+        self.archive_path2 = os.path.join(DIRECTORY_PATH, "test_bad.zip")
+        self.archive_path3 = os.path.join(DIRECTORY_PATH, "test_uncovered.zip")
         self.score_root_path = os.path.join(self.installer.icon_score_root_path, str(self.address.body.hex()))
         self.installer2 = IconScoreInstaller('/')
-
-    def tearDown(self):
-        IconScoreInstaller.remove_existing_score(self.score_root_path)
 
     @staticmethod
     def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
@@ -80,7 +79,6 @@ class TestIConScoreInstaller(unittest.TestCase):
                                        block_height1, transaction_index1)
         self.assertFalse(ret4)
 
-
         # Case when the user try to install scores without directories.
 
         ret5 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path3),
@@ -97,6 +95,9 @@ class TestIConScoreInstaller(unittest.TestCase):
                                block_height1, transaction_index1)
         self.installer.remove_existing_score(install_path)
         self.assertFalse(os.path.exists(install_path))
+
+    def tearDown(self):
+        IconScoreInstaller.remove_existing_score(self.score_root_path)
 
 
 if __name__ == "__main__":
