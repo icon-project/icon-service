@@ -23,6 +23,7 @@ from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException
 from iconservice.database.factory import DatabaseFactory
 from iconservice.database.db import ContextDatabase, PlyvelDatabase
+from iconservice.database.db import IconScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
@@ -126,4 +127,40 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
 
 class TestIconScoreDatabase(unittest.TestCase):
-    pass
+    def setUp(self):
+        state_db_root_path = 'state_db'
+        self.state_db_root_path = state_db_root_path
+        rmtree(state_db_root_path)
+        os.mkdir(state_db_root_path)
+
+        address = create_address(AddressPrefix.CONTRACT, b'0')
+        factory = DatabaseFactory(state_db_root_path)
+        context_factory = IconScoreContextFactory(max_size=2)
+
+        context = context_factory.create(IconScoreContextType.INVOKE)
+        context.block_batch = BlockBatch()
+        context.tx_batch = TransactionBatch()
+
+        context_db = factory.create_by_address(address)
+
+        self.db = IconScoreDatabase(context_db=context_db, prefix=b'')
+        self.address = address
+        self.context = context
+        self.context_factory = context_factory
+
+    def tearDown(self):
+        self.context_factory.destroy(self.context)
+        rmtree(self.state_db_root_path)
+
+    def test_address(self):
+        self.assertEqual(self.address, self.db.address)
+
+    def test_put_and_get(self):
+        db = self.db
+        key = self.address.body
+        value = 100
+
+        self.assertIsNone(db.get(key))
+
+        db.put(key, value.to_bytes(32, 'big'))
+        self.assertEqual(value.to_bytes(32, 'big'), db.get(key))

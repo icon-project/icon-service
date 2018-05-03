@@ -277,10 +277,11 @@ class IconScoreDatabase(ContextGetter):
         return IconScoreDatabase(self.__context_db, self.__prefix + prefix)
 
     def delete(self, key: bytes):
-        key = self.__hash_key(key)
-        self.__context_db.delete(self._context, key)
+        # key = self.__hash_key(key)
+        # self.__context_db.delete(self._context, key)
+        raise NotImplementedError('delete is not implemented')
 
     def __hash_key(self, key: bytes):
         """All key is hashed and stored to StateDB
         """
-        key = sha3_256(self.__prefix + key)
+        return sha3_256(self.__prefix + key)
