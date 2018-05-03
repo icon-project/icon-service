@@ -28,7 +28,7 @@ ICON_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../
 class IconScoreLoader(object):
     _PACKAGE_PATH = 'package.json'
 
-    def __init__(self, icon_score_root_path: str='score'):
+    def __init__(self, icon_score_root_path: str):
         self.__score_root_path = os.path.join(ICON_ROOT_PATH, icon_score_root_path)
 
     @staticmethod

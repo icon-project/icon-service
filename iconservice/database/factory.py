@@ -50,3 +50,15 @@ class DatabaseFactory(object):
         path = os.path.join(self.__state_db_root_path, name)
 
         return ContextDatabase.from_address_and_path(address=None, path=path)
+
+    def is_exist(self, address: Address) -> bool:
+        """ Check DB exist
+
+        :param address:
+        :return:
+        """
+
+        name = address.body.hex()
+        path = os.path.join(self.__state_db_root_path, name)
+        var = os.path.isdir(path)
+        return var

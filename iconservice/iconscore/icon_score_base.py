@@ -119,10 +119,11 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         super().genesis_init(*args, **kwargs)
 
     @abc.abstractmethod
-    def __init__(self, db: IconScoreDatabase, *args, **kwargs) -> None:
-        super().__init__(db, *args, **kwargs)
-        self.__address = db.address
+    def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
+        super().__init__(db, addr_owner)
         self.__db = db
+        self.__addr_owner = addr_owner
+        self.__address = db.address
 
         if not self.get_api():
             raise ExternalException(

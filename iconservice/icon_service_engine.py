@@ -17,7 +17,7 @@
 import json
 import os
 
-from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
+from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException
 from .base.block import Block
 from .base.message import Message
@@ -32,6 +32,8 @@ from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
 from .iconscore.icon_score_result import IconBlockResult, TransactionResult, JsonSerializer
+
+TEST_SCORE_ADDRESS = create_address(AddressPrefix.CONTRACT, b'test')
 
 
 class IconServiceEngine(object):
@@ -74,7 +76,7 @@ class IconServiceEngine(object):
         self._icon_score_mapper = IconScoreInfoMapper()
 
         self._icon_score_engine = IconScoreEngine(
-            icon_score_root_path, self._icon_score_mapper)
+            icon_score_root_path, self._icon_score_mapper, self._db_factory)
 
         self._init_icx_engine(self._db_factory)
 
@@ -120,7 +122,7 @@ class IconServiceEngine(object):
     def invoke(self,
                block_height: int,
                block_hash: str,
-               transactions) -> 'list':
+               transactions) -> list:
         """Process transactions in a block sent by loopchain
 
         :param block_height:
@@ -282,13 +284,15 @@ class IconServiceEngine(object):
         """
         tx_result = TransactionResult(tx_hash, context.block, to)
         try:
-            contract_address = self._icon_score_engine.invoke(
-                to, context, data_type, data)
+            if data_type == 'install':
+                to = TEST_SCORE_ADDRESS
+                tx_result.contract_address = to
+
+            self._icon_score_engine.invoke(to, context, data_type, data)
 
             context.block_batch.put_tx_batch(context.tx_batch)
             context.tx_batch.clear()
 
-            tx_result.contract_address = contract_address
             tx_result.status = TransactionResult.SUCCESS
         except:
             tx_result.status = TransactionResult.FAILURE

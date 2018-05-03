@@ -255,7 +255,7 @@ class IconScoreContextFactory(ContextContainer):
 def call_method(addr_to: Address, icon_score: 'IconScoreBase',
                 func_name: str, addr_from: Optional[Address]=None, *args, **kwargs) -> object:
 
-    if not __check_myself(addr_from, addr_to):
+    if __check_myself(addr_from, addr_to):
         raise IconScoreBaseException("call function myself")
 
     try:
