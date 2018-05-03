@@ -147,7 +147,7 @@ class Address(object):
 
         :return: True(contract) False(Not contract)
         """
-        return self.prefix == AddressPrefix
+        return self.prefix == AddressPrefix.CONTRACT
 
     @staticmethod
     def from_string(address: str):

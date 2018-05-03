@@ -96,20 +96,26 @@ class IconServiceEngine(object):
         self._icx_engine.close()
 
     def genesis_invoke(self, accounts: list) -> None:
-        context = self._context_factory.create(IconScoreContextType.GENESIS)
+        """Process the list of account info in the genesis block
 
-        # NOTICE: context is saved on thread local data
-        self._icx_engine.context = context
+        :param accounts: account infos in the genesis block
+        """
+
+        context = self._context_factory.create(IconScoreContextType.GENESIS)
 
         genesis_account = accounts[0]
         self._icx_engine.init_genesis_account(
+            context=context,                
             address=genesis_account['address'],
             amount=genesis_account['balance'])
 
         fee_treasury_account = accounts[1]
         self._icx_engine.init_fee_treasury_account(
+            context=context,                
             address=fee_treasury_account['address'],
             amount=fee_treasury_account['balance'])
+
+        self._context_factory.destroy(context)
 
     def invoke(self,
                block_height: int,
@@ -129,13 +135,14 @@ class IconServiceEngine(object):
         context.tx_batch = TransactionBatch()
         context.block_result = IconBlockResult(JsonSerializer())
 
-        # NOTICE: context is saved on thread local data
-        self._icx_engine.context = context
-
         for tx in transactions:
             method = tx['method']
             params = tx['params']
             self.call(context, method, params)
+
+            context.tx_batch.clear()
+
+        self._context_factory.destroy(context)
 
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
@@ -151,12 +158,12 @@ class IconServiceEngine(object):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
-        context.block = None
 
-        # NOTICE: context is saved on thread local data
-        self._icx_engine.context = context
+        ret = self.call(context, method, params)
 
-        return self.call(context, method, params)
+        self._context_factory.destroy(context)
+
+        return ret
 
     def call(self,
              context: IconScoreContext,
@@ -197,8 +204,7 @@ class IconServiceEngine(object):
         :return: icx balance in loop
         """
         address = params['address']
-
-        return self._icx_engine.get_balance(address)
+        return self._icx_engine.get_balance(context, address)
 
     def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
         """Returns the amount of icx total supply
@@ -206,7 +212,7 @@ class IconServiceEngine(object):
         :param context:
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self._icx_engine.get_total_supply()
+        return self._icx_engine.get_total_supply(context)
 
     def _handle_icx_call(self,
                          context: IconScoreContext,
@@ -215,11 +221,15 @@ class IconServiceEngine(object):
         :param params:
         :return:
         """
-        to: Address = params['to']
-        data_type = params.get('data_type', None)
-        data = params.get('data', None)
+        _from: Address = params['from']
+        _to: Address = params['to']
+        _data_type = params.get('data_type', None)
+        _data = params.get('data', None)
 
-        return self._icon_score_engine.query(to, context, data_type, data)
+        context.tx = Transaction(origin=_from)
+        context.msg = Message(sender=_from)
+
+        return self._icon_score_engine.query(_to, context, _data_type, _data)
 
     def _handle_icx_sendTransaction(self,
                                     context: IconScoreContext,
@@ -239,7 +249,7 @@ class IconServiceEngine(object):
         _value: int = params.get('value', 0)
         _fee: int = params['fee']
 
-        self._icx_engine.transfer(_from, _to, _value)
+        self._icx_engine.transfer(context, _from, _to, _value)
 
         if _to is None or _to.is_contract:
             # EOA to Score
@@ -302,7 +312,12 @@ class IconServiceEngine(object):
         context.msg = Message(sender=_from, value=_value)
 
     def commit(self):
+        """Write updated states in a context.block_batch to StateDB
+        when the candidate block has been confirmed
+        """
         pass
 
     def rollback(self):
+        """Delete updated states in a context.block_batch and 
+        """
         pass

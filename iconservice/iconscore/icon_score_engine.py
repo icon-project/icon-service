@@ -18,10 +18,11 @@
 
 
 from ..base.address import Address, AddressPrefix
-from ..base.exception import ExceptionCode, IconException
+from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
 from .icon_score_base import IconScoreBase
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
+from .icon_score_loader import IconScoreLoader
 
 
 class IconScoreEngine(object):
@@ -44,15 +45,20 @@ class IconScoreEngine(object):
         }
         self.__icon_score_info_mapper = icon_score_info_mapper
 
-    def __get_icon_score(self,
-                         address: Address) -> IconScoreBase:
+    def __get_icon_score(self, address: Address) -> IconScoreBase:
         """
         :param address:
-        :param readonly:
         :return: IconScoreBase object
         """
-        info = self.__icon_score_info_mapper[address]
-        return info.icon_score
+
+        icon_score_info = self.__icon_score_info_mapper.get(address)
+        if icon_score_info is None:
+            loader = IconScoreLoader()
+            loader.load_score(address)
+            raise IconScoreBaseException("icon_score_info is None")
+
+        icon_score = icon_score_info.icon_score
+        return icon_score
 
     def invoke(self,
                icon_score_address: Address,
@@ -103,11 +109,14 @@ class IconScoreEngine(object):
         :param context:
         :param calldata:
         """
+        method: str = calldata['method']
+        params: dict = calldata['params']
+
         # TODO: Call external method of iconscore
         return call_method(addr_to=icon_score_address,
                            score_mapper=self.__icon_score_info_mapper,
                            readonly=context.readonly,
-                           func_name=str(), *(), **{})
+                           func_name=method, *(), **params)
 
     def __fallback(self,
                    icon_score_address: Address,

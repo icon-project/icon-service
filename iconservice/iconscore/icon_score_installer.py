@@ -42,10 +42,11 @@ class IconScoreInstaller(object):
         """
         str_block_height = str(block_height)
         str_transaction_index = str(transaction_index)
-        str_address = str(address)
+        str_address = str(address.body.hex())
         score_id = str_block_height + "_" + str_transaction_index
         score_root_path = os.path.join(self.icon_score_root_path, str_address)
         install_path = os.path.join(score_root_path, score_id)
+
         try:
             if os.path.isfile(install_path):
                 raise ScoreInstallException(f'{install_path} is a file. Check your path.')
@@ -86,22 +87,26 @@ class IconScoreInstaller(object):
                 for zip_info in memory_zip.infolist():
                     with memory_zip.open(zip_info) as file:
                         file_path = zip_info.filename
-                        if file_path.find('__MACOSX') != -1:
+                        root_directory_index = file_path.find("/")
+                        path_uncovered_root_directory = file_path[root_directory_index + 1:]
+                        file_name_start_index = path_uncovered_root_directory.rfind('/')
+                        parent_directory = path_uncovered_root_directory[:file_name_start_index]
+
+                        if path_uncovered_root_directory.find('__MACOSX') != -1:
                             continue
-                        if file_path.find('__pycache__') != -1:
+                        if path_uncovered_root_directory.find('__pycache__') != -1:
                             continue
-                        file_name_start_index = file_path.rfind('/')
-                        if file_name_start_index == len(file_path) - 1:
+                        if file_name_start_index == len(path_uncovered_root_directory) - 1:
                             # continue when 'file_path' is a directory.
                             continue
-                        if file_path.find('/.') != -1:
+                        if path_uncovered_root_directory.find('/.') != -1:
                             # continue when 'file_path' is hidden directory or hidden file.
                             continue
-                        parent_directory = file_path[:file_name_start_index]
+
                         if file_name_start_index == -1:
-                            yield zip_info.filename, file, ''
+                            yield path_uncovered_root_directory, file, ''
                         else:
-                            yield zip_info.filename, file, parent_directory
+                            yield path_uncovered_root_directory, file, parent_directory
         except zipfile.BadZipFile:
             raise ScoreInstallExtractException("Bad zip file.")
         except zipfile.LargeZipFile:

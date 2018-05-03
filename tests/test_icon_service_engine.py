@@ -94,12 +94,15 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_call_in_query(self):
         context = factory.create(IconScoreContextType.QUERY)
+
         method = 'icx_getBalance'
         params = {'address': self._from}
 
         balance = self._engine.call(context, method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
+
+        factory.destroy(context)
 
     def test_call_in_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
@@ -117,7 +120,6 @@ class TestIconServiceEngine(unittest.TestCase):
             'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
         }
 
-        self._engine._icx_engine.context = context
         self._engine.call(context, method, params)
 
         tx_batch = context.tx_batch
@@ -134,6 +136,8 @@ class TestIconServiceEngine(unittest.TestCase):
         balance = int.from_bytes(
             icon_score_batch[_from.body][-32:], 'big')
         self.assertEqual(self._total_supply - value, balance)
+
+        factory.destroy(context)
 
     def test_invoke(self):
         block_height = 1

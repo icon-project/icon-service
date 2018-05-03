@@ -16,6 +16,7 @@
 
 
 from ..base.address import Address, AddressPrefix
+from ..base.exception import ExceptionCode, IconException
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -97,10 +98,16 @@ class IconScoreInfoMapper(dict):
         :param address: icon score address
         """
         if not isinstance(address, Address):
-            raise KeyError(f'{address} is not Address type.')
-        if address.is_contract:
-            raise KeyError(f'{address} is not an icon score address.')
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'{address} is an invalid address')
+        if not address.is_contract:
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'{address} is not an icon score address.')
 
     def __check_value_type(self, info: IconScoreInfo) -> None:
         if not isinstance(info, IconScoreInfo):
-            raise ValueError(f'{info} is not IconScoreInfo type.')
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'{info} is not IconScoreInfo type.')

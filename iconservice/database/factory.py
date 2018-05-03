@@ -17,7 +17,7 @@
 
 import os
 
-from .db import InternalScoreDatabase
+from .db import ContextDatabase
 from ..base.address import Address
 
 
@@ -30,7 +30,7 @@ class DatabaseFactory(object):
         """
         self.__state_db_root_path = state_db_root_path
 
-    def create_by_address(self, address: Address) -> InternalScoreDatabase:
+    def create_by_address(self, address: Address) -> ContextDatabase:
         """Create a state db with the given address.
 
         :param address:
@@ -39,9 +39,9 @@ class DatabaseFactory(object):
         name = address.body.hex()
         path = os.path.join(self.__state_db_root_path, name)
 
-        return InternalScoreDatabase.from_address_and_path(address, path)
+        return ContextDatabase.from_address_and_path(address, path)
 
-    def create_by_name(self, name: str) -> InternalScoreDatabase:
+    def create_by_name(self, name: str) -> ContextDatabase:
         """Create a state db with the given address.
 
         :param address:
@@ -49,5 +49,5 @@ class DatabaseFactory(object):
         """
         path = os.path.join(self.__state_db_root_path, name)
 
-        return InternalScoreDatabase.from_address_and_path(address=None,
+        return ContextDatabase.from_address_and_path(address=None,
                                                            path=path)

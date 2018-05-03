@@ -1,9 +1,9 @@
 import unittest
 from iconservice.iconscore.icon_score_base import IconScoreBase, score, external, payable
-from iconservice.base.address import Address, AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContext, Message
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import ExternalException, PayableException
-
+from tests.mock_db import MockDB
 
 @score
 class CallClass(IconScoreBase):
@@ -48,7 +48,8 @@ class CallClass(IconScoreBase):
 class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
-        self.ins = CallClass(None)
+        self.db = MockDB(MockDB.make_dict())
+        self.ins = CallClass(db=self.db)
         self.test_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
         self.empty_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
         pass
