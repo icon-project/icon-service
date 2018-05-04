@@ -19,7 +19,7 @@
 import unittest
 import shutil
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.database.db import ContextDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icx.icx_account import Account
@@ -39,7 +39,7 @@ class TestIcxStorage(unittest.TestCase):
         self.storage = IcxStorage(db)
 
         self.factory = IconScoreContextFactory(max_size=1)
-        context = self.factory.create(IconScoreContextType.INVOKE)
+        context = self.factory.create(IconScoreContextType.GENESIS)
         context.tx_batch = TransactionBatch()
         context.block_batch = BlockBatch()
         self.context = context
@@ -76,6 +76,35 @@ class TestIcxStorage(unittest.TestCase):
         text2 = self.storage.get_text(context, 'text')
 
         self.assertEqual(text, text2)
+
+    def test_owner(self):
+        context = self.context
+        icon_score_address = Address.from_data(
+            AddressPrefix.CONTRACT, b'score')
+        owner = Address.from_data(AddressPrefix.EOA, b'owner')
+
+        self.storage.put_score_owner(context, icon_score_address, owner)
+
+        owner2 = self.storage.get_score_owner(context, icon_score_address)
+        self.assertTrue(isinstance(owner2, Address))
+        self.assertEqual(AddressPrefix.EOA, owner2.prefix)
+        self.assertEqual(owner, owner2)
+
+    def test_is_score_installed(self):
+        context = self.context
+        icon_score_address = Address.from_data(
+            AddressPrefix.CONTRACT, b'score')
+        owner = Address.from_data(AddressPrefix.EOA, b'owner')
+
+        installed = self.storage.is_score_installed(context,
+                                                    icon_score_address)
+        self.assertFalse(installed)
+
+        self.storage.put_score_owner(context, icon_score_address, owner)
+
+        installed = self.storage.is_score_installed(context,
+                                                    icon_score_address)
+        self.assertTrue(installed)
 
     def tearDown(self):
         context = self.context

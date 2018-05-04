@@ -166,6 +166,10 @@ class Address(object):
 
         return Address(address_prefix, address_body)
 
+    @staticmethod
+    def from_data(prefix: AddressPrefix, data: bytes):
+        return create_address(prefix, data)
+
 
 def create_address(prefix: AddressPrefix, data: bytes):
     hash_value = hashlib.sha3_256(data).digest()
