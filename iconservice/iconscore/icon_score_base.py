@@ -18,7 +18,7 @@ import inspect
 import abc
 from functools import wraps
 
-from .icon_score_context import ContextGetter, IconScoreContext
+from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase
 from ..base.exception import ExternalException, PayableException
 from ..base.message import Message
@@ -119,10 +119,10 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         super().genesis_init(*args, **kwargs)
 
     @abc.abstractmethod
-    def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
-        super().__init__(db, addr_owner)
+    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
+        super().__init__(db, owner)
         self.__db = db
-        self.__addr_owner = addr_owner
+        self.__owner = owner
         self.__address = db.address
 
         if not self.get_api():
@@ -178,6 +178,10 @@ class IconScoreBase(IconScoreObject, ContextGetter):
     @property
     def db(self) -> IconScoreDatabase:
         return self.__db
+
+    @property
+    def owner(self) -> Address:
+        return self.__owner
 
     def call(self, addr_to: Address, func_name: str, *args, **kwargs):
         return self._context.call(addr_to, func_name, *args, **kwargs)

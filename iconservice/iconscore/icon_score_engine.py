@@ -20,24 +20,20 @@
 from collections import namedtuple
 
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
-from .icon_score_base import IconScoreBase
+from ..base.exception import ExceptionCode, IconException
 from .icon_score_context import IconScoreContext, call_method, call_fallback
-from .icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
-from .icon_score_loader import IconScoreLoader
-from ..database.factory import DatabaseFactory
-from ..database.db import IconScoreDatabase
+from .icon_score_info_mapper import IconScoreInfoMapper
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..icx.icx_storage import IcxStorage
 
 
 class IconScoreEngine(object):
     """Calls external functions provided by each IconScore
     """
 
-    def __init__(self,
-                 icon_score_root_path: str,
-                 icx_storage: 'IcxStorage',
-                 icon_score_info_mapper: IconScoreInfoMapper,
-                 db_factory: DatabaseFactory) -> None:
+    def __init__(self, icx_storage: 'IcxStorage', icon_score_info_mapper: IconScoreInfoMapper) -> None:
         """Constructor
 
         :param icon_score_root_path:
@@ -46,10 +42,8 @@ class IconScoreEngine(object):
         :param db_factory:
         """
 
-        self.__icon_score_root_path = icon_score_root_path
         self.__icx_storage = icx_storage
         self.__icon_score_info_mapper = icon_score_info_mapper
-        self.__db_factory = db_factory
 
         self._Task = namedtuple(
             'Task',
@@ -68,6 +62,7 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
+
         if data_type == 'call':
             self.__call(context, icon_score_address, data)
         elif data_type == 'install' or data_type == 'update':
@@ -76,6 +71,19 @@ class IconScoreEngine(object):
             raise IconException(
                 ExceptionCode.INVALID_PARAMS,
                 f'Invalid data type ({data_type})')
+
+    def query(self,
+              icon_score_address: Address,
+              context: IconScoreContext,
+              data_type: str,
+              data: dict) -> object:
+        """Run an external method of iconscore without state changing
+
+        Handles messagecall of icx_call
+        """
+
+        if data_type == 'call':
+            return self.__call(context, icon_score_address, data)
 
     def __put_task(self,
                    context: 'IconScoreContext',
@@ -113,10 +121,8 @@ class IconScoreEngine(object):
         params: dict = calldata['params']
 
         # TODO: Call external method of iconscore
-        icon_score = self.__get_icon_score(icon_score_address, context)
-        return call_method(addr_to=icon_score_address,
-                           get_score_func=self.get_icon_score,
-                           func_name=method, *(), **params)
+        icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+        return call_method(icon_score=icon_score, func_name=method, *(), **params)
 
     def __fallback(self, icon_score_address: Address):
         """When an IconScore receives some coins and calldata is None,
@@ -126,21 +132,9 @@ class IconScoreEngine(object):
         """
 
         # TODO: Call fallback method of iconscore
-        icon_score = self.__get_icon_score(icon_score_address, context)
-        call_fallback(addr_to=icon_score_address,
-                      get_score_func=self.get_icon_score)
+        icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+        call_fallback(icon_score)
 
-    def query(self,
-              icon_score_address: Address,
-              context: IconScoreContext,
-              data_type: str,
-              data: dict) -> object:
-        """Run an external method of iconscore without state changing
-
-        Handles messagecall of icx_call
-        """
-        if data_type == 'call':
-            return self.__call(icon_score_address, context, data)
 
     def commit(self, context: 'IconScoreContext') -> None:
         """It is called when the previous block has been confirmed
@@ -162,7 +156,7 @@ class IconScoreEngine(object):
             # TODO: install score package to 'address/block_height_tx_index' directory
             if task.type == 'install':
                 self.__install(task, context)
-            elif task.type =='update':
+            elif task.type == 'update':
                 self.__update(task, context)
             else:
                 pass
@@ -173,37 +167,15 @@ class IconScoreEngine(object):
         """Install an icon score
 
         Owner check has been already done in IconServiceEngine
-
-        Process Order
         - Install IconScore package file to file system
-        - Load IconScore wrapper
-        - Create Database
-        - Create an IconScore instance with address, owner and database
-        - Execute IconScoreBase.genesis_invoke()
-        - Register IconScoreInfo to IconScoreInfoMapper
 
-        :param icon_score_address:
-        :param owner:
-        :param data: zipped binary data + mime_type
         """
-        # score_wrapper = self.__load_score_wrapper(task.address)
-        # score_db = self.__create_icon_score_database(task.address)
-        #
-        # icon_score = score_wrapper(score_db, owner=task.owner)
-        # icon_score.genesis_init()
-        #
-        # self.__add_score_to_mapper(icon_score)
-        # self.__icx_storage.put_score_owner(context, task.owner)
-        # TODO only setup filesystem
+        self.__icx_storage.put_score_owner(context, task.owner)
 
     def __update(self, task: namedtuple, context: IconScoreContext) -> None:
         """Update an icon score
 
         Owner check has been already done in IconServiceEngine
-
-        :param icon_score_address:
-        :param owner:
-        :param data: zipped binary data + mime_type
         """
         raise NotImplementedError('Score update is not implemented')
 

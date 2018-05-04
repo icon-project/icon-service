@@ -82,7 +82,7 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icx: 'IcxEngine' = None
-    get_icon_score_function: callable = None
+    icon_score_mapper: IconScoreInfoMapper = None
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
@@ -169,8 +169,8 @@ class IconScoreContext(object):
         :return:
         """
 
-        call_method(addr_from=addr_from, addr_to=addr_to, get_score_func=self.get_icon_score_function,
-                    readonly=self.readonly, func_name=func_name, *args, **kwargs)
+        icon_score = self.icon_score_mapper.get_icon_score(addr_to)
+        call_method(icon_score=icon_score, func_name=func_name, addr_from=addr_from, *args, **kwargs)
 
     def selfdestruct(self, recipient: Address) -> None:
         """Destroy the current icon score, sending its funds to the given address
@@ -209,7 +209,9 @@ class IconScoreContext(object):
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:
-            info = self.get_icon_score_function(icon_score_address, only_info_none_check=True)
+            info = self.icon_score_mapper.get(icon_score_address)
+            if info is None:
+                raise IconScoreBaseException('IconScoreInfo is None')
             info.icon_score.db.write_batch(block_batch)
 
     def rollback(self) -> None:
@@ -252,26 +254,25 @@ class IconScoreContextFactory(ContextContainer):
         self._delete_context(context)
 
 
-def call_method(addr_to: Address, get_score_func: callable,
-                func_name: str, addr_from: Optional[Address]=None, *args, **kwargs) -> object:
+def call_method(icon_score: IconScoreBase, func_name: str,
+                addr_from: Optional[Address]=None, *args, **kwargs) -> object:
 
-    if __check_myself(addr_from, addr_to):
+    if icon_score is None:
+        raise IconScoreBaseException('score is None')
+
+    if __check_myself(addr_from, icon_score.address):
         raise IconScoreBaseException("call function myself")
 
     try:
-        icon_score = get_score_func(addr_to)
         return icon_score.call_method(func_name, *args, **kwargs)
     except (PayableException, ExternalException):
-        call_fallback(addr_to=addr_to,
-                      get_score_func=get_score_func)
+        call_fallback(icon_score)
         return None
     except Exception:
         raise
 
 
-def call_fallback(addr_to: Address, get_score_func: callable) -> None:
-
-    icon_score = get_score_func(addr_to)
+def call_fallback(icon_score: IconScoreBase) -> None:
     call_fallback_func = getattr(icon_score, '_IconScoreBase__call_fallback')
     call_fallback_func()
 

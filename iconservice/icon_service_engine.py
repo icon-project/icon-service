@@ -18,7 +18,7 @@ import json
 import os
 import hashlib
 
-from iconservice.iconscore.icon_score_loader import IconScoreLoader
+
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException
@@ -28,12 +28,13 @@ from .base.transaction import Transaction
 from .database.factory import DatabaseFactory
 from .database.batch import BlockBatch, TransactionBatch
 from .icx.icx_engine import IcxEngine
-from .iconscore.icon_score_info_mapper import IconScoreInfo
+from .icx.icx_storage import IcxStorage
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import IconBlockResult, TransactionResult, \
     JsonSerializer
 
@@ -77,15 +78,17 @@ class IconServiceEngine(object):
         self._db_factory = DatabaseFactory(state_db_root_path)
         self._context_factory = IconScoreContextFactory(max_size=5)
         self._icon_score_loader = IconScoreLoader('score')
-        self._icon_score_mapper = IconScoreInfoMapper(self._db_factory, self._icon_score_loaderx)
 
-        self._icon_score_engine = IconScoreEngine(
-            icon_score_root_path, self._icon_score_mapper, self._db_factory)
+        # TODO have to get IcxStorage!
+        self._icx_storage = IcxStorage(None)
+
+        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
+        self._icon_score_engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper)
 
         self._init_icx_engine(self._db_factory)
 
         IconScoreContext.icx = self._icx_engine
-        IconScoreContext.mapper = self._icon_score_engine.get_icon_score
+        IconScoreContext.mapper = self._icon_score_mapper
 
     def _init_icx_engine(self, db_factory: DatabaseFactory) -> None:
         """Initialize icx_engine
