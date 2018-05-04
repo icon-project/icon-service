@@ -152,35 +152,48 @@ class DictDB(object):
         return keys
 
 
-class ListDB(object):
+class ArrayDB():
     __SIZE = 'size'
 
     def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
-        self.__size = ListDB.__get_size()
+        self.__size = self.__get_size()
         self.__value_type = value_type
 
     def put(self, value: V) -> None:
-        sub_db = self.__db
         byte_value = ContainerUtil.encode_value(value)
-        sub_db.put(ContainerUtil.encode_key(self.__size), byte_value)
+        self.__db.put(ContainerUtil.encode_key(self.__size), byte_value)
         self.__size += 1
+        self.__set_size()
 
     def pop(self) -> None:
-        raise NotImplemented()
+        self.__size -= 1
+        self.__set_size()
 
-    def get(self, keys: Any) -> V:
-        raise NotImplemented()
+    def get(self, index: int=0) -> V:
+        if index >= self.__size:
+            raise IconScoreBaseException(f'ArrayDB out of range')
+
+        return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(self.__size)), self.__value_type)
+
+    def __iter__(self):
+
+        pass
+
+    def __len__(self):
+        return self.__size
 
     def __get_size(self) -> int:
         size = 0
-        db_list_size = ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(ListDB.__SIZE)), int)
+        db_list_size = ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(ArrayDB.__SIZE)), int)
         if db_list_size:
             size = db_list_size
         return size
 
     def __set_size(self) -> None:
-        pass
+        sub_db = self.__db
+        byte_value = ContainerUtil.encode_value(self.__size)
+        sub_db.put(ContainerUtil.encode_key(ArrayDB.__SIZE), byte_value)
 
     # tmp comment because hash key support
     #
