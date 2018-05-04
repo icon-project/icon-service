@@ -128,7 +128,7 @@ class IconScoreContext(object):
 
         :return: the icx amount of balance
         """
-        return self.icx.get_balance(address)
+        return self.icx.get_balance(self, address)
 
     def transfer(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
@@ -139,7 +139,7 @@ class IconScoreContext(object):
         :param addr_to:
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.icx.transfer(addr_from, addr_to, amount)
+        return self.icx.transfer(self, addr_from, addr_to, amount)
 
     def send(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -152,7 +152,7 @@ class IconScoreContext(object):
         ret = True
 
         try:
-            self.icx.transfer(addr_from, addr_to, amount)
+            self.icx.transfer(self, addr_from, addr_to, amount)
         except:
             ret = False
 
