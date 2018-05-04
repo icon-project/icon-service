@@ -14,16 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..iconscore import ContextGetter
+from ..iconscore.icon_score_context import ContextGetter
 from ..iconscore.icon_score_loader import IconScoreLoader
 from ..icx.icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
+from ..database.db import IconScoreDatabase
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-    from ..database.db import IconScoreDatabase
+    from ..database.factory import DatabaseFactory
 
 
 class IconScoreInfo(object):
@@ -67,12 +68,11 @@ class IconScoreInfoMapper(dict, ContextGetter):
     key: icon_score_address
     value: IconScoreInfo
     """
-    def __init__(self,
-                 storage: IcxStorage,
-                 db_factory: 'DatabaseFactory',
+    def __init__(self, storage: IcxStorage, db_factory: 'DatabaseFactory',
                  icon_score_loader: IconScoreLoader) -> None:
         """Constructor
         """
+        super().__init__()
         self.__icx_storage = storage
         self.__db_factory = db_factory
         self.__icon_score_loader = icon_score_loader
@@ -119,7 +119,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
                 ExceptionCode.INVALID_PARAMS,
                 f'{info} is not IconScoreInfo type.')
 
-    def get_icon_score(self, address: Address) -> Optional[IconScoreBase]:
+    def get_icon_score(self, address: Address) -> Optional['IconScoreBase']:
         """
         :param address:
         :return: IconScoreBase object
@@ -143,7 +143,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
         if owner is None:
             return None
 
-        icon_score = score_wrapper(score_db, owner=owner)
+        icon_score = score_wrapper(score_db, owner)
         return self.__add_score_to_mapper(icon_score)
 
     def __create_icon_score_database(self, address: Address) -> 'IconScoreDatabase':

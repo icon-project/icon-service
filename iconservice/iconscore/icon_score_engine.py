@@ -169,7 +169,9 @@ class IconScoreEngine(object):
         - Install IconScore package file to file system
 
         """
-        self.__icx_storage.put_score_owner(context, task.owner)
+        self.__icx_storage.put_score_owner(context, task.address, task.owner)
+        score = self.__icon_score_info_mapper.get_icon_score(task.address)
+        score.genesis_init(task.data)
 
     def __update(self, task: namedtuple, context: IconScoreContext) -> None:
         """Update an icon score

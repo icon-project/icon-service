@@ -18,7 +18,7 @@ import inspect
 import abc
 from functools import wraps
 
-from . import ContextGetter
+from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase
 from ..base.exception import ExternalException, PayableException
 from ..base.message import Message

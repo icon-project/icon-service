@@ -38,9 +38,6 @@ from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import IconBlockResult, TransactionResult, \
     JsonSerializer
 
-TEST_SCORE_ADDRESS = create_address(AddressPrefix.CONTRACT, b'test')
-
-
 class IconServiceEngine(object):
     """The entry of all icon service related components
 
@@ -90,7 +87,7 @@ class IconServiceEngine(object):
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
 
-    def _create_icx_storage(self, db_factory: DatabaseFactory) -> None:
+    def _create_icx_storage(self, db_factory: DatabaseFactory) -> 'IcxStorage':
         """Create IcxStorage instance
 
         :param db_factory: ContextDatabase Factory
@@ -143,14 +140,16 @@ class IconServiceEngine(object):
         context.tx_batch = TransactionBatch()
         context.block_result = IconBlockResult(JsonSerializer())
 
+        rets = []
         for tx in transactions:
             method = tx['method']
             params = tx['params']
-            self.call(context, method, params)
+            rets.append(self.call(context, method, params))
 
             context.tx_batch.clear()
 
         self._context_factory.destroy(context)
+        return rets
 
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
@@ -290,9 +289,9 @@ class IconServiceEngine(object):
         tx_result = TransactionResult(tx_hash, context.block, to)
         try:
             if data_type == 'install':
-                to = TEST_SCORE_ADDRESS
-                tx_result.contract_address = self.__generate_contract_address(
+                to = self.__generate_contract_address(
                     context.tx.origin, context.tx.timestamp, context.tx.nonce)
+                tx_result.contract_address = to
 
             self._icon_score_engine.invoke(to, context, data_type, data)
 
@@ -305,8 +304,8 @@ class IconServiceEngine(object):
 
         return tx_result
 
-    def __generate_contract_address(self,
-                                    from_: Address,
+    @staticmethod
+    def __generate_contract_address(from_: Address,
                                     timestamp: int,
                                     nonce: int = None) -> Address:
         """Generates a contract address from the transaction information.
@@ -323,8 +322,8 @@ class IconServiceEngine(object):
         hash_value = hashlib.sha3_256(data).hexdigest()
         return Address(AddressPrefix.CONTRACT, hash_value[-20:])
 
-    def _set_tx_info_to_context(self,
-                                context: IconScoreContext,
+    @staticmethod
+    def _set_tx_info_to_context(context: IconScoreContext,
                                 params: dict) -> None:
         """Set transaction and message info to IconScoreContext
 

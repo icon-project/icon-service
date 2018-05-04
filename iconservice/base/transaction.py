@@ -43,6 +43,10 @@ class Transaction(object):
         return self.__origin
 
     @property
+    def index(self) -> int:
+        return 0
+
+    @property
     def hash(self) -> str:
         """transaction hash
         """

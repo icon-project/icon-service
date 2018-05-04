@@ -141,6 +141,7 @@ class ContextDatabase(PlyvelDatabase):
         3. StateDB
 
         :param key:
+
         :return: a value for a given key
         """
         block_batch = context.block_batch
@@ -173,6 +174,7 @@ class ContextDatabase(PlyvelDatabase):
         :param key:
         :param value:
         """
+
         if context.readonly:
             raise DatabaseException('put is not allowed')
         elif context.type == IconScoreContextType.INVOKE:
