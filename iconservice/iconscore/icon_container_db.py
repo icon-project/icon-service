@@ -9,7 +9,6 @@ V = TypeVar('V', int, str, Address, bytes, bool)
 
 
 class ContainerUtil(object):
-    __SIZE = 'size'
 
     @staticmethod
     def encode_key(key: K) -> bytes:
@@ -109,52 +108,16 @@ class ContainerUtil(object):
                 db_value = ContainerUtil.encode_value(value)
                 db.put(db_key, db_value)
 
-    @staticmethod
-    def find_sub_db_from_keys(db: IconScoreDatabase, keys: Tuple[K, ...]) -> IconScoreDatabase:
-        sub_db = db
-        for key in keys:
-            sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
-        return sub_db
-
-    @staticmethod
-    def get_size(db: IconScoreDatabase):
-        size = 0
-        db_list_size = ContainerUtil.decode_object(db.get(ContainerUtil.encode_key(ContainerUtil.__SIZE)), int)
-        if db_list_size:
-            size = db_list_size
-        return size
-
-    @staticmethod
-    def check_tuple_keys(keys: Any, depth: int, is_strict_depth: bool=True) -> Tuple[K, ...]:
-
-        if keys is None:
-            keys = tuple()
-        elif not isinstance(keys, collections.Iterable):
-            keys = tuple([keys])
-
-        for key in keys:
-            if not isinstance(key, (int, str, Address)):
-                raise IconScoreBaseException(f"can't cast args {type(key)} : {key}")
-
-        if is_strict_depth:
-            if not len(keys) == depth:
-                raise IconScoreBaseException('depth over')
-        else:
-            if len(keys) >= depth:
-                raise IconScoreBaseException('depth over')
-        return keys
-
 
 class DictDB(object):
 
     def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type, depth: int=1) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
-        self.__size = ContainerUtil.get_size(self.__db)
         self.__value_type = value_type
         self.__depth = depth
 
     def __setitem__(self, keys: Any, value: V) -> None:
-        keys = ContainerUtil.check_tuple_keys(keys, self.__depth)
+        keys = DictDB.__check_tuple_keys(keys)
 
         *keys, last_key = keys
         sub_db = self.__db
@@ -165,7 +128,7 @@ class DictDB(object):
         sub_db.put(ContainerUtil.encode_key(last_key), byte_value)
 
     def __getitem__(self, keys: Any) -> V:
-        keys = ContainerUtil.check_tuple_keys(keys, self.__depth)
+        keys = DictDB.__check_tuple_keys(keys)
 
         *keys, last_key = keys
         sub_db = self.__db
@@ -173,23 +136,51 @@ class DictDB(object):
             sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
         return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(last_key)), self.__value_type)
 
+    def __check_tuple_keys(self, keys: Any) -> Tuple[K, ...]:
+
+        if keys is None:
+            keys = tuple()
+        elif not isinstance(keys, collections.Iterable):
+            keys = tuple([keys])
+
+        for key in keys:
+            if not isinstance(key, (int, str, Address)):
+                raise IconScoreBaseException(f"can't cast args {type(key)} : {key}")
+
+        if not len(keys) == self.__depth:
+            raise IconScoreBaseException('depth over')
+        return keys
+
 
 class ListDB(object):
+    __SIZE = 'size'
 
-    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type, depth: int=1) -> None:
+    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
-        self.__size = ContainerUtil.get_size(self.__db)
+        self.__size = ListDB.__get_size()
         self.__value_type = value_type
-        self.__depth = depth
 
     def put(self, value: V) -> None:
-        raise NotImplemented()
+        sub_db = self.__db
+        byte_value = ContainerUtil.encode_value(value)
+        sub_db.put(ContainerUtil.encode_key(self.__size), byte_value)
+        self.__size += 1
 
     def pop(self) -> None:
         raise NotImplemented()
 
     def get(self, keys: Any) -> V:
         raise NotImplemented()
+
+    def __get_size(self) -> int:
+        size = 0
+        db_list_size = ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(ListDB.__SIZE)), int)
+        if db_list_size:
+            size = db_list_size
+        return size
+
+    def __set_size(self) -> None:
+        pass
 
     # tmp comment because hash key support
     #
