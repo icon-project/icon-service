@@ -105,5 +105,4 @@ class TestIconScoreEngine(unittest.TestCase):
         calldata = {'method': 'total_supply', 'params': dict()}
 
         self._engine.invoke(self._icon_score_address, None, 'install', dict())
-        print(self._engine.query(self._icon_score_address, None, 'call', calldata))
-
+        self.assertEqual(1000000000000000000000, self._engine.query(self._icon_score_address, None, 'call', calldata))
