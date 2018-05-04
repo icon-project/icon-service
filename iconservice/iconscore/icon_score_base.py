@@ -150,7 +150,7 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         score_func = getattr(self, func_name)
         return score_func(*args, **kwargs)
 
-    def call_fallback(self):
+    def __call_fallback(self):
         func_name = 'fallback'
         payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
         self.__check_payable(func_name, payable_dict)

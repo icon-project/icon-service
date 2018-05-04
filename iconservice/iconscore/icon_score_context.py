@@ -209,7 +209,7 @@ class IconScoreContext(object):
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:
-            info = self.get_icon_score_function[icon_score_address]
+            info = self.get_icon_score_function(icon_score_address, only_info_none_check=True)
             info.icon_score.db.write_batch(block_batch)
 
     def rollback(self) -> None:
@@ -263,19 +263,17 @@ def call_method(addr_to: Address, get_score_func: callable,
         return icon_score.call_method(func_name, *args, **kwargs)
     except (PayableException, ExternalException):
         call_fallback(addr_to=addr_to,
-                      get_score_func=get_score_func,
-                      addr_from=addr_from)
+                      get_score_func=get_score_func)
         return None
+    except Exception:
+        raise
 
 
-def call_fallback(addr_to: Address, get_score_func: callable,
-                  addr_from: Optional[Address]=None) -> None:
-
-    if not __check_myself(addr_from, addr_to):
-        raise IconScoreBaseException("call function myself")
+def call_fallback(addr_to: Address, get_score_func: callable) -> None:
 
     icon_score = get_score_func(addr_to)
-    icon_score.call_fallback()
+    call_fallback_func = getattr(icon_score, '__call_fallback')
+    call_fallback_func()
 
 
 def __check_myself(addr_from: Optional[Address], addr_to: Address) -> bool:

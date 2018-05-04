@@ -52,15 +52,16 @@ class IconScoreEngine(object):
         self.__db_factory = db_factory
         self.__icon_score_loader = IconScoreLoader(icon_score_root_path)
 
-    def get_icon_score(self, address: Address) -> IconScoreBase:
+    def get_icon_score(self, address: Address, only_info_none_check: bool=False) -> IconScoreBase:
         """
+        :param only_info_none_check:
         :param address:
         :return: IconScoreBase object
         """
 
         icon_score_info = self.__icon_score_info_mapper.get(address)
         if icon_score_info is None:
-            if not self.__db_factory.is_exist(address):
+            if only_info_none_check or not self.__db_factory.is_exist(address):
                 raise IconScoreBaseException("icon_score_info is None")
             else:
                 self.__load_score(address)
