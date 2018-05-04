@@ -16,6 +16,7 @@
 
 import json
 import os
+import hashlib
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException
@@ -31,7 +32,8 @@ from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore.icon_score_result import IconBlockResult, TransactionResult, JsonSerializer
+from .iconscore.icon_score_result import IconBlockResult, TransactionResult, \
+    JsonSerializer
 
 TEST_SCORE_ADDRESS = create_address(AddressPrefix.CONTRACT, b'test')
 
@@ -285,7 +287,8 @@ class IconServiceEngine(object):
         try:
             if data_type == 'install':
                 to = TEST_SCORE_ADDRESS
-                tx_result.contract_address = to
+                tx_result.contract_address = self.__generate_contract_address(
+                    context.tx.origin, context.tx.timestamp, context.tx.nonce)
 
             self._icon_score_engine.invoke(to, context, data_type, data)
 
@@ -297,6 +300,24 @@ class IconServiceEngine(object):
             tx_result.status = TransactionResult.FAILURE
 
         return tx_result
+
+    def __generate_contract_address(self,
+                                    from_: Address,
+                                    timestamp: int,
+                                    nonce: int = None) -> Address:
+        """Generates a contract address from the transaction information.
+
+        :param from_:
+        :param timestamp:
+        :param nonce:
+        :return:
+        """
+        data = from_.body + timestamp.to_bytes(32, 'big')
+        if nonce is not None:
+            data += nonce.to_bytes(32, 'big')
+
+        hash_value = hashlib.sha3_256(data).hexdigest()
+        return Address(AddressPrefix.CONTRACT, hash_value[-20:])
 
     def _set_tx_info_to_context(self,
                                 context: IconScoreContext,
