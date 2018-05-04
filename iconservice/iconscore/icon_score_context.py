@@ -24,7 +24,6 @@ from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
 from ..icx.icx_engine import IcxEngine
-from .icon_score_info_mapper import IconScoreInfoMapper
 from ..database.batch import BlockBatch, TransactionBatch
 from .icon_score_result import IconBlockResult
 
@@ -33,6 +32,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
+
 
 _thread_local_data = threading.local()
 
@@ -69,8 +69,6 @@ class ContextGetter(object):
     @property
     def _context(self):
         return getattr(_thread_local_data, 'context', None)
-
-
 @unique
 class IconScoreContextType(IntEnum):
     GENESIS = 0
@@ -82,7 +80,7 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icx: 'IcxEngine' = None
-    icon_score_mapper: IconScoreInfoMapper = None
+    icon_score_mapper: 'IconScoreInfoMapper' = None
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
@@ -254,7 +252,7 @@ class IconScoreContextFactory(ContextContainer):
         self._delete_context(context)
 
 
-def call_method(icon_score: IconScoreBase, func_name: str,
+def call_method(icon_score: 'IconScoreBase', func_name: str,
                 addr_from: Optional[Address]=None, *args, **kwargs) -> object:
 
     if icon_score is None:
@@ -272,7 +270,7 @@ def call_method(icon_score: IconScoreBase, func_name: str,
         raise
 
 
-def call_fallback(icon_score: IconScoreBase) -> None:
+def call_fallback(icon_score: 'IconScoreBase') -> None:
     call_fallback_func = getattr(icon_score, '_IconScoreBase__call_fallback')
     call_fallback_func()
 

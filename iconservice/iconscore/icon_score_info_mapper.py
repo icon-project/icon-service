@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..database.factory import DatabaseFactory
-from ..iconscore.icon_score_context import ContextGetter
+from ..iconscore import ContextGetter
 from ..iconscore.icon_score_loader import IconScoreLoader
 from ..icx.icx_storage import IcxStorage
 from ..base.address import Address
@@ -68,7 +67,10 @@ class IconScoreInfoMapper(dict, ContextGetter):
     key: icon_score_address
     value: IconScoreInfo
     """
-    def __init__(self, storage: IcxStorage, db_factory: DatabaseFactory, icon_score_loader: IconScoreLoader) -> None:
+    def __init__(self,
+                 storage: IcxStorage,
+                 db_factory: 'DatabaseFactory',
+                 icon_score_loader: IconScoreLoader) -> None:
         """Constructor
         """
         self.__icx_storage = storage

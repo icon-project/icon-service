@@ -40,7 +40,7 @@ class IcxEngine(object):
         self.__genesis_address: Address = None
         self.__fee_treasury_address: Address = None
 
-    def open(self, db: 'ContextDatabase', logger: IcxLogger=None) -> None:
+    def open(self, storage: 'IcxStorage', logger: IcxLogger=None) -> None:
         """Open engine
 
         Get necessary parameters from caller and begin to use storage(leveldb)
@@ -50,15 +50,13 @@ class IcxEngine(object):
         """
         self.close()
 
-        storage = IcxStorage(db)
         self.__storage = storage
         self.__logger = logger
-        self.__db = db
 
         context = None
-        self.__load_genesis_account_from_storage(None, storage)
-        self.__load_fee_treasury_account_from_storage(None, storage)
-        self.__load_total_supply_amount_from_storage(None, storage)
+        self.__load_genesis_account_from_storage(context, storage)
+        self.__load_fee_treasury_account_from_storage(context, storage)
+        self.__load_total_supply_amount_from_storage(context, storage)
 
     def close(self) -> None:
         """Close resources

@@ -11,7 +11,7 @@ class SampleToken(IconScoreBase):
     _BALANCES = 'balances'
     _TOTAL_SUPPLY = 'total_supply'
 
-    def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
+    def __init__(self, db: IconScoreDatabase, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)

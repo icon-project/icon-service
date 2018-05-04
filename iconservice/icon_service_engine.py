@@ -65,7 +65,7 @@ class IconServiceEngine(object):
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
-        """Get necessary paramters and initialize
+        """Get necessary parameters and initialize
 
         :param icon_score_root_path:
         :param state_db_root_path:
@@ -79,27 +79,26 @@ class IconServiceEngine(object):
         self._context_factory = IconScoreContextFactory(max_size=5)
         self._icon_score_loader = IconScoreLoader('score')
 
-        # TODO have to get IcxStorage!
-        self._icx_storage = IcxStorage(None)
+        self._icx_storage = self._create_icx_storage(self._db_factory)
+
+        self._icx_engine = IcxEngine()
+        self._icx_engine.open(self._icx_storage)
 
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
         self._icon_score_engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper)
 
-        self._init_icx_engine(self._db_factory)
-
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
 
-    def _init_icx_engine(self, db_factory: DatabaseFactory) -> None:
-        """Initialize icx_engine
+    def _create_icx_storage(self, db_factory: DatabaseFactory) -> None:
+        """Create IcxStorage instance
 
-        :param db_factory:
+        :param db_factory: ContextDatabase Factory
         """
-        db = db_factory.create_by_name('icon_dex')
+        db: 'ContextDatabase' = db_factory.create_by_name('icon_dex')
         db.address = ICX_ENGINE_ADDRESS
 
-        self._icx_engine = IcxEngine()
-        self._icx_engine.open(db)
+        return IcxStorage(db)
 
     def close(self) -> None:
         self._icx_engine.close()

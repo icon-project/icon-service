@@ -23,40 +23,8 @@ from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import ContextGetter
-from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.utils import sha3_256
-
-
-class IconServiceDatabase(abc.ABC):
-
-    @abc.abstractmethod
-    def get(self, key: bytes) -> bytes:
-        pass
-
-    @abc.abstractmethod
-    def put(self, key: bytes, value: bytes):
-        pass
-
-    @abc.abstractmethod
-    def delete(self, key: bytes):
-        pass
-
-    @abc.abstractmethod
-    def close(self):
-        pass
-
-    @abc.abstractmethod
-    def get_sub_db(self, key: bytes):
-        pass
-
-    @abc.abstractmethod
-    def iterator(self):
-        pass
-
-    @abc.abstractmethod
-    def write_batch(self, states: dict):
-        pass
 
 
 class PlyvelDatabase(object):
@@ -148,7 +116,7 @@ class ContextDatabase(PlyvelDatabase):
         super().__init__(db)
         self.address = address
 
-    def get(self, context: IconScoreContext, key: bytes) -> bytes:
+    def get(self, context: 'IconScoreContext', key: bytes) -> bytes:
         """Returns value indicated by key from batch or StateDB
 
         :param context:
@@ -163,7 +131,7 @@ class ContextDatabase(PlyvelDatabase):
             return self.get_from_batch(context, key)
 
     def get_from_batch(self,
-                       context: IconScoreContext,
+                       context: 'IconScoreContext',
                        key: bytes) -> bytes:
         """Returns a value for a given key
 
@@ -196,7 +164,7 @@ class ContextDatabase(PlyvelDatabase):
         return super().get(key)
 
     def put(self,
-            context: IconScoreContext,
+            context: 'IconScoreContext',
             key: bytes,
             value: bytes) -> None:
         """put value to StateDB or catch according to contex type
@@ -212,16 +180,16 @@ class ContextDatabase(PlyvelDatabase):
         else:
             super().put(key, value)
 
-    def put_to_batch(self, context: IconScoreContext, key: bytes, value: bytes):
+    def put_to_batch(self, context: 'IconScoreContext', key: bytes, value: bytes):
         context.tx_batch.put(self.address, key, value)
 
-    def delete(self, context: IconScoreContext, key: bytes):
+    def delete(self, context: 'IconScoreContext', key: bytes):
         if context.readonly:
             raise DatabaseException('delete is not allowed')
         else:
             super().delete(key)
 
-    def close(self, context: IconScoreContext) -> None:
+    def close(self, context: 'IconScoreContext') -> None:
         if context is not None and context.readonly:
             raise DatabaseException(
                 'close is not allowed on readonly context')
@@ -229,7 +197,7 @@ class ContextDatabase(PlyvelDatabase):
         return super().close()
 
     def write_batch(self,
-                    context: IconScoreContext,
+                    context: 'IconScoreContext',
                     states: dict):
         if context.readonly:
             raise DatabaseException(
