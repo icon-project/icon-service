@@ -135,7 +135,6 @@ class IconScoreEngine(object):
         icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
         call_fallback(icon_score)
 
-
     def commit(self, context: 'IconScoreContext') -> None:
         """It is called when the previous block has been confirmed
         

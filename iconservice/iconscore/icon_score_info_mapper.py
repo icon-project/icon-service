@@ -125,8 +125,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
 
         icon_score_info = self.get(address)
         if icon_score_info is None:
-            if self.__db_factory.is_exist(address):
-                icon_score_info = self.__load_score(address)
+            icon_score_info = self.__load_score(address)
 
         if icon_score_info is None:
             return None

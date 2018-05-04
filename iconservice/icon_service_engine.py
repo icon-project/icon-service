@@ -88,7 +88,7 @@ class IconServiceEngine(object):
         self._init_icx_engine(self._db_factory)
 
         IconScoreContext.icx = self._icx_engine
-        IconScoreContext.mapper = self._icon_score_mapper
+        IconScoreContext.icon_score_mapper = self._icon_score_mapper
 
     def _init_icx_engine(self, db_factory: DatabaseFactory) -> None:
         """Initialize icx_engine
