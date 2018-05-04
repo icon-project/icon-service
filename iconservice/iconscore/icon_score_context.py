@@ -272,7 +272,7 @@ def call_method(addr_to: Address, get_score_func: callable,
 def call_fallback(addr_to: Address, get_score_func: callable) -> None:
 
     icon_score = get_score_func(addr_to)
-    call_fallback_func = getattr(icon_score, '__call_fallback')
+    call_fallback_func = getattr(icon_score, '_IconScoreBase__call_fallback')
     call_fallback_func()
 
 
