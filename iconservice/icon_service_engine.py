@@ -266,13 +266,12 @@ class IconServiceEngine(object):
 
         context.block_result.append(_tx_result)
 
-
     def __handle_score_invoke(self,
                               tx_hash: str,
                               to: Address,
                               context: IconScoreContext,
                               data_type: str,
-                              data: dict) ->TransactionResult:
+                              data: dict) -> TransactionResult:
         """Handle score invocation
 
         :param tx_hash: transaction hash
@@ -299,7 +298,6 @@ class IconServiceEngine(object):
 
         return tx_result
 
-
     def _set_tx_info_to_context(self,
                                 context: IconScoreContext,
                                 params: dict) -> None:
@@ -311,8 +309,17 @@ class IconServiceEngine(object):
         _from = params['from']
         _tx_hash = params.get('tx_hash', None)
         _value = params.get('value', 0)
+        _timestamp = None
+        _nonce = None
+        if 'timestamp' in params:
+            _timestamp = int(params.get('timestamp', None))
+        if 'nonce' in params:
+            _nonce = int(params.get('nonce', None), 16)
 
-        context.tx = Transaction(tx_hash=_tx_hash, origin=_from)
+        context.tx = Transaction(tx_hash=_tx_hash,
+                                 origin=_from,
+                                 timestamp=_timestamp,
+                                 nonce=_nonce)
         context.msg = Message(sender=_from, value=_value)
 
     def commit(self):
