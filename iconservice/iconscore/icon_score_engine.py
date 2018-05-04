@@ -50,9 +50,9 @@ class IconScoreEngine(object):
         }
         self.__icon_score_info_mapper = icon_score_info_mapper
         self.__db_factory = db_factory
-        self.__icon_score_root_path = icon_score_root_path
+        self.__icon_score_loader = IconScoreLoader(icon_score_root_path)
 
-    def __get_icon_score(self, address: Address) -> IconScoreBase:
+    def get_icon_score(self, address: Address) -> IconScoreBase:
         """
         :param address:
         :return: IconScoreBase object
@@ -69,8 +69,7 @@ class IconScoreEngine(object):
         return icon_score
 
     def __install_score(self, address: Address, owner: Address):
-        loader = IconScoreLoader(self.__icon_score_root_path)
-        score_wrapper = loader.load_score(address.body.hex())
+        score_wrapper = self.__icon_score_loader.load_score(address.body.hex())
         if score_wrapper is None:
             raise IconScoreBaseException(f'score_wrapper load Fail {address}')
 
@@ -85,8 +84,7 @@ class IconScoreEngine(object):
         return info
 
     def __load_score(self, address: Address):
-        loader = IconScoreLoader()
-        score_wrapper = loader.load_score(address.body.hex())
+        score_wrapper = self.__icon_score_loader.load_score(address.body.hex())
         if score_wrapper is None:
             raise IconScoreBaseException(f'score_wrapper load Fail {address}')
 
@@ -153,7 +151,7 @@ class IconScoreEngine(object):
 
         # TODO: Call external method of iconscore
         return call_method(addr_to=icon_score_address,
-                           icon_score=self.__get_icon_score(icon_score_address),
+                           get_score_func=self.get_icon_score,
                            func_name=method, *(), **params)
 
     def __fallback(self, icon_score_address: Address):
@@ -165,7 +163,7 @@ class IconScoreEngine(object):
 
         # TODO: Call fallback method of iconscore
         call_fallback(addr_to=icon_score_address,
-                      icon_score=self.__get_icon_score(icon_score_address))
+                      get_score_func=self.get_icon_score)
 
     def query(self,
               icon_score_address: Address,

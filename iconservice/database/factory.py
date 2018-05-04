@@ -60,5 +60,4 @@ class DatabaseFactory(object):
 
         name = address.body.hex()
         path = os.path.join(self.__state_db_root_path, name)
-        var = os.path.isdir(path)
-        return var
+        return os.path.isdir(path)

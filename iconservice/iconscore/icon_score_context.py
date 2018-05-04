@@ -82,7 +82,7 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icx: 'IcxEngine' = None
-    score_mapper: IconScoreInfoMapper = None
+    get_icon_score_function: callable = None
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
@@ -169,7 +169,7 @@ class IconScoreContext(object):
         :return:
         """
 
-        call_method(addr_from=addr_from, addr_to=addr_to, score_mapper=self.score_mapper,
+        call_method(addr_from=addr_from, addr_to=addr_to, get_score_func=self.get_icon_score_function,
                     readonly=self.readonly, func_name=func_name, *args, **kwargs)
 
     def selfdestruct(self, recipient: Address) -> None:
@@ -209,7 +209,7 @@ class IconScoreContext(object):
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:
-            info = self.score_mapper[icon_score_address]
+            info = self.get_icon_score_function[icon_score_address]
             info.icon_score.db.write_batch(block_batch)
 
     def rollback(self) -> None:
@@ -252,27 +252,29 @@ class IconScoreContextFactory(ContextContainer):
         self._delete_context(context)
 
 
-def call_method(addr_to: Address, icon_score: 'IconScoreBase',
+def call_method(addr_to: Address, get_score_func: callable,
                 func_name: str, addr_from: Optional[Address]=None, *args, **kwargs) -> object:
 
     if __check_myself(addr_from, addr_to):
         raise IconScoreBaseException("call function myself")
 
     try:
+        icon_score = get_score_func(addr_to)
         return icon_score.call_method(func_name, *args, **kwargs)
     except (PayableException, ExternalException):
         call_fallback(addr_to=addr_to,
-                      icon_score=icon_score,
+                      get_score_func=get_score_func,
                       addr_from=addr_from)
         return None
 
 
-def call_fallback(addr_to: Address, icon_score: 'IconScoreBase',
+def call_fallback(addr_to: Address, get_score_func: callable,
                   addr_from: Optional[Address]=None) -> None:
 
     if not __check_myself(addr_from, addr_to):
         raise IconScoreBaseException("call function myself")
 
+    icon_score = get_score_func(addr_to)
     icon_score.call_fallback()
 
 

@@ -155,7 +155,6 @@ class ContextDatabase(PlyvelDatabase):
         :param key:
         :return: value
         """
-        print(f'get {context}, {key}')
         if context is None \
                 or context.readonly \
                 or context.type == IconScoreContextType.GENESIS:
@@ -206,7 +205,6 @@ class ContextDatabase(PlyvelDatabase):
         :param key:
         :param value:
         """
-        print(f'put context: {context}, key : {key}, value : {value}')
         if context.readonly:
             raise DatabaseException('put is not allowed')
         elif context.type == IconScoreContextType.INVOKE:
