@@ -54,6 +54,14 @@ class TransactionResult(object):
         self.step_used = step_used
         self.status = status
 
+    def __str__(self) -> str:
+        return \
+            f'status: {self.status}\n' \
+            f'tx_hash: {self.tx_hash}\n' \
+            f'to: {self.to}\n' \
+            f'contract_address: {self.contract_address}\n' \
+            f'step_used: {self.step_used}'
+
 
 class Serializer(abc.ABC):
     """ An abstract class serialize results of transactions.

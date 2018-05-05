@@ -24,12 +24,14 @@ class Transaction(object):
 
     def __init__(self,
                  tx_hash: str = None,
+                 index: int = -1,
                  origin: Address = None,
                  timestamp: int = None,
                  nonce: int = None) -> None:
         """Transaction class for icon score context
         """
         self.__hash = tx_hash
+        self.__index = index
         self.__origin = origin
         self.__timestamp = timestamp
         self.__nonce = nonce
@@ -44,7 +46,9 @@ class Transaction(object):
 
     @property
     def index(self) -> int:
-        return 0
+        """tx index in a block
+        """
+        return self.__index
 
     @property
     def hash(self) -> str:

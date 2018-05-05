@@ -24,19 +24,23 @@ import unittest
 
 from iconservice.base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.exception import IconException
+from iconservice.base.transaction import Transaction
+from iconservice.base.message import Message
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.utils import sha3_256
 from . import create_address
 
 
-factory = IconScoreContextFactory(max_size=1)
+context_factory = IconScoreContextFactory(max_size=1)
 
 
 def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
-    context = factory.create(context_type)
+    context = context_factory.create(context_type)
 
     if context.type == IconScoreContextType.INVOKE:
         context.block_batch = BlockBatch()
@@ -60,9 +64,10 @@ class TestIconServiceEngine(unittest.TestCase):
         self._treasury_address = create_address(
             AddressPrefix.EOA, b'treasury')
 
+        self._tx_hash = sha3_256(b'tx_hash').hex()
         self._from = self._genesis_address
-        self._to = Address.from_string(f'hx{"1" * 40}')
-        self._icon_score_address = Address.from_string(f'cx{"2" * 40}')
+        self._to = create_address(AddressPrefix.EOA, b'to')
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
         self._total_supply = 100 * 10 ** 18
 
         accounts = [
@@ -93,7 +98,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(self._total_supply, balance)
 
     def test_call_in_query(self):
-        context = factory.create(IconScoreContextType.QUERY)
+        context = context_factory.create(IconScoreContextType.QUERY)
 
         method = 'icx_getBalance'
         params = {'address': self._from}
@@ -102,7 +107,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
 
-        factory.destroy(context)
+        context_factory.destroy(context)
 
     def test_call_in_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
@@ -137,7 +142,7 @@ class TestIconServiceEngine(unittest.TestCase):
             icon_score_batch[_from.body][-32:], 'big')
         self.assertEqual(self._total_supply - value, balance)
 
-        factory.destroy(context)
+        context_factory.destroy(context)
 
     def test_invoke(self):
         block_height = 1
@@ -151,12 +156,49 @@ class TestIconServiceEngine(unittest.TestCase):
                 'to': self._to,
                 'value': value,
                 'fee': 10 ** 16,
+                'timestamp': 1234567890,
                 'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
             }
         }
 
         self._engine.invoke(block_height, block_hash, [tx, tx])
 
+    def test_score_invoke(self):
+        method = 'icx_sendTransaction'
+        params = {
+            'from': self._from,
+            'to': self._icon_score_address,
+            'value': 1 * 10 ** 18,
+            'fee': 10 ** 16,
+            'timestamp': 1234567890,
+            'tx_hash': self._tx_hash,
+            'data_type': 'call',
+            'data': {
+                'method': 'transfer',
+                'params': {
+                    'to': self._to,
+                    'value': 777
+                }
+            }
+        }
+
+        context = _create_context(IconScoreContextType.INVOKE)
+        context.tx = Transaction(tx_hash=params['tx_hash'],
+                                 origin=params['from'],
+                                 index=0,
+                                 timestamp=params['timestamp'],
+                                 nonce=params.get('nonce', None))
+        context.msg = Message(sender=params['from'], value=params['value'])
+
+        tx_result = self._engine.call(context, method, params)
+        self.assertTrue(isinstance(tx_result, TransactionResult))
+        self.assertEqual(TransactionResult.FAILURE, tx_result.status)
+        self.assertEqual(self._icon_score_address, tx_result.to)
+        self.assertEqual(self._tx_hash, tx_result.tx_hash)
+        self.assertIsNone(tx_result.contract_address)
+        print(tx_result)
+
+        context_factory.destroy(context)
     '''
     def test_score_invoke(self):
         method = 'icx_sendTransaction'

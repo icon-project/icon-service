@@ -39,7 +39,7 @@ _thread_local_data = threading.local()
 
 class ContextContainer(object):
     """ContextContainer mixin
-    
+
     Every class inherit ContextContainer can share IconScoreContext instance
     in the current thread.
     """
@@ -69,6 +69,8 @@ class ContextGetter(object):
     @property
     def _context(self):
         return getattr(_thread_local_data, 'context', None)
+
+
 @unique
 class IconScoreContextType(IntEnum):
     GENESIS = 0
@@ -105,6 +107,8 @@ class IconScoreContext(object):
         self.block_batch = None
         self.tx_batch = None
         self.block_result = None
+
+        self.__msg_stack = []
 
     @property
     def readonly(self):
@@ -156,7 +160,8 @@ class IconScoreContext(object):
 
         return ret
 
-    def call(self, addr_from: Address, addr_to: Address, func_name: str, *args, **kwargs) -> None:
+    def call(self, addr_from: Address,
+             addr_to: Address, func_name: str, *args, **kwargs) -> None:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
@@ -166,9 +171,17 @@ class IconScoreContext(object):
         :param kwargs:
         :return:
         """
+        self.__msg_stack.append(self.msg)
 
+        self.msg = Message(sender=addr_from)
         icon_score = self.icon_score_mapper.get_icon_score(addr_to)
-        call_method(icon_score=icon_score, func_name=func_name, addr_from=addr_from, *args, **kwargs)
+
+        ret = call_method(icon_score=icon_score, func_name=func_name,
+                          addr_from=addr_from, *args, **kwargs)
+
+        self.msg = self.__msg_stack.pop()
+
+        return ret
 
     def selfdestruct(self, recipient: Address) -> None:
         """Destroy the current icon score, sending its funds to the given address
@@ -190,6 +203,7 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
+        self.__msg_stack.clear()
 
     def commit(self) -> None:
         """Write changed states in block_batch to StateDB

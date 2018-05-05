@@ -184,6 +184,11 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         return self.__owner
 
     def call(self, addr_to: Address, func_name: str, *args, **kwargs):
+        """Call external function provided by other IconScore with arguments
+
+        :param addr_to: the address of other IconScore
+        :param func_name: function name provided by other IconScore
+        """
         return self._context.call(addr_to, func_name, *args, **kwargs)
 
     def transfer(self, addr_to: Address, amount: int):

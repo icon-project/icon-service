@@ -18,8 +18,6 @@ import json
 import os
 import hashlib
 
-
-
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException
 from .base.block import Block
@@ -35,8 +33,10 @@ from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
 from .iconscore.icon_score_loader import IconScoreLoader
-from .iconscore.icon_score_result import IconBlockResult, TransactionResult, \
-    JsonSerializer
+from .iconscore.icon_score_result import IconBlockResult
+from .iconscore.icon_score_result import TransactionResult
+from .iconscore.icon_score_result import JsonSerializer
+
 
 class IconServiceEngine(object):
     """The entry of all icon service related components
@@ -59,10 +59,13 @@ class IconServiceEngine(object):
             'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
+        # When invoking a block is done but not confirmed,
+        # the complete context is saved to self._precommit_context
+
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
-        """Get necessary parameters and initialize
+        """Get necessary parameters and initialize diverse objects
 
         :param icon_score_root_path:
         :param state_db_root_path:
@@ -81,8 +84,11 @@ class IconServiceEngine(object):
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
 
-        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
-        self._icon_score_engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper)
+        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage,
+                                                      self._db_factory,
+                                                      self._icon_score_loader)
+        self._icon_score_engine = IconScoreEngine(self._icx_storage,
+                                                  self._icon_score_mapper)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -110,13 +116,13 @@ class IconServiceEngine(object):
 
         genesis_account = accounts[0]
         self._icx_engine.init_genesis_account(
-            context=context,                
+            context=context,
             address=genesis_account['address'],
             amount=genesis_account['balance'])
 
         fee_treasury_account = accounts[1]
         self._icx_engine.init_fee_treasury_account(
-            context=context,                
+            context=context,
             address=fee_treasury_account['address'],
             amount=fee_treasury_account['balance'])
 
@@ -125,7 +131,7 @@ class IconServiceEngine(object):
     def invoke(self,
                block_height: int,
                block_hash: str,
-               transactions) -> list:
+               transactions) -> 'IconBlockResult':
         """Process transactions in a block sent by loopchain
 
         :param block_height:
@@ -138,18 +144,28 @@ class IconServiceEngine(object):
         context.block = Block(block_height, block_hash)
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
-        context.block_result = IconBlockResult(JsonSerializer())
+        block_result = IconBlockResult(JsonSerializer())
 
-        rets = []
-        for tx in transactions:
+        for i, tx in enumerate(transactions):
             method = tx['method']
             params = tx['params']
-            rets.append(self.call(context, method, params))
+            _from = params['from']
+
+            context.tx = Transaction(tx_hash=params['tx_hash'],
+                                     index=i,
+                                     origin=_from,
+                                     timestamp=params['timestamp'],
+                                     nonce=params.get('nonce', None))
+
+            context.msg = Message(sender=_from, value=params.get('value', 0))
+
+            tx_result = self.call(context, method, params)
+            block_result.append(tx_result)
 
             context.tx_batch.clear()
 
         self._context_factory.destroy(context)
-        return rets
+        return block_result
 
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
@@ -165,6 +181,9 @@ class IconServiceEngine(object):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
+
+        _from = params.get('from', None)
+        context.msg = Message(sender=_from)
 
         ret = self.call(context, method, params)
 
@@ -225,22 +244,24 @@ class IconServiceEngine(object):
                          context: IconScoreContext,
                          params: dict) -> object:
         """Handles an icx_call jsonrpc request
+
+        State change is possible in icx_call message
+
         :param params:
         :return:
         """
-        _from: Address = params['from']
-        _to: Address = params['to']
-        _data_type = params.get('data_type', None)
-        _data = params.get('data', None)
+        icon_score_address: Address = params['to']
+        data_type = params.get('data_type', None)
+        data = params.get('data', None)
 
-        context.tx = Transaction(origin=_from)
-        context.msg = Message(sender=_from)
-
-        return self._icon_score_engine.query(_to, context, _data_type, _data)
+        return self._icon_score_engine.query(context,
+                                             icon_score_address,
+                                             data_type,
+                                             data)
 
     def _handle_icx_sendTransaction(self,
                                     context: IconScoreContext,
-                                    params: dict) -> object:
+                                    params: dict) -> 'TransactionResult':
         """icx_sendTransaction message handler
 
         * EOA to EOA
@@ -250,31 +271,31 @@ class IconServiceEngine(object):
         :return: return value of an IconScoreBase method
             None is allowed
         """
-        _tx_hash = params['tx_hash']
         _from: Address = params['from']
-        _to: Address = params['to']
-        _value: int = params.get('value', 0)
-        _fee: int = params['fee']
+        to: Address = params['to']
+        value: int = params.get('value', 0)
 
-        self._icx_engine.transfer(context, _from, _to, _value)
+        self._icx_engine.transfer(context, _from, to, value)
 
-        if _to is None or _to.is_contract:
+        if to is None or to.is_contract:
             # EOA to Score
-            _data_type: str = params['data_type']
-            _data: dict = params['data']
-            _tx_result = self.__handle_score_invoke(
-                _tx_hash, _to, context, _data_type, _data)
+            data_type: str = params['data_type']
+            data: dict = params['data']
+            tx_result = self.__handle_score_invoke(
+                context, to, data_type, data)
         else:
             # EOA to EOA
-            _tx_result = TransactionResult(
-                _tx_hash, context.block, _to, TransactionResult.SUCCESS)
+            tx_result = TransactionResult(context.tx.hash,
+                                          context.block,
+                                          to,
+                                          TransactionResult.SUCCESS)
 
-        context.block_result.append(_tx_result)
+        # context.block_result.append(tx_result)
+        return tx_result
 
     def __handle_score_invoke(self,
-                              tx_hash: str,
-                              to: Address,
                               context: IconScoreContext,
+                              to: Address,
                               data_type: str,
                               data: dict) -> TransactionResult:
         """Handle score invocation
@@ -286,19 +307,20 @@ class IconServiceEngine(object):
         :param data: calldata
         :return: A result of the score transaction
         """
-        tx_result = TransactionResult(tx_hash, context.block, to)
+        tx_result = TransactionResult(context.tx.hash, context.block, to)
+
         try:
             if data_type == 'install':
                 to = self.__generate_contract_address(
                     context.tx.origin, context.tx.timestamp, context.tx.nonce)
-                tx_result.contract_address = to
 
-            self._icon_score_engine.invoke(to, context, data_type, data)
+            self._icon_score_engine.invoke(context, to, data_type, data)
 
             context.block_batch.put_tx_batch(context.tx_batch)
             context.tx_batch.clear()
 
             tx_result.status = TransactionResult.SUCCESS
+            tx_result.contract_address = to
         except:
             tx_result.status = TransactionResult.FAILURE
 
@@ -322,37 +344,15 @@ class IconServiceEngine(object):
         hash_value = hashlib.sha3_256(data).hexdigest()
         return Address(AddressPrefix.CONTRACT, hash_value[-20:])
 
-    @staticmethod
-    def _set_tx_info_to_context(context: IconScoreContext,
-                                params: dict) -> None:
-        """Set transaction and message info to IconScoreContext
-
-        :param context:
-        :param params: jsonrpc params
-        """
-        _from = params['from']
-        _tx_hash = params.get('tx_hash', None)
-        _value = params.get('value', 0)
-        _timestamp = None
-        _nonce = None
-        if 'timestamp' in params:
-            _timestamp = int(params.get('timestamp', None))
-        if 'nonce' in params:
-            _nonce = int(params.get('nonce', None), 16)
-
-        context.tx = Transaction(tx_hash=_tx_hash,
-                                 origin=_from,
-                                 timestamp=_timestamp,
-                                 nonce=_nonce)
-        context.msg = Message(sender=_from, value=_value)
-
     def commit(self):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
-        pass
+        if self._precommit_data:
+            context = self._context_factory.create(IconScoreContextType.GENESIS)
+            self._icon_score_engine.commit(context)
 
     def rollback(self):
-        """Delete updated states in a context.block_batch and 
+        """Delete updated states in a context.block_batch and
         """
         pass

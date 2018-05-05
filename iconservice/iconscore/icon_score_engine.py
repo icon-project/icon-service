@@ -33,10 +33,11 @@ class IconScoreEngine(object):
     """Calls external functions provided by each IconScore
     """
 
-    def __init__(self, icx_storage: 'IcxStorage', icon_score_info_mapper: IconScoreInfoMapper) -> None:
+    def __init__(self,
+                 icx_storage: 'IcxStorage',
+                 icon_score_info_mapper: IconScoreInfoMapper) -> None:
         """Constructor
 
-        :param icon_score_root_path:
         :param icx_storage: Get IconScore owner info from icx_storage
         :param icon_score_info_mapper:
         :param db_factory:
@@ -51,8 +52,8 @@ class IconScoreEngine(object):
         self._tasks = []
 
     def invoke(self,
-               icon_score_address: Address,
                context: IconScoreContext,
+               icon_score_address: Address,
                data_type: str,
                data: dict) -> None:
         """Handle calldata contained in icx_sendTransaction message
@@ -73,17 +74,21 @@ class IconScoreEngine(object):
                 f'Invalid data type ({data_type})')
 
     def query(self,
-              icon_score_address: Address,
               context: IconScoreContext,
+              icon_score_address: Address,
               data_type: str,
               data: dict) -> object:
-        """Run an external method of iconscore without state changing
+        """Execute an external method of iconscore without state changing
 
         Handles messagecall of icx_call
         """
 
         if data_type == 'call':
             return self.__call(context, icon_score_address, data)
+        else:
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'Invalid data type ({data_type})')
 
     def __put_task(self,
                    context: 'IconScoreContext',
@@ -137,7 +142,7 @@ class IconScoreEngine(object):
 
     def commit(self, context: 'IconScoreContext') -> None:
         """It is called when the previous block has been confirmed
-        
+
         Execute a deferred tasks in queue (install, update or remove an score)
 
         Process Order
