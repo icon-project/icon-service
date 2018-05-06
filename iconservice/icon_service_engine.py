@@ -59,9 +59,6 @@ class IconServiceEngine(object):
             'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
-        # When invoking a block is done but not confirmed,
-        # the complete context is saved to self._precommit_context
-
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
@@ -139,7 +136,6 @@ class IconServiceEngine(object):
         :param transactions: transactions in a block
         :return: The results of transactions
         """
-        # Remaining part of a IconScoreContext will be set in each handler.
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = Block(block_height, block_hash)
         context.block_batch = BlockBatch(block_height, block_hash)
@@ -290,7 +286,6 @@ class IconServiceEngine(object):
                                           to,
                                           TransactionResult.SUCCESS)
 
-        # context.block_result.append(tx_result)
         return tx_result
 
     def __handle_score_invoke(self,
@@ -341,16 +336,14 @@ class IconServiceEngine(object):
         if nonce is not None:
             data += nonce.to_bytes(32, 'big')
 
-        hash_value = hashlib.sha3_256(data).hexdigest()
+        hash_value = hashlib.sha3_256(data).digest()
         return Address(AddressPrefix.CONTRACT, hash_value[-20:])
 
     def commit(self):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
-        if self._precommit_data:
-            context = self._context_factory.create(IconScoreContextType.GENESIS)
-            self._icon_score_engine.commit(context)
+        pass
 
     def rollback(self):
         """Delete updated states in a context.block_batch and
