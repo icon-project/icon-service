@@ -114,11 +114,11 @@ class TestIconScoreEngine(unittest.TestCase):
             os.makedirs(directory)
 
     def test_install(self):
-        self._engine.invoke(self._icon_score_address, self._context, 'install', dict())
+        self._engine.invoke(self._context, self._icon_score_address, 'install', dict())
 
     def test_call_method(self):
         calldata = {'method': 'total_supply', 'params': dict()}
 
-        self._engine.invoke(self._icon_score_address, self._context, 'install', dict())
+        self._engine.invoke(self._context, self._icon_score_address, 'install', dict())
         self._engine.commit(self._context)
-        self.assertEqual(1000000000000000000000, self._engine.query(self._icon_score_address, self._context, 'call', calldata))
+        self.assertEqual(1000000000000000000000, self._engine.query(self._context, self._icon_score_address, 'call', calldata))

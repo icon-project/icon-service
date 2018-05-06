@@ -21,6 +21,7 @@ from collections import namedtuple
 
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException
+from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
 
 
-class IconScoreEngine(object):
+class IconScoreEngine(ContextContainer):
     """Calls external functions provided by each IconScore
     """
 
@@ -42,6 +43,7 @@ class IconScoreEngine(object):
         :param icon_score_info_mapper:
         :param db_factory:
         """
+        super().__init__()
 
         self.__icx_storage = icx_storage
         self.__icon_score_info_mapper = icon_score_info_mapper
@@ -125,9 +127,12 @@ class IconScoreEngine(object):
         method: str = calldata['method']
         params: dict = calldata['params']
 
-        # TODO: Call external method of iconscore
-        icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
-        return call_method(icon_score=icon_score, func_name=method, *(), **params)
+        try:
+            self._put_context(context)
+            icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+            return call_method(icon_score=icon_score, func_name=method, *(), **params)
+        finally:
+            self._delete_context(context)
 
     def __fallback(self, icon_score_address: Address):
         """When an IconScore receives some coins and calldata is None,
@@ -143,7 +148,7 @@ class IconScoreEngine(object):
     def commit(self, context: 'IconScoreContext') -> None:
         """It is called when the previous block has been confirmed
 
-        Execute a deferred tasks in queue (install, update or remove an score)
+        Execute a deferred tasks in queue (install, update or remove a score)
 
         Process Order
         - Install IconScore package file to file system
@@ -159,15 +164,15 @@ class IconScoreEngine(object):
         for task in self._tasks:
             # TODO: install score package to 'address/block_height_tx_index' directory
             if task.type == 'install':
-                self.__install(task, context)
+                self.__install(context, task)
             elif task.type == 'update':
-                self.__update(task, context)
+                self.__update(context, task)
             else:
                 pass
 
         self._tasks.clear()
 
-    def __install(self, task: namedtuple, context: IconScoreContext) -> None:
+    def __install(self, context: IconScoreContext, task: namedtuple) -> None:
         """Install an icon score
 
         Owner check has been already done in IconServiceEngine
@@ -176,9 +181,14 @@ class IconScoreEngine(object):
         """
         self.__icx_storage.put_score_owner(context, task.address, task.owner)
         score = self.__icon_score_info_mapper.get_icon_score(task.address)
-        score.genesis_init(task.data)
 
-    def __update(self, task: namedtuple, context: IconScoreContext) -> None:
+        try:
+            self._put_context(context)
+            score.genesis_init(task.data)
+        finally:
+            self._delete_context(context)
+
+    def __update(self, context: IconScoreContext, task: namedtuple) -> None:
         """Update an icon score
 
         Owner check has been already done in IconServiceEngine

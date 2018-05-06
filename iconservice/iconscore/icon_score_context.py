@@ -234,7 +234,7 @@ class IconScoreContext(object):
         # Nothing to do
 
 
-class IconScoreContextFactory(ContextContainer):
+class IconScoreContextFactory(object):
     """IconScoreContextFactory
     """
     def __init__(self, max_size: int) -> None:
@@ -254,7 +254,6 @@ class IconScoreContextFactory(ContextContainer):
             else:
                 context = IconScoreContext(context_type)
 
-        self._put_context(context)
         return context
 
     def destroy(self, context: IconScoreContext) -> None:
@@ -262,8 +261,6 @@ class IconScoreContextFactory(ContextContainer):
             if len(self._queue) < self._max_size:
                 context.clear()
                 self._queue.append(context)
-
-        self._delete_context(context)
 
 
 def call_method(icon_score: 'IconScoreBase', func_name: str,
@@ -291,3 +288,7 @@ def call_fallback(icon_score: 'IconScoreBase') -> None:
 
 def __check_myself(addr_from: Optional[Address], addr_to: Address) -> bool:
     return addr_from == addr_to
+
+
+def is_context_readonly(context: 'IconScoreContext') -> bool:
+    return context is not None and context.readonly

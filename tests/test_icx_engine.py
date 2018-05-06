@@ -47,7 +47,8 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.context = self.factory.create(IconScoreContextType.GENESIS)
 
         logger = IcxLogger()
-        self.engine.open(db, logger)
+        icx_storage = IcxStorage(db)
+        self.engine.open(icx_storage, logger)
 
         self.engine.init_genesis_account(
             self.context, self.genesis_address, self.total_supply)
