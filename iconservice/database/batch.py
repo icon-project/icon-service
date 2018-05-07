@@ -51,7 +51,7 @@ class TransactionBatch(dict):
         """
         self.hash = hash
 
-    def put(self, address: Address, key: object, value: object) -> None:
+    def put(self, address: Address, key: bytes, value: bytes) -> None:
         """
         :param address: icon_score_address
         :param key: a key of state
