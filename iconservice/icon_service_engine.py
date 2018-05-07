@@ -17,6 +17,7 @@
 import json
 import os
 import hashlib
+from collections import namedtuple
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException
@@ -59,6 +60,11 @@ class IconServiceEngine(object):
             'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
+        # The precommit state is the state that been already invoked,
+        # but not written to levelDB or file system.
+        self._PrecommitState = namedtuple(
+            'PrecommitState', ['block_batch', 'block_result'])
+
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
@@ -89,6 +95,8 @@ class IconServiceEngine(object):
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
+
+        self._precommit_state: 'PrecommitState' = None
 
     def _create_icx_storage(self, db_factory: DatabaseFactory) -> 'IcxStorage':
         """Create IcxStorage instance
@@ -159,6 +167,11 @@ class IconServiceEngine(object):
             block_result.append(tx_result)
 
             context.tx_batch.clear()
+
+        # precommit_state will be written to levelDB on commit()
+        self._precommit_state = self._PrecommitState(
+            block_batch=context.block_batch,
+            block_result=block_result)
 
         self._context_factory.destroy(context)
         return block_result
@@ -343,9 +356,22 @@ class IconServiceEngine(object):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
-        pass
+        block_batch = self._precommit_state.block_batch
+
+        for address in block_batch:
+            icon_score = self._icon_score_mapper.get_icon_score(address)
+            # FIXME: by goldworm
+            context_db = icon_score.db._context_db
+            icon_score_batch = block_batch[address]
+
+            for key, value in icon_score_batch.items():
+                context_db.write_batch(context=None, key=key, value=value)
+
+        self._precommit_state = None
+        self._icon_score_engine.commit()
 
     def rollback(self):
-        """Delete updated states in a context.block_batch and
+        """Throw away updated elements in context.block_batch and IconScoreEngine
         """
-        pass
+        self._precommit_state = None
+        self._icon_score_engine.rollback()
