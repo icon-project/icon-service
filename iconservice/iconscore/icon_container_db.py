@@ -3,6 +3,7 @@ from typing import TypeVar, Optional, Any, Union, Tuple
 from ..base.address import Address
 from ..base.exception import IconScoreBaseException
 from ..database.db import IconScoreDatabase
+from collections import Iterator
 
 K = TypeVar('K', int, str, Address)
 V = TypeVar('V', int, str, Address, bytes, bool)
@@ -117,7 +118,7 @@ class DictDB(object):
         self.__depth = depth
 
     def __setitem__(self, keys: Any, value: V) -> None:
-        keys = DictDB.__check_tuple_keys(keys)
+        keys = self.__check_tuple_keys(keys)
 
         *keys, last_key = keys
         sub_db = self.__db
@@ -128,7 +129,7 @@ class DictDB(object):
         sub_db.put(ContainerUtil.encode_key(last_key), byte_value)
 
     def __getitem__(self, keys: Any) -> V:
-        keys = DictDB.__check_tuple_keys(keys)
+        keys = self.__check_tuple_keys(keys)
 
         *keys, last_key = keys
         sub_db = self.__db
@@ -152,12 +153,13 @@ class DictDB(object):
         return keys
 
 
-class ArrayDB():
+class ArrayDB(Iterator):
     __SIZE = 'size'
 
     def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
         self.__size = self.__get_size()
+        self.__index = 0
         self.__value_type = value_type
 
     def put(self, value: V) -> None:
@@ -174,11 +176,19 @@ class ArrayDB():
         if index >= self.__size:
             raise IconScoreBaseException(f'ArrayDB out of range')
 
-        return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(self.__size)), self.__value_type)
+        return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(index)), self.__value_type)
 
     def __iter__(self):
+        self.__index = 0
+        return self
 
-        pass
+    def __next__(self) -> V:
+        if self.__index < self.__size:
+            index = self.__index
+            self.__index += 1
+            return self.get(index)
+        else:
+            raise StopIteration
 
     def __len__(self):
         return self.__size
@@ -195,38 +205,28 @@ class ArrayDB():
         byte_value = ContainerUtil.encode_value(self.__size)
         sub_db.put(ContainerUtil.encode_key(ArrayDB.__SIZE), byte_value)
 
-    # tmp comment because hash key support
-    #
-    # def __setitem__(self, keys: Any, value: V) -> None:
-    #     keys = ContainerUtil.check_tuple_keys(keys, self.__depth)
-    #
-    #     *keys, last_key = keys
-    #     sub_db = self.__db
-    #     for key in keys:
-    #         sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
-    #
-    #     byte_value = ContainerUtil.encode_value(value)
-    #     sub_db.put(ContainerUtil.encode_key(last_key), byte_value)
-    #
-    # def __getitem__(self, keys: Any) -> V:
-    #     keys = ContainerUtil.check_tuple_keys(keys, self.__depth)
-    #
-    #     *keys, last_key = keys
-    #     sub_db = self.__db
-    #     for key in keys:
-    #         sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
-    #     return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(last_key)), self.__value_type)
-    #
-    # def len(self, keys: Any=None) -> int:
-    #     keys = self.__check_tuple_keys(keys, is_strict_depth=False)
-    #     sub_db = self.__find_sub_db_from_keys(self.__db, keys)
-    #     return len([item for item in sub_db.iterator()])
-    #
-    # def iter(self, keys: Any=None) -> iter:
-    #     keys = self.__check_tuple_keys(keys, is_strict_depth=False)
-    #     sub_db = self.__find_sub_db_from_keys(self.__db, keys)
-    #     return ContainerUtil.remove_prefix_from_iters(sub_db.iterator())
+    def __setitem__(self, index: int, value: V) -> None:
+        if index >= self.__size:
+            raise IconScoreBaseException(f'ArrayDB out of range')
 
+        sub_db = self.__db
+        byte_value = ContainerUtil.encode_value(value)
+        sub_db.put(ContainerUtil.encode_key(index), byte_value)
+
+    def __getitem__(self, index: int) -> V:
+        if isinstance(index, int):
+            if index < 0:
+                index += len(self)
+            if index < 0 or index >= len(self):
+                raise IconScoreBaseException(f'ArrayDB out of range, {index}')
+            sub_db = self.__db
+            return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(index)), self.__value_type)
+
+    def __contains__(self, item):
+        for e in self:
+            if e == item:
+                return True
+        return False
 
 class VarDB(object):
 

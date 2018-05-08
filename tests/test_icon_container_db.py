@@ -1,5 +1,7 @@
 import unittest
-from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, VarDB
+
+from iconservice.base.exception import IconScoreBaseException
+from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from tests.mock_db import MockDB
 
 
@@ -76,6 +78,29 @@ class TestIconContainerDB(unittest.TestCase):
         test_dict['a', 'c'] = 2
 
         self.assertEqual(test_dict['a', 'b'], 1)
+
+    def test_success_array1(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        range_size = 3
+
+        for i in range(range_size):
+            test_array.put(i)
+
+        for i in range(range_size):
+            self.assertEqual(test_array[i], i)
+
+        for i in range(range_size, range_size):
+            self.assertRaises(IconScoreBaseException, test_array[i])
+
+        cant_find_value = range_size
+        self.assertFalse(cant_find_value in test_array)
+        self.assertEqual(range_size, len(test_array))
+
+        for e, i in zip(test_array, range(range_size)):
+            self.assertEqual(e, i)
+
+        self.assertEqual(test_array[-1], range(range_size)[-1])
 
     def test_success_variable(self):
         test_var = VarDB('test_var', self.db, value_type=int)
