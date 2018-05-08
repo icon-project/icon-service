@@ -229,7 +229,9 @@ class IconServiceEngine(object):
         address = params['address']
         return self._icx_engine.get_balance(context, address)
 
-    def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
+    def _handle_icx_getTotalSupply(self,
+                                   context: IconScoreContext,
+                                   params: dict) -> int:
         """Returns the amount of icx total supply
 
         :param context:

@@ -37,32 +37,19 @@ from iconservice.utils.type_converter import TypeConverter
 # from loopchain.protos import message_code
 # from loopchain.rest_server import IcnTxPrevalidator
 
-type_table = {
-    'from': 'address',
-    'to': 'address',
-    'address': 'address',
-    'value': 'int',
-    'balance': 'int'
-}
-_type_converter = TypeConverter(type_table)
-
-_icon_service_engine = IconServiceEngine()
-_icon_service_engine.open('./score_root', './db_root')
-
-with open('init_genesis.json') as f:
-    genesis_block = json.load(f)
-
-params = []
-accounts = genesis_block['transaction_data']['accounts']
-for account in accounts:
-    params.append(_type_converter.convert(account))
-
-_icon_service_engine.genesis_invoke(params)
+_type_converter = None
+_icon_service_engine = None
+_block_height = 0
 
 
 def get_icon_service_engine():
     return _icon_service_engine
 
+def get_block_height():
+    global _block_height
+    _block_height += 1
+
+    return _block_height
 
 class MockDispatcher:
     # tx_validator = IcnTxPrevalidator()
@@ -92,8 +79,9 @@ class MockDispatcher:
         transactions = [req]
 
         try:
-            block_height = 0
-            block_hash = hashlib.sha3_256(b'block_hash').digest()
+            block_height = get_block_height()
+            data = f'block_height{block_height}'
+            block_hash = hashlib.sha3_256(data.encode()).digest()
             tx_results = engine.invoke(block_height, block_hash, transactions)
             res['result'] = tx_results
         except Exception as e:
@@ -164,7 +152,7 @@ class MockDispatcher:
     def icx_getTotalSupply(**kwargs):
         engine = get_icon_service_engine()
 
-        method = 'icx_getBalance'
+        method = 'icx_getTotalSupply'
         value = engine.query(method, params=None)
 
         return hex(value)
@@ -244,6 +232,43 @@ class SimpleRestServer():
                               debug=False)
 
 
-if __name__ == '__main__':
+def main():
+    init_type_converter()
+    init_icon_service_engine()
+
     server = SimpleRestServer(7100)
     server.run()
+
+
+def init_type_converter():
+    global _type_converter
+
+    type_table = {
+        'from': 'address',
+        'to': 'address',
+        'address': 'address',
+        'value': 'int',
+        'balance': 'int'
+    }
+    _type_converter = TypeConverter(type_table)
+
+
+def init_icon_service_engine():
+    global _icon_service_engine
+
+    _icon_service_engine = IconServiceEngine()
+    _icon_service_engine.open('./score_root', './db_root')
+
+    with open('init_genesis.json') as f:
+        genesis_block = json.load(f)
+
+    params = []
+    accounts = genesis_block['transaction_data']['accounts']
+    for account in accounts:
+        params.append(_type_converter.convert(account))
+
+    _icon_service_engine.genesis_invoke(params)
+
+
+if __name__ == '__main__':
+    main()
