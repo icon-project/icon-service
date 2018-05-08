@@ -343,19 +343,23 @@ class IconServiceEngine(object):
         :param from_:
         :param timestamp:
         :param nonce:
-        :return:
+        :return: score address
         """
         data = from_.body + timestamp.to_bytes(32, 'big')
         if nonce is not None:
             data += nonce.to_bytes(32, 'big')
 
-        hash_value = hashlib.sha3_256(data).digest()
-        return Address(AddressPrefix.CONTRACT, hash_value[-20:])
+        return create_address(AddressPrefix.CONTRACT, data)
 
     def commit(self):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
+        if self._precommit_state is None:
+            raise IconException(
+                ExceptionCode.INTERNAL_ERROR,
+                'Precommit state is none on commit')
+
         block_batch = self._precommit_state.block_batch
 
         for address in block_batch:
@@ -371,7 +375,8 @@ class IconServiceEngine(object):
         self._icon_score_engine.commit()
 
     def rollback(self):
-        """Throw away updated elements in context.block_batch and IconScoreEngine
+        """Throw away a precommit state
+        in context.block_batch and IconScoreEngine
         """
         self._precommit_state = None
         self._icon_score_engine.rollback()
