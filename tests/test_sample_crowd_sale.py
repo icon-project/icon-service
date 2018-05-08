@@ -1,23 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Copyright 2017-2018 theloop Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""IconScoreEngine testcase
-"""
-
-
 import unittest
 import os
 from iconservice.base.address import AddressPrefix, create_address, ICX_ENGINE_ADDRESS
@@ -35,7 +15,7 @@ from iconservice.icx.icx_storage import IcxStorage
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
-class TestIconScoreEngine(unittest.TestCase):
+class TestSampleCrowdSale(unittest.TestCase):
     _ROOT_SCORE_PATH = 'score'
     _TEST_DB_PATH = 'tests/test_db/'
 
@@ -58,7 +38,8 @@ class TestIconScoreEngine(unittest.TestCase):
             self._icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'SampleToken')
+        self._sample_token_addr = create_address(AddressPrefix.CONTRACT, b'SampleToken')
+        self._sample_crowd_sale_addr = create_address(AddressPrefix.CONTRACT, b'SampleCrowdSale')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)

@@ -13,7 +13,8 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def setUp(self):
         self._loader = IconScoreLoader(self._ROOT_SCORE_PATH)
-        self._address = create_address(AddressPrefix.CONTRACT, b'test')
+        self._address = create_address(AddressPrefix.CONTRACT, b'SampleToken')
+        print(self._address)
         archive_path = 'tests/score.zip'
         archive_path = os.path.join(ICON_ROOT_PATH, archive_path)
         zip_bytes = self.read_zipfile_as_byte(archive_path)
