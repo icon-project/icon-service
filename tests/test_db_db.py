@@ -125,6 +125,80 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(b'value1', db.get(context, b'key1'))
         self.assertEqual(b'value0', db.get(context, b'key0'))
 
+    def test_none_context(self):
+        context = None
+        db = self.db
+
+        db.put(context, b'key0', b'value0')
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+
+        db.delete(context, b'key0')
+        self.assertIsNone(db.get(context, b'key0'))
+
+        with self.assertRaises(TypeError):
+            db.put(context, b'key1', None)
+
+    def test_delete(self):
+        context = self.context        
+        db = self.db
+        score_address = db.address
+        tx_batch = context.tx_batch
+
+        db.put(context, b'key0', b'value0')
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+        self.assertEqual(b'value0', tx_batch[score_address][b'key0'])
+
+        db.write_batch(context, tx_batch[score_address])
+        tx_batch.clear()
+        self.assertEqual(0, len(tx_batch))
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+
+        db.delete(context, b'key0')
+        db.write_batch(context, tx_batch[score_address])
+        tx_batch.clear()
+        self.assertEqual(0, len(tx_batch))
+        self.assertIsNone(db.get(context, b'key0'))
+
+
+class TestIconScoreDatabase(unittest.TestCase):
+    def setUp(self):
+        state_db_root_path = 'state_db'
+        self.state_db_root_path = state_db_root_path
+        rmtree(state_db_root_path)
+        os.mkdir(state_db_root_path)
+
+        address = create_address(AddressPrefix.CONTRACT, b'0')
+        factory = DatabaseFactory(state_db_root_path)
+        context_factory = IconScoreContextFactory(max_size=2)
+
+        context = context_factory.create(IconScoreContextType.INVOKE)
+        context.block_batch = BlockBatch()
+        context.tx_batch = TransactionBatch()
+
+        context_db = factory.create_by_address(address)
+
+        self.db = IconScoreDatabase(context_db=context_db, prefix=b'')
+        self.address = address
+        self.context = context
+        self.context_factory = context_factory
+
+    def tearDown(self):
+        self.context_factory.destroy(self.context)
+        rmtree(self.state_db_root_path)
+
+    def test_address(self):
+        self.assertEqual(self.address, self.db.address)
+
+    def test_put_and_get(self):
+        db = self.db
+        key = self.address.body
+        value = 100
+
+        self.assertIsNone(db.get(key))
+
+        db.put(key, value.to_bytes(32, 'big'))
+        self.assertEqual(value.to_bytes(32, 'big'), db.get(key))
+
 
 class TestIconScoreDatabase(unittest.TestCase):
     def setUp(self):

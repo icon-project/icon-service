@@ -17,15 +17,15 @@ class TestIconScoreLoader(unittest.TestCase):
         archive_path = 'tests/score.zip'
         archive_path = os.path.join(ICON_ROOT_PATH, archive_path)
         zip_bytes = self.read_zipfile_as_byte(archive_path)
-        self.__unpack_zip_file(ICON_ROOT_PATH, zip_bytes)
+        install_path = os.path.join(ICON_ROOT_PATH, self._ROOT_SCORE_PATH)
+        self.__unpack_zip_file(install_path, zip_bytes)
 
     def tearDown(self):
-        remove_path = os.path.join(ICON_ROOT_PATH, 'score')
+        remove_path = os.path.join(ICON_ROOT_PATH, self._ROOT_SCORE_PATH)
         IconScoreInstaller.remove_existing_score(remove_path)
-        pass
 
     @staticmethod
-    def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
+    def read_zipfile_as_byte(archive_path: str) -> bytes:
         with open(archive_path, 'rb') as f:
             byte_data = f.read()
             return byte_data

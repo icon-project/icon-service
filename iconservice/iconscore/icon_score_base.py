@@ -18,7 +18,7 @@ import inspect
 import abc
 from functools import wraps
 
-from .icon_score_context import ContextGetter, IconScoreContext
+from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase
 from ..base.exception import ExternalException, PayableException
 from ..base.message import Message
@@ -119,10 +119,11 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         super().genesis_init(*args, **kwargs)
 
     @abc.abstractmethod
-    def __init__(self, db: IconScoreDatabase, *args, **kwargs) -> None:
-        super().__init__(db, *args, **kwargs)
-        self.__address = db.address
+    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
+        super().__init__(db, owner)
         self.__db = db
+        self.__owner = owner
+        self.__address = db.address
 
         if not self.get_api():
             raise ExternalException(
@@ -149,7 +150,7 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         score_func = getattr(self, func_name)
         return score_func(*args, **kwargs)
 
-    def call_fallback(self):
+    def __call_fallback(self):
         func_name = 'fallback'
         payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
         self.__check_payable(func_name, payable_dict)
@@ -178,7 +179,16 @@ class IconScoreBase(IconScoreObject, ContextGetter):
     def db(self) -> IconScoreDatabase:
         return self.__db
 
+    @property
+    def owner(self) -> Address:
+        return self.__owner
+
     def call(self, addr_to: Address, func_name: str, *args, **kwargs):
+        """Call external function provided by other IconScore with arguments
+
+        :param addr_to: the address of other IconScore
+        :param func_name: function name provided by other IconScore
+        """
         return self._context.call(addr_to, func_name, *args, **kwargs)
 
     def transfer(self, addr_to: Address, amount: int):

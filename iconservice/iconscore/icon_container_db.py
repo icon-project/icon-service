@@ -29,6 +29,8 @@ class ContainerUtil(object):
             str_key = hex(key)
         elif isinstance(key, str):
             str_key = key
+        elif isinstance(key, Address):
+            str_key = str(key)
         else:
             raise ContainerDBException(f"can't encode key: {key}")
         return str_key

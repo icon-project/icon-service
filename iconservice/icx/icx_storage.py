@@ -16,7 +16,8 @@
 
 from .icx_account import Account
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
-from ..base.address import Address
+from ..base.address import Address, AddressPrefix
+from ..utils import sha3_256
 
 
 class IcxStorage(object):
@@ -140,6 +141,56 @@ class IcxStorage(object):
         key = b'total_supply'
         value = value.to_bytes(BALANCE_BYTE_SIZE, DATA_BYTE_ORDER)
         self.__db.put(context, key, value)
+
+    def get_score_owner(self,
+                        context: 'IconScoreContext',
+                        icon_score_address: Address):
+        """Returns owner of IconScore
+
+        :param context:
+        :param icon_score_address:
+        :return owner: IconScore owner address
+        """
+        key = self._get_owner_key(icon_score_address)
+        value = self.__db.get(context, key)
+        if value:
+            return Address(AddressPrefix.EOA, value)
+        else:
+            return None
+
+    def put_score_owner(self,
+                        context: 'IconScoreContext',
+                        icon_score_address: Address,
+                        owner: Address) -> None:
+        """Records the owner of IconScore to icon_dex db.
+
+        :param context:
+        :param icon_score_address: IconScore address
+        :param owner: The owner of IconScore
+        """
+        key = self._get_owner_key(icon_score_address)
+        self.__db.put(context, key, owner.body)
+
+    def _get_owner_key(self, icon_score_address: Address) -> bytes:
+        return sha3_256(b'owner|' + icon_score_address.body)
+
+    def delete_score_owner(self,
+                           context: 'IconScoreContext',
+                           icon_score_address: Address) -> None:
+        key = self._get_owner_key(icon_score_address)
+        self.__db.delete(context, key)
+
+    def is_score_installed(self,
+                           context: 'IconScoreContext',
+                           icon_score_address: Address) -> bool:
+        """Returns whether IconScore is installed or not
+
+        :param context:
+        :param icon_score_address:
+        :return: True(installed) False(not installed)
+        """
+
+        return self.get_score_owner(context, icon_score_address) is not None
 
     def is_address_present(self,
                            context: 'IconScoreContext',

@@ -17,91 +17,106 @@
 """
 
 
-from ..base.address import Address, AddressPrefix
-from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
-from .icon_score_base import IconScoreBase
+from collections import namedtuple
+
+from ..base.address import Address
+from ..base.exception import ExceptionCode, IconException
+from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
-from .icon_score_loader import IconScoreLoader
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ..icx.icx_storage import IcxStorage
 
 
-class IconScoreEngine(object):
+class IconScoreEngine(ContextContainer):
     """Calls external functions provided by each IconScore
     """
 
     def __init__(self,
-                 icon_score_root_path: str,
+                 icx_storage: 'IcxStorage',
                  icon_score_info_mapper: IconScoreInfoMapper) -> None:
         """Constructor
 
-        :param icon_score_root_path:
+        :param icx_storage: Get IconScore owner info from icx_storage
         :param icon_score_info_mapper:
+        :param db_factory:
         """
-        # handlers for processing calldata
-        self._handler = {
-            'install': self.__install,
-            'update': self.__update,
-            'call': self.__call
-        }
+        super().__init__()
+
+        self.__icx_storage = icx_storage
         self.__icon_score_info_mapper = icon_score_info_mapper
 
-    def __get_icon_score(self, address: Address) -> IconScoreBase:
-        """
-        :param address:
-        :return: IconScoreBase object
-        """
-
-        icon_score_info = self.__icon_score_info_mapper.get(address)
-        if icon_score_info is None:
-            loader = IconScoreLoader()
-            loader.load_score(address)
-            raise IconScoreBaseException("icon_score_info is None")
-
-        icon_score = icon_score_info.icon_score
-        return icon_score
+        self._Task = namedtuple(
+            'Task',
+            ('type', 'address', 'owner', 'data', 'block_height', 'tx_index'))
+        self._tasks = []
 
     def invoke(self,
-               icon_score_address: Address,
                context: IconScoreContext,
+               icon_score_address: Address,
                data_type: str,
-               data: dict) -> Address:
+               data: dict) -> None:
         """Handle calldata contained in icx_sendTransaction message
 
         :param icon_score_address:
         :param context:
         :param data_type:
         :param data: calldata
-        :return: A newly created contract address if `data_type` is `install`, otherwise None.
         """
+
         if data_type == 'call':
-            self.__call(icon_score_address, context, data)
-            return None
-        elif data_type == 'install':
-            return self.__install(context.address, data)
-        elif data_type == 'update':
-            self.__update(context, data)
-            return None
+            self.__call(context, icon_score_address, data)
+        elif data_type == 'install' or data_type == 'update':
+            self.__put_task(context, data_type, icon_score_address, data)
         else:
-            raise IconException(ExceptionCode.INVALID_PARAMS, "Invalid data type")
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'Invalid data type ({data_type})')
 
-    def __install(self, icon_score_address: Address, data: bytes) -> bool:
-        """Install an icon score
+    def query(self,
+              context: IconScoreContext,
+              icon_score_address: Address,
+              data_type: str,
+              data: dict) -> object:
+        """Execute an external method of iconscore without state changing
 
-        :param data: zipped binary data
-        :return: newly created contract address
+        Handles messagecall of icx_call
         """
-        pass
 
-    def __update(self, icon_score_address: Address, data: dict) -> bool:
-        """Update an icon score
+        if data_type == 'call':
+            return self.__call(context, icon_score_address, data)
+        else:
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'Invalid data type ({data_type})')
 
-        :param data: zipped binary data
+    def __put_task(self,
+                   context: 'IconScoreContext',
+                   data_type: str,
+                   icon_score_address: Address,
+                   data: dict) -> None:
+        """Queue a deferred task to install, update or remove a score
+
+        :param context:
+        :param data_type:
+        :param icon_score_address:
+        :param data:
         """
-        pass
+        task = self._Task(
+            type=data_type,
+            address=icon_score_address,
+            owner=context.tx.origin,
+            data=data,
+            block_height=context.block.height,
+            tx_index=context.tx.index
+        )
+        self._tasks.append(task)
 
     def __call(self,
-               icon_score_address: Address,
                context: IconScoreContext,
+               icon_score_address: Address,
                calldata: dict) -> object:
         """Handle jsonrpc
 
@@ -112,34 +127,79 @@ class IconScoreEngine(object):
         method: str = calldata['method']
         params: dict = calldata['params']
 
-        # TODO: Call external method of iconscore
-        return call_method(addr_to=icon_score_address,
-                           score_mapper=self.__icon_score_info_mapper,
-                           readonly=context.readonly,
-                           func_name=method, *(), **params)
+        try:
+            self._put_context(context)
+            icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+            return call_method(icon_score=icon_score, func_name=method, *(), **params)
+        finally:
+            self._delete_context(context)
 
-    def __fallback(self,
-                   icon_score_address: Address,
-                   context: IconScoreContext):
+    def __fallback(self, icon_score_address: Address):
         """When an IconScore receives some coins and calldata is None,
         fallback function is called.
 
         :param icon_score_address:
+        """
+
+        # TODO: Call fallback method of iconscore
+        icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+        call_fallback(icon_score)
+
+    def commit(self, context: 'IconScoreContext') -> None:
+        """It is called when the previous block has been confirmed
+
+        Execute a deferred tasks in queue (install, update or remove a score)
+
+        Process Order
+        - Install IconScore package file to file system
+        - Load IconScore wrapper
+        - Create Database
+        - Create an IconScore instance with owner and database
+        - Execute IconScoreBase.genesis_invoke() only if task.type is 'install'
+        - Add IconScoreInfo to IconScoreInfoMapper
+        - Write the owner of score to icx database
+
         :param context:
         """
-        # TODO: Call fallback method of iconscore
-        call_fallback(addr_to=icon_score_address,
-                      score_mapper=self.__icon_score_info_mapper,
-                      readonly=context.readonly)
+        for task in self._tasks:
+            # TODO: install score package to 'address/block_height_tx_index' directory
+            if task.type == 'install':
+                self.__install(context, task)
+            elif task.type == 'update':
+                self.__update(context, task)
+            else:
+                pass
 
-    def query(self,
-              icon_score_address: Address,
-              context: IconScoreContext,
-              data_type: str,
-              data: dict) -> object:
-        """Run an external method of iconscore without state changing
+        self._tasks.clear()
 
-        Handles messagecall of icx_call
+    def __install(self, context: IconScoreContext, task: namedtuple) -> None:
+        """Install an icon score
+
+        Owner check has been already done in IconServiceEngine
+        - Install IconScore package file to file system
+
         """
-        if data_type == 'call':
-            return self.__call(icon_score_address, context, data)
+        self.__icx_storage.put_score_owner(context, task.address, task.owner)
+        score = self.__icon_score_info_mapper.get_icon_score(task.address)
+
+        try:
+            self._put_context(context)
+            score.genesis_init(task.data)
+        finally:
+            self._delete_context(context)
+
+    def __update(self, context: IconScoreContext, task: namedtuple) -> None:
+        """Update an icon score
+
+        Owner check has been already done in IconServiceEngine
+        """
+        raise NotImplementedError('Score update is not implemented')
+
+    def rollback(self) -> None:
+        """It is called when the previous block has been canceled
+
+        Rollback install, update or remove tasks cached in the previous block
+
+        :param context:
+        """
+        self._tasks.clear()

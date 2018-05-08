@@ -49,5 +49,5 @@ def trace(func):
     return wrapper
 
 
-def sha3_256(data: bytes):
+def sha3_256(data: bytes) -> bytes:
     return hashlib.sha3_256(data).digest()

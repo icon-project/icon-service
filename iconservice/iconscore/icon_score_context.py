@@ -24,7 +24,6 @@ from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreBaseException, PayableException, ExternalException
 from ..icx.icx_engine import IcxEngine
-from .icon_score_info_mapper import IconScoreInfoMapper
 from ..database.batch import BlockBatch, TransactionBatch
 from .icon_score_result import IconBlockResult
 
@@ -34,12 +33,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
 
+
 _thread_local_data = threading.local()
 
 
 class ContextContainer(object):
     """ContextContainer mixin
-    
+
     Every class inherit ContextContainer can share IconScoreContext instance
     in the current thread.
     """
@@ -82,7 +82,7 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icx: 'IcxEngine' = None
-    score_mapper: IconScoreInfoMapper = None
+    icon_score_mapper: 'IconScoreInfoMapper' = None
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
@@ -108,6 +108,8 @@ class IconScoreContext(object):
         self.tx_batch = None
         self.block_result = None
 
+        self.__msg_stack = []
+
     @property
     def readonly(self):
         return self.type == IconScoreContextType.QUERY
@@ -128,7 +130,7 @@ class IconScoreContext(object):
 
         :return: the icx amount of balance
         """
-        return self.icx.get_balance(address)
+        return self.icx.get_balance(self, address)
 
     def transfer(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
@@ -139,7 +141,7 @@ class IconScoreContext(object):
         :param addr_to:
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.icx.transfer(addr_from, addr_to, amount)
+        return self.icx.transfer(self, addr_from, addr_to, amount)
 
     def send(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -152,13 +154,14 @@ class IconScoreContext(object):
         ret = True
 
         try:
-            self.icx.transfer(addr_from, addr_to, amount)
+            self.icx.transfer(self, addr_from, addr_to, amount)
         except:
             ret = False
 
         return ret
 
-    def call(self, addr_from: Address, addr_to: Address, func_name: str, *args, **kwargs) -> None:
+    def call(self, addr_from: Address,
+             addr_to: Address, func_name: str, *args, **kwargs) -> None:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
@@ -168,9 +171,17 @@ class IconScoreContext(object):
         :param kwargs:
         :return:
         """
+        self.__msg_stack.append(self.msg)
 
-        call_method(addr_from=addr_from, addr_to=addr_to, score_mapper=self.score_mapper,
-                    readonly=self.readonly, func_name=func_name, *args, **kwargs)
+        self.msg = Message(sender=addr_from)
+        icon_score = self.icon_score_mapper.get_icon_score(addr_to)
+
+        ret = call_method(icon_score=icon_score, func_name=func_name,
+                          addr_from=addr_from, *args, **kwargs)
+
+        self.msg = self.__msg_stack.pop()
+
+        return ret
 
     def selfdestruct(self, recipient: Address) -> None:
         """Destroy the current icon score, sending its funds to the given address
@@ -192,6 +203,7 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
+        self.__msg_stack.clear()
 
     def commit(self) -> None:
         """Write changed states in block_batch to StateDB
@@ -209,7 +221,9 @@ class IconScoreContext(object):
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:
-            info = self.score_mapper[icon_score_address]
+            info = self.icon_score_mapper.get(icon_score_address)
+            if info is None:
+                raise IconScoreBaseException('IconScoreInfo is None')
             info.icon_score.db.write_batch(block_batch)
 
     def rollback(self) -> None:
@@ -220,7 +234,7 @@ class IconScoreContext(object):
         # Nothing to do
 
 
-class IconScoreContextFactory(ContextContainer):
+class IconScoreContextFactory(object):
     """IconScoreContextFactory
     """
     def __init__(self, max_size: int) -> None:
@@ -240,7 +254,6 @@ class IconScoreContextFactory(ContextContainer):
             else:
                 context = IconScoreContext(context_type)
 
-        self._put_context(context)
         return context
 
     def destroy(self, context: IconScoreContext) -> None:
@@ -249,32 +262,33 @@ class IconScoreContextFactory(ContextContainer):
                 context.clear()
                 self._queue.append(context)
 
-        self._delete_context(context)
 
+def call_method(icon_score: 'IconScoreBase', func_name: str,
+                addr_from: Optional[Address]=None, *args, **kwargs) -> object:
 
-def call_method(addr_to: Address, icon_score: 'IconScoreBase',
-                func_name: str, addr_from: Optional[Address]=None, *args, **kwargs) -> object:
+    if icon_score is None:
+        raise IconScoreBaseException('score is None')
 
-    if not __check_myself(addr_from, addr_to):
+    if __check_myself(addr_from, icon_score.address):
         raise IconScoreBaseException("call function myself")
 
     try:
         return icon_score.call_method(func_name, *args, **kwargs)
     except (PayableException, ExternalException):
-        call_fallback(addr_to=addr_to,
-                      icon_score=icon_score,
-                      addr_from=addr_from)
+        call_fallback(icon_score)
         return None
+    except Exception:
+        raise
 
 
-def call_fallback(addr_to: Address, icon_score: 'IconScoreBase',
-                  addr_from: Optional[Address]=None) -> None:
-
-    if not __check_myself(addr_from, addr_to):
-        raise IconScoreBaseException("call function myself")
-
-    icon_score.call_fallback()
+def call_fallback(icon_score: 'IconScoreBase') -> None:
+    call_fallback_func = getattr(icon_score, '_IconScoreBase__call_fallback')
+    call_fallback_func()
 
 
 def __check_myself(addr_from: Optional[Address], addr_to: Address) -> bool:
     return addr_from == addr_to
+
+
+def is_context_readonly(context: 'IconScoreContext') -> bool:
+    return context is not None and context.readonly

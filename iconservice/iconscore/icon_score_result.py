@@ -43,7 +43,8 @@ class TransactionResult(object):
         :param block: a block that the transaction belongs to
         :param to: a recipient address
         :param step_used: the amount of steps used in the transaction
-        :param contract_address: hex string that represant the contract address if the transaction`s target is contract
+        :param contract_address:hex string that represent the contract address
+            if the transaction`s target is contract
         :param status: a status of result. 1 (success) or 0 (failure)
         """
         self.tx_hash = tx_hash
@@ -52,6 +53,14 @@ class TransactionResult(object):
         self.contract_address = contract_address
         self.step_used = step_used
         self.status = status
+
+    def __str__(self) -> str:
+        return \
+            f'status: {self.status}\n' \
+            f'tx_hash: {self.tx_hash}\n' \
+            f'to: {self.to}\n' \
+            f'contract_address: {self.contract_address}\n' \
+            f'step_used: {self.step_used}'
 
 
 class Serializer(abc.ABC):
@@ -76,6 +85,7 @@ class IconBlockResult(list):
 
         :param serializer: serializer
         """
+        super().__init__()
         self.__serializer = serializer
 
     def serialize(self) -> bytes:
@@ -92,24 +102,33 @@ class JsonSerializer(Serializer):
 
         :return: a serialized data.
         """
-        serialized = json.dumps(transaction_results, cls=JsonSerializer.Encoder)
+        serialized = json.dumps(transaction_results,
+                                cls=JsonSerializer.Encoder)
         return bytes(serialized, 'utf-8')
 
-
     class Encoder(json.JSONEncoder):
+        """Converter class
+        """
 
         def default(self, obj):
             if isinstance(obj, TransactionResult):
                 new_dict = {}
                 for key, value in obj.__dict__.items():
-                    if(key == "block"):
+                    if key == "block":
                         new_dict["blockHeight"] = value.height
                     else:
-                        new_dict[JsonSerializer.Encoder.underscore_to_camel(key)] = value
+                        new_dict[JsonSerializer.Encoder.to_camelcase(key)] \
+                            = value
                 return new_dict
 
             return {'__{}__'.format(obj.__class__.__name__): obj.__dict__}
 
         @staticmethod
-        def underscore_to_camel(name):
-            return re.compile(r'_([a-z])').sub(lambda x: x.group(1).upper(), name)
+        def to_camelcase(name) -> str:
+            """Convert a under score name to camelcase name
+
+            :param name: under score name
+            :return: camelcase name
+            """
+            return re.compile(r'_([a-z])').sub(
+                lambda x: x.group(1).upper(), name)
