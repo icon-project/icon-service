@@ -256,26 +256,26 @@ class IconScoreDatabase(ContextGetter):
         :param prefix:
         """
         self.__prefix = prefix
-        self.__context_db = context_db
+        self._context_db = context_db
 
     @property
     def address(self):
-        return self.__context_db.address
+        return self._context_db.address
 
     def get(self, key: bytes) -> bytes:
         key = self.__hash_key(key)
-        return self.__context_db.get(self._context, key)
+        return self._context_db.get(self._context, key)
 
     def put(self, key: bytes, value: bytes):
         key = self.__hash_key(key)
-        self.__context_db.put(self._context, key, value)
+        self._context_db.put(self._context, key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
-        return IconScoreDatabase(self.__context_db, self.__prefix + prefix)
+        return IconScoreDatabase(self._context_db, self.__prefix + prefix)
 
     def delete(self, key: bytes):
         key = self.__hash_key(key)
-        self.__context_db.delete(self._context, key)
+        self._context_db.delete(self._context, key)
 
     def __hash_key(self, key: bytes):
         """All key is hashed and stored to StateDB

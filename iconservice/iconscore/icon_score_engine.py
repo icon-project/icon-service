@@ -145,7 +145,7 @@ class IconScoreEngine(ContextContainer):
         icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
         call_fallback(icon_score)
 
-    def commit(self, context: 'IconScoreContext') -> None:
+    def commit(self) -> None:
         """It is called when the previous block has been confirmed
 
         Execute a deferred tasks in queue (install, update or remove a score)
@@ -161,14 +161,17 @@ class IconScoreEngine(ContextContainer):
 
         :param context:
         """
+        # If context is None, we assume that context type is GENESIS mode
+        # Direct access to levelDB
+        context = None
+
         for task in self._tasks:
             # TODO: install score package to 'address/block_height_tx_index' directory
             if task.type == 'install':
                 self.__install(context, task)
             elif task.type == 'update':
                 self.__update(context, task)
-            else:
-                pass
+            # Invalid task.type has been already filtered in invoke()
 
         self._tasks.clear()
 
@@ -183,10 +186,9 @@ class IconScoreEngine(ContextContainer):
         score = self.__icon_score_info_mapper.get_icon_score(task.address)
 
         try:
-            self._put_context(context)
             score.genesis_init(task.data)
-        finally:
-            self._delete_context(context)
+        except Exception as e:
+            print(e)
 
     def __update(self, context: IconScoreContext, task: namedtuple) -> None:
         """Update an icon score
