@@ -1,12 +1,12 @@
 import unittest
 from iconservice.iconscore.icon_container_db import ContainerDBBase, DictDB, VarDB
-from tests.mock_db import MockDB
+from tests.mock_db import create_mock_icon_score_db
 
 
 class TestIconContainerDB(unittest.TestCase):
 
     def setUp(self):
-        self.db = MockDB(MockDB.make_dict())
+        self.db = create_mock_icon_score_db()
         pass
 
     def tearDown(self):
@@ -73,18 +73,12 @@ class TestIconContainerDB(unittest.TestCase):
         test_dict['a'] = 1
         test_dict['b'] = 2
 
-        for key, value in test_dict.iter():
-            print(key, value)
-
         self.assertEqual(test_dict['a'], 1)
 
     def test_success_dict_depth2(self):
         test_dict = DictDB('test_dict', self.db, depth=2, value_type=int)
         test_dict['a', 'b'] = 1
         test_dict['a', 'c'] = 2
-
-        for key, value in test_dict.iter('a'):
-            print(key, value)
 
         self.assertEqual(test_dict['a', 'b'], 1)
 

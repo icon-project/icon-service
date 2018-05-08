@@ -1,18 +1,21 @@
 import unittest
 from iconservice.iconscore.icon_score_base import IconScoreBase, score, external, payable
-from iconservice.iconscore.icon_score_context import IconScoreContext, Message
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.iconscore.icon_score_context import Message, ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
+from iconservice.base.address import Address, AddressPrefix, create_address
+from iconservice.base.block import Block
+from iconservice.base.transaction import Transaction
 from iconservice.base.exception import ExternalException, PayableException
-from tests.mock_db import MockDB
+from iconservice.database.db import IconScoreDatabase
+from tests.mock_db import create_mock_icon_score_db
 
 @score
 class CallClass(IconScoreBase):
-
     def genesis_init(self, *args, **kwargs) -> None:
         pass
 
-    def __init__(self, db, *args, **kwargs):
-        super().__init__(db, *args, **kwargs)
+    def __init__(self, db: IconScoreDatabase, owner: Address):
+        super().__init__(db, owner)
 
     @external(readonly=True)
     def func1(self):
@@ -45,22 +48,28 @@ class CallClass(IconScoreBase):
         pass
 
 
+class TestContextContainer(ContextContainer):
+    pass
+
+
 class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
-        self.db = MockDB(MockDB.make_dict())
-        self.ins = CallClass(db=self.db)
-        self.test_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
-        self.empty_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
-        pass
+        self._factory = IconScoreContextFactory(max_size=1)
+        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
+        self._context.tx = Transaction('test_01', origin=create_address(AddressPrefix.EOA, b'owner'))
+        self._context.block = Block(1, 'block_hash')
+
+        self._context_container = TestContextContainer()
+        self._context_container._put_context(self._context)
+        self.ins = CallClass(db=create_mock_icon_score_db(), owner=create_address(AddressPrefix.EOA, b'test'))
 
     def tearDown(self):
         self.ins = None
-        self.test_context = None
-        self.empty_context = None
 
     def test_success_call_method(self):
-        self.ins.set_context(self.empty_context)
+        self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
         self.ins.call_method('func1')
         self.ins.call_method('func2')
         self.ins.call_method('func3')
@@ -69,7 +78,7 @@ class TestCallMethod(unittest.TestCase):
         # self.ins.call_method('func6')
 
     def test_fail_call_method(self):
-        self.ins.set_context(self.test_context)
+        self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 1)
         self.assertRaises(PayableException, self.ins.call_method, 'func1')
         self.assertRaises(PayableException, self.ins.call_method, 'func2')
         # self.assertRaises(PayableException, self.ins.call_method, 'func3')
@@ -77,7 +86,7 @@ class TestCallMethod(unittest.TestCase):
         self.assertRaises(ExternalException, self.ins.call_method, 'func5')
         self.assertRaises(ExternalException, self.ins.call_method, 'func6')
 
-        self.ins.set_context(self.empty_context)
+        self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
         # self.assertRaises(PayableException, self.ins.call_method, 'func3')
         # self.assertRaises(PayableException, self.ins.call_method, 'func4')
         self.assertRaises(ExternalException, self.ins.call_method, 'func5')
