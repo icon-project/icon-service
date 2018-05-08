@@ -15,18 +15,53 @@
 # import _ssl
 import json
 import logging
+import sys
+import hashlib
 # import ssl
 # import threading
+# sys.path.append('/home/goldworm/work/icon/loopchain-icon/icon')
+sys.path.append('..')
+sys.path.append('.')
 
 from flask import Flask, request, Response
 from flask_restful import reqparse, Api
 from jsonrpcserver import methods
+
+from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.base.address import Address
+from iconservice.utils.type_converter import TypeConverter
 
 # from icon.tools.score_invoker import ScoreInvoker
 # from loopchain import utils, configure as conf, util
 # from loopchain.baseservice import CommonThread
 # from loopchain.protos import message_code
 # from loopchain.rest_server import IcnTxPrevalidator
+
+type_table = {
+    'from': 'address',
+    'to': 'address',
+    'address': 'address',
+    'value': 'int',
+    'balance': 'int'
+}
+_type_converter = TypeConverter(type_table)
+
+_icon_service_engine = IconServiceEngine()
+_icon_service_engine.open('./score_root', './db_root')
+
+with open('init_genesis.json') as f:
+    genesis_block = json.load(f)
+
+params = []
+accounts = genesis_block['transaction_data']['accounts']
+for account in accounts:
+    params.append(_type_converter.convert(account))
+
+_icon_service_engine.genesis_invoke(params)
+
+
+def get_icon_service_engine():
+    return _icon_service_engine
 
 
 class MockDispatcher:
@@ -36,7 +71,7 @@ class MockDispatcher:
     def dispatch():
         req = json.loads(request.get_data().decode())
         req["params"] = req.get("params", {})
-        req["params"]["method"] = request.get_json()["method"]
+        # req["params"]["method"] = request.get_json()["method"]
 
         response = methods.dispatch(req)
         return Response(str(response), response.http_status, mimetype='application/json')
@@ -45,29 +80,32 @@ class MockDispatcher:
     @methods.add
     def icx_sendTransaction(**kwargs):
         logging.debug(f"icx_sendTransaction{kwargs}")
-        # tx = MockDispatcher.tx_validator.validate_dumped_tx(json.dumps(kwargs), conf.LOOPCHAIN_DEFAULT_CHANNEL)
-        # if tx is None:
-        #     return {"response_code": message_code.Response.fail_create_tx,
-        #             "message": f"tx validate fail. tx data :: {kwargs}"}
 
-        tx = json.dumps(kwargs)
+        req = kwargs
+        engine = get_icon_service_engine()
 
-        # logging.debug("********************************************")
-        # logging.debug(f"{tx.json_dumps()}")
-        # logging.debug("********************************************")
+        res = {
+            'jsonrpc': req['jsonrpc'],
+            'id': req['id']
+        }
 
-        # deliver the tx object to IconScoreService directly here!
-        # res = ScoreInvoker().send_transaction(tx)
+        transactions = [req]
 
-        # response_data = {'response_code': res.code}
-        # if res.code != message_code.Response.success:
-        #     response_data['message'] = res.message
-        # else:
-        #     response_data['tx_hash'] = res.message
+        try:
+            block_height = 0
+            block_hash = hashlib.sha3_256(b'block_hash').digest()
+            tx_results = engine.invoke(block_height, block_hash, transactions)
+            res['result'] = tx_results
+        except Exception as e:
+            logging.error(e)
+            res['error'] = {
+                'code': -32603,
+                'message': str(e)
+            }
 
-        # util.logger.spam(f"response_data: ({response_data})")
-        return tx
+        return res
 
+    """
     @staticmethod
     @methods.add
     def icx_getTransactionResult(**kwargs):
@@ -93,10 +131,23 @@ class MockDispatcher:
             verify_result['message'] = "Invalid transaction hash."
 
         return verify_result
+    """
 
     @staticmethod
     @methods.add
     def icx_getBalance(**kwargs):
+        logging.error('###########' + str(kwargs))
+        engine = get_icon_service_engine()
+
+        method = 'icx_getBalance'
+        params = kwargs
+        params['address'] = Address.from_string(params['address'])
+
+        value = engine.query(method, params)
+
+        return hex(value)
+
+        """
         util.logger.spam(f"icx_getBalance{kwargs}")
         response = ScoreInvoker().get_balance(json.dumps(kwargs))
         try:
@@ -106,10 +157,19 @@ class MockDispatcher:
             response_data['response'] = response.meta
         response_data['response_code'] = response.code
         return response_data
+        """
 
     @staticmethod
     @methods.add
     def icx_getTotalSupply(**kwargs):
+        engine = get_icon_service_engine()
+
+        method = 'icx_getBalance'
+        value = engine.query(method, params=None)
+
+        return hex(value)
+
+        """
         util.logger.spam(f"icx_getTotalSupply{kwargs}")
         response = ScoreInvoker().get_total_supply(json.dumps(kwargs))
         try:
@@ -119,6 +179,7 @@ class MockDispatcher:
             response_data['response'] = response.meta
         response_data['response_code'] = response.code
         return response_data
+        """
 
 
 class FlaskServer():
@@ -178,7 +239,8 @@ class SimpleRestServer():
         logging.error("SimpleRestServer run... %s", str(api_port))
 
         # event.set()
-        self.__server.app.run(port=api_port, host=self.__peer_ip_address,
+        self.__server.app.run(port=api_port,
+                              host=self.__peer_ip_address,
                               debug=False)
 
 

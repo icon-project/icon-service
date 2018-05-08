@@ -178,8 +178,9 @@ class IconServiceEngine(object):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
 
-        _from = params.get('from', None)
-        context.msg = Message(sender=_from)
+        if params:
+            from_ = params.get('from', None)
+            context.msg = Message(sender=from_)
 
         ret = self.call(context, method, params)
 
