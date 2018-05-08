@@ -12,7 +12,7 @@ class SampleToken(IconScoreBase):
     _BALANCES = 'balances'
     _TOTAL_SUPPLY = 'total_supply'
 
-    def __init__(self, db: IconServiceDatabase) -> None:
+    def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)
@@ -74,7 +74,7 @@ class CrowdSale(IconScoreBase):
     _JOINER_LIST = 'joiner_list'
     _ADDR_TOKEN_REWARD = 'addr_token_reward'
 
-    def __init__(self, db: IconServiceDatabase) -> None:
+    def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
         self._addr_beneficiary = VarDB(self._ADDR_BENEFICIARY, db, value_type=Address)
         self._funding_goal = VarDB(self._FUNDING_GOAL, db, value_type=int)
