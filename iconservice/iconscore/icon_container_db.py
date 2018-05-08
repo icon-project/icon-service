@@ -1,7 +1,7 @@
 import collections
 from typing import TypeVar, Optional, Any, Union, Tuple
 from ..base.address import Address
-from ..base.exception import IconScoreBaseException
+from ..base.exception import ContainerDBException
 from ..database.db import IconScoreDatabase
 from collections import Iterator
 
@@ -30,7 +30,7 @@ class ContainerUtil(object):
         elif isinstance(key, str):
             str_key = key
         else:
-            raise IconScoreBaseException(f"can't encode key: {key}")
+            raise ContainerDBException(f"can't encode key: {key}")
         return str_key
 
     @staticmethod
@@ -46,7 +46,7 @@ class ContainerUtil(object):
         elif isinstance(value, bytes):
             byte_value = value
         else:
-            raise IconScoreBaseException(f"can't encode value: {value}")
+            raise ContainerDBException(f"can't encode value: {value}")
         return byte_value
 
     @staticmethod
@@ -135,6 +135,7 @@ class DictDB(object):
         sub_db = self.__db
         for key in keys:
             sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
+
         return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(last_key)), self.__value_type)
 
     def __check_tuple_keys(self, keys: Any) -> Tuple[K, ...]:
@@ -146,10 +147,11 @@ class DictDB(object):
 
         for key in keys:
             if not isinstance(key, (int, str, Address)):
-                raise IconScoreBaseException(f"can't cast args {type(key)} : {key}")
+                raise ContainerDBException(f"can't cast args {type(key)} : {key}")
 
         if not len(keys) == self.__depth:
-            raise IconScoreBaseException('depth over')
+            raise ContainerDBException('depth over')
+
         return keys
 
 
@@ -174,7 +176,7 @@ class ArrayDB(Iterator):
 
     def get(self, index: int=0) -> V:
         if index >= self.__size:
-            raise IconScoreBaseException(f'ArrayDB out of range')
+            raise ContainerDBException(f'ArrayDB out of range')
 
         return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(index)), self.__value_type)
 
@@ -198,6 +200,7 @@ class ArrayDB(Iterator):
         db_list_size = ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(ArrayDB.__SIZE)), int)
         if db_list_size:
             size = db_list_size
+
         return size
 
     def __set_size(self) -> None:
@@ -207,7 +210,7 @@ class ArrayDB(Iterator):
 
     def __setitem__(self, index: int, value: V) -> None:
         if index >= self.__size:
-            raise IconScoreBaseException(f'ArrayDB out of range')
+            raise ContainerDBException(f'ArrayDB out of range')
 
         sub_db = self.__db
         byte_value = ContainerUtil.encode_value(value)
@@ -218,15 +221,17 @@ class ArrayDB(Iterator):
             if index < 0:
                 index += len(self)
             if index < 0 or index >= len(self):
-                raise IconScoreBaseException(f'ArrayDB out of range, {index}')
+                raise ContainerDBException(f'ArrayDB out of range, {index}')
+
             sub_db = self.__db
             return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(index)), self.__value_type)
 
-    def __contains__(self, item):
+    def __contains__(self, item: V):
         for e in self:
             if e == item:
                 return True
         return False
+
 
 class VarDB(object):
 

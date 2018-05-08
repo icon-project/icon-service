@@ -1,6 +1,6 @@
 import unittest
 
-from iconservice.base.exception import IconScoreBaseException
+from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from tests.mock_db import MockDB
 
@@ -91,7 +91,7 @@ class TestIconContainerDB(unittest.TestCase):
             self.assertEqual(test_array[i], i)
 
         for i in range(range_size, range_size):
-            self.assertRaises(IconScoreBaseException, test_array[i])
+            self.assertRaises(ContainerDBException, test_array[i])
 
         cant_find_value = range_size
         self.assertFalse(cant_find_value in test_array)
