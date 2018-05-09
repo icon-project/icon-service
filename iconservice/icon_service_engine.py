@@ -136,6 +136,7 @@ class IconServiceEngine(object):
     def invoke(self,
                block_height: int,
                block_hash: str,
+               block_timestamp: int,
                transactions) -> 'IconBlockResult':
         """Process transactions in a block sent by loopchain
 
@@ -145,7 +146,7 @@ class IconServiceEngine(object):
         :return: The results of transactions
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
-        context.block = Block(block_height, block_hash)
+        context.block = Block(block_height, block_hash, block_timestamp)
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())
@@ -191,8 +192,9 @@ class IconServiceEngine(object):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
 
-        _from = params.get('from', None)
-        context.msg = Message(sender=_from)
+        if params:
+            from_ = params.get('from', None)
+            context.msg = Message(sender=from_)
 
         ret = self.call(context, method, params)
 
@@ -241,7 +243,9 @@ class IconServiceEngine(object):
         address = params['address']
         return self._icx_engine.get_balance(context, address)
 
-    def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
+    def _handle_icx_getTotalSupply(self,
+                                   context: IconScoreContext,
+                                   params: dict) -> int:
         """Returns the amount of icx total supply
 
         :param context:

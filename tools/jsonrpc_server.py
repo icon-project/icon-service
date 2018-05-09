@@ -12,60 +12,90 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import _ssl
+# import _ssl
 import json
 import logging
-import ssl
-import threading
+import sys
+import hashlib
+# import ssl
+# import threading
+sys.path.append('..')
+sys.path.append('.')
 
 from flask import Flask, request, Response
 from flask_restful import reqparse, Api
 from jsonrpcserver import methods
 
-from icon.tools.score_invoker import ScoreInvoker
-from loopchain import utils, configure as conf, util
-from loopchain.baseservice import CommonThread
-from loopchain.protos import message_code
-from loopchain.rest_server import IcnTxPrevalidator
+from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.base.address import Address
+from iconservice.iconscore.icon_score_result import TransactionResult
+from iconservice.utils.type_converter import TypeConverter
+
+
+_type_converter = None
+_icon_service_engine = None
+_block_height = 0
+
+
+def get_icon_service_engine():
+    return _icon_service_engine
+
+
+def get_block_height():
+    global _block_height
+    _block_height += 1
+
+    return _block_height
 
 
 class MockDispatcher:
-    tx_validator = IcnTxPrevalidator()
 
     @staticmethod
     def dispatch():
         req = json.loads(request.get_data().decode())
-        req["params"] = req.get("params", {})
-        req["params"]["method"] = request.get_json()["method"]
+        req["params"] = req.get("params", None)
 
         response = methods.dispatch(req)
-        return Response(str(response), response.http_status, mimetype='application/json')
+        return Response(str(response),
+                        response.http_status,
+                        mimetype='application/json')
 
     @staticmethod
     @methods.add
-    def icx_sendTransaction(**kwargs):
-        util.logger.spam(f"icx_sendTransaction{kwargs}")
-        tx = MockDispatcher.tx_validator.validate_dumped_tx(json.dumps(kwargs), conf.LOOPCHAIN_DEFAULT_CHANNEL)
-        if tx is None:
-            return {"response_code": message_code.Response.fail_create_tx,
-                    "message": f"tx validate fail. tx data :: {kwargs}"}
+    def icx_sendTransaction(**params):
+        """icx_sendTransaction jsonrpc handler
 
-        # util.logger.spam("********************************************")
-        # util.logger.spam(f"{tx.json_dumps()}")
-        # util.logger.spam("********************************************")
+        We assume that only one tx in a block
 
-        # deliver the tx object to IconScoreService directly here!
-        res = ScoreInvoker().send_transaction(tx)
+        :param params: jsonrpc params field
+        """
+        engine = get_icon_service_engine()
 
-        response_data = {'response_code': res.code}
-        if res.code != message_code.Response.success:
-            response_data['message'] = res.message
-        else:
-            response_data['tx_hash'] = res.message
+        transactions = [params]
 
-        util.logger.spam(f"response_data: ({response_data})")
-        return response_data
+        block_height: int = get_block_height()
+        data: str = f'block_height{block_height}'
+        block_hash: bytes = hashlib.sha3_256(data.encode()).digest()
+        block_timestamp_us = 0
+        
+        try:
+            tx_results = engine.invoke(height=block_height,
+                                       hash=block_hash,
+                                       timestamp=block_timestamp_us,
+                                       transactions=transactions)
 
+            tx_result = tx_results[0]
+            if tx_result.status == TransactionResult.SUCCESS:
+                engine.commit()
+            else:
+                engine.rollback()
+        except:
+            engine.rollback()
+            raise
+
+        return tx_result.to_dict()
+
+    """
     @staticmethod
     @methods.add
     def icx_getTransactionResult(**kwargs):
@@ -91,32 +121,27 @@ class MockDispatcher:
             verify_result['message'] = "Invalid transaction hash."
 
         return verify_result
+    """
 
     @staticmethod
     @methods.add
-    def icx_getBalance(**kwargs):
-        util.logger.spam(f"icx_getBalance{kwargs}")
-        response = ScoreInvoker().get_balance(json.dumps(kwargs))
-        try:
-            response_data = json.loads(response.meta)
-        except json.JSONDecodeError as e:
-            response_data = json.loads("{}")
-            response_data['response'] = response.meta
-        response_data['response_code'] = response.code
-        return response_data
+    def icx_getBalance(**params):
+        engine = get_icon_service_engine()
+
+        # params['address'] = Address.from_string(params['address'])
+        params = _type_converter.convert(params, recursive=False)
+        value = engine.query(method='icx_getBalance', params=params)
+
+        return hex(value)
 
     @staticmethod
     @methods.add
-    def icx_getTotalSupply(**kwargs):
-        util.logger.spam(f"icx_getTotalSupply{kwargs}")
-        response = ScoreInvoker().get_total_supply(json.dumps(kwargs))
-        try:
-            response_data = json.loads(response.meta)
-        except json.JSONDecodeError as e:
-            response_data = json.loads("{}")
-            response_data['response'] = response.meta
-        response_data['response_code'] = response.code
-        return response_data
+    def icx_getTotalSupply(**params):
+        engine = get_icon_service_engine()
+
+        value: int = engine.query(method='icx_getTotalSupply', params=params)
+
+        return hex(value)
 
 
 class FlaskServer():
@@ -126,21 +151,21 @@ class FlaskServer():
         self.__parser = reqparse.RequestParser()
 
         # SSL 적용 여부에 따라 context 생성 여부를 결정한다.
-        if conf.REST_SSL_TYPE == conf.SSLAuthType.none:
-            self.__ssl_context = None
-        elif conf.REST_SSL_TYPE == conf.SSLAuthType.server_only:
-            self.__ssl_context = (conf.DEFAULT_SSL_CERT_PATH, conf.DEFAULT_SSL_KEY_PATH)
-        elif conf.REST_SSL_TYPE == conf.SSLAuthType.mutual:
-            self.__ssl_context = ssl.SSLContext(_ssl.PROTOCOL_SSLv23)
-
-            self.__ssl_context.verify_mode = ssl.CERT_REQUIRED
-            self.__ssl_context.check_hostname = False
-
-            self.__ssl_context.load_verify_locations(cafile=conf.DEFAULT_SSL_TRUST_CERT_PATH)
-            self.__ssl_context.load_cert_chain(conf.DEFAULT_SSL_CERT_PATH, conf.DEFAULT_SSL_KEY_PATH)
-        else:
-            utils.exit_and_msg(
-                f"REST_SSL_TYPE must be one of [0,1,2]. But now conf.REST_SSL_TYPE is {conf.REST_SSL_TYPE}")
+        # if conf.REST_SSL_TYPE == conf.SSLAuthType.none:
+        #     self.__ssl_context = None
+        # elif conf.REST_SSL_TYPE == conf.SSLAuthType.server_only:
+        #     self.__ssl_context = (conf.DEFAULT_SSL_CERT_PATH, conf.DEFAULT_SSL_KEY_PATH)
+        # elif conf.REST_SSL_TYPE == conf.SSLAuthType.mutual:
+        #     self.__ssl_context = ssl.SSLContext(_ssl.PROTOCOL_SSLv23)
+        #
+        #     self.__ssl_context.verify_mode = ssl.CERT_REQUIRED
+        #     self.__ssl_context.check_hostname = False
+        #
+        #     self.__ssl_context.load_verify_locations(cafile=conf.DEFAULT_SSL_TRUST_CERT_PATH)
+        #     self.__ssl_context.load_cert_chain(conf.DEFAULT_SSL_CERT_PATH, conf.DEFAULT_SSL_KEY_PATH)
+        # else:
+        #     utils.exit_and_msg(
+        #         f"REST_SSL_TYPE must be one of [0,1,2]. But now conf.REST_SSL_TYPE is {conf.REST_SSL_TYPE}")
 
     @property
     def app(self):
@@ -158,28 +183,65 @@ class FlaskServer():
         self.__app.add_url_rule('/api/v2', view_func=MockDispatcher.dispatch, methods=['POST'])
 
 
-class SimpleRestServer(CommonThread):
+class SimpleRestServer():
     def __init__(self, peer_port, peer_ip_address=None):
-        if peer_ip_address is None:
-            peer_ip_address = conf.IP_LOCAL
-        CommonThread.__init__(self)
+        # if peer_ip_address is None:
+        #     peer_ip_address = conf.IP_LOCAL
+        # CommonThread.__init__(self)
         self.__peer_port = peer_port
         self.__peer_ip_address = peer_ip_address
 
         self.__server = FlaskServer()
         self.__server.set_resource()
 
-    def run(self, event: threading.Event):
-        ScoreInvoker().init_stub(self.__peer_ip_address, self.__peer_port)
-        ScoreInvoker().score_load()
-        api_port = self.__peer_port + conf.PORT_DIFF_REST_SERVICE_CONTAINER
-        logging.debug("SimpleRestServer run... %s", str(api_port))
+    def run(self):
+        # ScoreInvoker().init_stub(self.__peer_ip_address, self.__peer_port)
+        # ScoreInvoker().score_load()
+        api_port = self.__peer_port + 1900 #conf.PORT_DIFF_REST_SERVICE_CONTAINER
+        logging.error("SimpleRestServer run... %s", str(api_port))
 
-        event.set()
-        self.__server.app.run(port=api_port, host=self.__peer_ip_address,
-                              debug=False, ssl_context=self.__server.ssl_context)
+        # event.set()
+        self.__server.app.run(port=api_port,
+                              host=self.__peer_ip_address,
+                              debug=False)
+
+
+def main():
+    init_type_converter()
+    init_icon_service_engine()
+
+    server = SimpleRestServer(7100)
+    server.run()
+
+
+def init_type_converter():
+    global _type_converter
+
+    type_table = {
+        'from': 'address',
+        'to': 'address',
+        'address': 'address',
+        'fee': 'int',
+        'value': 'int',
+        'balance': 'int'
+    }
+    _type_converter = TypeConverter(type_table)
+
+
+def init_icon_service_engine():
+    global _icon_service_engine
+
+    _icon_service_engine = IconServiceEngine()
+    _icon_service_engine.open('./score_root', './db_root')
+
+    with open('init_genesis.json') as f:
+        genesis_block = json.load(f)
+
+    accounts = genesis_block['transaction_data']['accounts']
+    accounts = _type_converter.convert(accounts, recursive=True)
+
+    _icon_service_engine.genesis_invoke(accounts)
 
 
 if __name__ == '__main__':
-    server = SimpleRestServer(7100)
-    server.start()
+    main()
