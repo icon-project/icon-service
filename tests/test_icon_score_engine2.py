@@ -59,7 +59,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.GENESIS)
         self._context.msg = Message(self._from, 0)
         self._context.tx = Transaction('test_01', origin=create_address(AddressPrefix.EOA, b'owner'))
-        self._context.block = Block(1, 'block_hash')
+        self._context.block = Block(1, 'block_hash', 0)
 
     def tearDown(self):
         self._engine = None
@@ -95,7 +95,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         os.makedirs(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, 'tests/score/test_score')
         installdata = {'content_type': 'application/tbears', 'content': path}
-        calldata = {'method': 'total_supply', 'params': dict()}
+        calldata = {'method': 'balance_of', 'params': {'addr_from': str(self._icon_score_address)}}
 
         self._engine.invoke(self._context, self._icon_score_address, 'install', installdata)
         self._engine.commit()

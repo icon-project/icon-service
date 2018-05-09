@@ -123,6 +123,13 @@ class IconScoreInfoMapper(dict, ContextGetter):
     def score_root_path(self):
         return self.__icon_score_loader.score_root_path
 
+    def delete_icon_score(self, address: Address) -> None:
+        """
+        :param address:
+        """
+        if address in self:
+            del self[address]
+
     def get_icon_score(self, address: Address) -> Optional['IconScoreBase']:
         """
         :param address:

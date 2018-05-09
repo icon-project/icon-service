@@ -161,7 +161,7 @@ class IconScoreContext(object):
         return ret
 
     def call(self, addr_from: Address,
-             addr_to: Address, func_name: str, *args, **kwargs) -> None:
+             addr_to: Address, func_name: str, kw_params: dict) -> None:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
@@ -177,7 +177,7 @@ class IconScoreContext(object):
         icon_score = self.icon_score_mapper.get_icon_score(addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
-                          addr_from=addr_from, *args, **kwargs)
+                          addr_from=addr_from, kw_params=kw_params)
 
         self.msg = self.__msg_stack.pop()
 
@@ -263,8 +263,8 @@ class IconScoreContextFactory(object):
                 self._queue.append(context)
 
 
-def call_method(icon_score: 'IconScoreBase', func_name: str,
-                addr_from: Optional[Address]=None, *args, **kwargs) -> object:
+def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
+                addr_from: Optional[Address]=None) -> object:
 
     if icon_score is None:
         raise IconScoreBaseException('score is None')
@@ -273,7 +273,7 @@ def call_method(icon_score: 'IconScoreBase', func_name: str,
         raise IconScoreBaseException("call function myself")
 
     try:
-        return icon_score.call_method(func_name, *args, **kwargs)
+        return icon_score.call_method(func_name, kw_params)
     except (PayableException, ExternalException):
         call_fallback(icon_score)
         return None

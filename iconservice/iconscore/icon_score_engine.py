@@ -126,12 +126,12 @@ class IconScoreEngine(ContextContainer):
         :param calldata:
         """
         method: str = calldata['method']
-        params: dict = calldata['params']
+        kw_params: dict = calldata['params']
 
         try:
             self._put_context(context)
             icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
-            return call_method(icon_score=icon_score, func_name=method, *(), **params)
+            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
         finally:
             self._delete_context(context)
 
@@ -187,7 +187,7 @@ class IconScoreEngine(ContextContainer):
         content = task.data.get('content')
 
         if content_type == 'application/tbears':
-            self.__icon_score_info_mapper[task.address] = None
+            self.__icon_score_info_mapper.delete_icon_score(task.address)
             score_root_path = self.__icon_score_info_mapper.score_root_path
             target_path = path.join(score_root_path, task.address.body.hex())
             symlink(content, target_path)
