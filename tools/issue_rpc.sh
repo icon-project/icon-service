@@ -24,13 +24,13 @@ case "$action" in
       PARAMS='{"jsonrpc": "2.0", "method": "icx_getTotalSupply", "id": 40889, "params": {}}'
   ;;
   tokenbal|tokenBalance )
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 50889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "hx1000000000000000000000000000000000000000", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hx1000000000000000000000000000000000000000"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 50889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "cxb133709a91eb8bbc762808a87072287432523be5", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hx1000000000000000000000000000000000000000"}}}}'
   ;;
   tokensup|tokenTotalSupply )
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 60889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "hx1000000000000000000000000000000000000000", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "total_supply"}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 60889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "cxb133709a91eb8bbc762808a87072287432523be5", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "total_supply"}}}'
   ;;
   tokentra|tokenTransfer )
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 70889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "hx1000000000000000000000000000000000000000", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hx1000000000000000000000000000000000000000", "addr_to": "hx0000000000000000000000000000000000000000", "value": "0x1"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 70889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "cxb133709a91eb8bbc762808a87072287432523be5", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "transfer", "params": {"addr_from": "hx1000000000000000000000000000000000000000", "addr_to": "hx0000000000000000000000000000000000000000", "value": "0x1"}}}}'
   ;;
   * )
     echo "Error: Invalid action... $action"
