@@ -18,14 +18,23 @@ case "$action" in
       PARAMS='{"jsonrpc": "2.0", "method": "icx_getTransactionResult", "id": 20889, "params": {"tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
   ;;
   getbal|getBalance )
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_getBalance", "id": 30889, "params": {"address": "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433"}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_getBalance", "id": 30889, "params": {"address": "hx1000000000000000000000000000000000000000"}}'
   ;;
   getsup|getTotalSupply )
       PARAMS='{"jsonrpc": "2.0", "method": "icx_getTotalSupply", "id": 40889, "params": {}}'
   ;;
+  tokenbal|tokenBalance )
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 50889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "hx1000000000000000000000000000000000000000", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hx1000000000000000000000000000000000000000"}}}}'
+  ;;
+  tokensup|tokenTotalSupply )
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 60889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "hx1000000000000000000000000000000000000000", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "total_supply"}}}'
+  ;;
+  tokentra|tokenTransfer )
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 70889, "params": { "from": "hx0000000000000000000000000000000000000000", "to": "hx1000000000000000000000000000000000000000", "value": "0xde0b6b3a7640000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hx1000000000000000000000000000000000000000", "addr_to": "hx0000000000000000000000000000000000000000", "value": "0x1"}}}}'
+  ;;
   * )
     echo "Error: Invalid action... $action"
-    echo "   Valid actions are [sendtx|gettxres|getbal|getsup]."
+    echo "   Valid actions are [sendtx|gettxres|getbal|getsup|tokenbal|tokensup|tokentra]."
     exit 1
   ;;
 esac
