@@ -1,6 +1,6 @@
 import unittest
 import os
-from iconservice.iconscore.icon_score_loader import IconScoreLoader, ICON_ROOT_PATH
+from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_installer import IconScoreInstaller
 from iconservice.base.address import AddressPrefix, create_address
 
@@ -15,13 +15,13 @@ class TestIconScoreLoader(unittest.TestCase):
         self._loader = IconScoreLoader(self._ROOT_SCORE_PATH)
         self._address = create_address(AddressPrefix.CONTRACT, b'test')
         archive_path = 'tests/score.zip'
-        archive_path = os.path.join(ICON_ROOT_PATH, archive_path)
+        archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
         zip_bytes = self.read_zipfile_as_byte(archive_path)
-        install_path = os.path.join(ICON_ROOT_PATH, self._ROOT_SCORE_PATH)
+        install_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         self.__unpack_zip_file(install_path, zip_bytes)
 
     def tearDown(self):
-        remove_path = os.path.join(ICON_ROOT_PATH, self._ROOT_SCORE_PATH)
+        remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         IconScoreInstaller.remove_existing_score(remove_path)
 
     @staticmethod
