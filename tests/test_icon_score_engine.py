@@ -28,7 +28,7 @@ from iconservice.database.factory import DatabaseFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
-from iconservice.iconscore.icon_score_loader import ICON_ROOT_PATH, IconScoreLoader
+from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_installer import IconScoreInstaller
 from iconservice.icx.icx_storage import IcxStorage
 
@@ -41,9 +41,9 @@ class TestIconScoreEngine(unittest.TestCase):
 
     def setUp(self):
         archive_path = 'tests/score.zip'
-        archive_path = os.path.join(ICON_ROOT_PATH, archive_path)
+        archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
         zip_bytes = self.read_zipfile_as_byte(archive_path)
-        install_path = os.path.join(ICON_ROOT_PATH, self._ROOT_SCORE_PATH)
+        install_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         self.__unpack_zip_file(install_path, zip_bytes)
 
         db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
@@ -74,7 +74,7 @@ class TestIconScoreEngine(unittest.TestCase):
             score.db._context_db.close(self._context)
         self._factory.destroy(self._context)
 
-        remove_path = os.path.join(ICON_ROOT_PATH, self._ROOT_SCORE_PATH)
+        remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         IconScoreInstaller.remove_existing_score(remove_path)
         remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         IconScoreInstaller.remove_existing_score(remove_path)

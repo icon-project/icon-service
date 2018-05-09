@@ -18,7 +18,7 @@
 
 
 from collections import namedtuple
-from os import path, symlink
+from os import path, symlink, makedirs
 
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException
@@ -214,7 +214,9 @@ class IconScoreEngine(ContextContainer):
             self.__icon_score_info_mapper.delete_icon_score(task.address)
             score_root_path = self.__icon_score_info_mapper.score_root_path
             target_path = path.join(score_root_path, task.address.body.hex())
-            symlink(content, target_path)
+            makedirs(target_path)
+            target_path = path.join(target_path, '0_0')
+            symlink(content, target_path, target_is_directory=True)
         else:
             pass
 

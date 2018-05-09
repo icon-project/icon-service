@@ -23,14 +23,12 @@ from collections import defaultdict
 # ImportWarning: can't resolve package from __spec__ or __package__, falling back on __name__ and __path__ return f(*args, **kwds)
 from ..iconscore.icon_score_base import IconScoreBase
 
-ICON_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-
 
 class IconScoreLoader(object):
     _PACKAGE_PATH = 'package.json'
 
     def __init__(self, icon_score_root_path: str):
-        self.__score_root_path = os.path.join(ICON_ROOT_PATH, icon_score_root_path)
+        self.__score_root_path = icon_score_root_path
 
     @property
     def score_root_path(self):
