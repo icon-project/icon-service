@@ -115,7 +115,7 @@ def check_exception(func):
             log_exec = traceback.format_exc()
             # TODO replace log function
             print(f'call_stack\n', *log_call_stack, log_exec)
-        except IcxException:
+        except IconException:
             log_call_stack = traceback.format_stack()
             log_exec = traceback.format_exc()
             # TODO replace log function
@@ -145,4 +145,8 @@ class ScoreInstallException(IconScoreBaseException):
 
 
 class ScoreInstallExtractException(IconScoreBaseException):
+    pass
+
+
+class ContainerDBException(IconScoreBaseException):
     pass
