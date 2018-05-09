@@ -36,7 +36,7 @@ TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 # have to score.zip unpack and proj_name = test_score
-class TestIconScoreEngine(unittest.TestCase):
+class TestIconScoreEngine2(unittest.TestCase):
     _ROOT_SCORE_PATH = 'score'
     _TEST_DB_PATH = 'tests/test_db/'
 
