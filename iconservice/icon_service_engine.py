@@ -319,8 +319,14 @@ class IconServiceEngine(object):
 
         try:
             if data_type == 'install':
-                to = self.__generate_contract_address(
-                    context.tx.origin, context.tx.timestamp, context.tx.nonce)
+                content_type = data.get('content_type')
+                if content_type == 'application/tbears':
+                    content = data.get('content')
+                    proj_name = content.split('/')[-1]
+                    to = create_address(AddressPrefix.CONTRACT, proj_name.encode())
+                else:
+                    to = self.__generate_contract_address(
+                        context.tx.origin, context.tx.timestamp, context.tx.nonce)
 
             self._icon_score_engine.invoke(context, to, data_type, data)
 

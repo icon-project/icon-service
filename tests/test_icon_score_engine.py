@@ -115,6 +115,7 @@ class TestIconScoreEngine(unittest.TestCase):
 
     def test_install(self):
         self._engine.invoke(self._context, self._icon_score_address, 'install', dict())
+        self._engine.commit(self._context)
 
     def test_call_method(self):
         calldata = {'method': 'total_supply', 'params': dict()}

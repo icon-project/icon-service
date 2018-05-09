@@ -33,6 +33,10 @@ class IconScoreLoader(object):
     def __init__(self, icon_score_root_path: str):
         self.__score_root_path = os.path.join(ICON_ROOT_PATH, icon_score_root_path)
 
+    @property
+    def score_root_path(self):
+        return self.__score_root_path
+
     @staticmethod
     def __load_json(root_path: str) -> dict:
         path = os.path.join(root_path, IconScoreLoader._PACKAGE_PATH)

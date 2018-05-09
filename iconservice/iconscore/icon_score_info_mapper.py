@@ -119,6 +119,10 @@ class IconScoreInfoMapper(dict, ContextGetter):
                 ExceptionCode.INVALID_PARAMS,
                 f'{info} is not IconScoreInfo type.')
 
+    @property
+    def score_root_path(self):
+        return self.__icon_score_loader.score_root_path
+
     def get_icon_score(self, address: Address) -> Optional['IconScoreBase']:
         """
         :param address:

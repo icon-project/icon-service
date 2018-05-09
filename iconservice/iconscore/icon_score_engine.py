@@ -18,6 +18,7 @@
 
 
 from collections import namedtuple
+from os import path, makedirs, symlink
 
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException
@@ -182,6 +183,16 @@ class IconScoreEngine(ContextContainer):
         - Install IconScore package file to file system
 
         """
+        content_type = task.data.get('content_type')
+        content = task.data.get('content')
+
+        if content_type == 'application/tbears':
+            score_root_path = self.__icon_score_info_mapper.score_root_path
+            target_path = path.join(score_root_path, task.address.body.hex())
+            symlink(content, target_path)
+        else:
+            pass
+
         self.__icx_storage.put_score_owner(context, task.address, task.owner)
         score = self.__icon_score_info_mapper.get_icon_score(task.address)
 
