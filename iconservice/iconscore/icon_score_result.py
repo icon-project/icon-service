@@ -17,7 +17,6 @@
 
 import abc
 import json
-import re
 from ..base.address import Address
 from ..base.block import Block
 
