@@ -25,10 +25,12 @@ from ..base.exception import ExceptionCode, IconException
 from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
+from ..utils.type_converter import TypeConverter
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
+    from .icon_score_base import IconScoreBase
 
 
 class IconScoreEngine(ContextContainer):
@@ -130,9 +132,33 @@ class IconScoreEngine(ContextContainer):
         try:
             self._put_context(context)
             icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
-            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
+            return call_method(icon_score=icon_score, func_name=method,
+                               kw_params=self.__type_converter(icon_score, method, kw_params))
         finally:
             self._delete_context(context)
+
+    @staticmethod
+    def __type_converter(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
+        param_type_table = dict()
+        func_params = icon_score.get_api()[func_name].parameters
+
+        for key, value in kw_params.items():
+            param = func_params.get(key)
+            if param:
+                param_type = param.annotation
+                if param_type is Address:
+                    param_type_table[key] = TypeConverter.CONST_ADDRESS
+                elif param_type is int:
+                    param_type_table[key] = TypeConverter.CONST_INT
+                elif param_type is str:
+                    param_type_table[key] = TypeConverter.CONST_STRING
+                elif param_type is bytes:
+                    param_type_table[key] = TypeConverter.CONST_BYTES
+                elif param_type is bool:
+                    param_type_table[key] = TypeConverter.CONST_BOOL
+
+        converter = TypeConverter(param_type_table)
+        return converter.convert(kw_params, True)
 
     def __fallback(self, icon_score_address: Address):
         """When an IconScore receives some coins and calldata is None,

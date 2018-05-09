@@ -24,7 +24,6 @@ from ..base.exception import ExternalException, PayableException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
-from ..utils.type_converter import TypeConverter
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
@@ -43,8 +42,8 @@ def score(cls):
 
     for c in inspect.getmro(cls):
         custom_funcs = [value for key, value in inspect.getmembers(c, predicate=inspect.isfunction) if not key.startswith('__')]
-        external_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
-        payable_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
+        external_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
+        payable_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
         if external_funcs:
             getattr(cls, CONST_CLASS_EXTERNALS).update(external_funcs)
         if payable_funcs:
@@ -148,7 +147,7 @@ class IconScoreBase(IconScoreObject, ContextGetter):
 
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
         score_func = getattr(self, func_name)
-        return score_func(**self.__type_converter(func_name, kw_params))
+        return score_func(**kw_params)
 
     def __call_fallback(self):
         func_name = 'fallback'
@@ -162,30 +161,6 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         if func_name not in payable_dict:
             if self.msg.value > 0:
                 raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
-
-    def __type_converter(self, func_name: str, kw_params: dict) -> dict:
-        param_type_table = dict()
-
-        func_obj = self.get_api()[func_name]
-        func_params = inspect.signature(func_obj).parameters
-
-        for key, value in kw_params.items():
-            param = func_params.get(key)
-            if param:
-                param_type = param.annotation
-                if param_type is Address:
-                    param_type_table[key] = TypeConverter.CONST_ADDRESS
-                elif param_type is int:
-                    param_type_table[key] = TypeConverter.CONST_INT
-                elif param_type is str:
-                    param_type_table[key] = TypeConverter.CONST_STRING
-                elif param_type is bytes:
-                    param_type_table[key] = TypeConverter.CONST_BYTES
-                elif param_type is bool:
-                    param_type_table[key] = TypeConverter.CONST_BOOL
-
-        converter = TypeConverter(param_type_table)
-        return converter.convert(kw_params, True)
 
     @property
     def msg(self) -> Message:

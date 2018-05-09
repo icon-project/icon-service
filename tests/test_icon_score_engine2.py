@@ -91,7 +91,17 @@ class TestIconScoreEngine2(unittest.TestCase):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    def test_call_method(self):
+    def test_call_method1(self):
+        os.makedirs(self._icon_score_loader.score_root_path)
+        path = os.path.join(TEST_ROOT_PATH, 'tests/score/test_score')
+        installdata = {'content_type': 'application/tbears', 'content': path}
+        calldata = {'method': 'balance_of', 'params': {'addr_from': self._icon_score_address}}
+
+        self._engine.invoke(self._context, self._icon_score_address, 'install', installdata)
+        self._engine.commit()
+        self.assertEqual(1000000000000000000000, self._engine.query(self._context, self._icon_score_address, 'call', calldata))
+
+    def test_call_method2(self):
         os.makedirs(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, 'tests/score/test_score')
         installdata = {'content_type': 'application/tbears', 'content': path}

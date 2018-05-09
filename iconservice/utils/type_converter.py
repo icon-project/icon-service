@@ -85,6 +85,9 @@ class TypeConverter(object):
         :return:
         """
         try:
+            if not isinstance(value, str):
+                return value
+
             value_type = self.type_table[key]
 
             if value_type == TypeConverter.CONST_INT:
