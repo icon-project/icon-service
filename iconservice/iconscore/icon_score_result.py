@@ -70,6 +70,8 @@ class TransactionResult(object):
         for key, value in self.__dict__.items():
             if isinstance(value, Block):
                 new_dict["block_height"] = value.height
+            elif isinstance(value, Address):
+                new_dict[key] = str(value)
             else:
                 new_dict[key] = value
 

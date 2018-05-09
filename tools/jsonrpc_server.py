@@ -53,7 +53,7 @@ class MockDispatcher:
     @staticmethod
     def dispatch():
         req = json.loads(request.get_data().decode())
-        req["params"] = req.get("params", None)
+        # req["params"] = req.get("params", None)
 
         response = methods.dispatch(req)
         return Response(str(response),
@@ -62,7 +62,7 @@ class MockDispatcher:
 
     @staticmethod
     @methods.add
-    def icx_sendTransaction(**params):
+    def icx_sendTransaction(**kwargs):
         """icx_sendTransaction jsonrpc handler
 
         We assume that only one tx in a block
@@ -71,7 +71,13 @@ class MockDispatcher:
         """
         engine = get_icon_service_engine()
 
-        transactions = [params]
+        params = _type_converter.convert(kwargs, recursive=False)
+
+        tx ={}
+        tx['params'] = params
+        tx['method'] = 'icx_sendTransaction'
+
+        transactions = [tx]
 
         block_height: int = get_block_height()
         data: str = f'block_height{block_height}'
@@ -79,9 +85,9 @@ class MockDispatcher:
         block_timestamp_us = 0
         
         try:
-            tx_results = engine.invoke(height=block_height,
-                                       hash=block_hash,
-                                       timestamp=block_timestamp_us,
+            tx_results = engine.invoke(block_height=block_height,
+                                       block_hash=block_hash,
+                                       block_timestamp=block_timestamp_us,
                                        transactions=transactions)
 
             tx_result = tx_results[0]

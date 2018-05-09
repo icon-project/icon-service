@@ -142,6 +142,7 @@ class IconServiceEngine(object):
 
         :param block_height:
         :param block_hash:
+        :param block_timestamp:
         :param transactions: transactions in a block
         :return: The results of transactions
         """
