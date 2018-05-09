@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+
 from ..base.address import Address
 
 
@@ -30,36 +32,61 @@ class TypeConverter(object):
     CONST_BYTES = "bytes"
 
     def __init__(self, type_table: dict=None) -> None:
-        self.param_type_table = type_table
+        self.type_table = type_table
 
-    def convert(self, params: dict) -> dict:
-        return self.convert_dict_values(params)
+    def convert(self, params: object, recursive: bool) -> dict:
+        if isinstance(params, dict):
+            return self.convert_dict_values(params, recursive)
+        elif isinstance(params, list):
+            return self.convert_list_values(params, recursive)
 
-    def convert_dict_values(self, json_dict: dict) -> dict:
+        return params
+
+    def convert_dict_values(self, input: dict, recursive: bool) -> dict:
         """Convert json into appropriate format.
 
-        :param json_dict:
+        Original input is preserved after convert is done.
+
+        :param input:
         :return:
         """
-        json_dictionary = {}
+        output = {}
 
-        for key in json_dict:
-            if isinstance(json_dict[key], dict):
-                json_dictionary[key] = self.convert_dict_values(json_dict[key])
+        for key, value in input.items():
+            if isinstance(value, dict):
+                if recursive:
+                    output[key] = self.convert_dict_values(value,
+                                                           recursive)
+                else:
+                    output[key] = copy.deepcopy(value)
             else:
-                json_dictionary[key] = self.convert_value(key, json_dict[key])
+                output[key] = self.convert_value(key, value)
 
-        return json_dictionary
+        return output
 
-    def convert_value(self, key, value):
-        """Convert str value into specified type.
+    def convert_list_values(self, input: list, recursive: bool) -> list:
+        output = []
+
+        for item in input:
+            if isinstance(item, dict):
+                item = self.convert_dict_values(item, recursive)
+            if isinstance(item, list) and recursive:
+                item = self.convert_list_values(item, recursive)
+
+            output.append(item)
+
+        return output
+
+    def convert_value(self, key: str, value: object) -> object:
+        """Convert str value into the type specified in _type_table
 
         :param key:
         :param value:
         :return:
         """
         try:
-            value_type = self.param_type_table[key]
+            value_type = self.type_table[key]
+
             if value_type == TypeConverter.CONST_INT:
                 return int(str(value), 0)
             elif value_type == TypeConverter.CONST_BOOL:
@@ -70,7 +97,10 @@ class TypeConverter(object):
                 return [Address.from_string(a) for a in value]
             elif value_type == TypeConverter.CONST_BYTES:
                 return bytes.fromhex(value[2:])
-            else:
-                return value
         except KeyError:
-            return value
+            if isinstance(value, list):
+                return self.convert_list_values(value, recursive=True)
+        except:
+            pass
+
+        return value

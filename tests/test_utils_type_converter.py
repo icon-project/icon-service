@@ -17,10 +17,11 @@
 import unittest
 
 from iconservice.utils.type_converter import TypeConverter
+from iconservice.base.address import Address
 
 
 class TestTypeConverter(unittest.TestCase):
-    def test_convert(self):
+    def setUp(self):
         type_table = {
             "from": "address",
             "to": "address",
@@ -32,8 +33,17 @@ class TestTypeConverter(unittest.TestCase):
             "int_array": "int[]",
             "str_array1": "string[]",
             "str_array2": "string[]",
-            "data": "bytes"
+            "data": "bytes",
+            "balance": "int",
+            "address": "address"
         }
+        self.converter = TypeConverter(type_table)
+
+    def tearDown(self):
+        self.converter = None
+
+    def test_convert(self):
+        converter = self.converter
 
         _from = f'hx{"0" * 40}'
         _to = f'hx{"1" * 40}'
@@ -45,7 +55,6 @@ class TestTypeConverter(unittest.TestCase):
         _int_array = [0x1, 0x2, 0x3, 0x1234, 0x5]
         _str_array1 = ["asdf", 'qwer', 'qwer', 'zxcv']
         _unknown = "asdf"
-        converter = TypeConverter(type_table)
         _data = bytes.fromhex("0x1232"[2:])
 
         params = {
@@ -65,7 +74,7 @@ class TestTypeConverter(unittest.TestCase):
             "unknown": _unknown
         }
 
-        ret = converter.convert(params)
+        ret = converter.convert(params, recursive=True)
 
         self.assertEqual(_from, str(ret['from']))
         self.assertEqual(_to, str(ret['to']))
@@ -89,3 +98,80 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(_data, ret['data']['data'])
 
         self.assertEqual(_unknown, ret['unknown'])
+
+    def test_convert_recursively(self):
+        input = {
+            "transaction_data": {
+                "accounts": [
+                    {
+                        "name": "god",
+                        "address": "hx0000000000000000000000000000000000000000",
+                        "balance": "0x2961ffa20dd47f5c4700000"
+                    },
+                    {
+                        "name": "treasury",
+                        "address": "hx1000000000000000000000000000000000000000",
+                        "balance": "0x0"
+                    }
+                ],
+                "message": "A rHizomE has no beGInning Or enD; it is alWays IN the miDDle, between tHings, interbeing, intermeZzO. ThE tree is fiLiatioN, but the rhizome is alliance, uniquelY alliance. The tree imposes the verb \"to be\" but the fabric of the rhizome is the conJUNction, \"AnD ... and ...and...\"THis conJunction carriEs enouGh force to shaKe and uproot the verb \"to be.\" Where are You goIng? Where are you coMing from? What are you heading for? These are totally useless questions.\n\n- 『Mille Plateaux』, Gilles Deleuze & Felix Guattari\n\n\"Hyperconnect the world\""
+            }
+        }
+
+        converter = self.converter
+        output = converter.convert(input, recursive=True)
+
+        accounts = output['transaction_data']['accounts']
+        self.assertTrue(isinstance(accounts, list))
+
+        for account in accounts:
+            name = account['name']
+            address = account['address']
+            balance = account['balance']
+
+            self.assertTrue(isinstance(name, str))
+            self.assertTrue(isinstance(address, Address))
+            self.assertTrue(isinstance(balance, int))
+
+    def test_convert_list_values(self):
+        input = [
+            {
+                "name": "god",
+                "address": "hx0000000000000000000000000000000000000000",
+                "balance": "0x2961ffa20dd47f5c4700000"
+            },
+            {
+                "name": "treasury",
+                "address": "hx1000000000000000000000000000000000000000",
+                "balance": "0x0"
+            }
+        ]
+
+        converter = self.converter
+        output = converter.convert_list_values(input, False)
+
+        self.assertTrue(isinstance(output, list))
+
+        account = output[0]
+        name = account['name']
+        address = account['address']
+        balance = account['balance']
+
+        self.assertTrue(isinstance(name, str))
+        self.assertEqual('god', name)
+        self.assertTrue(isinstance(address, Address))
+        self.assertEqual("hx0000000000000000000000000000000000000000", str(address))
+        self.assertTrue(isinstance(balance, int))
+        self.assertEqual(0x2961ffa20dd47f5c4700000, balance)
+
+        account = output[1]
+        name = account['name']
+        address = account['address']
+        balance = account['balance']
+
+        self.assertTrue(isinstance(name, str))
+        self.assertEqual('treasury', name)
+        self.assertTrue(isinstance(address, Address))
+        self.assertEqual("hx1000000000000000000000000000000000000000", str(address))
+        self.assertTrue(isinstance(balance, int))
+        self.assertEqual(0, balance)

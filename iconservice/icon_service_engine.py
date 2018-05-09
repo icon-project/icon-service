@@ -128,6 +128,7 @@ class IconServiceEngine(object):
     def invoke(self,
                block_height: int,
                block_hash: str,
+               block_timestamp: int,
                transactions) -> 'IconBlockResult':
         """Process transactions in a block sent by loopchain
 
@@ -137,7 +138,7 @@ class IconServiceEngine(object):
         :return: The results of transactions
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
-        context.block = Block(block_height, block_hash)
+        context.block = Block(block_height, block_hash, block_timestamp)
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())

@@ -19,7 +19,6 @@ import sys
 import hashlib
 # import ssl
 # import threading
-# sys.path.append('/home/goldworm/work/icon/loopchain-icon/icon')
 sys.path.append('..')
 sys.path.append('.')
 
@@ -29,13 +28,9 @@ from jsonrpcserver import methods
 
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.base.address import Address
+from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.utils.type_converter import TypeConverter
 
-# from icon.tools.score_invoker import ScoreInvoker
-# from loopchain import utils, configure as conf, util
-# from loopchain.baseservice import CommonThread
-# from loopchain.protos import message_code
-# from loopchain.rest_server import IcnTxPrevalidator
 
 _type_converter = None
 _icon_service_engine = None
@@ -45,53 +40,60 @@ _block_height = 0
 def get_icon_service_engine():
     return _icon_service_engine
 
+
 def get_block_height():
     global _block_height
     _block_height += 1
 
     return _block_height
 
+
 class MockDispatcher:
-    # tx_validator = IcnTxPrevalidator()
 
     @staticmethod
     def dispatch():
         req = json.loads(request.get_data().decode())
-        req["params"] = req.get("params", {})
-        # req["params"]["method"] = request.get_json()["method"]
+        req["params"] = req.get("params", None)
 
         response = methods.dispatch(req)
-        return Response(str(response), response.http_status, mimetype='application/json')
+        return Response(str(response),
+                        response.http_status,
+                        mimetype='application/json')
 
     @staticmethod
     @methods.add
-    def icx_sendTransaction(**kwargs):
-        logging.debug(f"icx_sendTransaction{kwargs}")
+    def icx_sendTransaction(**params):
+        """icx_sendTransaction jsonrpc handler
 
-        req = kwargs
+        We assume that only one tx in a block
+
+        :param params: jsonrpc params field
+        """
         engine = get_icon_service_engine()
 
-        res = {
-            'jsonrpc': req['jsonrpc'],
-            'id': req['id']
-        }
+        transactions = [params]
 
-        transactions = [req]
-
+        block_height: int = get_block_height()
+        data: str = f'block_height{block_height}'
+        block_hash: bytes = hashlib.sha3_256(data.encode()).digest()
+        block_timestamp_us = 0
+        
         try:
-            block_height = get_block_height()
-            data = f'block_height{block_height}'
-            block_hash = hashlib.sha3_256(data.encode()).digest()
-            tx_results = engine.invoke(block_height, block_hash, transactions)
-            res['result'] = tx_results
-        except Exception as e:
-            logging.error(e)
-            res['error'] = {
-                'code': -32603,
-                'message': str(e)
-            }
+            tx_results = engine.invoke(height=block_height,
+                                       hash=block_hash,
+                                       timestamp=block_timestamp_us,
+                                       transactions=transactions)
 
-        return res
+            tx_result = tx_results[0]
+            if tx_result.status == TransactionResult.SUCCESS:
+                engine.commit()
+            else:
+                engine.rollback()
+        except:
+            engine.rollback()
+            raise
+
+        return tx_result.to_dict()
 
     """
     @staticmethod
@@ -123,51 +125,23 @@ class MockDispatcher:
 
     @staticmethod
     @methods.add
-    def icx_getBalance(**kwargs):
-        logging.error('###########' + str(kwargs))
+    def icx_getBalance(**params):
         engine = get_icon_service_engine()
 
-        method = 'icx_getBalance'
-        params = kwargs
-        params['address'] = Address.from_string(params['address'])
-
-        value = engine.query(method, params)
+        # params['address'] = Address.from_string(params['address'])
+        params = _type_converter.convert(params, recursive=False)
+        value = engine.query(method='icx_getBalance', params=params)
 
         return hex(value)
-
-        """
-        util.logger.spam(f"icx_getBalance{kwargs}")
-        response = ScoreInvoker().get_balance(json.dumps(kwargs))
-        try:
-            response_data = json.loads(response.meta)
-        except json.JSONDecodeError as e:
-            response_data = json.loads("{}")
-            response_data['response'] = response.meta
-        response_data['response_code'] = response.code
-        return response_data
-        """
 
     @staticmethod
     @methods.add
-    def icx_getTotalSupply(**kwargs):
+    def icx_getTotalSupply(**params):
         engine = get_icon_service_engine()
 
-        method = 'icx_getTotalSupply'
-        value = engine.query(method, params=None)
+        value: int = engine.query(method='icx_getTotalSupply', params=params)
 
         return hex(value)
-
-        """
-        util.logger.spam(f"icx_getTotalSupply{kwargs}")
-        response = ScoreInvoker().get_total_supply(json.dumps(kwargs))
-        try:
-            response_data = json.loads(response.meta)
-        except json.JSONDecodeError as e:
-            response_data = json.loads("{}")
-            response_data['response'] = response.meta
-        response_data['response_code'] = response.code
-        return response_data
-        """
 
 
 class FlaskServer():
@@ -247,6 +221,7 @@ def init_type_converter():
         'from': 'address',
         'to': 'address',
         'address': 'address',
+        'fee': 'int',
         'value': 'int',
         'balance': 'int'
     }
@@ -262,12 +237,10 @@ def init_icon_service_engine():
     with open('init_genesis.json') as f:
         genesis_block = json.load(f)
 
-    params = []
     accounts = genesis_block['transaction_data']['accounts']
-    for account in accounts:
-        params.append(_type_converter.convert(account))
+    accounts = _type_converter.convert(accounts, recursive=True)
 
-    _icon_service_engine.genesis_invoke(params)
+    _icon_service_engine.genesis_invoke(accounts)
 
 
 if __name__ == '__main__':
