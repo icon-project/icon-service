@@ -16,6 +16,7 @@
 import json
 import logging
 import sys
+import time
 import hashlib
 # import ssl
 # import threading
@@ -73,22 +74,21 @@ class MockDispatcher:
 
         params = _type_converter.convert(kwargs, recursive=False)
 
-        tx ={}
-        tx['params'] = params
-        tx['method'] = 'icx_sendTransaction'
-
-        transactions = [tx]
+        tx = {
+            'method': 'icx_sendTransaction',
+            'params': params
+        }
 
         block_height: int = get_block_height()
         data: str = f'block_height{block_height}'
         block_hash: bytes = hashlib.sha3_256(data.encode()).digest()
-        block_timestamp_us = 0
+        block_timestamp_us = int(time.time() * 10 ** 6)
         
         try:
             tx_results = engine.invoke(block_height=block_height,
                                        block_hash=block_hash,
                                        block_timestamp=block_timestamp_us,
-                                       transactions=transactions)
+                                       transactions=[tx])
 
             tx_result = tx_results[0]
             if tx_result.status == TransactionResult.SUCCESS:
