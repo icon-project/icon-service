@@ -8,6 +8,7 @@ from collections import Iterator
 K = TypeVar('K', int, str, Address)
 V = TypeVar('V', int, str, Address, bytes, bool)
 
+
 class ContainerUtil(object):
 
     @staticmethod

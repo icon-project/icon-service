@@ -19,7 +19,6 @@ import os
 import sys
 import importlib.machinery
 from collections import defaultdict
-from ..base.address import Address
 
 # ImportWarning: can't resolve package from __spec__ or __package__, falling back on __name__ and __path__ return f(*args, **kwds)
 from ..iconscore.icon_score_base import IconScoreBase

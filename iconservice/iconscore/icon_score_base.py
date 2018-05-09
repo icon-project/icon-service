@@ -185,7 +185,7 @@ class IconScoreBase(IconScoreObject, ContextGetter):
                     param_type_table[key] = TypeConverter.CONST_BOOL
 
         converter = TypeConverter(param_type_table)
-        return converter.convert_dict_values(kw_params, True)
+        return converter.convert(kw_params, True)
 
     @property
     def msg(self) -> Message:

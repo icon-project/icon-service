@@ -80,7 +80,7 @@ class IconServiceEngine(object):
 
         self._db_factory = DatabaseFactory(state_db_root_path)
         self._context_factory = IconScoreContextFactory(max_size=5)
-        self._icon_score_loader = IconScoreLoader('score')
+        self._icon_score_loader = IconScoreLoader(icon_score_root_path)
 
         self._icx_storage = self._create_icx_storage(self._db_factory)
 

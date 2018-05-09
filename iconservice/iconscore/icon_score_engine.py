@@ -18,7 +18,7 @@
 
 
 from collections import namedtuple
-from os import path, makedirs, symlink
+from os import path, symlink
 
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException
@@ -26,7 +26,7 @@ from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
 
@@ -42,7 +42,6 @@ class IconScoreEngine(ContextContainer):
 
         :param icx_storage: Get IconScore owner info from icx_storage
         :param icon_score_info_mapper:
-        :param db_factory:
         """
         super().__init__()
 
@@ -160,7 +159,6 @@ class IconScoreEngine(ContextContainer):
         - Add IconScoreInfo to IconScoreInfoMapper
         - Write the owner of score to icx database
 
-        :param context:
         """
         # If context is None, we assume that context type is GENESIS mode
         # Direct access to levelDB
@@ -176,7 +174,7 @@ class IconScoreEngine(ContextContainer):
 
         self._tasks.clear()
 
-    def __install(self, context: IconScoreContext, task: namedtuple) -> None:
+    def __install(self, context: Optional[IconScoreContext], task: namedtuple) -> None:
         """Install an icon score
 
         Owner check has been already done in IconServiceEngine
@@ -202,7 +200,7 @@ class IconScoreEngine(ContextContainer):
         except Exception as e:
             print(e)
 
-    def __update(self, context: IconScoreContext, task: namedtuple) -> None:
+    def __update(self, context: Optional[IconScoreContext], task: namedtuple) -> None:
         """Update an icon score
 
         Owner check has been already done in IconServiceEngine
@@ -213,7 +211,5 @@ class IconScoreEngine(ContextContainer):
         """It is called when the previous block has been canceled
 
         Rollback install, update or remove tasks cached in the previous block
-
-        :param context:
         """
         self._tasks.clear()
