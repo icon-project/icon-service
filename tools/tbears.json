@@ -1,0 +1,14 @@
+{
+    "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "port": 9000,
+    "score_root": "./.score",
+    "db_root": "./.db",
+    "genesis": {
+        "address": "hx0000000000000000000000000000000000000000",
+        "balance": "0x2961fff8ca4a62327800000"
+    },
+    "treasury": {
+        "address": "hx1000000000000000000000000000000000000000",
+        "balance": "0x0"
+    }
+}
