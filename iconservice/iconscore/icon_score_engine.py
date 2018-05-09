@@ -187,6 +187,7 @@ class IconScoreEngine(ContextContainer):
         content = task.data.get('content')
 
         if content_type == 'application/tbears':
+            self.__icon_score_info_mapper[task.address] = None
             score_root_path = self.__icon_score_info_mapper.score_root_path
             target_path = path.join(score_root_path, task.address.body.hex())
             symlink(content, target_path)
