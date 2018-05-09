@@ -82,7 +82,9 @@ class IconServiceEngine(object):
         self._context_factory = IconScoreContextFactory(max_size=5)
         self._icon_score_loader = IconScoreLoader(icon_score_root_path)
 
-        self._icx_storage = self._create_icx_storage(self._db_factory)
+        self._icx_context_db = self._db_factory.create_by_name('icon_dex')
+        self._icx_context_db.address = ICX_ENGINE_ADDRESS
+        self._icx_storage = IcxStorage(self._icx_context_db)
 
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
@@ -168,6 +170,7 @@ class IconServiceEngine(object):
             tx_result = self.call(context, method, params)
             block_result.append(tx_result)
 
+            context.block_batch.put_tx_batch(context.tx_batch)
             context.tx_batch.clear()
 
         # precommit_state will be written to levelDB on commit()
@@ -366,6 +369,8 @@ class IconServiceEngine(object):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
+        print('precommit: ' + str(self._precommit_state.block_batch))
+
         if self._precommit_state is None:
             raise IconException(
                 ExceptionCode.INTERNAL_ERROR,
@@ -374,13 +379,13 @@ class IconServiceEngine(object):
         block_batch = self._precommit_state.block_batch
 
         for address in block_batch:
-            icon_score = self._icon_score_mapper.get_icon_score(address)
-            # FIXME: by goldworm
-            context_db = icon_score.db._context_db
-            icon_score_batch = block_batch[address]
+            if address == ICX_ENGINE_ADDRESS:
+                context_db = self._icx_context_db
+            else:
+                icon_score = self._icon_score_mapper.get_icon_score(address)
+                context_db = icon_score.db._context_db
 
-            for key, value in icon_score_batch.items():
-                context_db.write_batch(context=None, key=key, value=value)
+            context_db.write_batch(context=None, states=block_batch[address])
 
         self._precommit_state = None
         self._icon_score_engine.commit()
