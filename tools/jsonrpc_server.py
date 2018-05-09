@@ -190,34 +190,64 @@ class FlaskServer():
 
 
 class SimpleRestServer():
-    def __init__(self, peer_port, peer_ip_address=None):
-        # if peer_ip_address is None:
-        #     peer_ip_address = conf.IP_LOCAL
-        # CommonThread.__init__(self)
-        self.__peer_port = peer_port
-        self.__peer_ip_address = peer_ip_address
+    def __init__(self, port, ip_address=None):
+        self.__port = port
+        self.__ip_address = ip_address
 
         self.__server = FlaskServer()
         self.__server.set_resource()
 
     def run(self):
-        # ScoreInvoker().init_stub(self.__peer_ip_address, self.__peer_port)
-        # ScoreInvoker().score_load()
-        api_port = self.__peer_port + 1900 #conf.PORT_DIFF_REST_SERVICE_CONTAINER
-        logging.error("SimpleRestServer run... %s", str(api_port))
+        logging.error(f"SimpleRestServer run... {self.__port}")
 
-        # event.set()
-        self.__server.app.run(port=api_port,
-                              host=self.__peer_ip_address,
+        self.__server.app.run(port=self.__port,
+                              host=self.__ip_address,
                               debug=False)
 
 
 def main():
-    init_type_converter()
-    init_icon_service_engine()
+    if len(sys.argv) == 2:
+        path = sys.argv[1]
+    else:
+        path = './tbears.json'
 
-    server = SimpleRestServer(7100)
+    print(f'config_file: {path}')
+    conf = load_config(path)
+
+    init_type_converter()
+    init_icon_service_engine(conf)
+
+    server = SimpleRestServer(conf['port'])
     server.run()
+
+
+def load_config(path: str) -> dict:
+    default_conf = {
+        "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "port": 9000,
+        "score_root": "./.score",
+        "db_root": "./db",
+        "genesis": {
+            "address": "hx0000000000000000000000000000000000000000",
+            "balance": "0x2961fff8ca4a62327800000"
+        },
+        "treasury": {
+            "address": "hx1000000000000000000000000000000000000000",
+            "balance": "0x0"
+        }
+    }
+
+    try:
+        with open(path) as f:
+            conf = json.load(f)
+    except:
+        return default_conf
+
+    for key in default_conf:
+        if key not in conf:
+            conf[key] = default_conf[key]
+
+    return conf
 
 
 def init_type_converter():
@@ -234,19 +264,17 @@ def init_type_converter():
     _type_converter = TypeConverter(type_table)
 
 
-def init_icon_service_engine():
+def init_icon_service_engine(conf):
     global _icon_service_engine
 
     _icon_service_engine = IconServiceEngine()
-    _icon_service_engine.open('./score_root', './db_root')
+    _icon_service_engine.open(icon_score_root_path=conf['score_root'],
+                              state_db_root_path=conf['db_root'])
 
-    with open('init_genesis.json') as f:
-        genesis_block = json.load(f)
+    genesis = _type_converter.convert(conf['genesis'], recursive=False)
+    treasury = _type_converter.convert(conf['treasury'], recursive=False)
 
-    accounts = genesis_block['transaction_data']['accounts']
-    accounts = _type_converter.convert(accounts, recursive=True)
-
-    _icon_service_engine.genesis_invoke(accounts)
+    _icon_service_engine.genesis_invoke([genesis, treasury])
 
 
 if __name__ == '__main__':
