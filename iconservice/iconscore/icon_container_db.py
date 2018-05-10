@@ -225,8 +225,7 @@ class ArrayDB(Iterator):
             if index < 0:
                 index += len(self)
             if index < 0 or index >= len(self):
-                return get_default_value(self.__value_type)
-                # raise ContainerDBException(f'ArrayDB out of range, {index}')
+                raise ContainerDBException(f'ArrayDB out of range, {index}')
 
             sub_db = self.__db
             return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(index)), self.__value_type)
