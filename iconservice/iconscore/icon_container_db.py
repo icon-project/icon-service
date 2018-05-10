@@ -10,6 +10,7 @@ V = TypeVar('V', int, str, Address, bytes, bool)
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase
 
+
 class ContainerUtil(object):
 
     @staticmethod

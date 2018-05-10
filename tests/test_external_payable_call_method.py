@@ -1,9 +1,10 @@
 import unittest
 from iconservice.iconscore.icon_score_base import IconScoreBase, score, external, payable
 from iconservice.iconscore.icon_score_context import IconScoreContext, Message
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import Address, AddressPrefix, create_address
 from iconservice.base.exception import ExternalException, PayableException
 from tests.mock_db import MockDB
+
 
 @score
 class CallClass(IconScoreBase):
@@ -11,8 +12,8 @@ class CallClass(IconScoreBase):
     def genesis_init(self, *args, **kwargs) -> None:
         pass
 
-    def __init__(self, db, *args, **kwargs):
-        super().__init__(db, *args, **kwargs)
+    def __init__(self, db, owner):
+        super().__init__(db, owner)
 
     @external(readonly=True)
     def func1(self):
@@ -49,7 +50,7 @@ class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
         self.db = MockDB(MockDB.make_dict())
-        self.ins = CallClass(db=self.db)
+        self.ins = CallClass(db=self.db, owner=create_address(AddressPrefix.EOA, b'owner'))
         self.test_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(0).encode()), 1))
         self.empty_context = IconScoreContext(msg=Message(Address(AddressPrefix.EOA, hex(1).encode()), 0))
         pass
