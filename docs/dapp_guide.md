@@ -91,6 +91,7 @@ class CrowdSale(IconScoreBase):
         one_icx = 1 * 10 * 18
         one_minutes = 1 * 60
         now_seconds = self.now_second()
+        
         self._addr_beneficiary.set(if_successful_send_to)
         self._funding_goal = funding_goal_in_icx * one_icx
         self._dead_line = now_seconds + duration_in_minutes * one_minutes
