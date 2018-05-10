@@ -337,6 +337,7 @@ class IconServiceEngine(object):
                 else:
                     to = self.__generate_contract_address(
                         context.tx.origin, context.tx.timestamp, context.tx.nonce)
+                tx_result.contract_address = to
 
             self._icon_score_engine.invoke(context, to, data_type, data)
 
@@ -344,7 +345,6 @@ class IconServiceEngine(object):
             context.tx_batch.clear()
 
             tx_result.status = TransactionResult.SUCCESS
-            tx_result.contract_address = to
         except:
             tx_result.status = TransactionResult.FAILURE
 
