@@ -56,7 +56,7 @@ class ContainerUtil(object):
     @staticmethod
     def decode_object(value: bytes, value_type: type) -> Optional[Union[K, V]]:
         if value is None:
-            return return_default_value(value_type)
+            return get_default_value(value_type)
 
         obj_value = None
         if value_type == int:
@@ -97,7 +97,7 @@ class ContainerUtil(object):
 
         byte_key = sub_db.get(ContainerUtil.encode_key(last_arg))
         if byte_key is None:
-            return return_default_value(value_type)
+            return get_default_value(value_type)
         return ContainerUtil.decode_object(byte_key, value_type)
 
     @staticmethod
@@ -225,7 +225,7 @@ class ArrayDB(Iterator):
             if index < 0:
                 index += len(self)
             if index < 0 or index >= len(self):
-                return return_default_value(self.__value_type)
+                return get_default_value(self.__value_type)
                 # raise ContainerDBException(f'ArrayDB out of range, {index}')
 
             sub_db = self.__db
@@ -253,7 +253,7 @@ class VarDB(object):
         return ContainerUtil.decode_object(self.__db.get(self.__var_byte_key), self.__value_type)
 
 
-def return_default_value(value_type: type) -> Any:
+def get_default_value(value_type: type) -> Any:
     if value_type == int:
         return 0
     elif value_type == str:
