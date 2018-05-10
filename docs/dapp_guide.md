@@ -40,7 +40,7 @@ class SampleToken(IconScoreBase):
         if self.balance_of(_addr_from) < _value:
             raise IconScoreBaseException(f"{_addr_from}'s balance < {_value}")
 
-        self._balances[_addr_from] = self._balances[_addr_from] _value
+        self._balances[_addr_from] = self._balances[_addr_from] - _value
         self._balances[_addr_to] = _value
         return True
 
