@@ -9,7 +9,7 @@ TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 class TestIconScoreLoader(unittest.TestCase):
-    _ROOT_SCORE_PATH = 'score'
+    _ROOT_SCORE_PATH = os.path.join(TEST_ROOT_PATH, 'score')
 
     def setUp(self):
         self._loader = IconScoreLoader(self._ROOT_SCORE_PATH)

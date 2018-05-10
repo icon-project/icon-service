@@ -36,7 +36,7 @@ TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 class TestIconScoreEngine(unittest.TestCase):
-    _ROOT_SCORE_PATH = 'score'
+    _ROOT_SCORE_PATH = os.path.join(TEST_ROOT_PATH, 'score')
     _TEST_DB_PATH = 'tests/test_db/'
 
     def setUp(self):
@@ -50,7 +50,7 @@ class TestIconScoreEngine(unittest.TestCase):
         self.__ensure_dir(db_path)
         self._db_factory = DatabaseFactory(db_path)
         self._icx_storage = self._create_icx_storage(self._db_factory)
-        self._icon_score_loader = IconScoreLoader('score')
+        self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
 
         self._engine = IconScoreEngine(

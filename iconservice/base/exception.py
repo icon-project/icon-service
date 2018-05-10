@@ -108,25 +108,13 @@ def check_exception(func):
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except IconScoreException:
-            pass
-        except IconScoreBaseException:
-            log_call_stack = traceback.format_stack()
-            log_exec = traceback.format_exc()
-            # TODO replace log function
-            print(f'call_stack\n', *log_call_stack, log_exec)
-        except IconException:
-            log_call_stack = traceback.format_stack()
-            log_exec = traceback.format_exc()
-            # TODO replace log function
-            print(f'call_stack\n', *log_call_stack, log_exec)
         except IconServiceBaseException:
             log_call_stack = traceback.format_stack()
             log_exec = traceback.format_exc()
             # TODO replace log function
             print(f'call_stack\n', *log_call_stack, log_exec)
-        except Exception:
-            raise
+        except Exception as e:
+            raise e
         finally:
             pass
     return _wrapper

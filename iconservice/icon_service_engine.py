@@ -20,7 +20,7 @@ import hashlib
 from collections import namedtuple
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
-from .base.exception import ExceptionCode, IconException
+from .base.exception import ExceptionCode, IconException, check_exception
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -135,6 +135,7 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
+    @check_exception
     def invoke(self,
                block_height: int,
                block_hash: str,
@@ -181,6 +182,7 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
+    @check_exception
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
 

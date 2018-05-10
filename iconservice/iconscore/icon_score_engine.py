@@ -21,7 +21,7 @@ from collections import namedtuple
 from os import path, symlink, makedirs
 
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException
+from ..base.exception import ExceptionCode, IconException, check_exception
 from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
@@ -55,6 +55,7 @@ class IconScoreEngine(ContextContainer):
             ('type', 'address', 'owner', 'data', 'block_height', 'tx_index'))
         self._tasks = []
 
+    @check_exception
     def invoke(self,
                context: IconScoreContext,
                icon_score_address: Address,
@@ -69,14 +70,15 @@ class IconScoreEngine(ContextContainer):
         """
 
         if data_type == 'call':
-            self.__call(context, icon_score_address, data)
+                self.__call(context, icon_score_address, data)
         elif data_type == 'install' or data_type == 'update':
-            self.__put_task(context, data_type, icon_score_address, data)
+                self.__put_task(context, data_type, icon_score_address, data)
         else:
             raise IconException(
                 ExceptionCode.INVALID_PARAMS,
                 f'Invalid data type ({data_type})')
 
+    @check_exception
     def query(self,
               context: IconScoreContext,
               icon_score_address: Address,
@@ -171,6 +173,7 @@ class IconScoreEngine(ContextContainer):
         icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
         call_fallback(icon_score)
 
+    @check_exception
     def commit(self) -> None:
         """It is called when the previous block has been confirmed
 
@@ -214,9 +217,12 @@ class IconScoreEngine(ContextContainer):
             self.__icon_score_info_mapper.delete_icon_score(task.address)
             score_root_path = self.__icon_score_info_mapper.score_root_path
             target_path = path.join(score_root_path, task.address.body.hex())
-            makedirs(target_path)
+            makedirs(target_path, exist_ok=True)
             target_path = path.join(target_path, '0_0')
-            symlink(content, target_path, target_is_directory=True)
+            try:
+                symlink(content, target_path, target_is_directory=True)
+            except FileExistsError:
+                pass
         else:
             pass
 
