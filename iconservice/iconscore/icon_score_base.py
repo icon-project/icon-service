@@ -50,8 +50,8 @@ def score(cls):
             getattr(cls, CONST_CLASS_PAYABLES).update(payable_funcs)
 
     @wraps(cls)
-    def __wrapper(*args, **kwargs):
-        res = cls(*args, **kwargs)
+    def __wrapper(*args):
+        res = cls(*args)
         return res
     return __wrapper
 
@@ -68,10 +68,10 @@ def external(readonly=False):
         setattr(func, CONST_EXTERNAL_FLAG, int(readonly))
 
         @wraps(func)
-        def __wrapper(calling_obj: object, **kwargs):
+        def __wrapper(calling_obj: object, *args, **kwargs):
             if not (isinstance(calling_obj, IconScoreBase)):
                 raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
-            res = func(calling_obj, **kwargs)
+            res = func(calling_obj, *args, **kwargs)
             return res
         return __wrapper
     return __inner_func
