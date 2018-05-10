@@ -110,7 +110,10 @@ class MockDispatcher:
         params = _type_converter.convert(params, recursive=False)
         value = engine.query(method='icx_call', params=params)
 
-        return hex(value)
+        if isinstance(value, int):
+            value = hex(value)
+
+        return value
 
     @staticmethod
     @methods.add
