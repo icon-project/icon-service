@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import traceback
 from enum import IntEnum, unique
 from functools import wraps
@@ -112,7 +113,7 @@ def check_exception(func):
             log_call_stack = traceback.format_stack()
             log_exec = traceback.format_exc()
             # TODO replace log function
-            print(f'call_stack\n', *log_call_stack, log_exec)
+            logging.debug(f'call_stack\n{log_call_stack}{log_exec}')
         except Exception as e:
             raise e
         finally:

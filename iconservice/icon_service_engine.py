@@ -17,6 +17,7 @@
 import json
 import os
 import hashlib
+import logging
 from collections import namedtuple
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
@@ -100,17 +101,10 @@ class IconServiceEngine(object):
 
         self._precommit_state: 'PrecommitState' = None
 
-    def _create_icx_storage(self, db_factory: DatabaseFactory) -> 'IcxStorage':
-        """Create IcxStorage instance
-
-        :param db_factory: ContextDatabase Factory
-        """
-        db: 'ContextDatabase' = db_factory.create_by_name('icon_dex')
-        db.address = ICX_ENGINE_ADDRESS
-
-        return IcxStorage(db)
-
     def close(self) -> None:
+        """Free all resources occupied by IconServiceEngine
+        including db, memory and so on
+        """
         self._icx_engine.close()
 
     def genesis_invoke(self, accounts: list) -> None:
@@ -233,9 +227,9 @@ class IconServiceEngine(object):
             handler = self._handlers[method]
             return handler(context, params)
         except KeyError as ke:
-            print(ke)
+            logging.error(ke)
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     def _handle_icx_getBalance(self,
                                context: IconScoreContext,
@@ -371,12 +365,12 @@ class IconServiceEngine(object):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
-        print('precommit: ' + str(self._precommit_state.block_batch))
-
         if self._precommit_state is None:
             raise IconException(
                 ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
+
+        logging.debug(f'precommit: {self._precommit_state.block_batch}')
 
         block_batch = self._precommit_state.block_batch
 

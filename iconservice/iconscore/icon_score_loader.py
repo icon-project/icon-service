@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import json
 import sys
 import importlib.machinery
@@ -47,7 +48,7 @@ class IconScoreLoader(object):
         dir_path = dirname(file_path)
 
         if dir_path in sys.path:
-            print(f"sys.path has the score path: {dir_path}")
+            logging.error(f"sys.path has the score path: {dir_path}")
         else:
             sys.path.append(dir_path)
 

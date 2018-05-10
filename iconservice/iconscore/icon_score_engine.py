@@ -17,6 +17,7 @@
 """
 
 
+import logging
 from collections import namedtuple
 from os import path, symlink, makedirs
 
@@ -232,7 +233,7 @@ class IconScoreEngine(ContextContainer):
         try:
             score.genesis_init(task.data)
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     def __update(self, context: Optional[IconScoreContext], task: namedtuple) -> None:
         """Update an icon score
