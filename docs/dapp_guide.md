@@ -40,8 +40,8 @@ class SampleToken(IconScoreBase):
         if self.balance_of(_addr_from) < _value:
             raise IconScoreBaseException(f"{_addr_from}'s balance < {_value}")
 
-        self._balances[_addr_from] -= _value
-        self._balances[_addr_to] += _value
+        self._balances[_addr_from] = self._balances[_addr_from] _value
+        self._balances[_addr_to] = _value
         return True
 
     @external()
@@ -110,7 +110,7 @@ class CrowdSale(IconScoreBase):
             raise IconScoreBaseException('crowd sale is closed')
 
         amount = self.msg.value
-        self._balance_of[self.msg.sender] += amount
+        self._balance_of[self.msg.sender] = self._balance_of[self.msg.sender] + amount
         self._amount_raise.set(self._amout_raise.get() + amount)
         self.call(self._addr_token_reward.get(), 'transfer', {'addr_to': self.msg.sender, 'value': amount/self._price.get()})
 
