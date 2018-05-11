@@ -18,7 +18,7 @@
 import os
 
 from .db import ContextDatabase
-from ..base.address import Address
+from ..base.address import Address, create_address
 
 
 class DatabaseFactory(object):

@@ -15,49 +15,51 @@
 # limitations under the License.
 
 import json
-import os
 import sys
 import importlib.machinery
+from os.path import dirname
+from os import path, listdir
 from collections import defaultdict
-from ..base.address import Address
 
 # ImportWarning: can't resolve package from __spec__ or __package__, falling back on __name__ and __path__ return f(*args, **kwds)
 from ..iconscore.icon_score_base import IconScoreBase
-
-ICON_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 
 
 class IconScoreLoader(object):
     _PACKAGE_PATH = 'package.json'
 
     def __init__(self, icon_score_root_path: str):
-        self.__score_root_path = os.path.join(ICON_ROOT_PATH, icon_score_root_path)
+        self.__score_root_path = icon_score_root_path
+
+    @property
+    def score_root_path(self):
+        return self.__score_root_path
 
     @staticmethod
     def __load_json(root_path: str) -> dict:
-        path = os.path.join(root_path, IconScoreLoader._PACKAGE_PATH)
-        with open(path, 'r') as f:
+        root_path = path.join(root_path, IconScoreLoader._PACKAGE_PATH)
+        with open(root_path, 'r') as f:
             return json.load(f)
 
     @staticmethod
-    def __load_user_score_module(path: str, call_class_name: str):
+    def __load_user_score_module(file_path: str, call_class_name: str):
 
-        dir_path = os.path.dirname(path)
+        dir_path = dirname(file_path)
 
         if dir_path in sys.path:
             print(f"sys.path has the score path: {dir_path}")
         else:
             sys.path.append(dir_path)
 
-        module = importlib.machinery.SourceFileLoader(call_class_name, path).load_module()
+        module = importlib.machinery.SourceFileLoader(call_class_name, file_path).load_module()
         return getattr(module, call_class_name)
 
     @staticmethod
     def __get_last_version_path(score_root_path: str, address_body: str):
-        address_path = os.path.join(score_root_path, str(address_body))
+        address_path = path.join(score_root_path, str(address_body))
 
         tmp_dict = defaultdict(list)
-        for dir_name in os.listdir(address_path):
+        for dir_name in listdir(address_path):
             block_height, tx_index = dir_name.split('_')
             tmp_dict[block_height].append(tx_index)
 
@@ -65,11 +67,11 @@ class IconScoreLoader(object):
         last_tx_index = sorted(tmp_dict[last_block_height], key=int)[-1]
 
         last_version = '{}_{}'.format(last_block_height, last_tx_index)
-        return os.path.join(address_path, last_version)
+        return path.join(address_path, last_version)
 
     def load_score(self, address_body: str):
         last_version_path = self.__get_last_version_path(self.__score_root_path, address_body)
         score_package_info = self.__load_json(last_version_path)
-        score_main_file_path = os.path.join(last_version_path, score_package_info["main_file"] + ".py")
+        score_main_file_path = path.join(last_version_path, score_package_info["main_file"] + ".py")
         score = self.__load_user_score_module(score_main_file_path, score_package_info["main_score"])
         return score

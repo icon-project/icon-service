@@ -119,6 +119,17 @@ class IconScoreInfoMapper(dict, ContextGetter):
                 ExceptionCode.INVALID_PARAMS,
                 f'{info} is not IconScoreInfo type.')
 
+    @property
+    def score_root_path(self):
+        return self.__icon_score_loader.score_root_path
+
+    def delete_icon_score(self, address: Address) -> None:
+        """
+        :param address:
+        """
+        if address in self:
+            del self[address]
+
     def get_icon_score(self, address: Address) -> Optional['IconScoreBase']:
         """
         :param address:
@@ -136,12 +147,12 @@ class IconScoreInfoMapper(dict, ContextGetter):
         return icon_score
 
     def __load_score(self, address: Address) -> Optional[IconScoreInfo]:
-        score_wrapper = self.__load_score_wrapper(address)
-        score_db = self.__create_icon_score_database(address)
-
         owner = self.__icx_storage.get_score_owner(self._context, address)
         if owner is None:
             return None
+
+        score_wrapper = self.__load_score_wrapper(address)
+        score_db = self.__create_icon_score_database(address)
 
         icon_score = score_wrapper(score_db, owner)
         return self.__add_score_to_mapper(icon_score)

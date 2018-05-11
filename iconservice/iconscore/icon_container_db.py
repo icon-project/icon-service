@@ -1,12 +1,14 @@
 import collections
-from typing import TypeVar, Optional, Any, Union, Tuple
+from typing import TypeVar, Optional, Any, Union, Tuple, TYPE_CHECKING
 from ..base.address import Address
 from ..base.exception import ContainerDBException
-from ..database.db import IconScoreDatabase
 from collections import Iterator
 
 K = TypeVar('K', int, str, Address)
 V = TypeVar('V', int, str, Address, bytes, bool)
+
+if TYPE_CHECKING:
+    from ..database.db import IconScoreDatabase
 
 
 class ContainerUtil(object):
@@ -54,7 +56,7 @@ class ContainerUtil(object):
     @staticmethod
     def decode_object(value: bytes, value_type: type) -> Optional[Union[K, V]]:
         if value is None:
-            return None
+            return get_default_value(value_type)
 
         obj_value = None
         if value_type == int:
@@ -79,7 +81,7 @@ class ContainerUtil(object):
         return key_from_bytes[:-1]
 
     @staticmethod
-    def put_to_db(db: IconScoreDatabase, db_key: str, container: iter) -> None:
+    def put_to_db(db: 'IconScoreDatabase', db_key: str, container: iter) -> None:
         sub_db = db.get_sub_db(ContainerUtil.encode_key(db_key))
         if isinstance(container, dict):
             ContainerUtil.__put_to_db_internal(sub_db, container.items())
@@ -87,7 +89,7 @@ class ContainerUtil(object):
             ContainerUtil.__put_to_db_internal(sub_db, enumerate(container))
 
     @staticmethod
-    def get_from_db(db: IconScoreDatabase, db_key: str, *args, value_type: type) -> Optional[K]:
+    def get_from_db(db: 'IconScoreDatabase', db_key: str, *args, value_type: type) -> Optional[K]:
         sub_db = db.get_sub_db(ContainerUtil.encode_key(db_key))
         *args, last_arg = args
         for arg in args:
@@ -95,11 +97,11 @@ class ContainerUtil(object):
 
         byte_key = sub_db.get(ContainerUtil.encode_key(last_arg))
         if byte_key is None:
-            return None
+            return get_default_value(value_type)
         return ContainerUtil.decode_object(byte_key, value_type)
 
     @staticmethod
-    def __put_to_db_internal(db: IconScoreDatabase, iters: iter) -> None:
+    def __put_to_db_internal(db: 'IconScoreDatabase', iters: iter) -> None:
         for key, value in iters:
             sub_db = db.get_sub_db(ContainerUtil.encode_key(key))
             if isinstance(value, dict):
@@ -114,7 +116,7 @@ class ContainerUtil(object):
 
 class DictDB(object):
 
-    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type, depth: int=1) -> None:
+    def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type, depth: int=1) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
         self.__value_type = value_type
         self.__depth = depth
@@ -160,7 +162,7 @@ class DictDB(object):
 class ArrayDB(Iterator):
     __SIZE = 'size'
 
-    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type) -> None:
+    def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
         self.__size = self.__get_size()
         self.__index = 0
@@ -237,7 +239,7 @@ class ArrayDB(Iterator):
 
 class VarDB(object):
 
-    def __init__(self, var_key: str, db: IconScoreDatabase, value_type: type) -> None:
+    def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
         self.__db = db
         self.__var_byte_key = ContainerUtil.encode_key(var_key)
         self.__value_type = value_type
@@ -249,3 +251,10 @@ class VarDB(object):
     def get(self) -> Optional[V]:
         return ContainerUtil.decode_object(self.__db.get(self.__var_byte_key), self.__value_type)
 
+
+def get_default_value(value_type: type) -> Any:
+    if value_type == int:
+        return 0
+    elif value_type == str:
+        return ""
+    return None

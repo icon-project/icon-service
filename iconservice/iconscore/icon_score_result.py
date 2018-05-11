@@ -17,7 +17,6 @@
 
 import abc
 import json
-import re
 from ..base.address import Address
 from ..base.block import Block
 
@@ -62,6 +61,22 @@ class TransactionResult(object):
             f'contract_address: {self.contract_address}\n' \
             f'step_used: {self.step_used}'
 
+    def to_dict(self) -> dict:
+        """
+        Returns properties as `dict`
+        :return: a dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if isinstance(value, Block):
+                new_dict["block_height"] = value.height
+            elif isinstance(value, Address):
+                new_dict[key] = str(value)
+            else:
+                new_dict[key] = value
+
+        return new_dict
+
 
 class Serializer(abc.ABC):
     """ An abstract class serialize results of transactions.
@@ -102,8 +117,7 @@ class JsonSerializer(Serializer):
 
         :return: a serialized data.
         """
-        serialized = json.dumps(transaction_results,
-                                cls=JsonSerializer.Encoder)
+        serialized = json.dumps(transaction_results, cls=JsonSerializer.Encoder)
         return bytes(serialized, 'utf-8')
 
     class Encoder(json.JSONEncoder):
@@ -112,23 +126,6 @@ class JsonSerializer(Serializer):
 
         def default(self, obj):
             if isinstance(obj, TransactionResult):
-                new_dict = {}
-                for key, value in obj.__dict__.items():
-                    if key == "block":
-                        new_dict["blockHeight"] = value.height
-                    else:
-                        new_dict[JsonSerializer.Encoder.to_camelcase(key)] \
-                            = value
-                return new_dict
+                return obj.to_dict()
 
-            return {'__{}__'.format(obj.__class__.__name__): obj.__dict__}
-
-        @staticmethod
-        def to_camelcase(name) -> str:
-            """Convert a under score name to camelcase name
-
-            :param name: under score name
-            :return: camelcase name
-            """
-            return re.compile(r'_([a-z])').sub(
-                lambda x: x.group(1).upper(), name)
+            return super().default(obj)

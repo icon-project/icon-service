@@ -1,5 +1,6 @@
 import unittest
 
+from iconservice import Address
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from tests.mock_db import create_mock_icon_score_db
@@ -107,3 +108,63 @@ class TestIconContainerDB(unittest.TestCase):
         test_var.set(1)
 
         self.assertEqual(test_var.get(), 1)
+
+    def test_default_val_db(self):
+        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}}
+        ContainerUtil.put_to_db(self.db, 'test_dict', test_dict)
+
+        # dict_db
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'b', value_type=int), 0)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=str), "")
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=bytes), b"")
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=Address), None)
+
+        # list_db
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=str), '')
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=int), 0)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=bytes), b'')
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=Address), None)
+
+        # var_db
+        test_var = VarDB('test_var', self.db, value_type=int)
+        self.assertEqual(test_var.get(), 0)
+        test_var2 = VarDB('test_var2', self.db, value_type=str)
+        self.assertEqual(test_var2.get(), "")
+        test_var3 = VarDB('test_var3', self.db, value_type=bytes)
+        self.assertEqual(test_var3.get(), b'')
+        test_var4 = VarDB('test_var4', self.db, value_type=Address)
+        self.assertEqual(test_var4.get(), None)
+
+        # array_db_int
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+        range_size = 3
+
+        for i in range(range_size):
+            test_array.put(i)
+
+        for i in range(range_size):
+            self.assertEqual(test_array[i], i)
+
+        self.assertEqual(test_array[3], 0)
+
+        for i in range(range_size, range_size):
+            self.assertRaises(ContainerDBException, test_array[i])
+
+        cant_find_value = range_size
+        self.assertFalse(cant_find_value in test_array)
+        self.assertEqual(range_size, len(test_array))
+
+        for e, i in zip(test_array, range(range_size)):
+            self.assertEqual(e, i)
+
+        self.assertEqual(test_array[-1], range(range_size)[-1])
+
+        # array_db_str
+        test_array2 = ArrayDB('test_array2', self.db, value_type=str)
+        range_size = 3
+
+        for i in range(range_size):
+            test_array2.put(str(i))
+
+        self.assertEqual(test_array2[3], "")
+        self.assertEqual(test_array2[4], "")

@@ -35,22 +35,19 @@ from iconservice.icx.icx_storage import IcxStorage
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
-class TestIconScoreEngine(unittest.TestCase):
-    _ROOT_SCORE_PATH = os.path.join(TEST_ROOT_PATH, 'score')
-    _TEST_DB_PATH = 'tests/test_db/'
+# have to score.zip unpack and proj_name = test_score
+class TestIconScoreEngine2(unittest.TestCase):
+    _ROOT_SCORE_PATH = 'score'
+    _TEST_DB_PATH = 'tests/test_db'
 
     def setUp(self):
-        archive_path = 'tests/score.zip'
-        archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
-        zip_bytes = self.read_zipfile_as_byte(archive_path)
-        install_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        self.__unpack_zip_file(install_path, zip_bytes)
-
         db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+        score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         self.__ensure_dir(db_path)
         self._db_factory = DatabaseFactory(db_path)
         self._icx_storage = self._create_icx_storage(self._db_factory)
-        self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
+
+        self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
 
         self._engine = IconScoreEngine(
@@ -58,7 +55,7 @@ class TestIconScoreEngine(unittest.TestCase):
             self._icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'SampleToken')
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'test_score')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
@@ -91,35 +88,26 @@ class TestIconScoreEngine(unittest.TestCase):
         return IcxStorage(db)
 
     @staticmethod
-    def read_zipfile_as_byte(archive_path: str) -> bytes:
-        with open(archive_path, 'rb') as f:
-            byte_data = f.read()
-            return byte_data
+    def __ensure_dir(dir_path):
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
 
-    @staticmethod
-    def __unpack_zip_file(install_path: str, data: bytes):
-        file_info_generator = IconScoreInstaller.extract_files_gen(data)
-        for name, file_info, parent_directory in file_info_generator:
-            if not os.path.exists(os.path.join(install_path, parent_directory)):
-                os.makedirs(os.path.join(install_path, parent_directory))
-            with file_info as file_info_context, open(os.path.join(install_path, name), 'wb') as dest:
-                contents = file_info_context.read()
-                dest.write(contents)
-        return True
+    def test_call_method1(self):
+        self.__ensure_dir(self._icon_score_loader.score_root_path)
+        path = os.path.join(TEST_ROOT_PATH, 'tests/score/test_score')
+        installdata = {'content_type': 'application/tbears', 'content': path}
+        calldata = {'method': 'balance_of', 'params': {'addr_from': self._icon_score_address}}
 
-    @staticmethod
-    def __ensure_dir(file_path):
-        directory = os.path.dirname(file_path)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-    def test_install(self):
-        self._engine.invoke(self._context, self._icon_score_address, 'install', {})
+        self._engine.invoke(self._context, self._icon_score_address, 'install', installdata)
         self._engine.commit()
+        self.assertEqual(1000000000000000000000, self._engine.query(self._context, self._icon_score_address, 'call', calldata))
 
-    def test_call_method(self):
-        calldata = {'method': 'total_supply', 'params': {}}
+    def test_call_method2(self):
+        self.__ensure_dir(self._icon_score_loader.score_root_path)
+        path = os.path.join(TEST_ROOT_PATH, 'tests/score/test_score')
+        installdata = {'content_type': 'application/tbears', 'content': path}
+        calldata = {'method': 'balance_of', 'params': {'addr_from': str(self._icon_score_address)}}
 
-        self._engine.invoke(self._context, self._icon_score_address, 'install', {})
+        self._engine.invoke(self._context, self._icon_score_address, 'install', installdata)
         self._engine.commit()
         self.assertEqual(1000000000000000000000, self._engine.query(self._context, self._icon_score_address, 'call', calldata))

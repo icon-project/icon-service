@@ -23,7 +23,7 @@ import shutil
 import unittest
 
 from iconservice.base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
-from iconservice.base.exception import IconException
+from iconservice.base.exception import ExceptionCode, IconException
 from iconservice.base.transaction import Transaction
 from iconservice.base.message import Message
 from iconservice.database.batch import BlockBatch, TransactionBatch
@@ -199,6 +199,19 @@ class TestIconServiceEngine(unittest.TestCase):
         print(tx_result)
 
         context_factory.destroy(context)
+
+    def test_commit(self):
+        with self.assertRaises(IconException) as cm:
+            self._engine.commit()
+        e = cm.exception
+        self.assertEqual(ExceptionCode.INTERNAL_ERROR, e.code)
+        self.assertEqual('Precommit state is none on commit', e.message)
+
+    def test_rollback(self):
+        self._engine.rollback()
+        self.assertIsNone(self._engine._precommit_state)
+        self.assertEqual(0, len(self._engine._icon_score_engine._tasks))
+
     '''
     def test_score_invoke(self):
         method = 'icx_sendTransaction'

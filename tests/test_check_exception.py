@@ -80,7 +80,7 @@ class TestCheckException(unittest.TestCase):
         self.assertRaises(IconException, self.call_raise_icx_exception3)
 
         # handling exception
-        #self.check_call_raise_icx_error3()
+        # self.check_call_raise_icx_error3()
 
 
 if __name__ == '__main__':

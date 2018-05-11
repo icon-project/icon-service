@@ -16,7 +16,7 @@
 
 import inspect
 import abc
-from functools import wraps
+from functools import wraps, partial
 
 from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase
@@ -37,44 +37,45 @@ CONST_PAYABLE_FLAG = '__payable_flag'
 
 
 def score(cls):
-    setattr(cls, CONST_CLASS_EXTERNALS, dict())
-    setattr(cls, CONST_CLASS_PAYABLES, dict())
+    setattr(cls, CONST_CLASS_EXTERNALS, {})
+    setattr(cls, CONST_CLASS_PAYABLES, {})
 
     for c in inspect.getmro(cls):
         custom_funcs = [value for key, value in inspect.getmembers(c, predicate=inspect.isfunction) if not key.startswith('__')]
-        external_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
-        payable_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
+        external_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
+        payable_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
         if external_funcs:
             getattr(cls, CONST_CLASS_EXTERNALS).update(external_funcs)
         if payable_funcs:
             getattr(cls, CONST_CLASS_PAYABLES).update(payable_funcs)
 
     @wraps(cls)
-    def __wrapper(*args, **kwargs):
-        res = cls(*args, **kwargs)
+    def __wrapper(*args):
+        res = cls(*args)
         return res
     return __wrapper
 
 
-def external(readonly=False):
-    def __inner_func(func):
-        cls_name, func_name = str(func.__qualname__).split('.')
-        if not inspect.isfunction(func):
-            raise ExternalException("isn't function", func, cls_name)
+def external(func=None, *, readonly=False):
+    if func is None:
+        return partial(external, readonly=readonly)
 
-        if func_name == 'fallback':
-            raise ExternalException("can't locate external to this func", func_name, cls_name)
+    cls_name, func_name = str(func.__qualname__).split('.')
+    if not inspect.isfunction(func):
+        raise ExternalException("isn't function", func, cls_name)
 
-        setattr(func, CONST_EXTERNAL_FLAG, int(readonly))
+    if func_name == 'fallback':
+        raise ExternalException("can't locate external to this func", func_name, cls_name)
 
-        @wraps(func)
-        def __wrapper(calling_obj: object, *args, **kwargs):
-            if not (isinstance(calling_obj, IconScoreBase)):
-                raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
-            res = func(calling_obj, *args, **kwargs)
-            return res
-        return __wrapper
-    return __inner_func
+    setattr(func, CONST_EXTERNAL_FLAG, int(readonly))
+
+    @wraps(func)
+    def __wrapper(calling_obj: object, *args, **kwargs):
+        if not (isinstance(calling_obj, IconScoreBase)):
+            raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
+        res = func(calling_obj, *args, **kwargs)
+        return res
+    return __wrapper
 
 
 def payable(func):
@@ -137,18 +138,17 @@ class IconScoreBase(IconScoreObject, ContextGetter):
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
         if not hasattr(cls, attr):
-            return dict()
+            return {}
         return getattr(cls, attr)
 
-    def call_method(self, func_name: str, *args, **kwargs):
+    def call_method(self, func_name: str, kw_params: dict):
 
         if func_name not in self.get_api():
             raise ExternalException(f"can't external call", func_name, type(self).__name__)
 
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
-
         score_func = getattr(self, func_name)
-        return score_func(*args, **kwargs)
+        return score_func(**kw_params)
 
     def __call_fallback(self):
         func_name = 'fallback'

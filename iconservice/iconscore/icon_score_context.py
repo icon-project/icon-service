@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-
+    from .icon_score_info_mapper import IconScoreInfoMapper
 
 _thread_local_data = threading.local()
 
@@ -43,6 +43,7 @@ class ContextContainer(object):
     Every class inherit ContextContainer can share IconScoreContext instance
     in the current thread.
     """
+
     @staticmethod
     def _get_context() -> 'IconScoreContext':
         return getattr(_thread_local_data, 'context', None)
@@ -66,6 +67,7 @@ class ContextContainer(object):
 class ContextGetter(object):
     """The class which refers to IconScoreContext should inherit ContextGetter
     """
+
     @property
     def _context(self):
         return getattr(_thread_local_data, 'context', None)
@@ -161,14 +163,13 @@ class IconScoreContext(object):
         return ret
 
     def call(self, addr_from: Address,
-             addr_to: Address, func_name: str, *args, **kwargs) -> None:
+             addr_to: Address, func_name: str, kw_params: dict) -> object:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
         :param addr_to:
         :param func_name:
-        :param args:
-        :param kwargs:
+        :param kw_params:
         :return:
         """
         self.__msg_stack.append(self.msg)
@@ -177,13 +178,13 @@ class IconScoreContext(object):
         icon_score = self.icon_score_mapper.get_icon_score(addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
-                          addr_from=addr_from, *args, **kwargs)
+                          addr_from=addr_from, kw_params=kw_params)
 
         self.msg = self.__msg_stack.pop()
 
         return ret
 
-    def selfdestruct(self, recipient: Address) -> None:
+    def self_destruct(self, recipient: Address) -> None:
         """Destroy the current icon score, sending its funds to the given address
 
         :param recipient: fund recipient
@@ -237,6 +238,7 @@ class IconScoreContext(object):
 class IconScoreContextFactory(object):
     """IconScoreContextFactory
     """
+
     def __init__(self, max_size: int) -> None:
         """Constructor
         """
@@ -263,9 +265,8 @@ class IconScoreContextFactory(object):
                 self._queue.append(context)
 
 
-def call_method(icon_score: 'IconScoreBase', func_name: str,
-                addr_from: Optional[Address]=None, *args, **kwargs) -> object:
-
+def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
+                addr_from: Optional[Address] = None) -> object:
     if icon_score is None:
         raise IconScoreBaseException('score is None')
 
@@ -273,7 +274,7 @@ def call_method(icon_score: 'IconScoreBase', func_name: str,
         raise IconScoreBaseException("call function myself")
 
     try:
-        return icon_score.call_method(func_name, *args, **kwargs)
+        return icon_score.call_method(func_name, kw_params)
     except (PayableException, ExternalException):
         call_fallback(icon_score)
         return None

@@ -17,9 +17,10 @@
 import json
 import os
 import hashlib
+from collections import namedtuple
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
-from .base.exception import ExceptionCode, IconException
+from .base.exception import ExceptionCode, IconException, check_exception
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -59,6 +60,11 @@ class IconServiceEngine(object):
             'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
+        # The precommit state is the state that been already invoked,
+        # but not written to levelDB or file system.
+        self._PrecommitState = namedtuple(
+            'PrecommitState', ['block_batch', 'block_result'])
+
     def open(self,
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
@@ -74,9 +80,11 @@ class IconServiceEngine(object):
 
         self._db_factory = DatabaseFactory(state_db_root_path)
         self._context_factory = IconScoreContextFactory(max_size=5)
-        self._icon_score_loader = IconScoreLoader('score')
+        self._icon_score_loader = IconScoreLoader(icon_score_root_path)
 
-        self._icx_storage = self._create_icx_storage(self._db_factory)
+        self._icx_context_db = self._db_factory.create_by_name('icon_dex')
+        self._icx_context_db.address = ICX_ENGINE_ADDRESS
+        self._icx_storage = IcxStorage(self._icx_context_db)
 
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
@@ -89,6 +97,8 @@ class IconServiceEngine(object):
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
+
+        self._precommit_state: 'PrecommitState' = None
 
     def _create_icx_storage(self, db_factory: DatabaseFactory) -> 'IcxStorage':
         """Create IcxStorage instance
@@ -125,19 +135,22 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
+    @check_exception
     def invoke(self,
                block_height: int,
                block_hash: str,
+               block_timestamp: int,
                transactions) -> 'IconBlockResult':
         """Process transactions in a block sent by loopchain
 
         :param block_height:
         :param block_hash:
+        :param block_timestamp:
         :param transactions: transactions in a block
         :return: The results of transactions
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
-        context.block = Block(block_height, block_hash)
+        context.block = Block(block_height, block_hash, block_timestamp)
         context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())
@@ -158,11 +171,18 @@ class IconServiceEngine(object):
             tx_result = self.call(context, method, params)
             block_result.append(tx_result)
 
+            context.block_batch.put_tx_batch(context.tx_batch)
             context.tx_batch.clear()
+
+        # precommit_state will be written to levelDB on commit()
+        self._precommit_state = self._PrecommitState(
+            block_batch=context.block_batch,
+            block_result=block_result)
 
         self._context_factory.destroy(context)
         return block_result
 
+    @check_exception
     def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
 
@@ -178,8 +198,9 @@ class IconServiceEngine(object):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
 
-        _from = params.get('from', None)
-        context.msg = Message(sender=_from)
+        if params:
+            from_ = params.get('from', None)
+            context.msg = Message(sender=from_)
 
         ret = self.call(context, method, params)
 
@@ -228,7 +249,9 @@ class IconServiceEngine(object):
         address = params['address']
         return self._icx_engine.get_balance(context, address)
 
-    def _handle_icx_getTotalSupply(self, context: IconScoreContext) -> int:
+    def _handle_icx_getTotalSupply(self,
+                                   context: IconScoreContext,
+                                   params: dict) -> int:
         """Returns the amount of icx total supply
 
         :param context:
@@ -306,8 +329,15 @@ class IconServiceEngine(object):
 
         try:
             if data_type == 'install':
-                to = self.__generate_contract_address(
-                    context.tx.origin, context.tx.timestamp, context.tx.nonce)
+                content_type = data.get('content_type')
+                if content_type == 'application/tbears':
+                    content = data.get('content')
+                    proj_name = content.split('/')[-1]
+                    to = create_address(AddressPrefix.CONTRACT, proj_name.encode())
+                else:
+                    to = self.__generate_contract_address(
+                        context.tx.origin, context.tx.timestamp, context.tx.nonce)
+                tx_result.contract_address = to
 
             self._icon_score_engine.invoke(context, to, data_type, data)
 
@@ -315,7 +345,6 @@ class IconServiceEngine(object):
             context.tx_batch.clear()
 
             tx_result.status = TransactionResult.SUCCESS
-            tx_result.contract_address = to
         except:
             tx_result.status = TransactionResult.FAILURE
 
@@ -330,22 +359,42 @@ class IconServiceEngine(object):
         :param from_:
         :param timestamp:
         :param nonce:
-        :return:
+        :return: score address
         """
         data = from_.body + timestamp.to_bytes(32, 'big')
         if nonce is not None:
             data += nonce.to_bytes(32, 'big')
 
-        hash_value = hashlib.sha3_256(data).digest()
-        return Address(AddressPrefix.CONTRACT, hash_value[-20:])
+        return create_address(AddressPrefix.CONTRACT, data)
 
     def commit(self):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
-        pass
+        print('precommit: ' + str(self._precommit_state.block_batch))
+
+        if self._precommit_state is None:
+            raise IconException(
+                ExceptionCode.INTERNAL_ERROR,
+                'Precommit state is none on commit')
+
+        block_batch = self._precommit_state.block_batch
+
+        for address in block_batch:
+            if address == ICX_ENGINE_ADDRESS:
+                context_db = self._icx_context_db
+            else:
+                icon_score = self._icon_score_mapper.get_icon_score(address)
+                context_db = icon_score.db._context_db
+
+            context_db.write_batch(context=None, states=block_batch[address])
+
+        self._precommit_state = None
+        self._icon_score_engine.commit()
 
     def rollback(self):
-        """Delete updated states in a context.block_batch and
+        """Throw away a precommit state
+        in context.block_batch and IconScoreEngine
         """
-        pass
+        self._precommit_state = None
+        self._icon_score_engine.rollback()

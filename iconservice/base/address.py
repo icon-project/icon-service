@@ -132,7 +132,7 @@ class Address(object):
 
         :return: (str) 42-char address
         """
-        return f'{str(self.__prefix)}{self.__body.hex()}'
+        return f'{str(self.prefix)}{self.body.hex()}'
 
     def __hash__(self) -> int:
         """Returns a hash value for this object
