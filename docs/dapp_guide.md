@@ -33,21 +33,18 @@ class SampleToken(IconScoreBase):
 
     @external(readonly=True)
     def balance_of(self, addr_from: Address) -> int:
-        var = self._balances[addr_from]
-        if var is None:
-            var = 0
-        return var
+        return self._balances[addr_from]
 
     def _transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
         if self.balance_of(_addr_from) < _value:
             raise IconScoreBaseException(f"{_addr_from}'s balance < {_value}")
 
-        self._balances[_addr_from] = self.balance_of(_addr_from) - _value
-        self._balances[_addr_to] = _value
+        self._balances[_addr_from] = self._balances[_addr_from] - _value
+        self._balances[_addr_to] = self._balances[_addr_to] + _value
         return True
 
-    @external()
+    @external
     def transfer(self, addr_to: Address, value: int) -> bool:
         return self._transfer(self.msg.sender, addr_to, value)
 
@@ -94,6 +91,7 @@ class CrowdSale(IconScoreBase):
         one_icx = 1 * 10 * 18
         one_minutes = 1 * 60
         now_seconds = self.now_second()
+        
         self._addr_beneficiary.set(if_successful_send_to)
         self._funding_goal = funding_goal_in_icx * one_icx
         self._dead_line = now_seconds + duration_in_minutes * one_minutes
@@ -101,10 +99,7 @@ class CrowdSale(IconScoreBase):
         self._addr_token_reward.set(address_of_token_used_as_reward)
 
     def __balance_of(self, addr_from: Address) -> int:
-        var = self._balances[addr_from]
-        if var is None:
-            var = 0
-        return var
+        return self._balances[addr_from]
 
     @external
     def total_joiner_count(self):
@@ -116,7 +111,7 @@ class CrowdSale(IconScoreBase):
             raise IconScoreBaseException('crowd sale is closed')
 
         amount = self.msg.value
-        self._balance_of[self.msg.sender] = self.__balance_of(self.msg.sender) + amount
+        self._balance_of[self.msg.sender] = self._balance_of[self.msg.sender] + amount
         self._amount_raise.set(self._amout_raise.get() + amount)
         self.call(self._addr_token_reward.get(), 'transfer', {'addr_to': self.msg.sender, 'value': amount/self._price.get()})
 
@@ -165,7 +160,7 @@ class CrowdSale(IconScoreBase):
 문법 설명
 --------------
 계약서 작성시 매개 변수 타입, 리턴 타입에 대한 명시를 해줄 것을 권장합니다.<br/>
-계약서 정보를 자동으로 만들어 줄때 API에 대한 내용을 계약서에 명시된 타입힌트를 가지고 제작을 진행합니다.<br/>
+계약서 정보를 자동으로 만들어 줄때 API에 대한 내용을 계약서에 명시된 타입힌트를 이용하여 제작을 진행합니다.<br/>
 만약 타입힌트가 적혀있지 않다면 해당 계약서 정보에 함수명에 대한 내용만 자동 기입됩니다.<br/>
 
 예시)
@@ -203,6 +198,7 @@ super().__init__()
 #### VarDB, DictDB, ArrayDB
 상태 DB에 읽고 쓰는 작업을 좀 더 편리하게 하기 위한 유틸리티 클래스입니다.<br/>
 키는 숫자, 문자 모두 가능하며, 반환될 value_type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
+존재하지 않는 키로 값을 얻으려 하면, value_type이 int일 때 0, str일 때 ""을 반환하며, Address 객체 및 bytes일 때는 None을 반환합니다.</br>
 VarDB는 단순 키-값 형식의 상태를 저장할 때 사용할 수 있으며, DictDB는 파이썬의 dict와 비슷하게 동작할 수 있게 구현되었습니다. <br/>
 참고로 DictDB는 순서 보장이 되지 않습니다. <br/>
 Length와 iterator를 지원하는 ArrayDB는 순서 보장을 합니다. <br/>
@@ -224,6 +220,8 @@ print(name) ##'theloop'
 test_dict1 = DictDB('test_dict1', db, value_type=int)
 test_dict1['key'] = 1 ## set
 print(test_dict1['key']) ## get 1
+
+print(test_dict1['nonexistence_key']) # 0출력(존재하지 않는 키에 접근, value_type=int)
 ```
 
 예시2) 이차원 배열 형식 (test_dict2['key1']['key2']):<br/>
@@ -231,6 +229,8 @@ print(test_dict1['key']) ## get 1
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
 print(test_dict2['key1']['key2']) ## get 'a'
+
+print(test_dict2['key1']['nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
 ```
 
 ##### ArrayDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
