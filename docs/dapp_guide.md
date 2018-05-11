@@ -198,7 +198,7 @@ super().__init__()
 #### VarDB, DictDB, ArrayDB
 상태 DB에 읽고 쓰는 작업을 좀 더 편리하게 하기 위한 유틸리티 클래스입니다.<br/>
 키는 숫자, 문자 모두 가능하며, 반환될 value_type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
-만약, 존재하지 않는 키로 값을 얻으려 한다면, value_type가 int라면 0을 반환, str라면 ""를 반환하며, Address객체, bytes라면 None을 반환합니다.</br>
+존재하지 않는 키로 값을 얻으려 하면, value_type이 int일 때 0, str일 때 ""을 반환하며, Address 객체 및 bytes일 때는 None을 반환합니다.</br>
 VarDB는 단순 키-값 형식의 상태를 저장할 때 사용할 수 있으며, DictDB는 파이썬의 dict와 비슷하게 동작할 수 있게 구현되었습니다. <br/>
 참고로 DictDB는 순서 보장이 되지 않습니다. <br/>
 Length와 iterator를 지원하는 ArrayDB는 순서 보장을 합니다. <br/>
