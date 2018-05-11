@@ -189,7 +189,7 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         return self.__owner
 
     def now(self):
-        return self.block.timestamp * 10 ** 6
+        return self.block.timestamp
 
     def call(self, addr_to: Address, func_name: str, kw_dict: dict):
         """Call external function provided by other IconScore with arguments

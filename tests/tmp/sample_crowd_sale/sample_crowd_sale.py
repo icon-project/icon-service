@@ -32,7 +32,8 @@ class SampleCrowdSale(IconScoreBase):
         super().genesis_init(*args, **kwargs)
 
         one_icx = 1 * 10 ** 18
-        one_minutes = 1 * 60
+        one_minute_to_sec = 1 * 60
+        one_second_to_microsec = 1 * 10 ** 6
         now_seconds = self.now()
 
         # genesis params
@@ -46,7 +47,7 @@ class SampleCrowdSale(IconScoreBase):
         self._addr_beneficiary.set(if_successful_send_to)
         self._addr_token_score.set(addr_token_score)
         self._funding_goal.set(funding_goal_in_icx * one_icx)
-        self._dead_line.set(now_seconds + duration_in_minutes * one_minutes)
+        self._dead_line.set(now_seconds + duration_in_minutes * one_minute_to_sec * one_second_to_microsec)
         price = int(icx_cost_of_each_token * one_icx)
         self._price.set(price)
 
