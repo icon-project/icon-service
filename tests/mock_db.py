@@ -7,7 +7,8 @@ class MockDB(IconScoreDatabase):
     def make_dict():
         return dict()
 
-    def __init__(self, dict_obj: dict):
+    def __init__(self, dict_obj: dict, context_db: 'ContextDatabase'=None, prefix: bytes=b''):
+        super().__init__(context_db)
         self.__db = dict_obj
 
     def put(self, key: bytes, value: bytes) -> bytes:

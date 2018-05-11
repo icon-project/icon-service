@@ -141,7 +141,7 @@ class IconScoreEngine(ContextContainer):
 
     @staticmethod
     def __type_converter(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
-        param_type_table = dict()
+        param_type_table = {}
         func_params = icon_score.get_api()[func_name].parameters
 
         for key, value in kw_params.items():
