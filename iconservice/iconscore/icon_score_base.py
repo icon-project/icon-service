@@ -24,6 +24,7 @@ from ..base.exception import ExternalException, PayableException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
+from ..base.block import Block
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
@@ -176,6 +177,10 @@ class IconScoreBase(IconScoreObject, ContextGetter):
         return self._context.tx
 
     @property
+    def block(self) -> Block:
+        return self._context.block
+
+    @property
     def db(self) -> IconScoreDatabase:
         return self.__db
 
@@ -183,13 +188,17 @@ class IconScoreBase(IconScoreObject, ContextGetter):
     def owner(self) -> Address:
         return self.__owner
 
-    def call(self, addr_to: Address, func_name: str, *args, **kwargs):
+    def now(self):
+        return self.block.timestamp * 10 ** 6
+
+    def call(self, addr_to: Address, func_name: str, kw_dict: dict):
         """Call external function provided by other IconScore with arguments
 
         :param addr_to: the address of other IconScore
         :param func_name: function name provided by other IconScore
+        :param kw_dict:
         """
-        return self._context.call(addr_to, func_name, *args, **kwargs)
+        return self._context.call(self.address, addr_to, func_name, kw_dict)
 
     def transfer(self, addr_to: Address, amount: int):
         return self._context.transfer(self.__address, addr_to, amount)
