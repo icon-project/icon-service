@@ -89,20 +89,16 @@ class SampleCrowdSale(IconScoreBase):
         if not self.__after_dead_line():
             raise IconScoreBaseException('before deadline')
 
-        print('1')
         if not self._funding_goal_reached.get():
             amount = self._balances[self.msg.sender]
             if amount > 0:
-                print('2')
                 if self.send(self.msg.sender, amount):
                     # event FundTransfer(msg.sender, amount, False)
                     pass
                 else:
                     self._balances[self.msg.sender] = amount
 
-        print('3')
         if self._funding_goal_reached.get() and self._addr_beneficiary.get() == self.msg.sender:
-            print('4')
             if self.send(self._addr_beneficiary.get(), self._amount_raise.get()):
                 # event FundTransfer(beneficiary, amountRaised, False)
                 pass

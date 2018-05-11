@@ -184,7 +184,10 @@ class TestIconScoreEngine2(unittest.TestCase):
         # addr1이 ICO끝났는지 확인
         self._context.msg = Message(self._addr1, 0)
         self._context.tx = Transaction('test_01', origin=self._addr2)
-        self._context.block = Block(2, 'block_hash', 100000)
+        one_minute_to_sec = 1 * 60
+        one_second_to_microsec = 1 * 10 ** 6
+
+        self._context.block = Block(2, 'block_hash', 10 * one_minute_to_sec * one_second_to_microsec)
 
         call_data = {'method': 'check_goal_reached', 'params': {}}
         self._engine.invoke(self._context, self._addr_crowd_sale_score, 'call', call_data)

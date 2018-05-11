@@ -240,8 +240,6 @@ class IconScoreEngine(ContextContainer):
         try:
             self._put_context(context)
             score.genesis_init()
-        except Exception as e:
-            print(e)
         finally:
             self._delete_context(context)
 
