@@ -137,7 +137,7 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.INVOKE:
             return self.get_from_batch(context, key)
         else:
-            return  super().get(key)
+            return super().get(key)
 
     def get_from_batch(self,
                        context: 'IconScoreContext',

@@ -378,6 +378,7 @@ class IconServiceEngine(object):
                 ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
 
+        context = self._context_factory.create(IconScoreContextType.GENESIS)
         block_batch = self._precommit_state.block_batch
 
         for address in block_batch:
@@ -389,8 +390,10 @@ class IconServiceEngine(object):
 
             context_db.write_batch(context=None, states=block_batch[address])
 
+        self._icon_score_engine.commit(context)
         self._precommit_state = None
-        self._icon_score_engine.commit()
+
+        self._context_factory.destroy(context)
 
     def rollback(self):
         """Throw away a precommit state
