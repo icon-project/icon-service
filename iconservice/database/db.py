@@ -33,6 +33,7 @@ def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
     else:
         return IconScoreContextType.GENESIS
 
+
 class PlyvelDatabase(object):
     """Plyvel database wrapper
     """

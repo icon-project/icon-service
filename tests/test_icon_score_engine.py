@@ -58,7 +58,7 @@ class TestIconScoreEngine(unittest.TestCase):
             self._icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'test')
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'SampleToken')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)

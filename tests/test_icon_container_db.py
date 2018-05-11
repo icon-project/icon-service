@@ -3,13 +3,13 @@ import unittest
 from iconservice import Address
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
-from tests.mock_db import MockDB
+from tests.mock_db import create_mock_icon_score_db
 
 
 class TestIconContainerDB(unittest.TestCase):
 
     def setUp(self):
-        self.db = MockDB(MockDB.make_dict())
+        self.db = create_mock_icon_score_db()
         pass
 
     def tearDown(self):

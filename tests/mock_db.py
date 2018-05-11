@@ -1,36 +1,44 @@
-from iconservice.database.db import IconScoreDatabase
+from iconservice.database.db import PlyvelDatabase
+from iconservice.database.db import ContextDatabase, IconScoreDatabase
+from iconservice.base.address import AddressPrefix, create_address
+from typing import Optional
 
 
-class MockDB(IconScoreDatabase):
+class MockPlyvelDatabase(PlyvelDatabase):
+    """Plyvel database wrapper
+    """
 
     @staticmethod
-    def make_dict():
+    def make_db() -> dict:
         return dict()
 
-    def __init__(self, dict_obj: dict, context_db: 'ContextDatabase'=None, prefix: bytes=b''):
-        super().__init__(context_db)
-        self.__db = dict_obj
+    def __init__(self, db: dict) -> None:
+        self._db = db
 
-    def put(self, key: bytes, value: bytes) -> bytes:
-        self.__db[key] = value
-
-    def get(self, key: bytes) -> bytes:
-        if key not in self.__db:
+    def get(self, key: bytes) -> Optional[bytes]:
+        if key not in self._db:
             return None
-        return self.__db[key]
+        return self._db[key]
 
-    def delete(self, key: bytes) -> bytes:
+    def put(self, key: bytes, value: bytes) -> None:
+        self._db[key] = value
+
+    def delete(self, key: bytes) -> None:
         pass
 
-    def close(self):
+    def close(self) -> None:
+        if self._db:
+            self._db.close()
+            self._db = None
+
+    def get_sub_db(self, key: bytes):
+        return MockPlyvelDatabase(self.make_db())
+
+    def write_batch(self, states: dict) -> None:
         pass
 
-    def get_sub_db(self, key: bytes) -> IconScoreDatabase:
-        if key not in self.__db:
-            sub_db = MockDB(MockDB.make_dict())
-            self.__db[key] = sub_db
 
-        return self.__db[key]
-
-    def iterator(self):
-        return iter(self.__db.items())
+def create_mock_icon_score_db():
+    mock_db = MockPlyvelDatabase(MockPlyvelDatabase.make_db())
+    context_db = ContextDatabase(mock_db, create_address(AddressPrefix.EOA, b'test_db'))
+    return IconScoreDatabase(context_db)

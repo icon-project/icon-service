@@ -74,9 +74,7 @@ class IconScoreEngine(ContextContainer):
         elif data_type == 'install' or data_type == 'update':
                 self.__put_task(context, icon_score_address, data_type, data)
         else:
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
-                f'Invalid data type ({data_type})')
+            self.__fallback(context, icon_score_address)
 
     @check_exception
     def query(self,
@@ -161,16 +159,19 @@ class IconScoreEngine(ContextContainer):
         converter = TypeConverter(param_type_table)
         return converter.convert(kw_params, True)
 
-    def __fallback(self, icon_score_address: Address):
+    def __fallback(self, context: IconScoreContext, icon_score_address: Address):
         """When an IconScore receives some coins and calldata is None,
         fallback function is called.
 
         :param icon_score_address:
         """
 
-        # TODO: Call fallback method of iconscore
-        icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
-        call_fallback(icon_score)
+        try:
+            self._put_context(context)
+            icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+            call_fallback(icon_score)
+        finally:
+            self._delete_context(context)
 
     @check_exception
     def commit(self, context: 'IconScoreContext') -> None:
