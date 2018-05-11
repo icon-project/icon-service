@@ -37,7 +37,7 @@ class SampleToken(IconScoreBase):
 
     def _transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
-        if self.balance_of(_addr_from) < _value:
+        if self._balances[_addr_from] < _value:
             raise IconScoreBaseException(f"{_addr_from}'s balance < {_value}")
 
         self._balances[_addr_from] = self._balances[_addr_from] - _value
@@ -46,7 +46,7 @@ class SampleToken(IconScoreBase):
 
     @external
     def transfer(self, addr_to: Address, value: int) -> bool:
-        return self._transfer(self.msg.sender, addr_to, value)
+        return self._transfer(self.address, addr_to, value)
 
     def fallback(self) -> None:
         pass

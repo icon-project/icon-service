@@ -298,8 +298,8 @@ class IconServiceEngine(object):
 
         if to is None or to.is_contract:
             # EOA to Score
-            data_type: str = params['data_type']
-            data: dict = params['data']
+            data_type: str = params.get('data_type')
+            data: dict = params.get('data')
             tx_result = self.__handle_score_invoke(
                 context, to, data_type, data)
         else:
