@@ -12,8 +12,8 @@ class SampleToken(IconScoreBase):
     _BALANCES = 'balances'
     _TOTAL_SUPPLY = 'total_supply'
 
-    def __init__(self, db: IconScoreDatabase) -> None:
-        super().__init__(db)
+    def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
+        super().__init__(db, addr_owner)
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)
 
@@ -25,7 +25,7 @@ class SampleToken(IconScoreBase):
         total_supply = init_supply * 10 ** decimal
 
         self._total_supply.set(total_supply)
-        self._balances[self.address] = total_supply
+        self._balances[self.msg.sender] = total_supply
 
     @external(readonly=True)
     def total_supply(self) -> int:
@@ -37,7 +37,7 @@ class SampleToken(IconScoreBase):
 
     def _transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
-        if self._balances[_addr_from] < _value:
+        if self.balance_of(_addr_from) < _value:
             raise IconScoreBaseException(f"{_addr_from}'s balance < {_value}")
 
         self._balances[_addr_from] = self._balances[_addr_from] - _value
@@ -46,62 +46,71 @@ class SampleToken(IconScoreBase):
 
     @external
     def transfer(self, addr_to: Address, value: int) -> bool:
-        return self._transfer(self.address, addr_to, value)
+        return self._transfer(self.msg.sender, addr_to, value)
 
     def fallback(self) -> None:
         pass
+
 ```
 
 <br/>
 위의 샘플토큰을 가지고 크라우드 세일을 하는 예제입니다.<br/>
+icx와 교환비율은 1:1이며 1분후에 크라우드 세일이 종료됩니다.<br/>
 크라우드펀딩에 참가한 총 인원을 구하는 함수(total_joiner_count)와 크라우드세일 마감함수(check_goal_reached)<br/>
 그리고 크라우드세일 성공 및 실패시에 icx를 환급받는(safe_withdrawal)을 제공합니다.<br/>
 
 ```python
 @score
-class CrowdSale(IconScoreBase):
+class SampleCrowdSale(IconScoreBase):
     _ADDR_BENEFICIARY = 'addr_beneficiary'
     _FUNDING_GOAL = 'funding_goal'
     _AMOUNT_RAISE = 'amount_raise'
     _DEAD_LINE = 'dead_line'
     _PRICE = 'price'
-    _BALANCE_OF = 'balance_of'
+    _BALANCES = 'balances'
+    _ADDR_TOKEN_SCORE = 'addr_token_score'
     _FUNDING_GOAL_REACHED = 'funding_goal_reached'
     _CROWD_SALE_CLOSED = 'crowd_sale_closed'
     _JOINER_LIST = 'joiner_list'
-    _ADDR_TOKEN_REWARD = 'addr_token_reward'
 
-    def __init__(self, db: IconScoreDatabase) -> None:
-        super().__init__(db)
+    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
+        super().__init__(db, owner)
+
         self._addr_beneficiary = VarDB(self._ADDR_BENEFICIARY, db, value_type=Address)
+        self._addr_token_score = VarDB(self._ADDR_TOKEN_SCORE, db, value_type=Address)
         self._funding_goal = VarDB(self._FUNDING_GOAL, db, value_type=int)
         self._amount_raise = VarDB(self._AMOUNT_RAISE, db, value_type=int)
         self._dead_line = VarDB(self._DEAD_LINE, db, value_type=int)
         self._price = VarDB(self._PRICE, db, value_type=int)
-        self._balance_of = DictDB(self._BALANCE_OF, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
         self._joiner_list = ArrayDB(self._JOINER_LIST, db, value_type=Address)
         self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
         self._crowd_sale_closed = VarDB(self._CROWD_SALE_CLOSED, db, value_type=bool)
-        self._addr_token_reward = VarDB(self._ADDR_TOKEN_REWARD, db, value_type=Address)
 
-    def genesis_init(self, if_successful_send_to: Address, funding_goal_in_icx: int,
-                     duration_in_minutes: int, icx_cost_of_each_token: int,
-                     address_of_token_used_as_reward: Address, *args, **kwargs) -> None:
+    def genesis_init(self, *args, **kwargs) -> None:
         super().genesis_init(*args, **kwargs)
-        one_icx = 1 * 10 * 18
-        one_minutes = 1 * 60
-        now_seconds = self.now_second()
-        
+
+        one_icx = 1 * 10 ** 18
+        one_minute_to_sec = 1 * 60
+        one_second_to_microsec = 1 * 10 ** 6
+        now_seconds = self.now()
+
+        # genesis params
+        if_successful_send_to = self.msg.sender
+        addr_token_score = Address.from_string('cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf')
+
+        funding_goal_in_icx = 100
+        duration_in_minutes = 1
+        icx_cost_of_each_token = 1
+
         self._addr_beneficiary.set(if_successful_send_to)
-        self._funding_goal = funding_goal_in_icx * one_icx
-        self._dead_line = now_seconds + duration_in_minutes * one_minutes
-        self._price = icx_cost_of_each_token * one_icx
-        self._addr_token_reward.set(address_of_token_used_as_reward)
+        self._addr_token_score.set(addr_token_score)
+        self._funding_goal.set(funding_goal_in_icx * one_icx)
+        self._dead_line.set(now_seconds + duration_in_minutes * one_minute_to_sec * one_second_to_microsec)
+        price = int(icx_cost_of_each_token * one_icx)
+        self._price.set(price)
 
-    def __balance_of(self, addr_from: Address) -> int:
-        return self._balances[addr_from]
-
-    @external
+    @external(readonly=True)
     def total_joiner_count(self):
         return len(self._joiner_list)
 
@@ -111,27 +120,28 @@ class CrowdSale(IconScoreBase):
             raise IconScoreBaseException('crowd sale is closed')
 
         amount = self.msg.value
-        self._balance_of[self.msg.sender] = self._balance_of[self.msg.sender] + amount
-        self._amount_raise.set(self._amout_raise.get() + amount)
-        self.call(self._addr_token_reward.get(), 'transfer', {'addr_to': self.msg.sender, 'value': amount/self._price.get()})
+        self._balances[self.msg.sender] = self._balances[self.msg.sender] + amount
+        self._amount_raise.set(self._amount_raise.get() + amount)
+        value = int(amount / self._price.get())
+        self.call(self._addr_token_score.get(), 'transfer', {'addr_to': self.msg.sender, 'value': value})
 
         if self.msg.sender not in self._joiner_list:
             self._joiner_list.put(self.msg.sender)
-            
-        # event FundTransfer(msg.sender, amont, True)
+
+        # event FundTransfer(msg.sender, amount, True)
 
     @external
     def check_goal_reached(self):
         if not self.__after_dead_line():
             raise IconScoreBaseException('before deadline')
 
-        if self._amout_raise.get() >= self._funding_goal.get():
+        if self._amount_raise.get() >= self._funding_goal.get():
             self._funding_goal_reached.set(True)
             # event GoalReached(beneficiary, amountRaised)
         self._crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
-        return self.now_second() >= self._dead_line.get()
+        return self.now() >= self._dead_line.get()
 
     @external
     def safe_withdrawal(self):
@@ -139,13 +149,13 @@ class CrowdSale(IconScoreBase):
             raise IconScoreBaseException('before deadline')
 
         if not self._funding_goal_reached.get():
-            amount = self._balance_of[self.msg.sender]
+            amount = self._balances[self.msg.sender]
             if amount > 0:
                 if self.send(self.msg.sender, amount):
-                    self._amount_raise.set(self._amount_raise.get() - amount)
                     # event FundTransfer(msg.sender, amount, False)
+                    pass
                 else:
-                    self._balance_of[self.msg.sender] = amount
+                    self._balances[self.msg.sender] = amount
 
         if self._funding_goal_reached.get() and self._addr_beneficiary.get() == self.msg.sender:
             if self.send(self._addr_beneficiary.get(), self._amount_raise.get()):
@@ -153,7 +163,7 @@ class CrowdSale(IconScoreBase):
                 pass
             else:
                 self._funding_goal_reached.set(False)
-
+                
 ```
 
 
