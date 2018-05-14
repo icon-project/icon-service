@@ -43,7 +43,6 @@ class CallClass1(IconScoreBase):
     def func6(self):
         pass
 
-    # @external
     @payable
     def fallback(self):
         pass
@@ -91,9 +90,12 @@ class TestCallMethod(unittest.TestCase):
 
     def test_success_call_method(self):
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
+        self._context.type = IconScoreContextType.INVOKE
         # self.ins.call_method('func1', {})
         self.ins.call_method('func2', {})
+        self._context.type = IconScoreContextType.QUERY
         self.ins.call_method('func3', {})
+        self._context.type = IconScoreContextType.INVOKE
         self.ins.call_method('func4', {})
         self.ins.call_method('func5', {})
         # self.ins.call_method('func6', {})
@@ -102,9 +104,12 @@ class TestCallMethod(unittest.TestCase):
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 1)
         self.assertRaises(ExternalException, self.ins.call_method, 'func1', {})
         self.assertRaises(PayableException, self.ins.call_method, 'func2', {})
-        # self.assertRaises(PayableException, self.ins.call_method, 'func3', {})
-        # self.assertRaises(PayableException, self.ins.call_method, 'func4', {})
-        # self.assertRaises(ExternalException, self.ins.call_method, 'func5', {})
+        self._context.type = IconScoreContextType.INVOKE
+        self.assertRaises(ExternalException, self.ins.call_method, 'func3', {})
+        self._context.type = IconScoreContextType.QUERY
+        self.assertRaises(ExternalException, self.ins.call_method, 'func4', {})
+        self.assertRaises(ExternalException, self.ins.call_method, 'func5', {})
+
         self.assertRaises(ExternalException, self.ins.call_method, 'func6', {})
 
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)

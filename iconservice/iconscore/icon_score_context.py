@@ -22,7 +22,7 @@ from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
-from ..base.exception import IconScoreBaseException, PayableException, ExternalException
+from ..base.exception import IconScoreException, PayableException, ExternalException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
 from .icon_score_result import IconBlockResult
@@ -224,7 +224,7 @@ class IconScoreContext(object):
         for icon_score_address in block_batch:
             info = self.icon_score_mapper.get(icon_score_address)
             if info is None:
-                raise IconScoreBaseException('IconScoreInfo is None')
+                raise IconScoreException('IconScoreInfo is None')
             info.icon_score.db.write_batch(block_batch)
 
     def rollback(self) -> None:
@@ -268,10 +268,10 @@ class IconScoreContextFactory(object):
 def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
                 addr_from: Optional[Address] = None) -> object:
     if icon_score is None:
-        raise IconScoreBaseException('score is None')
+        raise IconScoreException('score is None')
 
     if __check_myself(addr_from, icon_score.address):
-        raise IconScoreBaseException("call function myself")
+        raise IconScoreException("call function myself")
 
     try:
         return icon_score.call_method(func_name, kw_params)

@@ -84,12 +84,12 @@ class IconException(IconServiceBaseException):
         return f'{self.message} ({self.code})'
 
 
-class IconScoreBaseException(IconServiceBaseException):
+class IconScoreException(IconServiceBaseException):
     def __init__(self, message: str) -> None:
         super().__init__(message)
 
 
-class IconScoreException(IconScoreBaseException):
+class APIIconScoreBaseException(IconScoreException):
     def __init__(self, message: str, func_name: str, cls_name: str) -> None:
         super().__init__(message)
         self.__func_name = func_name
@@ -127,21 +127,21 @@ def check_exception(func):
     return _wrapper
 
 
-class ExternalException(IconScoreException):
+class ExternalException(APIIconScoreBaseException):
     pass
 
 
-class PayableException(IconScoreException):
+class PayableException(APIIconScoreBaseException):
     pass
 
 
-class ScoreInstallException(IconScoreBaseException):
+class ScoreInstallException(IconScoreException):
     pass
 
 
-class ScoreInstallExtractException(IconScoreBaseException):
+class ScoreInstallExtractException(IconScoreException):
     pass
 
 
-class ContainerDBException(IconScoreBaseException):
+class ContainerDBException(IconScoreException):
     pass

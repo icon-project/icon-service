@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
-import abc
+from inspect import isfunction, getmembers, signature
+from abc import ABC, ABCMeta, abstractmethod
 from functools import wraps, partial
 
 from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase
-from ..base.exception import ExternalException, PayableException, IconScoreBaseException
+from ..base.exception import ExternalException, PayableException, IconScoreException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
@@ -37,13 +37,13 @@ def external(func=None, *, readonly=False):
         return partial(external, readonly=readonly)
 
     cls_name, func_name = str(func.__qualname__).split('.')
-    if not inspect.isfunction(func):
+    if not isfunction(func):
         raise ExternalException("isn't function", func, cls_name)
 
     if func_name == 'fallback':
         raise ExternalException("can't locate external to this func", func_name, cls_name)
 
-    setattr(func, CONST_EXTERNAL_FLAG, int(readonly)+1)
+    setattr(func, CONST_EXTERNAL_FLAG, int(readonly) + 1)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -51,16 +51,17 @@ def external(func=None, *, readonly=False):
             raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
         res = func(calling_obj, *args, **kwargs)
         return res
+
     return __wrapper
 
 
 def payable(func):
     cls_name, func_name = str(func.__qualname__).split('.')
-    if not inspect.isfunction(func):
+    if not isfunction(func):
         raise PayableException("isn't function", func, cls_name)
 
     if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_EXTERNAL_FLAG) > 1:
-            raise PayableException("have to non readonly", func, cls_name)
+        raise PayableException("have to non readonly", func, cls_name)
 
     setattr(func, CONST_PAYABLE_FLAG, 1)
 
@@ -71,10 +72,11 @@ def payable(func):
             raise PayableException('is Not derived of ContractBase', func_name, cls_name)
         res = func(calling_obj, *args, **kwargs)
         return res
+
     return __wrapper
 
 
-class IconScoreObject(abc.ABC):
+class IconScoreObject(ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
         class.__mro__로 하기때문에 다음과 같이 init에 매개변수를 받게 자유롭게 하려면 다음처럼 래핑 클래스가 필요하다.
@@ -89,22 +91,21 @@ class IconScoreObject(abc.ABC):
         pass
 
 
-class IconScoreBaseMeta(abc.ABCMeta):
+class IconScoreBaseMeta(ABCMeta):
     def __new__(mcs, name, bases, namespace, **kwargs):
         if IconScoreObject in bases:
             return super().__new__(mcs, name, bases, namespace, **kwargs)
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-
         if not hasattr(cls, CONST_CLASS_EXTERNALS):
             setattr(cls, CONST_CLASS_EXTERNALS, {})
         if not hasattr(cls, CONST_CLASS_PAYABLES):
             setattr(cls, CONST_CLASS_PAYABLES, {})
 
         if not isinstance(namespace, dict):
-            raise IconScoreBaseException('attr is not dict!')
+            raise IconScoreException('attr is not dict!')
 
-        custom_funcs = [value for key, value in inspect.getmembers(cls, predicate=inspect.isfunction)
+        custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
                         if not key.startswith('__')]
 
         for func in custom_funcs:
@@ -113,10 +114,10 @@ class IconScoreBaseMeta(abc.ABCMeta):
             if not hasattr(func, CONST_PAYABLE_FLAG):
                 setattr(func, CONST_PAYABLE_FLAG, 0)
 
-        external_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs
-                          if hasattr(func, CONST_EXTERNAL_FLAG) and bool(getattr(func, CONST_EXTERNAL_FLAG))}
-        payable_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs
-                         if hasattr(func, CONST_PAYABLE_FLAG) and bool(getattr(func, CONST_PAYABLE_FLAG))}
+        external_funcs = {func.__name__: signature(func) for func in custom_funcs
+                          if bool(getattr(func, CONST_EXTERNAL_FLAG))}
+        payable_funcs = {func.__name__: signature(func) for func in custom_funcs
+                         if bool(getattr(func, CONST_PAYABLE_FLAG))}
 
         if external_funcs:
             attr_dict = getattr(cls, CONST_CLASS_EXTERNALS)
@@ -132,11 +133,11 @@ class IconScoreBaseMeta(abc.ABCMeta):
 
 class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
 
-    @abc.abstractmethod
+    @abstractmethod
     def genesis_init(self, *args, **kwargs) -> None:
         super().genesis_init(*args, **kwargs)
 
-    @abc.abstractmethod
+    @abstractmethod
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
         super().__init__(db, owner)
         self.__db = db
@@ -163,7 +164,9 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
         if func_name not in self.get_api():
             raise ExternalException(f"can't external call", func_name, type(self).__name__)
 
+        self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
+
         score_func = getattr(self, func_name)
         return score_func(**kw_params)
 
@@ -179,6 +182,12 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
         if func_name not in payable_dict:
             if self.msg.value > 0:
                 raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
+
+    def __check_readonly(self, func_name: str):
+        func = getattr(self, func_name)
+        readonly = bool(int(getattr(func, CONST_EXTERNAL_FLAG)) - 1)
+        if readonly != self._context.readonly:
+            raise ExternalException('context type is mismatch', func_name, type(self).__name__)
 
     @property
     def msg(self) -> Message:

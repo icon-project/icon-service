@@ -37,7 +37,7 @@ class SampleToken(IconScoreBase):
     def _transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
         if self.balance_of(_addr_from) < _value:
-            raise IconScoreBaseException(f"{_addr_from}'s balance < {_value}")
+            raise IconScoreException(f"{_addr_from}'s balance < {_value}")
 
         self._balances[_addr_from] = self._balances[_addr_from] - _value
         self._balances[_addr_to] = self._balances[_addr_to] + _value
@@ -115,7 +115,7 @@ class SampleCrowdSale(IconScoreBase):
     @payable
     def fallback(self) -> None:
         if self._crowd_sale_closed.get():
-            raise IconScoreBaseException('crowd sale is closed')
+            raise IconScoreException('crowd sale is closed')
 
         amount = self.msg.value
         self._balances[self.msg.sender] = self._balances[self.msg.sender] + amount
@@ -131,7 +131,7 @@ class SampleCrowdSale(IconScoreBase):
     @external
     def check_goal_reached(self):
         if not self.__after_dead_line():
-            raise IconScoreBaseException('before deadline')
+            raise IconScoreException('before deadline')
 
         if self._amount_raise.get() >= self._funding_goal.get():
             self._funding_goal_reached.set(True)
@@ -144,7 +144,7 @@ class SampleCrowdSale(IconScoreBase):
     @external
     def safe_withdrawal(self):
         if not self.__after_dead_line():
-            raise IconScoreBaseException('before deadline')
+            raise IconScoreException('before deadline')
 
         if not self._funding_goal_reached.get():
             amount = self._balances[self.msg.sender]
@@ -173,7 +173,7 @@ class SampleCrowdSale(IconScoreBase):
 
 예시)
 ```python
-@external()
+@external
 def func1(arg1: int, arg2: str) -> object:
     pass
 ```

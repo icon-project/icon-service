@@ -18,7 +18,7 @@ from ..iconscore.icon_score_context import ContextGetter
 from ..iconscore.icon_score_loader import IconScoreLoader
 from ..icx.icx_storage import IcxStorage
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException, IconScoreBaseException
+from ..base.exception import ExceptionCode, IconException, IconScoreException
 from ..database.db import IconScoreDatabase
 
 from typing import TYPE_CHECKING, Optional
@@ -177,7 +177,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
 
         score_wrapper = self.__icon_score_loader.load_score(address.body.hex())
         if score_wrapper is None:
-            raise IconScoreBaseException(f'score_wrapper load Fail {address}')
+            raise IconScoreException(f'score_wrapper load Fail {address}')
         return score_wrapper
 
     def __add_score_to_mapper(self, icon_score) -> IconScoreInfo:
