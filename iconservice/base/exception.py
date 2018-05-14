@@ -14,10 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import traceback
 from enum import IntEnum, unique
 from functools import wraps
+
+DEBUG_PRT = False
+
+if DEBUG_PRT:
+    import traceback
+else:
+    import logging
 
 
 @unique
@@ -102,18 +107,19 @@ class IconScoreException(IconScoreBaseException):
         return f'msg: {self.message} func: {self.func_name} cls: {self.cls_name}'
 
 
-# 예외 검사 간편하게 할 수 있는 함수인데..
-# 사용할지 안할지는 지켜본다.
 def check_exception(func):
     @wraps(func)
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except IconServiceBaseException:
-            log_call_stack = traceback.format_stack()
-            log_exec = traceback.format_exc()
-            # TODO replace log function
-            logging.debug(f'call_stack\n{log_call_stack}{log_exec}')
+        except IconServiceBaseException as e:
+            if DEBUG_PRT:
+                log_call_stack = traceback.format_stack()
+                log_exec = traceback.format_exc()
+                log_str = 'call_stack:\n {} \n exec:\n {}\n'.format(*log_call_stack, log_exec)
+                print(log_str)
+            else:
+                logging.exception(e)
         except Exception as e:
             raise e
         finally:
