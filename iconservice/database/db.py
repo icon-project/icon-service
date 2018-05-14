@@ -33,6 +33,7 @@ def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
     else:
         return IconScoreContextType.GENESIS
 
+
 class PlyvelDatabase(object):
     """Plyvel database wrapper
     """
@@ -137,7 +138,7 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.INVOKE:
             return self.get_from_batch(context, key)
         else:
-            return  super().get(key)
+            return super().get(key)
 
     def get_from_batch(self,
                        context: 'IconScoreContext',

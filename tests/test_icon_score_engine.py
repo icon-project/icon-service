@@ -58,7 +58,7 @@ class TestIconScoreEngine(unittest.TestCase):
             self._icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'test')
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'SampleToken')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
@@ -114,12 +114,12 @@ class TestIconScoreEngine(unittest.TestCase):
             os.makedirs(directory)
 
     def test_install(self):
-        self._engine.invoke(self._context, self._icon_score_address, 'install', dict())
+        self._engine.invoke(self._context, self._icon_score_address, 'install', {})
         self._engine.commit()
 
     def test_call_method(self):
-        calldata = {'method': 'total_supply', 'params': dict()}
+        calldata = {'method': 'total_supply', 'params': {}}
 
-        self._engine.invoke(self._context, self._icon_score_address, 'install', dict())
+        self._engine.invoke(self._context, self._icon_score_address, 'install', {})
         self._engine.commit()
         self.assertEqual(1000000000000000000000, self._engine.query(self._context, self._icon_score_address, 'call', calldata))

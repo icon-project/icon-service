@@ -133,6 +133,37 @@ class TestTypeConverter(unittest.TestCase):
             self.assertTrue(isinstance(address, Address))
             self.assertTrue(isinstance(balance, int))
 
+        input2 = {
+            "transaction_data": {
+                "accounts": [
+                    {
+                        "name": "god",
+                        "address": "hx0000000000000000000000000000000000000000",
+                        "balance": "0x2961ffa20dd47f5c4700000"
+                    },
+                    {
+                        "name": "treasury",
+                        "address": "hx1000000000000000000000000000000000000000",
+                        "balance": "0x0"
+                    }
+                ],
+                "message": "A rHizomE has no beGInning Or enD; it is alWays IN the miDDle, between tHings, interbeing, intermeZzO. ThE tree is fiLiatioN, but the rhizome is alliance, uniquelY alliance. The tree imposes the verb \"to be\" but the fabric of the rhizome is the conJUNction, \"AnD ... and ...and...\"THis conJunction carriEs enouGh force to shaKe and uproot the verb \"to be.\" Where are You goIng? Where are you coMing from? What are you heading for? These are totally useless questions.\n\n- 『Mille Plateaux』, Gilles Deleuze & Felix Guattari\n\n\"Hyperconnect the world\""
+            }
+        }
+        output2 = converter.convert(input2, recursive=False)
+
+        accounts2 = output2['transaction_data']['accounts']
+        self.assertTrue(isinstance(accounts2, list))
+
+        for account in accounts2:
+            name = account['name']
+            address = account['address']
+            balance = account['balance']
+
+            self.assertTrue(isinstance(name, str))
+            self.assertFalse(isinstance(address, Address))
+            self.assertFalse(isinstance(balance, int))
+
     def test_convert_list_values(self):
         input = [
             {
@@ -175,3 +206,31 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual("hx1000000000000000000000000000000000000000", str(address))
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(0, balance)
+
+        input2 = [
+            {
+                "name": "god",
+                "address": "hx0000000000000000000000000000000000000000",
+                "balance": "0x2961ffa20dd47f5c4700000",
+                "data-field": {
+                    "name": "god",
+                    "address": "hx0000000000000000000000000000000000000000"
+                }
+            },
+            {
+                "name": "treasury",
+                "address": "hx1000000000000000000000000000000000000000",
+                "balance": "0x0"
+            }
+        ]
+
+        output2 = converter.convert(input2, recursive=False)
+
+        account1 = output2[0]
+        account2 = output2[1]
+
+        self.assertEqual(account1["name"], "god")
+        self.assertTrue(isinstance(account1['address'], Address))
+        self.assertTrue(isinstance(account1['balance'], int))
+
+        self.assertFalse(isinstance(account1['data-field']['address'], Address))

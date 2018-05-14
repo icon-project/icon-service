@@ -292,8 +292,8 @@ class IconServiceEngine(object):
 
         if to is None or to.is_contract:
             # EOA to Score
-            data_type: str = params['data_type']
-            data: dict = params['data']
+            data_type: str = params.get('data_type')
+            data: dict = params.get('data')
             tx_result = self.__handle_score_invoke(
                 context, to, data_type, data)
         else:
@@ -331,6 +331,7 @@ class IconServiceEngine(object):
                 else:
                     to = self.__generate_contract_address(
                         context.tx.origin, context.tx.timestamp, context.tx.nonce)
+                tx_result.contract_address = to
 
             self._icon_score_engine.invoke(context, to, data_type, data)
 
@@ -338,7 +339,6 @@ class IconServiceEngine(object):
             context.tx_batch.clear()
 
             tx_result.status = TransactionResult.SUCCESS
-            tx_result.contract_address = to
         except:
             tx_result.status = TransactionResult.FAILURE
 
@@ -372,6 +372,7 @@ class IconServiceEngine(object):
 
         logging.debug(f'precommit: {self._precommit_state.block_batch}')
 
+        context = self._context_factory.create(IconScoreContextType.GENESIS)
         block_batch = self._precommit_state.block_batch
 
         for address in block_batch:
@@ -383,8 +384,10 @@ class IconServiceEngine(object):
 
             context_db.write_batch(context=None, states=block_batch[address])
 
+        self._icon_score_engine.commit(context)
         self._precommit_state = None
-        self._icon_score_engine.commit()
+
+        self._context_factory.destroy(context)
 
     def rollback(self):
         """Throw away a precommit state
