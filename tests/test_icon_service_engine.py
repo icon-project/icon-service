@@ -21,6 +21,7 @@
 import os
 import shutil
 import unittest
+import logging
 
 from iconservice.base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.exception import ExceptionCode, IconException
@@ -36,6 +37,7 @@ from iconservice.utils import sha3_256
 from . import create_address
 
 
+logging.basicConfig(level=logging.NOTSET)
 context_factory = IconScoreContextFactory(max_size=1)
 
 
@@ -147,6 +149,7 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_invoke(self):
         block_height = 1
         block_hash = None
+        block_timestamp = 0
         value = 1 * 10 ** 18
 
         tx = {
@@ -161,7 +164,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         }
 
-        self._engine.invoke(block_height, block_hash, [tx, tx])
+        self._engine.invoke(block_height, block_hash, block_timestamp, [tx, tx])
 
     def test_score_invoke(self):
         method = 'icx_sendTransaction'

@@ -17,6 +17,7 @@
 """
 
 
+import logging
 from collections import namedtuple
 from os import path, symlink, makedirs
 
@@ -240,6 +241,8 @@ class IconScoreEngine(ContextContainer):
         try:
             self._put_context(context)
             score.genesis_init()
+        except Exception as e:
+            logging.error(e)
         finally:
             self._delete_context(context)
 

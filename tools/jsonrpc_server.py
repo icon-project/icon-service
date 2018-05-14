@@ -212,7 +212,7 @@ def main():
     else:
         path = './tbears.json'
 
-    print(f'config_file: {path}')
+    logging.info(f'config_file: {path}')
     conf = load_config(path)
 
     init_type_converter()
