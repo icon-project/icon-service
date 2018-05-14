@@ -55,7 +55,7 @@ class SampleToken(IconScoreBase):
 
 <br/>
 위의 샘플토큰을 가지고 크라우드 세일을 하는 예제입니다.<br/>
-icx와 교환비율은 1:1이며 1분후에 크라우드 세일이 종료됩니다.
+icx와 교환비율은 1:1이며 1분후에 크라우드 세일이 종료됩니다.<br/>
 크라우드펀딩에 참가한 총 인원을 구하는 함수(total_joiner_count)와 크라우드세일 마감함수(check_goal_reached)<br/>
 그리고 크라우드세일 성공 및 실패시에 icx를 환급받는(safe_withdrawal)을 제공합니다.<br/>
 
