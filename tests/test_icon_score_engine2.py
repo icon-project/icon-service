@@ -60,8 +60,8 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._addr2 = create_address(AddressPrefix.EOA, b'addr2')
         self._addr3 = create_address(AddressPrefix.EOA, b'addr3')
 
-        self._addr_token_score = create_address(AddressPrefix.CONTRACT, b'SampleToken')
-        self._addr_crowd_sale_score = create_address(AddressPrefix.CONTRACT, b'SampleCrowdSale')
+        self._addr_token_score = create_address(AddressPrefix.CONTRACT, b'sample_token')
+        self._addr_crowd_sale_score = create_address(AddressPrefix.CONTRACT, b'sample_crowd_sale')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
@@ -72,9 +72,9 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
 
-        self._totalsupply = 1000000000000000000000
+        self._totalsupply = 1000 * 10 ** 18
         self._one_icx = 1 * 10 ** 18
-        self._one_icx_to_token = 1000
+        self._one_icx_to_token = 1
 
     def tearDown(self):
         self._engine = None
@@ -147,7 +147,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.tx = Transaction('test_01', origin=self._addr1)
         self._context.block = Block(1, 'block_hash', 0)
         call_data = {'method': 'balance_of', 'params': {'addr_from': str(self._addr_crowd_sale_score)}}
-        expect = self._totalsupply - join_icx * self._one_icx_to_token
+        expect = self._totalsupply - join_icx
         self.assertEqual(expect,
                          self._engine.query(self._context, self._addr_token_score, 'call', call_data))
         call_data = {'method': 'balance_of', 'params': {'addr_from': str(self._addr1)}}
@@ -187,7 +187,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         one_minute_to_sec = 1 * 60
         one_second_to_microsec = 1 * 10 ** 6
 
-        self._context.block = Block(2, 'block_hash', 10 * one_minute_to_sec * one_second_to_microsec)
+        self._context.block = Block(2, 'block_hash', 1 * one_minute_to_sec * one_second_to_microsec)
 
         call_data = {'method': 'check_goal_reached', 'params': {}}
         self._engine.invoke(self._context, self._addr_crowd_sale_score, 'call', call_data)

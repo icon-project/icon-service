@@ -115,11 +115,11 @@ class TestIconScoreEngine(unittest.TestCase):
 
     def test_install(self):
         self._engine.invoke(self._context, self._icon_score_address, 'install', {})
-        self._engine.commit()
+        self._engine.commit(self._context)
 
     def test_call_method(self):
         calldata = {'method': 'total_supply', 'params': {}}
 
         self._engine.invoke(self._context, self._icon_score_address, 'install', {})
-        self._engine.commit()
-        self.assertEqual(1000000000000000000000, self._engine.query(self._context, self._icon_score_address, 'call', calldata))
+        self._engine.commit(self._context)
+        self.assertEqual(1000 * 10 ** 18, self._engine.query(self._context, self._icon_score_address, 'call', calldata))

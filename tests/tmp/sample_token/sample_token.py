@@ -1,7 +1,6 @@
 from iconservice import *
 
 
-@score
 class SampleToken(IconScoreBase):
 
     _BALANCES = 'balances'

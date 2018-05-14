@@ -1,7 +1,6 @@
 from iconservice import *
 
 
-@score
 class SampleCrowdSale(IconScoreBase):
     _ADDR_BENEFICIARY = 'addr_beneficiary'
     _FUNDING_GOAL = 'funding_goal'
@@ -38,11 +37,11 @@ class SampleCrowdSale(IconScoreBase):
 
         # genesis params
         if_successful_send_to = self.msg.sender
-        addr_token_score = Address.from_string('cxe338f4a22eea1ef4327512b6eca37102d4ec1f84')
+        addr_token_score = Address.from_string('cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf')
 
         funding_goal_in_icx = 100
-        duration_in_minutes = 10
-        icx_cost_of_each_token = 0.001
+        duration_in_minutes = 1
+        icx_cost_of_each_token = 1
 
         self._addr_beneficiary.set(if_successful_send_to)
         self._addr_token_score.set(addr_token_score)

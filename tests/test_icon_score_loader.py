@@ -1,9 +1,10 @@
 import unittest
 import os
+from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_installer import IconScoreInstaller
 from iconservice.base.address import AddressPrefix, create_address
-
+import inspect
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -44,4 +45,4 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def test_install(self):
         score = self._loader.load_score(self._address.body.hex())
-        self.assertNotEqual(score, None)
+        self.assertTrue(IconScoreBase in inspect.getmro(score))

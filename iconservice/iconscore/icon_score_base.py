@@ -20,7 +20,7 @@ from functools import wraps, partial
 
 from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase
-from ..base.exception import ExternalException, PayableException
+from ..base.exception import ExternalException, PayableException, IconScoreBaseException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
@@ -30,31 +30,6 @@ CONST_CLASS_EXTERNALS = '__externals'
 CONST_EXTERNAL_FLAG = '__external_flag'
 CONST_CLASS_PAYABLES = '__payables'
 CONST_PAYABLE_FLAG = '__payable_flag'
-
-# score decorator는 반드시 최종 클래스에만 붙어야 한다.
-# 상속 불가
-# 클래스를 한번 감싸서 진행하는 것이기 때문에, 데코레이터 상속이 되버리면 미정의 동작이 발생
-# TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
-
-
-def score(cls):
-    setattr(cls, CONST_CLASS_EXTERNALS, {})
-    setattr(cls, CONST_CLASS_PAYABLES, {})
-
-    for c in inspect.getmro(cls):
-        custom_funcs = [value for key, value in inspect.getmembers(c, predicate=inspect.isfunction) if not key.startswith('__')]
-        external_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
-        payable_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
-        if external_funcs:
-            getattr(cls, CONST_CLASS_EXTERNALS).update(external_funcs)
-        if payable_funcs:
-            getattr(cls, CONST_CLASS_PAYABLES).update(payable_funcs)
-
-    @wraps(cls)
-    def __wrapper(*args):
-        res = cls(*args)
-        return res
-    return __wrapper
 
 
 def external(func=None, *, readonly=False):
@@ -68,7 +43,7 @@ def external(func=None, *, readonly=False):
     if func_name == 'fallback':
         raise ExternalException("can't locate external to this func", func_name, cls_name)
 
-    setattr(func, CONST_EXTERNAL_FLAG, int(readonly))
+    setattr(func, CONST_EXTERNAL_FLAG, int(readonly)+1)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -84,10 +59,10 @@ def payable(func):
     if not inspect.isfunction(func):
         raise PayableException("isn't function", func, cls_name)
 
-    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_EXTERNAL_FLAG) > 0:
+    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_EXTERNAL_FLAG) > 1:
             raise PayableException("have to non readonly", func, cls_name)
 
-    setattr(func, CONST_PAYABLE_FLAG, 0)
+    setattr(func, CONST_PAYABLE_FLAG, 1)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -114,7 +89,48 @@ class IconScoreObject(abc.ABC):
         pass
 
 
-class IconScoreBase(IconScoreObject, ContextGetter):
+class IconScoreBaseMeta(abc.ABCMeta):
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        if IconScoreObject in bases:
+            return super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        if not hasattr(cls, CONST_CLASS_EXTERNALS):
+            setattr(cls, CONST_CLASS_EXTERNALS, {})
+        if not hasattr(cls, CONST_CLASS_PAYABLES):
+            setattr(cls, CONST_CLASS_PAYABLES, {})
+
+        if not isinstance(namespace, dict):
+            raise IconScoreBaseException('attr is not dict!')
+
+        custom_funcs = [value for key, value in inspect.getmembers(cls, predicate=inspect.isfunction)
+                        if not key.startswith('__')]
+
+        for func in custom_funcs:
+            if not hasattr(func, CONST_EXTERNAL_FLAG):
+                setattr(func, CONST_EXTERNAL_FLAG, 0)
+            if not hasattr(func, CONST_PAYABLE_FLAG):
+                setattr(func, CONST_PAYABLE_FLAG, 0)
+
+        external_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs
+                          if hasattr(func, CONST_EXTERNAL_FLAG) and bool(getattr(func, CONST_EXTERNAL_FLAG))}
+        payable_funcs = {func.__name__: inspect.signature(func) for func in custom_funcs
+                         if hasattr(func, CONST_PAYABLE_FLAG) and bool(getattr(func, CONST_PAYABLE_FLAG))}
+
+        if external_funcs:
+            attr_dict = getattr(cls, CONST_CLASS_EXTERNALS)
+            attr_dict.clear()
+            attr_dict.update(external_funcs)
+        if payable_funcs:
+            attr_dict = getattr(cls, CONST_CLASS_PAYABLES)
+            attr_dict.clear()
+            attr_dict.update(payable_funcs)
+
+        return cls
+
+
+class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
 
     @abc.abstractmethod
     def genesis_init(self, *args, **kwargs) -> None:

@@ -6,7 +6,6 @@
 아울러 토큰을 전달하는 transfer 함수를 제공합니다.<br/>
 
 ```python
-@score
 class SampleToken(IconScoreBase):
 
     _BALANCES = 'balances'
@@ -60,7 +59,6 @@ icx와 교환비율은 1:1이며 1분후에 크라우드 세일이 종료됩니�
 그리고 크라우드세일 성공 및 실패시에 icx를 환급받는(safe_withdrawal)을 제공합니다.<br/>
 
 ```python
-@score
 class SampleCrowdSale(IconScoreBase):
     _ADDR_BENEFICIARY = 'addr_beneficiary'
     _FUNDING_GOAL = 'funding_goal'
@@ -183,10 +181,6 @@ def func1(arg1: int, arg2: str) -> object:
 #### 예외 처리
 계약서를 작성하면서 예외를 처리하고 싶다면,<br/>
 IconServiceBaseException 예외를 상속받아서 구현하길 권장합니다.<br/>
-
-#### score 데코레이터 (@score)
-다음 파이썬 클래스가 메인 컨트랙트 클래스라는 것을 지정합니다.<br/>
-score 데코레이터가 붙은 클래스는 상속이 불가합니다.<br/>
 
 #### 최상단 부모 클래스 (IconScoreBase)
 모든 DApp 관련 클래스를 만들 때는 IconScoreBase 클래스를 상속받아서 사용합니다.<br/>

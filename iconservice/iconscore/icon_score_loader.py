@@ -21,8 +21,6 @@ import importlib.machinery
 from os.path import dirname
 from os import path, listdir
 from collections import defaultdict
-
-# ImportWarning: can't resolve package from __spec__ or __package__, falling back on __name__ and __path__ return f(*args, **kwds)
 from ..iconscore.icon_score_base import IconScoreBase
 
 
@@ -70,7 +68,7 @@ class IconScoreLoader(object):
         last_version = '{}_{}'.format(last_block_height, last_tx_index)
         return path.join(address_path, last_version)
 
-    def load_score(self, address_body: str):
+    def load_score(self, address_body: str) -> IconScoreBase:
         last_version_path = self.__get_last_version_path(self.__score_root_path, address_body)
         score_package_info = self.__load_json(last_version_path)
         score_main_file_path = path.join(last_version_path, score_package_info["main_file"] + ".py")
