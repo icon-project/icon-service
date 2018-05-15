@@ -27,9 +27,13 @@ from ..base.address import Address
 from ..base.block import Block
 
 CONST_CLASS_EXTERNALS = '__externals'
-CONST_EXTERNAL_FLAG = '__external_flag'
 CONST_CLASS_PAYABLES = '__payables'
-CONST_PAYABLE_FLAG = '__payable_flag'
+
+CONST_BIT_FLAG = '__bit_flag'
+CONST_BIT_FLAG_EXTERNAL_BASE = 1
+CONST_BIT_FLAG_EXTERNAL_READONLY = 2
+CONST_BIT_FLAG_EXTERNAL = 3
+CONST_BIT_FLAG_PAYABLE = 4
 
 
 def external(func=None, *, readonly=False):
@@ -38,12 +42,19 @@ def external(func=None, *, readonly=False):
 
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
-        raise ExternalException("isn't function", func, cls_name)
+        raise IconScoreException(f"isn't function object: {func}, cls: {cls_name}")
 
     if func_name == 'fallback':
-        raise ExternalException("can't locate external to this func", func_name, cls_name)
+        raise IconScoreException(f"can't locate external to this func func: {func_name}, cls: {cls_name}")
 
-    setattr(func, CONST_EXTERNAL_FLAG, int(readonly) + 1)
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL:
+        raise IconScoreException(f"can't duplicated external decorator func: {func_name}, cls: {cls_name}")
+
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
+        raise IconScoreException(f"can't be placed on payable decorator func: {func_name}, cls: {cls_name}")
+
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) + int(readonly) + 1
+    setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -58,12 +69,16 @@ def external(func=None, *, readonly=False):
 def payable(func):
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
-        raise PayableException("isn't function", func, cls_name)
+        raise IconScoreException(f"isn't function object: {func}, cls: {cls_name}")
 
-    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_EXTERNAL_FLAG) > 1:
-        raise PayableException("have to non readonly", func, cls_name)
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
+        raise IconScoreException(f"can't duplicated payable decorator func: {func_name}, cls: {cls_name}")
 
-    setattr(func, CONST_PAYABLE_FLAG, 1)
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL_READONLY:
+        raise IconScoreException(f"have to non readonly func: {func_name}, cls: {cls_name}")
+
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) + CONST_BIT_FLAG_PAYABLE
+    setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -97,10 +112,6 @@ class IconScoreBaseMeta(ABCMeta):
             return super().__new__(mcs, name, bases, namespace, **kwargs)
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-        if not hasattr(cls, CONST_CLASS_EXTERNALS):
-            setattr(cls, CONST_CLASS_EXTERNALS, {})
-        if not hasattr(cls, CONST_CLASS_PAYABLES):
-            setattr(cls, CONST_CLASS_PAYABLES, {})
 
         if not isinstance(namespace, dict):
             raise IconScoreException('attr is not dict!')
@@ -108,26 +119,15 @@ class IconScoreBaseMeta(ABCMeta):
         custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
                         if not key.startswith('__')]
 
-        for func in custom_funcs:
-            if not hasattr(func, CONST_EXTERNAL_FLAG):
-                setattr(func, CONST_EXTERNAL_FLAG, 0)
-            if not hasattr(func, CONST_PAYABLE_FLAG):
-                setattr(func, CONST_PAYABLE_FLAG, 0)
-
         external_funcs = {func.__name__: signature(func) for func in custom_funcs
-                          if bool(getattr(func, CONST_EXTERNAL_FLAG))}
+                          if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL}
         payable_funcs = {func.__name__: signature(func) for func in custom_funcs
-                         if bool(getattr(func, CONST_PAYABLE_FLAG))}
+                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE}
 
         if external_funcs:
-            attr_dict = getattr(cls, CONST_CLASS_EXTERNALS)
-            attr_dict.clear()
-            attr_dict.update(external_funcs)
+            setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
         if payable_funcs:
-            attr_dict = getattr(cls, CONST_CLASS_PAYABLES)
-            attr_dict.clear()
-            attr_dict.update(payable_funcs)
-
+            setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
         return cls
 
 
@@ -155,9 +155,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
 
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
-        if not hasattr(cls, attr):
-            return {}
-        return getattr(cls, attr)
+        return getattr(cls, attr, {})
 
     def call_method(self, func_name: str, kw_params: dict):
 
@@ -185,9 +183,9 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
 
     def __check_readonly(self, func_name: str):
         func = getattr(self, func_name)
-        readonly = bool(int(getattr(func, CONST_EXTERNAL_FLAG)) - 1)
+        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL_READONLY)
         if readonly != self._context.readonly:
-            raise ExternalException('context type is mismatch', func_name, type(self).__name__)
+            raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
 
     @property
     def msg(self) -> Message:

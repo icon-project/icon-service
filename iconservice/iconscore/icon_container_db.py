@@ -1,8 +1,25 @@
-import collections
+# -*- coding: utf-8 -*-
+
+# Copyright 2017-2018 theloop Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 from typing import TypeVar, Optional, Any, Union, Tuple, TYPE_CHECKING
+from collections import Iterator, Iterable
 from ..base.address import Address
 from ..base.exception import ContainerDBException
-from collections import Iterator
+
 
 K = TypeVar('K', int, str, Address)
 V = TypeVar('V', int, str, Address, bytes, bool)
@@ -146,7 +163,7 @@ class DictDB(object):
 
         if keys is None:
             keys = tuple()
-        elif not isinstance(keys, collections.Iterable):
+        elif not isinstance(keys, Iterable):
             keys = tuple([keys])
 
         for key in keys:

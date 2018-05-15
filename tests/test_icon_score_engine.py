@@ -69,7 +69,7 @@ class TestIconScoreEngine(unittest.TestCase):
     def tearDown(self):
         self._engine = None
         info = self._icon_score_mapper.get(self._icon_score_address)
-        if info is not None:
+        if info is not None and not self._context.readonly:
             score = info.icon_score
             score.db._context_db.close(self._context)
         self._factory.destroy(self._context)
@@ -122,4 +122,5 @@ class TestIconScoreEngine(unittest.TestCase):
 
         self._engine.invoke(self._context, self._icon_score_address, 'install', {})
         self._engine.commit(self._context)
+        self._context.type = IconScoreContextType.QUERY
         self.assertEqual(1000 * 10 ** 18, self._engine.query(self._context, self._icon_score_address, 'call', calldata))

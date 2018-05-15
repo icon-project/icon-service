@@ -14,14 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import json
-import sys
 import importlib.machinery
-from os.path import dirname
 from os import path, listdir
 from collections import defaultdict
-from ..iconscore.icon_score_base import IconScoreBase
 
 
 class IconScoreLoader(object):
@@ -42,14 +38,6 @@ class IconScoreLoader(object):
 
     @staticmethod
     def __load_user_score_module(file_path: str, call_class_name: str):
-
-        dir_path = dirname(file_path)
-
-        if dir_path in sys.path:
-            logging.error(f"sys.path has the score path: {dir_path}")
-        else:
-            sys.path.append(dir_path)
-
         module = importlib.machinery.SourceFileLoader(call_class_name, file_path).load_module()
         return getattr(module, call_class_name)
 
@@ -68,9 +56,9 @@ class IconScoreLoader(object):
         last_version = '{}_{}'.format(last_block_height, last_tx_index)
         return path.join(address_path, last_version)
 
-    def load_score(self, address_body: str) -> IconScoreBase:
+    def load_score(self, address_body: str) -> callable:
         last_version_path = self.__get_last_version_path(self.__score_root_path, address_body)
         score_package_info = self.__load_json(last_version_path)
-        score_main_file_path = path.join(last_version_path, score_package_info["main_file"] + ".py")
-        score = self.__load_user_score_module(score_main_file_path, score_package_info["main_score"])
+        score_package_init_file_path = path.join(last_version_path, '__init__.py')
+        score = self.__load_user_score_module(score_package_init_file_path, score_package_info["main_score"])
         return score

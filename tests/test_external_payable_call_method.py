@@ -6,7 +6,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory, Ic
 from iconservice.base.address import Address, AddressPrefix, create_address
 from iconservice.base.block import Block
 from iconservice.base.transaction import Transaction
-from iconservice.base.exception import ExternalException, PayableException
+from iconservice.base.exception import ExternalException, PayableException, IconScoreException
 from iconservice.database.db import IconScoreDatabase
 from tests.mock_db import create_mock_icon_score_db
 
@@ -26,13 +26,13 @@ class CallClass1(IconScoreBase):
     def func2(self):
         pass
 
-    @external(readonly=True)
     @payable
+    @external
     def func3(self):
         pass
 
-    @external
     @payable
+    @external
     def func4(self):
         pass
 
@@ -59,8 +59,8 @@ class CallClass2(CallClass1):
     def func1(self):
         pass
 
-    @external
     @payable
+    @external
     def func5(self):
         pass
 
@@ -94,7 +94,7 @@ class TestCallMethod(unittest.TestCase):
         # self.ins.call_method('func1', {})
         self.ins.call_method('func2', {})
         self._context.type = IconScoreContextType.QUERY
-        self.ins.call_method('func3', {})
+        # self.ins.call_method('func3', {})
         self._context.type = IconScoreContextType.INVOKE
         self.ins.call_method('func4', {})
         self.ins.call_method('func5', {})
@@ -104,11 +104,11 @@ class TestCallMethod(unittest.TestCase):
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 1)
         self.assertRaises(ExternalException, self.ins.call_method, 'func1', {})
         self.assertRaises(PayableException, self.ins.call_method, 'func2', {})
-        self._context.type = IconScoreContextType.INVOKE
-        self.assertRaises(ExternalException, self.ins.call_method, 'func3', {})
+        # self._context.type = IconScoreContextType.GENESIS
+        # self.assertRaises(ExternalException, self.ins.call_method, 'func3', {})
         self._context.type = IconScoreContextType.QUERY
-        self.assertRaises(ExternalException, self.ins.call_method, 'func4', {})
-        self.assertRaises(ExternalException, self.ins.call_method, 'func5', {})
+        self.assertRaises(IconScoreException, self.ins.call_method, 'func4', {})
+        self.assertRaises(IconScoreException, self.ins.call_method, 'func5', {})
 
         self.assertRaises(ExternalException, self.ins.call_method, 'func6', {})
 

@@ -1,6 +1,15 @@
 간단한 토큰을 만들어봅니다.
 ==================================
 
+최초 설정
+--------------
+tbears init {project_name} {class_name}을 수행하면 {project_name}폴더가 생기며,<br/>
+\_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.<br/>
+{project_name}.py파일에는 {class_name}으로 메인클래스가 선언되어 있습니다.<br/>
+\_\_init\_\_.py 에는 동적 import를 위한 구문이 자동으로 생성되어있습니다.<br/>
+만약 폴더 구조가 변경되면 위의 내용을 반드시 확인 부탁드립니다.<br/>
+
+
 <br/>
 1000개의 초기 발행량을 가지며 처음 생성한 사람에게 전체 발행량을 발급하는 간단한 토큰 예제입니다.<br/>
 아울러 토큰을 전달하는 transfer 함수를 제공합니다.<br/>
@@ -49,6 +58,7 @@ class SampleToken(IconScoreBase):
 
     def fallback(self) -> None:
         pass
+
 
 ```
 
@@ -262,11 +272,14 @@ external 데코레이터가 없는 함수를 호출하면 해당 call은 실패�
 external(readonly=True)라고 선언된 함수는 읽기전용 db에만 접근 가능합니다. Solidity의 view 키워드 의미와 같습니다. <br/>
 만약 payable이 없는 함수인데 msg.value 값이 있다면 해당 call은 실패합니다.<br/>
 만약 payable이 있는 상태이나 external(readonly=True) 라면 해당 call은 실패합니다.<br/>
+external 데코레이터가 중복으로 선언되어있다면 import타임에 IconScoreException이 발생합니다.<br/>
 
 #### payable 데코레이터 (@payable)
 이 데코레이터가 붙은 함수들만 icx 코인 거래가 가능합니다.<br/>
 0이 들어와도 문제가 없습니다. <br/>
-만약 payable이 없는 함수에 icx값이 들어있다면 해당 call은 실패합니다.
+만약 payable이 없는 함수에 icx값이 들어있다면 해당 call은 실패합니다.<br/>
+payable 데코레이터는 반드시 external 데코레이터 보다 위에 선언되어야합니다.<br/>
+external 데코레이터가 중복으로 선언되어있다면 import타임에 IconScoreException이 발생합니다.<br/>
 
 #### fallback
 fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
