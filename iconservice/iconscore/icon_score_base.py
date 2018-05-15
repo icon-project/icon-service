@@ -116,18 +116,18 @@ class IconScoreBaseMeta(ABCMeta):
 
         external_funcs = {func.__name__: signature(func) for func in custom_funcs
                           if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL}
-        payable_funcs = {func.__name__: signature(func) for func in custom_funcs
-                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE}
+        payable_funcs = [func for func in custom_funcs
+                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE]
 
         readonly_payables = [func for func in payable_funcs
-                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY]
-
+                             if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY]
         if bool(readonly_payables):
             raise IconScoreException(f"can't payable readonly func: {readonly_payables}")
 
         if external_funcs:
             setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
         if payable_funcs:
+            payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
         return cls
 
