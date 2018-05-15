@@ -30,10 +30,11 @@ CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
 
 CONST_BIT_FLAG = '__bit_flag'
-CONST_BIT_FLAG_EXTERNAL_BASE = 1
-CONST_BIT_FLAG_EXTERNAL_READONLY = 2
-CONST_BIT_FLAG_EXTERNAL = 3
+CONST_BIT_FLAG_READONLY = 1
+CONST_BIT_FLAG_EXTERNAL = 2
 CONST_BIT_FLAG_PAYABLE = 4
+
+CONST_BIT_FLAG_EXTERNAL_READONLY = CONST_BIT_FLAG_READONLY | CONST_BIT_FLAG_EXTERNAL
 
 
 def external(func=None, *, readonly=False):
@@ -53,7 +54,7 @@ def external(func=None, *, readonly=False):
     if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
         raise IconScoreException(f"can't be placed on payable decorator func: {func_name}, cls: {cls_name}")
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) + int(readonly) + 1
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EXTERNAL | int(readonly)
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
@@ -74,10 +75,10 @@ def payable(func):
     if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
         raise IconScoreException(f"can't duplicated payable decorator func: {func_name}, cls: {cls_name}")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL_READONLY:
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY:
         raise IconScoreException(f"have to non readonly func: {func_name}, cls: {cls_name}")
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) + CONST_BIT_FLAG_PAYABLE
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_PAYABLE
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
@@ -183,7 +184,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
 
     def __check_readonly(self, func_name: str):
         func = getattr(self, func_name)
-        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL_READONLY)
+        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY)
         if readonly != self._context.readonly:
             raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
 
