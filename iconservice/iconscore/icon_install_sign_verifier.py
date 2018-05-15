@@ -41,11 +41,7 @@ class IconInstallSignVerifier:
     @classmethod
     def from_bytes(cls, data):
         """
-        Args:
-            data(bytes): bytes data which PublicKey.serialize() returns
-            raw(bool): if False, it is assumed that pubkey has gone through PublicKey.deserialize already, otherwise it must be specified as bytes.
-
-        Returns:
-            None
+        :param data: bytes data which PublicKey.serialize() returns
+        :return:
         """
         return cls(data, True)
