@@ -59,7 +59,6 @@ class SampleToken(IconScoreBase):
     def fallback(self) -> None:
         pass
 
-
 ```
 
 <br/>
@@ -278,7 +277,6 @@ external 데코레이터가 중복으로 선언되어있다면 import타임에 I
 이 데코레이터가 붙은 함수들만 icx 코인 거래가 가능합니다.<br/>
 0이 들어와도 문제가 없습니다. <br/>
 만약 payable이 없는 함수에 icx값이 들어있다면 해당 call은 실패합니다.<br/>
-payable 데코레이터는 반드시 external 데코레이터 보다 위에 선언되어야합니다.<br/>
 external 데코레이터가 중복으로 선언되어있다면 import타임에 IconScoreException이 발생합니다.<br/>
 
 #### fallback

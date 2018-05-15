@@ -51,9 +51,6 @@ def external(func=None, *, readonly=False):
     if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL:
         raise IconScoreException(f"can't duplicated external decorator func: {func_name}, cls: {cls_name}")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
-        raise IconScoreException(f"can't be placed on payable decorator func: {func_name}, cls: {cls_name}")
-
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EXTERNAL | int(readonly)
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
@@ -74,9 +71,6 @@ def payable(func):
 
     if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
         raise IconScoreException(f"can't duplicated payable decorator func: {func_name}, cls: {cls_name}")
-
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY:
-        raise IconScoreException(f"have to non readonly func: {func_name}, cls: {cls_name}")
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_PAYABLE
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -124,6 +118,12 @@ class IconScoreBaseMeta(ABCMeta):
                           if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL}
         payable_funcs = {func.__name__: signature(func) for func in custom_funcs
                          if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE}
+
+        readonly_payables = [func for func in payable_funcs
+                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY]
+
+        if bool(readonly_payables):
+            raise IconScoreException(f"can't payable readonly func: {readonly_payables}")
 
         if external_funcs:
             setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
