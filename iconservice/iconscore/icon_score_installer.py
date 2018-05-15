@@ -28,11 +28,11 @@ class IconScoreInstaller(object):
     """Score installer.
     """
 
-    def __init__(self, icon_score_root_path: 'str') -> 'None':
+    def __init__(self, icon_score_root_path: str) -> None:
         self.icon_score_root_path = icon_score_root_path
 
-    def install(self, address: 'Address', data: 'bytes', block_height: 'int', transaction_index: 'int',
-                tx_hash: 'bytes'=None) -> 'bool':
+    def install(self, address: 'Address', data: bytes, block_height: int, transaction_index: int,
+                tx_hash: bytes=None) -> bool:
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
         :param address: contract address
@@ -77,7 +77,7 @@ class IconScoreInstaller(object):
             return False
 
     @staticmethod
-    def extract_files_gen(data: 'bytes'):
+    def extract_files_gen(data: bytes):
         """Yield (filename, file_information, parent_directory_name) tuple.
 
         :param data: The byte value of the zip file.
@@ -107,7 +107,7 @@ class IconScoreInstaller(object):
             raise ScoreInstallExtractException("Large zip file.")
 
     @staticmethod
-    def remove_existing_score(archive_path: 'str') -> 'None':
+    def remove_existing_score(archive_path: str) -> None:
         """Remove archive file.
 
         :param archive_path: The path of SCORE archive.

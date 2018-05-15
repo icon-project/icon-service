@@ -33,7 +33,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         IconScoreInstaller.remove_existing_score(self.score_root_path)
 
     @staticmethod
-    def read_zipfile_as_byte(archive_path: 'str') -> 'bytes':
+    def read_zipfile_as_byte(archive_path: str) -> bytes:
         with open(archive_path, 'rb') as f:
             byte_data = f.read()
             return byte_data
