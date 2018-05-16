@@ -135,11 +135,11 @@ class PayableException(APIIconScoreBaseException):
     pass
 
 
-class ScoreInstallException(IconScoreBaseException):
+class ScoreInstallException(IconScoreException):
     pass
 
 
-class ScoreInstallExtractException(IconScoreBaseException):
+class ScoreInstallExtractException(IconScoreException):
     pass
 
 
