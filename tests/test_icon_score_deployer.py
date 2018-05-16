@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import unittest
-from iconservice.iconscore.icon_score_installer import *
+from iconservice.iconscore.icon_score_deployer import *
 from iconservice.base.address import Address
 
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -41,7 +41,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         # Case when the user install SCORE first time.
         block_height1, transaction_index1 = 1234, 12
         score_id = str(block_height1) + "_" + str(transaction_index1)
-        ret1 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+        ret1 = self.installer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path),
                                       block_height1, transaction_index1)
         install_path = os.path.join(self.score_root_path, score_id)
         zip_file_info_gen = self.installer.extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
@@ -61,28 +61,28 @@ class TestIConScoreInstaller(unittest.TestCase):
         self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
         # Case when the user install SCORE second time.
-        ret2 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+        ret2 = self.installer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path),
                                       block_height1, transaction_index1)
         self.assertFalse(ret2)
 
         # Case when installing SCORE with badzipfile Data.
         block_height2, transaction_index2 = 123, 13
         score_id2 = str(block_height2) + "_" + str(transaction_index2)
-        ret3 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path2),
+        ret3 = self.installer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path2),
                                       block_height2, transaction_index2)
         install_path2 = os.path.join(self.score_root_path, score_id2)
         self.assertFalse(ret3)
         self.assertFalse(os.path.exists(install_path2))
 
         # Case when The user specifies an installation path that does not have permission.
-        ret4 = self.installer2.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+        ret4 = self.installer2.deploy(self.address, self.read_zipfile_as_byte(self.archive_path),
                                        block_height1, transaction_index1)
         self.assertFalse(ret4)
 
         # Case when the user try to install scores without directories.
 
-        ret5 = self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path3),
-                                      block_height1, transaction_index2)
+        ret5 = self.installer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path3),
+                                     block_height1, transaction_index2)
         score_id3 = str(block_height1) + "_" + str(transaction_index2)
         install_path3 = os.path.join(self.score_root_path, score_id3)
         self.assertEqual(True, os.path.exists(install_path3))
@@ -91,7 +91,7 @@ class TestIConScoreInstaller(unittest.TestCase):
         block_height1, transaction_index1 = 1234, 12
         score_id = str(block_height1) + "_" + str(transaction_index1)
         install_path = os.path.join(self.score_root_path, score_id)
-        self.installer.install(self.address, self.read_zipfile_as_byte(self.archive_path),
+        self.installer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path),
                                block_height1, transaction_index1)
         self.installer.remove_existing_score(install_path)
         self.assertFalse(os.path.exists(install_path))

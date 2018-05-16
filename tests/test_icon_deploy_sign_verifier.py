@@ -17,7 +17,7 @@ import hashlib
 import os
 import unittest
 
-from iconservice.iconscore.icon_install_sign_verifier import IconInstallSignVerifier
+from iconservice.iconscore.icon_score_deploy_sign_verifier import IconScoreDeploySignVerifier
 from secp256k1 import PrivateKey
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -48,7 +48,7 @@ class TestIconInstallSignVerifier(unittest.TestCase):
     def setUp(self):
         self.tmp_signer = TmpSigner()
 
-        self.verifier = IconInstallSignVerifier(self.tmp_signer.public_key)
+        self.verifier = IconScoreDeploySignVerifier(self.tmp_signer.public_key)
 
     def test_verify(self):
         testzip_bytes = read_zipfile_as_byte(os.path.join(TEST_DIR, "test.zip"))

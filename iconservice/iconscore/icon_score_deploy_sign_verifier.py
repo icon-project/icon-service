@@ -17,7 +17,7 @@
 from secp256k1 import PublicKey, FLAG_VERIFY
 
 
-class IconInstallSignVerifier:
+class IconScoreDeploySignVerifier:
     def __init__(self, data, raw=True):
         """
         Refer to https://github.com/ludbb/secp256k1-py api documents.
@@ -26,16 +26,16 @@ class IconInstallSignVerifier:
         """
         self.__pubkey = PublicKey(data, raw, FLAG_VERIFY)
 
-    def verify(self, msg_hash, signature_bytes):
+    def verify(self, msg_hash: bytes, signature: bytes) -> bool:
         """Verify signature.
 
         :param msg_hash: Hash value of msg
-        :param signature_bytes: signature data
+        :param signature: signature data
         :return:
         """
         pubkey = self.__pubkey
 
-        signature = pubkey.ecdsa_deserialize(signature_bytes)
+        signature = pubkey.ecdsa_deserialize(signature)
         return pubkey.ecdsa_verify(msg_hash, signature, True)
 
     @classmethod

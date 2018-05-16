@@ -29,7 +29,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory, Ic
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_installer import IconScoreInstaller
+from iconservice.iconscore.icon_score_deployer import IconScoreInstaller
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
 

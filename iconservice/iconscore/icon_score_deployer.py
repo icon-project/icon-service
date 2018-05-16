@@ -31,8 +31,8 @@ class IconScoreInstaller(object):
     def __init__(self, icon_score_root_path: str) -> None:
         self.icon_score_root_path = icon_score_root_path
 
-    def install(self, address: 'Address', data: bytes, block_height: int, transaction_index: int,
-                tx_hash: bytes=None) -> bool:
+    def deploy(self, address: 'Address', data: bytes, block_height: int, transaction_index: int,
+               tx_hash: bytes=None) -> bool:
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
         :param address: contract address
@@ -42,10 +42,8 @@ class IconScoreInstaller(object):
         :param tx_hash:
         :return:
         """
-        str_block_height = str(block_height)
-        str_transaction_index = str(transaction_index)
         str_address = str(address.body.hex())
-        score_id = str_block_height + "_" + str_transaction_index
+        score_id = f'{block_height}_{transaction_index}'
         score_root_path = os.path.join(self.icon_score_root_path, str_address)
         install_path = os.path.join(score_root_path, score_id)
 
