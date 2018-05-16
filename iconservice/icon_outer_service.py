@@ -20,7 +20,7 @@ import pickle
 from loopchain.baseservice import ScoreResponse
 from loopchain.blockchain import Transaction, Block
 from loopchain.protos import loopchain_pb2, loopchain_pb2_grpc, message_code
-from icon.iconservice import IconServiceEngine
+from iconservice.icon_service_engine import IconServiceEngine
 
 # loopchain_pb2 를 아래와 같이 import 하지 않으면 broadcast 시도시 pickle 오류가 발생함
 # import loopchain_pb2

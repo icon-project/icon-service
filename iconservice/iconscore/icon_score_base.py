@@ -14,79 +14,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
-import abc
-from functools import wraps
+from inspect import isfunction, getmembers, signature
+from abc import ABC, ABCMeta, abstractmethod
+from functools import wraps, partial
 
-
-from .icon_score_context import IconScoreContext
-from ..database.db import IconServiceDatabase
-from ..base.exception import ExternalException, PayableException
+from .icon_score_context import ContextGetter
+from ..database.db import IconScoreDatabase
+from ..base.exception import ExternalException, PayableException, IconScoreException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
+from ..base.block import Block
 
 CONST_CLASS_EXTERNALS = '__externals'
-CONST_EXTERNAL_FLAG = '__external_flag'
 CONST_CLASS_PAYABLES = '__payables'
-CONST_PAYABLE_FLAG = '__payable_flag'
 
-# score decorator는 반드시 최종 클래스에만 붙어야 한다.
-# 상속 불가
-# 클래스를 한번 감싸서 진행하는 것이기 때문에, 데코레이터 상속이 되버리면 미정의 동작이 발생
-# TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
+CONST_BIT_FLAG = '__bit_flag'
+CONST_BIT_FLAG_READONLY = 1
+CONST_BIT_FLAG_EXTERNAL = 2
+CONST_BIT_FLAG_PAYABLE = 4
+
+CONST_BIT_FLAG_EXTERNAL_READONLY = CONST_BIT_FLAG_READONLY | CONST_BIT_FLAG_EXTERNAL
 
 
-def score(cls):
-    setattr(cls, CONST_CLASS_EXTERNALS, dict())
-    setattr(cls, CONST_CLASS_PAYABLES, dict())
+def external(func=None, *, readonly=False):
+    if func is None:
+        return partial(external, readonly=readonly)
 
-    for c in inspect.getmro(cls):
-        custom_funcs = [value for key, value in inspect.getmembers(c, predicate=inspect.isfunction) if not key.startswith('__')]
-        external_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_EXTERNAL_FLAG)}
-        payable_funcs = {func.__name__: func for func in custom_funcs if hasattr(func, CONST_PAYABLE_FLAG)}
-        if external_funcs:
-            getattr(cls, CONST_CLASS_EXTERNALS).update(external_funcs)
-        if payable_funcs:
-            getattr(cls, CONST_CLASS_PAYABLES).update(payable_funcs)
+    cls_name, func_name = str(func.__qualname__).split('.')
+    if not isfunction(func):
+        raise IconScoreException(f"isn't function object: {func}, cls: {cls_name}")
 
-    @wraps(cls)
-    def __wrapper(*args, **kwargs):
-        res = cls(*args, **kwargs)
+    if func_name == 'fallback':
+        raise IconScoreException(f"can't locate external to this func func: {func_name}, cls: {cls_name}")
+
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL:
+        raise IconScoreException(f"can't duplicated external decorator func: {func_name}, cls: {cls_name}")
+
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EXTERNAL | int(readonly)
+    setattr(func, CONST_BIT_FLAG, bit_flag)
+
+    @wraps(func)
+    def __wrapper(calling_obj: object, *args, **kwargs):
+        if not (isinstance(calling_obj, IconScoreBase)):
+            raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
+        res = func(calling_obj, *args, **kwargs)
         return res
+
     return __wrapper
-
-
-def external(readonly=False):
-    def __inner_func(func):
-        cls_name, func_name = str(func.__qualname__).split('.')
-        if not inspect.isfunction(func):
-            raise ExternalException("isn't function", func, cls_name)
-
-        if func_name == 'fallback':
-            raise ExternalException("can't locate external to this func", func_name, cls_name)
-
-        setattr(func, CONST_EXTERNAL_FLAG, int(readonly))
-
-        @wraps(func)
-        def __wrapper(calling_obj: object, *args, **kwargs):
-            if not (isinstance(calling_obj, IconScoreBase)):
-                raise ExternalException('is Not derived of ContractBase', func_name, cls_name)
-            res = func(calling_obj, *args, **kwargs)
-            return res
-        return __wrapper
-    return __inner_func
 
 
 def payable(func):
     cls_name, func_name = str(func.__qualname__).split('.')
-    if not inspect.isfunction(func):
-        raise PayableException("isn't function", func, cls_name)
+    if not isfunction(func):
+        raise IconScoreException(f"isn't function object: {func}, cls: {cls_name}")
 
-    if hasattr(func, CONST_EXTERNAL_FLAG) and getattr(func, CONST_EXTERNAL_FLAG) > 0:
-            raise PayableException("have to non readonly", func, cls_name)
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
+        raise IconScoreException(f"can't duplicated payable decorator func: {func_name}, cls: {cls_name}")
 
-    setattr(func, CONST_PAYABLE_FLAG, 0)
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_PAYABLE
+    setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -95,10 +82,11 @@ def payable(func):
             raise PayableException('is Not derived of ContractBase', func_name, cls_name)
         res = func(calling_obj, *args, **kwargs)
         return res
+
     return __wrapper
 
 
-class IconScoreObject(abc.ABC):
+class IconScoreObject(ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
         class.__mro__로 하기때문에 다음과 같이 init에 매개변수를 받게 자유롭게 하려면 다음처럼 래핑 클래스가 필요하다.
@@ -113,20 +101,54 @@ class IconScoreObject(abc.ABC):
         pass
 
 
-class IconScoreBase(IconScoreObject):
+class IconScoreBaseMeta(ABCMeta):
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        if IconScoreObject in bases:
+            return super().__new__(mcs, name, bases, namespace, **kwargs)
 
-    @abc.abstractmethod
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        if not isinstance(namespace, dict):
+            raise IconScoreException('attr is not dict!')
+
+        custom_funcs = [value for key, value in getmembers(cls, predicate=isfunction)
+                        if not key.startswith('__')]
+
+        external_funcs = {func.__name__: signature(func) for func in custom_funcs
+                          if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL}
+        payable_funcs = [func for func in custom_funcs
+                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE]
+
+        readonly_payables = [func for func in payable_funcs
+                             if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY]
+        if bool(readonly_payables):
+            raise IconScoreException(f"can't payable readonly func: {readonly_payables}")
+
+        if external_funcs:
+            setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
+        if payable_funcs:
+            payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
+            setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
+        return cls
+
+
+class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
+
+    @abstractmethod
     def genesis_init(self, *args, **kwargs) -> None:
         super().genesis_init(*args, **kwargs)
 
-    @abc.abstractmethod
-    def __init__(self, db: IconServiceDatabase, *args, **kwargs) -> None:
-        super().__init__(db, *args, **kwargs)
-        self.__context = None
+    @abstractmethod
+    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
+        super().__init__(db, owner)
+        self.__db = db
+        self.__owner = owner
+        self.__address = db.address
 
         if not self.get_api():
-            raise ExternalException('empty abi! have to position decorator(@init_abi) above class definition',
-                                    '__init__', str(type(self)))
+            raise ExternalException(
+                'empty abi! have to position decorator(@init_abi) above class definition',
+                '__init__', str(type(self)))
 
     @classmethod
     def get_api(cls) -> dict:
@@ -134,21 +156,20 @@ class IconScoreBase(IconScoreObject):
 
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
-        if not hasattr(cls, attr):
-            return dict()
-        return getattr(cls, attr)
+        return getattr(cls, attr, {})
 
-    def call_method(self, func_name: str, *args, **kwargs):
+    def call_method(self, func_name: str, kw_params: dict):
 
         if func_name not in self.get_api():
             raise ExternalException(f"can't external call", func_name, type(self).__name__)
 
+        self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
         score_func = getattr(self, func_name)
-        return score_func(*args, **kwargs)
+        return score_func(**kw_params)
 
-    def call_fallback(self):
+    def __call_fallback(self):
         func_name = 'fallback'
         payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
         self.__check_payable(func_name, payable_dict)
@@ -161,17 +182,53 @@ class IconScoreBase(IconScoreObject):
             if self.msg.value > 0:
                 raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
 
-    def set_context(self, context: IconScoreContext) -> None:
-        self.__context = context
+    def __check_readonly(self, func_name: str):
+        func = getattr(self, func_name)
+        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY)
+        if readonly != self._context.readonly:
+            raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
 
     @property
     def msg(self) -> Message:
-        return self.__context.msg
+        return self._context.msg
+
+    @property
+    def address(self) -> Address:
+        return self.__address
 
     @property
     def tx(self) -> Transaction:
-        return self.__context.tx
+        return self._context.tx
 
-    def call(self, addr_to: Address, func_name: str, *args, **kwargs):
-        return self.__context.call(addr_to, func_name, *args, **kwargs)
+    @property
+    def block(self) -> Block:
+        return self._context.block
 
+    @property
+    def db(self) -> IconScoreDatabase:
+        return self.__db
+
+    @property
+    def owner(self) -> Address:
+        return self.__owner
+
+    def now(self):
+        return self.block.timestamp
+
+    def call(self, addr_to: Address, func_name: str, kw_dict: dict):
+        """Call external function provided by other IconScore with arguments
+
+        :param addr_to: the address of other IconScore
+        :param func_name: function name provided by other IconScore
+        :param kw_dict:
+        """
+        return self._context.call(self.address, addr_to, func_name, kw_dict)
+
+    def transfer(self, addr_to: Address, amount: int):
+        return self._context.transfer(self.__address, addr_to, amount)
+
+    def send(self, addr_to: Address, amount: int):
+        return self._context.send(self.__address, addr_to, amount)
+
+    def revert(self) -> None:
+        return self._context.revert(self.__address)

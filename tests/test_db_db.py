@@ -21,11 +21,12 @@ import unittest
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import DatabaseException
-from iconservice.database.db import PlyvelDatabase
-from iconservice.database.db import ReadOnlyDatabase
-from iconservice.database.db import WritableDatabase
 from iconservice.database.factory import DatabaseFactory
+from iconservice.database.db import ContextDatabase, PlyvelDatabase
+from iconservice.database.db import IconScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from . import create_address, rmtree
 
 
@@ -36,13 +37,22 @@ class TestPlyvelDatabase(unittest.TestCase):
         rmtree(state_db_root_path)
         os.mkdir(state_db_root_path)
 
-        address = create_address(AddressPrefix.CONTRACT, b'0')
-        factory = DatabaseFactory(state_db_root_path)
-        self.db = factory.create_by_address(address)
+        self.db = PlyvelDatabase(
+            PlyvelDatabase.make_db(state_db_root_path, True))
 
     def tearDown(self):
         self.db.close()
         rmtree(self.state_db_root_path)
+
+    def test_get_and_put(self):
+        db = self.db
+
+        db.put(b'key0', b'value0')
+        value = db.get(b'key0')
+        self.assertEqual(b'value0', value)
+
+        value = db.get(b'key1')
+        self.assertIsNone(value)
 
     def test_write_batch(self):
         data = {
@@ -57,7 +67,7 @@ class TestPlyvelDatabase(unittest.TestCase):
         self.assertEqual(b'value0', db.get(b'key0'))
 
 
-class TestReadOnlyDatabase(unittest.TestCase):
+class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def setUp(self):
         state_db_root_path = 'state_db'
         self.state_db_root_path = state_db_root_path
@@ -66,91 +76,165 @@ class TestReadOnlyDatabase(unittest.TestCase):
 
         address = create_address(AddressPrefix.CONTRACT, b'0')
         factory = DatabaseFactory(state_db_root_path)
-        _db = factory.create_by_address(address)
+        context_factory = IconScoreContextFactory(max_size=2)
+
+        context = context_factory.create(IconScoreContextType.INVOKE)
+        context.block_batch = BlockBatch()
+        context.tx_batch = TransactionBatch()
 
         value = 100
-        _db.put(address.body, value.to_bytes(32, 'big'))
+        score_db = factory.create_by_address(address)
+        score_db._db.put(address.body, value.to_bytes(32, 'big'))
 
-        self.db = ReadOnlyDatabase(_db)
-
-    def tearDown(self):
-        self.db._ReadOnlyDatabase__db.close()
-        rmtree(self.state_db_root_path)
-
-    def test_get(self):
-        """
-        """
-        address = create_address(AddressPrefix.CONTRACT, b'0')
-        value = self.db.get(address.body)
-        self.assertEqual(100, int.from_bytes(value, 'big'))
-
-    def test_put(self):
-        """put is not allowed in ReadOnlyDatabase
-        """
-        with self.assertRaises(DatabaseException):
-            self.db.put(b'key0', b'value0')
-
-
-class TestWritableDatabase(unittest.TestCase):
-    def setUp(self):
-        state_db_root_path = 'state_db'
-        self.state_db_root_path = state_db_root_path
-        rmtree(state_db_root_path)
-        os.mkdir(state_db_root_path)
-
-        address = create_address(AddressPrefix.CONTRACT, b'0')
-        factory = DatabaseFactory(state_db_root_path)
-        _db = factory.create_by_address(address)
-
-        value = 100
-        _db.put(address.body, value.to_bytes(32, 'big'))
-
-        block_batch = BlockBatch()
-        tx_batch = TransactionBatch()
-
-        self.db = WritableDatabase(address=address,
-                                   db=_db,
-                                   block_batch=block_batch,
-                                   tx_batch=tx_batch)
-
+        self.db = score_db
         self.address = address
-        self.block_batch = block_batch
-        self.tx_batch = tx_batch
+        self.context = context
 
     def tearDown(self):
-        self.db.close()
+        self.db.close(self.context)
         rmtree(self.state_db_root_path)
 
     def test_get(self):
         """
         """
+        context = self.context
         address = create_address(AddressPrefix.CONTRACT, b'0')
-        value = self.db.get(address.body)
+        value = self.db.get(context, address.body)
         self.assertEqual(100, int.from_bytes(value, 'big'))
 
     def test_put(self):
         """WritableDatabase supports put()
         """
-        self.db.put(b'key0', b'value0')
-        value = self.db.get(b'key0')
+        context = self.context
+        self.db.put(context, b'key0', b'value0')
+        value = self.db.get(context, b'key0')
         self.assertEqual(b'value0', value)
 
-        batch = self.tx_batch[self.address]
+        batch = self.context.tx_batch[self.address]
         self.assertEqual(b'value0', batch.get(b'key0'))
 
     def test_write_batch(self):
+        context = self.context
         data = {
             b'key0': b'value0',
             b'key1': b'value1'
         }
         db = self.db
-        db.write_batch(data)
+        db.write_batch(context, data)
 
-        self.assertEqual(b'value1', db.get(b'key1'))
-        self.assertEqual(b'value0', db.get(b'key0'))
+        self.assertEqual(b'value1', db.get(context, b'key1'))
+        self.assertEqual(b'value0', db.get(context, b'key0'))
 
-    def test_get_sub_db(self):
-        """Create prefix db
-        """
-        prefix_db = self.db.get_sub_db(b'prefix')
-        self.assertTrue(isinstance(prefix_db, PlyvelDatabase))
+    def test_none_context(self):
+        context = None
+        db = self.db
+
+        db.put(context, b'key0', b'value0')
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+
+        db.delete(context, b'key0')
+        self.assertIsNone(db.get(context, b'key0'))
+
+        with self.assertRaises(TypeError):
+            db.put(context, b'key1', None)
+
+    def test_delete(self):
+        context = self.context        
+        db = self.db
+        score_address = db.address
+        tx_batch = context.tx_batch
+
+        db.put(context, b'key0', b'value0')
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+        self.assertEqual(b'value0', tx_batch[score_address][b'key0'])
+
+        db.write_batch(context, tx_batch[score_address])
+        tx_batch.clear()
+        self.assertEqual(0, len(tx_batch))
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+
+        db.delete(context, b'key0')
+        db.write_batch(context, tx_batch[score_address])
+        tx_batch.clear()
+        self.assertEqual(0, len(tx_batch))
+        self.assertIsNone(db.get(context, b'key0'))
+
+
+class TestIconScoreDatabase(unittest.TestCase):
+    def setUp(self):
+        state_db_root_path = 'state_db'
+        self.state_db_root_path = state_db_root_path
+        rmtree(state_db_root_path)
+        os.mkdir(state_db_root_path)
+
+        address = create_address(AddressPrefix.CONTRACT, b'0')
+        factory = DatabaseFactory(state_db_root_path)
+        context_factory = IconScoreContextFactory(max_size=2)
+
+        context = context_factory.create(IconScoreContextType.INVOKE)
+        context.block_batch = BlockBatch()
+        context.tx_batch = TransactionBatch()
+
+        context_db = factory.create_by_address(address)
+
+        self.db = IconScoreDatabase(context_db=context_db, prefix=b'')
+        self.address = address
+        self.context = context
+        self.context_factory = context_factory
+
+    def tearDown(self):
+        self.context_factory.destroy(self.context)
+        rmtree(self.state_db_root_path)
+
+    def test_address(self):
+        self.assertEqual(self.address, self.db.address)
+
+    def test_put_and_get(self):
+        db = self.db
+        key = self.address.body
+        value = 100
+
+        self.assertIsNone(db.get(key))
+
+        db.put(key, value.to_bytes(32, 'big'))
+        self.assertEqual(value.to_bytes(32, 'big'), db.get(key))
+
+
+class TestIconScoreDatabase(unittest.TestCase):
+    def setUp(self):
+        state_db_root_path = 'state_db'
+        self.state_db_root_path = state_db_root_path
+        rmtree(state_db_root_path)
+        os.mkdir(state_db_root_path)
+
+        address = create_address(AddressPrefix.CONTRACT, b'0')
+        factory = DatabaseFactory(state_db_root_path)
+        context_factory = IconScoreContextFactory(max_size=2)
+
+        context = context_factory.create(IconScoreContextType.INVOKE)
+        context.block_batch = BlockBatch()
+        context.tx_batch = TransactionBatch()
+
+        context_db = factory.create_by_address(address)
+
+        self.db = IconScoreDatabase(context_db=context_db, prefix=b'')
+        self.address = address
+        self.context = context
+        self.context_factory = context_factory
+
+    def tearDown(self):
+        self.context_factory.destroy(self.context)
+        rmtree(self.state_db_root_path)
+
+    def test_address(self):
+        self.assertEqual(self.address, self.db.address)
+
+    def test_put_and_get(self):
+        db = self.db
+        key = self.address.body
+        value = 100
+
+        self.assertIsNone(db.get(key))
+
+        db.put(key, value.to_bytes(32, 'big'))
+        self.assertEqual(value.to_bytes(32, 'big'), db.get(key))

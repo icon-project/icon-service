@@ -18,8 +18,8 @@ from enum import IntEnum, unique
 from struct import Struct
 
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
-from .icx_error import Code, IcxError
 from ..base.address import Address
+from ..base.exception import ExceptionCode, IconException
 
 
 ACCOUNT_DATA_STRUCTURE_VERSION = 0
@@ -55,6 +55,8 @@ class AccountFlag(IntEnum):
     LOCKED = 0x01
     # Is community representative
     C_REP = 0x02
+    # Is this score installed successfully?
+    INSTALLED = 0x04
 
 
 class Account(object):
@@ -72,7 +74,8 @@ class Account(object):
                  address: Address=None,
                  icx: int=0,
                  locked: bool=False,
-                 c_rep: bool=False) -> None:
+                 c_rep: bool=False,
+                 installed: bool=False) -> None:
         """Constructor
         """
         self.__type = account_type
@@ -80,6 +83,7 @@ class Account(object):
         self.__icx = icx
         self.__locked = locked
         self.__c_rep = c_rep
+        self.__installed = installed
 
     @property
     def address(self) -> Address:
@@ -148,6 +152,18 @@ class Account(object):
         self.__c_rep = bool(value)
 
     @property
+    def installed(self) -> bool:
+        """Is this score installed successfully?
+        """
+        return self.__installed
+
+    @installed.setter
+    def installed(self, value: bool) -> None:
+        """Is this score installed successfully?
+        """
+        self.__installed = bool(value)
+
+    @property
     def icx(self) -> int:
         """Returns the balance of the account in loop unit (1 icx == 1e18 loop)
 
@@ -162,7 +178,7 @@ class Account(object):
 
         """
         if not isinstance(value, int) or value <= 0:
-            raise IcxError(Code.INVALID_PARAMS)
+            raise IconException(ExceptionCode.INVALID_PARAMS)
 
         self.__icx += value
 
@@ -172,9 +188,9 @@ class Account(object):
         :param value: coin amount to withdraw
         """
         if not isinstance(value, int) or value <= 0:
-            raise IcxError(Code.INVALID_PARAMS)
+            raise IconException(ExceptionCode.INVALID_PARAMS)
         if self.__icx < value:
-            raise IcxError(Code.NOT_ENOUGH_BALANCE)
+            raise IconException(ExceptionCode.NOT_ENOUGH_BALANCE)
 
         self.__icx -= value
 

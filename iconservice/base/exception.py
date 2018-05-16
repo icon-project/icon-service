@@ -14,9 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import traceback
 from enum import IntEnum, unique
 from functools import wraps
+
+DEBUG_PRT = False
+
+if DEBUG_PRT:
+    import traceback
+else:
+    import logging
 
 
 @unique
@@ -60,31 +66,30 @@ class DatabaseException(IconServiceBaseException):
     pass
 
 
-class IcxException(IconServiceBaseException):
+class IconException(IconServiceBaseException):
     """Defines Icx Errors
     """
-
     def __init__(self, code: ExceptionCode, message: str = None) -> None:
         if message is None or message == '':
             message = str(code)
 
         super().__init__(message)
-        self.__code = code
+        self._code = code
 
     @property
     def code(self):
-        return self.__code
+        return self._code
 
     def __str__(self):
-        return f'msg: {self.message} code: {self.code}'
+        return f'{self.message} ({self.code})'
 
 
-class IconScoreBaseException(IconServiceBaseException):
+class IconScoreException(IconServiceBaseException):
     def __init__(self, message: str) -> None:
         super().__init__(message)
 
 
-class IconScoreException(IconScoreBaseException):
+class APIIconScoreBaseException(IconScoreException):
     def __init__(self, message: str, func_name: str, cls_name: str) -> None:
         super().__init__(message)
         self.__func_name = func_name
@@ -102,42 +107,31 @@ class IconScoreException(IconScoreBaseException):
         return f'msg: {self.message} func: {self.func_name} cls: {self.cls_name}'
 
 
-# 예외 검사 간편하게 할 수 있는 함수인데..
-# 사용할지 안할지는 지켜본다.
 def check_exception(func):
     @wraps(func)
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except IconScoreException:
-            pass
-        except IconScoreBaseException:
-            log_call_stack = traceback.format_stack()
-            log_exec = traceback.format_exc()
-            # TODO replace log function
-            print(f'call_stack\n', *log_call_stack, log_exec)
-        except IcxException:
-            log_call_stack = traceback.format_stack()
-            log_exec = traceback.format_exc()
-            # TODO replace log function
-            print(f'call_stack\n', *log_call_stack, log_exec)
-        except IconServiceBaseException:
-            log_call_stack = traceback.format_stack()
-            log_exec = traceback.format_exc()
-            # TODO replace log function
-            print(f'call_stack\n', *log_call_stack, log_exec)
-        except Exception:
-            raise
+        except IconServiceBaseException as e:
+            if DEBUG_PRT:
+                log_call_stack = traceback.format_stack()
+                log_exec = traceback.format_exc()
+                log_str = 'call_stack:\n {} \n exec:\n {}\n'.format(*log_call_stack, log_exec)
+                print(log_str)
+            else:
+                logging.exception(e)
+        except Exception as e:
+            raise e
         finally:
             pass
     return _wrapper
 
 
-class ExternalException(IconScoreException):
+class ExternalException(APIIconScoreBaseException):
     pass
 
 
-class PayableException(IconScoreException):
+class PayableException(APIIconScoreBaseException):
     pass
 
 
@@ -146,4 +140,8 @@ class ScoreInstallException(IconScoreBaseException):
 
 
 class ScoreInstallExtractException(IconScoreBaseException):
+    pass
+
+
+class ContainerDBException(IconScoreException):
     pass

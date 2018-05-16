@@ -18,8 +18,11 @@
 Functions and classes in this module don't have any external dependencies.
 """
 
+import logging
 import re
+import hashlib
 from functools import wraps
+import threading
 
 
 def is_lowercase_hex_string(value: str) -> bool:
@@ -41,7 +44,13 @@ def is_lowercase_hex_string(value: str) -> bool:
 def trace(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        logging.debug('%s(%r, %r) start' % (func.__name__, args, kwargs))
         result = func(*args, **kwargs)
-        print('%s(%r, %r) -> %r' % (func.__name__, args, kwargs, result))
+        logging.debug('%s() end ret(%r)' % (func.__name__, result))
+
         return result
     return wrapper
+
+
+def sha3_256(data: bytes) -> bytes:
+    return hashlib.sha3_256(data).digest()

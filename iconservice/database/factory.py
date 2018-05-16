@@ -17,8 +17,8 @@
 
 import os
 
-from .db import PlyvelDatabase
-from ..base.address import Address
+from .db import ContextDatabase
+from ..base.address import Address, create_address
 
 
 class DatabaseFactory(object):
@@ -26,24 +26,27 @@ class DatabaseFactory(object):
     """
 
     def __init__(self, state_db_root_path: str):
-        """
+        """Constructor
         """
         self.__state_db_root_path = state_db_root_path
 
-    def create_by_address(self, address: Address) -> PlyvelDatabase:
+    def create_by_address(self, address: Address) -> ContextDatabase:
         """Create a state db with the given address.
 
         :param address:
         :return: plyvel db object
         """
         name = address.body.hex()
-        return self.create_by_name(name)
+        path = os.path.join(self.__state_db_root_path, name)
 
-    def create_by_name(self, name: str) -> PlyvelDatabase:
-        """
-        :param name:
-        :return:
+        return ContextDatabase.from_address_and_path(address, path)
+
+    def create_by_name(self, name: str) -> ContextDatabase:
+        """Create a state db with the given address.
+
+        :param address:
+        :return: plyvel db object
         """
         path = os.path.join(self.__state_db_root_path, name)
-        db = PlyvelDatabase.make_db(path=path, create_if_missing=True)
-        return PlyvelDatabase(db)
+
+        return ContextDatabase.from_address_and_path(address=None, path=path)

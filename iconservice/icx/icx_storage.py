@@ -16,14 +16,15 @@
 
 from .icx_account import Account
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
-from ..base.address import Address
+from ..base.address import Address, AddressPrefix
+from ..utils import sha3_256
 
 
 class IcxStorage(object):
     """Icx coin state manager embedding a state db wrapper
     """
 
-    def __init__(self, db: object) -> None:
+    def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
 
         :param db: (Database) state db wrapper
@@ -31,14 +32,14 @@ class IcxStorage(object):
         self.__db = db
 
     @property
-    def db(self) -> object:
+    def db(self) -> 'ContextDatabase':
         """Returns state db wrapper.
 
         :return: (Database) state db wrapper
         """
         return self.__db
 
-    def get_text(self, name: str) -> str:
+    def get_text(self, context: 'IconScoreContext', name: str) -> str:
         """Return text format value from db
 
         :return: (str or None)
@@ -46,26 +47,33 @@ class IcxStorage(object):
             default encoding: utf8
         """
         key = name.encode()
-        value = self.__db.get(key)
+        value = self.__db.get(context, key)
         if value:
             return value.decode()
         else:
             return None
 
-    def put_text(self, name: str, text: str) -> None:
+    def put_text(self,
+                 context: 'IconScoreContext',
+                 name: str,
+                 text: str) -> None:
         """save text to db with name as a key
         All text are utf8 encoded.
 
+        :param context:
         :param name: db key
         :param text: db value
         """
         key = name.encode()
         value = text.encode()
-        self.__db.put(key, value)
+        self.__db.put(context, key, value)
 
-    def get_account(self, address: Address) -> Account:
+    def get_account(self,
+                    context: 'IconScoreContext',
+                    address: Address) -> Account:
         """Returns the account indicated by address.
 
+        :param context:
         :param address: account address
         :return: (Account)
             If the account indicated by address is not present,
@@ -74,7 +82,7 @@ class IcxStorage(object):
         account = None
 
         key = address.body
-        value = self.__db.get(key)
+        value = self.__db.get(context, key)
 
         if value:
             account = Account.from_bytes(value)
@@ -84,7 +92,10 @@ class IcxStorage(object):
         account.address = address
         return account
 
-    def put_account(self, address: Address, account: Account) -> None:
+    def put_account(self,
+                    context: 'IconScoreContext',
+                    address: Address,
+                    account: Account) -> None:
         """Put account info to db.
 
         :param address: account address
@@ -92,23 +103,26 @@ class IcxStorage(object):
         """
         key = address.body
         value = account.to_bytes()
-        self.__db.put(key, value)
+        self.__db.put(context, key, value)
 
-    def delete_account(self, address: Address) -> None:
+    def delete_account(self,
+                       context: 'IconScoreContext',
+                       address: Address) -> None:
         """Delete account info from db.
 
+        :param context:
         :param address: account address
         """
         key = address.body
-        self.__db.delete(key)
+        self.__db.delete(context, key)
 
-    def get_total_supply(self) -> int:
+    def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply
 
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
         key = b'total_supply'
-        value = self.__db.get(key)
+        value = self.__db.get(context, key)
 
         amount = 0
         if value:
@@ -116,30 +130,88 @@ class IcxStorage(object):
 
         return amount
 
-    def put_total_supply(self, value: int) -> None:
+    def put_total_supply(self,
+                         context: 'IconScoreContext',
+                         value: int) -> None:
         """Save the total supply to db
 
+        :param context:
         :param value: coin total supply
         """
         key = b'total_supply'
         value = value.to_bytes(BALANCE_BYTE_SIZE, DATA_BYTE_ORDER)
-        self.__db.put(key, value)
+        self.__db.put(context, key, value)
 
-    def is_address_present(self, address: Address) -> bool:
+    def get_score_owner(self,
+                        context: 'IconScoreContext',
+                        icon_score_address: Address):
+        """Returns owner of IconScore
+
+        :param context:
+        :param icon_score_address:
+        :return owner: IconScore owner address
+        """
+        key = self._get_owner_key(icon_score_address)
+        value = self.__db.get(context, key)
+        if value:
+            return Address(AddressPrefix.EOA, value)
+        else:
+            return None
+
+    def put_score_owner(self,
+                        context: 'IconScoreContext',
+                        icon_score_address: Address,
+                        owner: Address) -> None:
+        """Records the owner of IconScore to icon_dex db.
+
+        :param context:
+        :param icon_score_address: IconScore address
+        :param owner: The owner of IconScore
+        """
+        key = self._get_owner_key(icon_score_address)
+        self.__db.put(context, key, owner.body)
+
+    def _get_owner_key(self, icon_score_address: Address) -> bytes:
+        return sha3_256(b'owner|' + icon_score_address.body)
+
+    def delete_score_owner(self,
+                           context: 'IconScoreContext',
+                           icon_score_address: Address) -> None:
+        key = self._get_owner_key(icon_score_address)
+        self.__db.delete(context, key)
+
+    def is_score_installed(self,
+                           context: 'IconScoreContext',
+                           icon_score_address: Address) -> bool:
+        """Returns whether IconScore is installed or not
+
+        :param context:
+        :param icon_score_address:
+        :return: True(installed) False(not installed)
+        """
+
+        return self.get_score_owner(context, icon_score_address) is not None
+
+    def is_address_present(self,
+                           context: 'IconScoreContext',
+                           address: Address) -> bool:
         """Check whether value indicated by address is present or not.
 
+        :param context:
         :param address: account address
-
         :return: True(present) False(not present)
         """
         key = address.body
-        value = self.__db.get(key)
+        value = self.__db.get(context, key)
 
         return bool(value)
 
-    def close(self) -> None:
+    def close(self,
+              context: 'IconScoreContext') -> None:
         """Close the embedded database.
+
+        :param context:
         """
         if self.__db:
-            self.__db.close()
+            self.__db.close(context)
             self.__db = None

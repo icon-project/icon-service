@@ -17,6 +17,7 @@
 """functions and classes to handle address
 """
 
+import hashlib
 from enum import IntEnum
 
 from ..utils import is_lowercase_hex_string
@@ -131,7 +132,7 @@ class Address(object):
 
         :return: (str) 42-char address
         """
-        return f'{str(self.__prefix)}{self.__body.hex()}'
+        return f'{str(self.prefix)}{self.body.hex()}'
 
     def __hash__(self) -> int:
         """Returns a hash value for this object
@@ -139,6 +140,14 @@ class Address(object):
         :return: hash value
         """
         return hash(self.__prefix.to_bytes(1, 'big') + self.__body)
+
+    @property
+    def is_contract(self) -> bool:
+        """Is this a contract address?
+
+        :return: True(contract) False(Not contract)
+        """
+        return self.prefix == AddressPrefix.CONTRACT
 
     @staticmethod
     def from_string(address: str):
@@ -156,3 +165,15 @@ class Address(object):
         address_body = bytes.fromhex(body)
 
         return Address(address_prefix, address_body)
+
+    @staticmethod
+    def from_data(prefix: AddressPrefix, data: bytes):
+        return create_address(prefix, data)
+
+
+def create_address(prefix: AddressPrefix, data: bytes):
+    hash_value = hashlib.sha3_256(data).digest()
+    return Address(prefix, hash_value[-20:])
+
+
+ICX_ENGINE_ADDRESS = create_address(AddressPrefix.CONTRACT, b'icon_dex')
