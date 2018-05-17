@@ -83,14 +83,14 @@ class ContainerUtil(object):
 
         obj_value = None
         if value_type == int:
-            obj_value = int.from_bytes(value, "big")
+            obj_value = int.from_bytes(value, "big", signed=True)
         elif value_type == str:
             obj_value = value.decode()
         elif value_type == Address:
             str_value = value.decode()
             obj_value = Address.from_string(str_value)
         if value_type == bool:
-            obj_value = bool(int(int.from_bytes(value, 'big')))
+            obj_value = bool(int(int.from_bytes(value, 'big', signed=True)))
         elif value_type == bytes:
             obj_value = value
         return obj_value
