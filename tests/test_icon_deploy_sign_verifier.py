@@ -43,7 +43,7 @@ def read_zipfile_as_byte(archive_path: str) -> bytes:
         return byte_data
 
 
-class TestIconInstallSignVerifier(unittest.TestCase):
+class TestIconDeploySignVerifier(unittest.TestCase):
 
     def setUp(self):
         self.tmp_signer = TmpSigner()

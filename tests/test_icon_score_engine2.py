@@ -29,7 +29,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory, Ic
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_deployer import IconScoreInstaller
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
 
@@ -85,9 +85,9 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._factory.destroy(self._context)
 
         remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
 
     @staticmethod
     def __ensure_dir(dir_path):

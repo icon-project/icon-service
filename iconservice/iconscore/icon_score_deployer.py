@@ -24,7 +24,7 @@ from ..base.address import Address
 from ..base.exception import ScoreInstallException, ScoreInstallExtractException
 
 
-class IconScoreInstaller(object):
+class IconScoreDeployer(object):
     """Score installer.
     """
 
@@ -57,7 +57,7 @@ class IconScoreInstaller(object):
             if not os.path.exists(install_path):
                 os.makedirs(install_path)
 
-            file_info_generator = IconScoreInstaller.extract_files_gen(data)
+            file_info_generator = IconScoreDeployer.extract_files_gen(data)
             for name, file_info, parent_directory in file_info_generator:
                 if not os.path.exists(os.path.join(install_path, parent_directory)):
                     os.makedirs(os.path.join(install_path, parent_directory))
