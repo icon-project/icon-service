@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import hashlib
 import io
 import logging
 import os
@@ -24,26 +24,26 @@ from ..base.address import Address
 from ..base.exception import ScoreInstallException, ScoreInstallExtractException
 
 
-class IconScoreInstaller(object):
+class IconScoreDeployer(object):
     """Score installer.
     """
 
     def __init__(self, icon_score_root_path: str) -> None:
         self.icon_score_root_path = icon_score_root_path
 
-    def install(self, address: 'Address', data: bytes, block_height: int, transaction_index: int) -> bool:
+    def deploy(self, address: 'Address', data: bytes, block_height: int, transaction_index: int,
+               tx_hash: bytes=None) -> bool:
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
         :param address: contract address
         :param data: The byte value of the zip file.
         :param block_height:
         :param transaction_index:
+        :param tx_hash:
         :return:
         """
-        str_block_height = str(block_height)
-        str_transaction_index = str(transaction_index)
-        str_address = str(address.body.hex())
-        score_id = str_block_height + "_" + str_transaction_index
+        str_address = address.body.hex()
+        score_id = f'{block_height}_{transaction_index}'
         score_root_path = os.path.join(self.icon_score_root_path, str_address)
         install_path = os.path.join(score_root_path, score_id)
 
@@ -57,7 +57,7 @@ class IconScoreInstaller(object):
             if not os.path.exists(install_path):
                 os.makedirs(install_path)
 
-            file_info_generator = IconScoreInstaller.extract_files_gen(data)
+            file_info_generator = IconScoreDeployer.extract_files_gen(data)
             for name, file_info, parent_directory in file_info_generator:
                 if not os.path.exists(os.path.join(install_path, parent_directory)):
                     os.makedirs(os.path.join(install_path, parent_directory))

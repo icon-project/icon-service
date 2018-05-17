@@ -2,7 +2,7 @@ import unittest
 import os
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_installer import IconScoreInstaller
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 from iconservice.base.address import AddressPrefix, create_address
 import inspect
 
@@ -24,7 +24,7 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def tearDown(self):
         remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
 
     @staticmethod
     def read_zipfile_as_byte(archive_path: str) -> bytes:
@@ -34,7 +34,7 @@ class TestIconScoreLoader(unittest.TestCase):
 
     @staticmethod
     def __unpack_zip_file(install_path: str, data: bytes):
-        file_info_generator = IconScoreInstaller.extract_files_gen(data)
+        file_info_generator = IconScoreDeployer.extract_files_gen(data)
         for name, file_info, parent_directory in file_info_generator:
             if not os.path.exists(os.path.join(install_path, parent_directory)):
                 os.makedirs(os.path.join(install_path, parent_directory))

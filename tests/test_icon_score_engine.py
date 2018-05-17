@@ -29,7 +29,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory, Ic
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_installer import IconScoreInstaller
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 from iconservice.icx.icx_storage import IcxStorage
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -75,9 +75,9 @@ class TestIconScoreEngine(unittest.TestCase):
         self._factory.destroy(self._context)
 
         remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
 
     @staticmethod
     def _create_icx_storage(db_factory: DatabaseFactory) -> 'IcxStorage':
@@ -98,7 +98,7 @@ class TestIconScoreEngine(unittest.TestCase):
 
     @staticmethod
     def __unpack_zip_file(install_path: str, data: bytes):
-        file_info_generator = IconScoreInstaller.extract_files_gen(data)
+        file_info_generator = IconScoreDeployer.extract_files_gen(data)
         for name, file_info, parent_directory in file_info_generator:
             if not os.path.exists(os.path.join(install_path, parent_directory)):
                 os.makedirs(os.path.join(install_path, parent_directory))

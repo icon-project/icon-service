@@ -3,7 +3,7 @@ import unittest
 from os import path, makedirs, symlink
 from iconservice.iconscore.icon_score_base import IconScoreBase, Address
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_installer import IconScoreInstaller
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 from iconservice.base.address import AddressPrefix, create_address
 import inspect
 
@@ -22,9 +22,9 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def tearDown(self):
         remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        IconScoreInstaller.remove_existing_score(remove_path)
+        IconScoreDeployer.remove_existing_score(remove_path)
         pass
 
     @staticmethod
