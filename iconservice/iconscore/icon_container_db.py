@@ -35,6 +35,8 @@ class ContainerUtil(object):
 
     @staticmethod
     def encode_key(key: K) -> bytes:
+        if key is None:
+            raise ContainerDBException(f"can't cast args {type(key)} : {key}")
         prefix = b'|'
 
         key_bytes = ContainerUtil.__encode_key(key)
@@ -166,7 +168,7 @@ class DictDB(object):
     def __check_tuple_keys(self, keys: Any) -> Tuple[K, ...]:
 
         if keys is None:
-            keys = tuple()
+            raise ContainerDBException('key is None')
         elif not isinstance(keys, Iterable):
             keys = tuple([keys])
 
