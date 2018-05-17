@@ -36,7 +36,7 @@ class ContainerUtil(object):
     @staticmethod
     def encode_key(key: K) -> bytes:
         if key is None:
-            raise ContainerDBException(f"can't cast args {type(key)} : {key}")
+            raise ContainerDBException('key is None')
         prefix = b'|'
 
         key_bytes = ContainerUtil.__encode_key(key)
