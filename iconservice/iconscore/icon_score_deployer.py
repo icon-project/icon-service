@@ -42,7 +42,7 @@ class IconScoreInstaller(object):
         :param tx_hash:
         :return:
         """
-        str_address = str(address.body.hex())
+        str_address = address.body.hex()
         score_id = f'{block_height}_{transaction_index}'
         score_root_path = os.path.join(self.icon_score_root_path, str_address)
         install_path = os.path.join(score_root_path, score_id)

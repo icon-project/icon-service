@@ -39,7 +39,7 @@ class IconScoreDeploySignVerifier:
         return pubkey.ecdsa_verify(msg_hash, signature, True)
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_bytes(cls, data: bytes):
         """
         :param data: bytes data which PublicKey.serialize() returns
         :return:
