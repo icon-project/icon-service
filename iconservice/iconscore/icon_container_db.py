@@ -17,11 +17,14 @@
 
 from typing import TypeVar, Optional, Any, Union, Tuple, TYPE_CHECKING
 from collections import Iterator, Iterable
+
+from iconservice.utils import int_to_bytes
+
 from ..base.address import Address
 from ..base.exception import ContainerDBException
 
 
-K = TypeVar('K', int, str, Address)
+K = TypeVar('K', int, str, Address, bytes)
 V = TypeVar('V', int, str, Address, bytes, bool)
 
 if TYPE_CHECKING:
@@ -32,38 +35,39 @@ class ContainerUtil(object):
 
     @staticmethod
     def encode_key(key: K) -> bytes:
-        prefix = '|'
-        fmt = '{}{}'
+        prefix = b'|'
 
-        key_str = ContainerUtil.__encode_key(key)
-        return fmt.format(key_str, prefix).encode()
+        key_bytes = ContainerUtil.__encode_key(key)
+        return key_bytes + prefix
 
     @staticmethod
     def encode_value(value: V) -> bytes:
-        return ContainerUtil.__encode_value(value).encode()
+        return ContainerUtil.__encode_value(value)
 
     @staticmethod
-    def __encode_key(key: K) -> str:
+    def __encode_key(key: K) -> bytes:
         if isinstance(key, int):
-            str_key = hex(key)
+            bytes_key = int_to_bytes(key)
         elif isinstance(key, str):
-            str_key = key
+            bytes_key = key.encode('utf-8')
         elif isinstance(key, Address):
-            str_key = str(key)
+            bytes_key = key.body
+        elif isinstance(key, bytes):
+            bytes_key = key
         else:
             raise ContainerDBException(f"can't encode key: {key}")
-        return str_key
+        return bytes_key
 
     @staticmethod
-    def __encode_value(value: V) -> str:
+    def __encode_value(value: V) -> bytes:
         if isinstance(value, int):
-            byte_value = hex(value)
+            byte_value = int_to_bytes(value)
         elif isinstance(value, str):
-            byte_value = value
+            byte_value = value.encode('utf-8')
         elif isinstance(value, Address):
-            byte_value = str(value)
+            byte_value = value.body
         elif isinstance(value, bool):
-            byte_value = hex(int(value))
+            byte_value = int_to_bytes(int(value))
         elif isinstance(value, bytes):
             byte_value = value
         else:
@@ -77,14 +81,14 @@ class ContainerUtil(object):
 
         obj_value = None
         if value_type == int:
-            obj_value = int(value.decode(), 16)
+            obj_value = int.from_bytes(value, "big")
         elif value_type == str:
             obj_value = value.decode()
         elif value_type == Address:
             str_value = value.decode()
             obj_value = Address.from_string(str_value)
         if value_type == bool:
-            obj_value = bool(int(value.decode(), 16))
+            obj_value = bool(int(int.from_bytes(value, 'big')))
         elif value_type == bytes:
             obj_value = value
         return obj_value
@@ -274,4 +278,6 @@ def get_default_value(value_type: type) -> Any:
         return 0
     elif value_type == str:
         return ""
+    elif value_type == bytes:
+        return b''
     return None

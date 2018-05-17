@@ -64,7 +64,7 @@ class TestIconContainerDB(unittest.TestCase):
         testlist = [[]]
         ContainerUtil.put_to_db(self.db, 'test_list', testlist)
 
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 1, value_type=int), None)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 1, value_type=int), 0)
 
     def test_success_dict_depth1(self):
         test_dict = DictDB('test_dict', self.db, value_type=int)
@@ -134,37 +134,3 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(test_var3.get(), b'')
         test_var4 = VarDB('test_var4', self.db, value_type=Address)
         self.assertEqual(test_var4.get(), None)
-
-        # array_db_int
-        test_array = ArrayDB('test_array', self.db, value_type=int)
-        range_size = 3
-
-        for i in range(range_size):
-            test_array.put(i)
-
-        for i in range(range_size):
-            self.assertEqual(test_array[i], i)
-
-        self.assertEqual(test_array[3], 0)
-
-        for i in range(range_size, range_size):
-            self.assertRaises(ContainerDBException, test_array[i])
-
-        cant_find_value = range_size
-        self.assertFalse(cant_find_value in test_array)
-        self.assertEqual(range_size, len(test_array))
-
-        for e, i in zip(test_array, range(range_size)):
-            self.assertEqual(e, i)
-
-        self.assertEqual(test_array[-1], range(range_size)[-1])
-
-        # array_db_str
-        test_array2 = ArrayDB('test_array2', self.db, value_type=str)
-        range_size = 3
-
-        for i in range(range_size):
-            test_array2.put(str(i))
-
-        self.assertEqual(test_array2[3], "")
-        self.assertEqual(test_array2[4], "")
