@@ -49,4 +49,6 @@ class TestIconScoreLoader(unittest.TestCase):
         score = self.load_proj('test_score02', self._addr_test_score02)
         print('test_score02', score.get_api())
 
+        ins_score = score(None, None)
+        ins_score.print_test()
         self.assertTrue(IconScoreBase in inspect.getmro(score))
