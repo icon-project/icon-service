@@ -21,6 +21,7 @@ Functions and classes in this module don't have any external dependencies.
 import logging
 import re
 import hashlib
+import struct
 from functools import wraps
 import threading
 
@@ -57,8 +58,7 @@ def sha3_256(data: bytes) -> bytes:
 
 
 def int_to_bytes(n: int) -> bytes:
-    result = bytearray()
-    while n:
-        result.append(n & 0xff)
-        n = n >> 8
-    return result[::-1]
+    length = (n.bit_length() + 7) // 8
+    if n <= 0:
+        length += 1
+    return n.to_bytes(length, byteorder='big', signed=True)
