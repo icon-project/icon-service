@@ -16,10 +16,11 @@
 """IconScoreEngine module
 """
 
-
 import logging
 from collections import namedtuple
 from os import path, symlink, makedirs
+
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException, check_exception
@@ -29,6 +30,7 @@ from .icon_score_info_mapper import IconScoreInfoMapper
 from ..utils.type_converter import TypeConverter
 
 from typing import TYPE_CHECKING, Optional
+
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
     from .icon_score_base import IconScoreBase
@@ -40,7 +42,8 @@ class IconScoreEngine(ContextContainer):
 
     def __init__(self,
                  icx_storage: 'IcxStorage',
-                 icon_score_info_mapper: IconScoreInfoMapper) -> None:
+                 icon_score_info_mapper: 'IconScoreInfoMapper',
+                 icon_score_deployer: 'IconScoreDeployer') -> None:
         """Constructor
 
         :param icx_storage: Get IconScore owner info from icx_storage
@@ -50,6 +53,7 @@ class IconScoreEngine(ContextContainer):
 
         self.__icx_storage = icx_storage
         self.__icon_score_info_mapper = icon_score_info_mapper
+        self.__icon_score_deployer = icon_score_deployer
 
         self._Task = namedtuple(
             'Task',
@@ -58,8 +62,8 @@ class IconScoreEngine(ContextContainer):
 
     @check_exception
     def invoke(self,
-               context: IconScoreContext,
-               icon_score_address: Address,
+               context: 'IconScoreContext',
+               icon_score_address: 'Address',
                data_type: str,
                data: dict) -> None:
         """Handle calldata contained in icx_sendTransaction message
@@ -71,9 +75,10 @@ class IconScoreEngine(ContextContainer):
         """
 
         if data_type == 'call':
-                self.__call(context, icon_score_address, data)
+            self.__call(context, icon_score_address, data)
         elif data_type == 'install' or data_type == 'update':
-                self.__put_task(context, icon_score_address, data_type, data)
+            self.__on_deploy(context, icon_score_address, data_type, data)
+            self.__put_task(context, icon_score_address, data_type, data)
         else:
             self.__fallback(context, icon_score_address)
 
@@ -199,14 +204,30 @@ class IconScoreEngine(ContextContainer):
             data = task.data
 
             if data_type == 'install':
-                self.__install(context, icon_score_address, data)
+                self.__install_commit(context, icon_score_address, data)
             elif data_type == 'update':
-                self.__update(context, icon_score_address, data)
+                self.__update_commit(context, icon_score_address, data)
             # Invalid task.type has been already filtered in invoke()
 
         self._deferred_tasks.clear()
 
-    def __install(self,
+    #TODO change name to __on_deploy
+    def _on_deploy(self, context: 'IconScoreContext',
+                    icon_score_address: 'Address',
+                    data_type: str,
+                    data: dict):
+        content_type = data.get('content_type')
+
+        if content_type != 'application/zip':
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS,
+                f'Invalid content type ({content_type})')
+        content = data.get('content')[2:]
+        content_bytes = bytes.fromhex(content)
+
+        self.__icon_score_deployer.deploy(icon_score_address, content_bytes, context.block.height, context.tx.index)
+
+    def __install_commit(self,
                   context: Optional[IconScoreContext],
                   icon_score_address: Address,
                   data: dict) -> None:
@@ -246,7 +267,7 @@ class IconScoreEngine(ContextContainer):
         finally:
             self._delete_context(context)
 
-    def __update(self,
+    def __update_commit(self,
                  context: Optional[IconScoreContext],
                  icon_score_address: Address,
                  data: dict) -> None:
