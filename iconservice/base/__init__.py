@@ -16,10 +16,27 @@
 
 
 import hashlib
+from enum import IntEnum
 
-from ..base.address import Address, AddressPrefix 
+from ..base.address import Address, AddressPrefix
 
 
 def create_address(prefix: AddressPrefix, data: bytes):
     hash_value = hashlib.sha3_256(data).digest()
     return Address(prefix, hash_value[-20:])
+
+
+class OnInitType(IntEnum):
+    """Value used to call IconScoreBase.on_init()
+    """
+    NONE = -1
+    INSTALL = 0
+    UPDATE = 1
+
+    @staticmethod
+    def from_data_type(data_type: str):
+        if data_type == 'install':
+            return OnInitType.INSTALL
+        elif data_type == 'update':
+            return OnInitType.UPDATE
+        return OnInitType.NONE

@@ -25,6 +25,7 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
+from ..base import OnInitType
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
@@ -97,7 +98,7 @@ class IconScoreObject(ABC):
     def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def genesis_init(self, *args, **kwargs) -> None:
+    def on_init(self, on_init_type: 'OnInitType', params: dict) -> None:
         pass
 
 
@@ -135,8 +136,8 @@ class IconScoreBaseMeta(ABCMeta):
 class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
 
     @abstractmethod
-    def genesis_init(self, *args, **kwargs) -> None:
-        super().genesis_init(*args, **kwargs)
+    def on_init(self, on_init_type: 'OnInitType', params: dict) -> None:
+        super().on_init(on_init_type, params)
 
     @abstractmethod
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:

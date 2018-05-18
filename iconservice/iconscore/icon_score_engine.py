@@ -21,6 +21,7 @@ import logging
 from collections import namedtuple
 from os import path, symlink, makedirs
 
+from ..base import OnInitType
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException, check_exception
 from .icon_score_context import ContextContainer
@@ -131,14 +132,19 @@ class IconScoreEngine(ContextContainer):
 
         try:
             self._put_context(context)
-            icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
-            return call_method(icon_score=icon_score, func_name=method,
-                               kw_params=self.__type_converter(icon_score, method, kw_params))
+            icon_score = self.__icon_score_info_mapper.get_icon_score(
+                icon_score_address)
+            return call_method(
+                icon_score=icon_score,
+                func_name=method,
+                kw_params=self.__type_converter(icon_score, method, kw_params))
         finally:
             self._delete_context(context)
 
     @staticmethod
-    def __type_converter(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
+    def __type_converter(icon_score: 'IconScoreBase',
+                         func_name: str,
+                         kw_params: dict) -> dict:
         param_type_table = {}
         func_params = icon_score.get_api()[func_name].parameters
 
@@ -160,7 +166,8 @@ class IconScoreEngine(ContextContainer):
         converter = TypeConverter(param_type_table)
         return converter.convert(kw_params, True)
 
-    def __fallback(self, context: IconScoreContext, icon_score_address: Address):
+    def __fallback(self, context: IconScoreContext,
+                   icon_score_address: Address):
         """When an IconScore receives some coins and calldata is None,
         fallback function is called.
 
@@ -169,7 +176,8 @@ class IconScoreEngine(ContextContainer):
 
         try:
             self._put_context(context)
-            icon_score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
+            icon_score = self.__icon_score_info_mapper.get_icon_score(
+                icon_score_address)
             call_fallback(icon_score)
         finally:
             self._delete_context(context)
@@ -218,11 +226,13 @@ class IconScoreEngine(ContextContainer):
         """
         content_type = data.get('content_type')
         content = data.get('content')
+        params = data.get('params', {})
 
         if content_type == 'application/tbears':
             self.__icon_score_info_mapper.delete_icon_score(icon_score_address)
             score_root_path = self.__icon_score_info_mapper.score_root_path
-            target_path = path.join(score_root_path, icon_score_address.body.hex())
+            target_path = path.join(score_root_path,
+                                    icon_score_address.body.hex())
             makedirs(target_path, exist_ok=True)
             target_path = path.join(
                 target_path, f'{context.block.height}_{context.tx.index}')
@@ -238,13 +248,11 @@ class IconScoreEngine(ContextContainer):
                                            context.tx.origin)
         score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
 
-        try:
-            self._put_context(context)
-            score.genesis_init()
-        except Exception as e:
-            logging.error(e)
-        finally:
-            self._delete_context(context)
+        self._call_on_init_of_score(
+            context=context,
+            score=score,
+            on_init_type=OnInitType.from_data_type('install'),
+            params=params)
 
     def __update(self,
                  context: Optional[IconScoreContext],
@@ -255,6 +263,29 @@ class IconScoreEngine(ContextContainer):
         Owner check has been already done in IconServiceEngine
         """
         raise NotImplementedError('Score update is not implemented')
+
+    def _call_on_init_of_score(self,
+                               context: 'IconScoreContext',
+                               score: 'IconScoreBase',
+                               on_init_type: 'OnInitType',
+                               params: dict) -> None:
+        """on_init(on_init_type, params) of score is called
+        only once when installed or updated
+
+        :param context:
+        :param score:
+        :param on_init_type:
+        :param params: paramters passed to on_init()
+        """
+        assert params is not None
+
+        try:
+            self._put_context(context)
+            score.on_init(on_init_type, params)
+        except Exception as e:
+            logging.error(e)
+        finally:
+            self._delete_context(context)
 
     def rollback(self) -> None:
         """It is called when the previous block has been canceled
