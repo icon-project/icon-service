@@ -97,11 +97,11 @@ class TestIconZipDeploy(unittest.TestCase):
             byte_data = f.read()
             return byte_data
 
-    def test_on_deploy(self):
+    def test_deploy_on_invoke(self):
         data = self.read_zipfile_as_byte(os.path.join(TEST_ROOT_PATH, 'test.zip'))
         tmp_dict = {
             "content_type": "application/zip",
             "content": f'0x{data.hex()}'
         }
-        self._engine._on_deploy(self._context, self._addr1, 'install', tmp_dict)
+        self._engine._deploy_on_invoke(self._context, self._addr1, 'install', tmp_dict)
         self.assertTrue(os.path.join(TEST_ROOT_PATH, self._addr1.body.hex()))
