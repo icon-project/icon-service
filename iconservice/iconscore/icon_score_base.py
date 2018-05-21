@@ -18,8 +18,14 @@ from inspect import isfunction, getmembers, signature
 from abc import ABC, ABCMeta, abstractmethod
 from functools import wraps, partial
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .icon_score_context import IconScoreContext
+
+from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
-from ..database.db import IconScoreDatabase
+from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..base.exception import ExternalException, PayableException, IconScoreException
 from ..base.message import Message
 from ..base.transaction import Transaction
@@ -132,7 +138,8 @@ class IconScoreBaseMeta(ABCMeta):
         return cls
 
 
-class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
+class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
+                    metaclass=IconScoreBaseMeta):
 
     @abstractmethod
     def genesis_init(self, *args, **kwargs) -> None:
@@ -149,6 +156,8 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
             raise ExternalException(
                 'empty abi! have to position decorator(@init_abi) above class definition',
                 '__init__', str(type(self)))
+
+        self.__db.set_observer(self)
 
     @classmethod
     def get_api(cls) -> dict:
@@ -222,13 +231,35 @@ class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta)
         :param func_name: function name provided by other IconScore
         :param kw_dict:
         """
+        self._context.step_counter.increase_message_call_step(1)
         return self._context.call(self.address, addr_to, func_name, kw_dict)
 
     def transfer(self, addr_to: Address, amount: int):
+        self._context.step_counter.increase_transfer_step(1)
         return self._context.transfer(self.__address, addr_to, amount)
 
     def send(self, addr_to: Address, amount: int):
+        self._context.step_counter.increase_transfer_step(1)
         return self._context.send(self.__address, addr_to, amount)
 
     def revert(self) -> None:
         return self._context.revert(self.__address)
+
+    def on_put(self, context: 'IconScoreContext', key: bytes, new_value: bytes):
+        """Invoked when `put` is called in `ContextDatabase`.
+
+        :param context: SCORE context
+        :param key: key
+        :param new_value: new value
+        """
+        if new_value and context and context.type == IconScoreContextType.INVOKE:
+            context.step_counter.increase_storage_step(len(new_value))
+
+    def on_delete(self, context: 'IconScoreContext', key: bytes):
+        """Invoked when `delete` is called in `ContextDatabase`.
+
+        :param context: SCORE context
+        :param key: key
+        """
+        if context and context.type == IconScoreContextType.INVOKE:
+            pass
