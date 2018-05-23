@@ -22,6 +22,7 @@ class IconScoreStepCounterFactory(object):
 
     def __init__(
             self,
+            default_step: int = 0,
             sset_step_unit: int = 0,
             sreplace_step_unit: int = 0,
             sdelete_step_unit: int = 0,
@@ -30,6 +31,7 @@ class IconScoreStepCounterFactory(object):
             eventlog_step_unit: int = 0) -> None:
         """Constructor
 
+        :param default_step: default steps for every single transaction
         :param sset_step_unit: a base step unit for newly storing to DB
         :param sreplace_step_unit: a base step unit for modifying DB
         :param sdelete_step_unit: a base step unit for deleting key/value from DB
@@ -37,6 +39,7 @@ class IconScoreStepCounterFactory(object):
         :param msgcall_step_unit: a base step unit for calling to another SCORE
         :param eventlog_step_unit: a base step unit for logging.
         """
+        self.default_step = default_step
         self.sset_step_unit = sset_step_unit
         self.sreplace_step_unit = sreplace_step_unit
         self.sdelete_step_unit = sdelete_step_unit
@@ -51,6 +54,7 @@ class IconScoreStepCounterFactory(object):
         :return: step counter
         """
         return IconScoreStepCounter(
+            self.default_step,
             self.sset_step_unit,
             self.sreplace_step_unit,
             self.sdelete_step_unit,
@@ -115,6 +119,7 @@ class IconScoreStepCounter(object):
     """
 
     def __init__(self,
+                 default_step: int,
                  sset_step_unit: int,
                  sreplace_step_unit: int,
                  sdelete_step_unit: int,
@@ -124,6 +129,7 @@ class IconScoreStepCounter(object):
                  step_limit: int) -> None:
         """Constructor
 
+        :param default_step: default steps for every single transaction
         :param sset_step_unit: a base step unit for newly storing to DB
         :param sreplace_step_unit: a base step unit for modifying DB
         :param sdelete_step_unit: a base step unit for deleting key/value from DB
@@ -132,6 +138,7 @@ class IconScoreStepCounter(object):
         :param eventlog_step_unit: a base step unit for logging.
         :param step_limit: step limit of the transaction
         """
+        self.__step_used: int = default_step
         self.__sset_step_unit = sset_step_unit
         self.__sreplace_step_unit = sreplace_step_unit
         self.__sdelete_step_unit = sdelete_step_unit
@@ -139,7 +146,6 @@ class IconScoreStepCounter(object):
         self.__msgcall_step_unit = msgcall_step_unit
         self.__eventlog_step_unit = eventlog_step_unit
         self.__step_limit: int = step_limit
-        self.__step_used: int = 0
 
     @property
     def step_used(self) -> int:
