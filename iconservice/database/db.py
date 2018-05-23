@@ -108,6 +108,30 @@ class PlyvelDatabase(object):
                     wb.delete(key)
 
 
+class DatabaseObserver(abc.ABC):
+    """ An abstract class of database observer.
+    """
+
+    @abc.abstractmethod
+    def on_put(self, context: 'IconScoreContext', key: bytes, new_value: bytes):
+        """Invoked when `put` is called in `ContextDatabase`.
+
+        :param context: SCORE context
+        :param key: key
+        :param new_value: new value
+        """
+        pass
+
+    @abc.abstractmethod
+    def on_delete(self, context: 'IconScoreContext', key: bytes):
+        """Invoked when `delete` is called in `ContextDatabase`.
+
+        :param context: SCORE context
+        :param key: key
+        """
+        pass
+
+
 class ContextDatabase(PlyvelDatabase):
     """Database for an IconScore only used in the inside of iconservice.
 
@@ -125,6 +149,7 @@ class ContextDatabase(PlyvelDatabase):
         """
         super().__init__(db)
         self.address = address
+        self.__observer: DatabaseObserver = None
 
     def get(self, context: 'IconScoreContext', key: bytes) -> bytes:
         """Returns value indicated by key from batch or StateDB
@@ -193,6 +218,9 @@ class ContextDatabase(PlyvelDatabase):
         else:
             super().put(key, value)
 
+        if self.__observer:
+            self.__observer.on_put(context, key, value)
+
     def put_to_batch(self, context: 'IconScoreContext', key: bytes, value: bytes):
         context.tx_batch.put(self.address, key, value)
 
@@ -210,6 +238,9 @@ class ContextDatabase(PlyvelDatabase):
             self.put_to_batch(context, key, None)
         else:
             super().delete(key)
+
+        if self.__observer:
+            self.__observer.on_delete(context, key)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
@@ -234,6 +265,10 @@ class ContextDatabase(PlyvelDatabase):
                 'write_batch is not allowed on readonly context')
 
         return super().write_batch(states)
+
+    def set_observer(self, observer: DatabaseObserver):
+        self.__observer = observer
+
 
     @staticmethod
     def from_address_and_path(
@@ -277,6 +312,9 @@ class IconScoreDatabase(ContextGetter):
     def delete(self, key: bytes):
         key = self.__hash_key(key)
         self._context_db.delete(self._context, key)
+
+    def set_observer(self, observer: DatabaseObserver):
+        self._context_db.set_observer(observer)
 
     def __hash_key(self, key: bytes):
         """All key is hashed and stored to StateDB

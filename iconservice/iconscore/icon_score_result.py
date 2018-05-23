@@ -17,6 +17,8 @@
 
 import abc
 import json
+from typing import List
+
 from ..base.address import Address
 from ..base.block import Block
 
@@ -83,7 +85,7 @@ class Serializer(abc.ABC):
     """
 
     @abc.abstractmethod
-    def serialize(self, transaction_results: [TransactionResult]) -> bytes:
+    def serialize(self, transaction_results: List[TransactionResult]) -> bytes:
         """Returns a serialized data of the results of transactions.
 
         :return: a serialized data.
@@ -112,7 +114,7 @@ class IconBlockResult(list):
 
 
 class JsonSerializer(Serializer):
-    def serialize(self, transaction_results: [TransactionResult]) -> bytes:
+    def serialize(self, transaction_results: List[TransactionResult]) -> bytes:
         """Returns a serialized data of the results of transactions.
 
         :return: a serialized data.

@@ -17,6 +17,12 @@
 import threading
 from enum import IntEnum, unique
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_result import IconBlockResult
+
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
@@ -25,7 +31,6 @@ from ..base.exception import ExceptionCode, IconException
 from ..base.exception import IconScoreException, PayableException, ExternalException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
-from .icon_score_result import IconBlockResult
 
 from typing import Optional
 from typing import TYPE_CHECKING
@@ -69,7 +74,7 @@ class ContextGetter(object):
     """
 
     @property
-    def _context(self):
+    def _context(self) -> 'IconScoreContext':
         return getattr(_thread_local_data, 'context', None)
 
 
@@ -108,7 +113,8 @@ class IconScoreContext(object):
         self.msg = msg
         self.block_batch = None
         self.tx_batch = None
-        self.block_result = None
+        self.block_result: 'IconBlockResult' = None
+        self.step_counter: 'IconScoreStepCounter' = None
 
         self.__msg_stack = []
 

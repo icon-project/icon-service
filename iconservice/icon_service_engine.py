@@ -19,6 +19,10 @@ import os
 import hashlib
 import logging
 from collections import namedtuple
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .iconscore.icon_score_step import IconScoreStepCounter
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException, check_exception
@@ -38,6 +42,7 @@ from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import IconBlockResult
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
+from .iconscore.icon_score_step import IconScoreStepCounterFactory
 
 
 class IconServiceEngine(object):
@@ -65,6 +70,7 @@ class IconServiceEngine(object):
         # but not written to levelDB or file system.
         self._PrecommitState = namedtuple(
             'PrecommitState', ['block_batch', 'block_result'])
+        self._step_counter_factory: IconScoreStepCounterFactory = None
 
     def open(self,
              icon_score_root_path: str,
@@ -100,6 +106,8 @@ class IconServiceEngine(object):
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
 
         self._precommit_state: 'PrecommitState' = None
+
+        self._step_counter_factory = IconScoreStepCounterFactory(0, 0, 0, 0)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -162,7 +170,11 @@ class IconServiceEngine(object):
 
             context.msg = Message(sender=_from, value=params.get('value', 0))
 
-            tx_result = self.call(context, method, params)
+            context.step_counter: IconScoreStepCounter = \
+                self._step_counter_factory.create(params.get('step_limit', 0))
+
+            tx_result: TransactionResult = self.call(context, method, params)
+            tx_result.step_used = context.step_counter.step_used
             block_result.append(tx_result)
 
             context.block_batch.put_tx_batch(context.tx_batch)
