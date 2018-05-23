@@ -113,17 +113,24 @@ class DatabaseObserver(abc.ABC):
     """
 
     @abc.abstractmethod
-    def on_put(self, context: 'IconScoreContext', key: bytes, new_value: bytes):
+    def on_put(self, context: 'IconScoreContext',
+               key: bytes,
+               old_value: bytes,
+               new_value: bytes):
         """Invoked when `put` is called in `ContextDatabase`.
 
         :param context: SCORE context
         :param key: key
+        :param old_value: old value
         :param new_value: new value
         """
         pass
 
     @abc.abstractmethod
-    def on_delete(self, context: 'IconScoreContext', key: bytes):
+    def on_delete(self,
+                  context: 'IconScoreContext',
+                  key: bytes,
+                  old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
 
         :param context: SCORE context
@@ -215,11 +222,11 @@ class ContextDatabase(PlyvelDatabase):
             raise DatabaseException('put is not allowed')
         elif context_type == IconScoreContextType.INVOKE:
             self.put_to_batch(context, key, value)
+            if self.__observer:
+                old_value = self.get_from_batch(context, key)
+                self.__observer.on_put(context, key, old_value, value)
         else:
             super().put(key, value)
-
-        if self.__observer:
-            self.__observer.on_put(context, key, value)
 
     def put_to_batch(self, context: 'IconScoreContext', key: bytes, value: bytes):
         context.tx_batch.put(self.address, key, value)
@@ -235,12 +242,12 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.QUERY:
             raise DatabaseException('delete is not allowed')
         elif context_type == IconScoreContextType.INVOKE:
+            if self.__observer:
+                old_value = self.get_from_batch(context, key)
+                self.__observer.on_delete(context, key, old_value)
             self.put_to_batch(context, key, None)
         else:
             super().delete(key)
-
-        if self.__observer:
-            self.__observer.on_delete(context, key)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
