@@ -18,7 +18,7 @@ class TestIconContainerDB(unittest.TestCase):
         pass
 
     def test_success_list(self):
-        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]]]
+        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], create_address(0, b'123')]
         ContainerUtil.put_to_db(self.db, 'test_list', test_list)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 0, value_type=int), 1)
@@ -33,9 +33,11 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 0, value_type=int), 10)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 1, value_type=int), 11)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 2, value_type=int), 12)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 5, value_type=Address),
+                         create_address(0, b'123'))
 
     def test_success_dict(self):
-        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}}
+        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}, 4: create_address(1, b'123')}
         ContainerUtil.put_to_db(self.db, 'test_dict', test_dict)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 1, value_type=str), 'a')
@@ -44,22 +46,29 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 0, value_type=str), 'c')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 1, value_type=str), 'd')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'a', value_type=int), 1)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 4, value_type=Address),
+                         create_address(1, b'123'))
 
     def test_success_set(self):
-        test_set = {1, 2, 3}
+        address = create_address(0, b'123')
+        test_set = {1, 2, 3, address}
         ContainerUtil.put_to_db(self.db, 'test_set', test_set)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 0, value_type=int), 1)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 1, value_type=int), 2)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 2, value_type=int), 3)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 3, value_type=Address),
+                         address)
 
     def test_success_tuple(self):
-        test_tuple = tuple([1, 2, 3])
+        test_tuple = tuple([1, 2, 3, create_address(1, b'234')])
         ContainerUtil.put_to_db(self.db, 'test_tuple', test_tuple)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 0, value_type=int), 1)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 1, value_type=int), 2)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 2, value_type=int), 3)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 3, value_type=Address),
+                         create_address(1, b'234'))
 
     def test_fail_container(self):
         testlist = [[]]

@@ -54,7 +54,7 @@ class ContainerUtil(object):
             bytes_key = key.encode('utf-8')
         elif isinstance(key, Address):
             byte_array = bytearray(key.body)
-            byte_array.append(key.prefix.value)
+            byte_array.append(key.prefix)
             bytes_key = bytes(byte_array)
         elif isinstance(key, bytes):
             bytes_key = key
@@ -70,7 +70,7 @@ class ContainerUtil(object):
             byte_value = value.encode('utf-8')
         elif isinstance(value, Address):
             byte_array = bytearray(value.body)
-            byte_array.append(value.prefix.value)
+            byte_array.append(value.prefix)
             byte_value = bytes(byte_array)
         elif isinstance(value, bool):
             byte_value = int_to_bytes(int(value))
