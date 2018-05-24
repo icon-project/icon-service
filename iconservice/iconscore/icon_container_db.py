@@ -53,7 +53,7 @@ class ContainerUtil(object):
         elif isinstance(key, str):
             bytes_key = key.encode('utf-8')
         elif isinstance(key, Address):
-            bytes_key = key.body
+            bytes_key = str(key).encode('utf-8')
         elif isinstance(key, bytes):
             bytes_key = key
         else:
@@ -67,7 +67,7 @@ class ContainerUtil(object):
         elif isinstance(value, str):
             byte_value = value.encode('utf-8')
         elif isinstance(value, Address):
-            byte_value = value.body
+            byte_value = str(value).encode('utf-8')
         elif isinstance(value, bool):
             byte_value = int_to_bytes(int(value))
         elif isinstance(value, bytes):
@@ -87,7 +87,7 @@ class ContainerUtil(object):
         elif value_type == str:
             obj_value = value.decode()
         elif value_type == Address:
-            str_value = value.decode()
+            str_value = value.decode('utf-8')
             obj_value = Address.from_string(str_value)
         if value_type == bool:
             obj_value = bool(int(int.from_bytes(value, 'big', signed=True)))

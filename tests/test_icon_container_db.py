@@ -1,6 +1,7 @@
 import unittest
 
 from iconservice import Address
+from iconservice.base.address import create_address, AddressPrefix
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from tests.mock_db import create_mock_icon_score_db
@@ -17,7 +18,7 @@ class TestIconContainerDB(unittest.TestCase):
         pass
 
     def test_success_list(self):
-        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]]]
+        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], 'hx1234123421341234123412341234123421342134']
         ContainerUtil.put_to_db(self.db, 'test_list', test_list)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 0, value_type=int), 1)
@@ -32,9 +33,12 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 0, value_type=int), 10)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 1, value_type=int), 11)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 2, value_type=int), 12)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 5, value_type=Address),
+                         Address.from_string("hx1234123421341234123412341234123421342134"))
 
     def test_success_dict(self):
-        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}}
+        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1},
+                     4: {'address': "hx1234123421341234123412341234123421342134"}}
         ContainerUtil.put_to_db(self.db, 'test_dict', test_dict)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 1, value_type=str), 'a')
@@ -43,22 +47,28 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 0, value_type=str), 'c')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 1, value_type=str), 'd')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'a', value_type=int), 1)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 4, 'address', value_type=Address),
+                         Address.from_string("hx1234123421341234123412341234123421342134"))
 
     def test_success_set(self):
-        test_set = {1, 2, 3}
+        test_set = {1, 2, 3, "hx1234123421341234123412341234123421342134"}
         ContainerUtil.put_to_db(self.db, 'test_set', test_set)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 0, value_type=int), 1)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 1, value_type=int), 2)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 2, value_type=int), 3)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_set', 3, value_type=Address),
+                         Address.from_string("hx1234123421341234123412341234123421342134"))
 
     def test_success_tuple(self):
-        test_tuple = tuple([1, 2, 3])
+        test_tuple = tuple([1, 2, 3, 'hx1234123421341234123412341234123421342134'])
         ContainerUtil.put_to_db(self.db, 'test_tuple', test_tuple)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 0, value_type=int), 1)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 1, value_type=int), 2)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 2, value_type=int), 3)
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 3, value_type=Address),
+                         Address.from_string("hx1234123421341234123412341234123421342134"))
 
     def test_fail_container(self):
         testlist = [[]]
@@ -108,6 +118,26 @@ class TestIconContainerDB(unittest.TestCase):
         test_var.set(1)
 
         self.assertEqual(test_var.get(), 1)
+
+        test_var2 = VarDB(2,
+                          self.db, value_type=Address)
+        test_var2.set(Address.from_string("hx1234123412341234123412341234123412342134"))
+
+        self.assertEqual(test_var2.get(), Address.from_string("hx1234123412341234123412341234123412342134"))
+
+        test_var3 = VarDB(3,
+                          self.db, value_type=Address)
+        address = create_address(AddressPrefix.from_string("hx"), b'test_var3')
+        test_var3.set(address)
+
+        self.assertEqual(test_var3.get(), address)
+
+        test_var4 = VarDB(4,
+                          self.db, value_type=Address)
+
+        address2 = create_address(AddressPrefix.from_string('cx'), b'test_var4')
+        test_var4.set(address2)
+        self.assertEqual(test_var4.get(), address2)
 
     def test_default_val_db(self):
         test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}}
