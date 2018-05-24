@@ -56,7 +56,5 @@ def sha3_256(data: bytes) -> bytes:
 
 
 def int_to_bytes(n: int) -> bytes:
-    length = (n.bit_length() + 7) // 8
-    if n <= 0:
-        length += 1
+    length = (n.bit_length() + 8) // 8
     return n.to_bytes(length, byteorder='big', signed=True)

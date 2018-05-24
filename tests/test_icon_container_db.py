@@ -115,9 +115,9 @@ class TestIconContainerDB(unittest.TestCase):
 
     def test_success_variable(self):
         test_var = VarDB('test_var', self.db, value_type=int)
-        test_var.set(1)
+        test_var.set(10**19+1)
 
-        self.assertEqual(test_var.get(), 1)
+        self.assertEqual(test_var.get(), 10**19+1)
 
         test_var2 = VarDB(2,
                           self.db, value_type=Address)
