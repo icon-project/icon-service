@@ -119,8 +119,9 @@ def check_exception(func):
                 log_str = 'call_stack:\n {} \n exec:\n {}\n'.format(*log_call_stack, log_exec)
                 print(log_str)
             else:
-                logging.exception(e)
+                logging.fatal(e, exc_info=True)
         except Exception as e:
+            logging.fatal(e, exc_info=True)
             raise e
         finally:
             pass
