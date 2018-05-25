@@ -128,6 +128,9 @@ class IconScoreInfoMapper(dict, ContextGetter):
         :param address:
         """
         if address in self:
+            icon_score = self[address].icon_score
+            if icon_score is not None:
+                icon_score.db._context_db.close(self._context)
             del self[address]
 
     def get_icon_score(self, address: Address) -> Optional['IconScoreBase']:
@@ -146,7 +149,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
         icon_score = icon_score_info.icon_score
         return icon_score
 
-    def __load_score(self, address: Address) -> Optional[IconScoreInfo]:
+    def __load_score(self, address: 'Address') -> Optional['IconScoreInfo']:
         owner = self.__icx_storage.get_score_owner(self._context, address)
         if owner is None:
             return None
@@ -168,7 +171,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
         score_db = IconScoreDatabase(context_db)
         return score_db
 
-    def __load_score_wrapper(self, address: Address) -> callable:
+    def __load_score_wrapper(self, address: 'Address') -> callable:
         """Load IconScoreBase subclass from IconScore python package
 
         :param address: icon_score_address
@@ -184,3 +187,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
         info = IconScoreInfo(icon_score)
         self[icon_score.address] = info
         return info
+
+    def is_exist_db(self, address: 'Address') -> bool:
+        return self.__db_factory.is_exist(address)
+

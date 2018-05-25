@@ -236,11 +236,14 @@ class IconScoreEngine(ContextContainer):
         self.__icx_storage.put_score_owner(context,
                                            icon_score_address,
                                            context.tx.origin)
+        db_exist = self.__icon_score_info_mapper.is_exist_db(icon_score_address)
         score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
 
         try:
             self._put_context(context)
-            score.genesis_init()
+            if not db_exist:
+                logging.error('genesis_init!!!')
+                score.genesis_init()
         except Exception as e:
             logging.error(e)
         finally:
