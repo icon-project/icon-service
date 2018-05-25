@@ -8,7 +8,7 @@ requires = [
 
 setup_options = {
     'name': 'iconservice', 
-    'version': '0.0.1',
+    'version': '0.8.1',
     'description': 'iconservice for python',
     'long_description': open('docs/class.md').read(),
     'author': 'ICON foundation',
