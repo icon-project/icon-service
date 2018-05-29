@@ -13,18 +13,12 @@
 # limitations under the License.
 
 import logging
+import json
 from .configuration import LogConfiguration, LogHandlerType
 from enum import IntEnum
 
-
-DEFAULT_LOG_FORMAT = "'%(asctime)s %(process)d %(thread)d [CUSTOM] %(levelname)s %(message)s'"
-DEFAULT_LOG_FORMAT_DEBUG = "%(asctime)s %(process)d %(thread)d [CUSTOM] %(levelname)s %(message)s"
-DEFAULT_LOG_FILE_PATH = "./icon_service_logger"
-
-
-class LoggerPreset(IntEnum):
-    develop = 0
-    production = 1
+DEFAULT_LOG_FORMAT = "%(asctime)s %(process)d %(thread)d [TAG] %(levelname)s %(message)s"
+DEFAULT_LOG_FILE_PATH = "./logger.log"
 
 
 class LogLevel(IntEnum):
@@ -36,39 +30,43 @@ class LogLevel(IntEnum):
     CRITICAL = 50
 
 
-debug_preset = LogConfiguration()
-debug_preset.log_format = DEFAULT_LOG_FORMAT_DEBUG
-debug_preset.log_level = LogLevel.DEBUG
-debug_preset.log_color = True
-debug_preset.log_file_path = DEFAULT_LOG_FILE_PATH
-debug_preset.set_handler(LogHandlerType.debug)
-
-prod_preset = LogConfiguration()
-prod_preset.log_format = DEFAULT_LOG_FORMAT
-prod_preset.log_level = LogLevel.DEBUG
-prod_preset.log_color = False
-prod_preset.log_file_path = DEFAULT_LOG_FILE_PATH
-prod_preset.set_handler(LogHandlerType.production)
-
-LogPresets = {LoggerPreset.develop: debug_preset,
-              LoggerPreset.production: prod_preset}
-
-
 class Logger:
-    def __init__(self, log_preset: 'LoggerPreset'):
-        self.__log_preset = LogPresets[log_preset]
-        self.__update_other_loggers()
+    def __init__(self, import_file_path: str=None):
+        if import_file_path is None:
+            self.__log_preset = self.make_default_preset()
+        else:
+            self.__log_preset = self.import_file(import_file_path)
 
-    def __update_other_loggers(self):
-        logger = logging.getLogger('pika')
-        self.__log_preset.update_logger(logger)
-        logger = logging.getLogger('aio_pika')
-        self.__log_preset.update_logger(logger)
-        logger = logging.getLogger('sanic.access')
+    def import_file(self, path: str):
+        try:
+            with open(path) as f:
+                conf = json.load(f)
+                logger_config = conf['Logger']
+        except:
+            return self.make_default_preset()
+
+        return conf
+        preset = LogConfiguration()
+        return preset
+
+    def make_default_preset(self):
+        preset = LogConfiguration()
+        preset.log_format = DEFAULT_LOG_FORMAT
+        preset.log_level = LogLevel.DEBUG
+        preset.log_color = True
+        preset.log_file_path = DEFAULT_LOG_FILE_PATH
+        preset.set_handler(LogHandlerType.production)
+        self.update_other_logger_level('pika')
+        self.update_other_logger_level('aio_pika')
+        self.update_other_logger_level('sanic.access')
+        return preset
+
+    def update_other_logger_level(self, logger_name: str):
+        logger = logging.getLogger(logger_name)
         self.__log_preset.update_logger(logger)
 
-    def set_tag(self, **kwargs):
-        self.__log_preset.custom = '_'.join(kwargs.values())
+    def set_tag(self, tag: str):
+        self.__log_preset.custom = tag
         self.__log_preset.update_logger()
 
     def set_log_level(self, log_level: 'LogLevel'):
@@ -80,22 +78,22 @@ class Logger:
         self.__log_preset.update_logger()
 
     @staticmethod
-    def log_info(msg, *args, **kwargs):
+    def info(msg, *args, **kwargs):
         logging.info(msg, *args, **kwargs)
 
     @staticmethod
-    def log_debug(msg, *args, **kwargs):
+    def debug(msg, *args, **kwargs):
         logging.debug(msg, *args, **kwargs)
 
     @staticmethod
-    def log_warning(msg, *args, **kwargs):
+    def warning(msg, *args, **kwargs):
         logging.warning(msg, *args, **kwargs)
 
     @staticmethod
-    def log_exception(msg, *args, exc_info=True, **kwargs):
+    def exception(msg, *args, exc_info=True, **kwargs):
         logging.exception(msg, *args, exc_info=exc_info, **kwargs)
 
     @staticmethod
-    def log_error(msg, *args, **kwargs):
+    def error(msg, *args, **kwargs):
         logging.error(msg, *args, **kwargs)
 

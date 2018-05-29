@@ -14,15 +14,15 @@
 
 import logging
 import coloredlogs
-import datetime
 from enum import IntEnum
+from logging.handlers import TimedRotatingFileHandler
 
 
 class LogHandlerType(IntEnum):
     console = 1
     file_only_one = 2
     debug = 3
-    file_times = 4
+    file = 4
     production = 5
 
 
@@ -34,18 +34,13 @@ class LogConfiguration:
         self.log_color = True
         self.__handler_type = LogHandlerType.console
         self.__log_file_path = None
-        self.__log_file_path_time = None
         self.__log_format = None
 
     def log_file_path(self, log_file_path: str):
-        self.__log_file_path = '{}.log'.format(log_file_path)
-        time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.__log_file_path_time = '{}_{}.log'.format(log_file_path, time_str)
-
-    log_file_path = property(None, log_file_path)
+        self.__log_file_path = log_file_path
 
     def update_logger(self, logger: logging.Logger=None):
-        self.__log_format = self.log_format.replace("CUSTOM", self.custom)
+        self.__log_format = self.log_format.replace("TAG", self.custom)
 
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
@@ -53,7 +48,7 @@ class LogConfiguration:
         if logger is None:
             handlers = self.__make_handler()
             logging.basicConfig(handlers= handlers,
-                                format=self.__log_format, datefmt="%m%d %H:%M:%S", level=self.log_level)
+                                format=self.__log_format, datefmt="%m-%d %H:%M:%S", level=self.log_level)
         else:
             logger.setLevel(self.log_level)
 
@@ -69,13 +64,11 @@ class LogConfiguration:
             handlers.append(logging.StreamHandler())
         if LogHandlerType.file_only_one & self.__handler_type == LogHandlerType.file_only_one:
             handlers.append(logging.FileHandler(self.__log_file_path, 'w', 'utf-8'))
-        if LogHandlerType.file_times & self.__handler_type == LogHandlerType.file_times:
-            handlers.append(logging.FileHandler(self.__log_file_path_time, 'w', 'utf-8'))
+        if LogHandlerType.file & self.__handler_type == LogHandlerType.file:
+            handlers.append(TimedRotatingFileHandler(self.__log_file_path, when='D'))
         return handlers
 
     def __update_log_color_set(self, logger):
-        # level SPAM value is 5
-        # level DEBUG value is 10
         coloredlogs.DEFAULT_FIELD_STYLES = {
             'hostname': {'color': 'magenta'},
             'programname': {'color': 'cyan'},

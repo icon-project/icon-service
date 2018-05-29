@@ -11,9 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from .logger import LoggerPreset
 from .logger import Logger
 
-default_logger = Logger(LoggerPreset.develop)
-default_logger.set_tag(rpc_port='9000', amqp_key='amqp_key', channel_name='loopchain_dafult')
+default_logger = Logger()
+default_logger.set_tag('default_log')
