@@ -84,29 +84,32 @@ class IconScoreDeployer(object):
         """
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as memory_zip:
+                memory_zip_infolist = memory_zip.infolist()
+                memory_zip_files_path_gen = (path.filename for path in memory_zip_infolist)
+                common_path_len = len(os.path.commonpath(memory_zip_files_path_gen))
+                start_index = common_path_len
+                if common_path_len == 0:
+                    start_index = -1
                 for zip_info in memory_zip.infolist():
                     with memory_zip.open(zip_info) as file:
-                        file_path = zip_info.filename
-                        root_directory_index = file_path.find("/")
-                        path_uncovered_root_directory = file_path[root_directory_index + 1:]
-                        file_name_start_index = path_uncovered_root_directory.rfind('/')
-                        parent_directory = path_uncovered_root_directory[:file_name_start_index]
-
-                        if path_uncovered_root_directory.find('__MACOSX') != -1:
+                        file_path = zip_info.filename[start_index + 1:]
+                        file_name_start_index = file_path.rfind('/')
+                        parent_directory = file_path[:file_name_start_index]
+                        if file_path.find('__MACOSX') != -1:
                             continue
-                        if path_uncovered_root_directory.find('__pycache__') != -1:
+                        if file_path.find('__pycache__') != -1:
                             continue
-                        if file_name_start_index == len(path_uncovered_root_directory) - 1:
+                        if file_name_start_index == len(file_path) - 1:
                             # continue when 'file_path' is a directory.
                             continue
-                        if path_uncovered_root_directory.find('/.') != -1:
+                        if file_path.startswith('.') or file_path.find('/.') != -1:
                             # continue when 'file_path' is hidden directory or hidden file.
                             continue
 
                         if file_name_start_index == -1:
-                            yield path_uncovered_root_directory, file, ''
+                            yield file_path, file, ''
                         else:
-                            yield path_uncovered_root_directory, file, parent_directory
+                            yield file_path, file, parent_directory
         except zipfile.BadZipFile:
             raise ScoreInstallExtractException("Bad zip file.")
         except zipfile.LargeZipFile:
