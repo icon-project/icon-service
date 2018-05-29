@@ -216,7 +216,7 @@ class IconScoreEngine(ContextContainer):
         - Install IconScore package file to file system
 
         """
-        content_type = data.get('content_type')
+        content_type = data.get('contentType')
         content = data.get('content')
 
         if content_type == 'application/tbears':
