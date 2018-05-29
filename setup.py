@@ -3,7 +3,8 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'plyvel'
+    'plyvel',
+    'coloredlogs'
 ]
 
 setup_options = {
