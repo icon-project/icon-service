@@ -17,7 +17,6 @@
 """
 
 
-import logging
 from collections import namedtuple
 from os import path, symlink, makedirs
 
@@ -27,6 +26,7 @@ from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 from ..utils.type_converter import TypeConverter
+from ..logger import default_logger
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -242,10 +242,10 @@ class IconScoreEngine(ContextContainer):
         try:
             self._put_context(context)
             if not db_exist:
-                logging.error('genesis_init!!!')
+                default_logger.log_info('genesis_init!!!')
                 score.genesis_init()
         except Exception as e:
-            logging.error(e)
+            default_logger.error(e)
         finally:
             self._delete_context(context)
 

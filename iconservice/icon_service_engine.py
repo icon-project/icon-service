@@ -17,7 +17,6 @@
 import json
 import os
 import hashlib
-import logging
 from collections import namedtuple
 from typing import TYPE_CHECKING
 
@@ -43,7 +42,7 @@ from .iconscore.icon_score_result import IconBlockResult
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory
-
+from .logger import default_logger
 
 class IconServiceEngine(object):
     """The entry of all icon service related components
@@ -239,9 +238,9 @@ class IconServiceEngine(object):
             handler = self._handlers[method]
             return handler(context, params)
         except KeyError as ke:
-            logging.error(ke)
+            default_logger.log_error(ke)
         except Exception as e:
-            logging.error(e)
+            default_logger.log_error(e)
 
     def _handle_icx_getBalance(self,
                                context: IconScoreContext,
@@ -382,7 +381,7 @@ class IconServiceEngine(object):
                 ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
 
-        logging.debug(f'precommit: {self._precommit_state.block_batch}')
+        default_logger.log_debug(f'precommit: {self._precommit_state.block_batch}')
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
         block_batch = self._precommit_state.block_batch

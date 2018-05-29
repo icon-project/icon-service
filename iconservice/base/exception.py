@@ -16,13 +16,7 @@
 
 from enum import IntEnum, unique
 from functools import wraps
-
-DEBUG_PRT = False
-
-if DEBUG_PRT:
-    import traceback
-else:
-    import logging
+from ..logger import default_logger
 
 
 @unique
@@ -60,6 +54,9 @@ class IconServiceBaseException(BaseException):
     @property
     def message(self):
         return self.__message
+
+    def __str__(self):
+        return f'{self.message}'
 
 
 class DatabaseException(IconServiceBaseException):
@@ -113,15 +110,9 @@ def check_exception(func):
         try:
             return func(*args, **kwargs)
         except IconServiceBaseException as e:
-            if DEBUG_PRT:
-                log_call_stack = traceback.format_stack()
-                log_exec = traceback.format_exc()
-                log_str = 'call_stack:\n {} \n exec:\n {}\n'.format(*log_call_stack, log_exec)
-                print(log_str)
-            else:
-                logging.fatal(e, exc_info=True)
+                default_logger.log_exception(e, exc_info=True)
         except Exception as e:
-            logging.fatal(e, exc_info=True)
+            default_logger.log_exception(e, exc_info=True)
             raise e
         finally:
             pass

@@ -15,14 +15,13 @@
 # limitations under the License.
 import hashlib
 import io
-import logging
 import os
 import zipfile
 import shutil
 
 from ..base.address import Address
 from ..base.exception import ScoreInstallException, ScoreInstallExtractException
-
+from ..logger import default_logger
 
 class IconScoreDeployer(object):
     """Score installer.
@@ -66,13 +65,13 @@ class IconScoreDeployer(object):
                     dest.write(contents)
             return True
         except ScoreInstallException as e:
-            logging.debug(e.message)
+            default_logger.log_debug(e)
             return False
         except ScoreInstallExtractException:
             os.rmdir(install_path)
             return False
         except PermissionError as pe:
-            logging.debug(pe)
+            default_logger.log_debug(pe)
             return False
 
     @staticmethod
