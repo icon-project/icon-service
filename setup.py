@@ -3,12 +3,13 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'plyvel'
+    'plyvel',
+    'jsonpickle'
 ]
 
 setup_options = {
     'name': 'iconservice', 
-    'version': '0.8.1',
+    'version': '0.9.0',
     'description': 'iconservice for python',
     'long_description': open('docs/class.md').read(),
     'author': 'ICON foundation',
