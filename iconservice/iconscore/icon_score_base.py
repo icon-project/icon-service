@@ -25,7 +25,6 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
-from ..base import OnInitType
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
@@ -44,7 +43,8 @@ def external(func=None, *, readonly=False):
 
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
-        raise IconScoreException(f"isn't function object: {func}, cls: {cls_name}")
+        raise IconScoreException(
+            f"isn't function object: {func}, cls: {cls_name}")
 
     if func_name == 'fallback':
         raise IconScoreException(f"can't locate external to this func func: {func_name}, cls: {cls_name}")
@@ -98,7 +98,13 @@ class IconScoreObject(ABC):
     def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def on_init(self, on_init_type: 'OnInitType', params: dict) -> None:
+    def on_install(self, params: dict) -> None:
+        pass
+
+    def on_update(self, params: dict) -> None:
+        pass
+
+    def on_selfdestruct(self, recipient: 'Address') -> None:
         pass
 
 
@@ -136,8 +142,23 @@ class IconScoreBaseMeta(ABCMeta):
 class IconScoreBase(IconScoreObject, ContextGetter, metaclass=IconScoreBaseMeta):
 
     @abstractmethod
-    def on_init(self, on_init_type: 'OnInitType', params: dict) -> None:
-        super().on_init(on_init_type, params)
+    def on_install(self, params: dict) -> None:
+        """DB initialization on score install
+
+        :param params:
+        """
+        super().on_install(params)
+
+    @abstractmethod
+    def on_update(self, params: dict) -> None:
+        """DB initialization on score update
+
+        :param params:
+        """
+        super().on_update(params)
+
+    def on_selfdestruct(self, recipient: 'Address') -> None:
+        raise NotImplementedError()
 
     @abstractmethod
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:

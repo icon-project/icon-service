@@ -22,7 +22,6 @@ import unittest
 import os
 
 from . import rmtree
-from iconservice.base import OnInitType
 from iconservice.base.address import AddressPrefix, create_address
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
@@ -39,16 +38,14 @@ from iconservice.icx.icx_storage import IcxStorage
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
-class MockScore(object):
-    def __init__(self,
-                 testCase: unittest.TestCase,
-                 on_init_type: 'OnInitType'):
-        self._testCase = testCase
-        self._on_init_type = on_init_type
 
-    def on_init(self, on_init_type, params):
-        self._testCase.assertEqual(self._on_init_type, on_init_type)
-        self._testCase.assertIsNotNone(params)
+class MockScore(object):
+    def __init__(self, test_case: unittest.TestCase):
+        self._test_case = test_case
+
+    def on_install(self, params):
+        self._test_case.assertIsNotNone(params)
+        self._test_case.assertTrue(isinstance(params, dict))
 
 
 class TestIconScoreEngine(unittest.TestCase):
@@ -156,6 +153,5 @@ class TestIconScoreEngine(unittest.TestCase):
 
     def test_call_on_init_of_score(self):
         params = {}
-        on_init_type = OnInitType.INSTALL
-        score = MockScore(self, on_init_type)
-        self._engine._call_on_init_of_score(None, score, on_init_type, params)
+        score = MockScore(self)
+        self._engine._call_on_init_of_score(None, score.on_install, params)

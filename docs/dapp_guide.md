@@ -25,8 +25,8 @@ class SampleToken(IconScoreBase):
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)
 
-    def genesis_init(self, *args, **kwargs) -> None:
-        super().genesis_init(*args, **kwargs)
+    def on_install(self, params) -> None:
+        super().on_install(params)
 
         init_supply = 1000
         decimal = 18
@@ -34,6 +34,9 @@ class SampleToken(IconScoreBase):
 
         self._total_supply.set(total_supply)
         self._balances[self.msg.sender] = total_supply
+        
+    def on_update(self, params) -> None:
+        super().on_update(params)
 
     @external(readonly=True)
     def total_supply(self) -> int:
@@ -94,8 +97,8 @@ class SampleCrowdSale(IconScoreBase):
         self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
         self._crowd_sale_closed = VarDB(self._CROWD_SALE_CLOSED, db, value_type=bool)
 
-    def genesis_init(self, *args, **kwargs) -> None:
-        super().genesis_init(*args, **kwargs)
+    def on_install(self, params) -> None:
+        super().on_install(params)
 
         one_icx = 1 * 10 ** 18
         one_minute_to_sec = 1 * 60
@@ -116,6 +119,9 @@ class SampleCrowdSale(IconScoreBase):
         self._dead_line.set(now_seconds + duration_in_minutes * one_minute_to_sec * one_second_to_microsec)
         price = int(icx_cost_of_each_token * one_icx)
         self._price.set(price)
+        
+    def on_update(self, params) -> None:
+        super().on_update(params)
 
     @external(readonly=True)
     def total_joiner_count(self):
@@ -204,7 +210,7 @@ IconServiceBaseException 예외를 상속받아서 구현하길 권장합니다.
 super().__init__()
 ```
 
-#### genesis_init
+#### on_install
 계약서가 최초 배포되었을 때 상태 DB에 기록할 내용을 구현합니다.<br/>
 이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 계약서의 업데이트, 삭제 시에는 호출되지 않습니다.<br/>
 

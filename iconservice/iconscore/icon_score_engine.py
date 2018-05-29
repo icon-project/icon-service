@@ -21,7 +21,6 @@ import logging
 from collections import namedtuple
 from os import path, symlink, makedirs
 
-from ..base import OnInitType
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException, check_exception
 from .icon_score_context import ContextContainer
@@ -29,7 +28,7 @@ from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 from ..utils.type_converter import TypeConverter
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Callable
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
     from .icon_score_base import IconScoreBase
@@ -250,8 +249,7 @@ class IconScoreEngine(ContextContainer):
 
         self._call_on_init_of_score(
             context=context,
-            score=score,
-            on_init_type=OnInitType.from_data_type('install'),
+            on_init=score.on_install,
             params=params)
 
     def __update(self,
@@ -266,22 +264,20 @@ class IconScoreEngine(ContextContainer):
 
     def _call_on_init_of_score(self,
                                context: 'IconScoreContext',
-                               score: 'IconScoreBase',
-                               on_init_type: 'OnInitType',
+                               on_init: Callable[[dict], None],
                                params: dict) -> None:
         """on_init(on_init_type, params) of score is called
         only once when installed or updated
 
         :param context:
-        :param score:
-        :param on_init_type:
+        :param on_init: score.on_install() or score.on_update()
         :param params: paramters passed to on_init()
         """
         assert params is not None
 
         try:
             self._put_context(context)
-            score.on_init(on_init_type, params)
+            on_init(params)
         except Exception as e:
             logging.error(e)
         finally:

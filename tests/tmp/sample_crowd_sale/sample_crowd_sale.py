@@ -27,8 +27,8 @@ class SampleCrowdSale(IconScoreBase):
         self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
         self._crowd_sale_closed = VarDB(self._CROWD_SALE_CLOSED, db, value_type=bool)
 
-    def genesis_init(self, *args, **kwargs) -> None:
-        super().genesis_init(*args, **kwargs)
+    def on_install(self, params) -> None:
+        super().on_install(params)
 
         one_icx = 1 * 10 ** 18
         one_minute_to_sec = 1 * 60
@@ -49,6 +49,9 @@ class SampleCrowdSale(IconScoreBase):
         self._dead_line.set(now_seconds + duration_in_minutes * one_minute_to_sec * one_second_to_microsec)
         price = int(icx_cost_of_each_token * one_icx)
         self._price.set(price)
+
+    def on_update(self, params) -> None:
+        super().on_update(params)
 
     @external(readonly=True)
     def total_joiner_count(self):
