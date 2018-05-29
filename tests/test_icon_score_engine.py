@@ -20,12 +20,16 @@
 
 import unittest
 import os
-from iconservice.base.address import AddressPrefix, create_address, ICX_ENGINE_ADDRESS
+
+from . import rmtree
+from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import DatabaseFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
@@ -35,11 +39,23 @@ from iconservice.icx.icx_storage import IcxStorage
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
+class MockScore(object):
+    def __init__(self, test_case: unittest.TestCase):
+        self._test_case = test_case
+
+    def on_install(self, params):
+        self._test_case.assertIsNotNone(params)
+        self._test_case.assertTrue(isinstance(params, dict))
+
+
 class TestIconScoreEngine(unittest.TestCase):
     _ROOT_SCORE_PATH = os.path.join(TEST_ROOT_PATH, 'score')
     _TEST_DB_PATH = 'tests/test_db/'
 
     def setUp(self):
+        rmtree(self._ROOT_SCORE_PATH)
+        rmtree(self._TEST_DB_PATH)
+
         archive_path = 'tests/score.zip'
         archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
         zip_bytes = self.read_zipfile_as_byte(archive_path)
@@ -51,19 +67,24 @@ class TestIconScoreEngine(unittest.TestCase):
         self._db_factory = DatabaseFactory(db_path)
         self._icx_storage = self._create_icx_storage(self._db_factory)
         self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
-        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
+        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage,
+                                                      self._db_factory,
+                                                      self._icon_score_loader)
 
         self._engine = IconScoreEngine(
             self._icx_storage,
             self._icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'SampleToken')
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT,
+                                                  b'SampleToken')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
         self._context.msg = Message(self._from, 0)
-        self._context.tx = Transaction('test_01', origin=create_address(AddressPrefix.EOA, b'owner'))
+        self._context.tx = Transaction(
+            'test_01',
+            origin=create_address(AddressPrefix.EOA, b'owner'))
         self._context.block = Block(1, 'block_hash', 0)
 
     def tearDown(self):
@@ -102,7 +123,8 @@ class TestIconScoreEngine(unittest.TestCase):
         for name, file_info, parent_directory in file_info_generator:
             if not os.path.exists(os.path.join(install_path, parent_directory)):
                 os.makedirs(os.path.join(install_path, parent_directory))
-            with file_info as file_info_context, open(os.path.join(install_path, name), 'wb') as dest:
+            with file_info as file_info_context,\
+                    open(os.path.join(install_path, name), 'wb') as dest:
                 contents = file_info_context.read()
                 dest.write(contents)
         return True
@@ -114,13 +136,22 @@ class TestIconScoreEngine(unittest.TestCase):
             os.makedirs(directory)
 
     def test_install(self):
-        self._engine.invoke(self._context, self._icon_score_address, 'install', {})
+        self._engine.invoke(
+            self._context, self._icon_score_address, 'install', {})
         self._engine.commit(self._context)
 
     def test_call_method(self):
         calldata = {'method': 'total_supply', 'params': {}}
 
-        self._engine.invoke(self._context, self._icon_score_address, 'install', {})
+        self._engine.invoke(
+            self._context, self._icon_score_address, 'install', {})
         self._engine.commit(self._context)
         self._context.type = IconScoreContextType.QUERY
-        self.assertEqual(1000 * 10 ** 18, self._engine.query(self._context, self._icon_score_address, 'call', calldata))
+        ret = self._engine.query(
+            self._context, self._icon_score_address, 'call', calldata)
+        self.assertEqual(1000 * 10 ** 18, ret)
+
+    def test_call_on_init_of_score(self):
+        params = {}
+        score = MockScore(self)
+        self._engine._call_on_init_of_score(None, score.on_install, params)

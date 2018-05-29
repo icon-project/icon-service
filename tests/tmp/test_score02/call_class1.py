@@ -2,8 +2,11 @@ from iconservice import *
 
 
 class CallClass1(IconScoreBase):
-    def genesis_init(self, *args, **kwargs) -> None:
-        pass
+    def on_install(self, params: dict) -> None:
+        super().on_install(params)
+
+    def on_update(self, params: dict) -> None:
+        super().on_update(params)
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
         super().__init__(db, owner)
