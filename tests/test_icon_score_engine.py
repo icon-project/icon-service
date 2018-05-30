@@ -70,10 +70,12 @@ class TestIconScoreEngine(unittest.TestCase):
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage,
                                                       self._db_factory,
                                                       self._icon_score_loader)
-
+        self._icon_score_deployer = IconScoreDeployer('./')
         self._engine = IconScoreEngine(
             self._icx_storage,
-            self._icon_score_mapper)
+            self._icon_score_mapper,
+            self._icon_score_deployer
+        )
 
         self._from = create_address(AddressPrefix.EOA, b'from')
         self._icon_score_address = create_address(AddressPrefix.CONTRACT,
@@ -136,15 +138,21 @@ class TestIconScoreEngine(unittest.TestCase):
             os.makedirs(directory)
 
     def test_install(self):
+        proj_name = 'test_score'
+        path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
+        install_data = {'content_type': 'application/tbears', 'content': path}
         self._engine.invoke(
-            self._context, self._icon_score_address, 'install', {})
+            self._context, self._icon_score_address, 'install', install_data)
         self._engine.commit(self._context)
 
     def test_call_method(self):
         calldata = {'method': 'total_supply', 'params': {}}
 
+        proj_name = 'test_score'
+        path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
+        install_data = {'content_type': 'application/tbears', 'content': path}
         self._engine.invoke(
-            self._context, self._icon_score_address, 'install', {})
+            self._context, self._icon_score_address, 'install', install_data)
         self._engine.commit(self._context)
         self._context.type = IconScoreContextType.QUERY
         ret = self._engine.query(

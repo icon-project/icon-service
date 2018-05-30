@@ -57,7 +57,7 @@ class TestJsonSerializer(unittest.TestCase):
     def test_serialize(self):
         eoa_address = f'hx{"0" * 40}'
         ca_address = f'cx{"1" * 40}'
-        zero_block = Block(0, f'0x{"0" * 64}')
+        zero_block = Block(0, f'0x{"0" * 64}', 1)
 
         transaction_results = []
 

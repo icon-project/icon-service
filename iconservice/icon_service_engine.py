@@ -17,6 +17,8 @@
 import os
 from collections import namedtuple
 
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException, check_exception
 from .base.block import Block
@@ -95,18 +97,14 @@ class IconServiceEngine(object):
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
 
-        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage,
-                                                      self._db_factory,
-                                                      self._icon_score_loader)
-        self._icon_score_engine = IconScoreEngine(self._icx_storage,
-                                                  self._icon_score_mapper)
+        self._icon_score_mapper = IconScoreInfoMapper(
+            self._icx_storage, self._db_factory, self._icon_score_loader)
 
-        IconScoreContext.icx = self._icx_engine
-        IconScoreContext.icon_score_mapper = self._icon_score_mapper
-
-        self._precommit_state: 'PrecommitState' = None
-
-        self._step_counter_factory = IconScoreStepCounterFactory(0, 0, 0, 0)
+        self._icon_score_deployer = IconScoreDeployer(icon_score_root_path)
+        self._icon_score_engine = IconScoreEngine(
+            self._icx_storage,
+            self._icon_score_mapper,
+            self._icon_score_deployer)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine

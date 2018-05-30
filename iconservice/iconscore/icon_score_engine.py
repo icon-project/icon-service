@@ -100,10 +100,10 @@ class IconScoreEngine(ContextContainer):
                 f'Invalid data type ({data_type})')
 
     def _put_task(self,
-                   context: 'IconScoreContext',
-                   icon_score_address: Address,
-                   data_type: str,
-                   data: dict) -> None:
+                  context: 'IconScoreContext',
+                  icon_score_address: Address,
+                  data_type: str,
+                  data: dict) -> None:
         """Queue a deferred task to install, update or remove a score
 
         :param context:
@@ -121,9 +121,9 @@ class IconScoreEngine(ContextContainer):
         self._deferred_tasks.append(task)
 
     def _call(self,
-               context: IconScoreContext,
-               icon_score_address: Address,
-               calldata: dict) -> object:
+              context: IconScoreContext,
+              icon_score_address: Address,
+              calldata: dict) -> object:
         """Handle jsonrpc
 
         :param icon_score_address:
@@ -220,12 +220,14 @@ class IconScoreEngine(ContextContainer):
         self._deferred_tasks.clear()
 
     def _deploy_on_invoke(self, context: 'IconScoreContext',
-                    icon_score_address: 'Address',
-                    data_type: str,
-                    data: dict):
+                          icon_score_address: 'Address',
+                          data_type: str,
+                          data: dict):
         content_type = data.get('content_type')
 
-        if content_type != 'application/zip':
+        if content_type == 'application/tbears':
+            return
+        elif content_type != 'application/zip':
             raise IconException(
                 ExceptionCode.INVALID_PARAMS,
                 f'Invalid content type ({content_type})')
@@ -235,9 +237,9 @@ class IconScoreEngine(ContextContainer):
         self.__icon_score_deployer.deploy(icon_score_address, content_bytes, context.block.height, context.tx.index)
 
     def _install_on_commit(self,
-                  context: Optional[IconScoreContext],
-                  icon_score_address: Address,
-                  data: dict) -> None:
+                           context: Optional[IconScoreContext],
+                           icon_score_address: Address,
+                           data: dict) -> None:
         """Install an icon score
 
         Owner check has been already done in IconServiceEngine
@@ -276,9 +278,9 @@ class IconScoreEngine(ContextContainer):
                 params=params)
 
     def _update_on_commit(self,
-                 context: Optional[IconScoreContext],
-                 icon_score_address: Address,
-                 data: dict) -> None:
+                          context: Optional[IconScoreContext],
+                          icon_score_address: Address,
+                          data: dict) -> None:
         """Update an icon score
 
         Owner check has been already done in IconServiceEngine
