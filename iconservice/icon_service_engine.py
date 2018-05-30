@@ -106,7 +106,8 @@ class IconServiceEngine(object):
 
         self._precommit_state: 'PrecommitState' = None
 
-        self._step_counter_factory = IconScoreStepCounterFactory(0, 0, 0, 0)
+        self._step_counter_factory = IconScoreStepCounterFactory(
+            6000, 200, 50, -100, 10000, 1000, 20)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
