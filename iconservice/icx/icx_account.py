@@ -25,6 +25,7 @@ from ..base.exception import ExceptionCode, IconException
 ACCOUNT_DATA_STRUCTURE_VERSION = 0
 
 
+@unique
 class AccountType(IntEnum):
     """Account Type
     """
@@ -48,6 +49,7 @@ class AccountType(IntEnum):
         raise ValueError('Invalid AccountType value')
 
 
+@unique
 class AccountFlag(IntEnum):
     """Account bitwise flags
     """

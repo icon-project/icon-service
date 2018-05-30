@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import json
-import logging
 import sys
 import time
 import hashlib
@@ -26,6 +25,10 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.utils.type_converter import TypeConverter
 from iconservice.logger import Logger
 
+from typing import Optional
+
+TBEARS_LOG_TAG = 'tbears'
+
 sys.path.append('..')
 sys.path.append('.')
 
@@ -34,7 +37,7 @@ _icon_service_engine = None
 _block_height = 0
 
 
-def get_icon_service_engine() -> object:
+def get_icon_service_engine() -> Optional['IconServiceEngine']:
     return _icon_service_engine
 
 
@@ -82,7 +85,7 @@ class MockDispatcher:
 
         block_height: int = get_block_height()
         data: str = f'block_height{block_height}'
-        block_hash: bytes = hashlib.sha3_256(data.encode()).digest()
+        block_hash: str = hashlib.sha3_256(data.encode()).digest()
         block_timestamp_us = int(time.time() * 10 ** 6)
 
         try:
@@ -96,7 +99,7 @@ class MockDispatcher:
                 engine.commit()
             else:
                 engine.rollback()
-        except:
+        except Exception:
             engine.rollback()
             raise
 
@@ -155,10 +158,6 @@ class FlaskServer():
     def api(self):
         return self.__api
 
-    @property
-    def ssl_context(self):
-        return self.__ssl_context
-
     def set_resource(self):
         self.__app.add_url_rule('/api/v2', view_func=MockDispatcher.dispatch, methods=['POST'])
 
@@ -172,11 +171,12 @@ class SimpleRestServer():
         self.__server.set_resource()
 
     def run(self):
-        logging.error(f"SimpleRestServer run... {self.__port}")
+        Logger.error(f"SimpleRestServer run... {self.__port}", TBEARS_LOG_TAG)
 
         self.__server.app.run(port=self.__port,
                               host=self.__ip_address,
                               debug=False)
+
 
 def main():
     if len(sys.argv) == 2:
@@ -184,10 +184,9 @@ def main():
     else:
         path = './tbears.json'
 
-    print(f'config_file: {path}')
+    Logger.info(f'config_file: {path}', TBEARS_LOG_TAG)
     conf = load_config(path)
-    logger = Logger(path)
-    logger.set_tag('tbears')
+    Logger(path)
 
     init_type_converter()
     init_icon_service_engine(conf)
@@ -210,8 +209,8 @@ def load_config(path: str) -> dict:
             "address": "hx1000000000000000000000000000000000000000",
             "balance": "0x0"
         },
-        "Logger": {
-            "LogFormat": "%(asctime)s %(process)d %(thread)d [TAG] %(levelname)s %(message)s",
+        "logger": {
+            "logFormat": "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s",
             "logLevel": "DEBUG",
             "colorLog": True,
             "logFilePath": "./logger.log",

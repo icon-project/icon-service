@@ -18,9 +18,6 @@ import os
 from collections import namedtuple
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from .iconscore.icon_score_step import IconScoreStepCounter
-
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException, check_exception
 from .base.block import Block
@@ -41,6 +38,11 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory
 from .logger import Logger
+
+if TYPE_CHECKING:
+    from .iconscore.icon_score_step import IconScoreStepCounter
+
+ICON_SERVICE_LOG_TAG = 'IconService'
 
 
 class IconServiceEngine(object):
@@ -237,9 +239,9 @@ class IconServiceEngine(object):
             handler = self._handlers[method]
             return handler(context, params)
         except KeyError as ke:
-            Logger.error(ke)
+            Logger.error(ke, ICON_SERVICE_LOG_TAG)
         except Exception as e:
-            Logger.error(e)
+            Logger.error(e, ICON_SERVICE_LOG_TAG)
 
     def _handle_icx_getBalance(self,
                                context: IconScoreContext,
@@ -380,7 +382,7 @@ class IconServiceEngine(object):
                 ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
 
-        Logger.debug(f'precommit: {self._precommit_state.block_batch}')
+        Logger.debug(f'precommit: {self._precommit_state.block_batch}', ICON_SERVICE_LOG_TAG)
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
         block_batch = self._precommit_state.block_batch

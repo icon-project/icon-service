@@ -27,8 +27,6 @@ from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 from ..utils.type_converter import TypeConverter
-from ..logger import Logger
-
 
 from typing import TYPE_CHECKING, Optional, Callable
 

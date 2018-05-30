@@ -22,6 +22,9 @@ from os.path import dirname
 from collections import defaultdict
 from ..logger import Logger
 
+from ..icon_service_engine import ICON_SERVICE_LOG_TAG
+ICON_LOADER_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Loader'
+
 
 class IconScoreLoader(object):
     __PACKAGE_PATH = 'package.json'
@@ -46,7 +49,7 @@ class IconScoreLoader(object):
         dir_path = dirname(file_path)
 
         if dir_path in sys_path:
-            Logger.log_error(f"sys.path has the score path: {dir_path}")
+            Logger.log_error(f"sys.path has the score path: {dir_path}", ICON_LOADER_LOG_TAG)
         else:
             sys_path.append(dir_path)
 

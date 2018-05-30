@@ -18,11 +18,6 @@ from inspect import isfunction, getmembers, signature
 from abc import ABC, ABCMeta, abstractmethod
 from functools import wraps, partial
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .icon_score_context import IconScoreContext
-
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase, DatabaseObserver
@@ -31,6 +26,10 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .icon_score_context import IconScoreContext
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'

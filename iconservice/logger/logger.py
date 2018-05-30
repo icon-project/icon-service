@@ -31,7 +31,7 @@ class LogLevel(IntEnum):
 
 
 class Logger:
-    def __init__(self, import_file_path: str=None):
+    def __init__(self, import_file_path: str = None):
         if import_file_path is None:
             self.__log_preset = self.make_default_preset()
         else:
@@ -44,7 +44,7 @@ class Logger:
         try:
             with open(path) as f:
                 conf = json.load(f)
-                logger_config = conf["Logger"]
+                logger_config = conf["logger"]
                 log_format = logger_config.get("logFormat", DEFAULT_LOG_FORMAT)
                 log_level = logger_config.get("logLevel", LogLevel.DEBUG)
                 log_color = logger_config.get("colorLog", True)
@@ -74,10 +74,6 @@ class Logger:
         if logger is not None:
             self.__log_preset.update_logger(logger)
 
-    def set_tag(self, tag: str):
-        self.__log_preset.custom = tag
-        self.__log_preset.update_logger()
-
     def set_log_level(self, log_level: 'LogLevel'):
         self.__log_preset.log_level = log_level
         self.__log_preset.update_logger()
@@ -87,22 +83,25 @@ class Logger:
         self.__log_preset.update_logger()
 
     @staticmethod
-    def info(msg, *args, **kwargs):
-        logging.info(msg, *args, **kwargs)
+    def info(msg: str, tag: str = 'LOG'):
+        logging.info(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def debug(msg, *args, **kwargs):
-        logging.debug(msg, *args, **kwargs)
+    def debug(msg: str, tag: str = 'LOG'):
+        logging.debug(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def warning(msg, *args, **kwargs):
-        logging.warning(msg, *args, **kwargs)
+    def warning(msg: str, tag: str = 'LOG'):
+        logging.warning(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def exception(msg, *args, exc_info=True, **kwargs):
-        logging.exception(msg, *args, exc_info=exc_info, **kwargs)
+    def exception(msg, tag: str = 'LOG'):
+        logging.exception(Logger.__make_log_msg(msg, tag), exc_info=True)
 
     @staticmethod
-    def error(msg, *args, **kwargs):
-        logging.error(msg, *args, **kwargs)
+    def error(msg: str, tag: str = 'LOG'):
+        logging.error(Logger.__make_log_msg(msg, tag))
 
+    @staticmethod
+    def __make_log_msg(msg: str, tag: str):
+        return f'[{tag}]{msg}'

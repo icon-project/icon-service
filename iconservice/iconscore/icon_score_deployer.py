@@ -22,6 +22,9 @@ from ..base.address import Address
 from ..base.exception import ScoreInstallException, ScoreInstallExtractException
 from ..logger import Logger
 
+from ..icon_service_engine import ICON_SERVICE_LOG_TAG
+ICON_DEPLOY_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Deploy'
+
 
 class IconScoreDeployer(object):
     """Score installer.
@@ -65,13 +68,13 @@ class IconScoreDeployer(object):
                     dest.write(contents)
             return True
         except ScoreInstallException as e:
-            Logger.debug(e)
+            Logger.debug(e, ICON_DEPLOY_LOG_TAG)
             return False
         except ScoreInstallExtractException:
             os.rmdir(install_path)
             return False
         except PermissionError as pe:
-            Logger.debug(pe)
+            Logger.debug(pe, ICON_DEPLOY_LOG_TAG)
             return False
 
     @staticmethod
