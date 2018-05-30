@@ -16,7 +16,6 @@
 
 import os
 from collections import namedtuple
-from typing import TYPE_CHECKING
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException, check_exception
@@ -38,11 +37,11 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory
 from .logger import Logger
+from .icon_config import *
 
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
-
-ICON_SERVICE_LOG_TAG = 'IconService'
 
 
 class IconServiceEngine(object):

@@ -18,8 +18,7 @@ from enum import IntEnum, unique
 from functools import wraps
 from ..logger import Logger
 
-from ..icon_service_engine import ICON_SERVICE_LOG_TAG
-ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
+from ..icon_config import *
 
 
 @unique

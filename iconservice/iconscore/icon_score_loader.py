@@ -21,9 +21,7 @@ from os import path, listdir
 from os.path import dirname
 from collections import defaultdict
 from ..logger import Logger
-
-from ..icon_service_engine import ICON_SERVICE_LOG_TAG
-ICON_LOADER_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Loader'
+from ..icon_config import *
 
 
 class IconScoreLoader(object):

@@ -22,13 +22,12 @@ from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException
 from ..logger import Logger
-from ..icon_service_engine import ICON_SERVICE_LOG_TAG
+from ..icon_config import *
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
-ICX_ENGINE_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
 
 class IcxEngine(object):
     """Manages the balances of icon accounts
@@ -156,12 +155,12 @@ class IcxEngine(object):
         :param context:
         :param storage: state db manager
         """
-        Logger.debug('__load_total_supply_amount() start', ICX_ENGINE_LOG_TAG)
+        Logger.debug('__load_total_supply_amount() start', ICX_LOG_TAG)
 
         total_supply_amount = storage.get_total_supply(context)
         self.__total_supply_amount = total_supply_amount
-        Logger.info(f'total_supply: {total_supply_amount}', ICX_ENGINE_LOG_TAG)
-        Logger.debug('__load_total_supply_amount() end', ICX_ENGINE_LOG_TAG)
+        Logger.info(f'total_supply: {total_supply_amount}', ICX_LOG_TAG)
+        Logger.debug('__load_total_supply_amount() end', ICX_LOG_TAG)
 
     def get_balance(self,
                     context: 'IconScoreContext',
@@ -225,7 +224,7 @@ class IcxEngine(object):
                      f'to: {_to} '
                      f'amount: {_amount} '
                      f'fee: {_fee}',
-                     ICX_ENGINE_LOG_TAG)
+                     ICX_LOG_TAG)
 
         if _from == _to:
             raise IconException(ExceptionCode.INVALID_PARAMS)
@@ -248,7 +247,7 @@ class IcxEngine(object):
                     f'to_amount: {to_account.icx} '
                     f'fee_treasury: {fee_account.address} '
                     f'fee_amount: {fee_account.icx}',
-                    ICX_ENGINE_LOG_TAG)
+                    ICX_LOG_TAG)
 
         from_account.withdraw(_amount + _fee)
         to_account.deposit(_amount)
@@ -266,8 +265,8 @@ class IcxEngine(object):
                     f'to_amount: {to_account.icx} '
                     f'fee_treasury: {fee_account.address} '
                     f'fee_amount: {fee_account.icx}',
-                    ICX_ENGINE_LOG_TAG)
-        Logger.debug('send_transaction() end', ICX_ENGINE_LOG_TAG)
+                    ICX_LOG_TAG)
+        Logger.debug('send_transaction() end', ICX_LOG_TAG)
 
         return True
 
