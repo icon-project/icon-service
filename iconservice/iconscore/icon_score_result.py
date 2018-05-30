@@ -19,6 +19,8 @@ import abc
 import json
 from typing import List
 
+from iconservice.utils import to_camel_case
+
 from ..base.address import Address
 from ..base.block import Block
 
@@ -78,6 +80,18 @@ class TransactionResult(object):
                 new_dict[key] = value
 
         return new_dict
+
+    def to_response_json(self) -> dict:
+        """
+        Returns properties as json-rpc-v3 json
+        :return: a dict
+        """
+        response_json = {}
+        tx_dict = self.to_dict()
+        for key, value in tx_dict.items():
+            key = to_camel_case(key)
+            response_json[key] = value
+        return response_json
 
 
 class Serializer(abc.ABC):

@@ -45,3 +45,8 @@ def sha3_256(data: bytes) -> bytes:
 def int_to_bytes(n: int) -> bytes:
     length = (n.bit_length() + 8) // 8
     return n.to_bytes(length, byteorder='big', signed=True)
+
+
+def to_camel_case(snake_str):
+    str_array = snake_str.split('_')
+    return str_array[0] + ''.join(sub.title() for sub in str_array[1:])

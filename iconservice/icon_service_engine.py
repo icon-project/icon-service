@@ -105,6 +105,8 @@ class IconServiceEngine(object):
             self._icx_storage,
             self._icon_score_mapper,
             self._icon_score_deployer)
+        self._step_counter_factory = IconScoreStepCounterFactory(
+            6000, 200, 50, -100, 10000, 1000, 20)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -159,7 +161,7 @@ class IconServiceEngine(object):
             params = tx['params']
             _from = params['from']
 
-            context.tx = Transaction(tx_hash=params['tx_hash'],
+            context.tx = Transaction(tx_hash=params['txHash'],
                                      index=i,
                                      origin=_from,
                                      timestamp=params['timestamp'],
@@ -168,7 +170,7 @@ class IconServiceEngine(object):
             context.msg = Message(sender=_from, value=params.get('value', 0))
 
             context.step_counter: IconScoreStepCounter = \
-                self._step_counter_factory.create(params.get('step_limit', 0))
+                self._step_counter_factory.create(params.get('stepLimit', 0))
 
             tx_result: TransactionResult = self.call(context, method, params)
             tx_result.step_used = context.step_counter.step_used
@@ -273,7 +275,7 @@ class IconServiceEngine(object):
         :return:
         """
         icon_score_address: Address = params['to']
-        data_type = params.get('data_type', None)
+        data_type = params.get('dataType', None)
         data = params.get('data', None)
 
         return self._icon_score_engine.query(context,
@@ -301,7 +303,7 @@ class IconServiceEngine(object):
 
         if to is None or to.is_contract:
             # EOA to Score
-            data_type: str = params.get('data_type')
+            data_type: str = params.get('dataType')
             data: dict = params.get('data')
             tx_result = self.__handle_score_invoke(
                 context, to, data_type, data)
@@ -332,7 +334,7 @@ class IconServiceEngine(object):
 
         try:
             if data_type == 'install':
-                content_type = data.get('content_type')
+                content_type = data.get('contentType')
                 if content_type == 'application/tbears':
                     content = data.get('content')
                     proj_name = content.split('/')[-1]
