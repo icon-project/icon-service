@@ -17,12 +17,6 @@
 import threading
 from enum import IntEnum, unique
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .icon_score_step import IconScoreStepCounter
-    from .icon_score_result import IconBlockResult
-
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
@@ -32,10 +26,10 @@ from ..base.exception import IconScoreException, PayableException, ExternalExcep
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
 
-from typing import Optional
-from typing import TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
+    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_result import IconBlockResult
     from .icon_score_base import IconScoreBase
     from .icon_score_info_mapper import IconScoreInfoMapper
 

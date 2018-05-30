@@ -4,7 +4,8 @@ from setuptools import setup, find_packages
 
 requires = [
     'plyvel',
-    'jsonpickle'
+    'jsonpickle',
+    'coloredlogs'
 ]
 
 setup_options = {

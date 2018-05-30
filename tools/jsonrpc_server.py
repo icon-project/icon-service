@@ -13,43 +13,42 @@
 # limitations under the License.
 
 import json
-import logging
 import sys
 import time
 import hashlib
 
-# import ssl
-# import threading
-sys.path.append('..')
-sys.path.append('.')
-
 from flask import Flask, request, Response
 from flask_restful import reqparse, Api
 from jsonrpcserver import methods
-
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.utils.type_converter import TypeConverter
+from iconservice.logger import Logger
+
+from typing import Optional
+
+TBEARS_LOG_TAG = 'tbears'
+
+sys.path.append('..')
+sys.path.append('.')
 
 _type_converter = None
 _icon_service_engine = None
 _block_height = 0
 
 
-def get_icon_service_engine():
+def get_icon_service_engine() -> Optional['IconServiceEngine']:
     return _icon_service_engine
 
 
 def get_block_height():
     global _block_height
     _block_height += 1
-
     return _block_height
 
 
 def shutdown():
-    """Shutdown flask server
+    """ Shutdown flask server.
     """
     func = request.environ.get('werkzeug.server.shutdown')
     if func is None:
@@ -62,8 +61,6 @@ class MockDispatcher:
     @staticmethod
     def dispatch():
         req = json.loads(request.get_data().decode())
-        # req["params"] = req.get("params", None)
-
         response = methods.dispatch(req)
         return Response(str(response),
                         response.http_status,
@@ -72,11 +69,10 @@ class MockDispatcher:
     @staticmethod
     @methods.add
     def icx_sendTransaction(**kwargs):
-        """icx_sendTransaction jsonrpc handler
+        """ icx_sendTransaction jsonrpc handler.
+        We assume that only one tx in a block.
 
-        We assume that only one tx in a block
-
-        :param params: jsonrpc params field
+        :param kwargs: jsonrpc params field.
         """
         engine = get_icon_service_engine()
 
@@ -89,7 +85,7 @@ class MockDispatcher:
 
         block_height: int = get_block_height()
         data: str = f'block_height{block_height}'
-        block_hash: bytes = hashlib.sha3_256(data.encode()).digest()
+        block_hash: str = hashlib.sha3_256(data.encode()).digest()
         block_timestamp_us = int(time.time() * 10 ** 6)
 
         try:
@@ -103,7 +99,7 @@ class MockDispatcher:
                 engine.commit()
             else:
                 engine.rollback()
-        except:
+        except Exception:
             engine.rollback()
             raise
 
@@ -113,8 +109,6 @@ class MockDispatcher:
     @methods.add
     def icx_call(**params):
         engine = get_icon_service_engine()
-
-        # params['address'] = Address.from_string(params['address'])
         params = _type_converter.convert(params, recursive=False)
         value = engine.query(method='icx_call', params=params)
 
@@ -140,7 +134,6 @@ class MockDispatcher:
         engine = get_icon_service_engine()
 
         value: int = engine.query(method='icx_getTotalSupply', params=params)
-
         return hex(value)
 
     @staticmethod
@@ -157,23 +150,6 @@ class FlaskServer():
         self.__api = Api(self.__app)
         self.__parser = reqparse.RequestParser()
 
-        # SSL 적용 여부에 따라 context 생성 여부를 결정한다.
-        # if conf.REST_SSL_TYPE == conf.SSLAuthType.none:
-        #     self.__ssl_context = None
-        # elif conf.REST_SSL_TYPE == conf.SSLAuthType.server_only:
-        #     self.__ssl_context = (conf.DEFAULT_SSL_CERT_PATH, conf.DEFAULT_SSL_KEY_PATH)
-        # elif conf.REST_SSL_TYPE == conf.SSLAuthType.mutual:
-        #     self.__ssl_context = ssl.SSLContext(_ssl.PROTOCOL_SSLv23)
-        #
-        #     self.__ssl_context.verify_mode = ssl.CERT_REQUIRED
-        #     self.__ssl_context.check_hostname = False
-        #
-        #     self.__ssl_context.load_verify_locations(cafile=conf.DEFAULT_SSL_TRUST_CERT_PATH)
-        #     self.__ssl_context.load_cert_chain(conf.DEFAULT_SSL_CERT_PATH, conf.DEFAULT_SSL_KEY_PATH)
-        # else:
-        #     utils.exit_and_msg(
-        #         f"REST_SSL_TYPE must be one of [0,1,2]. But now conf.REST_SSL_TYPE is {conf.REST_SSL_TYPE}")
-
     @property
     def app(self):
         return self.__app
@@ -181,10 +157,6 @@ class FlaskServer():
     @property
     def api(self):
         return self.__api
-
-    @property
-    def ssl_context(self):
-        return self.__ssl_context
 
     def set_resource(self):
         self.__app.add_url_rule('/api/v2', view_func=MockDispatcher.dispatch, methods=['POST'])
@@ -199,7 +171,7 @@ class SimpleRestServer():
         self.__server.set_resource()
 
     def run(self):
-        logging.error(f"SimpleRestServer run... {self.__port}")
+        Logger.error(f"SimpleRestServer run... {self.__port}", TBEARS_LOG_TAG)
 
         self.__server.app.run(port=self.__port,
                               host=self.__ip_address,
@@ -212,13 +184,14 @@ def main():
     else:
         path = './tbears.json'
 
-    logging.info(f'config_file: {path}')
+    Logger.info(f'config_file: {path}', TBEARS_LOG_TAG)
     conf = load_config(path)
+    Logger(path)
 
     init_type_converter()
     init_icon_service_engine(conf)
 
-    server = SimpleRestServer(conf['port'])
+    server = SimpleRestServer(conf['port'], "0.0.0.0")
     server.run()
 
 
@@ -235,13 +208,20 @@ def load_config(path: str) -> dict:
         "treasury": {
             "address": "hx1000000000000000000000000000000000000000",
             "balance": "0x0"
+        },
+        "logger": {
+            "logFormat": "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s",
+            "logLevel": "DEBUG",
+            "colorLog": True,
+            "logFilePath": "./logger.log",
+            "logOutputType": "production"
         }
     }
 
     try:
         with open(path) as f:
             conf = json.load(f)
-    except:
+    except Exception:
         return default_conf
 
     for key in default_conf:
@@ -267,7 +247,6 @@ def init_type_converter():
 
 def init_icon_service_engine(conf):
     global _icon_service_engine
-
     _icon_service_engine = IconServiceEngine()
     _icon_service_engine.open(icon_score_root_path=conf['score_root'],
                               state_db_root_path=conf['db_root'])

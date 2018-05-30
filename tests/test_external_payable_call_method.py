@@ -9,6 +9,16 @@ from iconservice.base.transaction import Transaction
 from iconservice.base.exception import ExternalException, PayableException, IconScoreException
 from iconservice.database.db import IconScoreDatabase
 from tests.mock_db import create_mock_icon_score_db
+from functools import wraps
+
+
+def decorator(func):
+    @wraps(func)
+    def __wrapper(calling_obj: object, *args, **kwargs):
+        print('!!')
+        res = func(calling_obj, *args, **kwargs)
+        return res
+    return __wrapper
 
 
 class CallClass1(IconScoreBase):
@@ -25,7 +35,9 @@ class CallClass1(IconScoreBase):
     def func1(self):
         pass
 
+
     @external
+    @decorator
     def func2(self):
         pass
 
@@ -122,3 +134,6 @@ class TestCallMethod(unittest.TestCase):
         # self.assertRaises(PayableException, self.ins.call_method, 'func4', {})
         # self.assertRaises(ExternalException, self.ins.call_method, 'func5', {})
         self.assertRaises(ExternalException, self.ins.call_method, 'func6', {})
+
+    def test_func2_with_decorator(self):
+        self.ins.call_method('func2', {})

@@ -15,12 +15,13 @@
 # limitations under the License.
 
 import json
-import logging
 import importlib.machinery
 from sys import path as sys_path
 from os import path, listdir
 from os.path import dirname
 from collections import defaultdict
+from ..logger import Logger
+from ..icon_config import *
 
 
 class IconScoreLoader(object):
@@ -46,7 +47,7 @@ class IconScoreLoader(object):
         dir_path = dirname(file_path)
 
         if dir_path in sys_path:
-            logging.error(f"sys.path has the score path: {dir_path}")
+            Logger.error(f"sys.path has the score path: {dir_path}", ICON_LOADER_LOG_TAG)
         else:
             sys_path.append(dir_path)
 
@@ -56,7 +57,7 @@ class IconScoreLoader(object):
         return getattr(module, call_class_name)
 
     @staticmethod
-    def __get_last_version_path(score_root_path: str, address_body: str) -> tuple:
+    def __get_last_version_path(score_root_path: str, address_body: str) -> str:
         address_path = path.join(score_root_path, str(address_body))
 
         tmp_dict = defaultdict(list)

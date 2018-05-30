@@ -18,10 +18,15 @@ import json
 
 from .icx_account import Account, AccountType
 from .icx_config import FIXED_FEE
-from .icx_logger import IcxLogger, logd, logi, logw, loge
 from .icx_storage import IcxStorage
-from ..base.address import Address, AddressPrefix
+from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException
+from ..logger import Logger
+from ..icon_config import *
+
+from typing import TYPE_CHECKING, Optional
+if TYPE_CHECKING:
+    from ..iconscore.icon_score_context import IconScoreContext
 
 
 class IcxEngine(object):
@@ -35,23 +40,20 @@ class IcxEngine(object):
         """Constructor
         """
         self.__storage: IcxStorage = None
-        self.__logger: IcxLogger = None
         self.__total_supply_amount: int = 0
         self.__genesis_address: Address = None
         self.__fee_treasury_address: Address = None
 
-    def open(self, storage: 'IcxStorage', logger: IcxLogger=None) -> None:
+    def open(self, storage: 'IcxStorage') -> None:
         """Open engine
 
         Get necessary parameters from caller and begin to use storage(leveldb)
 
         :param storage: IcxStorage object to access state db
-        :param logger: IcxLogger to log debugging info.
         """
         self.close()
 
         self.__storage = storage
-        self.__logger = logger
 
         context = None
         self.__load_genesis_account_from_storage(context, storage)
@@ -72,6 +74,7 @@ class IcxEngine(object):
         """Initialize the state of genesis account
         with the info from genesis block
 
+        :param context:
         :param address: account address
         :param amount: the initial balance of genesis_account
         """
@@ -96,7 +99,7 @@ class IcxEngine(object):
     def init_fee_treasury_account(self,
                                   context: 'IconScoreContext',
                                   address: Address,
-                                  amount: int=0) -> None:
+                                  amount: int = 0) -> None:
         """Initialize fee treasury account with genesis block.
 
         :param context:
@@ -119,7 +122,7 @@ class IcxEngine(object):
         self.__fee_treasury_address = address
 
     def __load_genesis_account_from_storage(self,
-                                            context: 'IconScoreContext',
+                                            context: Optional['IconScoreContext'],
                                             storage: IcxStorage) -> None:
         """Load genesis account info from state db
 
@@ -132,7 +135,7 @@ class IcxEngine(object):
             self.__genesis_address = Address.from_string(obj['address'])
 
     def __load_fee_treasury_account_from_storage(self,
-                                                 context: 'IconScoreContext',
+                                                 context: Optional['IconScoreContext'],
                                                  storage: IcxStorage) -> None:
         """Load fee_treasury_account info from state db
 
@@ -145,19 +148,19 @@ class IcxEngine(object):
             self.__fee_treasury_address = Address.from_string(obj['address'])
 
     def __load_total_supply_amount_from_storage(self,
-                                                context: 'IconScoreContext',
+                                                context: Optional['IconScoreContext'],
                                                 storage: IcxStorage) -> None:
         """Load total coin supply amount from state db
 
         :param context:
         :param storage: state db manager
         """
-        logd(self.__logger, '__load_total_supply_amount() start')
+        Logger.debug('__load_total_supply_amount() start', ICX_LOG_TAG)
 
-        self.__total_supply_amount = storage.get_total_supply(context)
-        logi(self.__logger, f'total_supply: {self.__total_supply_amount}')
-
-        logd(self.__logger, '__load_total_supply_amount() end')
+        total_supply_amount = storage.get_total_supply(context)
+        self.__total_supply_amount = total_supply_amount
+        Logger.info(f'total_supply: {total_supply_amount}', ICX_LOG_TAG)
+        Logger.debug('__load_total_supply_amount() end', ICX_LOG_TAG)
 
     def get_balance(self,
                     context: 'IconScoreContext',
@@ -217,11 +220,11 @@ class IcxEngine(object):
         """
         _fee_treasury_address = self.__fee_treasury_address
 
-        logd(self.__logger,
-             f'from: {_from} '
-             f'to: {_to} '
-             f'amount: {_amount} '
-             f'fee: {_fee}')
+        Logger.debug(f'from: {_from} '
+                     f'to: {_to} '
+                     f'amount: {_amount} '
+                     f'fee: {_fee}',
+                     ICX_LOG_TAG)
 
         if _from == _to:
             raise IconException(ExceptionCode.INVALID_PARAMS)
@@ -237,14 +240,14 @@ class IcxEngine(object):
         to_account = self.__storage.get_account(context, _to)
         fee_account = self.__storage.get_account(context, _fee_treasury_address)
 
-        logi(self.__logger,
-             'before:  '
-             f'from: {_from} '
-             f'from_amount: {from_account.icx} '
-             f'to: {_to} '
-             f'to_amount: {to_account.icx} '
-             f'fee_treasury: {fee_account.address} '
-             f'fee_amount: {fee_account.icx}')
+        Logger.info('before:  '
+                    f'from: {_from} '
+                    f'from_amount: {from_account.icx} '
+                    f'to: {_to} '
+                    f'to_amount: {to_account.icx} '
+                    f'fee_treasury: {fee_account.address} '
+                    f'fee_amount: {fee_account.icx}',
+                    ICX_LOG_TAG)
 
         from_account.withdraw(_amount + _fee)
         to_account.deposit(_amount)
@@ -255,15 +258,15 @@ class IcxEngine(object):
         self.__storage.put_account(context, to_account.address, to_account)
         self.__storage.put_account(context, fee_account.address, fee_account)
 
-        logi(self.__logger,
-             'after: '
-             f'from: {_from} '
-             f'from_amount: {from_account.icx} '
-             f'to: {_to} '
-             f'to_amount: {to_account.icx} '
-             f'fee_treasury: {fee_account.address} '
-             f'fee_amount: {fee_account.icx}')
-        logd(self.__logger, 'send_transaction() end')
+        Logger.info('after: '
+                    f'from: {_from} '
+                    f'from_amount: {from_account.icx} '
+                    f'to: {_to} '
+                    f'to_amount: {to_account.icx} '
+                    f'fee_treasury: {fee_account.address} '
+                    f'fee_amount: {fee_account.icx}',
+                    ICX_LOG_TAG)
+        Logger.debug('send_transaction() end', ICX_LOG_TAG)
 
         return True
 

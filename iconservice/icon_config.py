@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Package for objects which are related with Icon Services"""
 
-from .base.address import Address
-from .base.exception import *
-from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
-from .iconscore.icon_score_base import *
-from .logger import Logger
+ICON_SERVICE_LOG_TAG = 'IconService'
+ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
+ICON_DEPLOY_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Deploy'
+ICON_LOADER_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Loader'
+ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
