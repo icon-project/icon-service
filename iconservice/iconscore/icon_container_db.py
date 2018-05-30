@@ -20,7 +20,7 @@ from collections import Iterator, Iterable
 
 from iconservice.utils import int_to_bytes
 
-from ..base.address import Address, AddressPrefix
+from ..base.address import Address
 from ..base.exception import ContainerDBException
 
 

@@ -17,4 +17,4 @@ from .base.address import Address
 from .base.exception import *
 from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
 from .iconscore.icon_score_base import *
-from .logger import default_logger
+from .logger import Logger

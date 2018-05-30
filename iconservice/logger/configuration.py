@@ -39,6 +39,8 @@ class LogConfiguration:
     def log_file_path(self, log_file_path: str):
         self.__log_file_path = log_file_path
 
+    log_file_path = property(None, log_file_path)
+
     def update_logger(self, logger: logging.Logger=None):
         self.__log_format = self.log_format.replace("TAG", self.custom)
 
@@ -55,7 +57,7 @@ class LogConfiguration:
         if self.log_color:
             self.__update_log_color_set(logger)
 
-    def set_handler(self, handler_type: LogHandlerType=LogHandlerType.debug):
+    def set_handler(self, handler_type: LogHandlerType):
         self.__handler_type = handler_type
 
     def __make_handler(self) -> []:

@@ -1,4 +1,4 @@
-{
+ {
     "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "port": 9000,
     "score_root": "./.score",
@@ -10,5 +10,12 @@
     "treasury": {
         "address": "hx1000000000000000000000000000000000000000",
         "balance": "0x0"
+    },
+    "Logger": {
+        "LogFormat": "%(asctime)s %(process)d %(thread)d [TAG] %(levelname)s %(message)s",
+        "logLevel": "DEBUG",
+        "colorLog": true,
+        "logFilePath": "./logger.log",
+        "logOutputType": "production"
     }
 }

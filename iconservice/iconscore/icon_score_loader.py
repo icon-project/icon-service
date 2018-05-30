@@ -20,7 +20,7 @@ from sys import path as sys_path
 from os import path, listdir
 from os.path import dirname
 from collections import defaultdict
-from ..logger import default_logger
+from ..logger import Logger
 
 
 class IconScoreLoader(object):
@@ -46,7 +46,7 @@ class IconScoreLoader(object):
         dir_path = dirname(file_path)
 
         if dir_path in sys_path:
-            default_logger.log_error(f"sys.path has the score path: {dir_path}")
+            Logger.log_error(f"sys.path has the score path: {dir_path}")
         else:
             sys_path.append(dir_path)
 

@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import hashlib
 import io
 import os
 import zipfile
@@ -21,7 +20,8 @@ import shutil
 
 from ..base.address import Address
 from ..base.exception import ScoreInstallException, ScoreInstallExtractException
-from ..logger import default_logger
+from ..logger import Logger
+
 
 class IconScoreDeployer(object):
     """Score installer.
@@ -65,13 +65,13 @@ class IconScoreDeployer(object):
                     dest.write(contents)
             return True
         except ScoreInstallException as e:
-            default_logger.log_debug(e)
+            Logger.debug(e)
             return False
         except ScoreInstallExtractException:
             os.rmdir(install_path)
             return False
         except PermissionError as pe:
-            default_logger.log_debug(pe)
+            Logger.debug(pe)
             return False
 
     @staticmethod

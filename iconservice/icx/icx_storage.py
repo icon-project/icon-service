@@ -19,6 +19,11 @@ from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, AddressPrefix
 from ..utils import sha3_256
 
+from typing import TYPE_CHECKING, Optional
+if TYPE_CHECKING:
+    from ..database.db import ContextDatabase
+    from ..iconscore.icon_score_context import IconScoreContext
+
 
 class IcxStorage(object):
     """Icx coin state manager embedding a state db wrapper
@@ -39,7 +44,7 @@ class IcxStorage(object):
         """
         return self.__db
 
-    def get_text(self, context: 'IconScoreContext', name: str) -> str:
+    def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
         """Return text format value from db
 
         :return: (str or None)
@@ -70,7 +75,7 @@ class IcxStorage(object):
 
     def get_account(self,
                     context: 'IconScoreContext',
-                    address: Address) -> Account:
+                    address: Address) -> 'Account':
         """Returns the account indicated by address.
 
         :param context:
@@ -98,6 +103,7 @@ class IcxStorage(object):
                     account: Account) -> None:
         """Put account info to db.
 
+        :param context:
         :param address: account address
         :param account: account to save
         """
@@ -144,7 +150,7 @@ class IcxStorage(object):
 
     def get_score_owner(self,
                         context: 'IconScoreContext',
-                        icon_score_address: Address):
+                        icon_score_address: Address) -> Optional['Address']:
         """Returns owner of IconScore
 
         :param context:
@@ -171,7 +177,8 @@ class IcxStorage(object):
         key = self._get_owner_key(icon_score_address)
         self.__db.put(context, key, owner.body)
 
-    def _get_owner_key(self, icon_score_address: Address) -> bytes:
+    @staticmethod
+    def _get_owner_key(icon_score_address: Address) -> bytes:
         return sha3_256(b'owner|' + icon_score_address.body)
 
     def delete_score_owner(self,

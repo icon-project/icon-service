@@ -16,7 +16,7 @@
 
 from enum import IntEnum, unique
 from functools import wraps
-from ..logger import default_logger
+from ..logger import Logger
 
 
 @unique
@@ -110,9 +110,9 @@ def check_exception(func):
         try:
             return func(*args, **kwargs)
         except IconServiceBaseException as e:
-                default_logger.log_exception(e, exc_info=True)
+                Logger.exception(e, exc_info=True)
         except Exception as e:
-            default_logger.log_exception(e, exc_info=True)
+            Logger.exception(e, exc_info=True)
             raise e
         finally:
             pass

@@ -12,6 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from .logger import Logger
-
-default_logger = Logger()
-default_logger.set_tag('default_log')
