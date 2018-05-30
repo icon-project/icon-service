@@ -42,7 +42,9 @@ class IconScoreLoader(object):
             return json.load(f)
 
     @staticmethod
-    def __load_user_score_module(file_path: str, call_class_name: str) -> callable:
+    def __load_user_score_module(file_path: str, score_package_info: dict) -> callable:
+        __MAIN_SCORE = 'main_score'
+        __MAIN_FILE = 'main_file'
 
         dir_path = dirname(file_path)
 
@@ -51,10 +53,12 @@ class IconScoreLoader(object):
         else:
             sys_path.append(dir_path)
 
-        module = importlib.machinery.SourceFileLoader(call_class_name, file_path).load_module()
+        package_module = importlib.machinery.SourceFileLoader(score_package_info[__MAIN_SCORE], file_path).load_module()
+        module = getattr(package_module, score_package_info[__MAIN_FILE])
+        importlib.reload(module)
         sys_path.remove(dir_path)
 
-        return getattr(module, call_class_name)
+        return getattr(module, score_package_info[__MAIN_SCORE])
 
     @staticmethod
     def __get_last_version_path(score_root_path: str, address_body: str) -> str:
@@ -76,5 +80,5 @@ class IconScoreLoader(object):
 
         score_package_info = self.__load_json(last_version_path)
         score_package_init_file_path = path.join(last_version_path, IconScoreLoader.__SCORE_ENTERANCE_FILE_PATH)
-        score = self.__load_user_score_module(score_package_init_file_path, score_package_info["main_score"])
+        score = self.__load_user_score_module(score_package_init_file_path, score_package_info)
         return score
