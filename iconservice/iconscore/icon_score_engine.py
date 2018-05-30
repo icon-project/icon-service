@@ -223,14 +223,14 @@ class IconScoreEngine(ContextContainer):
                           icon_score_address: 'Address',
                           data_type: str,
                           data: dict):
-        content_type = data.get('content_type')
+        content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
             return
         elif content_type != 'application/zip':
             raise IconException(
                 ExceptionCode.INVALID_PARAMS,
-                f'Invalid content type ({content_type})')
+                f'Invalid content type ({contentType})')
         content = data.get('content')[2:]
         content_bytes = bytes.fromhex(content)
 

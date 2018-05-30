@@ -38,9 +38,11 @@ class Logger:
             self.__log_preset = Logger.__make_default_preset()
         else:
             self.__log_preset = Logger.import_file(import_file_path)
+
         self.update_other_logger_level('pika')
         self.update_other_logger_level('aio_pika')
         self.update_other_logger_level('sanic.access')
+        self.__log_preset.update_logger()
 
     @staticmethod
     def import_file(path: str):

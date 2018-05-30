@@ -140,7 +140,7 @@ class TestIconScoreEngine(unittest.TestCase):
     def test_install(self):
         proj_name = 'test_score'
         path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
-        install_data = {'content_type': 'application/tbears', 'content': path}
+        install_data = {'contentType': 'application/tbears', 'content': path}
         self._engine.invoke(
             self._context, self._icon_score_address, 'install', install_data)
         self._engine.commit(self._context)
@@ -150,7 +150,7 @@ class TestIconScoreEngine(unittest.TestCase):
 
         proj_name = 'test_score'
         path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
-        install_data = {'content_type': 'application/tbears', 'content': path}
+        install_data = {'contentType': 'application/tbears', 'content': path}
         self._engine.invoke(
             self._context, self._icon_score_address, 'install', install_data)
         self._engine.commit(self._context)
