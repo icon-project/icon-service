@@ -214,7 +214,7 @@ class IconServiceEngine(object):
         return ret
 
     def call(self,
-             context: IconScoreContext,
+             context: 'IconScoreContext',
              method: str,
              params: dict) -> object:
         """Call invoke and query requests in jsonrpc format
@@ -243,7 +243,7 @@ class IconServiceEngine(object):
             Logger.error(e, ICON_SERVICE_LOG_TAG)
 
     def _handle_icx_getBalance(self,
-                               context: IconScoreContext,
+                               context: 'IconScoreContext',
                                params: dict) -> int:
         """Returns the icx balance of the given address
 
@@ -255,7 +255,7 @@ class IconServiceEngine(object):
         return self._icx_engine.get_balance(context, address)
 
     def _handle_icx_getTotalSupply(self,
-                                   context: IconScoreContext,
+                                   context: 'IconScoreContext',
                                    params: dict) -> int:
         """Returns the amount of icx total supply
 
@@ -265,7 +265,7 @@ class IconServiceEngine(object):
         return self._icx_engine.get_total_supply(context)
 
     def _handle_icx_call(self,
-                         context: IconScoreContext,
+                         context: 'IconScoreContext',
                          params: dict) -> object:
         """Handles an icx_call jsonrpc request
 
@@ -284,7 +284,7 @@ class IconServiceEngine(object):
                                              data)
 
     def _handle_icx_sendTransaction(self,
-                                    context: IconScoreContext,
+                                    context: 'IconScoreContext',
                                     params: dict) -> 'TransactionResult':
         """icx_sendTransaction message handler
 
@@ -317,10 +317,10 @@ class IconServiceEngine(object):
         return tx_result
 
     def __handle_score_invoke(self,
-                              context: IconScoreContext,
+                              context: 'IconScoreContext',
                               to: Address,
                               data_type: str,
-                              data: dict) -> TransactionResult:
+                              data: dict) -> 'TransactionResult':
         """Handle score invocation
 
         :param tx_hash: transaction hash
@@ -356,9 +356,9 @@ class IconServiceEngine(object):
         return tx_result
 
     @staticmethod
-    def __generate_contract_address(from_: Address,
+    def __generate_contract_address(from_: 'Address',
                                     timestamp: int,
-                                    nonce: int = None) -> Address:
+                                    nonce: int = None) -> 'Address':
         """Generates a contract address from the transaction information.
 
         :param from_:
