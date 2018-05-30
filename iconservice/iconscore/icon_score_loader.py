@@ -47,7 +47,7 @@ class IconScoreLoader(object):
         dir_path = dirname(file_path)
 
         if dir_path in sys_path:
-            Logger.log_error(f"sys.path has the score path: {dir_path}", ICON_LOADER_LOG_TAG)
+            Logger.error(f"sys.path has the score path: {dir_path}", ICON_LOADER_LOG_TAG)
         else:
             sys_path.append(dir_path)
 
