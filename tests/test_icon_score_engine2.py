@@ -97,7 +97,7 @@ class TestIconScoreEngine2(unittest.TestCase):
     def __request_install(self, proj_name: str, addr_score: Address):
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
-        install_data = {'content_type': 'application/tbears', 'content': path}
+        install_data = {'contentType': 'application/tbears', 'content': path}
         self._engine.invoke(self._context, addr_score, 'install', install_data)
         self._engine.commit(self._context)
 
