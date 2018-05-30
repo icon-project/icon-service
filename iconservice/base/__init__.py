@@ -17,9 +17,10 @@
 
 import hashlib
 
-from ..base.address import Address, AddressPrefix 
+from ..base.address import Address, AddressPrefix
 
 
 def create_address(prefix: AddressPrefix, data: bytes):
     hash_value = hashlib.sha3_256(data).digest()
     return Address(prefix, hash_value[-20:])
+

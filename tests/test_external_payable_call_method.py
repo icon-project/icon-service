@@ -22,7 +22,10 @@ def decorator(func):
 
 
 class CallClass1(IconScoreBase):
-    def genesis_init(self, *args, **kwargs) -> None:
+    def on_install(self, params: dict) -> None:
+        pass
+
+    def on_update(self, params: dict) -> None:
         pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
@@ -61,9 +64,11 @@ class CallClass1(IconScoreBase):
 
 
 class CallClass2(CallClass1):
-    def genesis_init(self, *args, **kwargs) -> None:
-        super().genesis_init(*args, **kwargs)
-        pass
+    def on_install(self, params) -> None:
+        super().on_install(params)
+
+    def on_update(self, params) -> None:
+        super().on_update(params)
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
         super().__init__(db, owner)
