@@ -243,13 +243,13 @@ print(test_dict1['key']) ## get 1
 print(test_dict1['nonexistence_key']) # 0출력(존재하지 않는 키에 접근, value_type=int)
 ```
 
-예시2) 이차원 배열 형식 (test_dict2['key1']['key2']):<br/>
+예시2) 이차원 배열 형식 (test_dict2['key1', 'key2']):<br/>
 ```python
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
-test_dict2['key1']['key2'] = 'a' ## set
-print(test_dict2['key1']['key2']) ## get 'a'
+test_dict2['key1', 'key2'] = 'a' ## set
+print(test_dict2['key1', 'key2']) ## get 'a'
 
-print(test_dict2['key1']['nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
+print(test_dict2['key1', 'nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
 ```
 
 ##### ArrayDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>
