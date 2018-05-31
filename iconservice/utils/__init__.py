@@ -32,7 +32,7 @@ def is_lowercase_hex_string(value: str) -> bool:
     try:
         result = re.match('[0-9a-f]+', value)
         return len(result.group(0)) == len(value)
-    except Exception:
+    except:
         pass
 
     return False
@@ -47,6 +47,6 @@ def int_to_bytes(n: int) -> bytes:
     return n.to_bytes(length, byteorder='big', signed=True)
 
 
-def to_camel_case(snake_str):
+def to_camel_case(snake_str: str) -> str:
     str_array = snake_str.split('_')
     return str_array[0] + ''.join(sub.title() for sub in str_array[1:])

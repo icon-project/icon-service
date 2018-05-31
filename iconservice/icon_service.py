@@ -36,7 +36,7 @@ class IconService(object):
             A node can have multiple channels.
         :param iconscore_storage_path: (string)
             root path where iconscores are deployed.
-            all iconscores have its own folder. (storage_path/contract_address)
+            all iconscores have its own folder. (storage_path/score_address)
         :param peer_target: (string)
             network info of peer_service
             ex: 127.0.0.1:7100

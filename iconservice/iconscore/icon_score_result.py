@@ -19,8 +19,7 @@ import abc
 import json
 from typing import List
 
-from iconservice.utils import to_camel_case
-
+from ..utils import to_camel_case
 from ..base.address import Address
 from ..base.block import Block
 
@@ -38,7 +37,7 @@ class TransactionResult(object):
             block: Block,
             to: Address,
             status: int = FAILURE,
-            contract_address: Address = None,
+            score_address: Address = None,
             step_used: int = 0) -> None:
         """Constructor
 
@@ -46,14 +45,14 @@ class TransactionResult(object):
         :param block: a block that the transaction belongs to
         :param to: a recipient address
         :param step_used: the amount of steps used in the transaction
-        :param contract_address:hex string that represent the contract address
+        :param score_address:hex string that represent the contract address
             if the transaction`s target is contract
         :param status: a status of result. 1 (success) or 0 (failure)
         """
         self.tx_hash = tx_hash
         self.block = block
         self.to = to
-        self.contract_address = contract_address
+        self.score_address = score_address
         self.step_used = step_used
         self.status = status
 
@@ -62,7 +61,7 @@ class TransactionResult(object):
             f'status: {self.status}\n' \
             f'tx_hash: {self.tx_hash}\n' \
             f'to: {self.to}\n' \
-            f'contract_address: {self.contract_address}\n' \
+            f'score_address: {self.score_address}\n' \
             f'step_used: {self.step_used}'
 
     def to_dict(self) -> dict:

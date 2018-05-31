@@ -23,10 +23,11 @@ from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 
 from ..base.address import Address
 from ..base.exception import ExceptionCode, IconException, check_exception
+from ..utils.type_converter import TypeConverter
+from ..logger import Logger
 from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
-from ..utils.type_converter import TypeConverter
 
 from typing import TYPE_CHECKING, Optional, Callable
 
@@ -59,7 +60,6 @@ class IconScoreEngine(ContextContainer):
             ('block', 'tx', 'msg', 'icon_score_address', 'data_type', 'data'))
         self._deferred_tasks = []
 
-    @check_exception
     def invoke(self,
                context: 'IconScoreContext',
                icon_score_address: 'Address',
@@ -76,12 +76,11 @@ class IconScoreEngine(ContextContainer):
         if data_type == 'call':
             self._call(context, icon_score_address, data)
         elif data_type == 'install' or data_type == 'update':
-            self._deploy_on_invoke(context, icon_score_address, data_type, data)
+            self._deploy_on_invoke(context, icon_score_address, data)
             self._put_task(context, icon_score_address, data_type, data)
         else:
             self._fallback(context, icon_score_address)
 
-    @check_exception
     def query(self,
               context: IconScoreContext,
               icon_score_address: Address,
@@ -121,27 +120,34 @@ class IconScoreEngine(ContextContainer):
         self._deferred_tasks.append(task)
 
     def _call(self,
-              context: IconScoreContext,
-              icon_score_address: Address,
-              calldata: dict) -> object:
-        """Handle jsonrpc
+              context: 'IconScoreContext',
+              icon_score_address: 'Address',
+              data: dict) -> object:
+        """Handle jsonrpc including both invoke and query
 
-        :param icon_score_address:
         :param context:
-        :param calldata:
+        :param icon_score_address:
+        :param data: data to call the method of score
         """
-        method: str = calldata['method']
-        kw_params: dict = calldata['params']
+        method: str = data['method']
+        kw_params: dict = data['params']
 
         try:
             self._put_context(context)
 
             icon_score = self.__icon_score_info_mapper.get_icon_score(
                 icon_score_address)
+            if icon_score is None:
+                raise IconException(
+                    ExceptionCode.INVALID_REQUEST,
+                    f'IconScore({icon_score_address}) not found')
+
             return call_method(
                 icon_score=icon_score,
                 func_name=method,
                 kw_params=self._type_converter(icon_score, method, kw_params))
+        except:
+            raise
         finally:
             self._delete_context(context)
 
@@ -219,10 +225,10 @@ class IconScoreEngine(ContextContainer):
 
         self._deferred_tasks.clear()
 
-    def _deploy_on_invoke(self, context: 'IconScoreContext',
-                          icon_score_address: 'Address',
-                          data_type: str,
-                          data: dict):
+    def _deploy_on_invoke(
+            self, context: 'IconScoreContext',
+            icon_score_address: 'Address',
+            data: dict):
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
@@ -230,17 +236,20 @@ class IconScoreEngine(ContextContainer):
         elif content_type != 'application/zip':
             raise IconException(
                 ExceptionCode.INVALID_PARAMS,
-                f'Invalid content type ({contentType})')
+                f'Invalid content type ({content_type})')
+
         content = data.get('content')[2:]
         content_bytes = bytes.fromhex(content)
 
-        self.__icon_score_deployer.deploy(icon_score_address, content_bytes, context.block.height, context.tx.index)
+        self.__icon_score_deployer.deploy(
+            icon_score_address, content_bytes,
+            context.block.height, context.tx.index)
 
     def _install_on_commit(self,
                            context: Optional[IconScoreContext],
                            icon_score_address: Address,
                            data: dict) -> None:
-        """Install an icon score
+        """Install an icon score on commit
 
         Owner check has been already done in IconServiceEngine
         - Install IconScore package file to file system
@@ -304,7 +313,7 @@ class IconScoreEngine(ContextContainer):
             self._put_context(context)
             on_init(params)
         except Exception as e:
-            logging.error(e)
+            Logger.exception(str(e))
         finally:
             self._delete_context(context)
 

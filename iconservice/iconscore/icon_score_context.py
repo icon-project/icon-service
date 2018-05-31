@@ -15,14 +15,16 @@
 # limitations under the License.
 
 import threading
-from enum import IntEnum, unique
+from enum import IntEnum, IntFlag, unique
 
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.exception import ExceptionCode, IconException
-from ..base.exception import IconScoreException, PayableException, ExternalException
+from ..base.exception import IconScoreException, PayableException
+from ..base.exception import ExternalException
+from ..base.exception import RevertException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
 
@@ -86,7 +88,7 @@ class IconScoreContext(object):
     icon_score_mapper: 'IconScoreInfoMapper' = None
 
     def __init__(self,
-                 context_type: IconScoreContextType = IconScoreContextType.QUERY,
+                 context_type: IconScoreContextType=IconScoreContextType.QUERY,
                  block: Block = None,
                  tx: Transaction = None,
                  msg: Message = None,
@@ -105,8 +107,8 @@ class IconScoreContext(object):
         self.block = block
         self.tx = tx
         self.msg = msg
-        self.block_batch = None
-        self.tx_batch = None
+        self.block_batch = block_batch
+        self.tx_batch = tx_batch
         self.block_result: 'IconBlockResult' = None
         self.step_counter: 'IconScoreStepCounter' = None
 
@@ -134,7 +136,8 @@ class IconScoreContext(object):
         """
         return self.icx.get_balance(self, address)
 
-    def transfer(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
+    def transfer(
+            self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
 
         If failed, an exception will be raised.
@@ -153,14 +156,13 @@ class IconScoreContext(object):
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         :return: True(success), False(failure)
         """
-        ret = True
-
         try:
             self.icx.transfer(self, addr_from, addr_to, amount)
-        except:
-            ret = False
+            return True
+        except Exception as e:
+            pass
 
-        return ret
+        return False
 
     def call(self, addr_from: Address,
              addr_to: Address, func_name: str, kw_params: dict) -> object:
@@ -191,10 +193,11 @@ class IconScoreContext(object):
         """
 
     def revert(self, message: str = None) -> None:
-        """Abort execution and revert state changes
+        """Abort score execution and revert state changes
 
         :param message: error log message
         """
+        raise RevertException(message)
 
     def clear(self) -> None:
         """Set instance member variables to None
@@ -218,7 +221,8 @@ class IconScoreContext(object):
 
         if self.block_batch is None:
             raise IconException(
-                ExceptionCode.INTERNAL_ERROR, 'Commit failure: BlockBatch is None')
+                ExceptionCode.INTERNAL_ERROR,
+                'Commit failure: BlockBatch is None')
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:
@@ -230,7 +234,8 @@ class IconScoreContext(object):
     def rollback(self) -> None:
         """Rollback changed states in block_batch
 
-        It will be done to clear data in block_batch in IconScoreContextFactory.destroy()
+        It will be done to clear data in block_batch
+        in IconScoreContextFactory.destroy()
         """
         # Nothing to do
 
@@ -247,8 +252,6 @@ class IconScoreContextFactory(object):
         self._max_size = max_size
 
     def create(self, context_type: IconScoreContextType) -> IconScoreContext:
-        context = None
-
         with self._lock:
             if len(self._queue) > 0:
                 context = self._queue.pop()
@@ -277,7 +280,6 @@ def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
         return icon_score.call_method(func_name, kw_params)
     except (PayableException, ExternalException):
         call_fallback(icon_score)
-        return None
     except Exception:
         raise
 

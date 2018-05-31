@@ -24,6 +24,7 @@ import unittest
 import logging
 
 from iconservice.base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
+from iconservice.base.address import create_address
 from iconservice.base.exception import ExceptionCode, IconException
 from iconservice.base.transaction import Transaction
 from iconservice.base.message import Message
@@ -35,7 +36,6 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import sha3_256
-from . import create_address
 
 
 logging.basicConfig(level=logging.NOTSET)
@@ -57,6 +57,12 @@ class TestIconServiceEngine(unittest.TestCase):
         self._state_db_root_path = 'dbs'
         self._icon_score_root_path = 'scores'
 
+        try:
+            shutil.rmtree(self._icon_score_root_path)
+            shutil.rmtree(self._state_db_root_path)
+        except:
+            pass
+
         engine = IconServiceEngine()
         engine.open(icon_score_root_path=self._icon_score_root_path,
                     state_db_root_path=self._state_db_root_path)
@@ -70,7 +76,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self._tx_hash = sha3_256(b'tx_hash').hex()
         self._from = self._genesis_address
         self._to = create_address(AddressPrefix.EOA, b'to')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
+        self._icon_score_address = create_address(
+            AddressPrefix.CONTRACT, b'score')
         self._total_supply = 100 * 10 ** 18
 
         self.__step_counter_factory \
@@ -130,8 +137,15 @@ class TestIconServiceEngine(unittest.TestCase):
             'to': _to,
             'value': value,
             'fee': 10 ** 16,
-            'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+            'timestamp': 1234567890,
+            'txHash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed'
         }
+
+        context.tx = Transaction(tx_hash=params['txHash'],
+                                 index=0,
+                                 origin=_from,
+                                 timestamp=params['timestamp'],
+                                 nonce=params.get('nonce', None))
 
         self._engine.call(context, method, params)
 
@@ -166,13 +180,15 @@ class TestIconServiceEngine(unittest.TestCase):
                 'value': value,
                 'fee': 10 ** 16,
                 'timestamp': 1234567890,
-                'txHash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+                'txHash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
             }
         }
 
-        self._engine.invoke(block_height, block_hash, block_timestamp, [tx, tx])
+        tx_results = self._engine.invoke(
+            block_height, block_hash, block_timestamp, [tx])
+        print(tx_results[0])
 
-    def test_score_invoke(self):
+    def test_score_invoke_failure(self):
         method = 'icx_sendTransaction'
         params = {
             'from': self._from,
@@ -180,8 +196,8 @@ class TestIconServiceEngine(unittest.TestCase):
             'value': 1 * 10 ** 18,
             'fee': 10 ** 16,
             'timestamp': 1234567890,
-            'tx_hash': self._tx_hash,
-            'data_type': 'call',
+            'txHash': self._tx_hash,
+            'dataType': 'call',
             'data': {
                 'method': 'transfer',
                 'params': {
@@ -192,7 +208,7 @@ class TestIconServiceEngine(unittest.TestCase):
         }
 
         context = _create_context(IconScoreContextType.INVOKE)
-        context.tx = Transaction(tx_hash=params['tx_hash'],
+        context.tx = Transaction(tx_hash=params['txHash'],
                                  origin=params['from'],
                                  index=0,
                                  timestamp=params['timestamp'],
@@ -204,7 +220,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(TransactionResult.FAILURE, tx_result.status)
         self.assertEqual(self._icon_score_address, tx_result.to)
         self.assertEqual(self._tx_hash, tx_result.tx_hash)
-        self.assertIsNone(tx_result.contract_address)
+        self.assertIsNone(tx_result.score_address)
         print(tx_result)
 
         context_factory.destroy(context)
@@ -229,7 +245,7 @@ class TestIconServiceEngine(unittest.TestCase):
             'to': self._icon_score_address,
             'value': 0,
             'fee': 10 ** 16,
-            'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+            'tx_hash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
             'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=',
             'data': {
                 'method': 'transfer',
@@ -263,3 +279,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(0, balance)
     '''
+
+
+if __name__ == '__main__':
+    unittest.main()
