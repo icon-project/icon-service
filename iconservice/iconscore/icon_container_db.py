@@ -146,6 +146,12 @@ class DictDB(object):
         self.__value_type = value_type
         self.__depth = depth
 
+    def remove(self, key: K) -> None:
+        if self.__depth != 1:
+            raise ContainerDBException(f'DictDB depth mismatch')
+
+        self.__db.delete(ContainerUtil.encode_key(key))
+
     def __setitem__(self, key: K, value: V) -> None:
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
