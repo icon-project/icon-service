@@ -256,12 +256,16 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         return self._context.call(self.address, addr_to, func_name, kw_dict)
 
     def transfer(self, addr_to: Address, amount: int):
-        self._context.step_counter.increase_transfer_step(1)
-        return self._context.transfer(self.__address, addr_to, amount)
+        ret = self._context.transfer(self.__address, addr_to, amount)
+        if amount > 0:
+            self._context.step_counter.increase_transfer_step(1)
+        return ret
 
     def send(self, addr_to: Address, amount: int):
-        self._context.step_counter.increase_transfer_step(1)
-        return self._context.send(self.__address, addr_to, amount)
+        ret = self._context.send(self.__address, addr_to, amount)
+        if amount > 0:
+            self._context.step_counter.increase_transfer_step(1)
+        return ret
 
     def revert(self) -> None:
         return self._context.revert(self.__address)

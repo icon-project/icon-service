@@ -280,6 +280,10 @@ class IcxEngine(object):
                 ExceptionCode.INVALID_REQUEST,
                 'icx transfer is not allowed on readonly context')
 
+        if _amount < 0:
+            raise IconException(
+                ExceptionCode.INVALID_PARAMS, 'amount is less than zero')
+
         return self._transfer(_context, _from, _to, _amount)
 
     def _transfer(self,

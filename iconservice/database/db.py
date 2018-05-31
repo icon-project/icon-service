@@ -300,6 +300,7 @@ class IconScoreDatabase(ContextGetter):
         """
         self.__prefix = prefix
         self._context_db = context_db
+        self.__observer: DatabaseObserver = None
 
     @property
     def address(self):
@@ -312,16 +313,25 @@ class IconScoreDatabase(ContextGetter):
     def put(self, key: bytes, value: bytes):
         key = self.__hash_key(key)
         self._context_db.put(self._context, key, value)
+        if self.__observer:
+            old_value = self._context_db.get(self._context, key)
+            self.__observer.on_put(self._context, key, old_value, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
-        return IconScoreDatabase(self._context_db, self.__prefix + prefix)
+        icon_score_database = IconScoreDatabase(
+            self._context_db, self.__prefix + prefix)
+        icon_score_database.set_observer(self.__observer)
+        return icon_score_database
 
     def delete(self, key: bytes):
         key = self.__hash_key(key)
         self._context_db.delete(self._context, key)
+        if self.__observer:
+            old_value = self._context_db.get(self._context, key)
+            self.__observer.on_delete(self._context, key, old_value)
 
     def set_observer(self, observer: DatabaseObserver):
-        self._context_db.set_observer(observer)
+        self.__observer = observer
 
     def __hash_key(self, key: bytes):
         """All key is hashed and stored to StateDB
