@@ -105,6 +105,12 @@ class IconServiceEngine(object):
             self._icx_storage,
             self._icon_score_mapper,
             self._icon_score_deployer)
+
+        IconScoreContext.icx = self._icx_engine
+        IconScoreContext.icon_score_mapper = self._icon_score_mapper
+
+        self._precommit_state: 'PrecommitState' = None
+
         self._step_counter_factory = IconScoreStepCounterFactory(
             6000, 200, 50, -100, 10000, 1000, 20)
 
