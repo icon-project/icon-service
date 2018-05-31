@@ -170,7 +170,7 @@ class IconServiceEngine(object):
             context.msg = Message(sender=_from, value=params.get('value', 0))
 
             context.step_counter: IconScoreStepCounter = \
-                self._step_counter_factory.create(params.get('stepLimit', 0))
+                self._step_counter_factory.create(params.get('step', 5000000))
 
             tx_result: TransactionResult = self.call(context, method, params)
             tx_result.step_used = context.step_counter.step_used
