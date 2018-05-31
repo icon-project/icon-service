@@ -84,11 +84,13 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(test_dict['a'], 1)
 
     def test_success_dict_depth2(self):
-        test_dict = DictDB('test_dict', self.db, depth=2, value_type=int)
-        test_dict['a', 'b'] = 1
-        test_dict['a', 'c'] = 2
+        test_dict = DictDB('test_dict', self.db, depth=3, value_type=int)
+        test_dict['a']['b']['c'] = 1
+        test_dict['a']['b']['d'] = 2
+        test_dict['a']['b']['e'] = 3
+        test_dict['a']['b']['f'] = 4
 
-        self.assertEqual(test_dict['a', 'b'], 1)
+        self.assertEqual(test_dict['a']['b']['c'], 1)
 
     def test_success_array1(self):
         test_array = ArrayDB('test_array', self.db, value_type=int)

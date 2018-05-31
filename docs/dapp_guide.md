@@ -246,10 +246,22 @@ print(test_dict1['nonexistence_key']) # 0출력(존재하지 않는 키에 접�
 예시2) 이차원 배열 형식 (test_dict2['key1', 'key2']):<br/>
 ```python
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
-test_dict2['key1', 'key2'] = 'a' ## set
-print(test_dict2['key1', 'key2']) ## get 'a'
+test_dict2['key1']['key2'] = 'a' ## set
+print(test_dict2['key1']['key2']) ## get 'a'
 
-print(test_dict2['key1', 'nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
+print(test_dict2['key1']['nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
+```
+
+depth가 1이상인 경우에 dict[key]로 접근시 value_type이 아니라 DictDB가 새로 만들어져 나옵니다.<br/>
+만약 depth가 다르게 하여 값을 세팅하려 하면 예외가 발생합니다.<br/>
+예시3)<br/>
+```
+test_dict3 = DictDB('test_dict2', db, value_type=str, depth = 3)
+test_dict3['key1']['key2']['key3'] = 1 #ok
+test_dict3['key1']['key2'] = 1 #raise mismatch exception
+
+test_dict2 = test_dict3['key']['key2']
+test_dict2['key1'] = 1 #ok
 ```
 
 ##### ArrayDB('DB에 접근할 key', '접근할 db', '반환될 type')으로 사용됩니다.<br/>

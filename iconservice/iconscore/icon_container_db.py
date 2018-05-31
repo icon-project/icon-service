@@ -146,42 +146,18 @@ class DictDB(object):
         self.__value_type = value_type
         self.__depth = depth
 
-    def __setitem__(self, keys: Any, value: V) -> None:
-        keys = self.__check_tuple_keys(keys)
-
-        *keys, last_key = keys
-        sub_db = self.__db
-        for key in keys:
-            sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
+    def __setitem__(self, key: K, value: V) -> None:
+        if self.__depth != 1:
+            raise ContainerDBException(f'DictDB depth mismatch')
 
         byte_value = ContainerUtil.encode_value(value)
-        sub_db.put(ContainerUtil.encode_key(last_key), byte_value)
+        self.__db.put(ContainerUtil.encode_key(key), byte_value)
 
-    def __getitem__(self, keys: Any) -> V:
-        keys = self.__check_tuple_keys(keys)
-
-        *keys, last_key = keys
-        sub_db = self.__db
-        for key in keys:
-            sub_db = sub_db.get_sub_db(ContainerUtil.encode_key(key))
-
-        return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(last_key)), self.__value_type)
-
-    def __check_tuple_keys(self, keys: Any) -> Tuple[K, ...]:
-
-        if keys is None:
-            raise ContainerDBException('key is None')
-        elif not isinstance(keys, Iterable):
-            keys = tuple([keys])
-
-        for key in keys:
-            if not isinstance(key, (int, str, Address)):
-                raise ContainerDBException(f"can't cast args {type(key)} : {key}")
-
-        if not len(keys) == self.__depth:
-            raise ContainerDBException('depth over')
-
-        return keys
+    def __getitem__(self, key: K) -> Any:
+        if self.__depth == 1:
+            return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(key)), self.__value_type)
+        else:
+            return DictDB(key, self.__db, self.__value_type, self.__depth-1)
 
 
 class ArrayDB(Iterator):
