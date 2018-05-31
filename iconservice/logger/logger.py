@@ -17,7 +17,7 @@ import json
 from .configuration import LogConfiguration, LogHandlerType
 from enum import IntEnum
 
-DEFAULT_LOG_FORMAT = "%(asctime)s %(process)d %(thread)d [TAG] %(levelname)s %(message)s"
+DEFAULT_LOG_FORMAT = "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s"
 DEFAULT_LOG_FILE_PATH = "./logger.log"
 
 DEFAULT_LOG_TAG = "LOG"
