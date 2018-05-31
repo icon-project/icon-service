@@ -252,7 +252,7 @@ print(test_dict2['key1']['key2']) ## get 'a'
 print(test_dict2['key1']['nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
 ```
 
-depth가 1이상인 경우에 dict[key]로 접근시 value_type이 아니라 DictDB가 새로 만들어져 나옵니다.<br/>
+depth가 2이상인 경우에 dict[key]로 접근시 value_type이 아니라 DictDB가 새로 만들어져 나옵니다.<br/>
 만약 depth가 다르게 하여 값을 세팅하려 하면 예외가 발생합니다.<br/>
 예시3)<br/>
 ```
