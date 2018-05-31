@@ -252,7 +252,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         :param func_name: function name provided by other IconScore
         :param kw_dict:
         """
-        self._context.step_counter.increase_message_call_step(1)
+        self._context.step_counter.increase_msgcall_step(1)
         return self._context.call(self.address, addr_to, func_name, kw_dict)
 
     def transfer(self, addr_to: Address, amount: int):
@@ -266,21 +266,35 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def revert(self) -> None:
         return self._context.revert(self.__address)
 
-    def on_put(self, context: 'IconScoreContext', key: bytes, new_value: bytes):
+    def on_put(self,
+               context: 'IconScoreContext',
+               key: bytes,
+               old_value: bytes,
+               new_value: bytes):
         """Invoked when `put` is called in `ContextDatabase`.
 
         :param context: SCORE context
         :param key: key
+        :param old_value: old value
         :param new_value: new value
         """
         if new_value and context and context.type == IconScoreContextType.INVOKE:
-            context.step_counter.increase_storage_step(len(new_value))
+            if old_value:
+                # modifying a value
+                context.step_counter.increase_sreplace_step(len(new_value))
+            else:
+                # newly storing a value
+                context.step_counter.increase_sset_step(len(new_value))
 
-    def on_delete(self, context: 'IconScoreContext', key: bytes):
+    def on_delete(self,
+                  context: 'IconScoreContext',
+                  key: bytes,
+                  old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
 
         :param context: SCORE context
         :param key: key
+        :param old_value: old value
         """
         if context and context.type == IconScoreContextType.INVOKE:
-            pass
+            context.step_counter.increase_sdelete_step(len(old_value))

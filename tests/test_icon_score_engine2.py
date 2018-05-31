@@ -30,6 +30,7 @@ from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+from iconservice.iconscore.icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
 
@@ -53,8 +54,9 @@ class TestIconScoreEngine2(unittest.TestCase):
 
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
+        self._icon_score_deployer = IconScoreDeployer('./')
 
-        self._engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper)
+        self._engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
 
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
         self._addr2 = create_address(AddressPrefix.EOA, b'addr2')
@@ -70,6 +72,11 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.block = Block(1, 'block_hash', 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
+        self.__step_counter_factory \
+            = IconScoreStepCounterFactory(10, 10, 10, 10)
+        self._step_counter: IconScoreStepCounter \
+            = self.__step_counter_factory.create(100)
+        self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
 
         self._totalsupply = 1000 * 10 ** 18
@@ -97,7 +104,7 @@ class TestIconScoreEngine2(unittest.TestCase):
     def __request_install(self, proj_name: str, addr_score: Address):
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
-        install_data = {'content_type': 'application/tbears', 'content': path}
+        install_data = {'contentType': 'application/tbears', 'content': path}
         self._engine.invoke(self._context, addr_score, 'install', install_data)
         self._engine.commit(self._context)
 

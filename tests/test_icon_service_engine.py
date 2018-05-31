@@ -33,6 +33,7 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import sha3_256
 from . import create_address
 
@@ -71,6 +72,11 @@ class TestIconServiceEngine(unittest.TestCase):
         self._to = create_address(AddressPrefix.EOA, b'to')
         self._icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
         self._total_supply = 100 * 10 ** 18
+
+        self.__step_counter_factory \
+            = IconScoreStepCounterFactory(10, 10, 10, 10)
+        self._engine._step_counter_factory = self.__step_counter_factory
+        self._engine._precommit_state = None
 
         accounts = [
             {
@@ -160,7 +166,7 @@ class TestIconServiceEngine(unittest.TestCase):
                 'value': value,
                 'fee': 10 ** 16,
                 'timestamp': 1234567890,
-                'tx_hash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+                'txHash': '4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
             }
         }
 

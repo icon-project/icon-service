@@ -7,7 +7,7 @@ fi
 action=$1
 
 CURL_CMD='curl -H "Content-Type: application/json" -d '
-SERVER_URL='http://localhost:9000/api/v2'
+SERVER_URL='http://localhost:9000/api/v3'
 
 case "$action" in
   sendtx|sendTransaction )
@@ -34,7 +34,7 @@ case "$action" in
   ;;
   seq1 )
   # genesis -> hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(addr1) transfer 10 icx(0x8ac7230489e80000)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 80889, "params": {"from": "hx0000000000000000000000000000000000000000", "to": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "value": "0x8ac7230489e80000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 80889, "params": {"from": "hx0000000000000000000000000000000000000000", "to": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "value": "0x8ac7230489e80000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
   ;;
   seq2 )
   # check icx balance address: addr value : 0x8ac7230489e80000 (10 icx)
@@ -42,23 +42,23 @@ case "$action" in
   ;;
   seq3 )
   # check token balance address : hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(addr1) value : 0x3635c9adc5dea00000 (1000*10**18)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 100889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 100889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "dataType": "call", "data": {"method": "balance_of", "params": {"addr_from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}'
   ;;
   seq4 )
   # transfer token to cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3(CrowdSale) value: 0x3635c9adc5dea00000(1000*10**18)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 110889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "value": "0x0", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "transfer", "params": {"addr_to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x3635c9adc5dea00000"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 110889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "value": "0x0", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "dataType": "call", "data": {"method": "transfer", "params": {"addr_to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x3635c9adc5dea00000"}}}}'
   ;;
   seq5 )
   # check token balance address : cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3(CrowdSale) value : 0x3635c9adc5dea00000 (1000*10**18)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 120889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 120889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "dataType": "call", "data": {"method": "balance_of", "params": {"addr_from": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3"}}}}'
   ;;
   seq6 )
   # check token balance address : hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(addr1) value : 0x0 (0)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 130889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 130889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "dataType": "call", "data": {"method": "balance_of", "params": {"addr_from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}'
   ;;
   seq7 )
   # transfer icx to CrowdSale value : 0x1bc16d674ec80000(2 icx)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 140889, "params": {"from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x1bc16d674ec80000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 140889, "params": {"from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x1bc16d674ec80000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
   ;;
   seq8 )
   # check icx balance address: addr1 value : 0x6f05b59d3b200000 (8 icx)
@@ -66,27 +66,27 @@ case "$action" in
   ;;
   seq9 )
   # check token balance address : hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(addr1) value : 0x2 (2)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 160889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "data_type": "call", "data": {"method": "balance_of", "params": {"addr_from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_call", "id": 160889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "dataType": "call", "data": {"method": "balance_of", "params": {"addr_from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}'
   ;;
   seq10 )
   # transfer icx to CrowdSale value : 0x6f05b59d3b200000(8 icx)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 170889, "params": {"from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x6f05b59d3b200000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 170889, "params": {"from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x6f05b59d3b200000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
   ;;
   seq11 )
   # genesis -> addr2 transfer 90icx(0x4e1003b28d9280000)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 180889, "params": {"from": "hx0000000000000000000000000000000000000000", "to": "hxbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "value": "0x4e1003b28d9280000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 180889, "params": {"from": "hx0000000000000000000000000000000000000000", "to": "hxbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "value": "0x4e1003b28d9280000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
   ;;
   seq12 )
   # transfer icx to CrowdSale value : 0x4e1003b28d9280000(90 icx)
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 190889, "params": {"from": "hxbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x4e1003b28d9280000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 190889, "params": {"from": "hxbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x4e1003b28d9280000", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802"}}'
   ;;
   seq13 )
   # check CrowdSaleEnd
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 200889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x0", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "check_goal_reached", "params": {}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 200889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x0", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "dataType": "call", "data": {"method": "check_goal_reached", "params": {}}}}'
   ;;
   seq14 )
   # check CrowdSaleEnd
-      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 210889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x0", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "tx_hash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "data_type": "call", "data": {"method": "safe_withdrawal", "params": {}}}}'
+      PARAMS='{"jsonrpc": "2.0", "method": "icx_sendTransaction", "id": 210889, "params": { "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "to": "cx8c814aa96fefbbb85131f87f6e0cb7878a95c1d3", "value": "0x0", "fee": "0x2386f26fc10000", "timestamp": "1523327456264040", "txHash": "1b06cfef02fd6c69e38f2d3079720f2c44be94455a7e664803a4fcbc3a695802", "dataType": "call", "data": {"method": "safe_withdrawal", "params": {}}}}'
   ;;
   seq15 )
   # check icx balance address: addr1 value : 0x56bc75e2d63100000 (100 icx)

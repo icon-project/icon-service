@@ -17,6 +17,8 @@
 import os
 from collections import namedtuple
 
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
 from .base.exception import ExceptionCode, IconException, check_exception
 from .base.block import Block
@@ -95,18 +97,16 @@ class IconServiceEngine(object):
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
 
-        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage,
-                                                      self._db_factory,
-                                                      self._icon_score_loader)
-        self._icon_score_engine = IconScoreEngine(self._icx_storage,
-                                                  self._icon_score_mapper)
+        self._icon_score_mapper = IconScoreInfoMapper(
+            self._icx_storage, self._db_factory, self._icon_score_loader)
 
-        IconScoreContext.icx = self._icx_engine
-        IconScoreContext.icon_score_mapper = self._icon_score_mapper
-
-        self._precommit_state: 'PrecommitState' = None
-
-        self._step_counter_factory = IconScoreStepCounterFactory(0, 0, 0, 0)
+        self._icon_score_deployer = IconScoreDeployer(icon_score_root_path)
+        self._icon_score_engine = IconScoreEngine(
+            self._icx_storage,
+            self._icon_score_mapper,
+            self._icon_score_deployer)
+        self._step_counter_factory = IconScoreStepCounterFactory(
+            6000, 200, 50, -100, 10000, 1000, 20)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -161,7 +161,7 @@ class IconServiceEngine(object):
             params = tx['params']
             _from = params['from']
 
-            context.tx = Transaction(tx_hash=params['tx_hash'],
+            context.tx = Transaction(tx_hash=params['txHash'],
                                      index=i,
                                      origin=_from,
                                      timestamp=params['timestamp'],
@@ -170,7 +170,7 @@ class IconServiceEngine(object):
             context.msg = Message(sender=_from, value=params.get('value', 0))
 
             context.step_counter: IconScoreStepCounter = \
-                self._step_counter_factory.create(params.get('step_limit', 0))
+                self._step_counter_factory.create(params.get('stepLimit', 0))
 
             tx_result: TransactionResult = self.call(context, method, params)
             tx_result.step_used = context.step_counter.step_used
@@ -214,7 +214,7 @@ class IconServiceEngine(object):
         return ret
 
     def call(self,
-             context: IconScoreContext,
+             context: 'IconScoreContext',
              method: str,
              params: dict) -> object:
         """Call invoke and query requests in jsonrpc format
@@ -243,7 +243,7 @@ class IconServiceEngine(object):
             Logger.error(e, ICON_SERVICE_LOG_TAG)
 
     def _handle_icx_getBalance(self,
-                               context: IconScoreContext,
+                               context: 'IconScoreContext',
                                params: dict) -> int:
         """Returns the icx balance of the given address
 
@@ -255,7 +255,7 @@ class IconServiceEngine(object):
         return self._icx_engine.get_balance(context, address)
 
     def _handle_icx_getTotalSupply(self,
-                                   context: IconScoreContext,
+                                   context: 'IconScoreContext',
                                    params: dict) -> int:
         """Returns the amount of icx total supply
 
@@ -265,7 +265,7 @@ class IconServiceEngine(object):
         return self._icx_engine.get_total_supply(context)
 
     def _handle_icx_call(self,
-                         context: IconScoreContext,
+                         context: 'IconScoreContext',
                          params: dict) -> object:
         """Handles an icx_call jsonrpc request
 
@@ -275,7 +275,7 @@ class IconServiceEngine(object):
         :return:
         """
         icon_score_address: Address = params['to']
-        data_type = params.get('data_type', None)
+        data_type = params.get('dataType', None)
         data = params.get('data', None)
 
         return self._icon_score_engine.query(context,
@@ -284,7 +284,7 @@ class IconServiceEngine(object):
                                              data)
 
     def _handle_icx_sendTransaction(self,
-                                    context: IconScoreContext,
+                                    context: 'IconScoreContext',
                                     params: dict) -> 'TransactionResult':
         """icx_sendTransaction message handler
 
@@ -303,7 +303,7 @@ class IconServiceEngine(object):
 
         if to is None or to.is_contract:
             # EOA to Score
-            data_type: str = params.get('data_type')
+            data_type: str = params.get('dataType')
             data: dict = params.get('data')
             tx_result = self.__handle_score_invoke(
                 context, to, data_type, data)
@@ -317,10 +317,10 @@ class IconServiceEngine(object):
         return tx_result
 
     def __handle_score_invoke(self,
-                              context: IconScoreContext,
+                              context: 'IconScoreContext',
                               to: Address,
                               data_type: str,
-                              data: dict) -> TransactionResult:
+                              data: dict) -> 'TransactionResult':
         """Handle score invocation
 
         :param tx_hash: transaction hash
@@ -334,7 +334,7 @@ class IconServiceEngine(object):
 
         try:
             if data_type == 'install':
-                content_type = data.get('content_type')
+                content_type = data.get('contentType')
                 if content_type == 'application/tbears':
                     content = data.get('content')
                     proj_name = content.split('/')[-1]
@@ -356,9 +356,9 @@ class IconServiceEngine(object):
         return tx_result
 
     @staticmethod
-    def __generate_contract_address(from_: Address,
+    def __generate_contract_address(from_: 'Address',
                                     timestamp: int,
-                                    nonce: int = None) -> Address:
+                                    nonce: int = None) -> 'Address':
         """Generates a contract address from the transaction information.
 
         :param from_:
