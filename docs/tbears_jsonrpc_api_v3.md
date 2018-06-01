@@ -3,7 +3,6 @@ ICON SCORE 개발 도구(tbears) 용 JSON-RPC API v3
 
 IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
-문서 이력
 |일시|작성자|비고|
 |:------|:---:|:--------|
 | 2018.5.18(금) | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
@@ -109,7 +108,7 @@ T_DATA_TYPE| install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call:
 
 KEY | VALUE 형식 | 설명
 ----|----------|-----
-from|T_ADDR_EOL|메시지를 보내는 주체의 주소
+from|T_ADDR_EOA|메시지를 보내는 주체의 주소
 to|T_ADDR_SCORE|transaction에 포함된 메시지콜 데이터를 처리할 SCORE 주소
 dataType|T_DATA_TYPE|data 종류 명시. "call"만 가능
 data|N/A|SCORE 구현에 따른 함수명 및 함수 Parameter
@@ -130,7 +129,7 @@ SCORE 함수 실행 결과
         "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",   // SCORE 주소
         "dataType": "call", // 메시지콜
         "data": {           // 메시지콜 데이터
-            "method": "get_balance", // SCORE External 함수 이
+            "method": "get_balance", // SCORE External 함수
             "params": {
                 "address": "hx1f9a3310f60a03934b917509c86442db703cbd52" // 토큰 잔고를 조회할 계좌 주소
             }
@@ -294,7 +293,8 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
 ## icx_sendTransaction
 
 * from 주소에서 to 주소로 지정된 금액의 코인을 이체한다.
-* to 주소가 가리키는 SCORE를 install, update 한다.
+* 새로운 SCORE를 install한다.
+* to 주소가 가리키는 SCORE를 update 한다.
 * to 주소가 가리키는 SCORE의 함수를 호출한다.
 * 상태 전이가 발생한다.
 
@@ -329,6 +329,7 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
     "id": 9876,
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
+        "to": "0x0",
         "step": "0x12345",
         "timestamp": "0x563a6cf330136",
         "nonce": "0x1",
@@ -397,7 +398,7 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
 {
     "jsonrpc": "2.0",
     "id": 9876,
-    "result": "0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed"
+    "result": "0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed" // transaction hash
 }
 
 // Response - 실패
