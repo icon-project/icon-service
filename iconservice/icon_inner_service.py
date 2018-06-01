@@ -137,7 +137,7 @@ class IconScoreInnerTask(object):
                 finally:
                     pass
         except (IconServiceBaseException, Exception) as e:
-            Logger.error(f'Execute Query Error : {e}', ICON_INNER_LOG_TAG)
+            Logger.exception(f'Execute Query Error : {e}', ICON_INNER_LOG_TAG)
             response = make_response(Response.fail, (Response.fail, e))
             return response
         return response
@@ -157,6 +157,7 @@ class IconScoreInnerTask(object):
                 finally:
                     pass
         except (IconServiceBaseException, Exception) as e:
+            Logger.exception(f'Execute commit Error: {e}', ICON_INNER_LOG_TAG)
             response = make_response(Response.fail, (Response.fail, e))
             return response
         return response
@@ -176,6 +177,7 @@ class IconScoreInnerTask(object):
                 finally:
                     pass
         except (IconServiceBaseException, Exception) as e:
+            Logger.exception(f'Execute rollback Error: {e}', ICON_INNER_LOG_TAG)
             response = make_response(Response.fail, (Response.fail, e))
             return response
         return response

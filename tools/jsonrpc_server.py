@@ -152,21 +152,21 @@ class MockDispatcher:
         if MQ_TEST:
             response = await get_icon_score_stub().task().icx_send_transaction(make_request)
             if not isinstance(response, list):
-                commit_response = await get_icon_score_stub().task().remove_precommit_state({})
+                await get_icon_score_stub().task().remove_precommit_state({})
             elif response[0]['status'] == 1:
-                commit_response = await get_icon_score_stub().task().write_precommit_state({})
+                await get_icon_score_stub().task().write_precommit_state({})
             else:
-                commit_response = await get_icon_score_stub().task().remove_precommit_state({})
-            return {'response': response, 'commitResponse': commit_response}
+                await get_icon_score_stub().task().remove_precommit_state({})
+            return response
         else:
             response = await get_icon_inner_task().icx_send_transaction(make_request)
             if not isinstance(response, list):
-                commit_response = await get_icon_inner_task().remove_precommit_state({})
+                await get_icon_inner_task().remove_precommit_state({})
             elif response[0]['status'] == 1:
-                commit_response = await get_icon_inner_task().write_precommit_state({})
+                await get_icon_inner_task().write_precommit_state({})
             else:
-                commit_response = await get_icon_inner_task().remove_precommit_state({})
-            return {'response': response, 'commitResponse': commit_response}
+                await get_icon_inner_task().remove_precommit_state({})
+            return response
 
     @staticmethod
     @methods.add
