@@ -17,7 +17,8 @@ import json
 from .configuration import LogConfiguration, LogHandlerType
 from enum import IntEnum
 
-DEFAULT_LOG_FORMAT = "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s"
+# DEFAULT_LOG_FORMAT = "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s"
+DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 DEFAULT_LOG_FILE_PATH = "./logger.log"
 
 DEFAULT_LOG_TAG = "LOG"
@@ -57,17 +58,22 @@ class Logger:
     @staticmethod
     def import_dict(conf: dict):
         log_format = conf.get("format", DEFAULT_LOG_FORMAT)
-        log_level = conf.get("level", LogLevel.DEBUG)
-        log_color = conf.get("colorLog", True)
+        log_level = LogLevel[conf.get("level", 'DEBUG').upper()]
+        log_color = conf.get("colorLog", False)
         log_output = conf.get('filePath', DEFAULT_LOG_FILE_PATH)
+
+        outputType = LogHandlerType.NONE
         log_output_type_str = conf.get('outputType', 'debug')
+        outputs = log_output_type_str.split('|')
+        for output in outputs:
+            outputType |= LogHandlerType[output.upper()]
 
         preset = LogConfiguration()
         preset.log_format = log_format
         preset.log_level = log_level
         preset.log_color = log_color
         preset.log_file_path = log_output
-        preset.set_handler(LogHandlerType[log_output_type_str])
+        preset.set_handler(outputType)
         return preset
 
     @staticmethod
@@ -115,4 +121,4 @@ class Logger:
 
     @staticmethod
     def __make_log_msg(msg: str, tag: str):
-        return f'[{tag}]{msg}'
+        return f'[{tag}] {msg}'

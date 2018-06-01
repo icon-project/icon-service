@@ -1,0 +1,7 @@
+{
+    "log": {
+        "level": "debug",
+        "filePath": "log.txt",
+        "outputType": "console|file"
+    }
+}

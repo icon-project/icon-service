@@ -19,6 +19,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 
 class LogHandlerType(IntEnum):
+    NONE = 0
     CONSOLE = 1
     FILE = 2
     DAILY_ROTATION = 4
@@ -29,7 +30,7 @@ class LogConfiguration:
         self.log_format = None
         self.custom = ""
         self.log_level = logging.DEBUG
-        self.log_color = True
+        self.log_color = False
         self.__handler_type = LogHandlerType.CONSOLE
         self.__log_file_path = None
         self.__log_format = None
@@ -85,18 +86,18 @@ class LogConfiguration:
             'asctime': {'color': 'magenta'}}
 
         coloredlogs.DEFAULT_LEVEL_STYLES = {
-            'info': {},
+            'info': {'color': 'green'},
             'notice': {'color': 'magenta'},
             'verbose': {'color': 'blue'},
             'success': {'color': 'green', 'bold': True},
             'spam': {'color': 'cyan'},
             'critical': {'color': 'red', 'bold': True},
             'error': {'color': 'red'},
-            'debug': {'color': 'green'},
+            'debug': {'color': 'white'},
             'warning': {'color': 'yellow'}}
 
         coloredlogs.install(logger=logger,
                             fmt=self.__log_format,
-                            datefmt="%m%d %H:%M:%S",
+                            datefmt="%m-%d %H:%M:%S",
                             level=self.log_level,
                             milliseconds=True)

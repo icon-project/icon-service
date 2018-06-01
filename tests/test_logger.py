@@ -17,9 +17,9 @@
 
 
 import unittest
+import os.path
 
 from iconservice.logger import Logger
-from iconservice.logger.logger import LogLevel
 
 
 TAG = 'logger'
@@ -27,9 +27,25 @@ TAG = 'logger'
 
 class TestLogger(unittest.TestCase):
     def setUp(self):
-        Logger.import_dict('./tbears.json')
+        filePath = os.path.join(os.path.dirname(__file__), 'logger.json')
+        Logger(filePath)
 
     def test_debug(self):
-        Logger.set_log_level(LogLevel.DEBUG)
         Logger.debug('debug log')
         Logger.debug('debug log', TAG)
+
+    def test_info(self):
+        Logger.info('info log')
+        Logger.info('info log', TAG)
+
+    def test_warning(self):
+        Logger.warning('warning log')
+        Logger.warning('warning log', TAG)
+
+    def test_error(self):
+        Logger.error('error log')
+        Logger.error('error log', TAG)
+
+
+if __name__ == '__main__':
+    unittest.main()
