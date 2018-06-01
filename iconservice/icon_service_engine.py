@@ -389,10 +389,6 @@ class IconServiceEngine(object):
                 ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
 
-        Logger.debug(
-            f'precommit: {self._precommit_state.block_batch}',
-            ICON_SERVICE_LOG_TAG)
-
         context = self._context_factory.create(IconScoreContextType.GENESIS)
         block_batch = self._precommit_state.block_batch
 
