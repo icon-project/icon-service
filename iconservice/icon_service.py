@@ -1,3 +1,5 @@
+# Copyright 2017-2018 theloop Inc.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+""" A class for gRPC service of Icon Service"""
 
-from message_queue import MessageQueueService
-from iconservice.icon_inner_service import IconScoreInnerService, IconScoreInnerStub
-from iconservice.icon_config import *
-from iconservice.logger import Logger
+import logging
+import setproctitle
+import timeit
 
-ICON_SERVICE_STANDALONE = 'IconServiceStandAlone'
+from loopchain.container import CommonService
+from loopchain.protos import loopchain_pb2_grpc, loopchain_pb2
+from icon.iconservice import IconOuterService
 
 
 class IconService(object):
@@ -24,98 +28,55 @@ class IconService(object):
     Its role is the bridge between loopchain and IconServiceEngine.
     """
 
-    def __init__(self, icon_score_root_path: str, icon_score_state_db_root_path: str,
-                 channel: str, amqp_key: str, amqp_target: str, rpc_port: str, only_service: bool = False):
+    def __init__(self, channel, iconscore_storage_path, peer_target):
         """constructor
+
+        :param channel: (string)
+            blockchain channel name.
+            A node can have multiple channels.
+        :param iconscore_storage_path: (string)
+            root path where iconscores are deployed.
+            all iconscores have its own folder. (storage_path/score_address)
+        :param peer_target: (string)
+            network info of peer_service
+            ex: 127.0.0.1:7100
         """
 
-        self.__icon_score_stub = None
-        self.__icon_score_queue_name = ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel,
-                                                                           amqp_key=amqp_key,
-                                                                           rpc_port=rpc_port)
+        self.__common_service = CommonService(loopchain_pb2)
 
-        self.__only_service = only_service
+        # gRPC service for Score Service
+        self.__outer_service = IconOuterService(
+            channel, iconscore_storage_path)
 
-        Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'icon_score_root_path : {icon_score_root_path}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'icon_score_state_db_root_path  : {icon_score_state_db_root_path}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'amqp_target  : {amqp_target}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'icon_score_queue_name  : {self.__icon_score_queue_name}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'only_service : {only_service}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
+        setproctitle.setproctitle(f"{setproctitle.getproctitle()} {channel}")
 
-        self.__amqp_target = amqp_target
-        self.__inner_service = IconScoreInnerService(amqp_target, self.__icon_score_queue_name,
-                                                     icon_score_root_path=icon_score_root_path,
-                                                     icon_score_state_db_root_path=icon_score_state_db_root_path)
+    @property
+    def common_service(self):
+        return self.__common_service
 
-    def stop(self):
-        if not self.__only_service:
-            self.__icon_score_stub().task().close()
+    def service_stop(self):
+        self.__common_service.stop()
 
-        self.__inner_service.loop.stop()
-        self.__inner_service.loop.close()
+    def serve(self, port):
+        """Run grpc server for icon service.
 
-    async def __create_icon_score_stub(self):
-        stub = IconScoreInnerStub(self.__amqp_target, self.__icon_score_queue_name)
-        await stub.connect()
-        self.__icon_score_stub = stub
+        This function will not return until self.__common_service is over.
 
-    def serve(self):
-        async def __serve():
-            await self.__inner_service.connect(exclusive=True)
+        :param port: (int) grpc server port number
+        """
 
-            if not self.__only_service:
-                await self.__create_icon_score_stub()
-                await self.__icon_score_stub.task().open()
+        stopwatch_start = timeit.default_timer()
 
-            Logger.info(f'Start IconService Service serve!', ICON_SERVICE_STANDALONE)
+        loopchain_pb2_grpc.add_ContainerServicer_to_server(
+            self.__outer_service,
+            self.__common_service.outer_server)
 
-        loop = MessageQueueService.loop
-        loop.create_task(__serve())
-        loop.run_forever()
+        logging.info(f"Start icon service at port: {port}")
 
+        self.__common_service.start(port)
 
-def main(argv):
-    import argparse
+        stopwatch_duration = timeit.default_timer() - stopwatch_start
+        logging.info(f"Start icon service start duration({stopwatch_duration})")
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--type", type=str, default='tbears',
-                        choices=['tbears', 'user'],
-                        help="icon service type [tbears|user]")
-    parser.add_argument("--score_root_path", type=str, default='.score',
-                        help="icon score root path  example : .score")
-    parser.add_argument("--state_db_root_path", type=str, default='.db',
-                        help="icon score state db root path  example : .db")
-    parser.add_argument("--channel", type=str,
-                        help="icon score channel")
-    parser.add_argument("--amqp_key", type=str, default='amqp_key',
-                        help="icon score amqp_key : [amqp_key]")
-    parser.add_argument("--amqp_target", type=str, default='127.0.0.1',
-                        help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("--rpc_port", type=str, default='9000',
-                        help="icon score rpc_port : [9000]")
-    parser.add_argument("--only_service", type=bool, default=False,
-                        help="icon score only_service")
-
-    args = parser.parse_args(argv)
-
-    path = None
-    Logger(path)
-
-    if args.type == "tbears":
-        icon_service = IconService(**DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT)
-    else:
-        params = {'icon_score_root_path': args.score_root_path,
-                  'icon_score_state_db_root_path': args.state_db_root_path,
-                  'channel': args.channel, 'amqp_key': args.amqp_key,
-                  'amqp_target': args.amqp_target, 'rpc_port': args.rpc_port,
-                  'only_service': args.only_service}
-        icon_service = IconService(**params)
-
-    icon_service.serve()
-
-
-if __name__ == '__main__':
-    import sys
-    main(sys.argv[1:])
+        # wait for service termination
+        self.__common_service.wait()

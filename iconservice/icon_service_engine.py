@@ -14,11 +14,15 @@
 # limitations under the License.
 
 
-from os import makedirs
+import os
 from collections import namedtuple
 
-from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
-from .base.exception import ExceptionCode, IconException, check_exception, IconServiceBaseException
+from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+
+from .base.address import Address, AddressPrefix
+from .base.address import ICX_ENGINE_ADDRESS, create_address
+from .base.exception import ExceptionCode, IconException, check_exception
+from .base.exception import IconServiceBaseException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -26,7 +30,6 @@ from .database.factory import DatabaseFactory
 from .database.batch import BlockBatch, TransactionBatch
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
-from .icx.icx_account import AccountType
 from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextType
@@ -37,12 +40,10 @@ from .iconscore.icon_score_result import IconBlockResult
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory
-from .iconscore.icon_score_deployer import IconScoreDeployer
 from .logger import Logger
 from .icon_config import *
 
-from typing import TYPE_CHECKING, Optional, Any
-
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
 
@@ -57,31 +58,19 @@ class IconServiceEngine(object):
     def __init__(self) -> None:
         """Constructor
         """
-
-        self._db_factory = None
-        self._context_factory = None
-        self._icon_score_loader = None
-        self._icx_context_db = None
-        self._icx_storage = None
-        self._icx_engine = None
-        self._icon_score_mapper = None
-        self._icon_score_engine = None
-        self._icon_score_deployer = None
-        self._step_counter_factory = None
-        self._precommit_state = None
-
         # jsonrpc handlers
         self._handlers = {
-            'icx_getBalance': self._handle_icx_get_balance,
-            'icx_getTotalSupply': self._handle_icx_get_total_supply,
+            'icx_getBalance': self._handle_icx_getBalance,
+            'icx_getTotalSupply': self._handle_icx_getTotalSupply,
             'icx_call': self._handle_icx_call,
-            'icx_sendTransaction': self._handle_icx_send_transaction
+            'icx_sendTransaction': self._handle_icx_sendTransaction
         }
 
         # The precommit state is the state that been already invoked,
         # but not written to levelDB or file system.
         self._PrecommitState = namedtuple(
             'PrecommitState', ['block_batch', 'block_result'])
+        self._step_counter_factory: IconScoreStepCounterFactory = None
 
     def open(self,
              icon_score_root_path: str,
@@ -91,9 +80,10 @@ class IconServiceEngine(object):
         :param icon_score_root_path:
         :param state_db_root_path:
         """
-
-        makedirs(icon_score_root_path, exist_ok=True)
-        makedirs(state_db_root_path, exist_ok=True)
+        if not os.path.isdir(icon_score_root_path):
+            os.mkdir(icon_score_root_path)
+        if not os.path.isdir(state_db_root_path):
+            os.mkdir(state_db_root_path)
 
         self._db_factory = DatabaseFactory(state_db_root_path)
         self._context_factory = IconScoreContextFactory(max_size=5)
@@ -106,22 +96,27 @@ class IconServiceEngine(object):
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
 
-        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
+        self._icon_score_mapper = IconScoreInfoMapper(
+            self._icx_storage, self._db_factory, self._icon_score_loader)
 
         self._icon_score_deployer = IconScoreDeployer(icon_score_root_path)
-        self._icon_score_engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
-
-        self._step_counter_factory = IconScoreStepCounterFactory(
-            6000, 200, 50, -100, 10000, 1000, 20)
+        self._icon_score_engine = IconScoreEngine(
+            self._icx_storage,
+            self._icon_score_mapper,
+            self._icon_score_deployer)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
+
+        self._precommit_state: 'PrecommitState' = None
+
+        self._step_counter_factory = IconScoreStepCounterFactory(
+            6000, 200, 50, -100, 10000, 1000, 20)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
         """
-
         self._icx_engine.close()
 
     def genesis_invoke(self, accounts: list) -> None:
@@ -132,57 +127,52 @@ class IconServiceEngine(object):
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
 
-        genesis = accounts[0]
-        treasury = accounts[1]
-        others = accounts[2:]
+        genesis_account = accounts[0]
+        self._icx_engine.init_genesis_account(
+            context=context,
+            address=genesis_account['address'],
+            amount=genesis_account['balance'])
 
-        __NAME_KEY = 'name'
-        __ADDRESS_KEY = 'address'
-        __AMOUNT_KEY = 'balance'
-
-        self._icx_engine.init_account(
-            context=context, account_type=AccountType.GENESIS,
-            account_name=genesis[__NAME_KEY], address=genesis[__ADDRESS_KEY], amount=genesis[__AMOUNT_KEY])
-
-        self._icx_engine.init_account(
-            context=context, account_type=AccountType.TREASURY,
-            account_name=treasury[__NAME_KEY], address=treasury[__ADDRESS_KEY], amount=treasury[__AMOUNT_KEY])
-
-        for other in others:
-            self._icx_engine.init_account(
-                context=context, account_type=AccountType.GENERAL,
-                account_name=other[__NAME_KEY], address=other[__ADDRESS_KEY], amount=other[__AMOUNT_KEY])
+        fee_treasury_account = accounts[1]
+        self._icx_engine.init_fee_treasury_account(
+            context=context,
+            address=fee_treasury_account['address'],
+            amount=fee_treasury_account['balance'])
 
         self._context_factory.destroy(context)
 
     @check_exception
     def invoke(self,
-               block: 'Block',
-               tx_params: list) -> 'IconBlockResult':
+               block_height: int,
+               block_hash: str,
+               block_timestamp: int,
+               transactions) -> 'IconBlockResult':
         """Process transactions in a block sent by loopchain
 
-        :param block::
-        :param tx_params: transactions in a block
+        :param block_height:
+        :param block_hash:
+        :param block_timestamp:
+        :param transactions: transactions in a block
         :return: The results of transactions
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
-        context.block = block
-        context.block_batch = BlockBatch(block.height, block.hash)
+        context.block = Block(block_height, block_hash, block_timestamp)
+        context.block_batch = BlockBatch(block_height, block_hash)
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())
 
-        for index, tx in enumerate(tx_params):
+        for i, tx in enumerate(transactions):
             method = tx['method']
             params = tx['params']
-            addr_from = params['from']
+            _from = params['from']
 
             context.tx = Transaction(tx_hash=params['txHash'],
-                                     index=index,
-                                     origin=addr_from,
+                                     index=i,
+                                     origin=_from,
                                      timestamp=params['timestamp'],
                                      nonce=params.get('nonce', None))
 
-            context.msg = Message(sender=addr_from, value=params.get('value', 0))
+            context.msg = Message(sender=_from, value=params.get('value', 0))
 
             context.step_counter: IconScoreStepCounter = \
                 self._step_counter_factory.create(params.get('step', 5000000))
@@ -203,7 +193,7 @@ class IconServiceEngine(object):
         return block_result
 
     @check_exception
-    def query(self, method: str, params: dict) -> Any:
+    def query(self, method: str, params: dict) -> object:
         """Process a query message call from outside
 
         State change is not allowed in a query message call
@@ -232,22 +222,22 @@ class IconServiceEngine(object):
              context: 'IconScoreContext',
              method: str,
              params: dict) -> object:
-        """Call invoke and query requests in jsonrpc format
+        """Call invoke and query requests in json-rpc format
 
         This method is designed to be called in icon_outer_service.py.
-        We assume that all param values have been already converted to the proper types.
-        (types: Address, int, str, bool, bytes and array)
+        We assume that all param values have been already converted
+        to the proper types. (types: Address, int, str, bool, bytes and array)
 
         invoke: Changes states of icon scores or icx
         query: query states of icon scores or icx without state changing
 
         :param context:
         :param method: 'icx_sendTransaction' only
-        :param params: params in jsonrpc message
+        :param params: params in json-rpc message
         :return:
             icx_sendTransaction: (bool) True(success) or False(failure)
             icx_getBalance, icx_getTotalSupply, icx_call:
-                (dict) result or error object in jsonrpc response
+                (dict) result or error object in json-rpc response
         """
         try:
             handler = self._handlers[method]
@@ -257,9 +247,9 @@ class IconServiceEngine(object):
         except Exception as e:
             Logger.error(e, ICON_SERVICE_LOG_TAG)
 
-    def _handle_icx_get_balance(self,
-                                context: 'IconScoreContext',
-                                params: dict) -> int:
+    def _handle_icx_getBalance(self,
+                               context: 'IconScoreContext',
+                               params: dict) -> int:
         """Returns the icx balance of the given address
 
         :param context:
@@ -269,9 +259,9 @@ class IconServiceEngine(object):
         address = params['address']
         return self._icx_engine.get_balance(context, address)
 
-    def _handle_icx_get_total_supply(self,
-                                     context: 'IconScoreContext',
-                                     params: dict) -> int:
+    def _handle_icx_getTotalSupply(self,
+                                   context: 'IconScoreContext',
+                                   params: dict) -> int:
         """Returns the amount of icx total supply
 
         :param context:
@@ -298,9 +288,9 @@ class IconServiceEngine(object):
                                              data_type,
                                              data)
 
-    def _handle_icx_send_transaction(self,
-                                     context: 'IconScoreContext',
-                                     params: dict) -> 'TransactionResult':
+    def _handle_icx_sendTransaction(self,
+                                    context: 'IconScoreContext',
+                                    params: dict) -> 'TransactionResult':
         """icx_sendTransaction message handler
 
         * EOA to EOA
@@ -314,60 +304,64 @@ class IconServiceEngine(object):
         to: Address = params['to']
         value: int = params.get('value', 0)
 
-        self._icx_engine.transfer(context, _from, to, value)
+        tx_result = TransactionResult(
+            context.tx.hash,
+            context.block,
+            to)
 
-        if to is None or to.is_contract:
-            # EOA to Score
-            data_type: str = params.get('dataType')
-            data: dict = params.get('data')
-            tx_result = self.__handle_score_invoke(
-                context, to, data_type, data)
-        else:
-            # EOA to EOA
-            tx_result = TransactionResult(context.tx.hash,
-                                          context.block,
-                                          to,
-                                          TransactionResult.SUCCESS)
+        try:
+            self._icx_engine.transfer(context, _from, to, value)
+
+            if to is None or to.is_contract:
+                data_type: str = params.get('dataType')
+                data: dict = params.get('data')
+                self.__handle_score_invoke(
+                    context, to, data_type, data, tx_result)
+
+            tx_result.status = TransactionResult.SUCCESS
+        except IconServiceBaseException as e:
+            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+        except Exception as e:
+            Logger.exception(e, ICON_SERVICE_LOG_TAG)
 
         return tx_result
 
     def __handle_score_invoke(self,
                               context: 'IconScoreContext',
-                              to: Optional['Address'],
+                              to: Address,
                               data_type: str,
-                              data: dict) -> 'TransactionResult':
+                              data: dict,
+                              tx_result: 'TransactionResult') -> None:
         """Handle score invocation
 
-        :param to: a recipient address
         :param context:
+        :param to: a recipient address
         :param data_type:
-        :param data: calldata
-        :return: A result of the score transaction
+        :param data:
+        :param tx_result: transaction result
+        :return: result of score transaction execution
         """
-        tx_result = TransactionResult(context.tx.hash, context.block, to)
-
         try:
             if data_type == 'install':
                 content_type = data.get('contentType')
                 if content_type == 'application/tbears':
                     content = data.get('content')
-                    proj_name = content.split('/')[-1]
-                    to = create_address(AddressPrefix.CONTRACT, proj_name.encode())
+                    project_name = content.split('/')[-1]
+                    to = create_address(
+                        AddressPrefix.CONTRACT, project_name.encode())
                 else:
                     to = self.__generate_contract_address(
-                        context.tx.origin, context.tx.timestamp, context.tx.nonce)
-                tx_result.contract_address = to
+                        context.tx.origin,
+                        context.tx.timestamp,
+                        context.tx.nonce)
+                tx_result.score_address = to
 
             self._icon_score_engine.invoke(context, to, data_type, data)
 
             context.block_batch.put_tx_batch(context.tx_batch)
             context.tx_batch.clear()
-
-            tx_result.status = TransactionResult.SUCCESS
-        except (IconServiceBaseException, Exception) as e:
-            tx_result.status = TransactionResult.FAILURE
-            Logger.error(e, ICON_SERVICE_LOG_TAG)
-        return tx_result
+        except:
+            raise
 
     @staticmethod
     def __generate_contract_address(from_: 'Address',
@@ -395,7 +389,9 @@ class IconServiceEngine(object):
                 ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
 
-        Logger.debug(f'precommit: {self._precommit_state.block_batch}', ICON_SERVICE_LOG_TAG)
+        Logger.debug(
+            f'precommit: {self._precommit_state.block_batch}',
+            ICON_SERVICE_LOG_TAG)
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
         block_batch = self._precommit_state.block_batch

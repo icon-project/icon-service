@@ -67,33 +67,59 @@ class IcxEngine(object):
             self.__storage.close(context=None)
             self.__storage = None
 
-    def init_account(self,
-                     context: 'IconScoreContext',
-                     account_type: 'AccountType',
-                     account_name: str,
-                     address: 'Address',
-                     amount: int) -> None:
+    def init_genesis_account(self,
+                             context: 'IconScoreContext',
+                             address: Address,
+                             amount: int) -> None:
+        """Initialize the state of genesis account
+        with the info from genesis block
 
-        account = Account(account_type=account_type, address=address, icx=int(amount))
+        :param context:
+        :param address: account address
+        :param amount: the initial balance of genesis_account
+        """
+        account = Account(account_type=AccountType.GENESIS,
+                          address=address,
+                          icx=amount)
 
         obj = {
             'version': 0,
             'address': str(address)
         }
-
         text = json.dumps(obj)
-        self.__storage.put_text(context, account_name, text)
+        self.__storage.put_text(context, 'genesis', text)
 
         self.__storage.put_account(context, account.address, account)
-        if account_type == AccountType.GENESIS:
-            self.__genesis_address = address
-            self.__total_supply_amount += account.icx
-            self.__storage.put_total_supply(context, self.__total_supply_amount)
-        elif account == AccountType.TREASURY:
-            self.__fee_treasury_address = address
-        else:
-            self.__total_supply_amount += account.icx
-            self.__storage.put_total_supply(context, self.__total_supply_amount)
+        self.__genesis_address = address
+
+        # icx amount of genesis account is equal to total supply at the first time.
+        self.__total_supply_amount = account.icx
+        self.__storage.put_total_supply(context, self.__total_supply_amount)
+
+    def init_fee_treasury_account(self,
+                                  context: 'IconScoreContext',
+                                  address: Address,
+                                  amount: int = 0) -> None:
+        """Initialize fee treasury account with genesis block.
+
+        :param context:
+        :param address: account address
+        :param amount: the initial balance of fee_treasury_account
+        """
+        account = Account(account_type=AccountType.TREASURY,
+                          address=address,
+                          icx=amount)
+
+        # Save fee_treasury info in json format to state db.
+        obj = {
+            'version': 0,
+            'address': str(address)
+        }
+        text = json.dumps(obj)
+        self.__storage.put_text(context, 'fee_treasury', text)
+
+        self.__storage.put_account(context, account.address, account)
+        self.__fee_treasury_address = address
 
     def __load_genesis_account_from_storage(self,
                                             context: Optional['IconScoreContext'],
@@ -185,7 +211,7 @@ class IcxEngine(object):
                            _fee: int) -> bool:
         """Transfer the amount of icx to an account indicated by _to address
 
-        :param context:
+        :param _context:
         :param _from: (string)
         :param _to: (string)
         :param _amount: (int) the amount of coin in loop to transfer
