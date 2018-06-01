@@ -19,11 +19,9 @@ from logging.handlers import TimedRotatingFileHandler
 
 
 class LogHandlerType(IntEnum):
-    console = 1
-    file_only_one = 2
-    debug = 3
-    file = 4
-    production = 5
+    CONSOLE = 1
+    FILE = 2
+    DAILY_ROTATION = 4
 
 
 class LogConfiguration:
@@ -32,7 +30,7 @@ class LogConfiguration:
         self.custom = ""
         self.log_level = logging.DEBUG
         self.log_color = True
-        self.__handler_type = LogHandlerType.console
+        self.__handler_type = LogHandlerType.CONSOLE
         self.__log_file_path = None
         self.__log_format = None
 
@@ -50,7 +48,9 @@ class LogConfiguration:
         if logger is None:
             handlers = self.__make_handler()
             logging.basicConfig(handlers= handlers,
-                                format=self.__log_format, datefmt="%m-%d %H:%M:%S", level=self.log_level)
+                                format=self.__log_format,
+                                datefmt="%m-%d %H:%M:%S",
+                                level=self.log_level)
         else:
             logger.setLevel(self.log_level)
 
@@ -62,12 +62,18 @@ class LogConfiguration:
 
     def __make_handler(self) -> []:
         handlers = []
-        if LogHandlerType.console & self.__handler_type:
+
+        if self.__handler_type & LogHandlerType.CONSOLE:
             handlers.append(logging.StreamHandler())
-        if LogHandlerType.file_only_one & self.__handler_type == LogHandlerType.file_only_one:
-            handlers.append(logging.FileHandler(self.__log_file_path, 'w', 'utf-8'))
-        if LogHandlerType.file & self.__handler_type == LogHandlerType.file:
-            handlers.append(TimedRotatingFileHandler(self.__log_file_path, when='D'))
+
+        if self.__handler_type & LogHandlerType.FILE:
+            handlers.append(
+                logging.FileHandler(self.__log_file_path, 'w', 'utf-8'))
+
+        if self.__handler_type & LogHandlerType.DAILY_ROTATION:
+            handlers.append(
+                TimedRotatingFileHandler(self.__log_file_path, when='D'))
+
         return handlers
 
     def __update_log_color_set(self, logger):

@@ -49,21 +49,26 @@ class Logger:
         try:
             with open(path) as f:
                 conf = json.load(f)
-                logger_config = conf["logger"]
-                log_format = logger_config.get("logFormat", DEFAULT_LOG_FORMAT)
-                log_level = logger_config.get("logLevel", LogLevel.DEBUG)
-                log_color = logger_config.get("colorLog", True)
-                log_output = logger_config.get('logFilePath', DEFAULT_LOG_FILE_PATH)
-                log_output_type_str = logger_config.get('logOutputType', 'debug')
-                preset = LogConfiguration()
-                preset.log_format = log_format
-                preset.log_level = log_level
-                preset.log_color = log_color
-                preset.log_file_path = log_output
-                preset.set_handler(LogHandlerType[log_output_type_str])
-                return preset
+                logger_config = conf["log"]
+                return Logger.import_dict(logger_config)
         except Exception:
             return Logger.__make_default_preset()
+
+    @staticmethod
+    def import_dict(conf: dict):
+        log_format = conf.get("format", DEFAULT_LOG_FORMAT)
+        log_level = conf.get("level", LogLevel.DEBUG)
+        log_color = conf.get("colorLog", True)
+        log_output = conf.get('filePath', DEFAULT_LOG_FILE_PATH)
+        log_output_type_str = conf.get('outputType', 'debug')
+
+        preset = LogConfiguration()
+        preset.log_format = log_format
+        preset.log_level = log_level
+        preset.log_color = log_color
+        preset.log_file_path = log_output
+        preset.set_handler(LogHandlerType[log_output_type_str])
+        return preset
 
     @staticmethod
     def __make_default_preset():
@@ -72,7 +77,7 @@ class Logger:
         preset.log_level = LogLevel.DEBUG
         preset.log_color = True
         preset.log_file_path = DEFAULT_LOG_FILE_PATH
-        preset.set_handler(LogHandlerType.production)
+        preset.set_handler(LogHandlerType.CONSOLE|LogHandlerType.FILE)
         return preset
 
     def update_other_logger_level(self, logger_name: str):
@@ -89,24 +94,24 @@ class Logger:
         self.__log_preset.update_logger()
 
     @staticmethod
-    def info(msg: str, tag: str = DEFAULT_LOG_TAG):
-        logging.info(Logger.__make_log_msg(msg, tag))
-
-    @staticmethod
     def debug(msg: str, tag: str = DEFAULT_LOG_TAG):
         logging.debug(Logger.__make_log_msg(msg, tag))
+
+    @staticmethod
+    def info(msg: str, tag: str = DEFAULT_LOG_TAG):
+        logging.info(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
     def warning(msg: str, tag: str = DEFAULT_LOG_TAG):
         logging.warning(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def exception(msg, tag: str = DEFAULT_LOG_TAG):
-        logging.exception(Logger.__make_log_msg(msg, tag), exc_info=True)
-
-    @staticmethod
     def error(msg: str, tag: str = DEFAULT_LOG_TAG):
         logging.error(Logger.__make_log_msg(msg, tag))
+
+    @staticmethod
+    def exception(msg, tag: str = DEFAULT_LOG_TAG):
+        logging.exception(Logger.__make_log_msg(msg, tag), exc_info=True)
 
     @staticmethod
     def __make_log_msg(msg: str, tag: str):
