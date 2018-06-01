@@ -12,8 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 ICON_SERVICE_LOG_TAG = 'IconService'
 ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
 ICON_DEPLOY_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Deploy'
 ICON_LOADER_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Loader'
 ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
+ICON_INNER_LOG_TAG = f'IconInnerService'
+
+HOME_PATH = str(Path.home())
+
+ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}.{rpc_port}"
+DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
+                                            'icon_score_state_db_root_path': '.db',
+                                            'channel': 'tbears_channel',
+                                            'amqp_key': 'amqp_key',
+                                            'amqp_target': '127.0.0.1',
+                                            'rpc_port': '9000',
+                                            'only_service': False}
