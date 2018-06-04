@@ -27,6 +27,8 @@ from iconservice.utils.type_converter import TypeConverter
 from iconservice.logger import Logger
 from iconservice.icon_config import *
 
+from collections import Iterable
+
 from typing import Optional
 
 MQ_TEST = False
@@ -102,6 +104,26 @@ def get_block_height():
     return __block_height
 
 
+def integers_to_hex(res: Iterable) -> Iterable:
+    if isinstance(res, dict):
+        for k, v in res.items():
+            if isinstance(v, dict):
+                res[k] = integers_to_hex(v)
+            elif isinstance(v, list):
+                res[k] = integers_to_hex(v)
+            elif isinstance(v, int):
+                res[k] = hex(v)
+    elif isinstance(res, list):
+        for k, v in enumerate(res):
+            if isinstance(v, dict):
+                res[k] = integers_to_hex(v)
+            elif isinstance(v, list):
+                res[k] = integers_to_hex(v)
+            elif isinstance(v, int):
+                res[k] = hex(v)
+    return res
+
+
 class MockDispatcher:
     flask_server = None
 
@@ -115,7 +137,13 @@ class MockDispatcher:
             return sanic_response.json(PARSE_ERROR_RESPONSE, 400)
         else:
             dispatch_response = await methods.dispatch(req)
-            return sanic_response.json(dispatch_response, status=dispatch_response.http_status)
+
+            res = str(dispatch_response)
+            response_json = json.loads(res)
+
+            if isinstance(response_json['result'], (dict, list)):
+                response_json['result'] = integers_to_hex(response_json['result'])
+            return sanic_response.json(response_json, status=dispatch_response.http_status)
 
     @staticmethod
     @methods.add
@@ -135,19 +163,21 @@ class MockDispatcher:
 
         make_request = dict()
 
+        tx_hash = hashlib.sha3_256(json.dumps(request_params).encode()).digest()
+        request_params['txHash'] = f'0x{tx_hash.hex()}'
+        tx = {
+            'method': 'icx_sendTransaction',
+            'params': request_params
+        }
+        make_request['transactions'] = [tx]
+
         block_height: int = get_block_height()
         data: str = f'blockHeight{block_height}'
         block_hash: str = hashlib.sha3_256(data.encode()).digest()
         block_timestamp_us = int(time.time() * 10 ** 6)
         make_request['block'] = {'blockHeight': block_height,
                                  'blockHash': block_hash,
-                                 'blockTimestamp': block_timestamp_us}
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': request_params
-        }
-
-        make_request['transactions'] = [tx]
+                                 'timestamp': block_timestamp_us}
 
         if MQ_TEST:
             response = await get_icon_score_stub().task().icx_send_transaction(make_request)
@@ -212,10 +242,13 @@ class MockDispatcher:
         if MockDispatcher.flask_server is not None:
             MockDispatcher.flask_server.app.stop()
 
+        return '0x0'
+
 
 class FlaskServer:
     def __init__(self):
         self.__app = Sanic(__name__)
+        self.__app.config['ENV'] = 'development'  # Block flask warning message
         MockDispatcher.flask_server = self
 
     @property
@@ -273,8 +306,8 @@ def load_config(path: str) -> dict:
     default_conf = {
         "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "port": 9000,
-        "score_root": "./.score",
-        "db_root": "./.db",
+        "scoreRoot": "./.score",
+        "dbRoot": "./.db",
         "accounts": [
             {
                 "name": "genesis",
@@ -287,12 +320,10 @@ def load_config(path: str) -> dict:
                 "balance": "0x0"
             }
         ],
-        "logger": {
-            "logFormat": "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s",
-            "logLevel": "DEBUG",
-            "colorLog": True,
-            "logFilePath": "./logger.log",
-            "logOutputType": "production"
+        "log": {
+            "level": "debug",
+            "filePath": "./tbears.log",
+            "outputType": "console|file"
         }
     }
 
@@ -330,7 +361,7 @@ async def init_icon_score_stub(conf: dict):
 
 async def init_icon_inner_task(conf: dict):
     global __icon_inner_task
-    __icon_inner_task = IconScoreInnerTask(conf['score_root'], conf['db_root'])
+    __icon_inner_task = IconScoreInnerTask(conf['scoreRoot'], conf['dbRoot'])
     await __icon_inner_task.open()
 
     accounts = get_type_converter().convert(conf['accounts'], recursive=False)
