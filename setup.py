@@ -5,7 +5,8 @@ from setuptools import setup, find_packages
 requires = [
     'plyvel',
     'jsonpickle',
-    'coloredlogs'
+    'coloredlogs',
+    'aio_pika'
 ]
 
 setup_options = {
