@@ -4,8 +4,10 @@ tbears 변경 사항 정리
 
 ## 0.9.0 - 2018-06-01
 
-* SCORE 개발용 로깅 기능 추가
 * IconScoreBase.genesis_init()를 on_install(), on_update()로 변경
+* SCORE 개발 시 복수 개의 파일로 개발 가능
+* SCORE 개발용 로깅 기능 추가
+* ICON JSON-RPC API v3 적용 (tbears_jsonrpc_api_v3.md 참고)
 * 외부 IP로 tbears json rpc server에 접속 가능
 * "WARNING: Do not use the development server in a production" 경고 메시지 제거
 * tbears 개발 도구 사용 튜토리얼 문서 추가
