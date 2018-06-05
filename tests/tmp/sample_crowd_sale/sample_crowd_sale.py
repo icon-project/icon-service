@@ -1,6 +1,11 @@
 from iconservice import *
 
 
+class SampleTokenInterface(AcceptableReceiver):
+    @interface
+    def transfer(self, addr_to: Address, value: int) -> bool: pass
+
+
 class SampleCrowdSale(IconScoreBase):
     _ADDR_BENEFICIARY = 'addr_beneficiary'
     _FUNDING_GOAL = 'funding_goal'
@@ -27,6 +32,8 @@ class SampleCrowdSale(IconScoreBase):
         self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
         self._crowd_sale_closed = VarDB(self._CROWD_SALE_CLOSED, db, value_type=bool)
 
+        self.__sample_token_score = self.create_acceptable_receiver(self._addr_token_score.get(), SampleTokenInterface)
+
     def on_install(self, params) -> None:
         super().on_install(params)
 
@@ -50,6 +57,8 @@ class SampleCrowdSale(IconScoreBase):
         price = int(icx_cost_of_each_token * one_icx)
         self._price.set(price)
 
+        self.__sample_token_score = self.create_acceptable_receiver(self._addr_token_score.get(), SampleTokenInterface)
+
     def on_update(self, params) -> None:
         super().on_update(params)
 
@@ -66,7 +75,8 @@ class SampleCrowdSale(IconScoreBase):
         self._balances[self.msg.sender] = self._balances[self.msg.sender] + amount
         self._amount_raise.set(self._amount_raise.get() + amount)
         value = int(amount / self._price.get())
-        self.call(self._addr_token_score.get(), 'transfer', {'addr_to': self.msg.sender, 'value': value})
+
+        self.__sample_token_score.transfer(self.msg.sender, value)
 
         if self.msg.sender not in self._joiner_list:
             self._joiner_list.put(self.msg.sender)

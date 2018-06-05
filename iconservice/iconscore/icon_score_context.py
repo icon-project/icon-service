@@ -165,12 +165,13 @@ class IconScoreContext(object):
         return False
 
     def call(self, addr_from: Address,
-             addr_to: Address, func_name: str, kw_params: dict) -> object:
+             addr_to: Address, func_name: str, arg_params: list, kw_params: dict) -> object:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
         :param addr_to:
         :param func_name:
+        :param arg_params:
         :param kw_params:
         :return:
         """
@@ -180,7 +181,7 @@ class IconScoreContext(object):
         icon_score = self.icon_score_mapper.get_icon_score(addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
-                          addr_from=addr_from, kw_params=kw_params)
+                          addr_from=addr_from, arg_params=arg_params, kw_params=kw_params)
 
         self.msg = self.__msg_stack.pop()
 
@@ -268,28 +269,37 @@ class IconScoreContextFactory(object):
                 self._queue.append(context)
 
 
+ATTR_CALL_METHOD = '_IconScoreBase__call_method'
+ATTR_CALL_FALLBACK = '_IconScoreBase__call_fallback'
+
+
 def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
-                addr_from: Optional[Address] = None) -> object:
+                addr_from: Optional['Address'] = None, arg_params: list = None) -> object:
+    __check_call_score_invalid(icon_score, addr_from)
+
+    try:
+        if arg_params is None:
+            arg_params = []
+        call_method_func = getattr(icon_score, ATTR_CALL_METHOD)
+        return call_method_func(func_name, arg_params, kw_params)
+    except (IconScoreException, Exception):
+        raise
+
+
+def __check_call_score_invalid(icon_score: 'IconScoreBase', addr_from: Optional['Address']) -> None:
     if icon_score is None:
         raise IconScoreException('score is None')
 
     if __check_myself(addr_from, icon_score.address):
         raise IconScoreException("call function myself")
 
-    try:
-        return icon_score.call_method(func_name, kw_params)
-    except (PayableException, ExternalException):
-        call_fallback(icon_score)
-    except Exception:
-        raise
-
 
 def call_fallback(icon_score: 'IconScoreBase') -> None:
-    call_fallback_func = getattr(icon_score, '_IconScoreBase__call_fallback')
+    call_fallback_func = getattr(icon_score, ATTR_CALL_FALLBACK)
     call_fallback_func()
 
 
-def __check_myself(addr_from: Optional[Address], addr_to: Address) -> bool:
+def __check_myself(addr_from: Optional['Address'], addr_to: 'Address') -> bool:
     return addr_from == addr_to
 
 

@@ -128,8 +128,14 @@ class ExternalException(APIIconScoreBaseException):
 class PayableException(APIIconScoreBaseException):
     pass
 
+
 class RevertException(APIIconScoreBaseException):
     pass
+
+
+class InterfaceException(IconScoreException):
+    pass
+
 
 class ScoreInstallException(IconScoreException):
     pass

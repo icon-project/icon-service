@@ -1,6 +1,6 @@
 import unittest
 
-from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
+from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable, interface
 from iconservice.iconscore.icon_score_context import Message, ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
 from iconservice.base.address import Address, AddressPrefix, create_address
@@ -34,7 +34,6 @@ class CallClass1(IconScoreBase):
     @external(readonly=True)
     def func1(self):
         pass
-
 
     @external
     @decorator
@@ -100,40 +99,46 @@ class TestCallMethod(unittest.TestCase):
 
         self._context_container = TestContextContainer()
         self._context_container._put_context(self._context)
-        self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
 
     def tearDown(self):
         self.ins = None
 
     def test_success_call_method(self):
+        self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
         self._context.type = IconScoreContextType.INVOKE
-        # self.ins.call_method('func1', {})
-        self.ins.call_method('func2', {})
+        func = getattr(self.ins, '_IconScoreBase__call_method')
+        # func('func1', {})
+        func('func2', {})
         self._context.type = IconScoreContextType.QUERY
-        # self.ins.call_method('func3', {})
+        # func('func3', {})
         self._context.type = IconScoreContextType.INVOKE
-        self.ins.call_method('func4', {})
-        self.ins.call_method('func5', {})
-        # self.ins.call_method('func6', {})
+        func('func4', {})
+        func('func5', {})
+        # func('func6', {})
 
     def test_fail_call_method(self):
+        self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 1)
-        self.assertRaises(ExternalException, self.ins.call_method, 'func1', {})
-        self.assertRaises(PayableException, self.ins.call_method, 'func2', {})
+        func = getattr(self.ins, '_IconScoreBase__call_method')
+        self.assertRaises(ExternalException, func, 'func1', {})
+        self.assertRaises(PayableException, func, 'func2', {})
         # self._context.type = IconScoreContextType.GENESIS
-        # self.assertRaises(ExternalException, self.ins.call_method, 'func3', {})
+        # self.assertRaises(ExternalException, func, 'func3', {})
         self._context.type = IconScoreContextType.QUERY
-        self.assertRaises(IconScoreException, self.ins.call_method, 'func4', {})
-        self.assertRaises(IconScoreException, self.ins.call_method, 'func5', {})
+        self.assertRaises(IconScoreException, func, 'func4', {})
+        self.assertRaises(IconScoreException, func, 'func5', {})
 
-        self.assertRaises(ExternalException, self.ins.call_method, 'func6', {})
+        self.assertRaises(ExternalException, func, 'func6', {})
 
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
-        # self.assertRaises(PayableException, self.ins.call_method, 'func3', {})
-        # self.assertRaises(PayableException, self.ins.call_method, 'func4', {})
-        # self.assertRaises(ExternalException, self.ins.call_method, 'func5', {})
-        self.assertRaises(ExternalException, self.ins.call_method, 'func6', {})
+        # self.assertRaises(PayableException, func, 'func3', {})
+        # self.assertRaises(PayableException, func, 'func4', {})
+        # self.assertRaises(ExternalException, func, 'func5', {})
+        self.assertRaises(ExternalException, func, 'func6', {})
 
     def test_func2_with_decorator(self):
-        self.ins.call_method('func2', {})
+        self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
+        func = getattr(self.ins, '_IconScoreBase__call_method')
+        func('func2', {})
+
