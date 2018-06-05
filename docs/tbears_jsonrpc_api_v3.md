@@ -307,7 +307,7 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
 | value | T_INT | to 주소로 이체할 코인양 |
 | step |T_INT | transaction을 수행하는데 사용되는 최대 step 양 |
 | timestamp | T_INT | transaction을 전송할 때의 timestamp 단위: microsecond |
-| nonce | T_INT | transaction hash 출동 방지를 위한 임의의 정수 (optional) |
+| nonce | T_INT | transaction hash 충돌 방지를 위한 임의의 정수 (optional) |
 | signature | T_SIG | transaction의 전자 서명 데이터 |
 | dataType | T_DATA_TYPE | data 항목의 종류를 알려주는 값 (optional) |
 | data | N/A | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 (optional) |

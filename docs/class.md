@@ -1,9 +1,21 @@
 # IconService 설계 문서
 
-작성자: 조치원
-작성일: 2018.03.20(화)
+## 문서 이력
+
+| 일시 | 버전 | 작성자 | 비고 |
+|:------|:-----|:---:|:--------|
+| 2018.06.04 | 0.9.0 | 조치원 | 0.9.0 형식에 맞추어 문서 갱신 |
+| 2018.03.20 | 0.0.0 | 조치원 | 최초 작성 |
 
 ## Overview
+
+* loopchain과 SCORE 구동 엔진 간의 의존성 제거
+* 코인 잔고 관리
+* Multi SCORE support
+* TX 처리 비용을 STEP 단위로 통일
+* SCORE 개발 편의성 강화
+* 전월세 수수료 모델 적용
+* SCORE 설치 절차 정립 (설치 요청 + 승인)
 
 ## Architecture
 
@@ -12,110 +24,125 @@
 * loopchain을 구성하는 각 Component들과의 통신 부분 구현
 * loopchain engine과의 결합성을 줄일 것
 
-#### IconService
+#### IconServiceEngine class
 
-* Icon 관련 서비스의 메인이 되는 클래스
-* 별도의 프로세스로 동작하며 loopchain과는 IPC 통신
-* 다른 언어로 개발될 수 있다.
+* ICON 관련 서비스의 메인이 되는 클래스
+* 코인 관리와 SCORE 관리는 모두 이 클래스 내에서 수행된다.
+* 통신 방법을 포함하여 loopchain과의 어떠한 의존성도 존재해서는 안된다.
 
-#### Connector
+#### IconScoreInnerService class
 
-* loopchain과의 통신 처리
-  * grpc
-  * MQ + jsonrpc
-* 통신 방법이 변경되더라도 Connector만 변경하면 되도록 구현 필요
+* loopchain과의 통신 처리 (MQ 방식)
+* 통신 방법이 변경되더라도 이 부분만 변경되어야 한다.
 
-### Icx Coin Management
+### Base package
 
-* icx 코인 이체
-* icx 잔고 조회
-* 다른 IconScore부터의 메시지콜 요청 지원
+* 패키지 내에서 공통적으로 사용되는 기반 클래스들 제공
+* address, block, exception, message, transaction 등등
 
-#### IcxEngine
+### Database package
 
-* icx 코인 이체 및 조회 관리
-* icx_score에서 사용하던 객체 재활용
+* LevelDB Wrapper
+* DB에 기록 전 Cache 관리
 
-### Multiple IconScore Management
+### Icx package
 
-* IconService에서 실행되는 IconScore들의 LifeCycle 관리
+* 코인 이체
+* 코인 잔고 조회
+* 계좌 주소 객체 정의
+* 계좌 데이터를 DB에 기록
 
-#### IconScore
+#### IcxEngine class
 
-* Icon Smart Contract
-* 각 Icon Score마다 고유의 주소를 가짐
+* 코인 이체 및 조회 관리
+* SCORE 에서는 이 객체를 통해 코인 이체 및 조회 가능
 
-#### IconScoreFactory
+### IconScore package
 
-* 새로운 IconScore를 동적으로 생성할 수 있는 Icon Score
-* loopchain이 재기동될 때 자신이 생성한 Icon Score들도 함께 생성해야 한다.
-* One Code Multi Instance Score 지원을 위해 필요
+* SCORE LifeCyle 관리 (설치, 로딩, 실행)
+* SCORE 개발에 필요한 기반 클래스 및 데이터 클래스 제공
+* SCORE 실행 시 필요한 정보를 담고 있는 Context 클래스
+* SCORE 실행 단계별 STEP 소비량 계산
 
-#### IconScoreContext
+#### IconScoreBase class
+
+* SCORE 를 만들기 위해서 반드시 상속받아야 하는 기반 클래스
+* 각 SCORE 마다 고유의 주소를 가짐
+* SCORE 구현을 위해 필요한 정보 객체와 API 제공
+
+#### IconScoreFactory class (미구현)
+
+* 새로운 SCORE 를 동적으로 생성할 수 있는 방법 제공
+* IconServiceEngine 이 재기동될 때 자신이 생성한 SCORE 들도 함께 생성해야 한다.
+* One Code Multi Instance SCORE 지원을 위해 필요
+
+#### IconScoreContext class
 
 IconScore 내에서 사용 가능한 정보나 함수 지원
 
 * block: block information
-  * block.coinbase
-  * block.number
-  * block.timestamp
+    - block.hash
+    - block.number
+    - block.timestamp
 * msg
-  * msg.sender
-  * msg.value
-  * msg.gas_left()
+    - msg.sender
+    - msg.value
+    - msg.step_left()
 * tx
-  * tx.gasprice
-  * tx.origin
+    - tx.origin
+    - tx.timestamp
+    - tx.nonce
 
-#### IconScoreInstaller
+#### IconScoreDeployer
 
-* IconScore 코드를 지정된 파일 경로에 설치
-* mime-type에 따라 다양한 설치자 존재 가능 (zip, url 등등)
-* IconScore 구성 파일들에 대한 무결정 확인 (sha3_256 사용)
+* SCORE 설치 패키지를 지정된 파일 경로에 설치
+    * $SCORE_ROOT/<address_without_prefix>/<blockHeight_txIndex>
+* contentType에 따라 다양한 설치자 존재 가능 (zip, url 등)
 
 #### IconScoreLoader
 
-* 파일 시스템에 저장되어 있는 IconScore를 로딩
-* 로딩된 IconScore 객체를 IconScoreEngine에 등록
-* IconScoreEngine과의 의존성이 없어야 한다.
+* 파일 시스템에 저장되어 있는 SCORE를 메모리에 로딩
+* IconScoreInfoMapper 클래스 내에서 사용된다.
 
 #### IconScoreEngine
 
-* IconScore들의 생명주기 관리 (등록, 업데이트, 제거)
-* 주소로 구분되는 IconScore의 함수 호출
-* IconScoreLoader와의 의존성이 없어야 한다.
+* IconScore 패키지 내 메인 클래스
+* SCORE 들의 생명주기 관리 (설치, 업데이트, 실행 등)
 
-### IconScore State Management
+#### IconScoreResult
+
+* TransactionResult 정의 클래스
+
+#### IconScoreStepCounter
+
+* 각 항목별 STEP 소비량 계산
+
+### database
 
 * IconScore의 상태를 저장하기 위해 Key:Value 기반의 Database가 사용된다.
-* 각 IconScore는 하나의 상태 DB를 가진다.
-* Block이 합의되어 BlockChain에 저장되기 전에는 해당 Block의 transaction으로 변경된 상태는 메모리에 저장된다. (Precommit)
+* 확정되기 전 블록에 저장되어 있는 tx에 의해 변경된 상태는 메모리에 저장된다. (Batch)
+* 해당 블록이 확정되면 영구 저장소(LevelDB)에 기록한다.
 
-#### MemoryDatabase
+#### PlyvelDatabase
 
-* 상태가 변경되었지만 합의가 완료되지 않아 영구 저장소(파일)에 기록될 수 없는 데이터를 저장
-* IconScore 개발자는 자신이 사용하는 Database 객체가 MemoryDatabase인지 FileDatabase인지 알 수 없도록 추상화한다.
+* plyvel 패키지를 이용하여 LevelDB 데이터를 조회하거나 기록할 때 사용
 
-#### FileDatabase
+#### ContextDatabase
 
-* plyvel 패키지를 이용하여 levedb 데이터를 조회하거나 기록할 때 사용
+* IconScoreContext를 인자로 입력 받는다.
+* 현재 Context의 정보에 따라 상태 값을 Batch에 적을지 실제 LevelDB에 기록할지를 결정한다.
 
-#### ReadOnlyDatabase
+#### IconScoreDatabase
 
-* 정보 조회 목적으로만 사용하는 Database
-* 정보 변경 메소드 수행 시 예외 발생
+* SCORE에게 전달되는 DB 객체
+* 내부에 ContextDatabase 객체를 포함한다.
 
-### Gas Calculation
-
-* IconScore를 실행하면서 발생하는 수수료를 계산한다.
-* Client vs 서비스 제공자 간 수수료 부담 비율을 고려하여 IconScore 실행 수수료를 지불 처리한다.
-
-### GasPriceTable
-
-### Gas
-
-### 기타
+### logger
 
 #### Logger
 
-* 오류 원인 분석을 지원하기 위한 로그 정보 기록
+* SCORE 및 IconServiceEngine 디버깅 로그 저장 기능 지원
+
+### utils
+
+* 일반 유틸리티 함수 및 클래스 정의
