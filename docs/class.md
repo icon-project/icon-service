@@ -35,17 +35,17 @@
 * loopchain과의 통신 처리 (MQ 방식)
 * 통신 방법이 변경되더라도 이 부분만 변경되어야 한다.
 
-### base package
+### Base package
 
 * 패키지 내에서 공통적으로 사용되는 기반 클래스들 제공
 * address, block, exception, message, transaction 등등
 
-### database package
+### Database package
 
 * LevelDB Wrapper
 * DB에 기록 전 Cache 관리
 
-### icx package
+### Icx package
 
 * 코인 이체
 * 코인 잔고 조회
@@ -57,7 +57,7 @@
 * 코인 이체 및 조회 관리
 * SCORE 에서는 이 객체를 통해 코인 이체 및 조회 가능
 
-### iconscore package
+### IconScore package
 
 * SCORE LifeCyle 관리 (설치, 로딩, 실행)
 * SCORE 개발에 필요한 기반 클래스 및 데이터 클래스 제공
@@ -96,8 +96,8 @@ IconScore 내에서 사용 가능한 정보나 함수 지원
 #### IconScoreDeployer
 
 * SCORE 설치 패키지를 지정된 파일 경로에 설치
-    * $SCORE_ROOT/address_without_prefix/blockHeight_txIndex
-* contentType에 따라 다양한 설치자 존재 가능 (zip, url 등등)
+    * $SCORE_ROOT/<address_without_prefix>/<blockHeight_txIndex>
+* contentType에 따라 다양한 설치자 존재 가능 (zip, url 등)
 
 #### IconScoreLoader
 
@@ -106,7 +106,7 @@ IconScore 내에서 사용 가능한 정보나 함수 지원
 
 #### IconScoreEngine
 
-* iconscore 패키지 내 메인 클래스
+* IconScore 패키지 내 메인 클래스
 * SCORE 들의 생명주기 관리 (설치, 업데이트, 실행 등)
 
 #### IconScoreResult
@@ -129,7 +129,7 @@ IconScore 내에서 사용 가능한 정보나 함수 지원
 
 #### ContextDatabase
 
-* IconScoreContext를 파라메터로 입력 받는다.
+* IconScoreContext를 인자로 입력 받는다.
 * 현재 Context의 정보에 따라 상태 값을 Batch에 적을지 실제 LevelDB에 기록할지를 결정한다.
 
 #### IconScoreDatabase
