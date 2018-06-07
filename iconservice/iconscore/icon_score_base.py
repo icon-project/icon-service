@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import warnings
 from inspect import isfunction, getmembers, signature
 from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
@@ -37,13 +37,19 @@ CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
 
 CONST_BIT_FLAG = '__bit_flag'
-CONST_BIT_FLAG_READONLY = 1
-CONST_BIT_FLAG_EXTERNAL = 2
-CONST_BIT_FLAG_PAYABLE = 4
-CONST_BIT_FLAG_EVENTLOG = 8
-CONST_BIT_FLAG_INTERFACE = 16
 
-CONST_BIT_FLAG_EXTERNAL_READONLY = CONST_BIT_FLAG_READONLY | CONST_BIT_FLAG_EXTERNAL
+
+@unique
+class ConstBitFlag(IntEnum):
+    NonFlag = 0
+    ReadOnly = 1
+    External = 2
+    Payable = 4
+    EventLog = 8
+    Interface = 16
+
+
+CONST_BIT_FLAG_EXTERNAL_READONLY = ConstBitFlag.ReadOnly | ConstBitFlag.External
 
 STR_IS_NOT_CALLABLE = 'is not callable'
 FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
@@ -56,10 +62,10 @@ def interface(func):
     if not isfunction(func):
         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_INTERFACE:
+    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Interface:
         raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('interface', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_INTERFACE
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Interface
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
@@ -79,10 +85,10 @@ def eventlog(func):
     if not isfunction(func):
         raise EventLogException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EVENTLOG:
+    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
         raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EVENTLOG
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
@@ -90,7 +96,7 @@ def eventlog(func):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
-        call_method = getattr(calling_obj, '_IconScoreBase__write_tx_log')
+        call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
         ret = call_method(func_name, args, kwargs)
         return ret
 
@@ -108,10 +114,10 @@ def external(func=None, *, readonly=False):
     if func_name == 'fallback':
         raise IconScoreException(f"can't locate external to this func func: {func_name}, cls: {cls_name}")
 
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL:
+    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External:
         raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('external', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EXTERNAL | int(readonly)
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.External | int(readonly)
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
@@ -130,10 +136,10 @@ def payable(func):
     if not isfunction(func):
         raise IconScoreException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
+    if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable:
         raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('payable', func_name, cls_name))
 
-    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_PAYABLE
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.Payable
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
@@ -207,12 +213,12 @@ class IconScoreBaseMeta(ABCMeta):
                         if not key.startswith('__')]
 
         external_funcs = {func.__name__: signature(func) for func in custom_funcs
-                          if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL}
+                          if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External}
         payable_funcs = [func for func in custom_funcs
-                         if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE]
+                         if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.Payable]
 
         readonly_payables = [func for func in payable_funcs
-                             if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY]
+                             if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
         if bool(readonly_payables):
             raise IconScoreException(f"can't payable readonly func: {readonly_payables}")
 
@@ -292,7 +298,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
 
     def __check_readonly(self, func_name: str):
         func = getattr(self, func_name)
-        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_READONLY)
+        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
         if readonly != self._context.readonly:
             raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
 
@@ -307,14 +313,15 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         self._context.step_counter.increase_msgcall_step(1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
-    def __write_tx_log(self, func_name: str, arg_list: list, kw_dict: dict):
+    def __write_eventlog(self, func_name: str, arg_list: list, kw_dict: dict):
         """
 
         :param func_name: function name provided by other IconScore
         :param arg_list:
         :param kw_dict:
         """
-        raise NotImplementedError
+        # raise NotImplementedError
+        pass
 
     @property
     def msg(self) -> 'Message':
@@ -343,10 +350,24 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def now(self):
         return self.block.timestamp
 
-    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[Type[T]]) -> T:
+    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[[Address, callable], Type[T]]) -> T:
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self.__call_interface_score)
+
+    def call(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
+
+        warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
+
+        """Call external function provided by other IconScore with arguments without fallback
+
+        :param addr_to: the address of other IconScore
+        :param func_name: function name provided by other IconScore
+        :param arg_list:
+        :param kw_dict:
+        """
+        self._context.step_counter.increase_msgcall_step(1)
+        return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
         ret = self._context.transfer(self.__address, addr_to, amount)
