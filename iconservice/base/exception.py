@@ -137,6 +137,10 @@ class InterfaceException(IconScoreException):
     pass
 
 
+class TxLogException(IconScoreException):
+    pass
+
+
 class ScoreInstallException(IconScoreException):
     pass
 

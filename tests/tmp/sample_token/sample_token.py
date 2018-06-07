@@ -1,6 +1,11 @@
 from iconservice import *
 
 
+class SampleTokenTxLog(TXLogScore):
+    @tx_log
+    def transfer(self, addr_from: Address, addr_to: Address, value: int): pass
+
+
 class SampleToken(IconScoreBase):
 
     _BALANCES = 'balances'
@@ -10,6 +15,8 @@ class SampleToken(IconScoreBase):
         super().__init__(db, addr_owner)
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)
+
+        self.__tx_log = self.create_tx_log_score(SampleTokenTxLog)
 
     def on_install(self, params: dict) -> None:
         super().on_install(params)
@@ -39,6 +46,8 @@ class SampleToken(IconScoreBase):
 
         self._balances[_addr_from] = self._balances[_addr_from] - _value
         self._balances[_addr_to] = self._balances[_addr_to] + _value
+
+        self.__tx_log.transfer(_addr_from, _addr_to, _value)
         return True
 
     @external

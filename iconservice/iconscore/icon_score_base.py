@@ -54,32 +54,33 @@ def interface(func):
         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
     @wraps(func)
-    def __wrapper(call_object: object, *args, **kwargs):
-        if not isinstance(call_object, InterfaceScore):
+    def __wrapper(calling_obj: object, *args, **kwargs):
+        if not isinstance(calling_obj, InterfaceScore):
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
-        call_method = getattr(call_object, '_InterfaceScore__call_method')
+        call_method = getattr(calling_obj, '_InterfaceScore__call_method')
         ret = call_method(func_name, args, kwargs)
         return ret
 
     return __wrapper
 
 
-# def event(func):
-#     cls_name, func_name = str(func.__qualname__).split('.')
-#     if not isfunction(func):
-#         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
-#
-#     @wraps(func)
-#     def __wrapper(call_object: object, *args, **kwargs):
-#         if not isinstance(call_object, AcceptableReceiver):
-#             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(AcceptableReceiver.__name__))
-#
-#         call_method = getattr(call_object, '_AcceptableReceiver__call_method')
-#         ret = call_method(func_name, args, kwargs)
-#         return ret
-#
-#     return __wrapper
+def tx_log(func):
+    cls_name, func_name = str(func.__qualname__).split('.')
+    if not isfunction(func):
+        raise TxLogException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+
+    @wraps(func)
+    def __wrapper(calling_obj: object, *args, **kwargs):
+        if not (isinstance(calling_obj, TXLogScore)):
+            raise TxLogException(
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(TXLogScore.__name__), func_name, cls_name)
+
+        call_method = getattr(calling_obj, '_TXLogScore__write_tx_log')
+        ret = call_method(func_name, args, kwargs)
+        return ret
+
+    return __wrapper
 
 
 def external(func=None, *, readonly=False):
@@ -146,6 +147,20 @@ class InterfaceScore(ABC):
             self.__call_func(self.__addr_to, func_name, arg_list, kw_dict)
         else:
             raise InterfaceException(STR_IS_NOT_CALLABLE)
+
+
+class TXLogScore(ABC):
+    def __init__(self, call_func: callable):
+        self.__call_func = call_func
+
+    def __write_tx_log(self, func_name: str, arg_list: list, kw_dict: dict):
+        if self.__call_func is None:
+            raise TxLogException('self.__call_func is None')
+
+        if callable(self.__call_func):
+            self.__call_func(func_name, arg_list, kw_dict)
+        else:
+            raise TxLogException(STR_IS_NOT_CALLABLE)
 
 
 class IconScoreObject(ABC):
@@ -283,6 +298,15 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         self._context.step_counter.increase_msgcall_step(1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
+    def __write_tx_log(self, func_name: str, arg_list: list, kw_dict: dict):
+        """
+
+        :param func_name: function name provided by other IconScore
+        :param arg_list:
+        :param kw_dict:
+        """
+        raise NotImplementedError
+
     @property
     def msg(self) -> 'Message':
         return self._context.msg
@@ -315,6 +339,14 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         if callable(interface_cls):
             return interface_cls(addr_to, self.__call_interface_score)
+        else:
+            raise InterfaceException(STR_IS_NOT_CALLABLE)
+
+    def create_tx_log_score(self, tx_log_cls: T) -> T:
+        if tx_log_cls is TXLogScore:
+            raise TxLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(TXLogScore.__name__))
+        if callable(tx_log_cls):
+            return tx_log_cls(self.__write_tx_log)
         else:
             raise InterfaceException(STR_IS_NOT_CALLABLE)
 
