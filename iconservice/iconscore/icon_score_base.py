@@ -27,7 +27,7 @@ from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, Type, Callable
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
 
@@ -334,21 +334,15 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def now(self):
         return self.block.timestamp
 
-    def create_interface_score(self, addr_to: 'Address', interface_cls: T) -> T:
+    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[Type[T]]) -> T:
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
-        if callable(interface_cls):
-            return interface_cls(addr_to, self.__call_interface_score)
-        else:
-            raise InterfaceException(STR_IS_NOT_CALLABLE)
+        return interface_cls(addr_to, self.__call_interface_score)
 
-    def create_tx_log_score(self, tx_log_cls: T) -> T:
+    def create_tx_log_score(self, tx_log_cls: Callable[Type[T]]) -> T:
         if tx_log_cls is TXLogScore:
             raise TxLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(TXLogScore.__name__))
-        if callable(tx_log_cls):
-            return tx_log_cls(self.__write_tx_log)
-        else:
-            raise InterfaceException(STR_IS_NOT_CALLABLE)
+        return tx_log_cls(self.__write_tx_log)
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
         ret = self._context.transfer(self.__address, addr_to, amount)
