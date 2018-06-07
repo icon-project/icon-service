@@ -90,6 +90,8 @@ class ContainerUtil(object):
         elif value_type == str:
             obj_value = value.decode()
         elif value_type == Address:
+            if value[-1] != 0 and value[-1] != 1 and isinstance(value[-1], AddressPrefix) is False:
+                raise ValueError
             prefix = AddressPrefix.EOA if value[-1] == 0 else AddressPrefix.CONTRACT
             obj_value = Address(prefix, value[:-1])
         if value_type == bool:

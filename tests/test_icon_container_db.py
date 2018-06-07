@@ -18,7 +18,7 @@ class TestIconContainerDB(unittest.TestCase):
         pass
 
     def test_success_list(self):
-        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], create_address(0, b'123')]
+        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], create_address(AddressPrefix.EOA, b'123')]
         ContainerUtil.put_to_db(self.db, 'test_list', test_list)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 0, value_type=int), 1)
