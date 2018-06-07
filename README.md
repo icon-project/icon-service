@@ -30,6 +30,14 @@ $ source bin/source
 iconservice-x.x.x-py3-none-any.whl
 ```
 
+## CI/CD
+* Jenkins Url: [https://jenkins.theloop.co.kr](https://jenkins.theloop.co.kr) (goldworm/@ucoin)
+* Path: ICON > ICON_iconservice
+* Task
+  - On branch `develop`: test
+  - On branch `master`: test, package, deploy to S3
+
+
 ## Directories
 
 * docs: 문서
