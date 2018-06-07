@@ -3,8 +3,8 @@ ICON SCORE 개발 도구(tbears) 용 JSON-RPC API v3
 
 IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
-|일시|작성자|비고|
-|:------|:---:|:--------|
+| 일시 | 작성자 | 비고 |
+|:-----|:-----:|:----|
 | 2018.5.18(금) | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
 | 2018.5.17(목) | 박은수 | API 작성 규칙 추가, 문서 고도화 |
 | 2018.5.15(화) | 조치원 | 최초 작성 (라인 플러스에 제공) |
@@ -34,9 +34,9 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
     "jsonrpc": "2.0",
     "id": $INT,
     "result": "$STRING"
-    or
+    // or
     "result": {
-      "$KEY1": "$VALUE1"
+      "$KEY1": "$VALUE1",
       "$KEY2": "$VALUE2"
     }
 }
@@ -59,13 +59,13 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 VALUE 형식 |설명 |예
 ----------|----|---
-T_ADDR_EOA|"hx" + 40 digit HEX 문자열|hxbe258ceb872e08851f1f59694dac2558708ece11
-T_ADDR_SCORE|"cx" + 40 digit HEX 문자열|cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32
-T_HASH| "0x" + 64 digit HEX 문자열|0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238
-T_INT|"0x" + lowercase HEX 문자열|0xa
-T_BIN_DATA|"0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다|0x34b2
-T_SIG|base64 encoded 문자열|
-T_DATA_TYPE| install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출|
+<a id="T_ADDR_EOA">T_ADDR_EOA</a>|"hx" + 40 digit HEX 문자열|hxbe258ceb872e08851f1f59694dac2558708ece11
+<a id="T_ADDR_SCORE">T_ADDR_SCORE</a>|"cx" + 40 digit HEX 문자열|cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32
+<a id="T_HASH">T_HASH</a>| "0x" + 64 digit HEX 문자열|0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238
+<a id="T_INT">T_INT</a>|"0x" + lowercase HEX 문자열|0xa
+<a id="T_BIN_DATA">T_BIN_DATA</a>|"0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다|0x34b2
+<a id="T_SIG">T_SIG</a>|base64 encoded 문자열|
+<a id="T_DATA_TYPE">T_DATA_TYPE</a>| install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출|
 
 # JSON-RPC API v3 ChangeLog
 
@@ -108,9 +108,9 @@ T_DATA_TYPE| install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call:
 
 KEY | VALUE 형식 | 설명
 ----|----------|-----
-from|T_ADDR_EOA|메시지를 보내는 주체의 주소
-to|T_ADDR_SCORE|transaction에 포함된 메시지콜 데이터를 처리할 SCORE 주소
-dataType|T_DATA_TYPE|data 종류 명시. "call"만 가능
+from|[T_ADDR_EOA](#T_ADDR_EOA)|메시지를 보내는 주체의 주소
+to|[T_ADDR_SCORE](#T_ADDR_SCORE)|transaction에 포함된 메시지콜 데이터를 처리할 SCORE 주소
+dataType|[T_DATA_TYPE](#T_DATA_TYPE)|data 종류 명시. "call"만 가능
 data|N/A|SCORE 구현에 따른 함수명 및 함수 Parameter
 
 ### Returns
@@ -172,7 +172,7 @@ SCORE 함수 실행 결과
 
 KEY | VALUE 형식 | 설명
 ----|----------|-----
-address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
+address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주소
 
 ### Returns
 코인 수
@@ -245,20 +245,20 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:----- |
-| txHash | T_HASH | 조회할 TX hash |
+| txHash | [T_HASH](#T_HASH) | 조회할 TX hash |
 
 ### Returns
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:-----|
-| status | T_INT | 1(success), 0(failure) |
-| txHash | T_HASH | transaction hash |
-| txIndex | T_INT | transaction index in a block |
-| blockHeight | T_INT | transaction이 포함된 block의 height |
-| blockHash | T_HASH | transaction이 포함된 block의 hash |
-| cumulativeStepUsed | T_INT | 블록 내에서 해당 transaction을 수행하는데 까지 소비된 step의 누적양 |
-| stepUsed | T_INT | 해당 transaction을 수행하는데 소비된 step 양 |
-| scoreAddress | T_ADDR_SCORE | 해당 transaction이 SCORE을 생성했을 때 해당 SCORE 주소 (optional) |
+| status | [T_INT](#T_INT) | 1(success), 0(failure) |
+| txHash | [T_HASH](#T_HASH) | transaction hash |
+| txIndex | [T_INT](#T_INT) | transaction index in a block |
+| blockHeight | [T_INT](#T_INT) | transaction이 포함된 block의 height |
+| blockHash | [T_HASH](#T_HASH) | transaction이 포함된 block의 hash |
+| cumulativeStepUsed | [T_INT](#T_INT) | 블록 내에서 해당 transaction을 수행하는데 까지 소비된 step의 누적양 |
+| stepUsed | [T_INT](#T_INT) | 해당 transaction을 수행하는데 소비된 step 양 |
+| scoreAddress | [T_ADDR_SCORE](#T_ADDR_SCORE) | 해당 transaction이 SCORE을 생성했을 때 해당 SCORE 주소 (optional) |
 
 ### Example
 
@@ -302,17 +302,17 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:-----|
-| from | T_ADDR_EOA | transaction을 생성한 주체의 주소 |
-| to | T_ADDR_EOA or T_ADDR_SCORE | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
-| value | T_INT | to 주소로 이체할 코인양 |
-| step |T_INT | transaction을 수행하는데 사용되는 최대 step 양 |
-| timestamp | T_INT | transaction을 전송할 때의 timestamp 단위: microsecond |
-| nonce | T_INT | transaction hash 충돌 방지를 위한 임의의 정수 (optional) |
-| signature | T_SIG | transaction의 전자 서명 데이터 |
-| dataType | T_DATA_TYPE | data 항목의 종류를 알려주는 값 (optional) |
+| from | [T_ADDR_EOA](#T_ADDR_EOA) | transaction을 생성한 주체의 주소 |
+| to | [T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE) | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
+| value | [T_INT](#T_INT) | to 주소로 이체할 코인양 |
+| step |[T_INT](#T_INT) | transaction을 수행하는데 사용되는 최대 step 양 |
+| timestamp | [T_INT](#T_INT) | transaction을 전송할 때의 timestamp 단위: microsecond |
+| nonce | [T_INT](#T_INT) | transaction hash 출동 방지를 위한 임의의 정수 (optional) |
+| signature | [T_SIG](#T_SIG) | transaction의 전자 서명 데이터 |
+| dataType | [T_DATA_TYPE](#T_DATA_TYPE) | data 항목의 종류를 알려주는 값 (optional) || to | T_ADDR_EOA or T_ADDR_SCORE | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
 | data | N/A | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 (optional) |
 | contentType | 문자열 | content의 mime-type |
-| content | T_BIN_DATA | 이진 데이터 |
+| content | [T_BIN_DATA](#T_BIN_DATA) | 이진 데이터 |
 
 ### Returns
 
@@ -426,4 +426,4 @@ address|T_ADDR_EOA or T_ADDR_SCORE|조회할 주소
 
 * [jsonrpc specification](http://www.jsonrpc.org/specification)
 * [Ethereum JSON RPC API](https://github.com/ethereum/wiki/wiki/JSON-RPC)
-* [Icon JSON RPC API](https://github.com/icon-project/icx_JSON_RPC)
+* [ICON JSON RPC API v2](https://github.com/icon-project/icx_JSON_RPC)
