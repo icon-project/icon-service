@@ -1,7 +1,7 @@
 from iconservice import *
 
 
-class SampleTokenInterface(AcceptableReceiver):
+class SampleTokenInterface(InterfaceScore):
     @interface
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 
@@ -32,7 +32,7 @@ class SampleCrowdSale(IconScoreBase):
         self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
         self._crowd_sale_closed = VarDB(self._CROWD_SALE_CLOSED, db, value_type=bool)
 
-        self.__sample_token_score = self.create_acceptable_receiver(self._addr_token_score.get(), SampleTokenInterface)
+        self.__sample_token_score = self.create_interface_score(self._addr_token_score.get(), SampleTokenInterface)
 
     def on_install(self, params) -> None:
         super().on_install(params)
@@ -57,7 +57,7 @@ class SampleCrowdSale(IconScoreBase):
         price = int(icx_cost_of_each_token * one_icx)
         self._price.set(price)
 
-        self.__sample_token_score = self.create_acceptable_receiver(self._addr_token_score.get(), SampleTokenInterface)
+        self.__sample_token_score = self.create_interface_score(self._addr_token_score.get(), SampleTokenInterface)
 
     def on_update(self, params) -> None:
         super().on_update(params)

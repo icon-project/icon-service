@@ -55,14 +55,31 @@ def interface(func):
 
     @wraps(func)
     def __wrapper(call_object: object, *args, **kwargs):
-        if not isinstance(call_object, AcceptableReceiver):
-            raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(AcceptableReceiver.__name__))
+        if not isinstance(call_object, InterfaceScore):
+            raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
-        call_method = getattr(call_object, '_AcceptableReceiver__call_method')
+        call_method = getattr(call_object, '_InterfaceScore__call_method')
         ret = call_method(func_name, args, kwargs)
         return ret
 
     return __wrapper
+
+
+# def event(func):
+#     cls_name, func_name = str(func.__qualname__).split('.')
+#     if not isfunction(func):
+#         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+#
+#     @wraps(func)
+#     def __wrapper(call_object: object, *args, **kwargs):
+#         if not isinstance(call_object, AcceptableReceiver):
+#             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(AcceptableReceiver.__name__))
+#
+#         call_method = getattr(call_object, '_AcceptableReceiver__call_method')
+#         ret = call_method(func_name, args, kwargs)
+#         return ret
+#
+#     return __wrapper
 
 
 def external(func=None, *, readonly=False):
@@ -116,7 +133,7 @@ def payable(func):
     return __wrapper
 
 
-class AcceptableReceiver(ABC):
+class InterfaceScore(ABC):
     def __init__(self, addr_to: 'Address', call_func: callable):
         self.__addr_to = addr_to
         self.__call_func = call_func
@@ -255,7 +272,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         if readonly != self._context.readonly:
             raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
 
-    def __call_accptable_receiver(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
+    def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
         """Call external function provided by other IconScore with arguments without fallback
 
         :param addr_to: the address of other IconScore
@@ -293,11 +310,11 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def now(self):
         return self.block.timestamp
 
-    def create_acceptable_receiver(self, addr_to: 'Address', acceptable_cls: T) -> T:
-        if acceptable_cls is AcceptableReceiver:
-            raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(AcceptableReceiver.__name__))
-        if callable(acceptable_cls):
-            return acceptable_cls(addr_to, self.__call_accptable_receiver)
+    def create_interface_score(self, addr_to: 'Address', interface_cls: T) -> T:
+        if interface_cls is InterfaceScore:
+            raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
+        if callable(interface_cls):
+            return interface_cls(addr_to, self.__call_interface_score)
         else:
             raise InterfaceException(STR_IS_NOT_CALLABLE)
 
