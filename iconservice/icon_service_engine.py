@@ -17,8 +17,9 @@
 from os import makedirs
 from collections import namedtuple
 
-from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
-from .base.exception import IconException, check_exception, IconServiceBaseException
+from .base.address import Address, AddressPrefix
+from .base.address import ICX_ENGINE_ADDRESS, create_address
+from .base.exception import IconException, IconServiceBaseException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -38,6 +39,7 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_score_deployer import IconScoreDeployer
+from .iconscore.transaction_validator import TransactionValidator
 from .logger import Logger
 from .icon_config import *
 
@@ -106,10 +108,12 @@ class IconServiceEngine(object):
         self._icx_engine = IcxEngine()
         self._icx_engine.open(self._icx_storage)
 
-        self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
+        self._icon_score_mapper = IconScoreInfoMapper(
+            self._icx_storage, self._db_factory, self._icon_score_loader)
 
         self._icon_score_deployer = IconScoreDeployer(icon_score_root_path)
-        self._icon_score_engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
+        self._icon_score_engine = IconScoreEngine(
+            self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._step_counter_factory.set_step_unit(StepType.TRANSACTION, 6000)
@@ -119,6 +123,8 @@ class IconServiceEngine(object):
         self._step_counter_factory.set_step_unit(StepType.TRANSFER, 10000)
         self._step_counter_factory.set_step_unit(StepType.CALL, 1000)
         self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
+
+        self._tx_validator = TransactionValidator(icx=self._icx_engine)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -231,6 +237,17 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
 
         return ret
+
+    def validate_transaction(self, tx: dict) -> tuple:
+        """Validate a transaction before putting it into txpool.
+        If failed to validate a tx, client will get a json-rpc error response
+
+        :param tx: dict including tx info
+        :return: (code, message)
+            success: (0, 'ok'), error: (code, 'error message')
+        """
+        # FIXME: If step_price is defined, it should be updated.
+        self._tx_validator.validate(tx, step_price=0)
 
     def call(self,
              context: 'IconScoreContext',
