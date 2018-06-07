@@ -318,8 +318,7 @@ external 데코레이터가 중복으로 선언되어있다면 import타임에 I
 
 #### fallback
 fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
-만약 계약서에서 정의되지 않은 함수를 call하거나 데이터 필드가 없는 순수한 icx 코인만 해당 계약서에 <br/>
-이체되었다면 이 fallback 함수가 호출됩니다.<br/>
+만약 계약서에서 데이터 필드가 없는 순수한 icx 코인만 해당 계약서에 이체되었다면 이 fallback 함수가 호출됩니다.<br/>
 만약 icx 코인이 이체되었는데, payable을 붙이지 않은 기본 fallback 함수가 호출되었다면<br/>
 payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
 
@@ -330,6 +329,7 @@ payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
 
 
 #### InterfaceScore
+legacy함수 call 대신 사용하는 문법입니다.<br/>
 다른 함수의 함수에 접근하는 인터페이스를 제공합니다.<br/>
 정의 내용은 다음과 같습니다.<br/>
 
@@ -343,7 +343,7 @@ eventlog 데코레이터와 마찬가지로 구현부가 없는 함수작성을 
 해당 구현부의 내용은 동작하지 않습니다.<br/>
 
 예시)<br/>
-스코어 built-in 함수 create_interface_score(주소, 인터페이스로 사용할 클래스)를 사용하여,<br/>
+IconScoreBase 내장함수 create_interface_score(주소, 인터페이스로 사용할 클래스)를 사용하여,<br/>
 InterfaceScore객체를 가져옵니다.<br/>
 해당 객체는 인터페이스로 사용할 클래스의 @interface가 있는 함수를 사용가능합니다.<br/>
 
@@ -351,3 +351,55 @@ InterfaceScore객체를 가져옵니다.<br/>
 sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
 sample_token_score.transfer(self.msg.sender, value)
 ```
+
+내장 함수 설명
+--------------
+#### create_interface_score(addr_to(주소), interface_cls(인터페이스 클래스)) -> interface_cls객체
+해당함수를 통하여 다른스코어의(addr_to) external함수에 접근이 가능한 객체가 반환됩니다.
+
+#### [legacy] call(addr_to(주소), func_name,  kw_dict(함수의 params)) -> 콜 함수의 반환값
+InterfaceScore가 가능하면서 해당함수는 legacy함수처리 되었습니다.<br/>
+동작은 InterfaceScore 내용과 동일합니다.<br/>
+
+#### transfer(addr_to(주소), amount(정수값)) -> bool
+다른 주소로 icx를 전송합니다.<br/>
+만약 로직실행중에 예외가 발생하면 해당예외를 핸들링 하지 않습니다.(예외발생)<br/>
+성공하면 반환값은 True입니다.<br/>
+
+#### send(addr_to(주소), amount(정수값)) -> bool
+다음 주소로 icx를 전송합니다.<br/>
+기본동작은 transfer와 동일하나, 예외를 핸들링합니다.<br/>
+전송이 되면 True값, 실패하면 False값이 반환됩니다.<br/>
+
+#### revert(message: str) -> None
+개발자가 강제로 revert예외를 발생시킬 수 있습니다.<br/>
+해당 예외가 발생하면 그동안 한 수행한 변경된 상태DB값은 롤백됩니다.<br/>
+
+내장 프로퍼티 설명
+--------------
+
+#### msg : 스코어를 부른 계정의 정보가 담겨있습니다.
+##### msg.sender : 
+현재 이 스코어의 함수를 호출한 계정의 주소입니다. <br/>
+만약 해당스코어에서 다른 스코어의 함수를 접근하면 해당 값은 해당스코어의 주소값으로 변경됩니다.<br/>
+##### msg.value : 현재 이 스코어의 함수를 호출한 계정이 가지고 있는 icx값입니다. <br/>
+
+#### address : 스코어의 주소값입니다.
+
+#### tx : 해당 트랜잭션의 정보입니다.
+##### tx.origin : 트랜잭션을 만든 계정입니다.
+##### tx.index : 트랜잭션 인덱스입니다.
+##### tx.hash : 트랜잭션 해쉬값입니다.
+##### tx.timestamp : 트랜잭션이 생성된 시간값입니다.
+##### tx.nonce : (옵션) 임의의 값입니다.
+
+#### block : 해당 트랜잭션을 담고있는 블럭의 정보입니다.
+##### block.height : 블럭의 높이값입니다.
+##### block.hash : 블럭의 해쉬값입니다.
+##### block.timestamp : 블럭이 생성된 시간값입니다.
+
+#### db : 상태DB를 접근하는 db객체입니다.
+
+#### owner : 해당 스코어를 배포한 계정의 주소입니다.
+
+#### now : block.timestamp의 wrapping함수입니다.
