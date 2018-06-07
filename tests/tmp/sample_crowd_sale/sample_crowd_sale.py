@@ -6,14 +6,6 @@ class SampleTokenInterface(InterfaceScore):
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 
 
-class SampleCrowdSaleTxLog(TXLogScore):
-    @tx_log
-    def fund_transfer(self, backer: Address, amount: int, is_contribution: bool): pass
-
-    @tx_log
-    def goal_reached(self, recipient: Address, total_amount_raised: int): pass
-
-
 class SampleCrowdSale(IconScoreBase):
     __ADDR_BENEFICIARY = 'addr_beneficiary'
     __FUNDING_GOAL = 'funding_goal'
@@ -25,6 +17,12 @@ class SampleCrowdSale(IconScoreBase):
     __FUNDING_GOAL_REACHED = 'funding_goal_reached'
     __CROWD_SALE_CLOSED = 'crowd_sale_closed'
     __JOINER_LIST = 'joiner_list'
+
+    @eventlog
+    def eventlog_fund_transfer(self, backer: Address, amount: int, is_contribution: bool): pass
+
+    @eventlog
+    def eventlog_goal_reached(self, recipient: Address, total_amount_raised: int): pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
         super().__init__(db, owner)
@@ -41,7 +39,6 @@ class SampleCrowdSale(IconScoreBase):
         self.__crowd_sale_closed = VarDB(self.__CROWD_SALE_CLOSED, db, value_type=bool)
 
         self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
-        self.__tx_log = self.create_tx_log_score(SampleCrowdSaleTxLog)
 
     def on_install(self, params) -> None:
         super().on_install(params)
@@ -90,7 +87,7 @@ class SampleCrowdSale(IconScoreBase):
         if self.msg.sender not in self.__joiner_list:
             self.__joiner_list.put(self.msg.sender)
 
-        self.__tx_log.fund_transfer(self.msg.sender, amount, True)
+        self.eventlog_fund_transfer(self.msg.sender, amount, True)
 
     @external
     def check_goal_reached(self):
@@ -99,7 +96,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if self.__amount_raise.get() >= self.__funding_goal.get():
             self.__funding_goal_reached.set(True)
-            self.__tx_log.goal_reached(self.__addr_beneficiary.get(), self.__amount_raise.get())
+            self.eventlog_goal_reached(self.__addr_beneficiary.get(), self.__amount_raise.get())
         self.__crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
@@ -114,12 +111,12 @@ class SampleCrowdSale(IconScoreBase):
             amount = self.__balances[self.msg.sender]
             if amount > 0:
                 if self.send(self.msg.sender, amount):
-                    self.__tx_log.fund_transfer(self.msg.sender, amount, False)
+                    self.eventlog_fund_transfer(self.msg.sender, amount, False)
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.__tx_log.fund_transfer(self.__addr_beneficiary.get(), self.__amount_raise.get())
+                self.eventlog_fund_transfer(self.__addr_beneficiary.get(), self.__amount_raise.get())
             else:
                 self.__funding_goal_reached.set(False)

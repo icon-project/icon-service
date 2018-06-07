@@ -16,7 +16,7 @@
 
 from inspect import isfunction, getmembers, signature
 from abc import ABC, ABCMeta, abstractmethod
-from functools import wraps, partial
+from functools import partial
 
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
@@ -40,18 +40,27 @@ CONST_BIT_FLAG = '__bit_flag'
 CONST_BIT_FLAG_READONLY = 1
 CONST_BIT_FLAG_EXTERNAL = 2
 CONST_BIT_FLAG_PAYABLE = 4
+CONST_BIT_FLAG_EVENTLOG = 8
+CONST_BIT_FLAG_INTERFACE = 16
 
 CONST_BIT_FLAG_EXTERNAL_READONLY = CONST_BIT_FLAG_READONLY | CONST_BIT_FLAG_EXTERNAL
 
 STR_IS_NOT_CALLABLE = 'is not callable'
 FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
 FORMAT_IS_NOT_DERIVED_OF_OBJECT = "isn't derived of {}"
+FORMAT_DECORATOR_DUPLICATED = "can't duplicated {} decorator func: {}, cls: {}"
 
 
 def interface(func):
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_INTERFACE:
+        raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('interface', func_name, cls_name))
+
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_INTERFACE
+    setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
@@ -65,18 +74,23 @@ def interface(func):
     return __wrapper
 
 
-def tx_log(func):
+def eventlog(func):
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
-        raise TxLogException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+        raise EventLogException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+
+    if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EVENTLOG:
+        raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
+
+    bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EVENTLOG
+    setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
-        if not (isinstance(calling_obj, TXLogScore)):
-            raise TxLogException(
-                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(TXLogScore.__name__), func_name, cls_name)
+        if not (isinstance(calling_obj, IconScoreBase)):
+            raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
-        call_method = getattr(calling_obj, '_TXLogScore__write_tx_log')
+        call_method = getattr(calling_obj, '_IconScoreBase__write_tx_log')
         ret = call_method(func_name, args, kwargs)
         return ret
 
@@ -95,7 +109,7 @@ def external(func=None, *, readonly=False):
         raise IconScoreException(f"can't locate external to this func func: {func_name}, cls: {cls_name}")
 
     if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_EXTERNAL:
-        raise IconScoreException(f"can't duplicated external decorator func: {func_name}, cls: {cls_name}")
+        raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('external', func_name, cls_name))
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_EXTERNAL | int(readonly)
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -117,7 +131,7 @@ def payable(func):
         raise IconScoreException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
     if getattr(func, CONST_BIT_FLAG, 0) & CONST_BIT_FLAG_PAYABLE:
-        raise IconScoreException(f"can't duplicated payable decorator func: {func_name}, cls: {cls_name}")
+        raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('payable', func_name, cls_name))
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | CONST_BIT_FLAG_PAYABLE
     setattr(func, CONST_BIT_FLAG, bit_flag)
@@ -134,7 +148,16 @@ def payable(func):
     return __wrapper
 
 
-class InterfaceScore(ABC):
+class InterfaceScoreMeta(ABCMeta):
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        if ABC in bases:
+            return super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        return cls
+
+
+class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     def __init__(self, addr_to: 'Address', call_func: callable):
         self.__addr_to = addr_to
         self.__call_func = call_func
@@ -147,20 +170,6 @@ class InterfaceScore(ABC):
             self.__call_func(self.__addr_to, func_name, arg_list, kw_dict)
         else:
             raise InterfaceException(STR_IS_NOT_CALLABLE)
-
-
-class TXLogScore(ABC):
-    def __init__(self, call_func: callable):
-        self.__call_func = call_func
-
-    def __write_tx_log(self, func_name: str, arg_list: list, kw_dict: dict):
-        if self.__call_func is None:
-            raise TxLogException('self.__call_func is None')
-
-        if callable(self.__call_func):
-            self.__call_func(func_name, arg_list, kw_dict)
-        else:
-            raise TxLogException(STR_IS_NOT_CALLABLE)
 
 
 class IconScoreObject(ABC):
@@ -338,11 +347,6 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self.__call_interface_score)
-
-    def create_tx_log_score(self, tx_log_cls: Callable[Type[T]]) -> T:
-        if tx_log_cls is TXLogScore:
-            raise TxLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(TXLogScore.__name__))
-        return tx_log_cls(self.__write_tx_log)
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
         ret = self._context.transfer(self.__address, addr_to, amount)

@@ -137,7 +137,7 @@ class InterfaceException(IconScoreException):
     pass
 
 
-class TxLogException(IconScoreException):
+class EventLogException(IconScoreException):
     pass
 
 
