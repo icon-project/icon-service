@@ -275,7 +275,8 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
 
         if func_name not in self.get_api():
-            raise ExternalException(f"can't external call", func_name, type(self).__name__)
+            raise ExternalException(f"can't external call", func_name, type(self).__name__,
+                                    ExceptionCode.SCORE_EXTERNAL_METHOD_NOT_FOUND)
 
         self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))

@@ -15,15 +15,13 @@
 # limitations under the License.
 
 import threading
-from enum import IntEnum, IntFlag, unique
+from enum import IntEnum, unique
 
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
-from ..base.exception import ExceptionCode, IconException
-from ..base.exception import IconScoreException, PayableException
-from ..base.exception import ExternalException
+from ..base.exception import IconScoreException
 from ..base.exception import RevertException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
@@ -58,8 +56,7 @@ class ContextContainer(object):
         """Delete the context of the current thread
         """
         if context is not _thread_local_data.context:
-            raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
+            raise IconScoreException(
                 'Critical error in context management')
 
         del _thread_local_data.context
@@ -216,14 +213,10 @@ class IconScoreContext(object):
         It is called on write_precommit message from loopchain
         """
         if self.readonly:
-            raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
-                'Commit is not possbile on readonly context')
+            raise IconScoreException('Commit is not possbile on readonly context')
 
         if self.block_batch is None:
-            raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
-                'Commit failure: BlockBatch is None')
+            raise IconScoreException('Commit failure: BlockBatch is None')
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:

@@ -22,7 +22,7 @@ from os import path, symlink, makedirs
 from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException, IconScoreException
+from ..base.exception import IconScoreException
 from ..utils.type_converter import TypeConverter
 from ..logger import Logger
 from .icon_score_context import ContextContainer
@@ -94,8 +94,7 @@ class IconScoreEngine(ContextContainer):
         if data_type == 'call':
             return self._call(context, icon_score_address, data)
         else:
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
+            raise IconScoreException(
                 f'Invalid data type ({data_type})')
 
     def _put_task(self,
@@ -138,8 +137,7 @@ class IconScoreEngine(ContextContainer):
             icon_score = self.__icon_score_info_mapper.get_icon_score(
                 icon_score_address)
             if icon_score is None:
-                raise IconException(
-                    ExceptionCode.INVALID_REQUEST,
+                raise IconScoreException(
                     f'IconScore({icon_score_address}) not found')
 
             return call_method(
@@ -233,8 +231,7 @@ class IconScoreEngine(ContextContainer):
         if content_type == 'application/tbears':
             return
         elif content_type != 'application/zip':
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
+            raise IconScoreException(
                 f'Invalid content type ({content_type})')
 
         content = data.get('content')[2:]

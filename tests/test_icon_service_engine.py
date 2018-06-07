@@ -18,12 +18,11 @@
 """
 
 
-import os
 import shutil
 import unittest
 import logging
 
-from iconservice.base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS
+from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.address import create_address
 from iconservice.base.exception import ExceptionCode, IconException
 from iconservice.base.transaction import Transaction
@@ -229,7 +228,7 @@ class TestIconServiceEngine(unittest.TestCase):
         with self.assertRaises(IconException) as cm:
             self._engine.commit()
         e = cm.exception
-        self.assertEqual(ExceptionCode.INTERNAL_ERROR, e.code)
+        self.assertEqual(ExceptionCode.ICON, e.code)
         self.assertEqual('Precommit state is none on commit', e.message)
 
     def test_rollback(self):

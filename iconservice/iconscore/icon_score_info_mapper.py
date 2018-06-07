@@ -18,7 +18,7 @@ from ..iconscore.icon_score_context import ContextGetter
 from ..iconscore.icon_score_loader import IconScoreLoader
 from ..icx.icx_storage import IcxStorage
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException, IconScoreException
+from ..base.exception import ExceptionCode, IconScoreException
 from ..database.db import IconScoreDatabase
 
 from typing import TYPE_CHECKING, Optional
@@ -104,20 +104,20 @@ class IconScoreInfoMapper(dict, ContextGetter):
         :param address: icon score address
         """
         if not isinstance(address, Address):
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
-                f'{address} is an invalid address')
+            raise IconScoreException(
+                f'{address} is an invalid address',
+                ExceptionCode.INVALID_PARAMS)
         if not address.is_contract:
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
-                f'{address} is not an icon score address.')
+            raise IconScoreException(
+                f'{address} is not an icon score address.',
+                ExceptionCode.INVALID_PARAMS)
 
     @staticmethod
     def __check_value_type(info: IconScoreInfo) -> None:
         if not isinstance(info, IconScoreInfo):
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS,
-                f'{info} is not IconScoreInfo type.')
+            raise IconScoreException(
+                f'{info} is not IconScoreInfo type.',
+                ExceptionCode.INVALID_PARAMS)
 
     @property
     def score_root_path(self):

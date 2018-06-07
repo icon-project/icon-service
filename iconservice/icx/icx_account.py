@@ -19,7 +19,7 @@ from struct import Struct
 
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException
+from ..base.exception import ExceptionCode, ICXException
 
 
 ACCOUNT_DATA_STRUCTURE_VERSION = 0
@@ -180,7 +180,7 @@ class Account(object):
 
         """
         if not isinstance(value, int) or value <= 0:
-            raise IconException(ExceptionCode.INVALID_PARAMS)
+            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
 
         self.__icx += value
 
@@ -190,9 +190,9 @@ class Account(object):
         :param value: coin amount to withdraw
         """
         if not isinstance(value, int) or value <= 0:
-            raise IconException(ExceptionCode.INVALID_PARAMS)
+            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
         if self.__icx < value:
-            raise IconException(ExceptionCode.NOT_ENOUGH_BALANCE)
+            raise ICXException(None, ExceptionCode.NOT_ENOUGH_BALANCE)
 
         self.__icx -= value
 

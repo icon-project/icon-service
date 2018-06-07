@@ -20,7 +20,7 @@ from .icx_account import Account, AccountType
 from .icx_config import FIXED_FEE
 from .icx_storage import IcxStorage
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException
+from ..base.exception import ExceptionCode, ICXException
 from ..logger import Logger
 from ..icon_config import *
 
@@ -171,9 +171,9 @@ class IcxEngine(object):
                           _amount: int,
                           _fee: int) -> bool:
         if _context.readonly:
-            raise IconException(
-                ExceptionCode.INVALID_REQUEST,
-                'icx transfer is not allowed on readonly context')
+            raise ICXException(
+                'icx transfer is not allowed on readonly context',
+                ExceptionCode.INVALID_REQUEST)
 
         return self._transfer_with_fee(_context, _from, _to, _amount, _fee)
 
@@ -190,7 +190,7 @@ class IcxEngine(object):
         :param _to: (string)
         :param _amount: (int) the amount of coin in loop to transfer
         :param _fee: (int) transaction fee (0.01 icx)
-        :exception: IconException
+        :exception: ICXException
         """
         _fee_treasury_address = self.__fee_treasury_address
 
@@ -201,13 +201,13 @@ class IcxEngine(object):
                      ICX_LOG_TAG)
 
         if _from == _to:
-            raise IconException(ExceptionCode.INVALID_PARAMS)
+            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
         if _from == _fee_treasury_address:
-            raise IconException(ExceptionCode.INVALID_PARAMS)
+            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
         if _to == _fee_treasury_address:
-            raise IconException(ExceptionCode.INVALID_PARAMS)
+            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
         if _fee != FIXED_FEE:
-            raise IconException(ExceptionCode.INVALID_FEE)
+            raise ICXException(None, ExceptionCode.INVALID_FEE)
 
         # get account info from state db.
         from_account = self.__storage.get_account(context, _from)
@@ -250,13 +250,13 @@ class IcxEngine(object):
                  _to: Address,
                  _amount: int) -> bool:
         if _context.readonly:
-            raise IconException(
-                ExceptionCode.INVALID_REQUEST,
-                'icx transfer is not allowed on readonly context')
+            raise ICXException(
+                'icx transfer is not allowed on readonly context',
+                ExceptionCode.INVALID_REQUEST)
 
         if _amount < 0:
-            raise IconException(
-                ExceptionCode.INVALID_PARAMS, 'amount is less than zero')
+            raise ICXException('amount is less than zero',
+                               ExceptionCode.INVALID_PARAMS)
 
         return self._transfer(_context, _from, _to, _amount)
 

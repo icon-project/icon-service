@@ -17,8 +17,9 @@
 from enum import IntEnum, unique
 from functools import wraps
 from ..logger import Logger
-
 from ..icon_config import *
+
+from typing import Optional
 
 
 @unique
@@ -28,17 +29,30 @@ class ExceptionCode(IntEnum):
     Refer to http://www.simple-is-better.org/json-rpc/jsonrpc20.html#examples
     """
     OK = 0
+    ICON = 100
+    DB = 200
+    ICX = 300
+    SCORE = 400
+    SCORE_EXTERNAL = 500
+    SCORE_EXTERNAL_METHOD_NOT_FOUND = 501
+    SCORE_PAYABLE = 600
+    SCORE_REVERT = 700
+    SCORE_INTERFACE = 800
+    SCORE_EVENTLOG = 900
+    SCORE_CONTAINERDB = 1000
+    SCORE_INSTALL = 1100
+    SCORE_INSTALL_EXTRACT = 1200
 
     # -32000 ~ -32099: Server error
-    INVALID_REQUEST = -32600
-    METHOD_NOT_FOUND = -32601
-    INVALID_PARAMS = -32602
-    INTERNAL_ERROR = -32603
-    PARSE_ERROR = -32700
+    INVALID_REQUEST = 32600
+    METHOD_NOT_FOUND = 32601
+    INVALID_PARAMS = 32602
+    INTERNAL_ERROR = 32603
+    PARSE_ERROR = 32700
 
-    LOCKED_ACCOUNT = -40000
-    NOT_ENOUGH_BALANCE = -40001
-    INVALID_FEE = -40002
+    LOCKED_ACCOUNT = 40000
+    NOT_ENOUGH_BALANCE = 40001
+    INVALID_FEE = 40002
 
     def __str__(self) -> str:
         if self.value == self.INVALID_REQUEST:
@@ -50,47 +64,48 @@ class ExceptionCode(IntEnum):
 # 아이콘 서비스에서 사용하는 모든 예외는 다음을 상속받는다.
 class IconServiceBaseException(BaseException):
 
-    def __init__(self, message: str):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.OK):
+        if message is None:
+            message = str(code)
         self.__message = message
+        self.__code = code
 
     @property
     def message(self):
         return self.__message
 
-    def __str__(self):
-        return f'{self.message}'
-
-
-class DatabaseException(IconServiceBaseException):
-    pass
-
-
-class IconException(IconServiceBaseException):
-    """Defines Icx Errors
-    """
-    def __init__(self, code: ExceptionCode, message: str = None) -> None:
-        if message is None or message == '':
-            message = str(code)
-
-        super().__init__(message)
-        self._code = code
-
     @property
     def code(self):
-        return self._code
+        return self.__code
 
     def __str__(self):
         return f'{self.message} ({self.code})'
 
 
+class IconException(IconServiceBaseException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.ICON):
+        super().__init__(message, code)
+
+
+class DatabaseException(IconServiceBaseException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.DB):
+        super().__init__(message, code)
+
+
+class ICXException(IconServiceBaseException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.ICX):
+        super().__init__(message, code)
+
+
 class IconScoreException(IconServiceBaseException):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE):
+        super().__init__(message, code)
 
 
 class APIIconScoreBaseException(IconScoreException):
-    def __init__(self, message: str, func_name: str, cls_name: str) -> None:
-        super().__init__(message)
+    def __init__(self, message: Optional[str], func_name: str, cls_name: str,
+                 code: ExceptionCode = ExceptionCode.SCORE):
+        super().__init__(message, code)
         self.__func_name = func_name
         self.__cls_name = cls_name
 
@@ -103,7 +118,7 @@ class APIIconScoreBaseException(IconScoreException):
         return self.__cls_name
 
     def __str__(self):
-        return f'msg: {self.message} func: {self.func_name} cls: {self.cls_name}'
+        return f'msg: {self.message} func: {self.func_name} cls: {self.cls_name} ({self.code})'
 
 
 def check_exception(func):
@@ -111,9 +126,7 @@ def check_exception(func):
     def _wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except IconServiceBaseException as e:
-                Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
-        except Exception as e:
+        except (IconServiceBaseException, Exception) as e:
             Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
             raise e
         finally:
@@ -122,32 +135,43 @@ def check_exception(func):
 
 
 class ExternalException(APIIconScoreBaseException):
-    pass
+    def __init__(self, message: Optional[str], func_name: str, cls_name: str,
+                 code: ExceptionCode = ExceptionCode.SCORE_EXTERNAL):
+        super().__init__(message, func_name, cls_name, code)
 
 
 class PayableException(APIIconScoreBaseException):
-    pass
+    def __init__(self, message: Optional[str], func_name: str, cls_name: str,
+                 code: ExceptionCode = ExceptionCode.SCORE_PAYABLE):
+        super().__init__(message, func_name, cls_name, code)
 
 
 class RevertException(APIIconScoreBaseException):
-    pass
+    def __init__(self, message: Optional[str], func_name: str, cls_name: str,
+                 code: ExceptionCode = ExceptionCode.SCORE_REVERT):
+        super().__init__(message, func_name, cls_name, code)
 
 
 class InterfaceException(IconScoreException):
-    pass
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_INTERFACE):
+        super().__init__(message, code)
 
 
 class EventLogException(IconScoreException):
-    pass
-
-
-class ScoreInstallException(IconScoreException):
-    pass
-
-
-class ScoreInstallExtractException(IconScoreException):
-    pass
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_EVENTLOG):
+        super().__init__(message, code)
 
 
 class ContainerDBException(IconScoreException):
-    pass
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_CONTAINERDB):
+        super().__init__(message, code)
+
+
+class ScoreInstallException(IconScoreException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_INSTALL):
+        super().__init__(message, code)
+
+
+class ScoreInstallExtractException(IconScoreException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_INSTALL_EXTRACT):
+        super().__init__(message, code)
