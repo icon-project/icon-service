@@ -161,7 +161,7 @@ class IconServiceEngine(object):
                tx_params: list) -> 'IconBlockResult':
         """Process transactions in a block sent by loopchain
 
-        :param block::
+        :param block:
         :param tx_params: transactions in a block
         :return: The results of transactions
         """
@@ -314,20 +314,25 @@ class IconServiceEngine(object):
         to: Address = params['to']
         value: int = params.get('value', 0)
 
-        self._icx_engine.transfer(context, _from, to, value)
+        tx_result = TransactionResult(
+            context.tx.hash,
+            context.block,
+            to)
 
-        if to is None or to.is_contract:
-            # EOA to Score
-            data_type: str = params.get('dataType')
-            data: dict = params.get('data')
-            tx_result = self.__handle_score_invoke(
-                context, to, data_type, data)
-        else:
-            # EOA to EOA
-            tx_result = TransactionResult(context.tx.hash,
-                                          context.block,
-                                          to,
-                                          TransactionResult.SUCCESS)
+        try:
+            self._icx_engine.transfer(context, _from, to, value)
+
+            if to is None or to.is_contract:
+                data_type: str = params.get('dataType')
+                data: dict = params.get('data')
+                self.__handle_score_invoke(
+                    context, to, data_type, data, tx_result)
+
+            tx_result.status = TransactionResult.SUCCESS
+        except IconServiceBaseException as e:
+            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+        except Exception as e:
+            Logger.exception(e, ICON_SERVICE_LOG_TAG)
 
         return tx_result
 
@@ -335,39 +340,39 @@ class IconServiceEngine(object):
                               context: 'IconScoreContext',
                               to: Optional['Address'],
                               data_type: str,
-                              data: dict) -> 'TransactionResult':
+                              data: dict,
+                              tx_result: 'TransactionResult') -> 'TransactionResult':
         """Handle score invocation
 
-        :param to: a recipient address
         :param context:
+        :param to: a recipient address
         :param data_type:
-        :param data: calldata
-        :return: A result of the score transaction
+        :param data:
+        :param tx_result: transaction result
+        :return: result of score transaction execution
         """
-        tx_result = TransactionResult(context.tx.hash, context.block, to)
 
         try:
             if data_type == 'install':
                 content_type = data.get('contentType')
                 if content_type == 'application/tbears':
                     content = data.get('content')
-                    proj_name = content.split('/')[-1]
-                    to = create_address(AddressPrefix.CONTRACT, proj_name.encode())
+                    project_name = content.split('/')[-1]
+                    to = create_address(
+                        AddressPrefix.CONTRACT, project_name.encode())
                 else:
                     to = self.__generate_contract_address(
-                        context.tx.origin, context.tx.timestamp, context.tx.nonce)
-                tx_result.contract_address = to
+                        context.tx.origin,
+                        context.tx.timestamp,
+                        context.tx.nonce)
+                tx_result.score_address = to
 
             self._icon_score_engine.invoke(context, to, data_type, data)
 
             context.block_batch.put_tx_batch(context.tx_batch)
             context.tx_batch.clear()
-
-            tx_result.status = TransactionResult.SUCCESS
-        except (IconServiceBaseException, Exception) as e:
-            tx_result.status = TransactionResult.FAILURE
-            Logger.error(e, ICON_SERVICE_LOG_TAG)
-        return tx_result
+        except:
+            raise
 
     @staticmethod
     def __generate_contract_address(from_: 'Address',

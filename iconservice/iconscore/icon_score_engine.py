@@ -22,7 +22,7 @@ from os import path, symlink, makedirs
 from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconException, check_exception
+from ..base.exception import ExceptionCode, IconException, IconScoreException
 from ..utils.type_converter import TypeConverter
 from ..logger import Logger
 from .icon_score_context import ContextContainer
@@ -146,7 +146,7 @@ class IconScoreEngine(ContextContainer):
                 icon_score=icon_score,
                 func_name=method,
                 kw_params=self._type_converter(icon_score, method, kw_params))
-        except:
+        except (IconScoreException, Exception):
             raise
         finally:
             self._delete_context(context)
@@ -193,7 +193,6 @@ class IconScoreEngine(ContextContainer):
         finally:
             self._delete_context(context)
 
-    @check_exception
     def commit(self, context: 'IconScoreContext') -> None:
         """It is called when the previous block has been confirmed
 

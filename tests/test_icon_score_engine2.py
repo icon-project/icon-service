@@ -33,6 +33,7 @@ from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter, IconScoreStepCounterFactory
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
+from iconservice.icx.icx_account import Account, AccountType
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -72,10 +73,8 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.block = Block(1, 'block_hash', 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
-        self.__step_counter_factory \
-            = IconScoreStepCounterFactory(10, 10, 10, 10)
-        self._step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(100)
+        self.__step_counter_factory = IconScoreStepCounterFactory()
+        self._step_counter: IconScoreStepCounter = self.__step_counter_factory.create(100)
         self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
 
@@ -213,9 +212,15 @@ class TestIconScoreEngine2(unittest.TestCase):
         call_data = {'method': 'check_goal_reached', 'params': {}}
         self._engine.invoke(self._context, self._addr_crowd_sale_score, 'call', call_data)
 
+        default_icx = 101 * self._one_icx
+        account = Account(AccountType.CONTRACT, self._addr_crowd_sale_score, default_icx)
+        self._icx_storage.put_account(self._context, self._addr_crowd_sale_score, account)
+
         self._context.type = IconScoreContextType.GENESIS
         call_data = {'method': 'safe_withdrawal', 'params': {}}
         self._engine.invoke(self._context, self._addr_crowd_sale_score, 'call', call_data)
+
+
 
 
 
