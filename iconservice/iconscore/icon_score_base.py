@@ -13,8 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import warnings
-from inspect import isfunction, getmembers, signature
+from inspect import isfunction, getmembers, signature, getfullargspec
 from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
 
@@ -28,7 +29,7 @@ from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
 
-from typing import TYPE_CHECKING, TypeVar, Type, Callable
+from typing import TYPE_CHECKING, TypeVar, Callable, Any
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
 
@@ -70,7 +71,7 @@ def interface(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
@@ -93,12 +94,15 @@ def eventlog(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
+        for index, annotation in enumerate(getfullargspec(func).annotations.values()):
+            if not isinstance(args[index], annotation):
+                raise EventLogException(f'annotation mismatch arg {args[index]}')
         call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
-        ret = call_method(func_name, args, kwargs)
+        ret = call_method(func_name, args)
         return ret
 
     return __wrapper
@@ -122,7 +126,7 @@ def external(func=None, *, readonly=False):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise ExternalException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__), func_name, cls_name)
@@ -144,7 +148,7 @@ def payable(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
 
         if not (isinstance(calling_obj, IconScoreBase)):
             raise PayableException(
@@ -153,6 +157,17 @@ def payable(func):
         return res
 
     return __wrapper
+
+
+class Indexed:
+    def __init__(self, value: Any):
+        if not isinstance(value, (int, str, bytes, Address, bool)):
+            raise EventLogException(f'must be primitive type [int, str, bytes, Address, bool]')
+        self.__value = value
+
+    @property
+    def value(self):
+        return self.__value
 
 
 class InterfaceScoreMeta(ABCMeta):
@@ -315,14 +330,27 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         self._context.step_counter.increase_step(StepType.CALL, 1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
-    def __write_eventlog(self, func_name: str, arg_list: list, kw_dict: dict):
+    def __write_eventlog(self, func_name: str, arg_list: list):
         """
 
         :param func_name: function name provided by other IconScore
         :param arg_list:
         :param kw_dict:
         """
-        # raise NotImplementedError
+
+        limit_count = 3
+        indexed_list = []
+        data_list = []
+        for arg in arg_list:
+            if isinstance(arg, Indexed):
+                indexed_list.append(arg)
+            else:
+                data_list.append(arg)
+
+        if len(indexed_list) > limit_count:
+            raise EventLogException(f'Over LimitCount : {limit_count}')
+
+        # TODO send params to eventlog internal logic
         pass
 
     @property
@@ -352,7 +380,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def now(self):
         return self.block.timestamp
 
-    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[[Address, callable], Type[T]]) -> T:
+    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self.__call_interface_score)
