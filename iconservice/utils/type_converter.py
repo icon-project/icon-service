@@ -58,6 +58,11 @@ class TypeConverter(object):
                                                            recursive)
                 else:
                     output[key] = copy.deepcopy(value)
+            elif isinstance(value, list):
+                if recursive:
+                    output[key] = self.convert_list_values(value, recursive)
+                else:
+                    output[key] = copy.deepcopy(value)
             else:
                 output[key] = self.convert_value(key, value)
 

@@ -81,7 +81,7 @@ class TestIconZipDeploy(unittest.TestCase):
             score.db._context_db.close(self._context)
         self._factory.destroy(self._context)
 
-        remove_path = os.path.join(TEST_ROOT_PATH, self._addr1.body.hex())
+        remove_path = os.path.join(TEST_ROOT_PATH, 'tests')
         IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
@@ -100,8 +100,8 @@ class TestIconZipDeploy(unittest.TestCase):
     def test_deploy_on_invoke(self):
         data = self.read_zipfile_as_byte(os.path.join(TEST_ROOT_PATH, 'test.zip'))
         tmp_dict = {
-            "content_type": "application/zip",
+            "contentType": "application/zip",
             "content": f'0x{data.hex()}'
         }
-        self._engine._deploy_on_invoke(self._context, self._addr1, 'install', tmp_dict)
+        self._engine._deploy_on_invoke(self._context, self._addr1, tmp_dict)
         self.assertTrue(os.path.join(TEST_ROOT_PATH, self._addr1.body.hex()))
