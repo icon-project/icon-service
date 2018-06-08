@@ -28,7 +28,7 @@ from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
 
-from typing import TYPE_CHECKING, TypeVar, Type, Callable, Any
+from typing import TYPE_CHECKING, TypeVar, Callable, Any
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
 
@@ -70,7 +70,7 @@ def interface(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
         if not isinstance(calling_obj, InterfaceScore):
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
@@ -93,7 +93,7 @@ def eventlog(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args):
+    def __wrapper(calling_obj: Any, *args):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
@@ -122,7 +122,7 @@ def external(func=None, *, readonly=False):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise ExternalException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__), func_name, cls_name)
@@ -144,7 +144,7 @@ def payable(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
 
         if not (isinstance(calling_obj, IconScoreBase)):
             raise PayableException(
