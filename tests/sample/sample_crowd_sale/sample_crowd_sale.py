@@ -117,6 +117,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.eventlog_fund_transfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
+                self.eventlog_fund_transfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
+                                            Indexed(False))
             else:
                 self.__funding_goal_reached.set(False)
