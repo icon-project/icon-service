@@ -18,7 +18,7 @@ from os import makedirs
 from collections import namedtuple
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
-from .base.exception import ExceptionCode, IconException, IconServiceBaseException
+from .base.exception import IconException, check_exception, IconServiceBaseException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -401,7 +401,6 @@ class IconServiceEngine(object):
         """
         if self._precommit_state is None:
             raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
                 'Precommit state is none on commit')
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
