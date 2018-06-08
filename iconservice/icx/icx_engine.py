@@ -60,6 +60,10 @@ class IcxEngine(object):
         self.__load_fee_treasury_account_from_storage(context, storage)
         self.__load_total_supply_amount_from_storage(context, storage)
 
+    @property
+    def storage(self) -> 'IcxStorage':
+        return self.__storage
+
     def close(self) -> None:
         """Close resources
         """
