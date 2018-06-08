@@ -207,7 +207,6 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
-    @check_exception
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
 
