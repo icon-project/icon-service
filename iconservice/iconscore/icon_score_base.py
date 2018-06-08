@@ -93,12 +93,12 @@ def eventlog(func):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     @wraps(func)
-    def __wrapper(calling_obj: object, *args, **kwargs):
+    def __wrapper(calling_obj: object, *args):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
         call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
-        ret = call_method(func_name, args, kwargs)
+        ret = call_method(func_name, args)
         return ret
 
     return __wrapper
@@ -325,7 +325,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         self._context.step_counter.increase_msgcall_step(1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
-    def __write_eventlog(self, func_name: str, arg_list: list, kw_dict: dict):
+    def __write_eventlog(self, func_name: str, arg_list: list):
         """
 
         :param func_name: function name provided by other IconScore
@@ -341,15 +341,6 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
                 indexed_list.append(arg)
             else:
                 data_list.append(arg)
-
-        if len(indexed_list) > limit_count:
-            raise EventLogException(f'Over LimitCount : {limit_count}')
-
-        for key, value in kw_dict:
-            if isinstance(value, Indexed):
-                indexed_list.append(value)
-            else:
-                data_list.append({key: value})
 
         if len(indexed_list) > limit_count:
             raise EventLogException(f'Over LimitCount : {limit_count}')
