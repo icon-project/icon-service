@@ -375,7 +375,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def now(self):
         return self.block.timestamp
 
-    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[T, Type[T]]) -> T:
+    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self.__call_interface_score)

@@ -32,7 +32,7 @@ class TestIconScoreLoader(unittest.TestCase):
         if not path.exists(dir_path):
             makedirs(dir_path)
 
-    def load_proj(self, proj: str, addr_score: Address) -> IconScoreBase:
+    def load_proj(self, proj: str, addr_score: Address) -> 'IconScoreBase':
         target_path = path.join(self._score_path, addr_score.body.hex())
         makedirs(target_path, exist_ok=True)
         target_path = path.join(target_path, '0_0')
