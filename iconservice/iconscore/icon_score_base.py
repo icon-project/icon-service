@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import warnings
-from inspect import isfunction, getmembers, signature
+from inspect import isfunction, getmembers, signature, getfullargspec
 from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
 
@@ -97,6 +97,9 @@ def eventlog(func):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
+        for index, annotation in enumerate(getfullargspec(func).annotations.values()):
+            if not isinstance(args[index], annotation):
+                raise EventLogException(f'annotation mismatch arg {args[index]}')
         call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
         ret = call_method(func_name, args)
         return ret
