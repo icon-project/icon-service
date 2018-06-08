@@ -89,6 +89,8 @@ class Address(object):
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
+        if isinstance(address_prefix, AddressPrefix) is False:
+            raise ValueError
         self.__prefix = address_prefix
         self.__body = address_body
 
