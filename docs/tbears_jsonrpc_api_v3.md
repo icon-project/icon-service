@@ -5,9 +5,10 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:-----|:-----:|:----|
-| 2018.5.18(금) | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
-| 2018.5.17(목) | 박은수 | API 작성 규칙 추가, 문서 고도화 |
-| 2018.5.15(화) | 조치원 | 최초 작성 (라인 플러스에 제공) |
+| 2018.06.08 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
+| 2018.05.18 | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
+| 2018.05.17 | 박은수 | API 작성 규칙 추가, 문서 고도화 |
+| 2018.05.15 | 조치원 | 최초 작성 (라인 플러스에 제공) |
 
 # API 작성 규칙
 * [JSON-RPC 2.0 표준안](http://www.jsonrpc.org/specification)을 따른다.
@@ -54,11 +55,12 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 * "KEY"의 작명은 camel case를 따른다.
 
 # VALUE 형식
+
 기본적으로 모든 JSON-RPC 메시지 내의 VALUE는 문자열 형식으로 되어 있다.<BR>
 많이 사용하는 "VALUE 형식"은 다음과 같다.
 
-VALUE 형식 |설명 |예
-----------|----|---
+| VALUE 형식 | 설명 | 예 |
+|------------|-----|----|
 <a id="T_ADDR_EOA">T_ADDR_EOA</a>|"hx" + 40 digit HEX 문자열|hxbe258ceb872e08851f1f59694dac2558708ece11
 <a id="T_ADDR_SCORE">T_ADDR_SCORE</a>|"cx" + 40 digit HEX 문자열|cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32
 <a id="T_HASH">T_HASH</a>| "0x" + 64 digit HEX 문자열|0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238
@@ -66,6 +68,35 @@ VALUE 형식 |설명 |예
 <a id="T_BIN_DATA">T_BIN_DATA</a>|"0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다|0x34b2
 <a id="T_SIG">T_SIG</a>|base64 encoded 문자열|
 <a id="T_DATA_TYPE">T_DATA_TYPE</a>| install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출|
+
+# JSON-RPC 에러 코드
+
+ICON JSON-RPC API Response에서 사용되는 기본적인 에러 코드 및 설명  
+아래 표의 메시지는 에러 코드에 대응하는 기본 메시지이며 구현에 따라 다른 메시지가 사용될 수 있다.
+
+## 에러 코드표
+
+| 에러 코드 | 메시지 | 설명 |
+|:---------|:------|:-----|
+| -32700 | Parse error | Invalid JSON was received by the server.<br>An error occurred on the server while parsing the JSON text. |
+| -32600 | Invalid Request | The JSON sent is not a valid Request object. |
+| -32601 | Method not found | The method does not exist / is not available. |
+| -32602 | Invalid params | Invalid method parameter(s). |
+| -32603 | Internal error | Internal JSON-RPC error. |
+| -32000 | Server error | IconServiceEngine 내부에서 발생하는 오류 |
+| -32100 | Score error | Score 내부에서 발생하는 오류 |
+
+## JSON-RPC Error Response
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+        "code": -32601,
+        "message": "Method not found (transfer)"
+    }
+}
+```
 
 # JSON-RPC API v3 ChangeLog
 
@@ -252,6 +283,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:-----|
 | status | [T_INT](#T_INT) | 1(success), 0(failure) |
+| failure | T_DICT | status가 0(failure)인 경우에만 존재. code와 message 존재 |
 | txHash | [T_HASH](#T_HASH) | transaction hash |
 | txIndex | [T_INT](#T_INT) | transaction index in a block |
 | blockHeight | [T_INT](#T_INT) | transaction이 포함된 block의 height |
@@ -273,7 +305,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
     }
 }
 
-// Response - 성공
+// Response - 성공 한 tx에 대한 결과
 {
     "jsonrpc": "2.0",
     "id": 578,
@@ -286,6 +318,25 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
         "cumulativeStepUsed": "0x1234",
         "stepUsed": "0x1234",
         "scoreAddress": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+    }
+    
+// Response - 실패 한 tx에 대한 결과
+{
+    "jsonrpc": "2.0",
+    "id": 578,
+    "result": {
+        "status": "0x0",
+        "failure": {
+            "code": "0x7d00",
+            "message": "Out of balance"
+        },
+        "txHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
+        "txIndex": "0x1",
+        "blockHeight": "0x1234",
+        "blockHash": "0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
+        "cumulativeStepUsed": "0x1234",
+        "stepUsed": "0x1234",
+        "scoreAddress": null
     }
 }
 ```
@@ -313,6 +364,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
 | data | N/A | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 (optional) |
 | contentType | 문자열 | content의 mime-type |
 | content | [T_BIN_DATA](#T_BIN_DATA) | 이진 데이터 |
+| params | T_DICT | on_install 혹은 on_update 로 전달되는 파라메터 값 |
 
 ### Returns
 
@@ -337,7 +389,12 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
         "dataType": "install",
         "data": {
             "contentType": "application/zip", // content의 mime-type
-            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e..." // SCORE 압축 데이터
+            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e...", // SCORE 압축 데이터
+            "params": {
+                "name": "ABCToken",
+                "symbol": "abc",
+                "decimals": "0x12"
+            }
         }
     }
 }
@@ -360,7 +417,10 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
         "dataType": "update", // SCORE 업데이트
         "data": {
             "contentType": "application/zip", // content의 mime-type
-            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e..." // SCORE 압축 데이터
+            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e...", // SCORE 압축 데이터
+            "params": {
+                "amount": "0x1234"
+            }
         }
     }
 }
