@@ -36,7 +36,7 @@ from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import IconBlockResult
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
-from .iconscore.icon_score_step import IconScoreStepCounterFactory
+from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_score_deployer import IconScoreDeployer
 from .logger import Logger
 from .icon_config import *
@@ -111,8 +111,14 @@ class IconServiceEngine(object):
         self._icon_score_deployer = IconScoreDeployer(icon_score_root_path)
         self._icon_score_engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
 
-        self._step_counter_factory = IconScoreStepCounterFactory(
-            6000, 200, 50, -100, 10000, 1000, 20)
+        self._step_counter_factory = IconScoreStepCounterFactory()
+        self._step_counter_factory.set_step_unit(StepType.TRANSACTION, 6000)
+        self._step_counter_factory.set_step_unit(StepType.STORAGE_SET, 200)
+        self._step_counter_factory.set_step_unit(StepType.STORAGE_REPLACE, 50)
+        self._step_counter_factory.set_step_unit(StepType.STORAGE_DELETE, -100)
+        self._step_counter_factory.set_step_unit(StepType.TRANSFER, 10000)
+        self._step_counter_factory.set_step_unit(StepType.CALL, 1000)
+        self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
