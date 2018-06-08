@@ -18,6 +18,7 @@ from inspect import isfunction, getmembers, signature
 from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
 
+from iconservice.iconscore.icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase, DatabaseObserver
@@ -310,7 +311,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         :param arg_list:
         :param kw_dict:
         """
-        self._context.step_counter.increase_msgcall_step(1)
+        self._context.step_counter.increase_step(StepType.CALL, 1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
     def __write_eventlog(self, func_name: str, arg_list: list, kw_dict: dict):
@@ -366,19 +367,19 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         :param arg_list:
         :param kw_dict:
         """
-        self._context.step_counter.increase_msgcall_step(1)
+        self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
         ret = self._context.transfer(self.__address, addr_to, amount)
         if amount > 0:
-            self._context.step_counter.increase_transfer_step(1)
+            self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         return ret
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
         ret = self._context.send(self.__address, addr_to, amount)
         if amount > 0:
-            self._context.step_counter.increase_transfer_step(1)
+            self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         return ret
 
     def revert(self) -> None:
@@ -399,10 +400,12 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         if new_value and context and context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
-                context.step_counter.increase_sreplace_step(len(new_value))
+                context.step_counter.increase_step(
+                    StepType.STORAGE_REPLACE, len(new_value))
             else:
                 # newly storing a value
-                context.step_counter.increase_sset_step(len(new_value))
+                context.step_counter.increase_step(
+                    StepType.STORAGE_DELETE, len(new_value))
 
     def on_delete(self,
                   context: 'IconScoreContext',
@@ -415,4 +418,5 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         :param old_value: old value
         """
         if context and context.type == IconScoreContextType.INVOKE:
-            context.step_counter.increase_sdelete_step(len(old_value))
+            context.step_counter.increase_step(
+                StepType.STORAGE_DELETE, len(old_value))
