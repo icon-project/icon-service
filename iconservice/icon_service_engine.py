@@ -18,7 +18,7 @@ from os import makedirs
 from collections import namedtuple
 
 from .base.address import Address, AddressPrefix, ICX_ENGINE_ADDRESS, create_address
-from .base.exception import IconException, IconServiceBaseException
+from .base.exception import IconException, check_exception, IconServiceBaseException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -161,6 +161,7 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
+    @check_exception
     def invoke(self,
                block: 'Block',
                tx_params: list) -> 'IconBlockResult':
@@ -207,6 +208,7 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
+    @check_exception
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
 
@@ -345,7 +347,7 @@ class IconServiceEngine(object):
                               to: Optional['Address'],
                               data_type: str,
                               data: dict,
-                              tx_result: 'TransactionResult') -> None:
+                              tx_result: 'TransactionResult') -> 'TransactionResult':
         """Handle score invocation
 
         :param context:
@@ -395,7 +397,7 @@ class IconServiceEngine(object):
 
         return create_address(AddressPrefix.CONTRACT, data)
 
-    def commit(self) -> None:
+    def commit(self):
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
@@ -420,7 +422,7 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
-    def rollback(self) -> None:
+    def rollback(self):
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         """
