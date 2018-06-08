@@ -19,10 +19,10 @@ class SampleCrowdSale(IconScoreBase):
     __JOINER_LIST = 'joiner_list'
 
     @eventlog
-    def eventlog_fund_transfer(self, backer: Address, amount: int, is_contribution: bool): pass
+    def eventlog_fund_transfer(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
 
     @eventlog
-    def eventlog_goal_reached(self, recipient: Address, total_amount_raised: int): pass
+    def eventlog_goal_reached(self, recipient: Indexed, total_amount_raised: Indexed): pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
         super().__init__(db, owner)
@@ -87,7 +87,7 @@ class SampleCrowdSale(IconScoreBase):
         if self.msg.sender not in self.__joiner_list:
             self.__joiner_list.put(self.msg.sender)
 
-        self.eventlog_fund_transfer(self.msg.sender, amount, True)
+        self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
 
     @external
     def check_goal_reached(self):
@@ -96,7 +96,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if self.__amount_raise.get() >= self.__funding_goal.get():
             self.__funding_goal_reached.set(True)
-            self.eventlog_goal_reached(self.__addr_beneficiary.get(), self.__amount_raise.get())
+            self.eventlog_goal_reached(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
         self.__crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
@@ -111,12 +111,13 @@ class SampleCrowdSale(IconScoreBase):
             amount = self.__balances[self.msg.sender]
             if amount > 0:
                 if self.send(self.msg.sender, amount):
-                    self.eventlog_fund_transfer(self.msg.sender, amount, False)
+                    self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.eventlog_fund_transfer(self.__addr_beneficiary.get(), self.__amount_raise.get())
+                self.eventlog_fund_transfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
+                                            Indexed(False))
             else:
                 self.__funding_goal_reached.set(False)
