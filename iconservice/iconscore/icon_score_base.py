@@ -253,9 +253,6 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def on_selfdestruct(self, recipient: 'Address') -> None:
         raise NotImplementedError()
 
-    def fallback(self) -> None:
-        pass
-
     @abstractmethod
     def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
         super().__init__(db, owner)
@@ -354,12 +351,12 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def now(self):
         return self.block.timestamp
 
-    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], Type[T]]) -> T:
+    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[[Address, callable], Type[T]]) -> T:
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self.__call_interface_score)
 
-    def call(self, addr_to: 'Address', func_name: str, kw_dict: dict):
+    def call(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
 
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
 
@@ -371,7 +368,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         :param kw_dict:
         """
         self._context.step_counter.increase_step(StepType.TRANSFER, 1)
-        return self._context.call(self.address, addr_to, func_name, [], kw_dict)
+        return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
         ret = self._context.transfer(self.__address, addr_to, amount)

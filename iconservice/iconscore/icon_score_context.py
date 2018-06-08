@@ -89,11 +89,11 @@ class IconScoreContext(object):
 
     def __init__(self,
                  context_type: IconScoreContextType=IconScoreContextType.QUERY,
-                 block: 'Block' = None,
-                 tx: 'Transaction' = None,
-                 msg: 'Message' = None,
-                 block_batch: 'BlockBatch' = None,
-                 tx_batch: 'TransactionBatch' = None) -> None:
+                 block: Block = None,
+                 tx: Transaction = None,
+                 msg: Message = None,
+                 block_batch: BlockBatch = None,
+                 tx_batch: TransactionBatch = None) -> None:
         """Constructor
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
@@ -129,7 +129,7 @@ class IconScoreContext(object):
         """
         raise NotImplementedError()
 
-    def get_balance(self, address: 'Address') -> int:
+    def get_balance(self, address: Address) -> int:
         """Returns the icx balance of context owner (icon score)
 
         :return: the icx amount of balance
@@ -137,7 +137,7 @@ class IconScoreContext(object):
         return self.icx.get_balance(self, address)
 
     def transfer(
-            self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
+            self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by 'to'.
 
         If failed, an exception will be raised.
@@ -148,7 +148,7 @@ class IconScoreContext(object):
         """
         return self.icx.transfer(self, addr_from, addr_to, amount)
 
-    def send(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
+    def send(self, addr_from: Address, addr_to: Address, amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
 
         :param addr_from:
@@ -159,13 +159,13 @@ class IconScoreContext(object):
         try:
             self.icx.transfer(self, addr_from, addr_to, amount)
             return True
-        except:
+        except Exception as e:
             pass
 
         return False
 
     def call(self, addr_from: Address,
-             addr_to: 'Address', func_name: str, arg_params: list, kw_params: dict) -> object:
+             addr_to: Address, func_name: str, arg_params: list, kw_params: dict) -> object:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
@@ -187,7 +187,7 @@ class IconScoreContext(object):
 
         return ret
 
-    def self_destruct(self, recipient: 'Address') -> None:
+    def self_destruct(self, recipient: Address) -> None:
         """Destroy the current icon score, sending its funds to the given address
 
         :param recipient: fund recipient
@@ -252,7 +252,7 @@ class IconScoreContextFactory(object):
         self._queue = []
         self._max_size = max_size
 
-    def create(self, context_type: 'IconScoreContextType') -> 'IconScoreContext':
+    def create(self, context_type: IconScoreContextType) -> IconScoreContext:
         with self._lock:
             if len(self._queue) > 0:
                 context = self._queue.pop()
@@ -262,7 +262,7 @@ class IconScoreContextFactory(object):
 
         return context
 
-    def destroy(self, context: 'IconScoreContext') -> None:
+    def destroy(self, context: IconScoreContext) -> None:
         with self._lock:
             if len(self._queue) < self._max_size:
                 context.clear()
