@@ -180,7 +180,7 @@ class Account(object):
 
         """
         if not isinstance(value, int) or value <= 0:
-            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
+            raise ICXException('deposit coin invalid params', ExceptionCode.INVALID_PARAMS)
 
         self.__icx += value
 
@@ -190,9 +190,9 @@ class Account(object):
         :param value: coin amount to withdraw
         """
         if not isinstance(value, int) or value <= 0:
-            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
+            raise ICXException('withdraw coin invalid params', ExceptionCode.INVALID_PARAMS)
         if self.__icx < value:
-            raise ICXException(None, ExceptionCode.NOT_ENOUGH_BALANCE)
+            raise ICXException('not enough balance', ExceptionCode.INVALID_PARAMS)
 
         self.__icx -= value
 

@@ -201,13 +201,13 @@ class IcxEngine(object):
                      ICX_LOG_TAG)
 
         if _from == _to:
-            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
+            raise ICXException('match _from and _to address', ExceptionCode.INVALID_PARAMS)
         if _from == _fee_treasury_address:
-            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
+            raise ICXException('match _from and fee_treasure address', ExceptionCode.INVALID_PARAMS)
         if _to == _fee_treasury_address:
-            raise ICXException(None, ExceptionCode.INVALID_PARAMS)
+            raise ICXException('match _to and fee_treasure address', ExceptionCode.INVALID_PARAMS)
         if _fee != FIXED_FEE:
-            raise ICXException(None, ExceptionCode.INVALID_FEE)
+            raise ICXException('invalid fee', ExceptionCode.INVALID_PARAMS)
 
         # get account info from state db.
         from_account = self.__storage.get_account(context, _from)

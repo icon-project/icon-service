@@ -38,7 +38,7 @@ class SampleToken(IconScoreBase):
     def __transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
         if self.balance_of(_addr_from) < _value:
-            raise IconScoreException(f"{_addr_from}'s balance < {_value}")
+            self.revert(f"{_addr_from}'s balance < {_value}")
 
         self.__balances[_addr_from] = self.__balances[_addr_from] - _value
         self.__balances[_addr_to] = self.__balances[_addr_to] + _value

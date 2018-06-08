@@ -161,7 +161,6 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
-    @check_exception
     def invoke(self,
                block: 'Block',
                tx_params: list) -> 'IconBlockResult':

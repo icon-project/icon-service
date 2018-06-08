@@ -21,12 +21,13 @@ from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
-from ..base.exception import IconScoreException
+from ..base.exception import IconScoreException, ExceptionCode
 from ..base.exception import RevertException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
+
 if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_result import IconBlockResult
@@ -190,12 +191,13 @@ class IconScoreContext(object):
         :param recipient: fund recipient
         """
 
-    def revert(self, message: str = None) -> None:
+    def revert(self, message: Optional[str], code: Union[ExceptionCode, int]) -> None:
         """Abort score execution and revert state changes
 
         :param message: error log message
+        :param code:
         """
-        raise RevertException(message)
+        raise RevertException(message, code)
 
     def clear(self) -> None:
         """Set instance member variables to None
