@@ -71,7 +71,7 @@ class Transaction(object):
 
     @staticmethod
     def create_transaction(index: int, origin: 'Address', params: dict):
-        tx_hash = params['tx_hash']
+        tx_hash = params['txHash']
         tx_timestamp = params['timestamp']
         nonce = params.get('nonce', None)
         return Transaction(tx_hash, index, origin, tx_timestamp, nonce)

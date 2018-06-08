@@ -17,6 +17,8 @@ import json
 from .configuration import LogConfiguration, LogHandlerType
 from enum import IntEnum
 
+from typing import Union
+
 # DEFAULT_LOG_FORMAT = "%(asctime)s %(process)d %(thread)d %(levelname)s %(message)s"
 DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 DEFAULT_LOG_FILE_PATH = "./logger.log"
@@ -52,7 +54,7 @@ class Logger:
                 conf = json.load(f)
                 logger_config = conf["log"]
                 return Logger.import_dict(logger_config)
-        except Exception:
+        except OSError:
             return Logger.__make_default_preset()
 
     @staticmethod
@@ -100,25 +102,25 @@ class Logger:
         self.__log_preset.update_logger()
 
     @staticmethod
-    def debug(msg: str, tag: str = DEFAULT_LOG_TAG):
+    def debug(msg: Union[str, BaseException], tag: str = DEFAULT_LOG_TAG):
         logging.debug(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def info(msg: str, tag: str = DEFAULT_LOG_TAG):
+    def info(msg: Union[str, BaseException], tag: str = DEFAULT_LOG_TAG):
         logging.info(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def warning(msg: str, tag: str = DEFAULT_LOG_TAG):
+    def warning(msg: Union[str, BaseException], tag: str = DEFAULT_LOG_TAG):
         logging.warning(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def error(msg: str, tag: str = DEFAULT_LOG_TAG):
+    def error(msg: Union[str, BaseException], tag: str = DEFAULT_LOG_TAG):
         logging.error(Logger.__make_log_msg(msg, tag))
 
     @staticmethod
-    def exception(msg, tag: str = DEFAULT_LOG_TAG):
+    def exception(msg: Union[str, BaseException], tag: str = DEFAULT_LOG_TAG):
         logging.exception(Logger.__make_log_msg(msg, tag), exc_info=True)
 
     @staticmethod
-    def __make_log_msg(msg: str, tag: str):
+    def __make_log_msg(msg: Union[str, BaseException], tag: str):
         return f'[{tag}] {msg}'

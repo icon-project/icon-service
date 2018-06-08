@@ -345,7 +345,7 @@ class IconServiceEngine(object):
                               to: Optional['Address'],
                               data_type: str,
                               data: dict,
-                              tx_result: 'TransactionResult') -> 'TransactionResult':
+                              tx_result: 'TransactionResult') -> None:
         """Handle score invocation
 
         :param context:
@@ -395,7 +395,7 @@ class IconServiceEngine(object):
 
         return create_address(AddressPrefix.CONTRACT, data)
 
-    def commit(self):
+    def commit(self) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
@@ -420,7 +420,7 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
-    def rollback(self):
+    def rollback(self) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         """
