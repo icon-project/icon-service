@@ -176,6 +176,7 @@ share/
 
 
 # ETC
+tmp/
 testcase/db/
 test_chain_helper_block/
 sample_score
