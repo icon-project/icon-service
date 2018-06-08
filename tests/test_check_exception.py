@@ -61,7 +61,7 @@ class TestCheckException(unittest.TestCase):
         pass
 
     def raise_icx_exception(self):
-        raise IconException(ExceptionCode.OK)
+        raise IconException(None, ExceptionCode.OK)
 
     def call_raise_icx_exception1(self):
         return self.raise_icx_exception()

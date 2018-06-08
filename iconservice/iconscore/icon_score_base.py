@@ -291,7 +291,8 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
 
         if func_name not in self.get_api():
-            raise ExternalException(f"can't external call", func_name, type(self).__name__)
+            raise ExternalException(f"can't external call", func_name, type(self).__name__,
+                                    ExceptionCode.METHOD_NOT_FOUND)
 
         self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
@@ -410,8 +411,9 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         return ret
 
-    def revert(self) -> None:
-        return self._context.revert(self.__address)
+    def revert(self, message: Optional[str] = None,
+               code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+        self._context.revert(message, code)
 
     def on_put(self,
                context: 'IconScoreContext',

@@ -15,20 +15,19 @@
 # limitations under the License.
 
 import threading
-from enum import IntEnum, IntFlag, unique
+from enum import IntEnum, unique
 
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
-from ..base.exception import ExceptionCode, IconException
-from ..base.exception import IconScoreException, PayableException
-from ..base.exception import ExternalException
+from ..base.exception import IconScoreException, ExceptionCode
 from ..base.exception import RevertException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
+
 if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_result import IconBlockResult
@@ -58,8 +57,7 @@ class ContextContainer(object):
         """Delete the context of the current thread
         """
         if context is not _thread_local_data.context:
-            raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
+            raise IconScoreException(
                 'Critical error in context management')
 
         del _thread_local_data.context
@@ -193,12 +191,13 @@ class IconScoreContext(object):
         :param recipient: fund recipient
         """
 
-    def revert(self, message: str = None) -> None:
+    def revert(self, message: Optional[str], code: Union[ExceptionCode, int]) -> None:
         """Abort score execution and revert state changes
 
         :param message: error log message
+        :param code:
         """
-        raise RevertException(message)
+        raise RevertException(message, code)
 
     def clear(self) -> None:
         """Set instance member variables to None
@@ -216,14 +215,10 @@ class IconScoreContext(object):
         It is called on write_precommit message from loopchain
         """
         if self.readonly:
-            raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
-                'Commit is not possbile on readonly context')
+            raise IconScoreException('Commit is not possbile on readonly context')
 
         if self.block_batch is None:
-            raise IconException(
-                ExceptionCode.INTERNAL_ERROR,
-                'Commit failure: BlockBatch is None')
+            raise IconScoreException('Commit failure: BlockBatch is None')
 
         block_batch = self.block_batch
         for icon_score_address in block_batch:
