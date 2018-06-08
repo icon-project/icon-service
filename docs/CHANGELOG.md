@@ -1,6 +1,24 @@
 # ChangeLog
 
-tbears 변경 사항 정리
+## 0.9.1 - 2018-06-08
+
+### SCORE
+
+* @interface decorator 추가
+
+### tbears
+
+* icx_sendTransaction 메소드 응답 형식 수정
+* icx_getTransactionResult 메소드 추가
+* run command parameter 추가 (--install, --update)
+* JSON-RPC 프로토콜 상에서 null값을 가지는 key에 대한 예외 처리
+
+### Documents
+
+* tbears_jsonrpc_api_v3.md
+    - 에러 코드표 추가
+* dapp_guid.md
+    - property, func 내용 추가
 
 ## 0.9.0 - 2018-06-01
 
