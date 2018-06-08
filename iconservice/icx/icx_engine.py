@@ -89,7 +89,7 @@ class IcxEngine(object):
             self.__genesis_address = address
             self.__total_supply_amount += account.icx
             self.__storage.put_total_supply(context, self.__total_supply_amount)
-        elif account == AccountType.TREASURY:
+        elif account_type == AccountType.TREASURY:
             self.__fee_treasury_address = address
         else:
             self.__total_supply_amount += account.icx

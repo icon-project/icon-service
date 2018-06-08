@@ -16,13 +16,11 @@
 
 
 import os
-import shutil
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix
-from iconservice.base.exception import DatabaseException
+from iconservice.base.address import AddressPrefix
 from iconservice.database.factory import DatabaseFactory
-from iconservice.database.db import ContextDatabase, PlyvelDatabase
+from iconservice.database.db import PlyvelDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContextType
