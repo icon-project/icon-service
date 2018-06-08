@@ -1,2 +1,4 @@
 coloredlogs
 plyvel
+aio_pika
+secp256k1
