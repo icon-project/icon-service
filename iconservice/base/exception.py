@@ -146,10 +146,9 @@ class PayableException(APIIconScoreBaseException):
         super().__init__(message, func_name, cls_name, code)
 
 
-class RevertException(APIIconScoreBaseException):
-    def __init__(self, message: Optional[str], func_name: str, cls_name: str,
-                 code: ExceptionCode = ExceptionCode.SCORE_REVERT):
-        super().__init__(message, func_name, cls_name, code)
+class RevertException(IconScoreException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_REVERT):
+        super().__init__(message, code)
 
 
 class InterfaceException(IconScoreException):
