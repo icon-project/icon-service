@@ -17,6 +17,7 @@
 
 import abc
 import json
+from collections import namedtuple
 from typing import List
 
 from ..utils import to_camel_case
@@ -30,6 +31,8 @@ class TransactionResult(object):
 
     SUCCESS = 1
     FAILURE = 0
+
+    Failure = namedtuple('Failure', ('code', 'message'))
 
     def __init__(
             self,
@@ -56,6 +59,10 @@ class TransactionResult(object):
         self.step_used = step_used
         self.status = status
 
+        # failure object which has code(int) and message(str) attributes
+        # It is only available on self.status == FAILURE
+        self.failure = None
+
     def __str__(self) -> str:
         return \
             f'status: {self.status}\n' \
@@ -75,6 +82,12 @@ class TransactionResult(object):
                 new_dict["block_height"] = value.height
             elif isinstance(value, Address):
                 new_dict[key] = str(value)
+            elif key == 'failure' and value:
+                if self.status == self.FAILURE:
+                    new_dict[key] = {
+                        'code': value.code,
+                        'message': value.message
+                    }
             else:
                 new_dict[key] = value
 
