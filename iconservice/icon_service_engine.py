@@ -19,6 +19,7 @@ from collections import namedtuple
 
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, create_address
+from .base.exception import ExceptionCode
 from .base.exception import IconException, IconServiceBaseException
 from .base.block import Block
 from .base.message import Message
@@ -352,8 +353,12 @@ class IconServiceEngine(object):
             tx_result.status = TransactionResult.SUCCESS
         except IconServiceBaseException as e:
             Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+            tx_result.failure = TransactionResult.Failure(
+                code=e.code, message=e.message)
         except Exception as e:
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            tx_result.failure = TransactionResult.Failure(
+                code=ExceptionCode.SERVER_ERROR, message=str(e))
 
         return tx_result
 

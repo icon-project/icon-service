@@ -33,11 +33,14 @@ def is_icon_address_valid(address: str) -> bool:
     :param address: (str) address string including prefix
     :return: (bool)
     """
-    if isinstance(address, str) and len(address) == 42:
-        prefix, body = split_icon_address(address)
-        if prefix == ICON_EOA_ADDRESS_PREFIX or \
-                prefix == ICON_CONTRACT_ADDRESS_PREFIX:
-            return is_lowercase_hex_string(body)
+    try:
+        if isinstance(address, str) and len(address) == 42:
+            prefix, body = split_icon_address(address)
+            if prefix == ICON_EOA_ADDRESS_PREFIX or \
+                    prefix == ICON_CONTRACT_ADDRESS_PREFIX:
+                return is_lowercase_hex_string(body)
+    finally:
+        pass
 
     return False
 
@@ -83,14 +86,21 @@ class Address(object):
     """Address class
     """
 
-    def __init__(self, address_prefix: AddressPrefix, address_body: bytes) -> None:
+    def __init__(self,
+                 address_prefix: AddressPrefix,
+                 address_body: bytes) -> None:
         """Constructor
 
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
-        if isinstance(address_prefix, AddressPrefix) is False:
-            raise ValueError
+        if not isinstance(address_prefix, AddressPrefix):
+            raise TypeError('Invalid address prefix type')
+        if not isinstance(address_body, bytes):
+            raise TypeError('Invalid address body type')
+        if len(address_body) != 20:
+            raise ValueError('Length of address body should be 20 in bytes')
+
         self.__prefix = address_prefix
         self.__body = address_body
 
