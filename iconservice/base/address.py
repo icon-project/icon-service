@@ -33,11 +33,14 @@ def is_icon_address_valid(address: str) -> bool:
     :param address: (str) address string including prefix
     :return: (bool)
     """
-    if isinstance(address, str) and len(address) == 42:
-        prefix, body = split_icon_address(address)
-        if prefix == ICON_EOA_ADDRESS_PREFIX or \
-                prefix == ICON_CONTRACT_ADDRESS_PREFIX:
-            return is_lowercase_hex_string(body)
+    try:
+        if isinstance(address, str) and len(address) == 42:
+            prefix, body = split_icon_address(address)
+            if prefix == ICON_EOA_ADDRESS_PREFIX or \
+                    prefix == ICON_CONTRACT_ADDRESS_PREFIX:
+                return is_lowercase_hex_string(body)
+    finally:
+        pass
 
     return False
 

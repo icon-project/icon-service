@@ -19,6 +19,7 @@ import unittest
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import is_icon_address_valid
 from iconservice.base.address import split_icon_address
+from iconservice.logger import Logger
 
 
 class TestAddress(unittest.TestCase):
@@ -82,6 +83,9 @@ class TestAddress(unittest.TestCase):
         a = Address.from_string(address)
         self.assertEqual(a.prefix, AddressPrefix.CONTRACT)
         self.assertEqual(a.body, bytes.fromhex(body))
+
+        print(f'{a}', a)
+        Logger.error(a)
 
     def test_hash(self):
         a1 = Address.from_string('hx00c3f694d84074f9145cd0bfa497290ce2d8052f')

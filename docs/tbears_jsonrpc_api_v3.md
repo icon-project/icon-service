@@ -283,7 +283,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:-----|
 | status | [T_INT](#T_INT) | 1(success), 0(failure) |
-| failure | T_DICT | status가 0(failure)인 경우에만 존재. code와 message 존재 |
+| failure | T_DICT | status가 0(failure)인 경우에만 존재. code(str), message(str) 속성 포함 |
 | txHash | [T_HASH](#T_HASH) | transaction hash |
 | txIndex | [T_INT](#T_INT) | transaction index in a block |
 | blockHeight | [T_INT](#T_INT) | transaction이 포함된 block의 height |
@@ -364,7 +364,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
 | data | N/A | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 (optional) |
 | contentType | 문자열 | content의 mime-type |
 | content | [T_BIN_DATA](#T_BIN_DATA) | 이진 데이터 |
-| params | T_DICT | on_install 혹은 on_update 로 전달되는 파라메터 값 |
+| params | T_DICT | on_install 혹은 on_update 로 전달되는 파라메터 값 (optional) |
 
 ### Returns
 

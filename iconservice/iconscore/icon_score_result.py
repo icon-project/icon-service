@@ -17,7 +17,6 @@
 
 import abc
 import json
-from collections import namedtuple
 from typing import List
 
 from ..utils import to_camel_case
@@ -32,7 +31,10 @@ class TransactionResult(object):
     SUCCESS = 1
     FAILURE = 0
 
-    Failure = namedtuple('Failure', ('code', 'message'))
+    class Failure(object):
+        def __init__(self, code: int, message: str):
+            self.code = int(code)
+            self.message = str(message)
 
     def __init__(
             self,
