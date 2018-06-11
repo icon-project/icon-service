@@ -169,7 +169,6 @@ class IconScoreInfoMapper(dict, ContextGetter):
 
         context_db = self.__db_factory.create_by_address(address)
         score_db = IconScoreDatabase(context_db)
-        score_db.create_observer()
         return score_db
 
     def __load_score_wrapper(self, address: 'Address') -> callable:

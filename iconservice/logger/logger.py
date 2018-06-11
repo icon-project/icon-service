@@ -41,12 +41,11 @@ class Logger:
             self.__log_preset = Logger.__make_default_preset()
         else:
             self.__log_preset = Logger.import_file(import_file_path)
+
+        self.update_other_logger_level('pika', True)
+        self.update_other_logger_level('aio_pika', True)
+        self.update_other_logger_level('sanic.access', True)
         self.__log_preset.update_logger()
-        self.update_other_logger_level('pika')
-        self.update_other_logger_level('aio_pika')
-        self.update_other_logger_level('sanic.access')
-        self.update_other_logger_level('jsonrpcclient.client.request')
-        self.update_other_logger_level('jsonrpcclient.client.response')
 
     @staticmethod
     def import_file(path: str):
@@ -89,10 +88,10 @@ class Logger:
         preset.set_handler(LogHandlerType.CONSOLE|LogHandlerType.FILE)
         return preset
 
-    def update_other_logger_level(self, logger_name: str):
+    def update_other_logger_level(self, logger_name: str, disable: bool = False):
         logger = logging.getLogger(logger_name)
         if logger is not None:
-            self.__log_preset.update_logger(logger)
+            self.__log_preset.update_logger(logger, disable)
 
     def set_log_level(self, log_level: 'LogLevel'):
         self.__log_preset.log_level = log_level
