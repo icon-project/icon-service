@@ -20,18 +20,15 @@ from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
 
 from iconservice.iconscore.icon_score_step import StepType
-from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
-from ..database.db import IconScoreDatabase, DatabaseObserver
+from ..database.db import IconScoreDatabase
 from ..base.exception import *
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
 
-from typing import TYPE_CHECKING, TypeVar, Callable, Any
-if TYPE_CHECKING:
-    from .icon_score_context import IconScoreContext
+from typing import TypeVar, Callable, Any
 
 T = TypeVar('T')
 
@@ -281,8 +278,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if not self.get_api():
             raise ExternalException('empty abi!', '__init__', str(type(self)))
 
-        self.__db.set_observer(self.__create_db_observer())
-
     @classmethod
     def get_api(cls) -> dict:
         return cls.__get_attr_dict(CONST_CLASS_EXTERNALS)
@@ -290,9 +285,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
         return getattr(cls, attr, {})
-
-    def __create_db_observer(self) -> 'DatabaseObserver':
-        return DatabaseObserver(self.__on_db_put, self.__on_db_delete)
 
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
 
@@ -336,12 +328,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self._context.step_counter.increase_step(StepType.CALL, 1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
-    def __write_eventlog(self, func_name: str, arg_list: list):
+    @staticmethod
+    def __write_eventlog(func_name: str, arg_list: list):
         """
 
         :param func_name: function name provided by other IconScore
         :param arg_list:
-        :param kw_dict:
         """
 
         limit_count = 3
@@ -358,43 +350,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         # TODO send params to eventlog internal logic
         pass
-
-    def __on_db_put(self,
-               context: 'IconScoreContext',
-               key: bytes,
-               old_value: bytes,
-               new_value: bytes):
-        """Invoked when `put` is called in `ContextDatabase`.
-
-        :param context: SCORE context
-        :param key: key
-        :param old_value: old value
-        :param new_value: new value
-        """
-        
-        if new_value and context and context.type == IconScoreContextType.INVOKE:
-            if old_value:
-                # modifying a value
-                context.step_counter.increase_step(
-                    StepType.STORAGE_REPLACE, len(new_value))
-            else:
-                # newly storing a value
-                context.step_counter.increase_step(
-                    StepType.STORAGE_DELETE, len(new_value))
-
-    def __on_db_delete(self,
-                  context: 'IconScoreContext',
-                  key: bytes,
-                  old_value: bytes):
-        """Invoked when `delete` is called in `ContextDatabase`.
-
-        :param context: SCORE context
-        :param key: key
-        :param old_value: old value
-        """
-        if context and context.type == IconScoreContextType.INVOKE:
-            context.step_counter.increase_step(
-                StepType.STORAGE_DELETE, len(old_value))
 
     @property
     def msg(self) -> 'Message':

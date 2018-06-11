@@ -20,6 +20,7 @@ from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils import sha3_256
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
@@ -113,12 +114,8 @@ class DatabaseObserver(object):
     """ An abstract class of database observer.
     """
 
-    def __init__(self, put_func: callable, delete_func: callable):
-        self.__put_func = put_func
-        self.__delete_func = delete_func
-
-    def on_put(self,
-               context: 'IconScoreContext',
+    @staticmethod
+    def on_put(context: 'IconScoreContext',
                key: bytes,
                old_value: bytes,
                new_value: bytes):
@@ -129,12 +126,19 @@ class DatabaseObserver(object):
         :param old_value: old value
         :param new_value: new value
         """
-        if not self.__put_func:
-            Logger.warning('__put_func is None', ICON_DB_LOG_TAG)
-        self.__put_func(context, key, old_value, new_value)
 
-    def on_delete(self,
-                  context: 'IconScoreContext',
+        if new_value and context and context.type == IconScoreContextType.INVOKE:
+            if old_value:
+                # modifying a value
+                context.step_counter.increase_step(
+                    StepType.STORAGE_REPLACE, len(new_value))
+            else:
+                # newly storing a value
+                context.step_counter.increase_step(
+                    StepType.STORAGE_DELETE, len(new_value))
+
+    @staticmethod
+    def on_delete(context: 'IconScoreContext',
                   key: bytes,
                   old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
@@ -144,9 +148,9 @@ class DatabaseObserver(object):
         :param key: key
         :param old_value:
         """
-        if not self.__delete_func:
-            Logger.warning('__delete_func is None', ICON_DB_LOG_TAG)
-        self.__delete_func(context, key, old_value)
+        if context and context.type == IconScoreContextType.INVOKE:
+            context.step_counter.increase_step(
+                StepType.STORAGE_DELETE, len(old_value))
 
 
 class ContextDatabase(PlyvelDatabase):
@@ -309,7 +313,7 @@ class IconScoreDatabase(ContextGetter):
         """
         self.__prefix = prefix
         self._context_db = context_db
-        self.__observer: DatabaseObserver = None
+        self.__observer = None
 
     @property
     def address(self):
@@ -339,8 +343,11 @@ class IconScoreDatabase(ContextGetter):
             old_value = self._context_db.get(self._context, key)
             self.__observer.on_delete(self._context, key, old_value)
 
-    def set_observer(self, observer: DatabaseObserver):
+    def set_observer(self, observer: 'DatabaseObserver'):
         self.__observer = observer
+
+    def create_observer(self):
+        self.__observer = DatabaseObserver()
 
     def __hash_key(self, key: bytes):
         """All key is hashed and stored to StateDB

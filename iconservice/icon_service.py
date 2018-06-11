@@ -25,32 +25,32 @@ class IconService(object):
     """
 
     def __init__(self, icon_score_root_path: str, icon_score_state_db_root_path: str,
-                 channel: str, amqp_key: str, amqp_target: str, rpc_port: str, only_service: bool = False):
+                 channel: str, amqp_key: str, amqp_target: str, rpc_port: str, only_inner_service: bool):
         """constructor
         """
 
         self.__icon_score_stub = None
-        self.__icon_score_queue_name = ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel,
-                                                                           amqp_key=amqp_key,
-                                                                           rpc_port=rpc_port)
-
-        self.__only_service = only_service
+        icon_score_queue_name = ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel,
+                                                                    amqp_key=amqp_key,
+                                                                    rpc_port=rpc_port)
+        self.__icon_score_queue_name = icon_score_queue_name
+        self.__only_inner_service = only_inner_service
 
         Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
         Logger.debug(f'icon_score_root_path : {icon_score_root_path}', ICON_SERVICE_STANDALONE)
         Logger.debug(f'icon_score_state_db_root_path  : {icon_score_state_db_root_path}', ICON_SERVICE_STANDALONE)
         Logger.debug(f'amqp_target  : {amqp_target}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'icon_score_queue_name  : {self.__icon_score_queue_name}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'only_service : {only_service}', ICON_SERVICE_STANDALONE)
+        Logger.debug(f'icon_score_queue_name  : {icon_score_queue_name}', ICON_SERVICE_STANDALONE)
+        Logger.debug(f'only_service : {only_inner_service}', ICON_SERVICE_STANDALONE)
         Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
 
         self.__amqp_target = amqp_target
-        self.__inner_service = IconScoreInnerService(amqp_target, self.__icon_score_queue_name,
+        self.__inner_service = IconScoreInnerService(amqp_target, icon_score_queue_name,
                                                      icon_score_root_path=icon_score_root_path,
                                                      icon_score_state_db_root_path=icon_score_state_db_root_path)
 
     def stop(self):
-        if not self.__only_service:
+        if not self.__only_inner_service:
             self.__icon_score_stub().task().close()
 
         self.__inner_service.loop.stop()
@@ -65,7 +65,7 @@ class IconService(object):
         async def __serve():
             await self.__inner_service.connect(exclusive=True)
 
-            if not self.__only_service:
+            if not self.__only_inner_service:
                 await self.__create_icon_score_stub()
                 await self.__icon_score_stub.task().open()
 
@@ -95,8 +95,8 @@ def main(argv):
                         help="icon score amqp_target : [127.0.0.1]")
     parser.add_argument("--rpc_port", type=str, default='9000',
                         help="icon score rpc_port : [9000]")
-    parser.add_argument("--only_service", type=bool, default=False,
-                        help="icon score only_service")
+    parser.add_argument("--only_inner_service", type=bool, default=False,
+                        help="icon score only_inner_service")
 
     args = parser.parse_args(argv)
 
@@ -110,7 +110,7 @@ def main(argv):
                   'icon_score_state_db_root_path': args.state_db_root_path,
                   'channel': args.channel, 'amqp_key': args.amqp_key,
                   'amqp_target': args.amqp_target, 'rpc_port': args.rpc_port,
-                  'only_service': args.only_service}
+                  'only_inner_service': args.only_inner_service}
         icon_service = IconService(**params)
 
     icon_service.serve()
@@ -118,4 +118,5 @@ def main(argv):
 
 if __name__ == '__main__':
     import sys
+
     main(sys.argv[1:])
