@@ -30,12 +30,27 @@ $ source bin/source
 iconservice-x.x.x-py3-none-any.whl
 ```
 
+## Build script
+```bash
+build.sh [test|build|deploy]
+```
+* Options
+  - test: test 실행
+  - build: test 후 build 실행
+  - build --ignore-test: build 실행
+  - deploy: test, build 후 s3에 deploy
+  - deploy --ignore-test: build 후 s3에 deploy
+
+
 ## CI/CD
 * Jenkins Url: [https://jenkins.theloop.co.kr](https://jenkins.theloop.co.kr) (goldworm/@ucoin)
-* Path: ICON > ICON_iconservice
+* Path: ICON > ICON_tbears
 * Task
   - On branch `develop`: test
   - On branch `master`: test, package, deploy to S3
+
+## 배포 URL
+> http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com
 
 
 ## Directories
