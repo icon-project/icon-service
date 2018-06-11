@@ -22,9 +22,9 @@ class SampleToken(IconScoreBase):
 
     __BALANCES = 'balances'
     __TOTAL_SUPPLY = 'total_supply'
-    
+
     @eventlog
-    def eventlog_transfer(self, addr_from: Address, addr_to: Address, value: int): pass
+    def eventlog_transfer(self, addr_from: Indexed, addr_to: Indexed, value: Indexed): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
         super().__init__(db, addr_owner)
@@ -55,12 +55,12 @@ class SampleToken(IconScoreBase):
     def __transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
         if self.balance_of(_addr_from) < _value:
-            raise IconScoreException(f"{_addr_from}'s balance < {_value}")
+            self.revert(f"{_addr_from}'s balance < {_value}")
 
         self.__balances[_addr_from] = self.__balances[_addr_from] - _value
         self.__balances[_addr_to] = self.__balances[_addr_to] + _value
 
-        self.eventlog_transfer(_addr_from, _addr_to, _value)
+        self.eventlog_transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
         return True
 
     @external
@@ -69,6 +69,7 @@ class SampleToken(IconScoreBase):
 
     def fallback(self) -> None:
         pass
+
 
 ```
 
@@ -95,12 +96,12 @@ class SampleCrowdSale(IconScoreBase):
     __FUNDING_GOAL_REACHED = 'funding_goal_reached'
     __CROWD_SALE_CLOSED = 'crowd_sale_closed'
     __JOINER_LIST = 'joiner_list'
-    
-    @eventlog
-    def eventlog_fund_transfer(self, backer: Address, amount: int, is_contribution: bool): pass
 
     @eventlog
-    def eventlog_goal_reached(self, recipient: Address, total_amount_raised: int): pass
+    def eventlog_fund_transfer(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
+
+    @eventlog
+    def eventlog_goal_reached(self, recipient: Indexed, total_amount_raised: Indexed): pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
         super().__init__(db, owner)
@@ -153,7 +154,7 @@ class SampleCrowdSale(IconScoreBase):
     @payable
     def fallback(self) -> None:
         if self.__crowd_sale_closed.get():
-            raise IconScoreException('crowd sale is closed')
+            self.revert('crowd sale is closed')
 
         amount = self.msg.value
         self.__balances[self.msg.sender] = self.__balances[self.msg.sender] + amount
@@ -165,16 +166,16 @@ class SampleCrowdSale(IconScoreBase):
         if self.msg.sender not in self.__joiner_list:
             self.__joiner_list.put(self.msg.sender)
 
-        self.eventlog_fund_transfer(self.msg.sender, amount, True)
+        self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
 
     @external
     def check_goal_reached(self):
         if not self.__after_dead_line():
-            raise IconScoreException('before deadline')
+            self.revert('before deadline')
 
         if self.__amount_raise.get() >= self.__funding_goal.get():
             self.__funding_goal_reached.set(True)
-            self.eventlog_goal_reached(self.__addr_beneficiary.get(), self.__amount_raise.get())
+            self.eventlog_goal_reached(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
         self.__crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
@@ -183,23 +184,24 @@ class SampleCrowdSale(IconScoreBase):
     @external
     def safe_withdrawal(self):
         if not self.__after_dead_line():
-            raise IconScoreException('before deadline')
+            self.revert('before deadline')
 
         if not self.__funding_goal_reached.get():
             amount = self.__balances[self.msg.sender]
             self.__balances[self.msg.sender] = 0
             if amount > 0:
                 if self.send(self.msg.sender, amount):
-                    self.eventlog_fund_transfer(self.msg.sender, amount, False)
+                    self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.eventlog_fund_transfer(self.__addr_beneficiary.get(), self.__amount_raise.get())
+                self.eventlog_fund_transfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
+                                            Indexed(False))
             else:
                 self.__funding_goal_reached.set(False)
-                
+
 ```
 
 
@@ -322,8 +324,27 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 
 #### eventlog 데코레이터 (@eventlog)
 이 데코레이터가 붙은 함수는 TxResult에 'eventlogs'의 내용으로 로그가 기록됩니다.<br/>
-해당 함수 정의는 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있어도,
+해당 함수 정의는 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있어도,<br/>
 해당 구현부의 내용은 동작하지 않습니다.<br/>
+키워드 인자는 지원하지 않습니다.<br/>
+함수 정의시에 Indexed wrapper클래스를 사용하면 해당 변수는 불룸필터(Bloom filter)적용이 가능합니다.<br/>
+함수 정의부와 실행부의 데이터 타입이 다르다면 mismatch예외가 발생합니다.<br/>
+따라서 매개변수 데이터 타입지정이 필수입니다.<br/>
+예시)<br/>
+```python
+@eventlog
+def eventlog_fund_transfer1(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
+
+@eventlog
+def eventlog_fund_transfer2(self, backer: Address, amount: int, is_contribution: bool): pass
+
+#사용
+self.eventlog_fund_transfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+self.eventlog_fund_transfer2(self.msg.sender, amount, True)
+```
+Indexed wrapper클래스는 기본타입(int, str, bytes, Address, bool)만 지원하며, array type은 지원하지 않습니다.<br/>
+Indexed가 없는 데이터 타입들은 tx_result에 indexed타입들과 별도로 분리되어 저장됩니다.<br/>
+indexed타입은 최대 3개까지 지원가능하며, 그외 데이터 타입은 제한이 없습니다.<br/>
 
 #### fallback
 fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>

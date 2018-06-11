@@ -109,6 +109,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if not self.__funding_goal_reached.get():
             amount = self.__balances[self.msg.sender]
+            self.__balances[self.msg.sender] = 0
             if amount > 0:
                 if self.send(self.msg.sender, amount):
                     self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
