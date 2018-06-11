@@ -14,17 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import abc
-import hashlib
 import plyvel
-import threading
 
 from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
-from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.utils import sha3_256
+from iconservice.logger.logger import Logger
+from iconservice.icon_config import *
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_context import IconScoreContext
 
 
 def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
@@ -46,7 +48,6 @@ class PlyvelDatabase(object):
         """Constructor
 
         :param path: db directory path
-        :param create_if_missing: if not exist, create db in path
         """
         self._db = db
 
@@ -108,12 +109,16 @@ class PlyvelDatabase(object):
                     wb.delete(key)
 
 
-class DatabaseObserver(abc.ABC):
+class DatabaseObserver(object):
     """ An abstract class of database observer.
     """
 
-    @abc.abstractmethod
-    def on_put(self, context: 'IconScoreContext',
+    def __init__(self, put_func: callable, delete_func: callable):
+        self.__put_func = put_func
+        self.__delete_func = delete_func
+
+    def on_put(self,
+               context: 'IconScoreContext',
                key: bytes,
                old_value: bytes,
                new_value: bytes):
@@ -124,19 +129,24 @@ class DatabaseObserver(abc.ABC):
         :param old_value: old value
         :param new_value: new value
         """
-        pass
+        if not self.__put_func:
+            Logger.warning('__put_func is None', ICON_DB_LOG_TAG)
+        self.__put_func(context, key, old_value, new_value)
 
-    @abc.abstractmethod
     def on_delete(self,
                   context: 'IconScoreContext',
                   key: bytes,
                   old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
 
+
         :param context: SCORE context
         :param key: key
+        :param old_value:
         """
-        pass
+        if not self.__delete_func:
+            Logger.warning('__delete_func is None', ICON_DB_LOG_TAG)
+        self.__delete_func(context, key, old_value)
 
 
 class ContextDatabase(PlyvelDatabase):
@@ -275,7 +285,6 @@ class ContextDatabase(PlyvelDatabase):
 
     def set_observer(self, observer: DatabaseObserver):
         self.__observer = observer
-
 
     @staticmethod
     def from_address_and_path(

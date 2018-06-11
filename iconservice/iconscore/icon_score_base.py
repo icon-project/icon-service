@@ -246,7 +246,7 @@ class IconScoreBaseMeta(ABCMeta):
         return cls
 
 
-class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
+class IconScoreBase(IconScoreObject, ContextGetter,
                     metaclass=IconScoreBaseMeta):
 
     @abstractmethod
@@ -281,7 +281,7 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         if not self.get_api():
             raise ExternalException('empty abi!', '__init__', str(type(self)))
 
-        self.__db.set_observer(self)
+        self.__db.set_observer(self.__create_db_observer())
 
     @classmethod
     def get_api(cls) -> dict:
@@ -290,6 +290,9 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
         return getattr(cls, attr, {})
+
+    def __create_db_observer(self) -> 'DatabaseObserver':
+        return DatabaseObserver(self.__on_db_put, self.__on_db_delete)
 
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
 
@@ -356,6 +359,43 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
         # TODO send params to eventlog internal logic
         pass
 
+    def __on_db_put(self,
+               context: 'IconScoreContext',
+               key: bytes,
+               old_value: bytes,
+               new_value: bytes):
+        """Invoked when `put` is called in `ContextDatabase`.
+
+        :param context: SCORE context
+        :param key: key
+        :param old_value: old value
+        :param new_value: new value
+        """
+        
+        if new_value and context and context.type == IconScoreContextType.INVOKE:
+            if old_value:
+                # modifying a value
+                context.step_counter.increase_step(
+                    StepType.STORAGE_REPLACE, len(new_value))
+            else:
+                # newly storing a value
+                context.step_counter.increase_step(
+                    StepType.STORAGE_DELETE, len(new_value))
+
+    def __on_db_delete(self,
+                  context: 'IconScoreContext',
+                  key: bytes,
+                  old_value: bytes):
+        """Invoked when `delete` is called in `ContextDatabase`.
+
+        :param context: SCORE context
+        :param key: key
+        :param old_value: old value
+        """
+        if context and context.type == IconScoreContextType.INVOKE:
+            context.step_counter.increase_step(
+                StepType.STORAGE_DELETE, len(old_value))
+
     @property
     def msg(self) -> 'Message':
         return self._context.msg
@@ -417,39 +457,3 @@ class IconScoreBase(IconScoreObject, ContextGetter, DatabaseObserver,
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         self._context.revert(message, code)
-
-    def on_put(self,
-               context: 'IconScoreContext',
-               key: bytes,
-               old_value: bytes,
-               new_value: bytes):
-        """Invoked when `put` is called in `ContextDatabase`.
-
-        :param context: SCORE context
-        :param key: key
-        :param old_value: old value
-        :param new_value: new value
-        """
-        if new_value and context and context.type == IconScoreContextType.INVOKE:
-            if old_value:
-                # modifying a value
-                context.step_counter.increase_step(
-                    StepType.STORAGE_REPLACE, len(new_value))
-            else:
-                # newly storing a value
-                context.step_counter.increase_step(
-                    StepType.STORAGE_DELETE, len(new_value))
-
-    def on_delete(self,
-                  context: 'IconScoreContext',
-                  key: bytes,
-                  old_value: bytes):
-        """Invoked when `delete` is called in `ContextDatabase`.
-
-        :param context: SCORE context
-        :param key: key
-        :param old_value: old value
-        """
-        if context and context.type == IconScoreContextType.INVOKE:
-            context.step_counter.increase_step(
-                StepType.STORAGE_DELETE, len(old_value))
