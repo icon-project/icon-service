@@ -40,7 +40,7 @@ class LogConfiguration:
 
     log_file_path = property(None, log_file_path)
 
-    def update_logger(self, logger: logging.Logger=None, disable: bool=False):
+    def update_logger(self, logger: logging.Logger=None):
         self.__log_format = self.log_format.replace("TAG", self.custom)
 
         for handler in logging.root.handlers[:]:
@@ -53,10 +53,7 @@ class LogConfiguration:
                                 datefmt="%m-%d %H:%M:%S",
                                 level=self.log_level)
         else:
-            if disable:
-                logger.setLevel(logging.CRITICAL)
-            else:
-                logger.setLevel(self.log_level)
+            logger.setLevel(self.log_level)
 
         if self.log_color:
             self.__update_log_color_set(logger)

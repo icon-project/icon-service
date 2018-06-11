@@ -32,4 +32,4 @@ DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
                                             'amqp_key': 'amqp_key',
                                             'amqp_target': '127.0.0.1',
                                             'rpc_port': '9000',
-                                            'only_service': False}
+                                            'only_inner_service': False}

@@ -30,6 +30,7 @@ from ..base.address import Address
 from ..base.block import Block
 
 from typing import TYPE_CHECKING, TypeVar, Callable, Any
+
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
 
@@ -336,7 +337,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self._context.step_counter.increase_step(StepType.CALL, 1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
-    def __write_eventlog(self, func_name: str, arg_list: list):
+    @staticmethod
+    def __write_eventlog(func_name: str, arg_list: list):
         """
 
         :param func_name: function name provided by other IconScore
@@ -359,19 +361,22 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         # TODO send params to eventlog internal logic
         pass
 
-    def __on_db_put(self,
-               context: 'IconScoreContext',
-               key: bytes,
-               old_value: bytes,
-               new_value: bytes):
+    @staticmethod
+    def __on_db_put(context: 'IconScoreContext',
+                    key: bytes,
+                    old_value: bytes,
+                    new_value: bytes):
         """Invoked when `put` is called in `ContextDatabase`.
+
+        # All steps are managed in the score
+        # Don't move to another codes
 
         :param context: SCORE context
         :param key: key
         :param old_value: old value
         :param new_value: new value
         """
-        
+
         if new_value and context and context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
@@ -382,16 +387,19 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 context.step_counter.increase_step(
                     StepType.STORAGE_DELETE, len(new_value))
 
-    def __on_db_delete(self,
-                  context: 'IconScoreContext',
-                  key: bytes,
-                  old_value: bytes):
+    @staticmethod
+    def __on_db_delete(context: 'IconScoreContext',
+                       key: bytes,
+                       old_value: bytes):
         """Invoked when `delete` is called in `ContextDatabase`.
 
+        # All steps are managed in the score
+        # Don't move to another codes
         :param context: SCORE context
         :param key: key
         :param old_value: old value
         """
+
         if context and context.type == IconScoreContextType.INVOKE:
             context.step_counter.increase_step(
                 StepType.STORAGE_DELETE, len(old_value))
