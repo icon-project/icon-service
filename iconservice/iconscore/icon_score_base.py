@@ -281,7 +281,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if not self.get_api():
             raise ExternalException('empty abi!', '__init__', str(type(self)))
 
-        self.__db.set_observer(self.__set_db_observer())
+        self.__db.set_observer(self.__create_db_observer())
 
     @classmethod
     def get_api(cls) -> dict:
@@ -291,7 +291,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __get_attr_dict(cls, attr: str) -> dict:
         return getattr(cls, attr, {})
 
-    def __set_db_observer(self):
+    def __create_db_observer(self) -> 'DatabaseObserver':
         return DatabaseObserver(self.__on_db_put, self.__on_db_delete)
 
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
