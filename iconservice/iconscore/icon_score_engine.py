@@ -143,36 +143,11 @@ class IconScoreEngine(ContextContainer):
             return call_method(
                 icon_score=icon_score,
                 func_name=method,
-                kw_params=self._type_converter(icon_score, method, kw_params))
+                kw_params=kw_params)
         except (IconScoreException, Exception):
             raise
         finally:
             self._delete_context(context)
-
-    @staticmethod
-    def _type_converter(icon_score: 'IconScoreBase',
-                        func_name: str,
-                        kw_params: dict) -> dict:
-        param_type_table = {}
-        func_params = icon_score.get_api()[func_name].parameters
-
-        for key, value in kw_params.items():
-            param = func_params.get(key)
-            if param:
-                param_type = param.annotation
-                if param_type is Address:
-                    param_type_table[key] = TypeConverter.CONST_ADDRESS
-                elif param_type is int:
-                    param_type_table[key] = TypeConverter.CONST_INT
-                elif param_type is str:
-                    param_type_table[key] = TypeConverter.CONST_STRING
-                elif param_type is bytes:
-                    param_type_table[key] = TypeConverter.CONST_BYTES
-                elif param_type is bool:
-                    param_type_table[key] = TypeConverter.CONST_BOOL
-
-        converter = TypeConverter(param_type_table)
-        return converter.convert(kw_params, True)
 
     def _fallback(self,
                   context: 'IconScoreContext',
