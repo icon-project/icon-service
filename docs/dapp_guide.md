@@ -7,9 +7,9 @@
 $ tbears init {project_name} {class_name}
 ```
 위의 명령을 수행하면 {project_name} 폴더가 생기며,
-해당 폴더 안에 \_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.
-{project_name}.py 파일에는 {class_name}으로 메인 클래스가 선언되어 있습니다.
-\_\_init\_\_.py 에는 동적 import를 위한 구문이 자동으로 생성되어 있습니다.
+해당 폴더 안에 \_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.<br/>
+{project_name}.py 파일에는 {class_name}으로 메인 클래스가 선언되어 있습니다.<br/>
+\_\_init\_\_.py 에는 동적 import를 위한 구문이 자동으로 생성되어 있습니다.<br/>
 만약 폴더 구조가 변경되면 위의 내용을 반드시 확인 부탁드립니다.<br/>
 
 
@@ -22,9 +22,9 @@ class SampleToken(IconScoreBase):
 
     __BALANCES = 'balances'
     __TOTAL_SUPPLY = 'total_supply'
-    
+
     @eventlog
-    def eventlog_transfer(self, addr_from: Address, addr_to: Address, value: int): pass
+    def eventlog_transfer(self, addr_from: Indexed, addr_to: Indexed, value: Indexed): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
         super().__init__(db, addr_owner)
@@ -55,12 +55,12 @@ class SampleToken(IconScoreBase):
     def __transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
 
         if self.balance_of(_addr_from) < _value:
-            raise IconScoreException(f"{_addr_from}'s balance < {_value}")
+            self.revert(f"{_addr_from}'s balance < {_value}")
 
         self.__balances[_addr_from] = self.__balances[_addr_from] - _value
         self.__balances[_addr_to] = self.__balances[_addr_to] + _value
 
-        self.eventlog_transfer(_addr_from, _addr_to, _value)
+        self.eventlog_transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
         return True
 
     @external
@@ -69,6 +69,7 @@ class SampleToken(IconScoreBase):
 
     def fallback(self) -> None:
         pass
+
 
 ```
 
@@ -95,12 +96,12 @@ class SampleCrowdSale(IconScoreBase):
     __FUNDING_GOAL_REACHED = 'funding_goal_reached'
     __CROWD_SALE_CLOSED = 'crowd_sale_closed'
     __JOINER_LIST = 'joiner_list'
-    
-    @eventlog
-    def eventlog_fund_transfer(self, backer: Address, amount: int, is_contribution: bool): pass
 
     @eventlog
-    def eventlog_goal_reached(self, recipient: Address, total_amount_raised: int): pass
+    def eventlog_fund_transfer(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
+
+    @eventlog
+    def eventlog_goal_reached(self, recipient: Indexed, total_amount_raised: Indexed): pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
         super().__init__(db, owner)
@@ -153,7 +154,7 @@ class SampleCrowdSale(IconScoreBase):
     @payable
     def fallback(self) -> None:
         if self.__crowd_sale_closed.get():
-            raise IconScoreException('crowd sale is closed')
+            self.revert('crowd sale is closed')
 
         amount = self.msg.value
         self.__balances[self.msg.sender] = self.__balances[self.msg.sender] + amount
@@ -165,16 +166,16 @@ class SampleCrowdSale(IconScoreBase):
         if self.msg.sender not in self.__joiner_list:
             self.__joiner_list.put(self.msg.sender)
 
-        self.eventlog_fund_transfer(self.msg.sender, amount, True)
+        self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
 
     @external
     def check_goal_reached(self):
         if not self.__after_dead_line():
-            raise IconScoreException('before deadline')
+            self.revert('before deadline')
 
         if self.__amount_raise.get() >= self.__funding_goal.get():
             self.__funding_goal_reached.set(True)
-            self.eventlog_goal_reached(self.__addr_beneficiary.get(), self.__amount_raise.get())
+            self.eventlog_goal_reached(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
         self.__crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
@@ -183,23 +184,24 @@ class SampleCrowdSale(IconScoreBase):
     @external
     def safe_withdrawal(self):
         if not self.__after_dead_line():
-            raise IconScoreException('before deadline')
+            self.revert('before deadline')
 
         if not self.__funding_goal_reached.get():
             amount = self.__balances[self.msg.sender]
             self.__balances[self.msg.sender] = 0
             if amount > 0:
                 if self.send(self.msg.sender, amount):
-                    self.eventlog_fund_transfer(self.msg.sender, amount, False)
+                    self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.eventlog_fund_transfer(self.__addr_beneficiary.get(), self.__amount_raise.get())
+                self.eventlog_fund_transfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
+                                            Indexed(False))
             else:
                 self.__funding_goal_reached.set(False)
-                
+
 ```
 
 
@@ -322,8 +324,27 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 
 #### eventlog 데코레이터 (@eventlog)
 이 데코레이터가 붙은 함수는 TxResult에 'eventlogs'의 내용으로 로그가 기록됩니다.<br/>
-해당 함수 정의는 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있어도,
-해당 구현부의 내용은 동작하지 않습니다.<br/>
+해당 함수 선언은 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
+키워드 인자는 지원하지 않습니다.<br/>
+함수 선언 시에 Indexed wrapper 클래스를 사용하면 해당 변수는 불룸필터(Bloom filter) 적용이 가능합니다.<br/>
+함수 선언부에 Indexed가 붙은 변수는 실행부에서도 Indexed를 붙여야 하며, 이를 어길 경우 mismatch 예외가 발생합니다.<br/>
+
+예시)<br/>
+```python
+# 선언부
+@eventlog
+def eventlog_fund_transfer1(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
+
+@eventlog
+def eventlog_fund_transfer2(self, backer: Address, amount: int, is_contribution: bool): pass
+
+# 실행부
+self.eventlog_fund_transfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+self.eventlog_fund_transfer2(self.msg.sender, amount, True)
+```
+Indexed wrapper 클래스는 기본 타입(int, str, bytes, Address, bool)만 지원하며, array 타입은 지원하지 않습니다.<br/>
+Indexed가 없는 데이터 타입은 TxResult에 Indexed 타입과 별도로 분리되어 저장됩니다.<br/>
+Indexed 타입의 병기는 최대 3개까지 가능하며, 그외 데이터 타입 수에는 제한이 없습니다.<br/>
 
 #### fallback
 fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
@@ -333,7 +354,7 @@ payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
 
 #### InterfaceScore
 다른 스코어의 함수를 호출하는 인터페이스로, 기존에 제공하던 call 함수 대신 사용할 수 있습니다.<br/>
-정의 내용은 다음과 같습니다.<br/>
+사용 형식은 다음과 같습니다.<br/>
 
 ```python
 class SampleTokenInterface(InterfaceScore):
@@ -341,8 +362,7 @@ class SampleTokenInterface(InterfaceScore):
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 ```
 다른 스코어에 interface 데코레이터가 붙은 함수처럼 정의된 함수가 있다면 그 함수를 호출할 수 있습니다.<br/>
-eventlog 데코레이터와 마찬가지로 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있어도,
-해당 구현부의 내용은 동작하지 않습니다.<br/>
+eventlog 데코레이터와 마찬가지로 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
 
 예시)<br/>
 IconScoreBase 내장함수 create_interface_score(스코어 주소, 인터페이스로 사용할 클래스)를 사용하여,
