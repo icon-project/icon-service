@@ -339,7 +339,7 @@ class IconScoreDatabase(ContextGetter):
             old_value = self._context_db.get(self._context, key)
             self.__observer.on_delete(self._context, key, old_value)
 
-    def set_observer(self, observer: DatabaseObserver):
+    def set_observer(self, observer: 'DatabaseObserver'):
         self.__observer = observer
 
     def __hash_key(self, key: bytes):
