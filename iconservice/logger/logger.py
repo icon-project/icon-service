@@ -41,12 +41,13 @@ class Logger:
             self.__log_preset = Logger.__make_default_preset()
         else:
             self.__log_preset = Logger.import_file(import_file_path)
-        self.__log_preset.update_logger()
+
         self.update_other_logger_level('pika')
         self.update_other_logger_level('aio_pika')
         self.update_other_logger_level('sanic.access')
         self.update_other_logger_level('jsonrpcclient.client.request')
         self.update_other_logger_level('jsonrpcclient.client.response')
+        self.__log_preset.update_logger()
 
     @staticmethod
     def import_file(path: str):
@@ -84,7 +85,7 @@ class Logger:
         preset = LogConfiguration()
         preset.log_format = DEFAULT_LOG_FORMAT
         preset.log_level = LogLevel.DEBUG
-        preset.log_color = True
+        preset.log_color = False
         preset.log_file_path = DEFAULT_LOG_FILE_PATH
         preset.set_handler(LogHandlerType.CONSOLE|LogHandlerType.FILE)
         return preset
