@@ -19,9 +19,10 @@ from inspect import isfunction, getmembers, signature, getfullargspec
 from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
 
-from iconservice.iconscore.icon_score_step import StepType
+from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
+from ..utils import int_to_bytes
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..base.exception import *
 from ..base.message import Message
@@ -304,6 +305,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
+        annotation_params = dict(self.get_api().get(func_name).parameters)
+        self.__convert_params(annotation_params, kw_params)
         score_func = getattr(self, func_name)
         return score_func(*arg_params, **kw_params)
 
@@ -325,6 +328,37 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
         if readonly != self._context.readonly:
             raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
+
+    def __convert_params(self, annimation_params: dict, kw_params: dict) -> None:
+
+        for key, param in annimation_params.items():
+            if key == 'self' or key == 'cls':
+                continue
+
+            kw_param = kw_params.get(param.name)
+            if kw_param is None:
+                continue
+
+            kw_param = self.__convert_value(param.annotation, kw_param)
+            kw_params[param.name] = kw_param
+
+    @staticmethod
+    def __convert_value(annotation_type: type, param: Any):
+        if annotation_type == int:
+            param = int(str(param), 0)
+        elif annotation_type == bool:
+            param = param == "True" or param is True
+        elif annotation_type == Address:
+            param = Address.from_string(param)
+        elif annotation_type == bytes:
+            if isinstance(param, int):
+                param = int_to_bytes(param)
+            elif isinstance(param, str):
+                param = param.encode()
+            elif isinstance(param, bool):
+                param = int(param)
+                param = int_to_bytes(param)
+        return param
 
     def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
         """Call external function provided by other IconScore with arguments without fallback

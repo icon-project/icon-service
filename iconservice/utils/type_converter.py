@@ -16,6 +16,7 @@
 
 import copy
 from ..base.address import Address
+from typing import Any
 
 
 class TypeConverter(object):
@@ -33,29 +34,28 @@ class TypeConverter(object):
     def __init__(self, type_table: dict=None) -> None:
         self.type_table = type_table
 
-    def convert(self, params: object, recursive: bool) -> dict:
+    def convert(self, params: Any, recursive: bool) -> Any:
         if isinstance(params, dict):
             return self.convert_dict_values(params, recursive)
         elif isinstance(params, list):
             return self.convert_list_values(params, recursive)
-
         return params
 
-    def convert_dict_values(self, input: dict, recursive: bool) -> dict:
+    def convert_dict_values(self, input_params: dict, recursive: bool) -> dict:
         """Convert json into appropriate format.
 
         Original input is preserved after convert is done.
 
-        :param input:
+        :param input_params:
+        :param recursive:
         :return:
         """
         output = {}
 
-        for key, value in input.items():
+        for key, value in input_params.items():
             if isinstance(value, dict):
                 if recursive:
-                    output[key] = self.convert_dict_values(value,
-                                                           recursive)
+                    output[key] = self.convert_dict_values(value, recursive)
                 else:
                     output[key] = copy.deepcopy(value)
             elif isinstance(value, list):
@@ -68,10 +68,10 @@ class TypeConverter(object):
 
         return output
 
-    def convert_list_values(self, input: list, recursive: bool) -> list:
+    def convert_list_values(self, input_params: list, recursive: bool) -> list:
         output = []
 
-        for item in input:
+        for item in input_params:
             if isinstance(item, dict):
                 item = self.convert_dict_values(item, recursive)
             if isinstance(item, list) and recursive:
@@ -92,7 +92,7 @@ class TypeConverter(object):
             if not isinstance(value, str):
                 return value
 
-            value_type = self.type_table[key]
+            value_type = self.type_table.get(key)
 
             if value_type == TypeConverter.CONST_INT:
                 return int(str(value), 0)
