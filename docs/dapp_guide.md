@@ -7,9 +7,9 @@
 $ tbears init {project_name} {class_name}
 ```
 위의 명령을 수행하면 {project_name} 폴더가 생기며,
-해당 폴더 안에 \_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.
-{project_name}.py 파일에는 {class_name}으로 메인 클래스가 선언되어 있습니다.
-\_\_init\_\_.py 에는 동적 import를 위한 구문이 자동으로 생성되어 있습니다.
+해당 폴더 안에 \_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.<br/>
+{project_name}.py 파일에는 {class_name}으로 메인 클래스가 선언되어 있습니다.<br/>
+\_\_init\_\_.py 에는 동적 import를 위한 구문이 자동으로 생성되어 있습니다.<br/>
 만약 폴더 구조가 변경되면 위의 내용을 반드시 확인 부탁드립니다.<br/>
 
 
@@ -324,27 +324,27 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 
 #### eventlog 데코레이터 (@eventlog)
 이 데코레이터가 붙은 함수는 TxResult에 'eventlogs'의 내용으로 로그가 기록됩니다.<br/>
-해당 함수 정의는 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있어도,<br/>
-해당 구현부의 내용은 동작하지 않습니다.<br/>
+해당 함수 선언은 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
 키워드 인자는 지원하지 않습니다.<br/>
-함수 정의시에 Indexed wrapper클래스를 사용하면 해당 변수는 불룸필터(Bloom filter)적용이 가능합니다.<br/>
-함수 정의부와 실행부의 데이터 타입이 다르다면 mismatch예외가 발생합니다.<br/>
-따라서 매개변수 데이터 타입지정이 필수입니다.<br/>
+함수 선언 시에 Indexed wrapper 클래스를 사용하면 해당 변수는 불룸필터(Bloom filter) 적용이 가능합니다.<br/>
+함수 선언부에 Indexed가 붙은 변수는 실행부에서도 Indexed를 붙여야 하며, 이를 어길 경우 mismatch 예외가 발생합니다.<br/>
+
 예시)<br/>
 ```python
+# 선언부
 @eventlog
 def eventlog_fund_transfer1(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
 
 @eventlog
 def eventlog_fund_transfer2(self, backer: Address, amount: int, is_contribution: bool): pass
 
-#사용
+# 실행부
 self.eventlog_fund_transfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
 self.eventlog_fund_transfer2(self.msg.sender, amount, True)
 ```
-Indexed wrapper클래스는 기본타입(int, str, bytes, Address, bool)만 지원하며, array type은 지원하지 않습니다.<br/>
-Indexed가 없는 데이터 타입들은 tx_result에 indexed타입들과 별도로 분리되어 저장됩니다.<br/>
-indexed타입은 최대 3개까지 지원가능하며, 그외 데이터 타입은 제한이 없습니다.<br/>
+Indexed wrapper 클래스는 기본 타입(int, str, bytes, Address, bool)만 지원하며, array 타입은 지원하지 않습니다.<br/>
+Indexed가 없는 데이터 타입은 TxResult에 Indexed 타입과 별도로 분리되어 저장됩니다.<br/>
+Indexed 타입의 병기는 최대 3개까지 가능하며, 그외 데이터 타입 수에는 제한이 없습니다.<br/>
 
 #### fallback
 fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
@@ -354,7 +354,7 @@ payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
 
 #### InterfaceScore
 다른 스코어의 함수를 호출하는 인터페이스로, 기존에 제공하던 call 함수 대신 사용할 수 있습니다.<br/>
-정의 내용은 다음과 같습니다.<br/>
+사용 형식은 다음과 같습니다.<br/>
 
 ```python
 class SampleTokenInterface(InterfaceScore):
@@ -362,8 +362,7 @@ class SampleTokenInterface(InterfaceScore):
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 ```
 다른 스코어에 interface 데코레이터가 붙은 함수처럼 정의된 함수가 있다면 그 함수를 호출할 수 있습니다.<br/>
-eventlog 데코레이터와 마찬가지로 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있어도,
-해당 구현부의 내용은 동작하지 않습니다.<br/>
+eventlog 데코레이터와 마찬가지로 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
 
 예시)<br/>
 IconScoreBase 내장함수 create_interface_score(스코어 주소, 인터페이스로 사용할 클래스)를 사용하여,
