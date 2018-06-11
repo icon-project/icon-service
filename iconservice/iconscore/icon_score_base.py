@@ -280,7 +280,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__owner = owner
         self.__address = db.address
 
-        if not self.get_api():
+        if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException('empty abi!', '__init__', str(type(self)))
 
         self.__db.set_observer(self.__create_db_observer())
@@ -298,14 +298,14 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
 
-        if func_name not in self.get_api():
+        if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException(f"can't external call", func_name, type(self).__name__,
                                     ExceptionCode.METHOD_NOT_FOUND)
 
         self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
-        annotation_params = dict(self.get_api().get(func_name).parameters)
+        annotation_params = dict(self.__get_attr_dict(CONST_CLASS_EXTERNALS).get(func_name).parameters)
         self.__convert_params(annotation_params, kw_params)
         score_func = getattr(self, func_name)
         return score_func(*arg_params, **kw_params)
@@ -349,7 +349,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         elif annotation_type == bool:
             param = param == "True" or param is True
         elif annotation_type == Address:
-            param = Address.from_string(param)
+            if isinstance(param, Address):
+                param = param
+            else:
+                param = Address.from_string(param)
         elif annotation_type == bytes:
             if isinstance(param, int):
                 param = int_to_bytes(param)
@@ -358,6 +361,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             elif isinstance(param, bool):
                 param = int(param)
                 param = int_to_bytes(param)
+            elif isinstance(param, Address):
+                byte_array = bytearray(param.body)
+                byte_array.append(param.prefix)
+                param = bytes(byte_array)
         return param
 
     def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
