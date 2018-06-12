@@ -5,6 +5,7 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:-----|:-----:|:----|
+| 2018.06.12 | 조치원 | 일부 표 오류 수정 |
 | 2018.06.08 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
 | 2018.05.18 | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
 | 2018.05.17 | 박은수 | API 작성 규칙 추가, 문서 고도화 |
@@ -60,14 +61,14 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 많이 사용하는 "VALUE 형식"은 다음과 같다.
 
 | VALUE 형식 | 설명 | 예 |
-|------------|-----|----|
-<a id="T_ADDR_EOA">T_ADDR_EOA</a>|"hx" + 40 digit HEX 문자열|hxbe258ceb872e08851f1f59694dac2558708ece11
-<a id="T_ADDR_SCORE">T_ADDR_SCORE</a>|"cx" + 40 digit HEX 문자열|cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32
-<a id="T_HASH">T_HASH</a>| "0x" + 64 digit HEX 문자열|0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238
-<a id="T_INT">T_INT</a>|"0x" + lowercase HEX 문자열|0xa
-<a id="T_BIN_DATA">T_BIN_DATA</a>|"0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다|0x34b2
-<a id="T_SIG">T_SIG</a>|base64 encoded 문자열|
-<a id="T_DATA_TYPE">T_DATA_TYPE</a>| install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출|
+|:----------|:----|:----|
+| <a id="T_ADDR_EOA">T_ADDR_EOA</a> | "hx" + 40 digit HEX 문자열 | hxbe258ceb872e08851f1f59694dac2558708ece11 |
+| <a id="T_ADDR_SCORE">T_ADDR_SCORE</a> | "cx" + 40 digit HEX 문자열 | cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32 |
+| <a id="T_HASH">T_HASH</a> | "0x" + 64 digit HEX 문자열 | 0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238 |
+| <a id="T_INT">T_INT</a> | "0x" + lowercase HEX 문자열 | 0xa |
+| <a id="T_BIN_DATA">T_BIN_DATA</a> | "0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다 | 0x34b2 |
+| <a id="T_SIG">T_SIG</a> | base64 encoded 문자열 | VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA= |
+| <a id="T_DATA_TYPE">T_DATA_TYPE</a> | install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출 | - |
 
 # JSON-RPC 에러 코드
 
