@@ -15,20 +15,20 @@
 # limitations under the License.
 
 import warnings
-from inspect import isfunction, getmembers, signature, getfullargspec
+from inspect import isfunction, getmembers, signature
 from abc import ABC, ABCMeta, abstractmethod
 from functools import partial
 
 from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
-from ..utils import int_to_bytes
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..base.exception import *
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
+from ..utils.type_converter import TypeConverter
 
 from typing import TYPE_CHECKING, TypeVar, Callable, Any, Generic, GenericMeta
 
@@ -100,7 +100,7 @@ def eventlog(func):
         if not (isinstance(calling_obj, IconScoreBase)):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
-        for index, annotation in enumerate(getfullargspec(func).annotations.values()):
+        for index, annotation in enumerate(TypeConverter.make_annotations_from_method(func).values()):
             if type(annotation) is GenericMeta:
                 _gorg = getattr(annotation, '_gorg', None)
                 if not isinstance(args[index], _gorg):
@@ -215,10 +215,10 @@ class IconScoreObject(ABC):
     def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def on_install(self, params: dict) -> None:
+    def on_install(self, **kwargs) -> None:
         pass
 
-    def on_update(self, params: dict) -> None:
+    def on_update(self, **kwargs) -> None:
         pass
 
     def on_selfdestruct(self, recipient: 'Address') -> None:
@@ -260,26 +260,16 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                     metaclass=IconScoreBaseMeta):
 
     @abstractmethod
-    def on_install(self, params: dict) -> None:
+    def on_install(self, **kwargs) -> None:
         """DB initialization on score install
-
-        :param params:
         """
-        super().on_install(params)
+        super().on_install(**kwargs)
 
     @abstractmethod
-    def on_update(self, params: dict) -> None:
+    def on_update(self, **kwargs) -> None:
         """DB initialization on score update
-
-        :param params:
         """
-        super().on_update(params)
-
-    def on_selfdestruct(self, recipient: 'Address') -> None:
-        raise NotImplementedError()
-
-    def fallback(self) -> None:
-        pass
+        super().on_update(**kwargs)
 
     @abstractmethod
     def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
@@ -292,6 +282,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             raise ExternalException('empty abi!', '__init__', str(type(self)))
 
         self.__db.set_observer(self.__create_db_observer())
+
+    def on_selfdestruct(self, recipient: 'Address') -> None:
+        raise NotImplementedError()
+
+    def fallback(self) -> None:
+        pass
 
     @classmethod
     def get_api(cls) -> dict:
@@ -313,9 +309,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
-        annotation_params = dict(self.__get_attr_dict(CONST_CLASS_EXTERNALS).get(func_name).parameters)
-        self.__convert_params(annotation_params, kw_params)
         score_func = getattr(self, func_name)
+
+        annotation_params = TypeConverter.make_annotations_from_method(score_func)
+        TypeConverter.convert_params(annotation_params, kw_params)
         return score_func(*arg_params, **kw_params)
 
     def __call_fallback(self):
@@ -336,44 +333,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
         if readonly != self._context.readonly:
             raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
-
-    def __convert_params(self, annimation_params: dict, kw_params: dict) -> None:
-
-        for key, param in annimation_params.items():
-            if key == 'self' or key == 'cls':
-                continue
-
-            kw_param = kw_params.get(param.name)
-            if kw_param is None:
-                continue
-
-            kw_param = self.__convert_value(param.annotation, kw_param)
-            kw_params[param.name] = kw_param
-
-    @staticmethod
-    def __convert_value(annotation_type: type, param: Any):
-        if annotation_type == int:
-            param = int(str(param), 0)
-        elif annotation_type == bool:
-            param = param == "True" or param is True
-        elif annotation_type == Address:
-            if isinstance(param, Address):
-                param = param
-            else:
-                param = Address.from_string(param)
-        elif annotation_type == bytes:
-            if isinstance(param, int):
-                param = int_to_bytes(param)
-            elif isinstance(param, str):
-                param = param.encode()
-            elif isinstance(param, bool):
-                param = int(param)
-                param = int_to_bytes(param)
-            elif isinstance(param, Address):
-                byte_array = bytearray(param.body)
-                byte_array.append(param.prefix)
-                param = bytes(byte_array)
-        return param
 
     def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
         """Call external function provided by other IconScore with arguments without fallback

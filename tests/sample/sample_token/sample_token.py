@@ -14,18 +14,16 @@ class SampleToken(IconScoreBase):
         self.__total_supply = VarDB(self.__TOTAL_SUPPLY, db, value_type=int)
         self.__balances = DictDB(self.__BALANCES, db, value_type=int)
 
-    def on_install(self, params: dict) -> None:
-        super().on_install(params)
+    def on_install(self, init_supply: int = 1000, decimal: int = 18) -> None:
+        super().on_install()
 
-        init_supply = 1000
-        decimal = 18
         total_supply = init_supply * 10 ** decimal
 
         self.__total_supply.set(total_supply)
         self.__balances[self.msg.sender] = total_supply
 
-    def on_update(self, params: dict) -> None:
-        super().on_update(params)
+    def on_update(self, **kwargs) -> None:
+        super().on_update(**kwargs)
 
     @external(readonly=True)
     def total_supply(self) -> int:

@@ -27,6 +27,7 @@ from ..logger import Logger
 from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
+from ..utils.type_converter import TypeConverter
 
 from typing import TYPE_CHECKING, Optional, Callable
 
@@ -276,11 +277,13 @@ class IconScoreEngine(ContextContainer):
         :param on_init: score.on_install() or score.on_update()
         :param params: paramters passed to on_init()
         """
-        assert params is not None
+
+        annotations = TypeConverter.make_annotations_from_method(on_init)
+        TypeConverter.convert_params(annotations, params)
 
         try:
             self._put_context(context)
-            on_init(params)
+            on_init(**params)
         except Exception as e:
             Logger.exception(str(e))
         finally:

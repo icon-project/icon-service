@@ -19,8 +19,7 @@
 
 import hashlib
 from enum import IntEnum
-
-from ..utils import is_lowercase_hex_string
+from ..utils.utils import is_lowercase_hex_string
 
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'

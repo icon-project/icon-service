@@ -13,14 +13,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-import hashlib
-
-from ..base.address import Address, AddressPrefix
-
-
-def create_address(prefix: AddressPrefix, data: bytes):
-    hash_value = hashlib.sha3_256(data).digest()
-    return Address(prefix, hash_value[-20:])
-
