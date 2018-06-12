@@ -334,14 +334,14 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 ```python
 # 선언부
 @eventlog
-def eventlog_fund_transfer1(self, backer: Indexed[Address], amount: Indexed[int], is_contribution: Indexed[bool]): pass
+def FundTransfer1(self, backer: Indexed[Address], amount: Indexed[int], is_contribution: Indexed[bool]): pass
 
 @eventlog
-def eventlog_fund_transfer2(self, backer: Address, amount: int, is_contribution: bool): pass
+def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
 
 # 실행부
-self.eventlog_fund_transfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
-self.eventlog_fund_transfer2(self.msg.sender, amount, True)
+self.FundTransfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+self.FundTransfer2(self.msg.sender, amount, True)
 ```
 Indexed wrapper 클래스는 기본 타입(int, str, bytes, Address, bool)만 지원하며, array 타입은 지원하지 않습니다.<br/>
 Indexed가 없는 데이터 타입은 TxResult에 Indexed 타입과 별도로 분리되어 저장됩니다.<br/>
