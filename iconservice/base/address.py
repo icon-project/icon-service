@@ -19,7 +19,6 @@
 
 import hashlib
 from enum import IntEnum
-
 from ..utils import is_lowercase_hex_string
 
 

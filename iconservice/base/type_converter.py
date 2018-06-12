@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
+from copy import deepcopy
+from typing import Any, get_type_hints
 from ..base.address import Address
-from typing import Any
+from ..utils import int_to_bytes
 
 
 class TypeConverter(object):
@@ -57,12 +58,12 @@ class TypeConverter(object):
                 if recursive:
                     output[key] = self.convert_dict_values(value, recursive)
                 else:
-                    output[key] = copy.deepcopy(value)
+                    output[key] = deepcopy(value)
             elif isinstance(value, list):
                 if recursive:
                     output[key] = self.convert_list_values(value, recursive)
                 else:
-                    output[key] = copy.deepcopy(value)
+                    output[key] = deepcopy(value)
             else:
                 output[key] = self.convert_value(key, value)
 
@@ -111,3 +112,49 @@ class TypeConverter(object):
             pass
 
         return value
+
+    @staticmethod
+    def make_annotations_from_method(func: callable):
+        hints = get_type_hints(func)
+        if hints.get('return') is not None:
+            del hints['return']
+        return hints
+
+    @staticmethod
+    def convert_params(annotation_params: dict, kw_params: dict) -> None:
+
+        for key, param in annotation_params.items():
+            if key == 'self' or key == 'cls':
+                continue
+
+            kw_param = kw_params.get(key)
+            if kw_param is None:
+                continue
+
+            kw_param = TypeConverter.__convert_value(param, kw_param)
+            kw_params[key] = kw_param
+
+    @staticmethod
+    def __convert_value(annotation_type: type, param: Any):
+        if annotation_type == int:
+            param = int(str(param), 0)
+        elif annotation_type == bool:
+            param = param == "True" or param is True
+        elif annotation_type == Address:
+            if isinstance(param, Address):
+                param = param
+            else:
+                param = Address.from_string(param)
+        elif annotation_type == bytes:
+            if isinstance(param, int):
+                param = int_to_bytes(param)
+            elif isinstance(param, str):
+                param = param.encode()
+            elif isinstance(param, bool):
+                param = int(param)
+                param = int_to_bytes(param)
+            elif isinstance(param, Address):
+                byte_array = bytearray(param.body)
+                byte_array.append(param.prefix)
+                param = bytes(byte_array)
+        return param

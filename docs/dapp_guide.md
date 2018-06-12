@@ -31,18 +31,16 @@ class SampleToken(IconScoreBase):
         self.__total_supply = VarDB(self.__TOTAL_SUPPLY, db, value_type=int)
         self.__balances = DictDB(self.__BALANCES, db, value_type=int)
 
-    def on_install(self, params: dict) -> None:
-        super().on_install(params)
+    def on_install(self, init_supply: int = 1000, decimal: int = 18) -> None:
+        super().on_install()
 
-        init_supply = 1000
-        decimal = 18
         total_supply = init_supply * 10 ** decimal
 
         self.__total_supply.set(total_supply)
         self.__balances[self.msg.sender] = total_supply
 
-    def on_update(self, params: dict) -> None:
-        super().on_update(params)
+    def on_update(self) -> None:
+        super().on_update()
 
     @external(readonly=True)
     def total_supply(self) -> int:
@@ -120,8 +118,9 @@ class SampleCrowdSale(IconScoreBase):
 
         self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
 
-    def on_install(self, params) -> None:
-        super().on_install(params)
+    def on_install(self, funding_goal_in_icx: int = 100, duration_in_minutes: int = 1,
+                   icx_cost_of_each_token: int = 1) -> None:
+        super().on_install()
 
         one_icx = 1 * 10 ** 18
         one_minute_to_sec = 1 * 60
@@ -132,10 +131,6 @@ class SampleCrowdSale(IconScoreBase):
         if_successful_send_to = self.msg.sender
         addr_token_score = Address.from_string('cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf')
 
-        funding_goal_in_icx = 100
-        duration_in_minutes = 1
-        icx_cost_of_each_token = 1
-
         self.__addr_beneficiary.set(if_successful_send_to)
         self.__addr_token_score.set(addr_token_score)
         self.__funding_goal.set(funding_goal_in_icx * one_icx)
@@ -145,8 +140,8 @@ class SampleCrowdSale(IconScoreBase):
 
         self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
 
-    def on_update(self, params) -> None:
-        super().on_update(params)
+    def on_update(self) -> None:
+        super().on_update()
 
     @external(readonly=True)
     def total_joiner_count(self):

@@ -16,7 +16,7 @@
 
 import unittest
 
-from iconservice.utils.type_converter import TypeConverter
+from iconservice.base.type_converter import TypeConverter
 from iconservice.base.address import Address
 
 

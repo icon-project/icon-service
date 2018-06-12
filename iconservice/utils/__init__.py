@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
 """Utilities
 
 Functions and classes in this module don't have any external dependencies.
@@ -20,6 +22,11 @@ Functions and classes in this module don't have any external dependencies.
 
 import re
 import hashlib
+
+
+def int_to_bytes(n: int) -> bytes:
+    length = (n.bit_length() + 8) // 8
+    return n.to_bytes(length, byteorder='big', signed=True)
 
 
 def is_lowercase_hex_string(value: str) -> bool:
@@ -40,11 +47,6 @@ def is_lowercase_hex_string(value: str) -> bool:
 
 def sha3_256(data: bytes) -> bytes:
     return hashlib.sha3_256(data).digest()
-
-
-def int_to_bytes(n: int) -> bytes:
-    length = (n.bit_length() + 8) // 8
-    return n.to_bytes(length, byteorder='big', signed=True)
 
 
 def to_camel_case(snake_str: str) -> str:
