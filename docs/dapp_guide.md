@@ -39,8 +39,8 @@ class SampleToken(IconScoreBase):
         self.__total_supply.set(total_supply)
         self.__balances[self.msg.sender] = total_supply
 
-    def on_update(self, **kwargs) -> None:
-        super().on_update(**kwargs)
+    def on_update(self) -> None:
+        super().on_update()
 
     @external(readonly=True)
     def total_supply(self) -> int:
@@ -67,7 +67,6 @@ class SampleToken(IconScoreBase):
 
     def fallback(self) -> None:
         pass
-
 
 ```
 
@@ -119,7 +118,7 @@ class SampleCrowdSale(IconScoreBase):
 
         self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
 
-    def on_install(self, funding_goal_in_icx: int = 100, duration_in_minutes: int = 1, 
+    def on_install(self, funding_goal_in_icx: int = 100, duration_in_minutes: int = 1,
                    icx_cost_of_each_token: int = 1) -> None:
         super().on_install()
 
@@ -141,8 +140,8 @@ class SampleCrowdSale(IconScoreBase):
 
         self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
 
-    def on_update(self, **kwargs) -> None:
-        super().on_update(**kwargs)
+    def on_update(self) -> None:
+        super().on_update()
 
     @external(readonly=True)
     def total_joiner_count(self):
