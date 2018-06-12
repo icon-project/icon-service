@@ -30,7 +30,7 @@ from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
 
-from typing import TYPE_CHECKING, TypeVar, Callable, Any
+from typing import TYPE_CHECKING, TypeVar, Callable, Any, Generic, GenericMeta
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -101,8 +101,16 @@ def eventlog(func):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
         for index, annotation in enumerate(getfullargspec(func).annotations.values()):
-            if not isinstance(args[index], annotation):
-                raise EventLogException(f'annotation mismatch arg {args[index]}')
+            if type(annotation) is GenericMeta:
+                _gorg = getattr(annotation, '_gorg', None)
+                if not isinstance(args[index], _gorg):
+                    raise EventLogException(f'annotation mismatch!\n'
+                                            f'arg: {args[index]}, type: {type(args[index])}\n'
+                                            f'annotation: {annotation}, type: {type(annotation)}')
+            elif not isinstance(args[index], annotation):
+                raise EventLogException(f'annotation mismatch!\n'
+                                        f'arg: {args[index]}, type: {type(args[index])}\n'
+                                        f'annotation: {annotation}, type: {type(annotation)}')
         call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
         ret = call_method(func_name, args)
         return ret
@@ -161,8 +169,8 @@ def payable(func):
     return __wrapper
 
 
-class Indexed:
-    def __init__(self, value: Any):
+class Indexed(Generic[T]):
+    def __init__(self, value: T):
         if not isinstance(value, (int, str, bytes, Address, bool)):
             raise EventLogException(f'must be primitive type [int, str, bytes, Address, bool]')
         self.__value = value
