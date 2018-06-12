@@ -7,7 +7,7 @@ class SampleToken(IconScoreBase):
     __TOTAL_SUPPLY = 'total_supply'
 
     @eventlog
-    def eventlog_transfer(self, addr_from: Indexed, addr_to: Indexed, value: Indexed): pass
+    def Transfer(self, addr_from: Indexed[Address], addr_to: Indexed[Address], value: Indexed[int]): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
         super().__init__(db, addr_owner)
@@ -43,7 +43,7 @@ class SampleToken(IconScoreBase):
         self.__balances[_addr_from] = self.__balances[_addr_from] - _value
         self.__balances[_addr_to] = self.__balances[_addr_to] + _value
 
-        self.eventlog_transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
+        self.Transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
         return True
 
     @external

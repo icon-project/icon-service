@@ -24,7 +24,7 @@ class SampleToken(IconScoreBase):
     __TOTAL_SUPPLY = 'total_supply'
 
     @eventlog
-    def eventlog_transfer(self, addr_from: Indexed, addr_to: Indexed, value: Indexed): pass
+    def Transfer(self, addr_from: Indexed[Address], addr_to: Indexed[Address], value: Indexed[int]): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
         super().__init__(db, addr_owner)
@@ -60,7 +60,7 @@ class SampleToken(IconScoreBase):
         self.__balances[_addr_from] = self.__balances[_addr_from] - _value
         self.__balances[_addr_to] = self.__balances[_addr_to] + _value
 
-        self.eventlog_transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
+        self.Transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
         return True
 
     @external
@@ -69,7 +69,6 @@ class SampleToken(IconScoreBase):
 
     def fallback(self) -> None:
         pass
-
 
 ```
 
@@ -98,10 +97,12 @@ class SampleCrowdSale(IconScoreBase):
     __JOINER_LIST = 'joiner_list'
 
     @eventlog
-    def eventlog_fund_transfer(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
+    def FundTransfer(self, backer: Indexed[Address], amount: Indexed[int], is_contribution: Indexed[bool]):
+        pass
 
     @eventlog
-    def eventlog_goal_reached(self, recipient: Indexed, total_amount_raised: Indexed): pass
+    def GoalReached(self, recipient: Indexed[Address], total_amount_raised: Indexed[int]):
+        pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
         super().__init__(db, owner)
@@ -166,7 +167,7 @@ class SampleCrowdSale(IconScoreBase):
         if self.msg.sender not in self.__joiner_list:
             self.__joiner_list.put(self.msg.sender)
 
-        self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+        self.FundTransfer(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
 
     @external
     def check_goal_reached(self):
@@ -175,7 +176,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if self.__amount_raise.get() >= self.__funding_goal.get():
             self.__funding_goal_reached.set(True)
-            self.eventlog_goal_reached(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
+            self.GoalReached(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
         self.__crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
@@ -191,14 +192,14 @@ class SampleCrowdSale(IconScoreBase):
             self.__balances[self.msg.sender] = 0
             if amount > 0:
                 if self.send(self.msg.sender, amount):
-                    self.eventlog_fund_transfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
+                    self.FundTransfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.eventlog_fund_transfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
-                                            Indexed(False))
+                self.FundTransfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
+                                  Indexed(False))
             else:
                 self.__funding_goal_reached.set(False)
 
@@ -333,14 +334,14 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 ```python
 # 선언부
 @eventlog
-def eventlog_fund_transfer1(self, backer: Indexed, amount: Indexed, is_contribution: Indexed): pass
+def FundTransfer1(self, backer: Indexed[Address], amount: Indexed[int], is_contribution: Indexed[bool]): pass
 
 @eventlog
-def eventlog_fund_transfer2(self, backer: Address, amount: int, is_contribution: bool): pass
+def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
 
 # 실행부
-self.eventlog_fund_transfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
-self.eventlog_fund_transfer2(self.msg.sender, amount, True)
+self.FundTransfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+self.FundTransfer2(self.msg.sender, amount, True)
 ```
 Indexed wrapper 클래스는 기본 타입(int, str, bytes, Address, bool)만 지원하며, array 타입은 지원하지 않습니다.<br/>
 Indexed가 없는 데이터 타입은 TxResult에 Indexed 타입과 별도로 분리되어 저장됩니다.<br/>
