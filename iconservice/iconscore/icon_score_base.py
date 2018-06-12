@@ -28,7 +28,7 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..base.address import Address
 from ..base.block import Block
-from ..utils.type_converter import TypeConverter
+from ..base.type_converter import TypeConverter
 
 from typing import TYPE_CHECKING, TypeVar, Callable, Any, Generic, GenericMeta
 

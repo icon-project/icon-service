@@ -17,7 +17,7 @@
 from copy import deepcopy
 from typing import Any, get_type_hints
 from ..base.address import Address
-from .utils import int_to_bytes
+from ..utils import int_to_bytes
 
 
 class TypeConverter(object):

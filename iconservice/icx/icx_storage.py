@@ -17,7 +17,7 @@
 from .icx_account import Account
 from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, AddressPrefix
-from ..utils.utils import sha3_256
+from ..utils import sha3_256
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:

@@ -17,7 +17,7 @@
 
 import unittest
 
-from iconservice.utils.utils import is_lowercase_hex_string
+from iconservice.utils import is_lowercase_hex_string
 
 
 class TestUtils(unittest.TestCase):

@@ -18,7 +18,7 @@
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from collections import Iterator
 
-from iconservice.utils.utils import int_to_bytes
+from iconservice.utils import int_to_bytes
 
 from ..base.address import Address, AddressPrefix
 from ..base.exception import ContainerDBException

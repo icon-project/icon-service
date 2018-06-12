@@ -64,8 +64,8 @@ class SampleCrowdSale(IconScoreBase):
 
         self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
 
-    def on_update(self, **kwargs) -> None:
-        super().on_update(**kwargs)
+    def on_update(self) -> None:
+        super().on_update()
 
     @external(readonly=True)
     def total_joiner_count(self):

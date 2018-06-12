@@ -20,7 +20,7 @@ from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.utils.utils import sha3_256
+from iconservice.utils import sha3_256
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
 

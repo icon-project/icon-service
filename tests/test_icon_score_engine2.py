@@ -37,8 +37,6 @@ from iconservice.icx.icx_account import Account, AccountType
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
-# FIXME
-
 # have to score.zip unpack and proj_name = test_score
 class TestIconScoreEngine2(unittest.TestCase):
     _ROOT_SCORE_PATH = 'tests/score'

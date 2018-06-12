@@ -22,8 +22,8 @@ class SampleToken(IconScoreBase):
         self.__total_supply.set(total_supply)
         self.__balances[self.msg.sender] = total_supply
 
-    def on_update(self, **kwargs) -> None:
-        super().on_update(**kwargs)
+    def on_update(self) -> None:
+        super().on_update()
 
     @external(readonly=True)
     def total_supply(self) -> int:
