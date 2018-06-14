@@ -164,10 +164,7 @@ class IconScoreEngine(ContextContainer):
                 raise IconScoreException(
                     f'IconScore({icon_score_address}) not found')
 
-            if method == 'getScoreApi':
-                return icon_score.get_api()
-            else:
-                return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
+            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
         except (IconScoreException, Exception):
             raise
         finally:

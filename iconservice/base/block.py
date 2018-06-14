@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class Block(object):
     """Block Information included in IconScoreContext
     """

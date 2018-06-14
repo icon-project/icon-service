@@ -21,7 +21,6 @@
 import shutil
 import unittest
 
-from iconservice import Block
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.address import create_address
 from iconservice.base.exception import ExceptionCode, IconException
@@ -35,6 +34,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from iconservice.utils import sha3_256
+from iconservice.base.block import Block
 
 context_factory = IconScoreContextFactory(max_size=1)
 
