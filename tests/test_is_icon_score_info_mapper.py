@@ -95,13 +95,12 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         self.assertEqual(1, len(self.mapper))
 
         score_address = Address.from_string(f'cx{"0" * 40}')
-        score = self.load_proj('test_score01', Address.from_string(f'cx{"0" * 40}'))
+        score = self.load_proj('test_score01', score_address)
         score_info = IconScoreInfo(icon_score=score)
+        self.mapper[score_address] = score_info
 
         info = self.mapper[score_address]
         self.assertTrue(isinstance(info, IconScoreInfo))
-        # FIXME
-        # print('dddd', score_info.address) # -> <property object at ~~>
 
     def test_delitem(self):
         score_address = Address.from_string(f'cx{"0" * 40}')
