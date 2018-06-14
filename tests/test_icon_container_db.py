@@ -1,16 +1,42 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2017-2018 theloop Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
 
-from iconservice import Address
+from iconservice import Address, IconScoreContextType
 from iconservice.base.address import create_address, AddressPrefix
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
+from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContextFactory
 from tests.mock_db import create_mock_icon_score_db
+
+
+class TestContextContainer(ContextContainer):
+    pass
 
 
 class TestIconContainerDB(unittest.TestCase):
 
     def setUp(self):
         self.db = create_mock_icon_score_db()
+        self._factory = IconScoreContextFactory(max_size=1)
+        self._context = self._factory.create(IconScoreContextType.GENESIS)
+
+        self._context_container = TestContextContainer()
+        self._context_container._put_context(self._context)
         pass
 
     def tearDown(self):
