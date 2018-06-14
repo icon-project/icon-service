@@ -30,6 +30,10 @@ class TestLogger(unittest.TestCase):
         filePath = os.path.join(os.path.dirname(__file__), 'logger.json')
         Logger(filePath)
 
+    def tearDown(self):
+        if os.path.exists('log.txt'):
+            os.remove('log.txt')
+
     def test_debug(self):
         Logger.debug('debug log')
         Logger.debug('debug log', TAG)

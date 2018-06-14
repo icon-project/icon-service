@@ -17,9 +17,8 @@ import os
 import shutil
 import unittest
 
-from iconservice import IconScoreBase, IconScoreContextType
+from iconservice import IconScoreBase, IconScoreContextType, IconScoreException
 from iconservice.base.address import Address, ICX_ENGINE_ADDRESS
-from iconservice.base.exception import IconException
 from iconservice.database.factory import DatabaseFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
@@ -73,37 +72,36 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         os.makedirs(target_path, exist_ok=True)
         target_path = os.path.join(target_path, '0_0')
 
-        ref_path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj))
+        ref_path = os.path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
         os.symlink(ref_path, target_path, target_is_directory=True)
         return self._loader.load_score(addr_score.body.hex())
 
-    # def test_setitem(self):
-    #     info = IconScoreInfo(icon_score=None)
-    #
-    #     with self.assertRaises(IconException):
-    #         self.mapper[self.address] = None
-    #     with self.assertRaises(IconException):
-    #         self.mapper[self.score_address] = 1
-    #
-    #     score_address = Address.from_string(f'cx{"1" * 40}')
-    #     self.mapper[score_address] = info
-    #     self.assertEqual(2, len(self.mapper))
-    #
-    #     self.assertIsNone(self.mapper[self.score_address].icon_score)
+    def test_setitem(self):
+        info = IconScoreInfo(icon_score=None)
 
-    # def test_getitem(self):
-    #
-    #     self.assertEqual(1, len(self.mapper))
-    #
-    #     score_address = Address.from_string(f'cx{"0" * 40}')
-    #     score = self.load_proj('test_score01', Address.from_string(f'cx{"0"*40}'))
-    #     score_info = IconScoreInfo(icon_score=score)
-    #
-    #     info = self.mapper[score_address]
-    #     self.assertTrue(isinstance(info, IconScoreInfo))
+        with self.assertRaises(IconScoreException):
+            self.mapper[self.address] = None
+        with self.assertRaises(IconScoreException):
+            self.mapper[self.score_address] = 1
+
+        score_address = Address.from_string(f'cx{"1" * 40}')
+        self.mapper[score_address] = info
+        self.assertEqual(2, len(self.mapper))
+
+        self.assertIsNone(self.mapper[self.score_address].icon_score)
+
+    def test_getitem(self):
+
+        self.assertEqual(1, len(self.mapper))
+
+        score_address = Address.from_string(f'cx{"0" * 40}')
+        score = self.load_proj('test_score01', Address.from_string(f'cx{"0" * 40}'))
+        score_info = IconScoreInfo(icon_score=score)
+
+        info = self.mapper[score_address]
+        self.assertTrue(isinstance(info, IconScoreInfo))
         # FIXME
-        # print('ddd', score_info.address) -> <property object at 0x10471cae8>
-        # self.assertEqual(score_address, info.address)
+        # print('dddd', score_info.address) # -> <property object at ~~>
 
     def test_delitem(self):
         score_address = Address.from_string(f'cx{"0" * 40}')

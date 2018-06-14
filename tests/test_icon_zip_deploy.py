@@ -33,7 +33,7 @@ from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
 
-TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
 class TestIconZipDeploy(unittest.TestCase):
@@ -52,7 +52,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
-        self._icon_score_deployer = IconScoreDeployer('./')
+        self._icon_score_deployer = IconScoreDeployer(TEST_ROOT_PATH)
 
         self._engine = IconScoreEngine(self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
 
@@ -84,6 +84,8 @@ class TestIconZipDeploy(unittest.TestCase):
         remove_path = os.path.join(TEST_ROOT_PATH, 'tests')
         IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+        IconScoreDeployer.remove_existing_score(remove_path)
+        remove_path = os.path.join(TEST_ROOT_PATH, self._addr1.body.hex())
         IconScoreDeployer.remove_existing_score(remove_path)
 
     @staticmethod
