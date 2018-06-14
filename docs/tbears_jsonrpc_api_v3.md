@@ -198,14 +198,14 @@ SCORE 함수 실행 결과
 ### getScoreApi
 
 #### 반환정보
-* 스코어의 API함수 (external, payable, fallback, on_install, on_update, eventlog)의 정보들(배열)로 반환  
-* 함수정보에 대한 필드는 다음과 같습니다.  
+* 스코어의 API 함수 (external, payable, fallback, on_install, on_update, eventlog)의 정보들(배열)로 반환
+* 함수정보에 대한 필드는 다음과 같습니다.
     - type : function, fallback, on_install, on_update, eventlog
     - name : 함수 이름
     - inputs : 파라미터 정보(배열)
         + name : 파라미터 이름
         + type : 파라미터 타입 (int, str, bytes, bool, Address)
-        + indexed : eventlog일 경우에 다음 정보가 표기
+        + indexed : eventlog 의 경우에 다음 정보가 표기
     - outputs : 리턴값 정보
         + type : 리턴값 타입 (int, str, bytes, bool, Address)
     - readonly : external(readonly=True)
