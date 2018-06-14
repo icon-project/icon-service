@@ -195,9 +195,9 @@ SCORE 함수 실행 결과
 }
 ```
 
-### getScoreApi
+## icx_getScoreApi
 
-#### 반환정보
+### 반환정보
 * 스코어의 API 함수 (external, payable, fallback, on_install, on_update, eventlog)의 정보들(배열)로 반환
 * 함수정보에 대한 필드는 다음과 같습니다.
     - type : function, fallback, on_install, on_update, eventlog
@@ -216,16 +216,11 @@ SCORE 함수 실행 결과
 // Request
 {
     "jsonrpc": "2.0",
-    "method": "icx_call",
+    "method": "icx_getScoreApi",
     "id": 1234,
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // TX 송신자 주소
-        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",   // SCORE 주소
-        "dataType": "call", // 메시지콜
-        "data": {           // 메시지콜 데이터
-            "method": "getScoreApi", // 계산된 SCORE GetAPI 반환 api
-            "params": {}
-        }
+        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"   // SCORE 주소
     }
 }
 

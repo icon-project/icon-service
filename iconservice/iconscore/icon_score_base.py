@@ -19,8 +19,8 @@ from inspect import isfunction, getmembers, signature
 from abc import abstractmethod
 from functools import partial
 
-from .icon_score_make_api import MakeScoreApi
-from .icon_score_class import *
+from .icon_score_api_generator import ScoreApiGenerator
+from .icon_score_base2 import *
 from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
@@ -201,7 +201,9 @@ class IconScoreBaseMeta(ABCMeta):
             payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
 
-        MakeScoreApi.make_api(cls, custom_funcs)
+        api_list = ScoreApiGenerator.generate(custom_funcs)
+        setattr(cls, CONST_CLASS_API, api_list)
+
         return cls
 
 
@@ -240,7 +242,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     @classmethod
     def get_api(cls) -> dict:
-        return getattr(cls, MakeScoreApi.CONST_CLASS_API, "")
+        return getattr(cls, CONST_CLASS_API, "")
 
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:

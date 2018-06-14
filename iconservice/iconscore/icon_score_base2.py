@@ -27,6 +27,7 @@ T = TypeVar('T')
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
+CONST_CLASS_API = '__api'
 
 CONST_BIT_FLAG = '__bit_flag'
 
