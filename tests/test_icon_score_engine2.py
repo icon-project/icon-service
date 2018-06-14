@@ -108,6 +108,13 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._engine.invoke(self._context, addr_score, 'install', install_data)
         self._engine.commit(self._context)
 
+    def test_call_get_api(self):
+        self.__request_install('sample_token', self._addr_token_score)
+        self._context.type = IconScoreContextType.QUERY
+        call_data = {'method': 'getScoreApi', 'params': {}}
+        var = self._engine.query(self._context, self._addr_token_score, 'call', call_data)
+        print(var)
+
     def test_call_balance_of1(self):
         self.__request_install('sample_token', self._addr_token_score)
         self._context.type = IconScoreContextType.QUERY

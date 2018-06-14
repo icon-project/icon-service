@@ -20,6 +20,9 @@ from ..base.address import Address
 from ..utils import int_to_bytes
 
 
+score_base_support_type = (int, str, bytes, bool, Address)
+
+
 class TypeConverter(object):
 
     CONST_INT = "int"

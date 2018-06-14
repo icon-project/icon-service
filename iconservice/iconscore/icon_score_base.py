@@ -16,49 +16,26 @@
 
 import warnings
 from inspect import isfunction, getmembers, signature
-from abc import ABC, ABCMeta, abstractmethod
+from abc import abstractmethod
 from functools import partial
 
+from .icon_score_make_api import MakeScoreApi
+from .icon_score_class import *
 from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..base.exception import *
-from ..base.message import Message
-from ..base.transaction import Transaction
-from ..base.address import Address
-from ..base.block import Block
 from ..base.type_converter import TypeConverter
 
-from typing import TYPE_CHECKING, TypeVar, Callable, Any, Generic, GenericMeta
+from typing import TYPE_CHECKING, Callable, Any
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
-
-T = TypeVar('T')
-
-CONST_CLASS_EXTERNALS = '__externals'
-CONST_CLASS_PAYABLES = '__payables'
-
-CONST_BIT_FLAG = '__bit_flag'
-
-
-@unique
-class ConstBitFlag(IntEnum):
-    NonFlag = 0
-    ReadOnly = 1
-    External = 2
-    Payable = 4
-    EventLog = 8
-    Interface = 16
-
-
-CONST_BIT_FLAG_EXTERNAL_READONLY = ConstBitFlag.ReadOnly | ConstBitFlag.External
-
-STR_IS_NOT_CALLABLE = 'is not callable'
-FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
-FORMAT_IS_NOT_DERIVED_OF_OBJECT = "isn't derived of {}"
-FORMAT_DECORATOR_DUPLICATED = "can't duplicated {} decorator func: {}, cls: {}"
+    from ..base.address import Address
+    from ..base.transaction import Transaction
+    from ..base.message import Message
+    from ..base.block import Block
 
 
 def interface(func):
@@ -101,16 +78,20 @@ def eventlog(func):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
         for index, annotation in enumerate(TypeConverter.make_annotations_from_method(func).values()):
-            if type(annotation) is GenericMeta:
-                _gorg = getattr(annotation, '_gorg', None)
-                if not isinstance(args[index], _gorg):
-                    raise EventLogException(f'annotation mismatch!\n'
-                                            f'arg: {args[index]}, type: {type(args[index])}\n'
-                                            f'annotation: {annotation}, type: {type(annotation)}')
-            elif not isinstance(args[index], annotation):
-                raise EventLogException(f'annotation mismatch!\n'
-                                        f'arg: {args[index]}, type: {type(args[index])}\n'
-                                        f'annotation: {annotation}, type: {type(annotation)}')
+            indexed = False
+            for sub in annotation._subs_tree():
+                if sub is Indexed:
+                    continue
+                if not isinstance(args[index].value, sub):
+                    if indexed:
+                        raise EventLogException(f'annotation mismatch!\n'
+                                                f'arg: {args[index]}, type: {type(args[index])}\n'
+                                                f'annotation: {annotation}, type: {type(annotation)}')
+                    else:
+                        raise EventLogException(f'annotation mismatch!\n'
+                                                f'arg: {args[index]}, type: {type(args[index])}\n'
+                                                f'annotation: {annotation}, type: {type(annotation)}')
+
         call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
         ret = call_method(func_name, args)
         return ret
@@ -126,7 +107,7 @@ def external(func=None, *, readonly=False):
     if not isfunction(func):
         raise IconScoreException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    if func_name == 'fallback':
+    if func_name == STR_FALLBACK:
         raise IconScoreException(f"can't locate external to this func func: {func_name}, cls: {cls_name}")
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.External:
@@ -169,41 +150,6 @@ def payable(func):
     return __wrapper
 
 
-class Indexed(Generic[T]):
-    def __init__(self, value: T):
-        if not isinstance(value, (int, str, bytes, Address, bool)):
-            raise EventLogException(f'must be primitive type [int, str, bytes, Address, bool]')
-        self.__value = value
-
-    @property
-    def value(self):
-        return self.__value
-
-
-class InterfaceScoreMeta(ABCMeta):
-    def __new__(mcs, name, bases, namespace, **kwargs):
-        if ABC in bases:
-            return super().__new__(mcs, name, bases, namespace, **kwargs)
-
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-        return cls
-
-
-class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
-    def __init__(self, addr_to: 'Address', call_func: callable):
-        self.__addr_to = addr_to
-        self.__call_func = call_func
-
-    def __call_method(self, func_name: str, arg_list: list, kw_dict: dict):
-        if self.__call_func is None:
-            raise InterfaceException('self.__call_func is None')
-
-        if callable(self.__call_func):
-            self.__call_func(self.__addr_to, func_name, arg_list, kw_dict)
-        else:
-            raise InterfaceException(STR_IS_NOT_CALLABLE)
-
-
 class IconScoreObject(ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
@@ -226,6 +172,7 @@ class IconScoreObject(ABC):
 
 
 class IconScoreBaseMeta(ABCMeta):
+
     def __new__(mcs, name, bases, namespace, **kwargs):
         if IconScoreObject in bases:
             return super().__new__(mcs, name, bases, namespace, **kwargs)
@@ -253,6 +200,8 @@ class IconScoreBaseMeta(ABCMeta):
         if payable_funcs:
             payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
+
+        MakeScoreApi.make_api(cls, custom_funcs)
         return cls
 
 
@@ -291,7 +240,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     @classmethod
     def get_api(cls) -> dict:
-        return cls.__get_attr_dict(CONST_CLASS_EXTERNALS)
+        return getattr(cls, MakeScoreApi.CONST_CLASS_API, "")
 
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
@@ -316,7 +265,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return score_func(*arg_params, **kw_params)
 
     def __call_fallback(self):
-        func_name = 'fallback'
+        func_name = STR_FALLBACK
         payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
         self.__check_payable(func_name, payable_dict)
 
