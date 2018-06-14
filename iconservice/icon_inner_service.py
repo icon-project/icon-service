@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.utils.type_converter import TypeConverter
+from iconservice.base.type_converter import TypeConverter
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.logger.logger import Logger
