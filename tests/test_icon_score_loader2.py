@@ -18,10 +18,10 @@
 import unittest
 
 from os import path, makedirs, symlink
-from iconservice.iconscore.icon_score_base import IconScoreBase, Address
+from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
-from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import Address, AddressPrefix, create_address
 import inspect
 
 TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
