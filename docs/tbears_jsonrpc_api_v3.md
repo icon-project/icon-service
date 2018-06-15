@@ -195,6 +195,45 @@ SCORE 함수 실행 결과
 }
 ```
 
+## icx_getScoreApi
+
+### 반환정보
+* 스코어의 API 함수 (external, payable, fallback, on_install, on_update, eventlog)의 정보들(배열)로 반환
+* 함수정보에 대한 필드는 다음과 같습니다.
+    - type : function, fallback, on_install, on_update, eventlog
+    - name : 함수 이름
+    - inputs : 파라미터 정보(배열)
+        + name : 파라미터 이름
+        + type : 파라미터 타입 (int, str, bytes, bool, Address)
+        + indexed : eventlog 의 경우에 다음 정보가 표기
+    - outputs : 리턴값 정보
+        + type : 리턴값 타입 (int, str, bytes, bool, Address)
+    - readonly : external(readonly=True)
+    - payable : payable
+ 
+* 예시
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "method": "icx_getScoreApi",
+    "id": 1234,
+    "params": {
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // TX 송신자 주소
+        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"   // SCORE 주소
+    }
+}
+
+// Response - 성공
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": [...]
+}
+// Response - 실패
+// icx_call 실패와 동일
+```
+
 ## icx_getBalance
 
 * 지정된 계좌 주소 또는 SCORE의 코인 수를 조회한다.

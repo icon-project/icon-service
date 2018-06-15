@@ -91,9 +91,35 @@ class IconScoreEngine(ContextContainer):
 
         if data_type == 'call':
             return self._call(context, icon_score_address, data)
+        elif data_type == 'score_api':
+            return self._get_score_api(context, icon_score_address)
         else:
             raise IconScoreException(
                 f'Invalid data type ({data_type})')
+
+    def _get_score_api(self,
+                       context: 'IconScoreContext',
+                       icon_score_address: 'Address') -> object:
+        """Handle get score api
+
+        :param context:
+        :param icon_score_address:
+        """
+
+        try:
+            self._put_context(context)
+
+            icon_score = self.__icon_score_info_mapper.get_icon_score(
+                icon_score_address)
+            if icon_score is None:
+                raise IconScoreException(
+                    f'IconScore({icon_score_address}) not found')
+
+            return icon_score.get_api()
+        except (IconScoreException, Exception):
+            raise
+        finally:
+            self._delete_context(context)
 
     def _put_task(self,
                   context: 'IconScoreContext',
@@ -138,10 +164,7 @@ class IconScoreEngine(ContextContainer):
                 raise IconScoreException(
                     f'IconScore({icon_score_address}) not found')
 
-            return call_method(
-                icon_score=icon_score,
-                func_name=method,
-                kw_params=kw_params)
+            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
         except (IconScoreException, Exception):
             raise
         finally:

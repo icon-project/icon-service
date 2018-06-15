@@ -338,7 +338,7 @@ def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pa
 self.FundTransfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
 self.FundTransfer2(self.msg.sender, amount, True)
 ```
-Indexed wrapper 클래스는 기본 타입(int, str, bytes, Address, bool)만 지원하며, array 타입은 지원하지 않습니다.<br/>
+Indexed wrapper 클래스는 기본 타입(int, str, bytes, bool, Address)만 지원하며, array 타입은 지원하지 않습니다.<br/>
 Indexed가 없는 데이터 타입은 TxResult에 Indexed 타입과 별도로 분리되어 저장됩니다.<br/>
 Indexed 타입의 병기는 최대 3개까지 가능하며, 그외 데이터 타입 수에는 제한이 없습니다.<br/>
 

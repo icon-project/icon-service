@@ -78,7 +78,8 @@ class IconServiceEngine(object):
             'icx_getBalance': self._handle_icx_get_balance,
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
-            'icx_sendTransaction': self._handle_icx_send_transaction
+            'icx_sendTransaction': self._handle_icx_send_transaction,
+            'icx_getScoreApi': self._handle_icx_get_score_api
         }
 
         # The precommit state is the state that been already invoked,
@@ -347,7 +348,7 @@ class IconServiceEngine(object):
             if to is None or to.is_contract:
                 data_type: str = params.get('dataType')
                 data: dict = params.get('data')
-                self.__handle_score_invoke(
+                self._handle_score_invoke(
                     context, to, data_type, data, tx_result)
 
             tx_result.status = TransactionResult.SUCCESS
@@ -362,12 +363,12 @@ class IconServiceEngine(object):
 
         return tx_result
 
-    def __handle_score_invoke(self,
-                              context: 'IconScoreContext',
-                              to: Optional['Address'],
-                              data_type: str,
-                              data: dict,
-                              tx_result: 'TransactionResult') -> None:
+    def _handle_score_invoke(self,
+                             context: 'IconScoreContext',
+                             to: Optional['Address'],
+                             data_type: str,
+                             data: dict,
+                             tx_result: 'TransactionResult') -> None:
         """Handle score invocation
 
         :param context:
@@ -387,7 +388,7 @@ class IconServiceEngine(object):
                     to = create_address(
                         AddressPrefix.CONTRACT, project_name.encode())
                 else:
-                    to = self.__generate_contract_address(
+                    to = self._generate_contract_address(
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
@@ -400,10 +401,28 @@ class IconServiceEngine(object):
         except:
             raise
 
+    def _handle_icx_get_score_api(self,
+                                  context: 'IconScoreContext',
+                                  params: dict) -> object:
+        """Handles an icx_get_score_api jsonrpc request
+
+        get score api
+
+        :param params:
+        :return:
+        """
+        icon_score_address: Address = params['to']
+        data_type = 'score_api'
+
+        return self._icon_score_engine.query(context,
+                                             icon_score_address,
+                                             data_type,
+                                             None)
+
     @staticmethod
-    def __generate_contract_address(from_: 'Address',
-                                    timestamp: int,
-                                    nonce: int = None) -> 'Address':
+    def _generate_contract_address(from_: 'Address',
+                                   timestamp: int,
+                                   nonce: int = None) -> 'Address':
         """Generates a contract address from the transaction information.
 
         :param from_:
