@@ -24,6 +24,7 @@ from .icon_score_base2 import *
 from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
+from .icx import Icx
 from ..base.exception import *
 from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
@@ -36,7 +37,6 @@ if TYPE_CHECKING:
     from ..base.transaction import Transaction
     from ..base.message import Message
     from ..base.block import Block
-    from ..base.icx import Icx
 
 
 def interface(func):
@@ -79,23 +79,29 @@ def eventlog(func):
             raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
 
         for index, annotation in enumerate(TypeConverter.make_annotations_from_method(func).values()):
-            indexed = False
-            for sub in annotation._subs_tree():
-                if sub is Indexed:
-                    continue
-                if not isinstance(args[index].value, sub):
-                    if indexed:
-                        raise EventLogException(f'annotation mismatch!\n'
-                                                f'arg: {args[index]}, type: {type(args[index])}\n'
-                                                f'annotation: {annotation}, type: {type(annotation)}')
+
+            if annotation in score_base_support_type:
+                __check_mismatch_arg(args[index], annotation)
+            else:
+                # generic type!
+                if hasattr(annotation, '_subs_tree'):
+                    var_type = annotation._subs_tree()[0]
+                    if var_type is Indexed:
+                        # indexed!
+                        var_type = annotation._subs_tree()[1]
+                        __check_mismatch_arg(args[index].value, var_type)
                     else:
-                        raise EventLogException(f'annotation mismatch!\n'
-                                                f'arg: {args[index]}, type: {type(args[index])}\n'
-                                                f'annotation: {annotation}, type: {type(annotation)}')
+                        __check_mismatch_arg(args[index], annotation)
 
         call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
         ret = call_method(func_name, args)
         return ret
+
+    def __check_mismatch_arg(arg, annotation_type):
+        if not isinstance(arg, annotation_type):
+            raise EventLogException(f'annotation mismatch!\n'
+                                    f'arg: {arg}, type: {type(arg)}\n'
+                                    f'annotation: {annotation_type}')
 
     return __wrapper
 
