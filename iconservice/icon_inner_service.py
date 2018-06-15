@@ -69,7 +69,7 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def genesis_invoke(self, request: dict):
-        Logger.debug(f'IconService genesis invoke request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'genesis invoke request with {request}', ICON_INNER_LOG_TAG)
 
         is_open, result = self.__check_open_icon_service_engine()
         if not is_open:
@@ -86,7 +86,7 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def invoke(self, request: dict):
-        Logger.debug(f'icx_send_transaction request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'invoke request with {request}', ICON_INNER_LOG_TAG)
 
         try:
             is_open, result = self.__check_open_icon_service_engine()
@@ -117,7 +117,7 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def query(self, request: dict):
-        Logger.debug(f'icx_call request with {request}', ICON_INNER_LOG_TAG)
+        Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
 
         is_open, result = self.__check_open_icon_service_engine()
         if not is_open:

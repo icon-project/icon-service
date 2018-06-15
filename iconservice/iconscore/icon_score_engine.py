@@ -91,15 +91,13 @@ class IconScoreEngine(ContextContainer):
 
         if data_type == 'call':
             return self._call(context, icon_score_address, data)
-        elif data_type == 'score_api':
-            return self._get_score_api(context, icon_score_address)
         else:
             raise IconScoreException(
                 f'Invalid data type ({data_type})')
 
-    def _get_score_api(self,
-                       context: 'IconScoreContext',
-                       icon_score_address: 'Address') -> object:
+    def get_score_api(self,
+                      context: 'IconScoreContext',
+                      icon_score_address: 'Address') -> object:
         """Handle get score api
 
         :param context:

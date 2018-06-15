@@ -406,9 +406,8 @@ class IconServiceEngine(object):
         :param params:
         :return:
         """
-        icon_score_address: Address = params['to']
-        data_type = 'score_api'
-        return self._icon_score_engine.query(context, icon_score_address, data_type, None)
+        icon_score_address: Address = params['address']
+        return self._icon_score_engine.get_score_api(context, icon_score_address)
 
     @staticmethod
     def _generate_contract_address(from_: 'Address',
