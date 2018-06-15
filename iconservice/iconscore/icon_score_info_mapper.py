@@ -73,9 +73,9 @@ class IconScoreInfoMapper(dict, ContextGetter):
         """Constructor
         """
         super().__init__()
-        self.__icx_storage = storage
-        self.__db_factory = db_factory
-        self.__icon_score_loader = icon_score_loader
+        self._icx_storage = storage
+        self._db_factory = db_factory
+        self._icon_score_loader = icon_score_loader
 
     def __getitem__(self, icon_score_address: Address) -> IconScoreInfo:
         """operator[] overriding
@@ -83,7 +83,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
         :param icon_score_address:
         :return: IconScoreInfo instance
         """
-        self.__check_key_type(icon_score_address)
+        self._check_key_type(icon_score_address)
         return super().__getitem__(icon_score_address)
 
     def __setitem__(self,
@@ -93,12 +93,12 @@ class IconScoreInfoMapper(dict, ContextGetter):
         :param icon_score_address:
         :param info: IconScoreInfo
         """
-        self.__check_key_type(icon_score_address)
-        self.__check_value_type(info)
+        self._check_key_type(icon_score_address)
+        self._check_value_type(info)
         super().__setitem__(icon_score_address, info)
 
     @staticmethod
-    def __check_key_type(address: Address) -> None:
+    def _check_key_type(address: Address) -> None:
         """Check if key type is an icon score address type or not.
 
         :param address: icon score address
@@ -113,7 +113,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
                 ExceptionCode.INVALID_PARAMS)
 
     @staticmethod
-    def __check_value_type(info: IconScoreInfo) -> None:
+    def _check_value_type(info: IconScoreInfo) -> None:
         if not isinstance(info, IconScoreInfo):
             raise IconScoreException(
                 f'{info} is not IconScoreInfo type.',
@@ -121,7 +121,7 @@ class IconScoreInfoMapper(dict, ContextGetter):
 
     @property
     def score_root_path(self):
-        return self.__icon_score_loader.score_root_path
+        return self._icon_score_loader.score_root_path
 
     def delete_icon_score(self, address: Address) -> None:
         """
@@ -150,44 +150,44 @@ class IconScoreInfoMapper(dict, ContextGetter):
         return icon_score
 
     def __load_score(self, address: 'Address') -> Optional['IconScoreInfo']:
-        owner = self.__icx_storage.get_score_owner(self._context, address)
+        owner = self._icx_storage.get_score_owner(self._context, address)
         if owner is None:
             return None
 
-        score_wrapper = self.__load_score_wrapper(address)
-        score_db = self.__create_icon_score_database(address)
+        score_wrapper = self._load_score_wrapper(address)
+        score_db = self._create_icon_score_database(address)
 
         icon_score = score_wrapper(score_db, owner)
-        return self.__add_score_to_mapper(icon_score)
+        return self._add_score_to_mapper(icon_score)
 
-    def __create_icon_score_database(self, address: Address) -> 'IconScoreDatabase':
+    def _create_icon_score_database(self, address: Address) -> 'IconScoreDatabase':
         """Create IconScoreDatabase instance
         with icon_score_address and ContextDatabase
 
         :param address: icon_score_address
         """
 
-        context_db = self.__db_factory.create_by_address(address)
+        context_db = self._db_factory.create_by_address(address)
         score_db = IconScoreDatabase(context_db)
         return score_db
 
-    def __load_score_wrapper(self, address: 'Address') -> callable:
+    def _load_score_wrapper(self, address: 'Address') -> callable:
         """Load IconScoreBase subclass from IconScore python package
 
         :param address: icon_score_address
         :return: IconScoreBase subclass (NOT instance)
         """
 
-        score_wrapper = self.__icon_score_loader.load_score(address.body.hex())
+        score_wrapper = self._icon_score_loader.load_score(address.body.hex())
         if score_wrapper is None:
             raise IconScoreException(f'score_wrapper load Fail {address}')
         return score_wrapper
 
-    def __add_score_to_mapper(self, icon_score) -> IconScoreInfo:
+    def _add_score_to_mapper(self, icon_score) -> IconScoreInfo:
         info = IconScoreInfo(icon_score)
         self[icon_score.address] = info
         return info
 
     def is_exist_db(self, address: 'Address') -> bool:
-        return self.__db_factory.is_exist(address)
+        return self._db_factory.is_exist(address)
 

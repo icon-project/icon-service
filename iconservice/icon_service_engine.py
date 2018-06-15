@@ -43,7 +43,6 @@ from .iconscore.icon_score_deployer import IconScoreDeployer
 from .iconscore.transaction_validator import TransactionValidator
 from .logger import Logger
 from .icon_config import *
-from .utils import check_error_response, make_error_response
 
 from typing import TYPE_CHECKING, Optional, Any
 
@@ -273,15 +272,8 @@ class IconServiceEngine(object):
             icx_getBalance, icx_getTotalSupply, icx_call:
                 (dict) result or error object in jsonrpc response
         """
-        try:
-            handler = self._handlers[method]
-            return handler(context, params)
-        except IconServiceBaseException as icon_e:
-            Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(icon_e.code, icon_e.message)
-        except Exception as e:
-            Logger.error(e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        handler = self._handlers[method]
+        return handler(context, params)
 
     def _handle_icx_get_balance(self,
                                 context: 'IconScoreContext',
@@ -416,11 +408,7 @@ class IconServiceEngine(object):
         """
         icon_score_address: Address = params['to']
         data_type = 'score_api'
-
-        response = self._icon_score_engine.query(context, icon_score_address, data_type, None)
-        if not check_error_response(response):
-            response = {'api': response}
-        return response
+        return self._icon_score_engine.query(context, icon_score_address, data_type, None)
 
     @staticmethod
     def _generate_contract_address(from_: 'Address',

@@ -86,8 +86,8 @@ def make_response(result: Any):
 
 
 def check_error_response(result: Any):
-    return isinstance(result, dict) and result.get('failure')
+    return isinstance(result, dict) and result.get('error')
 
 
 def make_error_response(code: int, message: str):
-    return {'failure': {'code': code, 'message': message}}
+    return {'error': {'code': code, 'message': message}}

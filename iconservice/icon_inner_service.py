@@ -15,7 +15,7 @@
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.base.type_converter import TypeConverter
 from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
 from iconservice.utils import make_response, make_error_response
@@ -85,7 +85,7 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def icx_send_transaction(self, request: dict):
+    async def invoke(self, request: dict):
         Logger.debug(f'icx_send_transaction request with {request}', ICON_INNER_LOG_TAG)
 
         try:
@@ -116,63 +116,66 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def icx_call(self, request: dict):
+    async def query(self, request: dict):
         Logger.debug(f'icx_call request with {request}', ICON_INNER_LOG_TAG)
 
-        try:
-            is_open, result = self.__check_open_icon_service_engine()
-            if not is_open:
-                response = result
-            else:
-                try:
-                    method = request.get('method')
-                    params = request.get('params')
-                    params = self.__type_converter.convert(params, recursive=False)
-                    if method is None or params is None:
-                        response = make_error_response(ExceptionCode.INVALID_PARAMS, 'method, params is None')
-                    else:
-                        value = self.__icon_service_engine.query(method=method, params=params)
-                        response = make_response(value)
-                finally:
-                    pass
-        finally:
-            pass
+        is_open, result = self.__check_open_icon_service_engine()
+        if not is_open:
+            response = result
+        else:
+            try:
+                method = request.get('method')
+                params = request.get('params')
+                params = self.__type_converter.convert(params, recursive=False)
+                if method is None or params is None:
+                    response = make_error_response(ExceptionCode.INVALID_PARAMS, 'method, params is None')
+                else:
+                    value = self.__icon_service_engine.query(method=method, params=params)
+                    response = make_response(value)
+            except IconServiceBaseException as icon_e:
+                Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
+                return make_error_response(icon_e.code, icon_e.message)
+            except Exception as e:
+                Logger.error(e, ICON_SERVICE_LOG_TAG)
+                return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         return response
 
     @message_queue_task
     async def write_precommit_state(self, request: dict):
         Logger.debug(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
 
-        try:
-            is_open, result = self.__check_open_icon_service_engine()
-            if not is_open:
-                response = result
-            else:
-                try:
-                    self.__icon_service_engine.commit()
-                    response = make_response(0)
-                finally:
-                    pass
-        finally:
-            pass
+        is_open, result = self.__check_open_icon_service_engine()
+        if not is_open:
+            response = result
+        else:
+            try:
+                self.__icon_service_engine.commit()
+                response = make_response(0)
+            except IconServiceBaseException as icon_e:
+                Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
+                return make_error_response(icon_e.code, icon_e.message)
+            except Exception as e:
+                Logger.error(e, ICON_SERVICE_LOG_TAG)
+                return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         return response
 
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
         Logger.debug(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
 
-        try:
-            is_open, result = self.__check_open_icon_service_engine()
-            if not is_open:
-                response = result
-            else:
-                try:
-                    self.__icon_service_engine.rollback()
-                    response = make_response(0)
-                finally:
-                    pass
-        finally:
-            pass
+        is_open, result = self.__check_open_icon_service_engine()
+        if not is_open:
+            response = result
+        else:
+            try:
+                self.__icon_service_engine.rollback()
+                response = make_response(0)
+            except IconServiceBaseException as icon_e:
+                Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
+                return make_error_response(icon_e.code, icon_e.message)
+            except Exception as e:
+                Logger.error(e, ICON_SERVICE_LOG_TAG)
+                return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         return response
 
     @message_queue_task

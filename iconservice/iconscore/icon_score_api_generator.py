@@ -15,13 +15,10 @@
 # limitations under the License.
 
 from inspect import signature, Signature, Parameter
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from ..base.exception import IconScoreException
 from ..base.type_converter import score_base_support_type
 from .icon_score_base2 import Indexed, ConstBitFlag, CONST_BIT_FLAG, STR_FALLBACK
-
-if TYPE_CHECKING:
-    from .icon_score_base import IconScoreBase
 
 
 class ScoreApiGenerator:
