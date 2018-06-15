@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..iconscore.icon_score_context import IconScoreContext
-from ..iconscore.icon_score_step import StepType
-from .address import Address
+from .icon_score_context import IconScoreContext
+from .icon_score_step import StepType
+from ..base.address import Address
 
 
 class Icx(object):
