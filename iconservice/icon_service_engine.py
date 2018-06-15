@@ -272,13 +272,8 @@ class IconServiceEngine(object):
             icx_getBalance, icx_getTotalSupply, icx_call:
                 (dict) result or error object in jsonrpc response
         """
-        try:
-            handler = self._handlers[method]
-            return handler(context, params)
-        except KeyError as ke:
-            Logger.error(ke, ICON_SERVICE_LOG_TAG)
-        except Exception as e:
-            Logger.error(e, ICON_SERVICE_LOG_TAG)
+        handler = self._handlers[method]
+        return handler(context, params)
 
     def _handle_icx_get_balance(self,
                                 context: 'IconScoreContext',
@@ -411,13 +406,8 @@ class IconServiceEngine(object):
         :param params:
         :return:
         """
-        icon_score_address: Address = params['to']
-        data_type = 'score_api'
-
-        return self._icon_score_engine.query(context,
-                                             icon_score_address,
-                                             data_type,
-                                             None)
+        icon_score_address: Address = params['address']
+        return self._icon_score_engine.get_score_api(context, icon_score_address)
 
     @staticmethod
     def _generate_contract_address(from_: 'Address',

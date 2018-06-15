@@ -47,8 +47,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         self.score_address = Address.from_string(f'cx{"0" * 40}')
         self.address = Address.from_string(f'hx{"a" * 40}')
 
-        self.mapper[self.score_address] = IconScoreInfo(
-            icon_score=None)
+        self.mapper[self.score_address] = IconScoreInfo(icon_score=None)
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
