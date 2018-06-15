@@ -24,12 +24,7 @@ from .icon_score_base2 import *
 from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
-from ..base.address import Address
-from ..base.block import Block
 from ..base.exception import *
-from ..base.icx import Icx
-from ..base.message import Message
-from ..base.transaction import Transaction
 from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
 
@@ -41,6 +36,7 @@ if TYPE_CHECKING:
     from ..base.transaction import Transaction
     from ..base.message import Message
     from ..base.block import Block
+    from ..base.icx import Icx
 
 
 def interface(func):
