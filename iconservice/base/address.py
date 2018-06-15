@@ -20,6 +20,7 @@
 import hashlib
 from enum import IntEnum
 from ..utils import is_lowercase_hex_string
+from .exception import ExceptionCode, IconException
 
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
@@ -78,7 +79,7 @@ class AddressPrefix(IntEnum):
         if prefix == ICON_CONTRACT_ADDRESS_PREFIX:
             return AddressPrefix.CONTRACT
 
-        raise ValueError('Invalid address prefix')
+        raise IconException('Invalid address prefix', ExceptionCode.INVALID_PARAMS)
 
 
 class Address(object):
@@ -94,11 +95,11 @@ class Address(object):
         :param address_body: 20-byte address body
         """
         if not isinstance(address_prefix, AddressPrefix):
-            raise TypeError('Invalid address prefix type')
+            raise IconException('Invalid address prefix type', ExceptionCode.INVALID_PARAMS)
         if not isinstance(address_body, bytes):
-            raise TypeError('Invalid address body type')
+            raise IconException('Invalid address body type', ExceptionCode.INVALID_PARAMS)
         if len(address_body) != 20:
-            raise ValueError('Length of address body should be 20 in bytes')
+            raise IconException('Length of address body should be 20 in bytes', ExceptionCode.INVALID_PARAMS)
 
         self.__prefix = address_prefix
         self.__body = address_body
@@ -168,7 +169,7 @@ class Address(object):
         """
 
         if not is_icon_address_valid(address):
-            raise ValueError('Invalid address')
+            raise IconException('Invalid address', ExceptionCode.INVALID_PARAMS)
 
         prefix, body = split_icon_address(address)
 
