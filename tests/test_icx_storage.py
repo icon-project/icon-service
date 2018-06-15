@@ -24,7 +24,6 @@ from iconservice.database.db import ContextDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 
