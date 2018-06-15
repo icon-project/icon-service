@@ -88,31 +88,25 @@ class IconScoreInnerTask(object):
     async def invoke(self, request: dict):
         Logger.debug(f'invoke request with {request}', ICON_INNER_LOG_TAG)
 
-        try:
-            is_open, result = self.__check_open_icon_service_engine()
+        is_open, result = self.__check_open_icon_service_engine()
 
-            if not is_open:
-                response = result
+        if not is_open:
+            response = result
+        else:
+            params = self.__type_converter.convert(request, recursive=False)
+            block_params = params.get('block')
+            transactions_params = params.get('transactions')
+            converted_params = []
+            for transaction_params in transactions_params:
+                converted_params.append(self.__type_converter.convert(transaction_params, recursive=True))
+
+            if block_params is None or transactions_params is None:
+                response = make_error_response(ExceptionCode.INVALID_PARAMS, 'block_params, tx_params is None')
             else:
-                params = self.__type_converter.convert(request, recursive=False)
-                block_params = params.get('block')
-                transactions_params = params.get('transactions')
-                converted_params = []
-                for transaction_params in transactions_params:
-                    converted_params.append(self.__type_converter.convert(transaction_params, recursive=True))
-
-                if block_params is None or transactions_params is None:
-                    response = make_error_response(ExceptionCode.INVALID_PARAMS, 'block_params, tx_params is None')
-                else:
-                    block = Block.create_block(block_params)
-                    try:
-                        tx_results = self.__icon_service_engine.invoke(block=block, tx_params=converted_params)
-                        results = [tx_result.to_response_json() for tx_result in tx_results]
-                        response = make_response(results)
-                    finally:
-                        pass
-        finally:
-            pass
+                block = Block.create_block(block_params)
+                tx_results = self.__icon_service_engine.invoke(block=block, tx_params=converted_params)
+                results = [tx_result.to_response_json() for tx_result in tx_results]
+                response = make_response(results)
         return response
 
     @message_queue_task
