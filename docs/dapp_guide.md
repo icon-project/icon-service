@@ -186,13 +186,13 @@ class SampleCrowdSale(IconScoreBase):
             amount = self.__balances[self.msg.sender]
             self.__balances[self.msg.sender] = 0
             if amount > 0:
-                if self.send(self.msg.sender, amount):
+                if self.icx.send(self.msg.sender, amount):
                     self.FundTransfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
-            if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
+            if self.icx.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
                 self.FundTransfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
                                   Indexed(False))
             else:
@@ -378,16 +378,6 @@ sample_token_score.transfer(self.msg.sender, value)
 #### [legacy] call(addr_to(주소), func_name,  kw_dict(함수의 params)) -> 콜 함수의 반환 값
 InterfaceScore가 도입되기 전에 다른 스코어의 함수를 호출하기 위해 제공했던 함수입니다.
 
-#### transfer(addr_to(주소), amount(정수값)) -> bool
-다른 주소로 icx를 전송합니다.<br/>
-만약 로직 실행 중에 예외가 발생하면 해당 예외를 처리하지 않고 상위로 올려줍니다.<br/>
-성공하면 반환 값은 True입니다.<br/>
-
-#### send(addr_to(주소), amount(정수값)) -> bool
-다음 주소로 icx를 전송합니다.<br/>
-기본 동작은 transfer와 동일하나, 예외를 이 함수 안에서 처리합니다.<br/>
-전송을 성공하면 True, 실패하면 False가 반환됩니다.<br/>
-
 #### revert(message: str) -> None
 개발자가 강제로 revert 예외를 발생시킬 수 있습니다.<br/>
 해당 예외가 발생하면 그동안 실행하면서 변경되었던 상태 DB 값은 롤백됩니다.<br/>
@@ -402,8 +392,6 @@ InterfaceScore가 도입되기 전에 다른 스코어의 함수를 호출하기
 * msg.value :
 현재 이 스코어의 함수를 호출한 계정에서 전송하려는 icx 값입니다. <br/>
 
-#### address : 스코어의 주소 값입니다.
-
 #### tx : 해당 트랜잭션의 정보입니다.
 * tx.origin : 트랜잭션을 만든 계정
 * tx.index : 트랜잭션 인덱스
@@ -416,7 +404,20 @@ InterfaceScore가 도입되기 전에 다른 스코어의 함수를 호출하기
 * block.hash : 블럭의 해쉬 값
 * block.timestamp : 블럭이 생성된 시각
 
+#### icx : icx 코인을 전송하기 위한 객체입니다.
+* icx.transfer(addr_to(주소), amount(정수값)) -> bool<br/>
+addr_to 주소로 amount만큼 icx 코인을 전송합니다.<br/>
+만약 로직 실행 중에 예외가 발생하면 해당 예외를 처리하지 않고 상위로 올려줍니다.<br/>
+성공하면 반환 값은 True입니다.<br/>
+
+* icx.send(addr_to(주소), amount(정수값)) -> bool<br/>
+addr_to 주소로 amount만큼 icx 코인을 전송합니다.<br/>
+기본 동작은 transfer와 동일하나, 예외를 이 함수 안에서 처리합니다.<br/>
+전송을 성공하면 True, 실패하면 False가 반환됩니다.<br/>
+
 #### db : 상태 DB를 접근하는 db 객체입니다.
+
+#### address : 스코어의 주소 값입니다.
 
 #### owner : 해당 스코어를 배포한 계정의 주소입니다.
 

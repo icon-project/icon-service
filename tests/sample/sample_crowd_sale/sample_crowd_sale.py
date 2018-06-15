@@ -110,13 +110,13 @@ class SampleCrowdSale(IconScoreBase):
             amount = self.__balances[self.msg.sender]
             self.__balances[self.msg.sender] = 0
             if amount > 0:
-                if self.send(self.msg.sender, amount):
+                if self.icx.send(self.msg.sender, amount):
                     self.FundTransfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
-            if self.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
+            if self.icx.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
                 self.FundTransfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
                                   Indexed(False))
             else:

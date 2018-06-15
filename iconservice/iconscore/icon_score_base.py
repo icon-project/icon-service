@@ -24,9 +24,9 @@ from .icon_score_base2 import *
 from .icon_score_step import StepType
 from .icon_score_context import IconScoreContextType
 from .icon_score_context import ContextGetter
-from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..base.exception import *
 from ..base.type_converter import TypeConverter
+from ..database.db import IconScoreDatabase, DatabaseObserver
 
 from typing import TYPE_CHECKING, Callable, Any
 
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from ..base.transaction import Transaction
     from ..base.message import Message
     from ..base.block import Block
+    from ..base.icx import Icx
 
 
 def interface(func):
@@ -228,6 +229,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__db = db
         self.__owner = owner
         self.__address = db.address
+        self.__icx = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException('empty abi!', '__init__', str(type(self)))
@@ -387,6 +389,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def owner(self) -> 'Address':
         return self.__owner
 
+    @property
+    def icx(self) -> 'Icx':
+        if self.__icx is None:
+            self.__icx = Icx(self._context, self.__address)
+        return self.__icx
+
     def now(self):
         return self.block.timestamp
 
@@ -408,18 +416,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         """
         self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         return self._context.call(self.address, addr_to, func_name, [], kw_dict)
-
-    def transfer(self, addr_to: 'Address', amount: int) -> bool:
-        ret = self._context.transfer(self.__address, addr_to, amount)
-        if amount > 0:
-            self._context.step_counter.increase_step(StepType.TRANSFER, 1)
-        return ret
-
-    def send(self, addr_to: 'Address', amount: int) -> bool:
-        ret = self._context.send(self.__address, addr_to, amount)
-        if amount > 0:
-            self._context.step_counter.increase_step(StepType.TRANSFER, 1)
-        return ret
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
