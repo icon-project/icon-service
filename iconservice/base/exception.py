@@ -102,7 +102,7 @@ class APIIconScoreBaseException(IconScoreException):
         return self.__cls_name
 
     def __str__(self):
-        return f'msg: {self.message} func: {self.func_name} cls: {self.cls_name} ({self.code})'
+        return f'msg: {self.message}, func: {self.func_name}, cls: {self.cls_name} ({self.code})'
 
 
 def check_exception(func):

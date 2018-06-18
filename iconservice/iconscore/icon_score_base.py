@@ -200,7 +200,7 @@ class IconScoreBaseMeta(ABCMeta):
         readonly_payables = [func for func in payable_funcs
                              if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
         if bool(readonly_payables):
-            raise IconScoreException(f"can't payable readonly func: {readonly_payables}")
+            raise IconScoreException(f"Readonly method cannot be payable: {readonly_payables}")
 
         if external_funcs:
             setattr(cls, CONST_CLASS_EXTERNALS, external_funcs)
@@ -262,7 +262,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
 
         if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
-            raise ExternalException(f"can't external call", func_name, type(self).__name__,
+            raise ExternalException(f"Cannot call external method", func_name, type(self).__name__,
                                     ExceptionCode.METHOD_NOT_FOUND)
 
         self.__check_readonly(func_name)
@@ -285,13 +285,13 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __check_payable(self, func_name: str, payable_dict: dict):
         if func_name not in payable_dict:
             if self.msg.value > 0:
-                raise PayableException(f"can't have msg.value", func_name, type(self).__name__)
+                raise PayableException(f"This is not payable", func_name, type(self).__name__)
 
     def __check_readonly(self, func_name: str):
         func = getattr(self, func_name)
         readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
         if readonly != self._context.readonly:
-            raise IconScoreException(f'context type is mismatch func: {func_name}, cls: {type(self).__name__}')
+            raise IconScoreException(f'Context type mismatch, func: {func_name}, cls: {type(self).__name__}')
 
     def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
         """Call external function provided by other IconScore with arguments without fallback
@@ -322,8 +322,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             else:
                 data_list.append(arg)
 
+        indexed_len = len(indexed_list)
         if len(indexed_list) > limit_count:
-            raise EventLogException(f'Over LimitCount : {limit_count}')
+            raise EventLogException(f'limit_count overflow: {indexed_len}')
 
         # TODO send params to eventlog internal logic
         pass
