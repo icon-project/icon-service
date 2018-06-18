@@ -53,7 +53,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def open(self):
         if self._is_open:
-            make_error_response(ExceptionCode.INVALID_REQUEST, 'already icon_service open!')
+            make_error_response(ExceptionCode.INVALID_REQUEST, 'already icon_service opened!')
 
         Logger.debug("icon_score_service open", ICON_INNER_LOG_TAG)
         self._icon_service_engine.open(self._icon_score_root_path, self._icon_score_state_db_root_path)
@@ -190,7 +190,7 @@ class IconScoreInnerTask(object):
 
     def _check_open_icon_service_engine(self):
         if not self._is_open:
-            msg = "IconService isn't Open yet!!"
+            msg = "IconService isn't Opened yet!!"
             Logger.error(msg, ICON_INNER_LOG_TAG)
             result = make_error_response(ExceptionCode.INVALID_REQUEST, msg)
         else:

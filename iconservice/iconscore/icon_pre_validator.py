@@ -69,7 +69,7 @@ class IconPreValidator(object):
 
         _from = tx['from']
         value = tx.get('value', 0)
-        step_limit = tx.get('step_limit', 0)
+        step_limit = tx.get('stepLimit', 0)
         balance = self._icx.get_balance(context=context, address=_from)
 
         if balance < value + step_limit * step_price:
