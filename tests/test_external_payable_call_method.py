@@ -38,10 +38,10 @@ def decorator(func):
 
 
 class CallClass1(IconScoreBase):
-    def on_install(self, params: dict) -> None:
+    def on_install(self) -> None:
         pass
 
-    def on_update(self, params: dict) -> None:
+    def on_update(self) -> None:
         pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
@@ -53,21 +53,21 @@ class CallClass1(IconScoreBase):
 
     @external
     @decorator
-    def func2(self, positional, kw_args):
+    def func2(self, arg1: int, arg2: str):
         pass
 
     @payable
     @external
-    def func3(self, positional, kw_args):
+    def func3(self, arg1: int, arg2: str):
         pass
 
     @payable
     @external
-    def func4(self, positional, kw_args):
+    def func4(self, arg1: int, arg2: str):
         pass
 
     @payable
-    def func5(self, positional, kw_args):
+    def func5(self, arg1: int, arg2: str):
         pass
 
     def func6(self):
@@ -79,11 +79,11 @@ class CallClass1(IconScoreBase):
 
 
 class CallClass2(CallClass1):
-    def on_install(self, params) -> None:
-        super().on_install(params)
+    def on_install(self) -> None:
+        super().on_install()
 
-    def on_update(self, params) -> None:
-        super().on_update(params)
+    def on_update(self) -> None:
+        super().on_update()
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
         super().__init__(db, owner)
@@ -93,7 +93,7 @@ class CallClass2(CallClass1):
 
     @payable
     @external
-    def func5(self, positional, kw_args):
+    def func5(self, arg1: int, arg2: str):
         pass
 
     def fallback(self):

@@ -14,9 +14,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ..base.exception import ExceptionCode, IconException
+from ..base.address import Address
+from typing import TYPE_CHECKING
 
-from .address import is_icon_address_valid
-from .exception import ExceptionCode, IconException
+if TYPE_CHECKING:
+    from ..icx.icx_engine import IcxEngine
+    from ..iconscore.icon_score_context import IconScoreContext
+
+
+class IconPreValidator(object):
+    """IconService Pre Validator
+    """
+
+    def __init__(self, icx: 'IcxEngine') -> None:
+        """Constructor
+
+        :param icx: icx engine
+        """
+        self._icx = icx
+
+    def tx_validate(self, context: 'IconScoreContext', converted_tx: dict, step_price: int) -> None:
+        """Validate a transaction before accepting it
+                If failed to validate a tx, client will get a json-rpc error response
+
+                :param context: query context
+                :param converted_tx: dict including tx info
+                :param step_price:
+                """
+
+        self._tx_validate(converted_tx)
+        self._icx_check_balance(context, converted_tx, step_price)
+        self._icx_check_to_address(context, converted_tx)
+
+    @staticmethod
+    def query_validate(converted_tx: dict) -> None:
+        method = converted_tx['method']
+        params = converted_tx['params']
+        JsonRpcMessageValidator.validate(method, params)
+
+    @staticmethod
+    def _tx_validate(request: dict) -> None:
+        method = request['method']
+        params = request['params']
+        JsonRpcMessageValidator.validate(method, params)
+
+    def _icx_check_balance(self, context: 'IconScoreContext', tx: dict, step_price: int) -> None:
+        """Check the balance of from address is enough to pay for tx fee and value
+
+        :param tx:
+        :param step_price:
+        """
+        tx = tx['params']
+
+        _from = tx['from']
+        value = tx.get('value', 0)
+        step_limit = tx.get('step_limit', 0)
+        balance = self._icx.get_balance(context=context, address=_from)
+
+        if balance < value + step_limit * step_price:
+            raise IconException('Out of balance', ExceptionCode.INVALID_REQUEST)
+
+    def _icx_check_to_address(self, context: 'IconScoreContext', tx: dict) -> None:
+        """Check the validation of to
+
+        :param tx:
+        :return:
+        """
+        tx = tx['params']
+        to = tx.get('to', None)
+
+        if to is None:
+            pass
+        elif to and not isinstance(to, Address):
+            Address.from_string(to)
+        elif to.is_contract and not self._icx.storage.is_score_installed(context=context, icon_score_address=to):
+            raise IconException(f'Score is not installed {str(to)}', ExceptionCode.INVALID_PARAMS)
 
 
 class JsonRpcMessageValidator(object):
@@ -25,7 +98,7 @@ class JsonRpcMessageValidator(object):
     def validate(cls, method: str, params: dict) -> None:
         """Validate json-rpc message
         If json-rpc message is not valid, raise an exception
-       
+
         :param method:
         :param params: json-rpc params before type converting
         :return:
@@ -82,33 +155,32 @@ class JsonRpcMessageValidator(object):
 
     @classmethod
     def _check_address_value(
-            cls, key: str, params: dict, optional: bool=False) -> None:
+            cls, key: str, params: dict, optional: bool = False) -> None:
         if optional and key not in params:
             return
 
-        address: str = params.get(key)
-        if not is_icon_address_valid(address):
+        address = params.get(key)
+        if not isinstance(address, Address):
             raise IconException(
                 code=ExceptionCode.INVALID_PARAMS,
                 message=f'Invalid address: {key}')
 
     @classmethod
     def _check_int_value(
-            cls, key: str, params: dict, optional: bool=False) -> int:
+            cls, key: str, params: dict, optional: bool = False) -> int:
         # If key is optional and params doesn't contain key, do nothing
         if optional and key not in params:
             return 0
 
-        try:
-            return int(params[key], 16)
-        except Exception as e:
+        int_value = params.get(key)
+        if not isinstance(int_value, int):
             raise IconException(
                 code=ExceptionCode.INVALID_PARAMS,
-                message=f'Invalid param: {repr(e)}')
+                message=f'Invalid param: {int_value}')
 
     @classmethod
     def _check_data_value(
-            cls, data_type: str, data: dict, optional: bool=False):
+            cls, data_type: str, data: dict, optional: bool = False):
         """
 
         :param data_type:

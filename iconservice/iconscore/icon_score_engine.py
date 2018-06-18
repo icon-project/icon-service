@@ -162,7 +162,10 @@ class IconScoreEngine(ContextContainer):
                 raise IconScoreException(
                     f'IconScore({icon_score_address}) not found')
 
-            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
+            ret_value = call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
+            if isinstance(ret_value, Address):
+                ret_value = str(ret_value)
+            return ret_value
         except (IconScoreException, Exception):
             raise
         finally:

@@ -26,24 +26,25 @@ from message_queue import message_queue_task, MessageQueueStub, MessageQueueServ
 class IconScoreInnerTask(object):
     def __init__(self, icon_score_root_path: str, icon_score_state_db_root_path: str):
 
-        self.__icon_score_root_path = icon_score_root_path
-        self.__icon_score_state_db_root_path = icon_score_state_db_root_path
+        self._icon_score_root_path = icon_score_root_path
+        self._icon_score_state_db_root_path = icon_score_state_db_root_path
 
-        self.__icon_service_engine = IconServiceEngine()
-        self.__is_open = False
-        self.__type_converter = None
-        self.__init_type_converter()
+        self._icon_service_engine = IconServiceEngine()
+        self._is_open = False
+        self._type_converter = None
+        self._init_type_converter()
 
-    def __init_type_converter(self):
+    def _init_type_converter(self):
         type_table = {
             'from': 'address',
             'to': 'address',
             'address': 'address',
             'fee': 'int',
             'value': 'int',
-            'balance': 'int'
+            'balance': 'int',
+            'timestamp': 'int'
         }
-        self.__type_converter = TypeConverter(type_table)
+        self._type_converter = TypeConverter(type_table)
 
     @message_queue_task
     async def hello(self):
@@ -51,15 +52,18 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def open(self):
+        if self._is_open:
+            make_error_response(ExceptionCode.INVALID_REQUEST, 'already icon_service open!')
+
         Logger.debug("icon_score_service open", ICON_INNER_LOG_TAG)
-        self.__icon_service_engine.open(self.__icon_score_root_path, self.__icon_score_state_db_root_path)
-        self.__is_open = True
+        self._icon_service_engine.open(self._icon_score_root_path, self._icon_score_state_db_root_path)
+        self._is_open = True
 
     @message_queue_task
     async def close(self):
         Logger.debug("icon_score_service close", ICON_INNER_LOG_TAG)
-        self.__icon_service_engine.close()
-        self.__is_open = False
+        self._icon_service_engine.close()
+        self._is_open = False
 
     @message_queue_task
     async def status(self):
@@ -71,7 +75,7 @@ class IconScoreInnerTask(object):
     async def genesis_invoke(self, request: dict):
         Logger.debug(f'genesis invoke request with {request}', ICON_INNER_LOG_TAG)
 
-        is_open, result = self.__check_open_icon_service_engine()
+        is_open, result = self._check_open_icon_service_engine()
         if not is_open:
             response = result
         else:
@@ -79,32 +83,33 @@ class IconScoreInnerTask(object):
             if accounts is None:
                 response = make_error_response(ExceptionCode.INVALID_PARAMS, 'accounts is None')
             else:
-                accounts = self.__type_converter.convert(accounts, recursive=False)
-                self.__icon_service_engine.genesis_invoke(accounts)
-                response = make_response(0)
+                accounts = self._type_converter.convert(accounts, recursive=False)
+                self._icon_service_engine.genesis_invoke(accounts)
+                response = make_response(ExceptionCode.OK)
         return response
 
     @message_queue_task
     async def invoke(self, request: dict):
         Logger.debug(f'invoke request with {request}', ICON_INNER_LOG_TAG)
 
-        is_open, result = self.__check_open_icon_service_engine()
+        is_open, result = self._check_open_icon_service_engine()
 
         if not is_open:
             response = result
         else:
-            params = self.__type_converter.convert(request, recursive=False)
+            params = self._type_converter.convert(request, recursive=False)
             block_params = params.get('block')
             transactions_params = params.get('transactions')
+
             converted_params = []
             for transaction_params in transactions_params:
-                converted_params.append(self.__type_converter.convert(transaction_params, recursive=True))
+                converted_params.append(self._type_converter.convert(transaction_params, recursive=True))
 
             if block_params is None or transactions_params is None:
                 response = make_error_response(ExceptionCode.INVALID_PARAMS, 'block_params, tx_params is None')
             else:
                 block = Block.create_block(block_params)
-                tx_results = self.__icon_service_engine.invoke(block=block, tx_params=converted_params)
+                tx_results = self._icon_service_engine.invoke(block=block, tx_params=converted_params)
                 results = [tx_result.to_response_json() for tx_result in tx_results]
                 response = make_response(results)
         return response
@@ -113,19 +118,17 @@ class IconScoreInnerTask(object):
     async def query(self, request: dict):
         Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
 
-        is_open, result = self.__check_open_icon_service_engine()
+        is_open, result = self._check_open_icon_service_engine()
         if not is_open:
             response = result
         else:
             try:
-                method = request.get('method')
-                params = request.get('params')
-                params = self.__type_converter.convert(params, recursive=False)
-                if method is None or params is None:
-                    response = make_error_response(ExceptionCode.INVALID_PARAMS, 'method, params is None')
-                else:
-                    value = self.__icon_service_engine.query(method=method, params=params)
-                    response = make_response(value)
+                converted_request = self._convert_request_params(request)
+                self._icon_service_engine.query_pre_validate(converted_request)
+
+                value = self._icon_service_engine.query(method=converted_request['method'],
+                                                        params=converted_request['params'])
+                response = make_response(value)
             except IconServiceBaseException as icon_e:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
                 return make_error_response(icon_e.code, icon_e.message)
@@ -135,16 +138,16 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def write_precommit_state(self, request: dict):
-        Logger.debug(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+    async def write_precommit_state(self):
+        Logger.debug(f'write_precommit_state request', ICON_INNER_LOG_TAG)
 
-        is_open, result = self.__check_open_icon_service_engine()
+        is_open, result = self._check_open_icon_service_engine()
         if not is_open:
             response = result
         else:
             try:
-                self.__icon_service_engine.commit()
-                response = make_response(0)
+                self._icon_service_engine.commit()
+                response = make_response(ExceptionCode.OK)
             except IconServiceBaseException as icon_e:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
                 return make_error_response(icon_e.code, icon_e.message)
@@ -154,16 +157,16 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def remove_precommit_state(self, request: dict):
-        Logger.debug(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+    async def remove_precommit_state(self):
+        Logger.debug(f'remove_precommit_state request', ICON_INNER_LOG_TAG)
 
-        is_open, result = self.__check_open_icon_service_engine()
+        is_open, result = self._check_open_icon_service_engine()
         if not is_open:
             response = result
         else:
             try:
-                self.__icon_service_engine.rollback()
-                response = make_response(0)
+                self._icon_service_engine.rollback()
+                response = make_response(ExceptionCode.OK)
             except IconServiceBaseException as icon_e:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
                 return make_error_response(icon_e.code, icon_e.message)
@@ -174,22 +177,36 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def pre_validate_check(self, request: dict):
-        response = make_response(0)
-        return response
+        try:
+            converted_request = self._convert_request_params(request)
+            self._icon_service_engine.tx_pre_validate(converted_request)
+        except IconServiceBaseException as icon_e:
+            Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
+            return make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            Logger.error(e, ICON_SERVICE_LOG_TAG)
+            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        return make_response(ExceptionCode.OK)
 
-    def __check_open_icon_service_engine(self):
-        if not self.__is_open:
+    def _check_open_icon_service_engine(self):
+        if not self._is_open:
             msg = "IconService isn't Open yet!!"
             Logger.error(msg, ICON_INNER_LOG_TAG)
             result = make_error_response(ExceptionCode.INVALID_REQUEST, msg)
         else:
             result = None
 
-        return self.__is_open, result
+        return self._is_open, result
+
+    def _convert_request_params(self, request: dict) -> dict:
+        params = request['params']
+        params = self._type_converter.convert(params, recursive=False)
+        request['params'] = params
+        return request
 
     @message_queue_task
     async def change_block_hash(self, params):
-        return 0
+        return ExceptionCode.OK
 
 
 class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
