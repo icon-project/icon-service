@@ -1,0 +1,8 @@
+{
+    "log": {
+        "colorLog": true,
+        "level": "DEBUG",
+        "filePath": "./icon_service.log",
+        "outputType": "console|file"
+    }
+}
