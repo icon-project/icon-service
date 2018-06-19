@@ -252,7 +252,7 @@ class IconScoreEngine(ContextContainer):
             self.__icon_score_info_mapper.delete_icon_score(icon_score_address)
             score_root_path = self.__icon_score_info_mapper.score_root_path
             target_path = path.join(score_root_path,
-                                        icon_score_address.body.hex())
+                                    icon_score_address.body.hex())
             makedirs(target_path, exist_ok=True)
             target_path = path.join(
                 target_path, f'{context.block.height}_{context.tx.index}')
@@ -264,8 +264,8 @@ class IconScoreEngine(ContextContainer):
             pass
 
         self.__icx_storage.put_score_owner(context,
-                                            icon_score_address,
-                                            context.tx.origin)
+                                           icon_score_address,
+                                           context.tx.origin)
         db_exist = self.__icon_score_info_mapper.is_exist_db(icon_score_address)
         score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
 
