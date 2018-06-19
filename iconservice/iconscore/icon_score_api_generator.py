@@ -166,14 +166,15 @@ class ScoreApiGenerator:
         indexed = False
         converted_type = ''
 
-        if param_type in score_base_support_type:
-            converted_type = ScoreApiGenerator.__convert_type(param_type)
-        else:
-            for sub in param_type._subs_tree():
-                if sub is Indexed:
-                    indexed = True
-                else:
-                    converted_type = ScoreApiGenerator.__convert_type(sub)
+        if param_type is not Signature.empty:
+            if param_type in score_base_support_type:
+                converted_type = ScoreApiGenerator.__convert_type(param_type)
+            else:
+                for sub in param_type._subs_tree():
+                    if sub is Indexed:
+                        indexed = True
+                    else:
+                        converted_type = ScoreApiGenerator.__convert_type(sub)
 
         return converted_type, indexed
 

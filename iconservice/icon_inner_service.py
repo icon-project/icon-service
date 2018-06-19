@@ -14,6 +14,7 @@
 
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.base.type_converter import TypeConverter
+from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.logger.logger import Logger
@@ -64,12 +65,6 @@ class IconScoreInnerTask(object):
         Logger.debug("icon_score_service close", ICON_INNER_LOG_TAG)
         self._icon_service_engine.close()
         self._is_open = False
-
-    @message_queue_task
-    async def status(self):
-        Logger.debug("icon_score_service status", ICON_INNER_LOG_TAG)
-        result = dict()
-        return make_response(result)
 
     @message_queue_task
     async def genesis_invoke(self, request: dict):
@@ -128,6 +123,9 @@ class IconScoreInnerTask(object):
 
                 value = self._icon_service_engine.query(method=converted_request['method'],
                                                         params=converted_request['params'])
+
+                if isinstance(value, Address):
+                    value = str(value)
                 response = make_response(value)
             except IconServiceBaseException as icon_e:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
@@ -190,7 +188,7 @@ class IconScoreInnerTask(object):
 
     def _check_open_icon_service_engine(self):
         if not self._is_open:
-            msg = "IconService isn't Opened yet!!"
+            msg = "IconService isn't opened yet!!"
             Logger.error(msg, ICON_INNER_LOG_TAG)
             result = make_error_response(ExceptionCode.INVALID_REQUEST, msg)
         else:

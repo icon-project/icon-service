@@ -133,6 +133,8 @@ class TestCallMethod(unittest.TestCase):
         func('func5', (1, 2), {})
         # func('func6', {})
 
+        print(self.ins.get_api())
+
     def test_fail_call_method(self):
         self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 1)
@@ -157,4 +159,5 @@ class TestCallMethod(unittest.TestCase):
         self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
         func = getattr(self.ins, '_IconScoreBase__call_method')
         func('func2', (1, 2), {})
+
 

@@ -23,7 +23,112 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 
-class IconPreValidator(object):
+class IconPreValidator:
+    class JsonRpcMessageValidator:
+
+        @classmethod
+        def validate(cls, method: str, params: dict) -> None:
+            """Validate json-rpc message
+            If json-rpc message is not valid, raise an exception
+
+            :param method:
+            :param params: json-rpc params before type converting
+            :return:
+            """
+            if method == 'icx_getBalance':
+                cls.validate_get_balance(params)
+            elif method == 'icx_call':
+                cls.validate_call(params)
+            elif method == 'icx_sendTransaction':
+                cls.validate_send_transaction(params)
+
+        @classmethod
+        def validate_get_balance(cls, params: dict) -> None:
+            cls._check_contains('address', params)
+
+        @classmethod
+        def validate_call(cls, params: dict) -> None:
+            cls._check_address_value('from', params)
+
+        @classmethod
+        def validate_send_transaction(cls, params: dict) -> None:
+            cls._check_address_value('from', params)
+
+            data_type = params.get('dataType', None)
+
+            if data_type == 'call':
+                cls._validate_call_on_send_transaction(params)
+            elif data_type == 'install':
+                cls._validate_install_on_send_transaction(params)
+            elif data_type == 'update':
+                cls._validate_update_on_send_transaction(params)
+            else:
+                cls._validate_transfer_on_send_transaction(params)
+
+        @classmethod
+        def _validate_call_on_send_transaction(cls, params):
+            cls._check_address_value('from', params)
+            cls._check_int_value('value', params, optional=True)
+
+        @classmethod
+        def _validate_transfer_on_send_transaction(cls, params):
+            cls._check_address_value('from', params)
+            cls._check_address_value('to', params)
+            cls._check_int_value('timestamp', params)
+
+        @classmethod
+        def _validate_update_on_send_transaction(cls, params):
+            cls._check_address_value('from', params)
+            cls._check_address_value('to', params)
+
+        @classmethod
+        def _validate_install_on_send_transaction(cls, params):
+            cls._check_address_value('from', params)
+
+        @classmethod
+        def _check_address_value(
+                cls, key: str, params: dict, optional: bool = False) -> None:
+            if optional and key not in params:
+                return
+
+            address = params.get(key)
+            if not isinstance(address, Address):
+                raise IconException(
+                    code=ExceptionCode.INVALID_PARAMS,
+                    message=f'Invalid address: {key}')
+
+        @classmethod
+        def _check_int_value(
+                cls, key: str, params: dict, optional: bool = False) -> int:
+            # If key is optional and params doesn't contain key, do nothing
+            if optional and key not in params:
+                return 0
+
+            int_value = params.get(key)
+            if not isinstance(int_value, int):
+                raise IconException(
+                    code=ExceptionCode.INVALID_PARAMS,
+                    message=f'Invalid param: {int_value}')
+
+        @classmethod
+        def _check_data_value(
+                cls, data_type: str, data: dict, optional: bool = False):
+            """
+
+            :param data_type:
+            :param data:
+            :param optional:
+            :return:
+            """
+            pass
+
+        @classmethod
+        def _check_contains(cls, key: str, params: dict):
+            if key not in params:
+                raise IconException(
+                    code=ExceptionCode.INVALID_PARAMS,
+                    message=f"'{key}' not found")
+
     """IconService Pre Validator
     """
 
@@ -51,13 +156,13 @@ class IconPreValidator(object):
     def query_validate(converted_tx: dict) -> None:
         method = converted_tx['method']
         params = converted_tx['params']
-        JsonRpcMessageValidator.validate(method, params)
+        IconPreValidator.JsonRpcMessageValidator.validate(method, params)
 
     @staticmethod
     def _tx_validate(request: dict) -> None:
         method = request['method']
         params = request['params']
-        JsonRpcMessageValidator.validate(method, params)
+        IconPreValidator.JsonRpcMessageValidator.validate(method, params)
 
     def _icx_check_balance(self, context: 'IconScoreContext', tx: dict, step_price: int) -> None:
         """Check the balance of from address is enough to pay for tx fee and value
@@ -91,108 +196,3 @@ class IconPreValidator(object):
         elif to.is_contract and not self._icx.storage.is_score_installed(context=context, icon_score_address=to):
             raise IconException(f'Score is not installed {str(to)}', ExceptionCode.INVALID_PARAMS)
 
-
-class JsonRpcMessageValidator(object):
-
-    @classmethod
-    def validate(cls, method: str, params: dict) -> None:
-        """Validate json-rpc message
-        If json-rpc message is not valid, raise an exception
-
-        :param method:
-        :param params: json-rpc params before type converting
-        :return:
-        """
-        if method == 'icx_getBalance':
-            cls.validate_get_balance(params)
-        elif method == 'icx_call':
-            cls.validate_call(params)
-        elif method == 'icx_sendTransaction':
-            cls.validate_send_transaction(params)
-
-    @classmethod
-    def validate_get_balance(cls, params: dict) -> None:
-        cls._check_contains('address', params)
-
-    @classmethod
-    def validate_call(cls, params: dict) -> None:
-        cls._check_address_value('from', params)
-
-    @classmethod
-    def validate_send_transaction(cls, params: dict) -> None:
-        cls._check_address_value('from', params)
-
-        data_type = params.get('dataType', None)
-
-        if data_type == 'call':
-            cls._validate_call_on_send_transaction(params)
-        elif data_type == 'install':
-            cls._validate_install_on_send_transaction(params)
-        elif data_type == 'update':
-            cls._validate_update_on_send_transaction(params)
-        else:
-            cls._validate_transfer_on_send_transaction(params)
-
-    @classmethod
-    def _validate_call_on_send_transaction(cls, params):
-        cls._check_address_value('from', params)
-        cls._check_int_value('value', params, optional=True)
-
-    @classmethod
-    def _validate_transfer_on_send_transaction(cls, params):
-        cls._check_address_value('from', params)
-        cls._check_address_value('to', params)
-        cls._check_int_value('timestamp', params)
-
-    @classmethod
-    def _validate_update_on_send_transaction(cls, params):
-        cls._check_address_value('from', params)
-        cls._check_address_value('to', params)
-
-    @classmethod
-    def _validate_install_on_send_transaction(cls, params):
-        cls._check_address_value('from', params)
-
-    @classmethod
-    def _check_address_value(
-            cls, key: str, params: dict, optional: bool = False) -> None:
-        if optional and key not in params:
-            return
-
-        address = params.get(key)
-        if not isinstance(address, Address):
-            raise IconException(
-                code=ExceptionCode.INVALID_PARAMS,
-                message=f'Invalid address: {key}')
-
-    @classmethod
-    def _check_int_value(
-            cls, key: str, params: dict, optional: bool = False) -> int:
-        # If key is optional and params doesn't contain key, do nothing
-        if optional and key not in params:
-            return 0
-
-        int_value = params.get(key)
-        if not isinstance(int_value, int):
-            raise IconException(
-                code=ExceptionCode.INVALID_PARAMS,
-                message=f'Invalid param: {int_value}')
-
-    @classmethod
-    def _check_data_value(
-            cls, data_type: str, data: dict, optional: bool = False):
-        """
-
-        :param data_type:
-        :param data:
-        :param optional:
-        :return:
-        """
-        pass
-
-    @classmethod
-    def _check_contains(cls, key: str, params: dict):
-        if key not in params:
-            raise IconException(
-                code=ExceptionCode.INVALID_PARAMS,
-                message=f"'{key}' not found")
