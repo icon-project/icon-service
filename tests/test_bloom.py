@@ -12,7 +12,6 @@
 #   test_icon_bloom() : add example for ICON
 
 from __future__ import unicode_literals
-
 import itertools
 
 from hypothesis import (
@@ -20,7 +19,8 @@ from hypothesis import (
     given,
     settings,
 )
-from iconservice.bloomfilter.bloom import (
+
+from iconservice.utils.bloom import (
     BloomFilter,
 )
 
