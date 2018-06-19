@@ -26,7 +26,7 @@ ICON SCORE에서는 SCORE의 상태들을 저장하기 위해 levelDB 오픈소�
 ICON SCORE 개발 환경을 구축하기 위해서는 levelDB 개발 라이브러리의 사전 설치가 반드시 필요하다.<br/>
 [LevelDB GitHub](https://github.com/google/leveldb)
 
-#### MacOS 설치 방법
+#### ex) MacOS에서의 설치 방법
 
 ```bash
 $ brew install leveldb
@@ -112,14 +112,23 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
     "port": 9000,
     "scoreRoot": "./.score",
     "dbRoot": "./.db",
-    "genesis": {
-        "address": "hx0000000000000000000000000000000000000000",
-        "balance": "0x2961fff8ca4a62327800000"
-    },
-    "treasury": {
-        "address": "hx1000000000000000000000000000000000000000",
-        "balance": "0x0"
-    },
+    "accounts": [
+        {
+            "name": "genesis",
+            "address": "hx0000000000000000000000000000000000000000",
+            "balance": "0x2961fff8ca4a62327800000"
+        },
+        {
+            "name": "fee_treasury",
+            "address": "hx1000000000000000000000000000000000000000",
+            "balance": "0x0"
+        },
+        {
+            "name": "test_account",
+            "address": "hxb5618548d56c2491849b980a03db35f5578dd494",
+            "balance": "0x100000"
+        }
+    ],
     "log": {
         "level": "debug",
         "filePath": "./tbears.log",
@@ -136,8 +145,7 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 | port | int | JSON-RPC 서버의 포트 번호 |
 | scoreRoot | string | SCORE가 설치될 루트 디렉토리 |
 | dbRoot | string | 상태 기록을 위한 DB 파일이 생성되는 루트 디렉토리 |
-| genesis | dict | 초기 코인을 가지고 있는 계좌 정보 |
-| treasury | dict | transaction 처리 수수료를 수집하는 계좌 정보 |
+| accounts | list | 초기 코인을 가지고 있는 계좌 정보 목록<br>(index 0) genesis: 초기 코인을 가지고 있는 계좌 정보<br>(index 1) fee_treasury: transaction 처리 수수료를 수집하는 계좌 정보<br>(index 2~): 임의의 계좌 정보 |
 | log | dict | tbears 로깅 설정 |
 | log.level | string | 로그 메시지 표시 수준 정의<br/>“debug”, “info”, “warning”, “error” |
 | log.filePath | string | 로그 파일 경로 |
