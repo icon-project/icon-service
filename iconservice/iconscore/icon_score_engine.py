@@ -114,8 +114,6 @@ class IconScoreEngine(ContextContainer):
                     f'IconScore({icon_score_address}) not found')
 
             return icon_score.get_api()
-        except (IconScoreException, Exception):
-            raise
         finally:
             self._delete_context(context)
 
@@ -162,8 +160,6 @@ class IconScoreEngine(ContextContainer):
                 raise IconScoreException(
                     f'IconScore({icon_score_address}) not found')
             return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
-        except (IconScoreException, Exception):
-            raise
         finally:
             self._delete_context(context)
 
@@ -207,12 +203,15 @@ class IconScoreEngine(ContextContainer):
             data_type = task.data_type
             data = task.data
 
-            if data_type == 'install':
-                self._install_on_commit(context, icon_score_address, data)
-            elif data_type == 'update':
-                self._update_on_commit(context, icon_score_address, data)
-            # Invalid task.type has been already filtered in invoke()
-
+            try:
+                if data_type == 'install':
+                    self._install_on_commit(context, icon_score_address, data)
+                elif data_type == 'update':
+                    self._update_on_commit(context, icon_score_address, data)
+                # Invalid task.type has been already filtered in invoke()
+            except BaseException as e:
+                Logger.exception(e)
+                continue
         self._deferred_tasks.clear()
 
     def _deploy_on_invoke(
@@ -244,6 +243,7 @@ class IconScoreEngine(ContextContainer):
         - Install IconScore package file to file system
 
         """
+
         content_type = data.get('contentType')
         content = data.get('content')
         params = data.get('params', {})
@@ -252,7 +252,7 @@ class IconScoreEngine(ContextContainer):
             self.__icon_score_info_mapper.delete_icon_score(icon_score_address)
             score_root_path = self.__icon_score_info_mapper.score_root_path
             target_path = path.join(score_root_path,
-                                    icon_score_address.body.hex())
+                                        icon_score_address.body.hex())
             makedirs(target_path, exist_ok=True)
             target_path = path.join(
                 target_path, f'{context.block.height}_{context.tx.index}')
@@ -264,8 +264,8 @@ class IconScoreEngine(ContextContainer):
             pass
 
         self.__icx_storage.put_score_owner(context,
-                                           icon_score_address,
-                                           context.tx.origin)
+                                            icon_score_address,
+                                            context.tx.origin)
         db_exist = self.__icon_score_info_mapper.is_exist_db(icon_score_address)
         score = self.__icon_score_info_mapper.get_icon_score(icon_score_address)
 
@@ -303,8 +303,6 @@ class IconScoreEngine(ContextContainer):
         try:
             self._put_context(context)
             on_init(**params)
-        except Exception as e:
-            Logger.exception(str(e))
         finally:
             self._delete_context(context)
 
