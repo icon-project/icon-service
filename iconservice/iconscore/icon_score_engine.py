@@ -211,7 +211,7 @@ class IconScoreEngine(ContextContainer):
                 # Invalid task.type has been already filtered in invoke()
             except BaseException as e:
                 Logger.exception(e)
-                continue
+                
         self._deferred_tasks.clear()
 
     def _deploy_on_invoke(
