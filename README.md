@@ -22,7 +22,7 @@ $ cd icon
 $ source bin/source
 
 # pip packaging 스크립트 실행
-(icon) $ ./build.sh
+(icon) $ ./build.sh build
 
 # 패키지 파일 생성 확인
 (icon) $ cd dist
@@ -40,11 +40,26 @@ build.sh [test|build|deploy]
   - build --ignore-test: build 실행
   - deploy: test, build 후 s3에 deploy
   - deploy --ignore-test: build 후 s3에 deploy
+  
+* Tbears
+  - tbears의 build script 사용법도 동일
+  - **dependencies**: iconservice의 의존을 충족 하여야 함
+    - **default**: S3에 올라가 있는  `iconservice.whl`을 다운받아 설치하여 의존을 충족
+    - **iconservice repository 지정**: 환경변수로 `ICONSERVICEPATH` 를 지정하면 whl 설치 없이 repository로 의존을 충족
+    
+      예)
+        ```bash
+        $ export ICONSERVICEPATH=../icon
+        $ build.sh test
+        ```
+
 
 
 ## CI/CD
 * Jenkins Url: [https://jenkins.theloop.co.kr](https://jenkins.theloop.co.kr) (goldworm/@ucoin)
-* Path: ICON > ICON_tbears
+* Path: 
+  - iconservice: ICON > ICON_iconservice
+  - tbears: ICON > ICON_tbears
 * Task
   - On branch `develop`: test
   - On branch `master`: test, package, deploy to S3
