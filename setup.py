@@ -23,6 +23,8 @@ setup_options = {
             'iconservice=iconservice:main'
         ],
     },
+    'setup_requires': ['pytest-runner'],
+    'tests_requires': ['pytest'],
     'classifiers': [
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers', 
