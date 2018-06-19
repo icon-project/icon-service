@@ -40,7 +40,7 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_score_deployer import IconScoreDeployer
-from .iconscore.transaction_validator import TransactionValidator
+from .iconscore.icon_pre_validator import IconPreValidator
 from .logger import Logger
 from .icon_config import *
 
@@ -72,6 +72,7 @@ class IconServiceEngine(object):
         self._icon_score_deployer = None
         self._step_counter_factory = None
         self._precommit_state = None
+        self._icon_pre_validator = None
 
         # jsonrpc handlers
         self._handlers = {
@@ -126,7 +127,7 @@ class IconServiceEngine(object):
         self._step_counter_factory.set_step_unit(StepType.CALL, 1000)
         self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
 
-        self._tx_validator = TransactionValidator(icx=self._icx_engine)
+        self._icon_pre_validator = IconPreValidator(icx=self._icx_engine)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -240,16 +241,19 @@ class IconServiceEngine(object):
 
         return ret
 
-    def validate_transaction(self, tx: dict) -> tuple:
-        """Validate a transaction before putting it into txpool.
+    def tx_pre_validate(self, tx: dict) -> None:
+        """Validate a transaction before putting it into tx pool.
         If failed to validate a tx, client will get a json-rpc error response
 
         :param tx: dict including tx info
-        :return: (code, message)
-            success: (0, 'ok'), error: (code, 'error message')
         """
+
         # FIXME: If step_price is defined, it should be updated.
-        self._tx_validator.validate(tx, step_price=0)
+        context = self._context_factory.create(IconScoreContextType.QUERY)
+        self._icon_pre_validator.tx_validate(context, tx, step_price=0)
+
+    def query_pre_validate(self, request: dict) -> None:
+        self._icon_pre_validator.query_validate(request)
 
     def call(self,
              context: 'IconScoreContext',
@@ -329,7 +333,7 @@ class IconServiceEngine(object):
             None is allowed
         """
         _from: Address = params['from']
-        to: Address = params['to']
+        to: Optional[Address] = params.get('to')
         value: int = params.get('value', 0)
 
         tx_result = TransactionResult(

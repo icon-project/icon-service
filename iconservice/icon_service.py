@@ -42,7 +42,7 @@ class IconService(object):
         Logger.debug(f'icon_score_state_db_root_path  : {icon_score_state_db_root_path}', ICON_SERVICE_STANDALONE)
         Logger.debug(f'amqp_target  : {amqp_target}', ICON_SERVICE_STANDALONE)
         Logger.debug(f'icon_score_queue_name  : {icon_score_queue_name}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'only_service : {only_service}', ICON_SERVICE_STANDALONE)
+        Logger.debug(f'only_service : {only_inner_service}', ICON_SERVICE_STANDALONE)
         Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
 
         self.__amqp_target = amqp_target
@@ -101,7 +101,7 @@ def main(argv):
 
     args = parser.parse_args(argv)
 
-    path = None
+    path = './icon_service.json'
     Logger(path)
 
     if args.type == "tbears":

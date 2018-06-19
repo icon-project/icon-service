@@ -38,10 +38,10 @@ def decorator(func):
 
 
 class CallClass1(IconScoreBase):
-    def on_install(self, params: dict) -> None:
+    def on_install(self) -> None:
         pass
 
-    def on_update(self, params: dict) -> None:
+    def on_update(self) -> None:
         pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
@@ -53,21 +53,21 @@ class CallClass1(IconScoreBase):
 
     @external
     @decorator
-    def func2(self, positional, kw_args):
+    def func2(self, arg1: int, arg2: str):
         pass
 
     @payable
     @external
-    def func3(self, positional, kw_args):
+    def func3(self, arg1: int, arg2: str):
         pass
 
     @payable
     @external
-    def func4(self, positional, kw_args):
+    def func4(self, arg1: int, arg2: str):
         pass
 
     @payable
-    def func5(self, positional, kw_args):
+    def func5(self, arg1: int, arg2: str):
         pass
 
     def func6(self):
@@ -79,11 +79,11 @@ class CallClass1(IconScoreBase):
 
 
 class CallClass2(CallClass1):
-    def on_install(self, params) -> None:
-        super().on_install(params)
+    def on_install(self) -> None:
+        super().on_install()
 
-    def on_update(self, params) -> None:
-        super().on_update(params)
+    def on_update(self) -> None:
+        super().on_update()
 
     def __init__(self, db: IconScoreDatabase, owner: Address):
         super().__init__(db, owner)
@@ -93,7 +93,7 @@ class CallClass2(CallClass1):
 
     @payable
     @external
-    def func5(self, positional, kw_args):
+    def func5(self, arg1: int, arg2: str):
         pass
 
     def fallback(self):
@@ -133,6 +133,8 @@ class TestCallMethod(unittest.TestCase):
         func('func5', (1, 2), {})
         # func('func6', {})
 
+        print(self.ins.get_api())
+
     def test_fail_call_method(self):
         self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 1)
@@ -157,4 +159,5 @@ class TestCallMethod(unittest.TestCase):
         self.ins = CallClass2(create_mock_icon_score_db(), create_address(AddressPrefix.EOA, b'test'))
         func = getattr(self.ins, '_IconScoreBase__call_method')
         func('func2', (1, 2), {})
+
 
