@@ -251,6 +251,7 @@ class IconServiceEngine(object):
         # FIXME: If step_price is defined, it should be updated.
         context = self._context_factory.create(IconScoreContextType.QUERY)
         self._icon_pre_validator.tx_validate(context, tx, step_price=0)
+        self._context_factory.destroy(context)
 
     def query_pre_validate(self, request: dict) -> None:
         self._icon_pre_validator.query_validate(request)

@@ -53,10 +53,13 @@ class IconScoreLoader(object):
         else:
             sys_path.append(dir_path)
 
-        package_module = importlib.machinery.SourceFileLoader(score_package_info[__MAIN_SCORE], file_path).load_module()
-        module = getattr(package_module, score_package_info[__MAIN_FILE])
-        importlib.reload(module)
-        sys_path.remove(dir_path)
+        try:
+            package_module = importlib.machinery.SourceFileLoader(
+                score_package_info[__MAIN_SCORE], file_path).load_module()
+            module = getattr(package_module, score_package_info[__MAIN_FILE])
+            importlib.reload(module)
+        finally:
+            sys_path.remove(dir_path)
 
         return getattr(module, score_package_info[__MAIN_SCORE])
 
