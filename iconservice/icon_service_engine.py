@@ -39,8 +39,8 @@ from .iconscore.icon_score_result import IconBlockResult
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
-from .iconscore.icon_score_deployer import IconScoreDeployer
 from .iconscore.icon_pre_validator import IconPreValidator
+from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .logger import Logger
 from .icon_config import *
 
@@ -48,6 +48,32 @@ from typing import TYPE_CHECKING, Optional, Any
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
+
+
+def _generate_score_address_for_tbears(path: str) -> 'Address':
+    """
+
+    :param path: The path of a SCORE which is under development with tbears
+    :return:
+    """
+    project_name = path.split('/')[-1]
+    return create_address(AddressPrefix.CONTRACT, project_name.encode())
+
+def _generate_score_address(from_: 'Address',
+                            timestamp: int,
+                            nonce: int = None) -> 'Address':
+    """Generates a SCORE address from the transaction information.
+
+    :param from_:
+    :param timestamp:
+    :param nonce:
+    :return: score address
+    """
+    data = from_.body + timestamp.to_bytes(32, 'big')
+    if nonce:
+        data += nonce.to_bytes(32, 'big')
+
+    return create_address(AddressPrefix.CONTRACT, data)
 
 
 class IconServiceEngine(object):
@@ -69,7 +95,7 @@ class IconServiceEngine(object):
         self._icx_engine = None
         self._icon_score_mapper = None
         self._icon_score_engine = None
-        self._icon_score_deployer = None
+        self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._precommit_state = None
         self._icon_pre_validator = None
@@ -114,9 +140,16 @@ class IconServiceEngine(object):
         self._icon_score_mapper = IconScoreInfoMapper(
             self._icx_storage, self._db_factory, self._icon_score_loader)
 
-        self._icon_score_deployer = IconScoreDeployer(icon_score_root_path)
         self._icon_score_engine = IconScoreEngine(
-            self._icx_storage, self._icon_score_mapper, self._icon_score_deployer)
+            self._icx_storage, self._icon_score_mapper)
+
+        icon_score_deploy_engine_flags = \
+            IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
+        self._icon_score_deploy_engine = IconScoreDeployEngine(
+            icon_score_root_path=icon_score_root_path,
+            flags=icon_score_deploy_engine_flags,
+            icx_storage=self._icx_storage,
+            icon_score_mapper=self._icon_score_mapper)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._step_counter_factory.set_step_unit(StepType.TRANSACTION, 6000)
@@ -156,17 +189,26 @@ class IconServiceEngine(object):
         __AMOUNT_KEY = 'balance'
 
         self._icx_engine.init_account(
-            context=context, account_type=AccountType.GENESIS,
-            account_name=genesis[__NAME_KEY], address=genesis[__ADDRESS_KEY], amount=genesis[__AMOUNT_KEY])
+            context=context,
+            account_type=AccountType.GENESIS,
+            account_name=genesis[__NAME_KEY],
+            address=genesis[__ADDRESS_KEY],
+            amount=genesis[__AMOUNT_KEY])
 
         self._icx_engine.init_account(
-            context=context, account_type=AccountType.TREASURY,
-            account_name=treasury[__NAME_KEY], address=treasury[__ADDRESS_KEY], amount=treasury[__AMOUNT_KEY])
+            context=context,
+            account_type=AccountType.TREASURY,
+            account_name=treasury[__NAME_KEY],
+            address=treasury[__ADDRESS_KEY],
+            amount=treasury[__AMOUNT_KEY])
 
         for other in others:
             self._icx_engine.init_account(
-                context=context, account_type=AccountType.GENERAL,
-                account_name=other[__NAME_KEY], address=other[__ADDRESS_KEY], amount=other[__AMOUNT_KEY])
+                context=context,
+                account_type=AccountType.GENERAL,
+                account_name=other[__NAME_KEY],
+                address=other[__ADDRESS_KEY],
+                amount=other[__AMOUNT_KEY])
 
         self._context_factory.destroy(context)
 
@@ -333,27 +375,28 @@ class IconServiceEngine(object):
         :return: return value of an IconScoreBase method
             None is allowed
         """
-        _from: Address = params['from']
-        to: Optional[Address] = params.get('to')
-        value: int = params.get('value', 0)
-
-        tx_result = TransactionResult(
-            context.tx.hash,
-            context.block,
-            to)
+        tx_result = TransactionResult(context.tx.hash, context.block)
 
         try:
+            to: Address = params.get('to', None)
+            tx_result.to = to
+
+            _from: Address = params['from']
+            value: int = params.get('value', 0)
+
             self._icx_engine.transfer(context, _from, to, value)
 
             if to is None or to.is_contract:
                 data_type: str = params.get('dataType')
                 data: dict = params.get('data')
+
                 self._handle_score_invoke(
                     context, to, data_type, data, tx_result)
 
             tx_result.status = TransactionResult.SUCCESS
         except IconServiceBaseException as e:
             Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+            # Add failure info to transaction result
             tx_result.failure = TransactionResult.Failure(
                 code=e.code, message=e.message)
         except Exception as e:
@@ -378,28 +421,22 @@ class IconServiceEngine(object):
         :param tx_result: transaction result
         :return: result of score transaction execution
         """
+        if data_type == 'install':
+            content_type = data.get('contentType')
+            if content_type == 'application/tbears':
+                path: str = data.get('content')
+                to = _generate_score_address_for_tbears(path)
+            else:
+                to = _generate_score_address(
+                    context.tx.origin, context.tx.timestamp, context.tx.nonce)
+            tx_result.score_address = to
 
-        try:
-            if data_type == 'install':
-                content_type = data.get('contentType')
-                if content_type == 'application/tbears':
-                    content = data.get('content')
-                    project_name = content.split('/')[-1]
-                    to = create_address(
-                        AddressPrefix.CONTRACT, project_name.encode())
-                else:
-                    to = self._generate_contract_address(
-                        context.tx.origin,
-                        context.tx.timestamp,
-                        context.tx.nonce)
-                tx_result.score_address = to
-
-            self._icon_score_engine.invoke(context, to, data_type, data)
-
-            context.block_batch.put_tx_batch(context.tx_batch)
-            context.tx_batch.clear()
-        except:
-            raise
+        if self._icon_score_deploy_engine.is_data_type_supported(data_type):
+            self._icon_score_deploy_engine.invokde(
+                context, to, data_type, data)
+        else:
+            self._icon_score_engine.invoke(
+                context, to, data_type, data)
 
     def _handle_icx_get_score_api(self,
                                   context: 'IconScoreContext',
@@ -413,23 +450,6 @@ class IconServiceEngine(object):
         """
         icon_score_address: Address = params['address']
         return self._icon_score_engine.get_score_api(context, icon_score_address)
-
-    @staticmethod
-    def _generate_contract_address(from_: 'Address',
-                                   timestamp: int,
-                                   nonce: int = None) -> 'Address':
-        """Generates a contract address from the transaction information.
-
-        :param from_:
-        :param timestamp:
-        :param nonce:
-        :return: score address
-        """
-        data = from_.body + timestamp.to_bytes(32, 'big')
-        if nonce is not None:
-            data += nonce.to_bytes(32, 'big')
-
-        return create_address(AddressPrefix.CONTRACT, data)
 
     def commit(self) -> None:
         """Write updated states in a context.block_batch to StateDB
@@ -452,6 +472,7 @@ class IconServiceEngine(object):
             context_db.write_batch(context=None, states=block_batch[address])
 
         self._icon_score_engine.commit(context)
+        self._icon_score_deploy_engine.commit(context)
         self._precommit_state = None
 
         self._context_factory.destroy(context)
@@ -462,3 +483,4 @@ class IconServiceEngine(object):
         """
         self._precommit_state = None
         self._icon_score_engine.rollback()
+        self._icon_score_deploy_engine.rollback()

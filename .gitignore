@@ -43,6 +43,9 @@
 # Visual Studio Code
 .vscode/
 
+# vi
+.*.swp
+
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 

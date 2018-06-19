@@ -66,6 +66,26 @@ class IconServiceBaseException(BaseException):
         return f'{self.message} ({self.code})'
 
 
+class InvalidParamsException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.INVALID_PARAMS)
+
+
+class MethodNotFoundException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.METHOD_NOT_FOUND)
+
+
+class ServerErrorException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.SERVER_ERROR)
+
+
+class InvalidRequestException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.INVALID_REQUEST)
+
+
 class IconException(IconServiceBaseException):
     def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SERVER_ERROR):
         super().__init__(message, code)
@@ -82,7 +102,9 @@ class ICXException(IconServiceBaseException):
 
 
 class IconScoreException(IconServiceBaseException):
-    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SERVER_ERROR):
+    def __init__(self,
+                 message: Optional[str],
+                 code: ExceptionCode = ExceptionCode.SERVER_ERROR):
         super().__init__(message, code)
 
 

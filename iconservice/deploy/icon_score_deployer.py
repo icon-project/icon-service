@@ -18,10 +18,10 @@ import os
 import zipfile
 import shutil
 
-from ..base.address import Address
-from ..base.exception import ScoreInstallException, ScoreInstallExtractException
-from ..logger import Logger
-from ..icon_config import *
+from iconservice.base.address import Address
+from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
+from iconservice.logger import Logger
+from iconservice.icon_config import *
 
 
 class IconScoreDeployer(object):

@@ -40,7 +40,7 @@ class TransactionResult(object):
             self,
             tx_hash: str,
             block: Block,
-            to: Address,
+            to: Address = None,
             status: int = FAILURE,
             score_address: Address = None,
             step_used: int = 0) -> None:

@@ -125,11 +125,13 @@ ICON JSON-RPC API Response에서 사용되는 기본적인 에러 코드 및 설
 * icx_sendTransaction 메시지에서 tx_hash 항목을 삭제한다.
 
 # JSON-RPC Methods
-[icx_call](#icx_call)<br>
-[icx_getBalance](#icx_getbalance)<br>
-[icx_getTotalSupply](#icx_gettotalsupply)<br>
-[icx_getTransactionResult](#icx_gettransactionresult)<br>
-[icx_sendTransaction](#icx_sendtransaction)
+
+* [icx_call](#icx_call)
+* [icx_getBalance](#icx_getbalance)
+* [icx_getScoreInfo](#icx_getScoreInfo)
+* [icx_getTotalSupply](#icx_gettotalsupply)
+* [icx_getTransactionResult](#icx_gettransactionresult)
+* [icx_sendTransaction](#icx_sendtransaction)
 
 ## icx_call
 
@@ -241,9 +243,9 @@ SCORE 함수 실행 결과
 
 ### Parameters
 
-KEY | VALUE 형식 | 설명
-----|----------|-----
-address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주소
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|------|
+| address | [T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE) | 조회할 주소 |
 
 ### Returns
 코인 수
@@ -274,6 +276,104 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
     "id": 10,
     "error": {
         "code": -32602,
+        "message": "Invalid address"
+    }
+}
+```
+
+## icx_getScoreInfo
+
+* 현재 설치되어 있거나 검수 중인 SCORE의 정보를 가져온다.
+
+### Parameters
+
+### Returns
+
+* 명시된 주소가 가리키는 SCORE의 정보를 리턴한다.
+
+### Example
+
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "method": "icx_getScoreInfo",
+    "params": {
+        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+    }
+}
+```
+
+```json
+// Response - 성공 1
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "result": {
+        "status": "running",
+        "owner": "hxb1258ceb872e08851f1f59694dac2558708ece11", 
+        "verifier": "hx8a4892bb7209e8a9d2fcb6094dac2558708ecb92",
+        "verifyStatus": "accepted",
+        "deployTxHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
+        "verifyTxHash": "0xa84f2e3c85433ebb5dc1ba6579132b143087c68db1b2168786408fcbce568e90",
+        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+    }
+}
+```
+
+```json
+// Response - 성공 2
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "result": {
+        "status": "running",
+        "verifyStatus": "rejected",
+        "owner": "hxb1258ceb872e08851f1f59694dac2558708ece11", 
+        "verifier": "hx8a4892bb7209e8a9d2fcb6094dac2558708ecb92",
+        "deployTxHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
+        "verifyTxHash": "0xa84f2e3c85433ebb5dc1ba6579132b143087c68db1b2168786408fcbce568e90",
+        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
+        "message": "Too much size"
+    }
+}
+```
+
+```json
+// Response - 성공 3
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "result": {
+        "status": "notReady",
+        "verifyStatus": "pending",
+        "owner": "hxb1258ceb872e08851f1f59694dac2558708ece11",
+        "deployTxHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
+        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
+    }
+}
+```
+
+```json
+// Response - 실패
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "error": {
+        "code": -32000,
+        "message": "SCORE not found"
+    }
+}
+```
+
+```json
+// Response - 실패
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "error": {
+        "code": -32000,
         "message": "Invalid address"
     }
 }
@@ -391,20 +491,21 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
-|:----|:----------|:-----|
-| from | [T_ADDR_EOA](#T_ADDR_EOA) | transaction을 생성한 주체의 주소 |
-| to | [T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE) | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
-| value | [T_INT](#T_INT) | to 주소로 이체할 코인양 |
-| step |[T_INT](#T_INT) | transaction을 수행하는데 사용되는 최대 step 양 |
-| timestamp | [T_INT](#T_INT) | transaction을 전송할 때의 timestamp 단위: microsecond |
-| nonce | [T_INT](#T_INT) | transaction hash 출동 방지를 위한 임의의 정수 (optional) |
-| signature | [T_SIG](#T_SIG) | transaction의 전자 서명 데이터 |
-| dataType | [T_DATA_TYPE](#T_DATA_TYPE) | data 항목의 종류를 알려주는 값 (optional) || to | T_ADDR_EOA or T_ADDR_SCORE | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
-| data | N/A | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 (optional) |
-| contentType | 문자열 | content의 mime-type |
-| content | [T_BIN_DATA](#T_BIN_DATA) | 이진 데이터 |
-| params | T_DICT | on_install 혹은 on_update 로 전달되는 파라메터 값 (optional) |
+| KEY | VALUE 형식 | 속성 | 설명 |
+|:----|:----------|:----:|:-----|
+| from | [T_ADDR_EOA](#T_ADDR_EOA) | required | transaction을 생성한 주체의 주소 |
+| to | [T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE) | optional | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
+| value | [T_INT](#T_INT) | optional | to 주소로 이체할 코인양<br/> 생략할 경우 0으로 간주 |
+| stepLimit |[T_INT](#T_INT) | required | transaction을 수행하는데 소비되는 최대 step 허용치 |
+| timestamp | [T_INT](#T_INT) | required | transaction을 전송할 때의 timestamp 단위: microsecond |
+| nonce | [T_INT](#T_INT) | optional | transaction hash 출동 방지를 위한 임의의 정수 |
+| signature | [T_SIG](#T_SIG) | required | transaction의 전자 서명 데이터 |
+| dataType | [T_DATA_TYPE](#T_DATA_TYPE) | optional | data 항목의 종류를 알려주는 값 (optional) |
+| to | T_ADDR_EOA or T_ADDR_SCORE | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
+| data | N/A | optional | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 |
+| contentType | 문자열 | optional | content의 mime-type |
+| content | [T_BIN_DATA](#T_BIN_DATA) | optional | 이진 데이터 |
+| params | T_DICT | optional | on_install 혹은 on_update 로 전달되는 파라메터 값 |
 
 ### Returns
 
@@ -422,7 +523,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "0x0",
-        "step": "0x12345",
+        "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
@@ -450,7 +551,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // transaction 생성 주체의 주소
         "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // transaction의 메시지콜을 처리할 SCORE 주소
-        "step": "0x12345", // Ethereum의 gas 개념
+        "stepLimit": "0x12345", // Ethereum의 gas 개념
         "timestamp": "0x563a6cf330136", // transaction 생성 시간. 단위: microsecond
         "nonce": "0x1", // 임의의 정수
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
@@ -466,6 +567,25 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
 }
 ```
 
+* SCORE approval
+```json
+// Request
+{
+    "jsonrpc": "2.0", // jsonrpc 버전
+    "method": "icx_sendTransaction", // jsonrpc 메소드명
+    "id": 9876, // jsonrpc message id
+    "params": {
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // transaction 생성 주체의 주소
+        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // transaction의 메시지콜을 처리할 SCORE 주소
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136", // transaction 생성 시간. 단위: microsecond
+        "nonce": "0x1", // 임의의 정수
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "approval", // SCORE 설치 승인
+    }
+}
+```
+
 * SCORE 함수 호출
 ```json
 // Request
@@ -477,6 +597,7 @@ address|[T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE)|조회할 주
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
         "value": "0xde0b6b3a7640000",
+        "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",

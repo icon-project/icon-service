@@ -18,7 +18,7 @@ import hashlib
 import os
 import unittest
 
-from iconservice.iconscore.icon_score_deploy_sign_verifier import IconScoreDeploySignVerifier
+from iconservice.deploy.icon_score_deploy_sign_verifier import IconScoreDeploySignVerifier
 from secp256k1 import PrivateKey
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))

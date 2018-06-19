@@ -25,6 +25,7 @@ from . import rmtree
 from iconservice.base.address import AddressPrefix, create_address
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
+from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import DatabaseFactory
@@ -33,19 +34,11 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.icx.icx_storage import IcxStorage
 
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-
-
-class MockScore(object):
-    def __init__(self, test_case: unittest.TestCase):
-        self._test_case = test_case
-
-    def on_install(self, test1: int = 1, test2: str = 'a'):
-        pass
 
 
 class TestIconScoreEngine(unittest.TestCase):
@@ -70,16 +63,13 @@ class TestIconScoreEngine(unittest.TestCase):
         self._icon_score_mapper = IconScoreInfoMapper(self._icx_storage,
                                                       self._db_factory,
                                                       self._icon_score_loader)
-        self._icon_score_deployer = IconScoreDeployer('./')
         self._engine = IconScoreEngine(
             self._icx_storage,
-            self._icon_score_mapper,
-            self._icon_score_deployer
-        )
+            self._icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT,
-                                                  b'SampleToken')
+        self._icon_score_address =\
+            create_address(AddressPrefix.CONTRACT, b'SampleToken')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
@@ -151,18 +141,18 @@ class TestIconScoreEngine(unittest.TestCase):
     def test_call_method(self):
         calldata = {'method': 'total_supply', 'params': {}}
 
-        proj_name = 'test_score'
-        path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
-        install_data = {'contentType': 'application/tbears', 'content': path}
-        self._engine.invoke(
-            self._context, self._icon_score_address, 'install', install_data)
-        self._engine.commit(self._context)
+        # proj_name = 'test_score'
+        # path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
+        # install_data = {'contentType': 'application/tbears', 'content': path}
+        # self._engine.invoke(
+        #     self._context, self._icon_score_address, 'install', install_data)
+        # self._engine.commit(self._context)
         self._context.type = IconScoreContextType.QUERY
-        ret = self._engine.query(
-            self._context, self._icon_score_address, 'call', calldata)
-        self.assertEqual(1000 * 10 ** 18, ret)
 
-    def test_call_on_init_of_score(self):
-        params = {}
-        score = MockScore(self)
-        self._engine._call_on_init_of_score(None, score.on_install, params)
+        with self.assertRaises(ServerErrorException) as cm:
+            ret = self._engine.query(
+                self._context, self._icon_score_address, 'call', calldata)
+
+        e = cm.exception
+        self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
+        print(e)
