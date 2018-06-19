@@ -15,10 +15,6 @@
 # limitations under the License.
 
 
-import abc
-import json
-from typing import List
-
 from ..utils import to_camel_case
 from ..base.address import Address
 from ..base.block import Block
@@ -106,56 +102,3 @@ class TransactionResult(object):
             key = to_camel_case(key)
             response_json[key] = value
         return response_json
-
-
-class Serializer(abc.ABC):
-    """ An abstract class serialize results of transactions.
-    """
-
-    @abc.abstractmethod
-    def serialize(self, transaction_results: List[TransactionResult]) -> bytes:
-        """Returns a serialized data of the results of transactions.
-
-        :return: a serialized data.
-        """
-        pass
-
-
-class IconBlockResult(list):
-    """ The class manage results of transactions.
-    """
-
-    def __init__(self, serializer: Serializer) -> None:
-        """Constructor
-
-        :param serializer: serializer
-        """
-        super().__init__()
-        self.__serializer = serializer
-
-    def serialize(self) -> bytes:
-        """Returns a serialized data of the block result.
-
-        :return: a serialized data.
-        """
-        return self.__serializer.serialize(self)
-
-
-class JsonSerializer(Serializer):
-    def serialize(self, transaction_results: List[TransactionResult]) -> bytes:
-        """Returns a serialized data of the results of transactions.
-
-        :return: a serialized data.
-        """
-        serialized = json.dumps(transaction_results, cls=JsonSerializer.Encoder)
-        return bytes(serialized, 'utf-8')
-
-    class Encoder(json.JSONEncoder):
-        """Converter class
-        """
-
-        def default(self, obj):
-            if isinstance(obj, TransactionResult):
-                return obj.to_dict()
-
-            return super().default(obj)

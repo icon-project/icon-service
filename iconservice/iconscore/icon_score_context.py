@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Optional, Union
 
 if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
-    from .icon_score_result import IconBlockResult
     from .icon_score_base import IconScoreBase
     from .icon_score_info_mapper import IconScoreInfoMapper
 
@@ -107,7 +106,6 @@ class IconScoreContext(object):
         self.msg = msg
         self.block_batch = block_batch
         self.tx_batch = tx_batch
-        self.block_result: 'IconBlockResult' = None
         self.step_counter: 'IconScoreStepCounter' = None
 
         self.__msg_stack = []

@@ -35,16 +35,14 @@ from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_engine import IconScoreEngine
 from .iconscore.icon_score_loader import IconScoreLoader
-from .iconscore.icon_score_result import IconBlockResult
 from .iconscore.icon_score_result import TransactionResult
-from .iconscore.icon_score_result import JsonSerializer
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_pre_validator import IconPreValidator
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .logger import Logger
 from .icon_config import *
 
-from typing import TYPE_CHECKING, Optional, Any
+from typing import TYPE_CHECKING, Optional, Any, List
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
@@ -175,7 +173,7 @@ class IconServiceEngine(object):
 
     def invoke(self,
                block: 'Block',
-               tx_params: list) -> 'IconBlockResult':
+               tx_params: list) -> 'List[TransactionResult]':
         """Process transactions in a block sent by loopchain
 
         :param block:
@@ -186,7 +184,7 @@ class IconServiceEngine(object):
         context.block = block
         context.block_batch = BlockBatch(block.height, block.hash)
         context.tx_batch = TransactionBatch()
-        block_result = IconBlockResult(JsonSerializer())
+        block_result = []
 
         is_genesis = block.height == 0
 
