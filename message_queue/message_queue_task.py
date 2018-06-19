@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import functools
 import logging
 import traceback
@@ -19,11 +20,12 @@ import traceback
 from enum import IntEnum
 
 TASK_ATTR_DICT = "task_attr"
-MESSAGE_QUEUE_TYPE_KEY = "message_queue_type"
+MESSAGE_QUEUE_TYPE_KEY = "type"
+MESSAGE_QUEUE_PRIORITY_KEY = "priority"
 
 
 class MessageQueueType(IntEnum):
-    MasterWorker = 0,
+    Worker = 0,
     RPC = 1,
 
 
@@ -31,21 +33,22 @@ class MessageQueueException(Exception):
     pass
 
 
-def message_queue_task(func=None, *, message_queue_type=MessageQueueType.RPC):
+def message_queue_task(func=None, *, type_=MessageQueueType.RPC, priority=128):
     if func is None:
-        return functools.partial(message_queue_task, message_queue_type=message_queue_type)
+        return functools.partial(message_queue_task, type_=type_, priority=priority)
 
     @functools.wraps(func)
     async def _wrapper(*args, **kwargs):
         try:
-            return await func(*args, **kwargs)
+            return await asyncio.coroutine(func)(*args, **kwargs)
         except Exception as e:
             logging.error(e)
             traceback.print_exc()
             return MessageQueueException(str(e))
 
     task_attr = {
-        MESSAGE_QUEUE_TYPE_KEY: message_queue_type
+        MESSAGE_QUEUE_TYPE_KEY: type_,
+        MESSAGE_QUEUE_PRIORITY_KEY: priority
     }
     setattr(_wrapper, TASK_ATTR_DICT, task_attr)
     return _wrapper

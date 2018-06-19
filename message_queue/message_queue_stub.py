@@ -16,10 +16,13 @@ import aio_pika
 import functools
 import inspect
 import logging
+import pika
 
 from typing import TypeVar, Generic
-from message_queue import MessageQueueType, MessageQueueException, MESSAGE_QUEUE_TYPE_KEY, TASK_ATTR_DICT
-from message_queue import MasterWorker, RPC
+from message_queue import (
+    MessageQueueType, MessageQueueException, worker, rpc,
+    MESSAGE_QUEUE_TYPE_KEY, MESSAGE_QUEUE_PRIORITY_KEY, TASK_ATTR_DICT)
+
 
 T = TypeVar('T')
 
@@ -34,60 +37,100 @@ class MessageQueueStub(Generic[T]):
         self._amqp_target = amqp_target
         self._route_key = route_key
 
-        self._connection = None
-        self._channel = None
+        self._worker_client_async: worker.ClientAsync = None
+        self._worker_client_sync: worker.ClientSync = None
 
-        self._pattern_master_worker: MasterWorker = None
-        self._pattern_rpc: RPC = None
+        self._rpc_client_async: rpc.ClientAsync = None
+        self._rpc_client_sync: rpc.ClientSync = None
 
-        self._task = object.__new__(self.__class__.TaskType)  # not calling __init__
+        self._sync_task = object.__new__(self.__class__.TaskType)  # not calling __init__
+        self._async_task = object.__new__(self.__class__.TaskType)  # not calling __init__
 
     async def connect(self):
-        self._connection = await aio_pika.connect(f"amqp://{self._amqp_target}")
-        self._channel = await self._connection.channel()
-
-        self._pattern_master_worker = MasterWorker(self._channel, self._route_key)
-        self._pattern_rpc = await RPC.create(self._channel, self._route_key)
-
-        await self._pattern_master_worker.initialize_queue(auto_delete=True)
-        await self._pattern_rpc.initialize_queue(auto_delete=True)
+        await self.connect_async()
+        self.connect_sync()
 
         await self._register_tasks()
 
+    async def connect_async(self):
+        connection = await aio_pika.connect(f"amqp://{self._amqp_target}")
+        channel = await connection.channel()
+
+        self._worker_client_async = worker.ClientAsync(channel, self._route_key)
+        await self._worker_client_async.initialize_queue(auto_delete=True)
+
+        self._rpc_client_async = rpc.ClientAsync(channel, self._route_key)
+        await self._rpc_client_async.initialize_exchange()
+        await self._rpc_client_async.initialize_queue(auto_delete=True)
+
+    def connect_sync(self):
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=f'{self._amqp_target}'))
+        channel = connection.channel()
+
+        self._worker_client_sync = worker.ClientSync(channel, self._route_key)
+        self._worker_client_sync.initialize_queue(auto_delete=True)
+
+        self._rpc_client_sync: rpc.ClientSync = rpc.ClientSync(channel, self._route_key)
+        self._rpc_client_sync.initialize_exchange()
+        self._rpc_client_sync.initialize_queue(auto_delete=True)
+
     async def _register_tasks(self):
-        for attribute_name in dir(self._task):
+        for attribute_name in dir(self._async_task):
             try:
-                attribute = getattr(self._task, attribute_name)
+                attribute = getattr(self._async_task, attribute_name)
                 task_attr: dict = getattr(attribute, TASK_ATTR_DICT)
             except AttributeError:
                 pass
             else:
-                func_name = f"{type(self._task).__name__}.{attribute_name}"
+                func_name = f"{type(self._async_task).__name__}.{attribute_name}"
 
                 message_queue_type = task_attr[MESSAGE_QUEUE_TYPE_KEY]
-                if message_queue_type == MessageQueueType.MasterWorker:
-                    binding_method = self._call_task
+                message_queue_priority = task_attr[MESSAGE_QUEUE_PRIORITY_KEY]
+                if message_queue_type == MessageQueueType.Worker:
+                    binding_async_method = self._call_async_worker
+                    binding_sync_method = self._call_sync_worker
                 elif message_queue_type == MessageQueueType.RPC:
-                    binding_method = self._call_rpc
+                    binding_async_method = self._call_async_rpc
+                    binding_sync_method = self._call_sync_rpc
                 else:
                     raise RuntimeError(f"MessageQueueType invalid. {func_name}, {message_queue_type}")
 
-                stub = functools.partial(binding_method, func_name, attribute)
-                setattr(self._task, attribute_name, stub)
+                stub = functools.partial(binding_async_method, func_name, attribute, message_queue_priority)
+                setattr(self._async_task, attribute_name, stub)
 
-    async def _call_task(self, func_name, func, *args, **kwargs):
+                stub = functools.partial(binding_sync_method, func_name, attribute, message_queue_priority)
+                setattr(self._sync_task, attribute_name, stub)
+
+    async def _call_async_worker(self, func_name, func, priority, *args, **kwargs):
         params = inspect.signature(func).bind(*args, **kwargs)
         params.apply_defaults()
-        await self._pattern_master_worker.create_task(func_name, kwargs=params.arguments)
+        await self._worker_client_async.call(func_name, kwargs=params.arguments, priority=priority)
 
-    async def _call_rpc(self, func_name, func, *args, **kwargs):
+    async def _call_async_rpc(self, func_name, func, priority, *args, **kwargs):
         params = inspect.signature(func).bind(*args, **kwargs)
         params.apply_defaults()
-        result = await self._pattern_rpc.call(func_name, kwargs=params.arguments)
+        result = await self._rpc_client_async.call(func_name, kwargs=params.arguments, priority=priority)
         if isinstance(result, MessageQueueException):
             logging.error(result)
             raise result
         return result
 
-    def task(self) -> T:
-        return self._task
+    def _call_sync_worker(self, func_name, func, priority, *args, **kwargs):
+        params = inspect.signature(func).bind(*args, **kwargs)
+        params.apply_defaults()
+        self._worker_client_sync.call(func_name, kwargs=params.arguments, priority=priority)
+
+    def _call_sync_rpc(self, func_name, func, priority, *args, **kwargs):
+        params = inspect.signature(func).bind(*args, **kwargs)
+        params.apply_defaults()
+        result = self._rpc_client_sync.call(func_name, kwargs=params.arguments, priority=priority)
+        if isinstance(result, MessageQueueException):
+            logging.error(result)
+            raise result
+        return result
+
+    def async_task(self) -> T:
+        return self._async_task
+
+    def sync_task(self) -> T:
+        return self._sync_task
