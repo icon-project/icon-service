@@ -323,7 +323,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 data_list.append(arg)
 
         indexed_len = len(indexed_list)
-        if len(indexed_list) > limit_count:
+        if indexed_len > limit_count:
             raise EventLogException(f'limit_count overflow: {indexed_len}')
 
         # TODO send params to eventlog internal logic
