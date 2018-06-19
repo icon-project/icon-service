@@ -1,3 +1,5 @@
+hypothesis
+pytest
 coloredlogs
 plyvel
 aio_pika
