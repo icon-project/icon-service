@@ -32,7 +32,7 @@ class ExitCode(IntEnum):
 def main():
     parser = argparse.ArgumentParser(prog='icon_service_cli.py', usage=f"""
     ==========================
-    iconservice version : {iconservice.__version__}pwd
+    iconservice version : {iconservice.__version__}
     ==========================
     iconservice commands:
         start : icon_service start
@@ -57,6 +57,8 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("--amqp_target", type=str, default='127.0.0.1',
                         help="icon score amqp_target : [127.0.0.1]")
+    parser.add_argument("--config", type=str, default='./icon_service.json',
+                        help="icon score config")
 
     args = parser.parse_args()
 
@@ -70,7 +72,9 @@ def main():
               '--icon_score_root_path': args.score_root_path,
               '--icon_score_state_db_root_path': args.state_db_root_path,
               '--channel': args.channel, '--amqp_key': args.amqp_key,
-              '--amqp_target': args.amqp_target}
+              '--amqp_target': args.amqp_target, '--config': args.config}
+
+    Logger(args.config)
 
     if command == 'start' and len(args.command) == 1:
         result = start(params)
