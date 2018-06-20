@@ -66,18 +66,18 @@ class Logger:
         log_color = conf.get("colorLog", False)
         log_output = conf.get('filePath', DEFAULT_LOG_FILE_PATH)
 
-        outputType = LogHandlerType.NONE
+        output_type = LogHandlerType.NONE
         log_output_type_str = conf.get('outputType', 'debug')
         outputs = log_output_type_str.split('|')
         for output in outputs:
-            outputType |= LogHandlerType[output.upper()]
+            output_type |= LogHandlerType[output.upper()]
 
         preset = LogConfiguration()
         preset.log_format = log_format
         preset.log_level = log_level
         preset.log_color = log_color
         preset.log_file_path = log_output
-        preset.set_handler(outputType)
+        preset.set_handler(output_type)
         return preset
 
     @staticmethod

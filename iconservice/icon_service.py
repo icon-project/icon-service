@@ -26,12 +26,9 @@ class IconService(object):
     """
 
     def __init__(self):
-        self._icon_score_queue_name = None
+        self._icon_score_queue_name  = None
         self._amqp_target = None
         self._inner_service = None
-
-        path = './icon_service.json'
-        Logger(path)
 
     def serve(self, icon_score_root_path: str, icon_score_state_db_root_path: str, channel: str, amqp_key: str,
               amqp_target: str):
@@ -70,12 +67,15 @@ def main():
     parser.add_argument("--channel", default='loopchain_default')
     parser.add_argument("--amqp_key", default='amqp_key')
     parser.add_argument("--amqp_target", default='127.0.0.1')
+    parser.add_argument("--config", default='./icon_service.json')
     args = parser.parse_args()
 
     params = {'icon_score_root_path': args.icon_score_root_path,
               'icon_score_state_db_root_path': args.icon_score_state_db_root_path,
               'channel': args.channel, 'amqp_key': args.amqp_key,
               'amqp_target': args.amqp_target}
+
+    Logger(args.config)
 
     icon_service = IconService()
     if args.type == "tbears":
