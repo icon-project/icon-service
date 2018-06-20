@@ -15,10 +15,9 @@ import sys
 import subprocess
 from enum import IntEnum
 import asyncio
-import aio_pika
 
 import iconservice
-from .icon_inner_service import IconScoreInnerStub, IconScoreInnerService
+from .icon_inner_service import IconScoreInnerStub
 from .icon_config import ICON_SCORE_QUEUE_NAME_FORMAT
 from .logger import Logger
 
@@ -33,17 +32,17 @@ class ExitCode(IntEnum):
 def main():
     parser = argparse.ArgumentParser(prog='icon_service_cli.py', usage=f"""
     ==========================
-    iconservice version : {iconservice.__version__}
+    iconservice version : {iconservice.__version__}pwd
     ==========================
     iconservice commands:
-        serve : icon_service serve
+        start : icon_service start
         stop : icon_service stop
     """)
 
     parser.add_argument('command', type=str,
                         nargs='*',
-                        choices=['serve', 'stop'],
-                        help='iconservice type [serve|stop]')
+                        choices=['start', 'stop'],
+                        help='iconservice type [start|stop]')
 
     parser.add_argument("--type", type=str, default='user',
                         choices=['tbears', 'user'],
@@ -58,8 +57,6 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("--amqp_target", type=str, default='127.0.0.1',
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("--rpc_port", type=str, default='9000',
-                        help="icon score rpc_port : [9000]")
 
     args = parser.parse_args()
 
@@ -73,10 +70,10 @@ def main():
               '--icon_score_root_path': args.score_root_path,
               '--icon_score_state_db_root_path': args.state_db_root_path,
               '--channel': args.channel, '--amqp_key': args.amqp_key,
-              '--amqp_target': args.amqp_target, '--rpc_port': args.rpc_port}
+              '--amqp_target': args.amqp_target}
 
-    if command == 'serve' and len(args.command) == 1:
-        result = serve(params)
+    if command == 'start' and len(args.command) == 1:
+        result = start(params)
     elif command == 'stop' and len(args.command) == 1:
         result = stop(params)
     else:
@@ -85,33 +82,27 @@ def main():
     sys.exit(result)
 
 
-def serve(params: dict) -> int:
-    async def _serve():
-        check_serve = await is_serve_icon_service(params)
-        if not check_serve:
-            await start_process(params)
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(_serve())
+def start(params: dict) -> int:
+    if not is_serve_icon_service(params):
+        start_process(params)
     return ExitCode.SUCCEEDED
 
 
 def stop(params: dict) -> int:
     async def _stop():
-        check_serve = await is_serve_icon_service(params)
-        if check_serve:
-            kw_params = {'channel': params['--channel'],
-                         'amqp_key': params['--amqp_key'],
-                         'amqp_target': params['--amqp_target'],
-                         'rpc_port': params['--rpc_port']}
-            await stop_process(**kw_params)
+        kw_params = {'channel': params['--channel'],
+                     'amqp_key': params['--amqp_key'],
+                     'amqp_target': params['--amqp_target']}
+        await stop_process(**kw_params)
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(_stop())
+    if is_serve_icon_service(params):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(_stop())
+
     return ExitCode.SUCCEEDED
 
 
-async def start_process(params: dict):
+def start_process(params: dict):
     Logger.debug('start_server() start')
     python_module_string = 'iconservice.icon_service'
 
@@ -124,43 +115,53 @@ async def start_process(params: dict):
     Logger.debug('start_process() end')
 
 
-async def stop_process(channel: str, amqp_key: str, amqp_target: str, rpc_port: str):
-    icon_score_queue_name = _make_icon_score_queue_name(channel, amqp_key, rpc_port)
+async def stop_process(channel: str, amqp_key: str, amqp_target: str):
+    icon_score_queue_name = _make_icon_score_queue_name(channel, amqp_key)
     stub = await _create_icon_score_stub(amqp_target, icon_score_queue_name)
     await stub.async_task().close()
     Logger.info(f'stop_icon_service!', ICON_SERVICE_STANDALONE)
 
 
-async def is_serve_icon_service(params: dict) -> bool:
+def is_serve_icon_service(params: dict) -> bool:
     kw_params = {'channel': params['--channel'],
                  'amqp_key': params['--amqp_key'],
-                 'amqp_target': params['--amqp_target'],
-                 'rpc_port': params['--rpc_port']}
-    return await _check_serve(**kw_params)
+                 'amqp_target': params['--amqp_target']}
+    return _check_serve(**kw_params)
 
 
-async def _check_serve(channel: str, amqp_key: str, amqp_target: str, rpc_port: str) -> bool:
-    icon_score_queue_name = _make_icon_score_queue_name(channel, amqp_key, rpc_port)
+def _check_serve(channel: str, amqp_key: str, amqp_target: str) -> bool:
     Logger.info(f'check_serve_icon_service!', ICON_SERVICE_STANDALONE)
-
-    try:
-        kw_params = {'exclusive': True}
-        connection = await aio_pika.connect_robust(f"amqp://{amqp_target}")
-        channel = await connection.channel()
-
-        queue = await channel.declare_queue(icon_score_queue_name, auto_delete=True)
-        await queue.consume(_consume, **kw_params)
-    except:
-        return True
-    return False
+    return find_procs_by_params('icon_service', channel, amqp_key, amqp_target)
 
 
-async def _consume(message):
-    pass
+def find_procs_by_params(name, *args) -> bool:
+    # Return a list of processes matching 'name'.
+
+    key_table = ['--channel', '--amqp_key', '--amqp_target']
+
+    command = f"ps -ef | grep {name} | grep -v grep"
+    result = subprocess.run(command, stdout=subprocess.PIPE, shell=True)
+    if result.returncode == 1:
+        return False
+
+    result = result.stdout.decode()
+    lines = result.splitlines()
+    for line_str in lines:
+        params = line_str.split('Python -m iconservice.icon_service ')
+        if len(params) != 2:
+            continue
+
+        options = params[1]
+        option_params = options.split(' ')
+        option_table = dict(zip(option_params[::2], option_params[1::2]))
+        for index in range(len(args)):
+            if option_table[key_table[index]] != args[index]:
+                return False
+    return True
 
 
-def _make_icon_score_queue_name(channel: str, amqp_key: str, rpc_port: str) -> str:
-    return ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key, rpc_port=rpc_port)
+def _make_icon_score_queue_name(channel: str, amqp_key: str) -> str:
+    return ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key)
 
 
 async def _create_icon_score_stub(amqp_target: str, icon_score_queue_name: str) -> 'IconScoreInnerStub':
