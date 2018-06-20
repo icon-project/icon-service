@@ -34,12 +34,12 @@ class IconService(object):
         Logger(path)
 
     def serve(self, icon_score_root_path: str, icon_score_state_db_root_path: str, channel: str, amqp_key: str,
-              amqp_target: str, rpc_port: str):
+              amqp_target: str):
         async def _serve():
             await self._inner_service.connect(exclusive=True)
             Logger.info(f'Start IconService Service serve!', ICON_SERVICE_STANDALONE)
 
-        self._set_icon_score_stub_params(channel, amqp_key, amqp_target, rpc_port)
+        self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
         Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
         Logger.debug(f'icon_score_root_path : {icon_score_root_path}', ICON_SERVICE_STANDALONE)
@@ -56,9 +56,9 @@ class IconService(object):
         loop.create_task(_serve())
         loop.run_forever()
 
-    def _set_icon_score_stub_params(self, channel: str, amqp_key: str, amqp_target: str, rpc_port: str):
+    def _set_icon_score_stub_params(self, channel: str, amqp_key: str, amqp_target: str):
         self._icon_score_queue_name = \
-            ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key, rpc_port=rpc_port)
+            ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key)
         self._amqp_target = amqp_target
 
 
@@ -70,13 +70,12 @@ def main():
     parser.add_argument("--channel", default='loopchain_default')
     parser.add_argument("--amqp_key", default='amqp_key')
     parser.add_argument("--amqp_target", default='127.0.0.1')
-    parser.add_argument("--rpc_port", default='9000')
     args = parser.parse_args()
 
     params = {'icon_score_root_path': args.icon_score_root_path,
               'icon_score_state_db_root_path': args.icon_score_state_db_root_path,
               'channel': args.channel, 'amqp_key': args.amqp_key,
-              'amqp_target': args.amqp_target, 'rpc_port': args.rpc_port}
+              'amqp_target': args.amqp_target}
 
     icon_service = IconService()
     if args.type == "tbears":
