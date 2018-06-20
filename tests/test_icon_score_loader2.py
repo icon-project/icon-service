@@ -20,7 +20,7 @@ import unittest
 from os import path, makedirs, symlink
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.base.address import Address, AddressPrefix, create_address
 import inspect
 

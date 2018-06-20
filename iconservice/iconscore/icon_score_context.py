@@ -40,7 +40,7 @@ _thread_local_data = threading.local()
 class ContextContainer(object):
     """ContextContainer mixin
 
-    Every class inherit ContextContainer can share IconScoreContext instance
+    Every class which inherits ContextContainer can share IconScoreContext instance
     in the current thread.
     """
 

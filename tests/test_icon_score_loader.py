@@ -19,7 +19,7 @@ import unittest
 import os
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_deployer import IconScoreDeployer
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.base.address import AddressPrefix, create_address
 import inspect
 
