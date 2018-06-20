@@ -26,7 +26,7 @@ class IconService(object):
     """
 
     def __init__(self):
-        self._icon_score_queue_name  = None
+        self._icon_score_queue_name = None
         self._amqp_target = None
         self._inner_service = None
 
