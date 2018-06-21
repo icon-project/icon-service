@@ -119,9 +119,13 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def write_precommit_state(self):
+    async def write_precommit_state(self, request: dict):
         Logger.debug(f'write_precommit_state request', ICON_INNER_LOG_TAG)
         try:
+            # TODO check block validate
+            block = Block.create_block(request)
+            self._icon_service_engine.precommit_validate(block)
+
             self._icon_service_engine.commit()
             response = make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
@@ -133,9 +137,13 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def remove_precommit_state(self):
+    async def remove_precommit_state(self, request: dict):
         Logger.debug(f'remove_precommit_state request', ICON_INNER_LOG_TAG)
         try:
+            # TODO check block validate
+            block = Block.create_block(request)
+            self._icon_service_engine.precommit_validate(block)
+            
             self._icon_service_engine.rollback()
             response = make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:

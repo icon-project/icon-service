@@ -478,6 +478,10 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
 
+    def precommit_validate(self, block: Block) -> None:
+        # TODO if failed raise exception
+        pass
+
     def rollback(self) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
