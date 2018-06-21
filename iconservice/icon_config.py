@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from pathlib import Path
+from enum import IntEnum
 
 ICON_SERVICE_LOG_TAG = 'IconService'
 ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
@@ -33,3 +34,13 @@ DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
                                             'amqp_target': '127.0.0.1'}
 
 ICON_SERVICE_BIG_STEP_LIMIT = 5000000
+
+
+class EnableThreadFlag(IntEnum):
+    NonFlag = 0
+    Invoke = 1
+    Query = 2
+    Validate = 4
+
+
+ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
