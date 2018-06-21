@@ -59,6 +59,7 @@ def _generate_score_address_for_tbears(path: str) -> 'Address':
     project_name = path.split('/')[-1]
     return create_address(AddressPrefix.CONTRACT, project_name.encode())
 
+
 def _generate_score_address(from_: 'Address',
                             timestamp: int,
                             nonce: int = None) -> 'Address':
@@ -432,7 +433,7 @@ class IconServiceEngine(object):
             tx_result.score_address = to
 
         if self._icon_score_deploy_engine.is_data_type_supported(data_type):
-            self._icon_score_deploy_engine.invokde(
+            self._icon_score_deploy_engine.invoke(
                 context, to, data_type, data)
         else:
             self._icon_score_engine.invoke(
