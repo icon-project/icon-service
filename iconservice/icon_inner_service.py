@@ -87,7 +87,7 @@ class IconScoreInnerTask(object):
         else:
             block = Block.create_block(block_params)
             tx_results = self._icon_service_engine.invoke(block=block, tx_params=converted_params)
-            results = [tx_result.to_response_json() for tx_result in tx_results]
+            results = {tx_result.tx_hash: tx_result.to_response_json() for tx_result in tx_results}
             response = make_response(results)
         return response
 
