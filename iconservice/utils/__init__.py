@@ -56,7 +56,7 @@ def to_camel_case(snake_str: str) -> str:
     return str_array[0] + ''.join(sub.title() for sub in str_array[1:])
 
 
-def integers_to_hex(res: Iterable) -> Iterable:
+def integers_to_hex(res: Any) -> Iterable:
     if isinstance(res, dict):
         for k, v in res.items():
             if isinstance(v, dict):
@@ -89,5 +89,5 @@ def check_error_response(result: Any):
     return isinstance(result, dict) and result.get('error')
 
 
-def make_error_response(code: int, message: str):
-    return {'error': {'code': code, 'message': message}}
+def make_error_response(code: Any, message: str):
+    return {'error': {'code': integers_to_hex(int(code)), 'message': message}}
