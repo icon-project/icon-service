@@ -42,12 +42,12 @@ class Logger:
         else:
             self.__log_preset = Logger.import_file(import_file_path)
 
+        self.__log_preset.update_logger()
         self.update_other_logger_level('pika')
         self.update_other_logger_level('aio_pika')
         self.update_other_logger_level('sanic.access')
         self.update_other_logger_level('jsonrpcclient.client.request')
         self.update_other_logger_level('jsonrpcclient.client.response')
-        self.__log_preset.update_logger()
 
     @staticmethod
     def import_file(path: str):
@@ -93,7 +93,10 @@ class Logger:
     def update_other_logger_level(self, logger_name: str):
         logger = logging.getLogger(logger_name)
         if logger is not None:
+            tmp_level = self.__log_preset.log_level
+            self.__log_preset.log_level = LogLevel.WARNING
             self.__log_preset.update_logger(logger)
+            self.__log_preset.log_level = tmp_level
 
     def set_log_level(self, log_level: 'LogLevel'):
         self.__log_preset.log_level = log_level
