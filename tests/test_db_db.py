@@ -25,7 +25,7 @@ from iconservice.database.db import IconScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from . import create_address, rmtree
+from tests import create_address, rmtree
 
 
 class TestPlyvelDatabase(unittest.TestCase):

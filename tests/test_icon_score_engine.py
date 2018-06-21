@@ -21,7 +21,7 @@
 import unittest
 import os
 
-from . import rmtree
+from tests import rmtree
 from iconservice.base.address import AddressPrefix, create_address
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block

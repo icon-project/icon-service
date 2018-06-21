@@ -41,22 +41,25 @@ class LogConfiguration:
     log_file_path = property(None, log_file_path)
 
     def update_logger(self, logger: logging.Logger=None):
+        if logger is None:
+            logger = logging.root
+
         self.__log_format = self.log_format.replace("TAG", self.custom)
 
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
 
-        if logger is None:
+        if logger is logging.root:
             handlers = self.__make_handler()
             logging.basicConfig(handlers= handlers,
                                 format=self.__log_format,
                                 datefmt="%m-%d %H:%M:%S",
                                 level=self.log_level)
+
+            if self.log_color:
+                self.__update_log_color_set(logger)
         else:
             logger.setLevel(self.log_level)
-
-        if self.log_color:
-            self.__update_log_color_set(logger)
 
     def set_handler(self, handler_type: LogHandlerType):
         self.__handler_type = handler_type

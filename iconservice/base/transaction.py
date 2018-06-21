@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional, TYPE_CHECKING
 
-from .address import Address
+if TYPE_CHECKING:
+    from .address import Address
 
 
 class Transaction(object):
@@ -25,7 +27,7 @@ class Transaction(object):
     def __init__(self,
                  tx_hash: str = None,
                  index: int = -1,
-                 origin: Address = None,
+                 origin: Optional['Address'] = None,
                  timestamp: int = None,
                  nonce: int = None) -> None:
         """Transaction class for icon score context
@@ -37,7 +39,7 @@ class Transaction(object):
         self.__nonce = nonce
 
     @property
-    def origin(self) -> Address:
+    def origin(self) -> 'Address':
         """transaction creator
 
         :return:

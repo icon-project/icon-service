@@ -173,46 +173,6 @@ class IconServiceEngine(object):
 
         self._icx_engine.close()
 
-    def genesis_invoke(self, accounts: list) -> None:
-        """Process the list of account info in the genesis block
-
-        :param accounts: account infos in the genesis block
-        """
-
-        context = self._context_factory.create(IconScoreContextType.GENESIS)
-
-        genesis = accounts[0]
-        treasury = accounts[1]
-        others = accounts[2:]
-
-        __NAME_KEY = 'name'
-        __ADDRESS_KEY = 'address'
-        __AMOUNT_KEY = 'balance'
-
-        self._icx_engine.init_account(
-            context=context,
-            account_type=AccountType.GENESIS,
-            account_name=genesis[__NAME_KEY],
-            address=genesis[__ADDRESS_KEY],
-            amount=genesis[__AMOUNT_KEY])
-
-        self._icx_engine.init_account(
-            context=context,
-            account_type=AccountType.TREASURY,
-            account_name=treasury[__NAME_KEY],
-            address=treasury[__ADDRESS_KEY],
-            amount=treasury[__AMOUNT_KEY])
-
-        for other in others:
-            self._icx_engine.init_account(
-                context=context,
-                account_type=AccountType.GENERAL,
-                account_name=other[__NAME_KEY],
-                address=other[__ADDRESS_KEY],
-                amount=other[__AMOUNT_KEY])
-
-        self._context_factory.destroy(context)
-
     def invoke(self,
                block: 'Block',
                tx_params: list) -> 'IconBlockResult':
@@ -228,28 +188,10 @@ class IconServiceEngine(object):
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())
 
+        is_genesis = block.height == 0
+
         for index, tx in enumerate(tx_params):
-            method = tx['method']
-            params = tx['params']
-            addr_from = params['from']
-
-            context.tx = Transaction(tx_hash=params['txHash'],
-                                     index=index,
-                                     origin=addr_from,
-                                     timestamp=params['timestamp'],
-                                     nonce=params.get('nonce', None))
-
-            context.msg = Message(sender=addr_from, value=params.get('value', 0))
-
-            context.step_counter: IconScoreStepCounter = \
-                self._step_counter_factory.create(params.get('step', 5000000))
-
-            tx_result: TransactionResult = self.call(context, method, params)
-            tx_result.step_used = context.step_counter.step_used
-            block_result.append(tx_result)
-
-            context.block_batch.put_tx_batch(context.tx_batch)
-            context.tx_batch.clear()
+            self._invoke(context, tx, index, block_result, is_genesis)
 
         # precommit_state will be written to levelDB on commit()
         self._precommit_state = self._PrecommitState(
@@ -258,6 +200,45 @@ class IconServiceEngine(object):
 
         self._context_factory.destroy(context)
         return block_result
+
+    def _invoke(self,
+                context: 'IconScoreContext',
+                tx_params: dict,
+                index: int,
+                block_result: 'IconBlockResult',
+                is_genesis: bool):
+
+        method = tx_params.get('method')
+        params = tx_params.get('params')
+        addr_from = params.get('from')
+
+        context.tx = Transaction(tx_hash=params['txHash'],
+                                 index=index,
+                                 origin=addr_from,
+                                 timestamp=params.get('timestamp'),
+                                 nonce=params.get('nonce', None))
+
+        context.msg = Message(sender=addr_from, value=params.get('value', 0))
+
+        context.step_counter: IconScoreStepCounter = \
+            self._step_counter_factory.create(params.get('step', ICON_SERVICE_BIG_STEP_LIMIT))
+
+        accounts = self._check_genesis_invoke(index, is_genesis, tx_params)
+        if accounts :
+            tx_result = self._genesis_invoke(context, accounts)
+        else:
+            tx_result = self._call(context, method, params)
+        tx_result.step_used = context.step_counter.step_used
+        block_result.append(tx_result)
+
+        context.block_batch.put_tx_batch(context.tx_batch)
+        context.tx_batch.clear()
+
+    @staticmethod
+    def _check_genesis_invoke(index: int, is_genesis: bool, tx_params: dict) -> Optional[list]:
+        if not is_genesis or index != 0:
+            return None
+        return tx_params.get('accounts')
 
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
@@ -278,7 +259,7 @@ class IconServiceEngine(object):
             from_ = params.get('from', None)
             context.msg = Message(sender=from_)
 
-        ret = self.call(context, method, params)
+        ret = self._call(context, method, params)
 
         self._context_factory.destroy(context)
 
@@ -299,10 +280,61 @@ class IconServiceEngine(object):
     def query_pre_validate(self, request: dict) -> None:
         self._icon_pre_validator.query_validate(request)
 
-    def call(self,
-             context: 'IconScoreContext',
-             method: str,
-             params: dict) -> object:
+    def _genesis_invoke(self,
+                        context: 'IconScoreContext',
+                        accounts: list):
+
+        tx_result = TransactionResult(context.tx.hash, context.block)
+
+        try:
+            genesis = accounts[0]
+            treasury = accounts[1]
+            others = accounts[2:]
+
+            __NAME_KEY = 'name'
+            __ADDRESS_KEY = 'address'
+            __AMOUNT_KEY = 'balance'
+
+            self._icx_engine.init_account(
+                context=context,
+                account_type=AccountType.GENESIS,
+                account_name=genesis[__NAME_KEY],
+                address=genesis[__ADDRESS_KEY],
+                amount=genesis[__AMOUNT_KEY])
+
+            self._icx_engine.init_account(
+                context=context,
+                account_type=AccountType.TREASURY,
+                account_name=treasury[__NAME_KEY],
+                address=treasury[__ADDRESS_KEY],
+                amount=treasury[__AMOUNT_KEY])
+
+            for other in others:
+                self._icx_engine.init_account(
+                    context=context,
+                    account_type=AccountType.GENERAL,
+                    account_name=other[__NAME_KEY],
+                    address=other[__ADDRESS_KEY],
+                    amount=other[__AMOUNT_KEY])
+
+            tx_result.status = TransactionResult.SUCCESS
+
+        except IconServiceBaseException as e:
+            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+            # Add failure info to transaction result
+            tx_result.failure = TransactionResult.Failure(
+                code=e.code, message=e.message)
+        except Exception as e:
+            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            tx_result.failure = TransactionResult.Failure(
+                code=ExceptionCode.SERVER_ERROR, message=str(e))
+
+        return tx_result
+
+    def _call(self,
+              context: 'IconScoreContext',
+              method: str,
+              params: dict) -> Any:
         """Call invoke and query requests in jsonrpc format
 
         This method is designed to be called in icon_outer_service.py.
