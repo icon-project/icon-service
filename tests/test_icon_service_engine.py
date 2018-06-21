@@ -101,7 +101,15 @@ class TestIconServiceEngine(unittest.TestCase):
                 'balance': 0
             }
         ]
-        self._engine.genesis_invoke(accounts)
+
+        block = Block(0, 'bloackHash', 0)
+        tx = {'method': '',
+              'params': {'txHash': 'txHash'},
+              'accounts': accounts}
+        tx_lists = [tx]
+
+        self._engine.invoke(block, tx_lists)
+        self._engine.commit()
 
     def tearDown(self):
         self._engine.close()
@@ -122,7 +130,7 @@ class TestIconServiceEngine(unittest.TestCase):
         method = 'icx_getBalance'
         params = {'address': self._from}
 
-        balance = self._engine.call(context, method, params)
+        balance = self._engine._call(context, method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
 
@@ -151,7 +159,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
-        self._engine.call(context, method, params)
+        self._engine._call(context, method, params)
 
         tx_batch = context.tx_batch
         self.assertEqual(1, len(tx_batch))
@@ -220,7 +228,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                  nonce=params.get('nonce', None))
         context.msg = Message(sender=params['from'], value=params['value'])
 
-        tx_result = self._engine.call(context, method, params)
+        tx_result = self._engine._call(context, method, params)
         self.assertTrue(isinstance(tx_result, TransactionResult))
         self.assertEqual(TransactionResult.FAILURE, tx_result.status)
         self.assertEqual(self._icon_score_address, tx_result.to)
@@ -262,7 +270,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         }
 
-        ret = self._engine.call(method, params)
+        ret = self._engine._call(method, params)
         self.assertTrue(ret)
     '''
 
@@ -281,7 +289,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         }
 
-        balance = self._engine.call(method, params)
+        balance = self._engine._call(method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(0, balance)
     '''

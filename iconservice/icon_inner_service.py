@@ -66,20 +66,14 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def genesis_invoke(self, request: dict):
         Logger.debug(f'genesis invoke request with {request}', ICON_INNER_LOG_TAG)
-
-        accounts = request.get('accounts')
-        if accounts is None:
-            response = make_error_response(ExceptionCode.INVALID_PARAMS, 'accounts is None')
-        else:
-            accounts = self._type_converter.convert(accounts, recursive=False)
-            self._icon_service_engine.genesis_invoke(accounts)
-            response = make_response(ExceptionCode.OK)
-        return response
+        return self._invoke(request)
 
     @message_queue_task
     async def invoke(self, request: dict):
         Logger.debug(f'invoke request with {request}', ICON_INNER_LOG_TAG)
+        return self._invoke(request)
 
+    def _invoke(self, request: dict):
         params = self._type_converter.convert(request, recursive=False)
         block_params = params.get('block')
         transactions_params = params.get('transactions')
