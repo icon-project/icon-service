@@ -23,9 +23,14 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..base.block import Block
 
 
 class IcxStorage(object):
+    BLOCK_HEIGHT_KEY = b'blockHeight'
+    BLOCK_HASH_KEY = b'blockHash'
+    BLOCK_TIMESTAMP = b'blockTimeStamp'
+
     """Icx coin state manager embedding a state db wrapper
     """
 
@@ -43,6 +48,15 @@ class IcxStorage(object):
         :return: (Database) state db wrapper
         """
         return self.__db
+
+    def get_last_block_info(self, context: 'IconScoreContext') -> dict:
+        pass
+
+    def put_block_info(self, context: 'IconScoreContext', block: 'Block') -> None:
+        block_height = block.height
+        block_hash = block.hash
+        block_timestamp = block.timestamp
+        pass
 
     def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
         """Return text format value from db
