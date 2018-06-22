@@ -148,15 +148,11 @@ class DictDB(object):
         self.__depth = depth
 
     def remove(self, key: K) -> None:
-        if self.__depth != 1:
-            raise ContainerDBException(f'DictDB depth mismatch')
-
-        self.__db.delete(ContainerUtil.encode_key(key))
+        self.__remove(key)
 
     def __setitem__(self, key: K, value: V) -> None:
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
-
         byte_value = ContainerUtil.encode_value(value)
         self.__db.put(ContainerUtil.encode_key(key), byte_value)
 
@@ -165,6 +161,14 @@ class DictDB(object):
             return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(key)), self.__value_type)
         else:
             return DictDB(key, self.__db, self.__value_type, self.__depth-1)
+
+    def __delitem__(self, key):
+        self.__remove(key)
+
+    def __remove(self, key: K) -> None:
+        if self.__depth != 1:
+            raise ContainerDBException(f'DictDB depth mismatch')
+        self.__db.delete(ContainerUtil.encode_key(key))
 
 
 class ArrayDB(Iterator):
@@ -183,15 +187,19 @@ class ArrayDB(Iterator):
         self.__size += 1
         self.__set_size()
 
-    def pop(self) -> None:
-        self.__db.delete(ContainerUtil.encode_key(self.__index))
+    def pop(self) -> Optional[V]:
+        if self.__size == 0:
+            return None
+
+        last_val = self.get(self.__size-1)
+        self.__db.delete(ContainerUtil.encode_key(self.__size))
         self.__size -= 1
         self.__set_size()
+        return last_val
 
-    def __get(self, index: int=0) -> V:
+    def get(self, index: int=0) -> V:
         if index >= self.__size:
             raise ContainerDBException(f'ArrayDB out of range')
-
         index_byte_key = ContainerUtil.encode_key(index)
         return ContainerUtil.decode_object(self.__db.get(index_byte_key), self.__value_type)
 
@@ -203,7 +211,7 @@ class ArrayDB(Iterator):
         if self.__index < self.__size:
             index = self.__index
             self.__index += 1
-            return self.__get(index)
+            return self[index]
         else:
             raise StopIteration
 
@@ -221,7 +229,6 @@ class ArrayDB(Iterator):
     def __setitem__(self, index: int, value: V) -> None:
         if index >= self.__size:
             raise ContainerDBException(f'ArrayDB out of range')
-
         sub_db = self.__db
         byte_value = ContainerUtil.encode_value(value)
         sub_db.put(ContainerUtil.encode_key(index), byte_value)
@@ -232,7 +239,6 @@ class ArrayDB(Iterator):
                 index += len(self)
             if index < 0 or index >= len(self):
                 raise ContainerDBException(f'ArrayDB out of range, {index}')
-
             sub_db = self.__db
             index_byte_key = ContainerUtil.encode_key(index)
             return ContainerUtil.decode_object(sub_db.get(index_byte_key), self.__value_type)
