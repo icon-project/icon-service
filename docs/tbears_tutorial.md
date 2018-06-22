@@ -147,7 +147,7 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 | dbRoot | string | 상태 기록을 위한 DB 파일이 생성되는 루트 디렉토리 |
 | accounts | list | 초기 코인을 가지고 있는 계좌 정보 목록<br>(index 0) genesis: 초기 코인을 가지고 있는 계좌 정보<br>(index 1) fee_treasury: transaction 처리 수수료를 수집하는 계좌 정보<br>(index 2~): 임의의 계좌 정보 |
 | log | dict | tbears 로깅 설정 |
-| log.level | string | 로그 메시지 표시 수준 정의<br/>“debug”, “info”, “warning”, “error” |
+| log.level | string | 로그 메시지 표시 수준 정의<br/>"debug", "info", "warning", "error" |
 | log.filePath | string | 로그 파일 경로 |
 | log.outputType | string | “console”: tbears를 실행한 콘솔창에 로그 표시<br/>“file”: 지정된 파일 경로에 로그 기록<br/>“console&#x7c;file”: 콘솔과 파일에 동시 기록 |
 
@@ -184,11 +184,11 @@ abc.py  __init__.py  package.json
 | 항목 | 설명 |
 |:------|:-----|
 | \<project> | 이름의 SCORE 프로젝트 디렉토리 생성 |
-| \<project>/\__init\__.py | SCORE 프로젝트 디렉토리가 python 패키지 형식으로 인식되도록 한다. |
+| \<project>/\_\_init\_\_.py | SCORE 프로젝트 디렉토리가 python 패키지 형식으로 인식되도록 한다. |
 | \<project>/package.json | SCORE의 메타 데이터 |
 | \<project>/\<project>.py | SCORE의 메인 파일. 내부에 ABCToken class가 정의되어 있다. |
 
-### tbears run <project> \[--install or --update] \[config param path]
+### tbears run \<project\> \[--install or --update] \[config param path]
 
 JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설치하여 해당 SCORE 서비스가 실행될 수 있는 환경을 구성한다.
 
@@ -197,26 +197,25 @@ JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설�
 ```bash
 (work) $ tbears run abc
 ...
-06-01 17:12:13.867 10836 140167437186816 INFO {"jsonrpc": "2.0", "result": {"txHash": "90e6fb4c01d397c601a9b378e7c24bc58a300ccac1ec971923ad985306068d1c", "blockHeight": 4, "to": "cxbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "scoreAddress": "cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf", "stepUsed": "0x1234", "status": "0x1"}, "id": 111}
-```
+06-20 18:12:36 INFO {"jsonrpc": "2.0", "result": "0xab7cfcd238d0a871ffe1c8d2e0114b014a0eb71182d9ee4f0b19d46bf6f7c44a", "id": 111}
+...
 
-```bash
-(work) $ cat ./params.json
-{
-    "name": "hello world"
-} 
-
-(work) $ tbears run abc --install ./params.json
+# issue icx_getTransactionResult the result (txHash)
+# need to modify value of txHash in issue_rpc.sh
+(work) $ ./issue_rpc.sh gettxres
+...
+06-22 18:15:15 INFO {"jsonrpc": "2.0", "result": {"txHash": "0xab7cfcd238d0a871ffe1c8d2e0114b014a0eb71182d9ee4f0b19d46bf6f7c44a", "blockHeight": "0x9", "to": null, "scoreAddress": "cx6bd390bd855f086e3e9d525b46bfe24511431532", "stepUsed": "0x1770", "status": "0x1", "failure": null, "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, "id": 112}
 ...
 ```
 
 ```bash
 (work) $ cat ./params.json
 {
-    "name": "hello world"
+    "init_supply": "0x3e8",
+    "decimal": "0x12"
 } 
 
-(work) $ tbears run abc --update ./params.json
+(work) $ tbears run abc --install ./params.json
 ...
 ```
 
@@ -227,10 +226,10 @@ JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설�
 | 옵션 | 속성 | 설명 |
 |:------|:-----|:-----|
 | project | required | SCORE 코드를 포함하는 디렉토리 경로명 |
-| --install | optional | SCORE를 설치한다.<br/>IconScoreBase.on_install()이 호출된다. |
-| --update | optional | SCORE를 업데이트한다.<br/>IconScoreBase.on_update()가 호출된다.<br/>(--update 옵션은 현재 미구현으로 차기 버전에서 지원 예정) |
-| config param path | optional | IconScoreBase.on_install() 혹은 IconScoreBase.on_update()에 파라메터로 입력되는 데이터 내용을 담은 파일의 경로<br/>해당 파일의 내용은 json 형식을 따라야 한다. |
-| --install 혹은 --update가 생략된 경우 | - | SCORE reload를 수행한다.<br/>IconScoreBase.on_install() 혹은 IconScoreBase.on_update()가 호출되지 않는다. |
+| --install | optional | SCORE를 설치한다. on_install()이 호출된다. |
+| --update | optional | SCORE를 업데이트한다. on_update()가 호출된다.<br/>(--update 옵션은 현재 미구현으로 차기 버전에서 지원 예정) |
+| config param path | optional | on\_install() 혹은 on_update()에 파라메터로 입력되는 데이터 내용을 담은 파일의 경로<br/>해당 파일의 내용은 json 형식을 따라야 한다. |
+| --install 혹은 --update가 생략된 경우 | - | SCORE reload를 수행한다.<br/>on_install() 혹은 on_update()가 호출되지 않는다. |
 
 ### tbears stop
 
@@ -272,18 +271,18 @@ def debug(msg: str, tag: str)
 ```python
 from iconservice.logger import Logger
 
-TAG = ‘ABCToken’
+TAG = 'ABCToken'
 
-Logger.debug(‘debug log’, TAG)
-Logger.info(‘info log’, TAG)
-Logger.warning(‘warning log’, TAG)
-Logger.error(‘error log’, TAG)
+Logger.debug('debug log', TAG)
+Logger.info('info log', TAG)
+Logger.warning('warning log', TAG)
+Logger.error('error log', TAG)
 ```
 
 ## ICON SCORE 개발 시 유의 사항
 
 * tbears는 현 시점에서 loopchain 엔진을 포함하고 있지 않기 때문에 일부 SCORE 개발과 관련없는 JSON-RPC API 들은 동작하지 않을 수 있다.
-    * tbears에서 지원하는 JSON-RPC API: icx_getBalance, icx_getTotalSupply, icx_getBalance, icx_sendTransaction
-    * icx_getTransactionResult JSON-RPC API는 현재 미지원
+    * tbears에서 지원하는 JSON-RPC API:
+        * icx_getBalance, icx_getTotalSupply, icx_getBalance, icx_sendTransaction, icx_getTransactionResult
 * 이후 tbears 버전에서는 사용 방법이나 SCORE 개발 방법이 일부 변경될 수 있다.
 * 개발의 편의성을 위해서 tbears에서 제공하는 JSON-RPC 서버는 transaction 내에 포함된  전자 서명을 검증하지 않는다.
