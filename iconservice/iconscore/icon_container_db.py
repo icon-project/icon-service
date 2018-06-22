@@ -191,8 +191,9 @@ class ArrayDB(Iterator):
         if self.__size == 0:
             return None
 
-        last_val = self.get(self.__size-1)
-        self.__db.delete(ContainerUtil.encode_key(self.__size))
+        index = self.__size - 1
+        last_val = self.get(index)
+        self.__db.delete(ContainerUtil.encode_key(index))
         self.__size -= 1
         self.__set_size()
         return last_val

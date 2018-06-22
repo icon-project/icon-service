@@ -24,7 +24,7 @@ class MockPlyvelDatabase(PlyvelDatabase):
         self._db[key] = value
 
     def delete(self, key: bytes) -> None:
-        pass
+        del self._db[key]
 
     def close(self) -> None:
         if self._db:
