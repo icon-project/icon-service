@@ -99,9 +99,6 @@ class IconScoreInnerTask(object):
             for transaction_params in transactions_params:
                 converted_params.append(self._type_converter.convert(transaction_params, recursive=True))
 
-            if block_params is None or transactions_params is None:
-                response = make_error_response(ExceptionCode.INVALID_PARAMS, 'block_params, tx_params is None')
-            else:
                 block = Block.create_block(block_params)
                 tx_results = self._icon_service_engine.invoke(block=block, tx_params=converted_params)
                 results = {tx_result.tx_hash: tx_result.to_response_json() for tx_result in tx_results}
