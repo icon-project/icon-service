@@ -200,7 +200,7 @@ JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설�
 06-20 18:12:36 INFO {"jsonrpc": "2.0", "result": "0xab7cfcd238d0a871ffe1c8d2e0114b014a0eb71182d9ee4f0b19d46bf6f7c44a", "id": 111}
 ...
 
-# issue icx_getTransactionResult the result (txHash)
+# issue icx_getTransactionResult with the result (txHash)
 # need to modify value of txHash in issue_rpc.sh
 (work) $ ./issue_rpc.sh gettxres
 ...
