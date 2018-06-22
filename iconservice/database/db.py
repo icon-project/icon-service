@@ -166,7 +166,6 @@ class ContextDatabase(PlyvelDatabase):
         """
         super().__init__(db)
         self.address = address
-        self.__observer: DatabaseObserver = None
 
     def get(self, context: 'IconScoreContext', key: bytes) -> bytes:
         """Returns value indicated by key from batch or StateDB
@@ -232,9 +231,6 @@ class ContextDatabase(PlyvelDatabase):
             raise DatabaseException('put is not allowed')
         elif context_type == IconScoreContextType.INVOKE:
             self.put_to_batch(context, key, value)
-            if self.__observer:
-                old_value = self.get_from_batch(context, key)
-                self.__observer.on_put(context, key, old_value, value)
         else:
             super().put(key, value)
 
@@ -252,9 +248,6 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.QUERY:
             raise DatabaseException('delete is not allowed')
         elif context_type == IconScoreContextType.INVOKE:
-            if self.__observer:
-                old_value = self.get_from_batch(context, key)
-                self.__observer.on_delete(context, key, old_value)
             self.put_to_batch(context, key, None)
         else:
             super().delete(key)
@@ -282,9 +275,6 @@ class ContextDatabase(PlyvelDatabase):
                 'write_batch is not allowed on readonly context')
 
         return super().write_batch(states)
-
-    def set_observer(self, observer: DatabaseObserver):
-        self.__observer = observer
 
     @staticmethod
     def from_address_and_path(
@@ -321,10 +311,10 @@ class IconScoreDatabase(ContextGetter):
 
     def put(self, key: bytes, value: bytes):
         key = self.__hash_key(key)
-        self._context_db.put(self._context, key, value)
         if self.__observer:
             old_value = self._context_db.get(self._context, key)
             self.__observer.on_put(self._context, key, old_value, value)
+        self._context_db.put(self._context, key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
         icon_score_database = IconScoreDatabase(
@@ -334,10 +324,10 @@ class IconScoreDatabase(ContextGetter):
 
     def delete(self, key: bytes):
         key = self.__hash_key(key)
-        self._context_db.delete(self._context, key)
         if self.__observer:
             old_value = self._context_db.get(self._context, key)
             self.__observer.on_delete(self._context, key, old_value)
+        self._context_db.delete(self._context, key)
 
     def set_observer(self, observer: 'DatabaseObserver'):
         self.__observer = observer
