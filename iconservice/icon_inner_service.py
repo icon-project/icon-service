@@ -58,7 +58,8 @@ class IconScoreInnerTask(object):
             'fee': 'int',
             'value': 'int',
             'balance': 'int',
-            'timestamp': 'int'
+            'timestamp': 'int',
+            'blockHeight': 'int'
         }
         self._type_converter = TypeConverter(type_table)
 
@@ -93,14 +94,15 @@ class IconScoreInnerTask(object):
         try:
             params = self._type_converter.convert(request, recursive=False)
             block_params = params['block']
+            converted_block_params = self._type_converter.convert(block_params, recursive=True)
             transactions_params = params['transactions']
 
-            converted_params = []
+            converted_tx_params = []
             for transaction_params in transactions_params:
-                converted_params.append(self._type_converter.convert(transaction_params, recursive=True))
+                converted_tx_params.append(self._type_converter.convert(transaction_params, recursive=True))
 
-            block = Block.create_block(block_params)
-            tx_results = self._icon_service_engine.invoke(block=block, tx_params=converted_params)
+            block = Block.create_block(converted_block_params)
+            tx_results = self._icon_service_engine.invoke(block=block, tx_params=converted_tx_params)
             results = {tx_result.tx_hash: tx_result.to_response_json() for tx_result in tx_results}
             response = make_response(results)
         except IconServiceBaseException as icon_e:

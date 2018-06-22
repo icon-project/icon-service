@@ -18,14 +18,14 @@
 class Block(object):
     """Block Information included in IconScoreContext
     """
-    def __init__(self, height: int, hash: str, timestamp: int) -> None:
+    def __init__(self, block_height: int, block_hash: str, timestamp: int) -> None:
         """Constructor
 
-        :param height: block height
-        :param hash: block hash
+        :param block_height: block height
+        :param block_hash: block hash
         """
-        self.height = height
-        self.hash = hash
+        self.height = block_height
+        self.hash = block_hash
         # unit: microsecond
         self.timestamp = timestamp
 

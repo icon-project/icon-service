@@ -208,6 +208,9 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
+    def _check_block_validate(self, block: 'Block'):
+        pass
+
     @staticmethod
     def _check_genesis_invoke(index: int, is_genesis: bool, tx_params: dict) -> bool:
         if not is_genesis or index != 0:

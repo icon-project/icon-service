@@ -30,13 +30,15 @@ class ExceptionCode(IntEnum):
     """
     OK = 0
 
-    # -32000 ~ -32099: Server error
+    # 32000 ~ 32099: Server error
     SERVER_ERROR = 32000
     SCORE_ERROR = 32100
     INVALID_REQUEST = 32600
     METHOD_NOT_FOUND = 32601
     INVALID_PARAMS = 32602
     INTERNAL_ERROR = 32603
+
+    # for inner handle consensus #33000
 
     def __str__(self) -> str:
         if self.value == self.INVALID_REQUEST:
