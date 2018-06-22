@@ -160,9 +160,20 @@ class IconPreValidator:
 
     @staticmethod
     def _tx_validate(request: dict) -> None:
+        IconPreValidator._check_contain_dict('method', request)
         method = request['method']
+        IconPreValidator._check_contain_dict('params', request)
         params = request['params']
+        IconPreValidator._check_contain_dict('txHash', params)
+
         IconPreValidator.JsonRpcMessageValidator.validate(method, params)
+
+    @staticmethod
+    def _check_contain_dict(key, table: dict) -> None:
+        if key not in table:
+            raise IconException(
+                code=ExceptionCode.INVALID_PARAMS,
+                message=f"'{key}' not found")
 
     def _icx_check_balance(self, context: 'IconScoreContext', tx: dict, step_price: int) -> None:
         """Check the balance of from address is enough to pay for tx fee and value
