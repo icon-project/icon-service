@@ -50,7 +50,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "method": "icx_call",
     "params": {
         "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
@@ -72,7 +72,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response - 설치 요청, 심사 중
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "result": {
         "next": {
             "status": "pending",
@@ -86,7 +86,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response - 심사 완료: accepted
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "result": {
         "current": {
             "status": "active",
@@ -101,7 +101,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response - 심사 완료: rejected
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "result": {
         "next": {
             "status": "rejected",
@@ -118,7 +118,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response - update 요청, 심사 중
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "result": {
         "current": {
             "status": "active", // or "inactive"
@@ -137,7 +137,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response - update 요청, 심사 완료: rejected
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "result": {
         "current": {
             "status": "active", // or "inactive"
@@ -158,7 +158,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "error": {
         "code": -32062,
         "message": "SCORE not found"
@@ -166,7 +166,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 }
 ```
 
-# Invokde Methods
+# Invoke Methods
 
 상태를 변경하는 Method
 
@@ -255,7 +255,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 * SCORE 등록을 심사할 수 있는 권한을 가진 주소 목록에서 해당 주소를 제거한다.
 * Auditor 주소의 키가 유출되는 경우 대비
 
-### Paramters
+### Parameters
 
 없음
 
@@ -290,7 +290,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 * 해당 목록에 등록된 주소만이 acceptScore와 rejectScore를 호출할 수 있다.
 * Genesis 주소 전용 메소드
 
-### Paramters
+### Parameters
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:-----------|-----|
@@ -330,7 +330,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 * 해당 목록에서 제거된 주소는 더이상 SCORE 등록 심사를 할 수 없다.
 * Genesis 주소 전용 메소드
 
-### Paramters
+### Parameters
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:-----------|-----|
@@ -344,7 +344,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Request
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genensis address
@@ -370,7 +370,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response: success
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "result": "0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed" // txHash
 }
 ```
@@ -379,7 +379,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Response: failure
 {
     "jsonrpc": "2.0",
-    "id": 0,
+    "id": 1234,
     "error": {
         "code": -32600,
         "message": "Forbidden method"
