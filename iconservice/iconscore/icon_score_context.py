@@ -26,7 +26,7 @@ from ..base.exception import RevertException
 from ..icx.icx_engine import IcxEngine
 from ..database.batch import BlockBatch, TransactionBatch
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, List
 
 if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
@@ -107,6 +107,7 @@ class IconScoreContext(object):
         self.block_batch = block_batch
         self.tx_batch = tx_batch
         self.step_counter: 'IconScoreStepCounter' = None
+        self.event_logs: List['EventLog'] = []
 
         self.__msg_stack = []
 

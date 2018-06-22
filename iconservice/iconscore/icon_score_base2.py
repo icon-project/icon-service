@@ -16,14 +16,15 @@
 
 from typing import Generic, TYPE_CHECKING, TypeVar
 from abc import ABC, ABCMeta
+
 from ..base.exception import *
-from ..base.type_converter import score_base_support_type
+from ..base.address import Address
 
 if TYPE_CHECKING:
-    from ..base.address import Address
-
+    pass
 
 T = TypeVar('T')
+BaseType = TypeVar('BaseType', int, str, bytes, bool, Address)
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
@@ -48,14 +49,19 @@ class ConstBitFlag(IntEnum):
     Interface = 16
 
 
-class Indexed(Generic[T]):
-    def __init__(self, value: T):
-        if not isinstance(value, score_base_support_type):
-            raise EventLogException(f'must be primitive type [int, str, bytes, bool, Address]')
+class Indexed(Generic[BaseType]):
+    """
+    A wrapper class of BastType(int, str, bytes, bool, Address)
+    This is used to distinguish Indexed argument in EventLog
+    """
+    def __init__(self, value: BaseType):
         self.__value = value
 
     @property
-    def value(self):
+    def value(self) -> BaseType:
+        return self.__value
+
+    def __get__(self, instance, owner) -> BaseType:
         return self.__value
 
 
