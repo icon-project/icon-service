@@ -100,6 +100,7 @@ class IconServiceEngine(object):
         self._step_counter_factory = None
         self._precommit_state = None
         self._icon_pre_validator = None
+        self._last_block = None
 
         # jsonrpc handlers
         self._handlers = {

@@ -116,6 +116,10 @@ class IconScoreContext(object):
     def readonly(self):
         return self.type == IconScoreContextType.QUERY
 
+    @property
+    def last_block(self) -> 'Block':
+        return self.icx.storage.last_block
+
     def gasleft(self) -> int:
         """Returns the amount of gas left
 

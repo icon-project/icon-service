@@ -29,9 +29,9 @@ class Block(object):
         # unit: microsecond
         self.timestamp = timestamp
 
-    @staticmethod
-    def create_block(params: dict):
-        block_height = params.get('blockHeight')
-        block_hash = params.get('blockHash')
-        timestamp = params.get('timestamp')
-        return Block(block_height, block_hash, timestamp)
+
+def create_block(params: dict):
+    block_height = params.get('blockHeight')
+    block_hash = params.get('blockHash')
+    timestamp = params.get('timestamp')
+    return Block(block_height, block_hash, timestamp)
