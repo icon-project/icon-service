@@ -175,3 +175,14 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(test_var3.get(), b'')
         test_var4 = VarDB('test_var4', self.db, value_type=Address)
         self.assertEqual(test_var4.get(), None)
+
+    def test_array_db(self):
+        testarray = ArrayDB("TEST", self.db, value_type=int)
+        testarray.put(1)
+        testarray.put(3)
+        testarray.put(5)
+        testarray.put(7)
+        self.assertEqual(4, len(testarray))
+        self.assertEqual(7, testarray.pop())
+        self.assertEqual(5, testarray.pop())
+        self.assertEqual(2, len(testarray))
