@@ -5,6 +5,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:----|:-----:|:----|
+| 2018.06.22 | 조치원 | revokeAuditor -> selfRevoke로 변경<br>AddAuditor, RemoveAuditor 추가 |
 | 2018.06.21 | 조치원 | 초기 작성 |
 
 # VALUE 형식
@@ -52,7 +53,7 @@ Governance SCORE가 제공하는 API를 설명한다.
     "id": 0,
     "method": "icx_call",
     "params": {
-        "from": "hx...", // optional
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
         "to": "cx0000000000000000000000000000000000000001",
         "dataType": "call",
         "data": {
@@ -74,12 +75,14 @@ Governance SCORE가 제공하는 API를 설명한다.
     "id": 0,
     "result": {
         "next": {
-            "status": "pending", // "rejected"
-            "deployTxHash": "0x..." // deploy txHash
+            "status": "pending",
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27"
         }
     }
 }
+```
 
+```json
 // Response - 심사 완료: accepted
 {
     "jsonrpc": "2.0",
@@ -87,12 +90,14 @@ Governance SCORE가 제공하는 API를 설명한다.
     "result": {
         "current": {
             "status": "active",
-            "deployTxHash": "0x...",
-            "auditTxHash": "0x..."
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27",
+            "auditTxHash": "0x644dd57fbb65b49a49bcaf5e7685e01d53dc321f1cfb7dbbf8f4306265745292"
         }
     }
 }
+```
 
+```json
 // Response - 심사 완료: rejected
 {
     "jsonrpc": "2.0",
@@ -100,8 +105,8 @@ Governance SCORE가 제공하는 API를 설명한다.
     "result": {
         "next": {
             "status": "rejected",
-            "deployTxHash": "0x...",
-            "auditTxHash": "0x..."
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27",
+            "auditTxHash": "0x644dd57fbb65b49a49bcaf5e7685e01d53dc321f1cfb7dbbf8f4306265745292"
         }
     }
 }
@@ -117,16 +122,18 @@ Governance SCORE가 제공하는 API를 설명한다.
     "result": {
         "current": {
             "status": "active", // or "inactive"
-            "deployTxHash": "0x...",
-            "auditTxHash": "0x..."
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b207",
+            "auditTxHash": "0x644dd57fbb65b49a49bcaf5e7685e01d53dc321f1cfb7dbbf8f4306265745292"
         },
         "next": {
             "status": "pending",
-            "deployTxHash": "0x..."
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b207"
         }
     }
 }
+```
 
+```json
 // Response - update 요청, 심사 완료: rejected
 {
     "jsonrpc": "2.0",
@@ -134,13 +141,13 @@ Governance SCORE가 제공하는 API를 설명한다.
     "result": {
         "current": {
             "status": "active", // or "inactive"
-            "deployTxHash": "0x...",
-            "auditTxHash": "0x..."
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27",
+            "auditTxHash": "0x644dd57fbb65b49a49bcaf5e7685e01d53dc321f1cfb7dbbf8f4306265745292"
         },
         "next": {
             "status": "rejected",
-            "deployTxHash": "0x...",
-            "auditTxHash": "0x..."
+            "deployTxHash": "0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27",
+            "auditTxHash": "0x644dd57fbb65b49a49bcaf5e7685e01d53dc321f1cfb7dbbf8f4306265745292"
         }
     }
 }
@@ -182,8 +189,8 @@ Governance SCORE가 제공하는 API를 설명한다.
 ```json
 {
     "jsonrpc": "2.0",
-    "method": "icx_sendTransaction",
     "id": 1234,
+    "method": "icx_sendTransaction",
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cx0000000000000000000000000000000000000001",
@@ -222,8 +229,8 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Request
 {
     "jsonrpc": "2.0",
-    "method": "icx_sendTransaction",
     "id": 1234,
+    "method": "icx_sendTransaction",
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cx0000000000000000000000000000000000000001",
@@ -243,7 +250,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 }
 ```
 
-## revokeAuditor
+## selfRevoke
 
 * SCORE 등록을 심사할 수 있는 권한을 가진 주소 목록에서 해당 주소를 제거한다.
 * Auditor 주소의 키가 유출되는 경우 대비
@@ -260,8 +267,8 @@ Governance SCORE가 제공하는 API를 설명한다.
 // Request
 {
     "jsonrpc": "2.0",
-    "method": "icx_sendTransaction",
     "id": 1234,
+    "method": "icx_sendTransaction",
     "params": {
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cx0000000000000000000000000000000000000001",
@@ -271,8 +278,111 @@ Governance SCORE가 제공하는 API를 설명한다.
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "call",
         "data": {
-            "method": "revokeAuditor"
+            "method": "selfRevoke"
         }
+    }
+}
+```
+
+## addAuditor
+
+* SCORE 등록 심사 권한을 가진 주소 목록에 새로운 주소를 추가한다.
+* 해당 목록에 등록된 주소만이 acceptScore와 rejectScore를 호출할 수 있다.
+* Genesis 주소 전용 메소드
+
+### Paramters
+
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|-----|
+| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 추가한 새로운 EOA 주소 |
+
+### Examples
+
+#### Request
+
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genesis address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "addAuditor",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
+## removeAuditor
+
+* SCORE 등록 심사 권한을 가진 주소 목록에서 기존 주소를 제거한다.
+* 해당 목록에서 제거된 주소는 더이상 SCORE 등록 심사를 할 수 없다.
+* Genesis 주소 전용 메소드
+
+### Paramters
+
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|-----|
+| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 추가한 새로운 EOA 주소 |
+
+### Examples
+
+#### Request
+
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "method": "icx_sendTransaction",
+    "params": {
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genensis address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "removeAuditor",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+// Response: success
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "result": "0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed" // txHash
+}
+```
+
+```json
+// Response: failure
+{
+    "jsonrpc": "2.0",
+    "id": 0,
+    "error": {
+        "code": -32600,
+        "message": "Forbidden method"
     }
 }
 ```
