@@ -345,7 +345,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param new_value: new value
         """
 
-        if new_value and context and context.type == IconScoreContextType.INVOKE:
+        if new_value and context and \
+                context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
                 context.step_counter.increase_step(
@@ -353,7 +354,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             else:
                 # newly storing a value
                 context.step_counter.increase_step(
-                    StepType.STORAGE_DELETE, len(new_value))
+                    StepType.STORAGE_SET, len(new_value))
 
     @staticmethod
     def __on_db_delete(context: 'IconScoreContext',
@@ -368,7 +369,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param old_value: old value
         """
 
-        if context and context.type == IconScoreContextType.INVOKE:
+        if old_value and context and \
+                context.type == IconScoreContextType.INVOKE:
             context.step_counter.increase_step(
                 StepType.STORAGE_DELETE, len(old_value))
 
