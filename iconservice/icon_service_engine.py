@@ -191,7 +191,14 @@ class IconServiceEngine(object):
         is_genesis = block.height == 0
 
         for index, tx in enumerate(tx_params):
-            self._invoke(context, tx, index, block_result, is_genesis)
+            if self._check_genesis_invoke(index, is_genesis, tx):
+                tx_result = self._genesis_invoke(context, tx, index)
+            else:
+                tx_result = self._invoke(context, tx, index)
+            block_result.append(tx_result)
+
+        context.block_batch.put_tx_batch(context.tx_batch)
+        context.tx_batch.clear()
 
         # precommit_state will be written to levelDB on commit()
         self._precommit_state = self._PrecommitState(
@@ -201,92 +208,28 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
-    def _invoke(self,
-                context: 'IconScoreContext',
-                tx_params: dict,
-                index: int,
-                block_result: 'IconBlockResult',
-                is_genesis: bool):
-
-        method = tx_params.get('method')
-        params = tx_params.get('params')
-        addr_from = params.get('from')
-
-        context.tx = Transaction(tx_hash=params['txHash'],
-                                 index=index,
-                                 origin=addr_from,
-                                 timestamp=params.get('timestamp'),
-                                 nonce=params.get('nonce', None))
-
-        context.msg = Message(sender=addr_from, value=params.get('value', 0))
-
-        context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(params.get('step', ICON_SERVICE_BIG_STEP_LIMIT))
-
-        accounts = self._check_genesis_invoke(index, is_genesis, tx_params)
-        if accounts :
-            tx_result = self._genesis_invoke(context, accounts)
-        else:
-            tx_result = self._call(context, method, params)
-        tx_result.step_used = context.step_counter.step_used
-        block_result.append(tx_result)
-
-        context.block_batch.put_tx_batch(context.tx_batch)
-        context.tx_batch.clear()
-
     @staticmethod
-    def _check_genesis_invoke(index: int, is_genesis: bool, tx_params: dict) -> Optional[list]:
+    def _check_genesis_invoke(index: int, is_genesis: bool, tx_params: dict) -> bool:
         if not is_genesis or index != 0:
-            return None
-        return tx_params.get('accounts')
-
-    def query(self, method: str, params: dict) -> Any:
-        """Process a query message call from outside
-
-        State change is not allowed in a query message call
-
-        * icx_getBalance
-        * icx_getTotalSupply
-        * icx_call
-
-        :param method:
-        :param params:
-        :return: the result of query
-        """
-        context = self._context_factory.create(IconScoreContextType.QUERY)
-
-        if params:
-            from_ = params.get('from', None)
-            context.msg = Message(sender=from_)
-
-        ret = self._call(context, method, params)
-
-        self._context_factory.destroy(context)
-
-        return ret
-
-    def tx_pre_validate(self, tx: dict) -> None:
-        """Validate a transaction before putting it into tx pool.
-        If failed to validate a tx, client will get a json-rpc error response
-
-        :param tx: dict including tx info
-        """
-
-        # FIXME: If step_price is defined, it should be updated.
-        context = self._context_factory.create(IconScoreContextType.QUERY)
-        self._icon_pre_validator.tx_validate(context, tx, step_price=0)
-        self._context_factory.destroy(context)
-
-    def query_pre_validate(self, request: dict) -> None:
-        self._icon_pre_validator.query_validate(request)
+            return False
+        return 'accounts' in tx_params
 
     def _genesis_invoke(self,
                         context: 'IconScoreContext',
-                        accounts: list):
+                        tx_params: dict,
+                        index: int) -> 'TransactionResult':
+
+        params = tx_params['params']
+        context.tx = Transaction(tx_hash=params['txHash'],
+                                 index=index,
+                                 origin=None,
+                                 timestamp=context.block.timestamp,
+                                 nonce=params.get('nonce', None))
 
         tx_result = TransactionResult(context.tx.hash, context.block)
 
         try:
+            accounts = tx_params['accounts']
             genesis = accounts[0]
             treasury = accounts[1]
             others = accounts[2:]
@@ -330,6 +273,70 @@ class IconServiceEngine(object):
                 code=ExceptionCode.SERVER_ERROR, message=str(e))
 
         return tx_result
+
+    def _invoke(self,
+                context: 'IconScoreContext',
+                tx_params: dict,
+                index: int) -> 'TransactionResult':
+
+        method = tx_params['method']
+        params = tx_params['params']
+        addr_from = params['from']
+
+        context.tx = Transaction(tx_hash=params['txHash'],
+                                 index=index,
+                                 origin=addr_from,
+                                 timestamp=params['timestamp'],
+                                 nonce=params.get('nonce', None))
+
+        context.msg = Message(sender=addr_from, value=params.get('value', 0))
+
+        context.step_counter: IconScoreStepCounter = \
+            self._step_counter_factory.create(params.get('step', ICON_SERVICE_BIG_STEP_LIMIT))
+
+        tx_result = self._call(context, method, params)
+        tx_result.step_used = context.step_counter.step_used
+        return tx_result
+
+    def query(self, method: str, params: dict) -> Any:
+        """Process a query message call from outside
+
+        State change is not allowed in a query message call
+
+        * icx_getBalance
+        * icx_getTotalSupply
+        * icx_call
+
+        :param method:
+        :param params:
+        :return: the result of query
+        """
+        context = self._context_factory.create(IconScoreContextType.QUERY)
+
+        if params:
+            from_ = params.get('from', None)
+            context.msg = Message(sender=from_)
+
+        ret = self._call(context, method, params)
+
+        self._context_factory.destroy(context)
+
+        return ret
+
+    def tx_pre_validate(self, tx: dict) -> None:
+        """Validate a transaction before putting it into tx pool.
+        If failed to validate a tx, client will get a json-rpc error response
+
+        :param tx: dict including tx info
+        """
+
+        # FIXME: If step_price is defined, it should be updated.
+        context = self._context_factory.create(IconScoreContextType.QUERY)
+        self._icon_pre_validator.tx_validate(context, tx, step_price=0)
+        self._context_factory.destroy(context)
+
+    def query_pre_validate(self, request: dict) -> None:
+        self._icon_pre_validator.query_validate(request)
 
     def _call(self,
               context: 'IconScoreContext',
