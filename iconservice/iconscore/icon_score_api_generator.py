@@ -166,7 +166,7 @@ class ScoreApiGenerator:
         indexed = False
         converted_type = ''
 
-        if param_type is not Signature.empty:
+        if param_type is not None and param_type is not Signature.empty:
             if param_type in score_base_support_type:
                 converted_type = ScoreApiGenerator.__convert_type(param_type)
             else:
