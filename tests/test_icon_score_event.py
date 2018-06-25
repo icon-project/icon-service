@@ -23,7 +23,7 @@ from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
     external, EventLogException
-from iconservice.base.address import create_address, AddressPrefix, Address
+from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
 
@@ -44,7 +44,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = create_address(AddressPrefix.CONTRACT, b'empty')
+        address = Mock(spec=Address)
         age = 10
         phone_number = "000"
 
@@ -72,12 +72,11 @@ class TestEventlog(unittest.TestCase):
         self.assertRaises(EventLogException, self._mock_score.FourIndexEvent,
                           name, address, age, phone_number)
 
-
     def test_call_event_kwarg(self):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = create_address(AddressPrefix.CONTRACT, b'empty')
+        address = Mock(spec=Address)
         age = 10
 
         # Call with ordered arguments
@@ -100,14 +99,14 @@ class TestEventlog(unittest.TestCase):
 
     def test_call_event_no_hint_exception(self):
         name = "name"
-        address = create_address(AddressPrefix.CONTRACT, b'empty')
+        address = Mock(spec=Address)
         age = 10
         self.assertRaises(EventLogException, self._mock_score.HintlessEvent,
                           name, address, age)
 
     def test_call_event_mismatch_arg(self):
         name = "name"
-        address = create_address(AddressPrefix.CONTRACT, b'empty')
+        address = Mock(spec=Address)
         age = "10"
         # The hint of 'age' is int type but argument is str type
 

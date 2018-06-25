@@ -361,7 +361,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if indexed_args_count > len(arguments):
             raise EventLogException(
-                f'declared index_count is {indexed_args_count}, '
+                f'declared indexed_args_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 
         indexed: List[BaseType] = []

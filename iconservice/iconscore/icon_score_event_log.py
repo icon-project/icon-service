@@ -37,8 +37,7 @@ class EventLog(object):
         Constructor
 
         :param score_address: an address of SCORE in which the event is invoked
-        :param event: a name of event
-        :param indexed: a list of indexed arguments
+        :param indexed: a list of indexed arguments including a event signature
         :param data: a list of normal arguments
         """
         self.score_address: 'Address' = score_address
