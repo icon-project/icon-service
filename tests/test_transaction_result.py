@@ -18,10 +18,10 @@
 import unittest
 
 from iconservice.base.exception import ExceptionCode
-from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.iconscore.icon_score_result import TransactionResult
-from tests import create_block_hash, create_tx_hash
+from tests import create_block_hash, create_tx_hash, create_address
 
 
 class TestTransactionResult(unittest.TestCase):

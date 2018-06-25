@@ -20,7 +20,7 @@
 import os
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.message import Message
@@ -37,7 +37,7 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx.icx_account import Account, AccountType
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from tests import rmtree
+from tests import rmtree, create_address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -116,7 +116,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-    def __request_install(self, project_name: str, addr_score: Address):
+    def __request_install(self, project_name: str, addr_score: 'Address'):
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, f'tests/sample/{project_name}')
         install_data = {'contentType': 'application/tbears', 'content': path}

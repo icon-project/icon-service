@@ -15,10 +15,9 @@
 # limitations under the License.
 
 from .icx_account import Account
-from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, AddressPrefix
-from ..base.block import create_block
 from ..utils import sha3_256, int_to_bytes
+from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -28,9 +27,7 @@ if TYPE_CHECKING:
 
 
 class IcxStorage(object):
-    BLOCK_HEIGHT_KEY = b'last_block_height'
-    BLOCK_HASH_KEY = b'last_block_hash'
-    BLOCK_TIMESTAMP = b'last_block_timestamp'
+    _LAST_BLOCK_KEY = b'last_block'
 
     """Icx coin state manager embedding a state db wrapper
     """
@@ -56,26 +53,15 @@ class IcxStorage(object):
         return self._last_block
 
     def load_last_block_info(self, context: Optional['IconScoreContext']) -> None:
-        block_height = self._db.get(context, self.BLOCK_HEIGHT_KEY)
-        block_hash = self._db.get(context, self.BLOCK_HASH_KEY)
-        block_timestamp = self._db.get(context, self.BLOCK_TIMESTAMP)
-        if not all((block_height, block_hash, block_timestamp)):
+        block_bytes = self._db.get(context, self._LAST_BLOCK_KEY)
+        if block_bytes is None:
             return
 
-        self._last_block = \
-            create_block({'blockHeight': block_height, 'blockHash': block_hash, 'timestamp': block_timestamp})
+        self._last_block = Block.from_bytes(block_bytes)
 
     def put_block_info(self, context: 'IconScoreContext', block: 'Block') -> None:
-        block_height = block.height
-        block_hash = block.hash
-        block_timestamp = block.timestamp
-
-        self._db.put(context, self.BLOCK_HEIGHT_KEY, int_to_bytes(block_height))
-        self._db.put(context, self.BLOCK_HASH_KEY, block_hash.encode())
-        self._db.put(context, self.BLOCK_TIMESTAMP, int_to_bytes(block_timestamp))
-
-        self._last_block = \
-            create_block({'blockHeight': block_height, 'blockHash': block_hash, 'timestamp': block_timestamp})
+        self._db.put(context, self._LAST_BLOCK_KEY, bytes(block))
+        self._last_block = block
 
     def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
         """Return text format value from db

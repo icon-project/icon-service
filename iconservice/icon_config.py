@@ -44,3 +44,13 @@ class EnableThreadFlag(IntEnum):
 
 
 ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
+
+
+JSONRPC_VERSION = '2.0'
+CHARSET_ENCODING = 'utf-8'
+
+# 32bytes == 256bit
+BALANCE_BYTE_SIZE = 32
+DATA_BYTE_ORDER = 'big'  # big endian
+# Fixed fee is 0.01 icx.
+FIXED_FEE = 10 ** 16

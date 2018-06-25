@@ -17,10 +17,10 @@
 import unittest
 
 from iconservice.base.exception import ExceptionCode, IconException
-from iconservice.base.address import Address, AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from tests import create_tx_hash
+from tests import create_tx_hash, create_address
 
 
 class MockIcxStorage(object):
@@ -102,4 +102,5 @@ class TestTransactionValidator(unittest.TestCase):
             response = {'code': e.code, 'message': e.message}
 
         self.assertEqual(ExceptionCode.INVALID_PARAMS, response['code'])
-        self.assertEqual(response['message'], f"Score is not installed {create_address(AddressPrefix.CONTRACT, b'to')}")
+        self.assertEqual(response['message'],
+                         f"Score is not installed {create_address(AddressPrefix.CONTRACT, b'to')}")

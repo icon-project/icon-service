@@ -22,7 +22,6 @@ import shutil
 import unittest
 
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
-from iconservice.base.address import create_address
 from iconservice.base.exception import ExceptionCode, IconException
 from iconservice.base.transaction import Transaction
 from iconservice.base.message import Message
@@ -35,6 +34,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from iconservice.utils import sha3_256
 from iconservice.base.block import Block
+from tests import create_block_hash, create_address
 
 context_factory = IconScoreContextFactory(max_size=1)
 
@@ -104,7 +104,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         block = Block(0, 'bloackHash', 0)
         tx = {'method': '',
-              'params': {'txHash': 'txHash'},
+              'params': {'txHash': self._tx_hash},
               'accounts': accounts}
         tx_lists = [tx]
 
@@ -149,8 +149,8 @@ class TestIconServiceEngine(unittest.TestCase):
             'to': _to,
             'value': value,
             'fee': 10 ** 16,
-            'timestamp': 1234567890,
-            'txHash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed'
+            'timestamp': hex(1234567890),
+            'txHash': self._tx_hash
         }
 
         context.tx = Transaction(tx_hash=params['txHash'],
@@ -180,7 +180,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke(self):
         block_height = 1
-        block_hash = None
+        block_hash = create_block_hash(b'block')
         block_timestamp = 0
         value = 1 * 10 ** 18
 

@@ -17,7 +17,6 @@
 import json
 
 from .icx_account import Account, AccountType
-from .icx_config import FIXED_FEE
 from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import ExceptionCode, ICXException

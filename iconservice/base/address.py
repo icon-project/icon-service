@@ -180,12 +180,8 @@ class Address(object):
 
     @staticmethod
     def from_data(prefix: AddressPrefix, data: bytes):
-        return create_address(prefix, data)
+        hash_value = hashlib.sha3_256(data).digest()
+        return Address(prefix, hash_value[-20:])
 
 
-def create_address(prefix: AddressPrefix, data: bytes):
-    hash_value = hashlib.sha3_256(data).digest()
-    return Address(prefix, hash_value[-20:])
-
-
-ICX_ENGINE_ADDRESS = create_address(AddressPrefix.CONTRACT, b'icon_dex')
+ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')
