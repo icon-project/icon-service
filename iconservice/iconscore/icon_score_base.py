@@ -80,6 +80,7 @@ def eventlog(func=None, *, indexed_args_count=0):
     setattr(func, CONST_BIT_FLAG, bit_flag)
 
     parameters = signature(func).parameters.values()
+    event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
     def __wrapper(calling_obj: Any, *args, **kwargs):
@@ -87,64 +88,79 @@ def eventlog(func=None, *, indexed_args_count=0):
             raise EventLogException(
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
         try:
-            arguments = __resolve_arguments(parameters, args, kwargs)
+            arguments = __resolve_arguments(func_name, parameters, args, kwargs)
         except TypeError as e:
             raise EventLogException(str(e))
 
         call_method = getattr(calling_obj, '_IconScoreBase__put_eventlog')
-        return call_method(func_name, arguments, indexed_args_count)
-
-    def __resolve_arguments(parameters_, args, kwargs) -> List[Any]:
-        """
-        Resolves arguments with keeping order as the function declaration
-        :param parameters_: Arguments description of the function declaration
-        :param args: input ordered arguments
-        :param kwargs: input keyword arguments
-        :return: an ordered list of arguments
-        """
-        arguments = []
-        for i, parameter in enumerate(parameters_, -1):
-            if i < 0:
-                # pass the self parameter
-                continue
-            name = parameter.name
-            annotation = parameter.annotation
-            if i < len(args):
-                # the argument is in the ordered args
-                value = args[i]
-                if name in kwargs:
-                    raise TypeError(
-                        f"Duplicated argument value for '{func_name}': {name}")
-            else:
-                # If arg is over, the argument should be searched on kwargs
-                try:
-                    value = kwargs[name]
-                except KeyError:
-                    raise TypeError(
-                        f"Missing argument value for '{func_name}': {name}")
-            # If there's no hint of argument in the function declaration,
-            # raise an exception
-            if annotation is Parameter.empty:
-                raise TypeError(
-                    f"Missing argument hint for '{func_name}': '{name}'")
-            if hasattr(annotation, '_subs_tree'):
-                # Generic type has a '_subs_tree'
-                sub_tree = annotation._subs_tree()
-                if isinstance(sub_tree, tuple):
-                    # Generic declaration with sub type. `Generic[T1,...]`
-                    main_type = sub_tree[0]
-                else:
-                    # Generic declaration only
-                    main_type = sub_tree
-            else:
-                main_type = annotation
-            if not isinstance(value, main_type):
-                raise TypeError(f"Mismatch type type of '{name}': "
-                                f"{type(value)}, expected: {main_type}")
-            arguments.append(value)
-        return arguments
+        return call_method(event_signature, arguments, indexed_args_count)
 
     return __wrapper
+
+
+def __retrieve_event_signature(function_name, parameters) -> str:
+    """
+    Retrieves a event signature from the function name and parameters
+    :param function_name: name of event function
+    :param parameters: Arguments description of the function declaration
+    :return: event signature
+    """
+    type_names: List[str] = []
+    for i, param in enumerate(parameters):
+        if i > 0:
+            type_names.append(str(param.annotation.__name__))
+    return f"{function_name}({','.join(type_names)})"
+
+
+def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
+    """
+    Resolves arguments with keeping order as the function declaration
+    :param parameters: Arguments description of the function declaration
+    :param args: input ordered arguments
+    :param kwargs: input keyword arguments
+    :return: an ordered list of arguments
+    """
+    arguments = []
+    for i, parameter in enumerate(parameters, -1):
+        if i < 0:
+            # pass the self parameter
+            continue
+        name = parameter.name
+        annotation = parameter.annotation
+        if i < len(args):
+            # the argument is in the ordered args
+            value = args[i]
+            if name in kwargs:
+                raise TypeError(
+                    f"Duplicated argument value for '{function_name}': {name}")
+        else:
+            # If arg is over, the argument should be searched on kwargs
+            try:
+                value = kwargs[name]
+            except KeyError:
+                raise TypeError(
+                    f"Missing argument value for '{function_name}': {name}")
+        # If there's no hint of argument in the function declaration,
+        # raise an exception
+        if annotation is Parameter.empty:
+            raise TypeError(
+                f"Missing argument hint for '{function_name}': '{name}'")
+        if hasattr(annotation, '_subs_tree'):
+            # Generic type has a '_subs_tree'
+            sub_tree = annotation._subs_tree()
+            if isinstance(sub_tree, tuple):
+                # Generic declaration with sub type. `Generic[T1,...]`
+                main_type = sub_tree[0]
+            else:
+                # Generic declaration only
+                main_type = sub_tree
+        else:
+            main_type = annotation
+        if not isinstance(value, main_type):
+            raise TypeError(f"Mismatch type type of '{name}': "
+                            f"{type(value)}, expected: {main_type}")
+        arguments.append(value)
+    return arguments
 
 
 def external(func=None, *, readonly=False):
@@ -346,13 +362,13 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
     def __put_eventlog(self,
-                       event_name: str,
+                       event_signature: str,
                        arguments: List[Any],
                        indexed_args_count: int):
         """
         Puts a eventlog to the context running
 
-        :param event_name: name of eventlog
+        :param event_signature: signature of eventlog
         :param arguments: arguments of eventlog call
         """
         if indexed_args_count > INDEXED_ARGS_LIMIT:
@@ -364,26 +380,30 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f'declared indexed_args_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 
-        indexed: List[BaseType] = []
+        indexed: List[BaseType] = [event_signature]
         data: List[BaseType] = []
-        type_names: List[str] = []
         for i, argument in enumerate(arguments):
             # Raises an exception if the types are not supported
-            if type(argument) not in BaseType.__constraints__:
-                raise EventLogException(f'Not supported type: {type(argument)}')
-
-            type_names.append(str(type(argument).__name__))
+            if not IconScoreBase.__is_base_type(argument):
+                raise EventLogException(
+                    f'Not supported type: {type(argument)}')
 
             # Separates indexed type and base type with keeping order.
             if i < indexed_args_count:
                 indexed.append(argument)
             else:
                 data.append(argument)
-
-        indexed.insert(0, f"{event_name}({','.join(type_names)})")
+        print(indexed[0])
 
         event = EventLog(self.address, indexed, data)
         self._context.event_logs.append(event)
+
+    @staticmethod
+    def __is_base_type(value) -> bool:
+        for base_type in BaseType.__constraints__:
+            if isinstance(value, base_type):
+                return True
+        return False
 
     @staticmethod
     def __on_db_put(context: 'IconScoreContext',
