@@ -20,6 +20,7 @@ from iconservice.base.exception import ExceptionCode, IconException
 from iconservice.base.address import Address, AddressPrefix, create_address
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
+from tests import create_tx_hash
 
 
 class MockIcxStorage(object):
@@ -54,6 +55,7 @@ class TestTransactionValidator(unittest.TestCase):
         self.tx = {
             'method': 'test',
             'params': {
+                'txHash': create_tx_hash(b'tx'),
                 'from': create_address(AddressPrefix.EOA, b'from'),
                 'to': create_address(AddressPrefix.CONTRACT, b'to'),
                 'value': 0,

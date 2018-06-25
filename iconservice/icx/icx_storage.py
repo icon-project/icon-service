@@ -55,11 +55,15 @@ class IcxStorage(object):
     def last_block(self) -> 'Block':
         return self._last_block
 
-    def get_last_block_info(self, context: 'IconScoreContext') -> 'Block':
+    def load_last_block_info(self, context: Optional['IconScoreContext']) -> None:
         block_height = self._db.get(context, self.BLOCK_HEIGHT_KEY)
         block_hash = self._db.get(context, self.BLOCK_HASH_KEY)
         block_timestamp = self._db.get(context, self.BLOCK_TIMESTAMP)
-        return create_block({'blockHeight': block_height, 'blockHash': block_hash, 'timestamp': block_timestamp})
+        if not all((block_height, block_hash, block_timestamp)):
+            return
+
+        self._last_block = \
+            create_block({'blockHeight': block_height, 'blockHash': block_hash, 'timestamp': block_timestamp})
 
     def put_block_info(self, context: 'IconScoreContext', block: 'Block') -> None:
         block_height = block.height
@@ -113,8 +117,6 @@ class IcxStorage(object):
             If the account indicated by address is not present,
             create a new account.
         """
-        account = None
-
         key = address.body
         value = self._db.get(context, key)
 
