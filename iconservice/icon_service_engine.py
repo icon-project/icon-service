@@ -184,7 +184,7 @@ class IconServiceEngine(object):
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
-        context.block_batch = BlockBatch(block.height, block.hash)
+        context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())
 
@@ -206,12 +206,15 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
-    def check_block_validate(self, block: 'Block'):
+    def check_block_validate(self, block: 'Block') -> None:
         last_block = self._icx_storage.last_block
+        if last_block is None:
+            return
+
         if block.height <= last_block.height:
             raise IconException('NextBlockHeight <= LastBlockHeight')
-        elif block.height == last_block.height + 1:
-            raise IconException('NextBlockHeight is not LastBlockHeight + 1')
+        elif block.height != last_block.height + 1:
+            raise IconException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
 
     @staticmethod
     def _check_genesis_invoke(index: int, block_height: int, tx_params: dict) -> bool:
@@ -497,7 +500,7 @@ class IconServiceEngine(object):
         icon_score_address: Address = params['address']
         return self._icon_score_engine.get_score_api(context, icon_score_address)
 
-    def commit(self, block: 'Block') -> None:
+    def commit(self) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
@@ -521,18 +524,18 @@ class IconServiceEngine(object):
         self._icon_score_deploy_engine.commit(context)
         self._precommit_state = None
 
-        self._icx_storage.put_block_info(block)
+        self._icx_storage.put_block_info(context, block_batch.block)
         self._context_factory.destroy(context)
 
     def precommit_validate(self, block: Block) -> None:
         if self._precommit_state is None:
             raise IconException('_precommit_state is None')
 
-        block_batch = self._precommit_state.block_batch
+        block = self._precommit_state.block_batch.block
 
-        if block.height != block_batch.height:
+        if block.height != block.height:
             raise IconException('mismatch block height')
-        elif block.hash != block_batch.hash:
+        elif block.hash != block.hash:
             raise IconException('mismatch block hash')
 
     def rollback(self) -> None:

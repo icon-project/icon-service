@@ -104,12 +104,11 @@ class BlockBatch(dict):
     key: Address
     value: IconScoreBatch
     """
-    def __init__(self, block_height: int=-1, block_hash: str=None):
+    def __init__(self, block: Optional['Block'] = None):
         """
         """
         super().__init__()
-        self.height = block_height
-        self.hash = block_hash
+        self.block = block
 
     def put(self, address: 'Address', key: bytes, value: bytes) -> None:
         """

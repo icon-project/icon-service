@@ -102,7 +102,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         ]
 
-        block = Block(0, 'bloackHash', 0)
+        block = Block(0, create_block_hash(b'block'), 0)
         tx = {'method': '',
               'params': {'txHash': self._tx_hash},
               'accounts': accounts}

@@ -156,8 +156,8 @@ class IconScoreInnerTask(object):
 
     def _write_precommit_state(self, request: dict):
         try:
-            # TODO check block validate
-            block = Block.from_dict(request)
+            converted_block_params = self._type_converter.convert(request, recursive=False)
+            block = Block.from_dict(converted_block_params)
             self._icon_service_engine.precommit_validate(block)
 
             self._icon_service_engine.commit()
