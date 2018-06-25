@@ -403,14 +403,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self.__icx
 
     def now(self):
-        if self.block is None:
-            last_block = self._context.last_block
-            if last_block is None:
-                return 0
-            else:
-                return last_block.timestamp
-        else:
-            return self.block.timestamp
+        return self.block.timestamp
 
     def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
         if interface_cls is InterfaceScore:

@@ -315,6 +315,7 @@ class IconServiceEngine(object):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
+        context.block = self._icx_storage.last_block
 
         if params:
             from_ = params.get('from', None)
