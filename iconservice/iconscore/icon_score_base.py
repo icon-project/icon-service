@@ -19,7 +19,7 @@ from inspect import isfunction, getmembers, signature, Parameter
 from abc import abstractmethod
 from functools import partial
 
-from iconservice.iconscore.icon_score_event_log import INDEXED_PARAM_LIMIT, EventLog
+from iconservice.iconscore.icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import *
 from .icon_score_step import StepType
@@ -63,9 +63,9 @@ def interface(func):
     return __wrapper
 
 
-def eventlog(func=None, *, index_count=0):
+def eventlog(func=None, *, indexed_args_count=0):
     if func is None:
-        return partial(eventlog, index_count=index_count)
+        return partial(eventlog, indexed_args_count=indexed_args_count)
 
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
@@ -92,7 +92,7 @@ def eventlog(func=None, *, index_count=0):
             raise EventLogException(str(e))
 
         call_method = getattr(calling_obj, '_IconScoreBase__put_eventlog')
-        return call_method(func_name, arguments, index_count)
+        return call_method(func_name, arguments, indexed_args_count)
 
     def __resolve_arguments(parameters_, args, kwargs) -> List[Any]:
         """
@@ -348,20 +348,20 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __put_eventlog(self,
                        event_name: str,
                        arguments: List[Any],
-                       index_count: int):
+                       indexed_args_count: int):
         """
         Puts a eventlog to the context running
 
         :param event_name: name of eventlog
         :param arguments: arguments of eventlog call
         """
-        if index_count > INDEXED_PARAM_LIMIT:
+        if indexed_args_count > INDEXED_ARGS_LIMIT:
             raise EventLogException(
-                f'indexed arguments are overflow: limit={INDEXED_PARAM_LIMIT}')
+                f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
 
-        if index_count > len(arguments):
+        if indexed_args_count > len(arguments):
             raise EventLogException(
-                f'declared index_count is {index_count}, '
+                f'declared index_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 
         indexed: List[BaseType] = []
@@ -375,7 +375,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             type_names.append(str(type(argument).__name__))
 
             # Separates indexed type and base type with keeping order.
-            if i < index_count:
+            if i < indexed_args_count:
                 indexed.append(argument)
             else:
                 data.append(argument)

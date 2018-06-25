@@ -21,7 +21,7 @@ from ..base.address import Address
 if TYPE_CHECKING:
     from .icon_score_base2 import BaseType
 
-INDEXED_PARAM_LIMIT = 3
+INDEXED_ARGS_LIMIT = 3
 
 
 class EventLog(object):
