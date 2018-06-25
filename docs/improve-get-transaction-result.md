@@ -111,3 +111,33 @@
 #### On error
 * `code`: an error code
 * `message`: a string providing a short description of the error
+
+
+### Event Log
+- 지원 하는 parameter type: 
+  int, str, bytes, bool, Address
+- indexed
+  - 첫 item은 Event의 signature
+  - 총 4개까지 지원
+- data: parameter 제한 없음
+   
+
+예)
+```json
+{
+    "eventLogs": [
+        {
+            "scoreAddress": "cxXXXXXXXXXXXXXXXXXXXX",
+            "indexed": [
+              "Transfer(Address,Address,int)", 
+              "hxAAAAAAAAAAAAAAAAAAAA", 
+              "hxBBBBBBBBBBBBBBBBBBBB" 
+            ],
+            "data": [
+              "0x56bc75e2d63100000"
+            ]
+        },
+        ...
+    ]
+}
+```
