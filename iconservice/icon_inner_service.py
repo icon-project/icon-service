@@ -95,13 +95,16 @@ class IconScoreInnerTask(object):
             params = self._type_converter.convert(request, recursive=False)
             block_params = params['block']
             converted_block_params = self._type_converter.convert(block_params, recursive=True)
+
+            block = Block.from_dict(converted_block_params)
+            self._icon_service_engine.check_block_validate(block)
+
             transactions_params = params['transactions']
 
             converted_tx_params = []
             for transaction_params in transactions_params:
                 converted_tx_params.append(self._type_converter.convert(transaction_params, recursive=True))
 
-            block = Block.from_dict(converted_block_params)
             tx_results = self._icon_service_engine.invoke(block=block, tx_params=converted_tx_params)
             results = {tx_result.tx_hash: tx_result.to_response_json() for tx_result in tx_results}
             response = make_response(results)
@@ -153,8 +156,8 @@ class IconScoreInnerTask(object):
 
     def _write_precommit_state(self, request: dict):
         try:
-            # TODO check block validate
-            block = Block.from_dict(request)
+            converted_block_params = self._type_converter.convert(request, recursive=False)
+            block = Block.from_dict(converted_block_params)
             self._icon_service_engine.precommit_validate(block)
 
             self._icon_service_engine.commit()

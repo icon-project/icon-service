@@ -90,4 +90,4 @@ def check_error_response(result: Any):
 
 
 def make_error_response(code: Any, message: str):
-    return {'error': {'code': integers_to_hex(int(code)), 'message': message}}
+    return {'error': {'code': int(code), 'message': message}}

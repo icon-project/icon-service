@@ -24,7 +24,8 @@ from tests import create_block_hash
 class TestBlock(unittest.TestCase):
     def test_Block_from_bytes_to_bytes(self):
         block_hash = create_block_hash(b'block1')
-        block1 = Block(1, block_hash, 100)
+        block_hash_str = f"0x{block_hash}"
+        block1 = Block(1, block_hash_str, 100)
         data = Block.to_bytes(block1)
         self.assertEqual(bytes(block1), data)
         self.assertTrue(isinstance(data, bytes))

@@ -57,6 +57,13 @@ class Block(object):
         return Block(block_height, block_hash, timestamp)
 
     @staticmethod
+    def from_block(block: 'Block'):
+        block_height = block.height
+        block_hash = block.hash
+        timestamp = block.timestamp
+        return Block(block_height, block_hash, timestamp)
+
+    @staticmethod
     def from_bytes(buf: bytes) -> 'Block':
         """Create Account object from bytes data
 
@@ -86,7 +93,7 @@ class Block(object):
         # for extendability
         version_bytes = self._VERSION.to_bytes(1, byteorder)
         block_height_bytes = self._height.to_bytes(BALANCE_BYTE_SIZE, byteorder)
-        block_hash_bytes = bytes.fromhex(self._hash)
+        block_hash_bytes = bytes.fromhex(self._hash[2:])
         timestamp_bytes = self._timestamp.to_bytes(BALANCE_BYTE_SIZE, byteorder)
 
         return Block._struct.pack(

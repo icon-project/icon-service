@@ -184,14 +184,12 @@ class IconServiceEngine(object):
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
-        context.block_batch = BlockBatch(block.height, block.hash)
+        context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         block_result = IconBlockResult(JsonSerializer())
 
-        is_genesis = block.height == 0
-
         for index, tx in enumerate(tx_params):
-            if self._check_genesis_invoke(index, is_genesis, tx):
+            if self._check_genesis_invoke(index, block.height, tx):
                 tx_result = self._genesis_invoke(context, tx, index)
             else:
                 tx_result = self._invoke(context, tx, index)
@@ -208,12 +206,19 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
-    def _check_block_validate(self, block: 'Block'):
-        pass
+    def check_block_validate(self, block: 'Block') -> None:
+        last_block = self._icx_storage.last_block
+        if last_block is None:
+            return
+
+        if block.height <= last_block.height:
+            raise IconException('NextBlockHeight <= LastBlockHeight')
+        elif block.height != last_block.height + 1:
+            raise IconException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
 
     @staticmethod
-    def _check_genesis_invoke(index: int, is_genesis: bool, tx_params: dict) -> bool:
-        if not is_genesis or index != 0:
+    def _check_genesis_invoke(index: int, block_height: int, tx_params: dict) -> bool:
+        if block_height != 0 or index != 0:
             return False
         return 'accounts' in tx_params
 
@@ -519,11 +524,19 @@ class IconServiceEngine(object):
         self._icon_score_deploy_engine.commit(context)
         self._precommit_state = None
 
+        self._icx_storage.put_block_info(context, block_batch.block)
         self._context_factory.destroy(context)
 
-    def precommit_validate(self, block: Block) -> None:
-        # TODO if failed raise exception
-        pass
+    def precommit_validate(self, precommit_block: 'Block') -> None:
+        if self._precommit_state is None:
+            raise IconException('_precommit_state is None')
+
+        block = self._precommit_state.block_batch.block
+
+        if block.height != precommit_block.height:
+            raise IconException('mismatch block height')
+        elif block.hash != precommit_block.hash:
+            raise IconException('mismatch block hash')
 
     def rollback(self) -> None:
         """Throw away a precommit state
