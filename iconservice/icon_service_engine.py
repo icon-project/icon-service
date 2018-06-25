@@ -527,15 +527,15 @@ class IconServiceEngine(object):
         self._icx_storage.put_block_info(context, block_batch.block)
         self._context_factory.destroy(context)
 
-    def precommit_validate(self, block: Block) -> None:
+    def precommit_validate(self, precommit_block: Block) -> None:
         if self._precommit_state is None:
             raise IconException('_precommit_state is None')
 
         block = self._precommit_state.block_batch.block
 
-        if block.height != block.height:
+        if block.height != precommit_block.height:
             raise IconException('mismatch block height')
-        elif block.hash != block.hash:
+        elif block.hash != precommit_block.hash:
             raise IconException('mismatch block hash')
 
     def rollback(self) -> None:
