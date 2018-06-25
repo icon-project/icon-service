@@ -393,7 +393,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 indexed.append(argument)
             else:
                 data.append(argument)
-        print(indexed[0])
 
         event = EventLog(self.address, indexed, data)
         self._context.event_logs.append(event)
