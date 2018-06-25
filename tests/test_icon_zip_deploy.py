@@ -20,7 +20,7 @@
 
 import unittest
 import os
-from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.message import Message
@@ -34,6 +34,8 @@ from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
+from tests import create_address
+
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -64,8 +66,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self.from_address = create_address(AddressPrefix.EOA, b'from')
 
-        self.sample_token_address = create_address(
-            AddressPrefix.CONTRACT, b'sample_token')
+        self.sample_token_address = create_address(AddressPrefix.CONTRACT, b'sample_token')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)

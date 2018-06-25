@@ -18,10 +18,10 @@
 import unittest
 
 from iconservice.base.exception import ExceptionCode
-from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.iconscore.icon_score_result import TransactionResult
-from tests import create_block_hash, create_tx_hash
+from tests import create_block_hash, create_tx_hash, create_address
 
 
 class TestTransactionResult(unittest.TestCase):
@@ -30,7 +30,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_hash = create_tx_hash(b'tx')
         to = create_address(AddressPrefix.EOA, b'to')
 
-        block = Block(height=0, hash=block_hash, timestamp=1234567890)
+        block = Block(block_height=0, block_hash=block_hash, timestamp=0x1234567890)
         tx_result = TransactionResult(tx_hash=tx_hash, block=block, to=to)
         tx_result.failure = TransactionResult.Failure(
             code=ExceptionCode.SERVER_ERROR, message=str('Server error'))

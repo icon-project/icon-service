@@ -15,9 +15,9 @@
 # limitations under the License.
 
 from .icx_account import Account
-from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, AddressPrefix
-from ..utils import sha3_256
+from ..utils import sha3_256, int_to_bytes
+from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -27,9 +27,7 @@ if TYPE_CHECKING:
 
 
 class IcxStorage(object):
-    BLOCK_HEIGHT_KEY = b'blockHeight'
-    BLOCK_HASH_KEY = b'blockHash'
-    BLOCK_TIMESTAMP = b'blockTimeStamp'
+    _LAST_BLOCK_KEY = b'last_block'
 
     """Icx coin state manager embedding a state db wrapper
     """
@@ -39,7 +37,8 @@ class IcxStorage(object):
 
         :param db: (Database) state db wrapper
         """
-        self.__db = db
+        self._db = db
+        self._last_block = None
 
     @property
     def db(self) -> 'ContextDatabase':
@@ -47,16 +46,22 @@ class IcxStorage(object):
 
         :return: (Database) state db wrapper
         """
-        return self.__db
+        return self._db
 
-    def get_last_block_info(self, context: 'IconScoreContext') -> dict:
-        pass
+    @property
+    def last_block(self) -> 'Block':
+        return self._last_block
+
+    def load_last_block_info(self, context: Optional['IconScoreContext']) -> None:
+        block_bytes = self._db.get(context, self._LAST_BLOCK_KEY)
+        if block_bytes is None:
+            return
+
+        self._last_block = Block.from_bytes(block_bytes)
 
     def put_block_info(self, context: 'IconScoreContext', block: 'Block') -> None:
-        block_height = block.height
-        block_hash = block.hash
-        block_timestamp = block.timestamp
-        pass
+        self._db.put(context, self._LAST_BLOCK_KEY, bytes(block))
+        self._last_block = block
 
     def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
         """Return text format value from db
@@ -66,7 +71,7 @@ class IcxStorage(object):
             default encoding: utf8
         """
         key = name.encode()
-        value = self.__db.get(context, key)
+        value = self._db.get(context, key)
         if value:
             return value.decode()
         else:
@@ -85,7 +90,7 @@ class IcxStorage(object):
         """
         key = name.encode()
         value = text.encode()
-        self.__db.put(context, key, value)
+        self._db.put(context, key, value)
 
     def get_account(self,
                     context: 'IconScoreContext',
@@ -98,10 +103,8 @@ class IcxStorage(object):
             If the account indicated by address is not present,
             create a new account.
         """
-        account = None
-
         key = address.body
-        value = self.__db.get(context, key)
+        value = self._db.get(context, key)
 
         if value:
             account = Account.from_bytes(value)
@@ -123,7 +126,7 @@ class IcxStorage(object):
         """
         key = address.body
         value = account.to_bytes()
-        self.__db.put(context, key, value)
+        self._db.put(context, key, value)
 
     def delete_account(self,
                        context: 'IconScoreContext',
@@ -134,7 +137,7 @@ class IcxStorage(object):
         :param address: account address
         """
         key = address.body
-        self.__db.delete(context, key)
+        self._db.delete(context, key)
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply
@@ -142,7 +145,7 @@ class IcxStorage(object):
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
         key = b'total_supply'
-        value = self.__db.get(context, key)
+        value = self._db.get(context, key)
 
         amount = 0
         if value:
@@ -160,7 +163,7 @@ class IcxStorage(object):
         """
         key = b'total_supply'
         value = value.to_bytes(BALANCE_BYTE_SIZE, DATA_BYTE_ORDER)
-        self.__db.put(context, key, value)
+        self._db.put(context, key, value)
 
     def get_score_owner(self,
                         context: 'IconScoreContext',
@@ -172,7 +175,7 @@ class IcxStorage(object):
         :return owner: IconScore owner address
         """
         key = self._get_owner_key(icon_score_address)
-        value = self.__db.get(context, key)
+        value = self._db.get(context, key)
         if value:
             return Address(AddressPrefix.EOA, value)
         else:
@@ -189,7 +192,7 @@ class IcxStorage(object):
         :param owner: The owner of IconScore
         """
         key = self._get_owner_key(icon_score_address)
-        self.__db.put(context, key, owner.body)
+        self._db.put(context, key, owner.body)
 
     @staticmethod
     def _get_owner_key(icon_score_address: Address) -> bytes:
@@ -199,7 +202,7 @@ class IcxStorage(object):
                            context: 'IconScoreContext',
                            icon_score_address: Address) -> None:
         key = self._get_owner_key(icon_score_address)
-        self.__db.delete(context, key)
+        self._db.delete(context, key)
 
     def is_score_installed(self,
                            context: 'IconScoreContext',
@@ -223,7 +226,7 @@ class IcxStorage(object):
         :return: True(present) False(not present)
         """
         key = address.body
-        value = self.__db.get(context, key)
+        value = self._db.get(context, key)
 
         return bool(value)
 
@@ -233,6 +236,6 @@ class IcxStorage(object):
 
         :param context:
         """
-        if self.__db:
-            self.__db.close(context)
-            self.__db = None
+        if self._db:
+            self._db.close(context)
+            self._db = None

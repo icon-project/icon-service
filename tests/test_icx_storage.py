@@ -26,12 +26,13 @@ from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from tests import create_address
 
 
 class TestIcxStorage(unittest.TestCase):
     def setUp(self):
         self.db_name = 'icx.db'
-        self.address = Address.from_string('hx' + '0' * 40)
+        self.address = create_address(AddressPrefix.EOA, b'addr1')
         db = ContextDatabase.from_address_and_path(self.address, self.db_name)
         self.assertIsNotNone(db)
 
@@ -46,7 +47,7 @@ class TestIcxStorage(unittest.TestCase):
     def test_get_put_account(self):
         context = self.context
         account = Account()
-        account.address = Address.from_string('hx' + '1' * 40)
+        account.address = create_address(AddressPrefix.EOA, b'addr2')
         account.deposit(10 ** 19)
 
         self.storage.put_account(context, account.address, account)
@@ -57,7 +58,7 @@ class TestIcxStorage(unittest.TestCase):
     def test_delete_account(self):
         context = self.context
         account = Account()
-        account.address = Address.from_string('hx' + '7' * 40)
+        account.address = create_address(AddressPrefix.EOA, b'addr7')
         self.storage.put_account(context, account.address, account)
 
         ret = self.storage.is_address_present(context, account.address)
@@ -78,9 +79,8 @@ class TestIcxStorage(unittest.TestCase):
 
     def test_owner(self):
         context = self.context
-        icon_score_address = Address.from_data(
-            AddressPrefix.CONTRACT, b'score')
-        owner = Address.from_data(AddressPrefix.EOA, b'owner')
+        icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
+        owner = create_address(AddressPrefix.EOA, b'owner')
 
         self.storage.put_score_owner(context, icon_score_address, owner)
 
@@ -91,9 +91,8 @@ class TestIcxStorage(unittest.TestCase):
 
     def test_is_score_installed(self):
         context = self.context
-        icon_score_address = Address.from_data(
-            AddressPrefix.CONTRACT, b'score')
-        owner = Address.from_data(AddressPrefix.EOA, b'owner')
+        icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
+        owner = create_address(AddressPrefix.EOA, b'owner')
 
         installed = self.storage.is_score_installed(context,
                                                     icon_score_address)

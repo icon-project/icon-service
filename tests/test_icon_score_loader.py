@@ -20,8 +20,9 @@ import os
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import Address, AddressPrefix
 import inspect
+from tests import create_address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 

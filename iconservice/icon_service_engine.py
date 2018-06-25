@@ -18,7 +18,7 @@ from os import makedirs
 from collections import namedtuple
 
 from .base.address import Address, AddressPrefix
-from .base.address import ICX_ENGINE_ADDRESS, create_address
+from .base.address import ICX_ENGINE_ADDRESS
 from .base.exception import ExceptionCode
 from .base.exception import IconException, IconServiceBaseException
 from .base.block import Block
@@ -57,7 +57,7 @@ def _generate_score_address_for_tbears(path: str) -> 'Address':
     :return:
     """
     project_name = path.split('/')[-1]
-    return create_address(AddressPrefix.CONTRACT, project_name.encode())
+    return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
 
 
 def _generate_score_address(from_: 'Address',
@@ -74,7 +74,7 @@ def _generate_score_address(from_: 'Address',
     if nonce:
         data += nonce.to_bytes(32, 'big')
 
-    return create_address(AddressPrefix.CONTRACT, data)
+    return Address.from_data(AddressPrefix.CONTRACT, data)
 
 
 class IconServiceEngine(object):
@@ -315,6 +315,7 @@ class IconServiceEngine(object):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
+        context.block = self._icx_storage.last_block
 
         if params:
             from_ = params.get('from', None)

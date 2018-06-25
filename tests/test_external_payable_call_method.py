@@ -16,16 +16,17 @@
 
 import unittest
 
-from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable, interface
+from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
 from iconservice.iconscore.icon_score_context import Message, ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
-from iconservice.base.address import Address, AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.transaction import Transaction
 from iconservice.base.exception import ExternalException, PayableException, IconScoreException
 from iconservice.database.db import IconScoreDatabase
 from tests.mock_db import create_mock_icon_score_db
 from functools import wraps
+from tests import create_address
 
 
 def decorator(func):
@@ -44,7 +45,7 @@ class CallClass1(IconScoreBase):
     def on_update(self) -> None:
         pass
 
-    def __init__(self, db: IconScoreDatabase, owner: Address):
+    def __init__(self, db: IconScoreDatabase, owner: 'Address'):
         super().__init__(db, owner)
 
     @external(readonly=True)
@@ -85,7 +86,7 @@ class CallClass2(CallClass1):
     def on_update(self) -> None:
         super().on_update()
 
-    def __init__(self, db: IconScoreDatabase, owner: Address):
+    def __init__(self, db: IconScoreDatabase, owner: 'Address'):
         super().__init__(db, owner)
 
     def func1(self):

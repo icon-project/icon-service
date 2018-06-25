@@ -1,7 +1,8 @@
 from iconservice.database.db import PlyvelDatabase
 from iconservice.database.db import ContextDatabase, IconScoreDatabase
-from iconservice.base.address import AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 from typing import Optional
+from tests import create_address
 
 
 class MockPlyvelDatabase(PlyvelDatabase):

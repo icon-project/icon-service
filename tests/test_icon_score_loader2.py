@@ -21,8 +21,9 @@ from os import path, makedirs, symlink
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.base.address import Address, AddressPrefix, create_address
+from iconservice.base.address import AddressPrefix
 import inspect
+from tests import create_address
 
 TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
 
@@ -49,7 +50,7 @@ class TestIconScoreLoader(unittest.TestCase):
         if not path.exists(dir_path):
             makedirs(dir_path)
 
-    def load_proj(self, proj: str, addr_score: Address) -> 'IconScoreBase':
+    def load_proj(self, proj: str, addr_score: 'Address') -> 'IconScoreBase':
         target_path = path.join(self._score_path, addr_score.body.hex())
         makedirs(target_path, exist_ok=True)
         target_path = path.join(target_path, '0_0')

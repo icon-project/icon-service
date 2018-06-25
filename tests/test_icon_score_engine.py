@@ -21,8 +21,8 @@
 import unittest
 import os
 
-from tests import rmtree
-from iconservice.base.address import AddressPrefix, create_address
+from tests import rmtree, create_address
+from iconservice.base.address import AddressPrefix
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, ServerErrorException

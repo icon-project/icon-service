@@ -17,10 +17,9 @@
 from enum import IntEnum, unique
 from struct import Struct
 
-from .icx_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address
 from ..base.exception import ExceptionCode, ICXException
-
+from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 
 ACCOUNT_DATA_STRUCTURE_VERSION = 0
 
@@ -69,7 +68,7 @@ class Account(object):
     # leveldb account value structure (bigendian, 36 bytes)
     # version(1) | type(1) | flags(1) | reserved(1) |
     # icx(BALANCE_BYTE_SIZE)
-    __struct = Struct(f'>cccx{BALANCE_BYTE_SIZE}s')
+    _struct = Struct(f'>cccx{BALANCE_BYTE_SIZE}s')
 
     def __init__(self,
                  account_type: AccountType=AccountType.GENERAL,
@@ -80,12 +79,12 @@ class Account(object):
                  installed: bool=False) -> None:
         """Constructor
         """
-        self.__type = account_type
-        self.__address = address
-        self.__icx = icx
-        self.__locked = locked
-        self.__c_rep = c_rep
-        self.__installed = installed
+        self._type = account_type
+        self._address = address
+        self._icx = icx
+        self._locked = locked
+        self._c_rep = c_rep
+        self._installed = installed
 
     @property
     def address(self) -> Address:
@@ -93,7 +92,7 @@ class Account(object):
 
         :return: (Address)
         """
-        return self.__address
+        return self._address
 
     @address.setter
     def address(self, value: Address) -> None:
@@ -101,7 +100,7 @@ class Account(object):
 
         :param value: account address
         """
-        self.__address = value
+        self._address = value
 
     @property
     def type(self) -> AccountType:
@@ -109,7 +108,7 @@ class Account(object):
 
         :return: AccountType value
         """
-        return self.__type
+        return self._type
 
     @type.setter
     def type(self, value: AccountType) -> None:
@@ -119,7 +118,7 @@ class Account(object):
         """
         if not isinstance(value, AccountType):
             raise ValueError('Invalid AccountType')
-        self.__type = value
+        self._type = value
 
     @property
     def locked(self) -> bool:
@@ -127,7 +126,7 @@ class Account(object):
 
         :return: True(locked) False(unlocked)
         """
-        return self.__locked
+        return self._locked
 
     @locked.setter
     def locked(self, value: bool) -> None:
@@ -135,7 +134,7 @@ class Account(object):
 
         :param value: True(locked) False(unlocked)
         """
-        self.__locked = bool(value)
+        self._locked = bool(value)
 
     @property
     def c_rep(self) -> bool:
@@ -143,7 +142,7 @@ class Account(object):
 
         :return: True(c_rep) False(not c_rep)
         """
-        return self.__c_rep
+        return self._c_rep
 
     @c_rep.setter
     def c_rep(self, value: bool) -> None:
@@ -151,19 +150,19 @@ class Account(object):
 
         :param value: True(c_rep) False(not c_rep)
         """
-        self.__c_rep = bool(value)
+        self._c_rep = bool(value)
 
     @property
     def installed(self) -> bool:
         """Is this score installed successfully?
         """
-        return self.__installed
+        return self._installed
 
     @installed.setter
     def installed(self, value: bool) -> None:
         """Is this score installed successfully?
         """
-        self.__installed = bool(value)
+        self._installed = bool(value)
 
     @property
     def icx(self) -> int:
@@ -171,7 +170,7 @@ class Account(object):
 
         :return: balance in loop
         """
-        return self.__icx
+        return self._icx
 
     def deposit(self, value: int) -> None:
         """Deposit coin
@@ -182,7 +181,7 @@ class Account(object):
         if not isinstance(value, int) or value <= 0:
             raise ICXException('deposit coin invalid params', ExceptionCode.INVALID_PARAMS)
 
-        self.__icx += value
+        self._icx += value
 
     def withdraw(self, value: int) -> None:
         """Withdraw coin
@@ -191,10 +190,10 @@ class Account(object):
         """
         if not isinstance(value, int) or value <= 0:
             raise ICXException('withdraw coin invalid params', ExceptionCode.INVALID_PARAMS)
-        if self.__icx < value:
+        if self._icx < value:
             raise ICXException('not enough balance', ExceptionCode.INVALID_PARAMS)
 
-        self.__icx -= value
+        self._icx -= value
 
     def __eq__(self, other) -> bool:
         """operator == overriding
@@ -225,18 +224,18 @@ class Account(object):
         byteorder = DATA_BYTE_ORDER
 
         version, account_type, flags, amount = \
-            Account.__struct.unpack(buf)
+            Account._struct.unpack(buf)
 
-        version = int.from_bytes(version, byteorder)
+        # version = int.from_bytes(version, byteorder)
         account_type = int.from_bytes(account_type, byteorder)
         flags = int.from_bytes(flags, byteorder)
         amount = int.from_bytes(amount, byteorder)
 
         account = Account()
         account.type = AccountType.from_int(account_type)
-        account.__locked = bool(flags & AccountFlag.LOCKED)
-        account.__c_rep = bool(flags & AccountFlag.C_REP)
-        account.__icx = amount
+        account._locked = bool(flags & AccountFlag.LOCKED)
+        account._c_rep = bool(flags & AccountFlag.C_REP)
+        account._icx = amount
 
         return account
 
@@ -250,16 +249,16 @@ class Account(object):
         version = ACCOUNT_DATA_STRUCTURE_VERSION
 
         flags = 0
-        if self.__locked:
+        if self._locked:
             flags |= AccountFlag.LOCKED
-        if self.__c_rep:
+        if self._c_rep:
             flags |= AccountFlag.C_REP
 
-        return Account.__struct.pack(
+        return Account._struct.pack(
             version.to_bytes(1, byteorder),
-            self.__type.to_bytes(1, byteorder),
+            self._type.to_bytes(1, byteorder),
             flags.to_bytes(1, byteorder),
-            self.__icx.to_bytes(BALANCE_BYTE_SIZE, byteorder))
+            self._icx.to_bytes(BALANCE_BYTE_SIZE, byteorder))
 
     def __bytes__(self) -> bytes:
         """operator bytes() overriding
