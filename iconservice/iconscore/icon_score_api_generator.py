@@ -18,8 +18,7 @@ from inspect import signature, Signature, Parameter
 from typing import Any
 from ..base.exception import IconScoreException
 from ..base.type_converter import score_base_support_type
-from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, STR_FALLBACK, \
-    Indexed
+from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK
 
 
 class ScoreApiGenerator:
@@ -117,16 +116,21 @@ class ScoreApiGenerator:
         event_funcs = {func.__name__: signature(func) for func in score_funcs
                        if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog}
 
+        indexed_args_counts = {func.__name__: getattr(func, CONST_INDEXED_ARGS_COUNT, 0)
+                               for func in score_funcs
+                               if getattr(func, CONST_INDEXED_ARGS_COUNT, 0)}
+
         for func_name, event in event_funcs.items():
-            src.append(ScoreApiGenerator.__generate_event(func_name, event))
+            index_args_count = indexed_args_counts.get(func_name, 0)
+            src.append(ScoreApiGenerator.__generate_event(func_name, event, index_args_count))
 
     @staticmethod
-    def __generate_event(func_name: str, sig_info: 'Signature') -> dict:
+    def __generate_event(func_name: str, sig_info: 'Signature', index_args_count: int) -> dict:
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_EVENT
         info[ScoreApiGenerator.__API_NAME] = func_name
         info[ScoreApiGenerator.__API_INPUTS] = \
-            ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
+            ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters), index_args_count)
         return info
 
     @staticmethod
@@ -137,34 +141,34 @@ class ScoreApiGenerator:
             return info_list
 
         info = dict()
-        converted_type, _ = ScoreApiGenerator.__generate_type(params_type)
+        converted_type = ScoreApiGenerator.__generate_type(params_type)
         info[ScoreApiGenerator.__API_TYPE] = converted_type
         info_list.append(info)
         return info_list
 
     @staticmethod
-    def __generate_inputs(params: dict) -> list:
+    def __generate_inputs(params: dict, index_args_count: int = 0) -> list:
         tmp_list = []
-        for param_name, param in params.items():
-            ScoreApiGenerator.__generate_input(tmp_list, param)
+        for index, (param_name, param) in enumerate(params.items()):
+            is_indexed = index < index_args_count
+            ScoreApiGenerator.__generate_input(tmp_list, param, is_indexed)
         return tmp_list
 
     @staticmethod
-    def __generate_input(src: list, param: 'Parameter'):
+    def __generate_input(src: list, param: 'Parameter', is_indexed: bool):
         if param.name == 'self' or param.name == 'cls':
             return
 
         info = dict()
         info[ScoreApiGenerator.__API_NAME] = param.name
-        convert_type, is_indexed = ScoreApiGenerator.__generate_type(param.annotation)
+        convert_type = ScoreApiGenerator.__generate_type(param.annotation)
         info[ScoreApiGenerator.__API_TYPE] = convert_type
         if is_indexed:
             info[ScoreApiGenerator.__API_INPUTS_INDEXED] = is_indexed
         src.append(info)
 
     @staticmethod
-    def __generate_type(param_type: Any) -> (str, bool):
-        indexed = False
+    def __generate_type(param_type: Any) -> str:
         converted_type = ''
 
         if param_type is not None and param_type is not Signature.empty:
@@ -172,12 +176,9 @@ class ScoreApiGenerator:
                 converted_type = ScoreApiGenerator.__convert_type(param_type)
             else:
                 for sub in param_type._subs_tree():
-                    if sub is Indexed:
-                        indexed = True
-                    else:
-                        converted_type = ScoreApiGenerator.__convert_type(sub)
+                    converted_type = ScoreApiGenerator.__convert_type(sub)
 
-        return converted_type, indexed
+        return converted_type
 
     @staticmethod
     def __convert_type(src_type: Any) -> str:

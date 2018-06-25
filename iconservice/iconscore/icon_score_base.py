@@ -78,6 +78,7 @@ def eventlog(func=None, *, indexed_args_count=0):
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
     setattr(func, CONST_BIT_FLAG, bit_flag)
+    setattr(func, CONST_INDEXED_ARGS_COUNT, indexed_args_count)
 
     parameters = signature(func).parameters.values()
     event_signature = __retrieve_event_signature(func_name, parameters)
@@ -256,6 +257,7 @@ class IconScoreBaseMeta(ABCMeta):
 
         readonly_payables = [func for func in payable_funcs
                              if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
+
         if bool(readonly_payables):
             raise IconScoreException(f"Readonly method cannot be payable: {readonly_payables}")
 
