@@ -11,8 +11,9 @@
 # limitations under the License.
 
 import argparse
+import setproctitle
 
-from message_queue import MessageQueueService
+from earlgrey import MessageQueueService
 from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_config import *
 from iconservice.logger import Logger
@@ -61,19 +62,28 @@ class IconService(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type", default='users')
-    parser.add_argument("--icon_score_root_path", default='.score')
-    parser.add_argument("--icon_score_state_db_root_path", default='.db')
-    parser.add_argument("--channel", default='loopchain_default')
-    parser.add_argument("--amqp_key", default='amqp_key')
-    parser.add_argument("--amqp_target", default='127.0.0.1')
-    parser.add_argument("--config", default=CONFIG_JSON_PATH)
+    parser.add_argument("--t", dest='type', type=str, default='user',
+                        choices=['tbears', 'user'],
+                        help="icon service type [tbears|user]")
+    parser.add_argument("--sc", dest='icon_score_root_path', type=str, default='.score',
+                        help="icon score root path  example : .score")
+    parser.add_argument("--st", dest='icon_score_state_db_root_path', type=str, default='.db',
+                        help="icon score state db root path  example : .db")
+    parser.add_argument("--ch", dest='channel', type=str, default='loopchain_default',
+                        help="icon score channel")
+    parser.add_argument("--ak", dest='amqp_key', type=str, default='amqp_key',
+                        help="icon score amqp_key : [amqp_key]")
+    parser.add_argument("--at", dest='amqp_target', type=str, default='127.0.0.1',
+                        help="icon score amqp_target : [127.0.0.1]")
+    parser.add_argument("--c", dest='config', type=str, default=CONFIG_JSON_PATH,
+                        help="icon score config")
     args = parser.parse_args()
 
-    params = {'icon_score_root_path': args.icon_score_root_path,
-              'icon_score_state_db_root_path': args.icon_score_state_db_root_path,
-              'channel': args.channel, 'amqp_key': args.amqp_key,
-              'amqp_target': args.amqp_target}
+    args_params = dict(vars(args))
+    setproctitle.setproctitle(ICON_SERVICE_PROCTITLE_FORMAT.format(**args_params))
+
+    del args_params['type']
+    del args_params['config']
 
     Logger(args.config)
 
@@ -81,7 +91,7 @@ def main():
     if args.type == "tbears":
         icon_service.serve(**DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT)
     else:
-        icon_service.serve(**params)
+        icon_service.serve(**args_params)
     Logger.debug(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
 
 

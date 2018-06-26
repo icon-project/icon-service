@@ -24,7 +24,7 @@ from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
 from iconservice.utils import make_response, make_error_response
 
-from message_queue import message_queue_task, MessageQueueStub, MessageQueueService
+from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
