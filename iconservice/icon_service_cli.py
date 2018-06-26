@@ -11,6 +11,8 @@
 # limitations under the License.
 
 import argparse
+import json
+import os
 import sys
 import subprocess
 from enum import IntEnum
@@ -22,6 +24,8 @@ from .icon_config import ICON_SCORE_QUEUE_NAME_FORMAT
 from .logger import Logger
 
 ICON_SERVICE_STANDALONE = 'IconServiceStandAlone'
+DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
+CONFIG_JSON_PATH = os.path.join(DIRECTORY_PATH, "icon_service.json")
 
 
 class ExitCode(IntEnum):
@@ -47,9 +51,9 @@ def main():
     parser.add_argument("--type", type=str, default='user',
                         choices=['tbears', 'user'],
                         help="icon service type [tbears|user]")
-    parser.add_argument("--score_root_path", type=str, default='.score',
+    parser.add_argument("--icon_score_root_path", type=str, default='.score',
                         help="icon score root path  example : .score")
-    parser.add_argument("--state_db_root_path", type=str, default='.db',
+    parser.add_argument("--icon_score_state_db_root_path", type=str, default='.db',
                         help="icon score state db root path  example : .db")
     parser.add_argument("--channel", type=str, default='loopchain_default',
                         help="icon score channel")
@@ -57,7 +61,7 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("--amqp_target", type=str, default='127.0.0.1',
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("--config", type=str, default='./icon_service.json',
+    parser.add_argument("--config", type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
 
     args = parser.parse_args()
@@ -69,17 +73,18 @@ def main():
     command = args.command[0]
 
     params = {'--type': args.type,
-              '--icon_score_root_path': args.score_root_path,
-              '--icon_score_state_db_root_path': args.state_db_root_path,
+              '--icon_score_root_path': args.icon_score_root_path,
+              '--icon_score_state_db_root_path': args.icon_score_state_db_root_path,
               '--channel': args.channel, '--amqp_key': args.amqp_key,
               '--amqp_target': args.amqp_target, '--config': args.config}
 
+    cli_config = get_config(vars(args))  # get config dict
     Logger(args.config)
 
     if command == 'start' and len(args.command) == 1:
-        result = start(params)
+        result = start(cli_config)
     elif command == 'stop' and len(args.command) == 1:
-        result = stop(params)
+        result = stop(cli_config)
     else:
         parser.print_help()
         result = ExitCode.COMMAND_IS_WRONG.value
@@ -172,3 +177,22 @@ async def _create_icon_score_stub(amqp_target: str, icon_score_queue_name: str) 
     stub = IconScoreInnerStub(amqp_target, icon_score_queue_name)
     await stub.connect()
     return stub
+
+
+def get_config(args_config: dict):
+    try:
+        with open(args_config['config'], mode='rb') as config_file:
+            config = json.load(config_file)
+        config_dict = {k: v for k, v in args_config.items() if k != "command"}
+        params_dict = {}
+
+        for k in config_dict:
+            if k in config:
+                config_dict[k] = config[k]
+            params_dict[f'--{k}'] = config_dict[k]
+
+    except:
+        Logger.error('check your config file!')
+        sys.exit(ExitCode.COMMAND_IS_WRONG)
+    else:
+        return params_dict

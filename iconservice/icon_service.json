@@ -4,5 +4,7 @@
         "level": "DEBUG",
         "filePath": "./icon_service.log",
         "outputType": "console|file"
-    }
+    },
+    "amqp_target": "127.0.0.1",
+    "icon_score_state_db_root_path": ".db"
 }
