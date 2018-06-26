@@ -83,6 +83,8 @@ def make_response(result: Any):
         return result
     elif isinstance(result, (dict, list, int)):
         return integers_to_hex(result)
+    else:
+        return result
 
 
 def check_error_response(result: Any):
