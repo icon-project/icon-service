@@ -23,8 +23,8 @@ class SampleToken(IconScoreBase):
     __BALANCES = 'balances'
     __TOTAL_SUPPLY = 'total_supply'
 
-    @eventlog
-    def Transfer(self, addr_from: Indexed[Address], addr_to: Indexed[Address], value: Indexed[int]): pass
+    @eventlog(indexed_args_count=3)
+    def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
         super().__init__(db, addr_owner)
@@ -58,7 +58,7 @@ class SampleToken(IconScoreBase):
         self.__balances[_addr_from] = self.__balances[_addr_from] - _value
         self.__balances[_addr_to] = self.__balances[_addr_to] + _value
 
-        self.Transfer(Indexed(_addr_from), Indexed(_addr_to), Indexed(_value))
+        self.Transfer(_addr_from, _addr_to, _value)
         return True
 
     @external
@@ -94,12 +94,12 @@ class SampleCrowdSale(IconScoreBase):
     __CROWD_SALE_CLOSED = 'crowd_sale_closed'
     __JOINER_LIST = 'joiner_list'
 
-    @eventlog
-    def FundTransfer(self, backer: Indexed[Address], amount: Indexed[int], is_contribution: Indexed[bool]):
+    @eventlog(indexed_args_count=3)
+    def FundTransfer(self, backer: Address, amount: int, is_contribution: bool):
         pass
 
-    @eventlog
-    def GoalReached(self, recipient: Indexed[Address], total_amount_raised: Indexed[int]):
+    @eventlog(indexed_args_count=2)
+    def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
     def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
@@ -162,7 +162,7 @@ class SampleCrowdSale(IconScoreBase):
         if self.msg.sender not in self.__joiner_list:
             self.__joiner_list.put(self.msg.sender)
 
-        self.FundTransfer(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+        self.FundTransfer(self.msg.sender, amount, True)
 
     @external
     def check_goal_reached(self):
@@ -171,7 +171,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if self.__amount_raise.get() >= self.__funding_goal.get():
             self.__funding_goal_reached.set(True)
-            self.GoalReached(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()))
+            self.GoalReached(self.__addr_beneficiary.get(), self.__amount_raise.get())
         self.__crowd_sale_closed.set(True)
 
     def __after_dead_line(self):
@@ -187,14 +187,14 @@ class SampleCrowdSale(IconScoreBase):
             self.__balances[self.msg.sender] = 0
             if amount > 0:
                 if self.icx.send(self.msg.sender, amount):
-                    self.FundTransfer(Indexed(self.msg.sender), Indexed(amount), Indexed(False))
+                    self.FundTransfer(self.msg.sender, amount, False)
                 else:
                     self.__balances[self.msg.sender] = amount
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.icx.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.FundTransfer(Indexed(self.__addr_beneficiary.get()), Indexed(self.__amount_raise.get()),
-                                  Indexed(False))
+                self.FundTransfer(self.__addr_beneficiary.get(), self.__amount_raise.get(),
+                                  False)
             else:
                 self.__funding_goal_reached.set(False)
 
@@ -321,26 +321,25 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 #### eventlog 데코레이터 (@eventlog)
 이 데코레이터가 붙은 함수는 TxResult에 'eventlogs'의 내용으로 로그가 기록됩니다.<br/>
 해당 함수 선언은 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
-키워드 인자는 지원하지 않습니다.<br/>
-함수 선언 시에 Indexed wrapper 클래스를 사용하면 해당 변수는 불룸필터(Bloom filter) 적용이 가능합니다.<br/>
-함수 선언부에 Indexed가 붙은 변수는 실행부에서도 Indexed를 붙여야 하며, 이를 어길 경우 mismatch 예외가 발생합니다.<br/>
+함수 선언 시 매개 변수의 Type Hint는 필수 입니다. Type Hint가 없다면 트랜잭션은 성공하지 못합니다.<br/>
+함수 선언 시에 데코레이터의 매개 변수에 `indexed_args_count` 값을 설정하면 해당 수 만큼의 변수(선언된 순서 순)가 인덱싱이 되어 불룸필터(Bloom filter)에 적용이 됩니다.<br/>
 
 예시)<br/>
 ```python
 # 선언부
 @eventlog
-def FundTransfer1(self, backer: Indexed[Address], amount: Indexed[int], is_contribution: Indexed[bool]): pass
+def FundTransfer1(self, backer: Address, amount: int, is_contribution: bool): pass
 
-@eventlog
+@eventlog(indexed_args_count=1) # 변수 1개(backer)만 인덱싱 됨
 def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
 
 # 실행부
-self.FundTransfer1(Indexed(self.msg.sender), Indexed(amount), Indexed(True))
+self.FundTransfer1(self.msg.sender, amount, True)
 self.FundTransfer2(self.msg.sender, amount, True)
 ```
-Indexed wrapper 클래스는 기본 타입(int, str, bytes, bool, Address)만 지원하며, array 타입은 지원하지 않습니다.<br/>
-Indexed가 없는 데이터 타입은 TxResult에 Indexed 타입과 별도로 분리되어 저장됩니다.<br/>
-Indexed 타입의 병기는 최대 3개까지 가능하며, 그외 데이터 타입 수에는 제한이 없습니다.<br/>
+매개 변수는 기본 타입(int, str, bytes, bool, Address)만 지원하며, array 타입은 지원하지 않습니다.<br/>
+인덱싱이 되지 않는 매개 변수는 TxResult에 인덱싱 된 매개 변수와 별도로 분리되어 저장됩니다.<br/>
+매개 변수의 인덱싱은 최대 3까지 가능합니다.<br/>
 
 #### fallback
 fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>

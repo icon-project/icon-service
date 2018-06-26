@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 PYVER=$(python -c 'import sys; print(sys.version_info[0])')
 if [[ PYVER -ne 3 ]];then

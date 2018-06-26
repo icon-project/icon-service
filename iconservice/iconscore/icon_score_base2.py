@@ -14,22 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Generic, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 from abc import ABC, ABCMeta
+
 from ..base.exception import *
-from ..base.type_converter import score_base_support_type
+from ..base.address import Address
 
 if TYPE_CHECKING:
-    from ..base.address import Address
-
+    pass
 
 T = TypeVar('T')
+BaseType = TypeVar('BaseType', int, str, bytes, bool, Address)
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'
+CONST_CLASS_INDEXES = '__indexes'
 CONST_CLASS_API = '__api'
 
 CONST_BIT_FLAG = '__bit_flag'
+CONST_INDEXED_ARGS_COUNT = '__indexed_args_count'
 
 FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
 FORMAT_IS_NOT_DERIVED_OF_OBJECT = "isn't derived of {}"
@@ -46,17 +49,6 @@ class ConstBitFlag(IntEnum):
     Payable = 4
     EventLog = 8
     Interface = 16
-
-
-class Indexed(Generic[T]):
-    def __init__(self, value: T):
-        if not isinstance(value, score_base_support_type):
-            raise EventLogException(f'must be primitive type [int, str, bytes, bool, Address]')
-        self.__value = value
-
-    @property
-    def value(self):
-        return self.__value
 
 
 class InterfaceScoreMeta(ABCMeta):

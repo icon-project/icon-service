@@ -15,10 +15,11 @@
 # limitations under the License.
 
 import warnings
-from inspect import isfunction, getmembers, signature
+from inspect import isfunction, getmembers, signature, Parameter
 from abc import abstractmethod
 from functools import partial
 
+from iconservice.iconscore.icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import *
 from .icon_score_step import StepType
@@ -29,7 +30,7 @@ from ..base.exception import *
 from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
 
-from typing import TYPE_CHECKING, Callable, Any
+from typing import TYPE_CHECKING, Callable, Any, List
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -62,48 +63,105 @@ def interface(func):
     return __wrapper
 
 
-def eventlog(func):
+def eventlog(func=None, *, indexed_args_count=0):
+    if func is None:
+        return partial(eventlog, indexed_args_count=indexed_args_count)
+
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
-        raise EventLogException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+        raise EventLogException(
+            FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
-        raise IconScoreException(FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
+        raise IconScoreException(
+            FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
     setattr(func, CONST_BIT_FLAG, bit_flag)
+    setattr(func, CONST_INDEXED_ARGS_COUNT, indexed_args_count)
+
+    parameters = signature(func).parameters.values()
+    event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
-    def __wrapper(calling_obj: Any, *args):
+    def __wrapper(calling_obj: Any, *args, **kwargs):
         if not (isinstance(calling_obj, IconScoreBase)):
-            raise EventLogException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
+            raise EventLogException(
+                FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
+        try:
+            arguments = __resolve_arguments(func_name, parameters, args, kwargs)
+        except TypeError as e:
+            raise EventLogException(str(e))
 
-        for index, annotation in enumerate(TypeConverter.make_annotations_from_method(func).values()):
-
-            if annotation in score_base_support_type:
-                __check_mismatch_arg(args[index], annotation)
-            else:
-                # generic type!
-                if hasattr(annotation, '_subs_tree'):
-                    var_type = annotation._subs_tree()[0]
-                    if var_type is Indexed:
-                        # indexed!
-                        var_type = annotation._subs_tree()[1]
-                        __check_mismatch_arg(args[index].value, var_type)
-                    else:
-                        __check_mismatch_arg(args[index], annotation)
-
-        call_method = getattr(calling_obj, '_IconScoreBase__write_eventlog')
-        ret = call_method(func_name, args)
-        return ret
-
-    def __check_mismatch_arg(arg, annotation_type):
-        if not isinstance(arg, annotation_type):
-            raise EventLogException(f'annotation mismatch!\n'
-                                    f'arg: {arg}, type: {type(arg)}\n'
-                                    f'annotation: {annotation_type}')
+        call_method = getattr(calling_obj, '_IconScoreBase__put_eventlog')
+        return call_method(event_signature, arguments, indexed_args_count)
 
     return __wrapper
+
+
+def __retrieve_event_signature(function_name, parameters) -> str:
+    """
+    Retrieves a event signature from the function name and parameters
+    :param function_name: name of event function
+    :param parameters: Arguments description of the function declaration
+    :return: event signature
+    """
+    type_names: List[str] = []
+    for i, param in enumerate(parameters):
+        if i > 0:
+            type_names.append(str(param.annotation.__name__))
+    return f"{function_name}({','.join(type_names)})"
+
+
+def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
+    """
+    Resolves arguments with keeping order as the function declaration
+    :param parameters: Arguments description of the function declaration
+    :param args: input ordered arguments
+    :param kwargs: input keyword arguments
+    :return: an ordered list of arguments
+    """
+    arguments = []
+    for i, parameter in enumerate(parameters, -1):
+        if i < 0:
+            # pass the self parameter
+            continue
+        name = parameter.name
+        annotation = parameter.annotation
+        if i < len(args):
+            # the argument is in the ordered args
+            value = args[i]
+            if name in kwargs:
+                raise TypeError(
+                    f"Duplicated argument value for '{function_name}': {name}")
+        else:
+            # If arg is over, the argument should be searched on kwargs
+            try:
+                value = kwargs[name]
+            except KeyError:
+                raise TypeError(
+                    f"Missing argument value for '{function_name}': {name}")
+        # If there's no hint of argument in the function declaration,
+        # raise an exception
+        if annotation is Parameter.empty:
+            raise TypeError(
+                f"Missing argument hint for '{function_name}': '{name}'")
+        if hasattr(annotation, '_subs_tree'):
+            # Generic type has a '_subs_tree'
+            sub_tree = annotation._subs_tree()
+            if isinstance(sub_tree, tuple):
+                # Generic declaration with sub type. `Generic[T1,...]`
+                main_type = sub_tree[0]
+            else:
+                # Generic declaration only
+                main_type = sub_tree
+        else:
+            main_type = annotation
+        if not isinstance(value, main_type):
+            raise TypeError(f"Mismatch type type of '{name}': "
+                            f"{type(value)}, expected: {main_type}")
+        arguments.append(value)
+    return arguments
 
 
 def external(func=None, *, readonly=False):
@@ -199,6 +257,7 @@ class IconScoreBaseMeta(ABCMeta):
 
         readonly_payables = [func for func in payable_funcs
                              if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly]
+
         if bool(readonly_payables):
             raise IconScoreException(f"Readonly method cannot be payable: {readonly_payables}")
 
@@ -304,30 +363,48 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self._context.step_counter.increase_step(StepType.CALL, 1)
         return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
 
-    @staticmethod
-    def __write_eventlog(func_name: str, arg_list: list):
+    def __put_eventlog(self,
+                       event_signature: str,
+                       arguments: List[Any],
+                       indexed_args_count: int):
         """
+        Puts a eventlog to the context running
 
-        :param func_name: function name provided by other IconScore
-        :param arg_list:
-        :param kw_dict:
+        :param event_signature: signature of eventlog
+        :param arguments: arguments of eventlog call
         """
+        if indexed_args_count > INDEXED_ARGS_LIMIT:
+            raise EventLogException(
+                f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
 
-        limit_count = 3
-        indexed_list = []
-        data_list = []
-        for arg in arg_list:
-            if isinstance(arg, Indexed):
-                indexed_list.append(arg)
+        if indexed_args_count > len(arguments):
+            raise EventLogException(
+                f'declared indexed_args_count is {indexed_args_count}, '
+                f'but argument count is {len(arguments)}')
+
+        indexed: List[BaseType] = [event_signature]
+        data: List[BaseType] = []
+        for i, argument in enumerate(arguments):
+            # Raises an exception if the types are not supported
+            if not IconScoreBase.__is_base_type(argument):
+                raise EventLogException(
+                    f'Not supported type: {type(argument)}')
+
+            # Separates indexed type and base type with keeping order.
+            if i < indexed_args_count:
+                indexed.append(argument)
             else:
-                data_list.append(arg)
+                data.append(argument)
 
-        indexed_len = len(indexed_list)
-        if indexed_len > limit_count:
-            raise EventLogException(f'limit_count overflow: {indexed_len}')
+        event = EventLog(self.address, indexed, data)
+        self._context.event_logs.append(event)
 
-        # TODO send params to eventlog internal logic
-        pass
+    @staticmethod
+    def __is_base_type(value) -> bool:
+        for base_type in BaseType.__constraints__:
+            if isinstance(value, base_type):
+                return True
+        return False
 
     @staticmethod
     def __on_db_put(context: 'IconScoreContext',
