@@ -20,7 +20,7 @@ from collections import namedtuple
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS
 from .base.exception import ExceptionCode
-from .base.exception import IconException, IconServiceBaseException
+from .base.exception import IconServiceBaseException, ServerErrorException, IconException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -210,9 +210,9 @@ class IconServiceEngine(object):
             return
 
         if block.height <= last_block.height:
-            raise IconException('NextBlockHeight <= LastBlockHeight')
+            raise ServerErrorException('NextBlockHeight <= LastBlockHeight')
         elif block.height != last_block.height + 1:
-            raise IconException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
+            raise ServerErrorException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
 
     @staticmethod
     def _check_genesis_invoke(index: int, block_height: int, tx_params: dict) -> bool:
@@ -503,7 +503,7 @@ class IconServiceEngine(object):
         when the candidate block has been confirmed
         """
         if self._precommit_state is None:
-            raise IconException(
+            raise ServerErrorException(
                 'Precommit state is none on commit')
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
@@ -527,14 +527,14 @@ class IconServiceEngine(object):
 
     def precommit_validate(self, precommit_block: 'Block') -> None:
         if self._precommit_state is None:
-            raise IconException('_precommit_state is None')
+            raise ServerErrorException('_precommit_state is None')
 
         block = self._precommit_state.block_batch.block
 
         if block.height != precommit_block.height:
-            raise IconException('mismatch block height')
+            raise ServerErrorException('mismatch block height')
         elif block.hash != precommit_block.hash:
-            raise IconException('mismatch block hash')
+            raise ServerErrorException('mismatch block hash')
 
     def rollback(self) -> None:
         """Throw away a precommit state
