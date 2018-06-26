@@ -20,89 +20,83 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice.iconscore.icon_score_result import TransactionResult
-from iconservice.iconscore.icon_score_result import IconBlockResult
-from iconservice.iconscore.icon_score_result import Serializer
-from iconservice.iconscore.icon_score_result import JsonSerializer
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.block import Block
+from iconservice.base.exception import IconServiceBaseException
+from iconservice.base.transaction import Transaction
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_engine import IconScoreEngine
+from iconservice.icx import IcxEngine
 
 
-class TestIconBlockResult(unittest.TestCase):
+class TestTransactionResult(unittest.TestCase):
     def setUp(self):
-        self._mock_serializer = Mock(spec=Serializer)
-        self._block_result = IconBlockResult(self._mock_serializer)
+        self._icon_service_engine = IconServiceEngine()
+        self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
+        self._icon_service_engine._icon_score_deploy_engine = \
+            Mock(spec=IconScoreDeployEngine)
+
+        self._icon_service_engine._icon_score_engine = Mock(
+            spec=IconScoreEngine)
+
+        self._mock_context = Mock(spec=IconScoreContext)
+        self._mock_context.attach_mock(Mock(spec=Transaction), "tx")
+        self._mock_context.attach_mock(Mock(spec=Block), "block")
 
     def tearDown(self):
         self._block_result = None
         self._mock_serializer = None
 
-    def test_append(self):
-        self._block_result.append(Mock(spec=TransactionResult))
-        assert len(self._block_result) == 1
+    def test_tx_success(self):
+        from_ = Mock(spec=Address)
+        to_ = Mock(spec=Address)
+        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
+            Mock(return_value=False), 'is_data_type_supported')
 
-    def test_serialize(self):
-        self._block_result.serialize()
-        self._mock_serializer.serialize.assert_called_once()
+        tx_result = self._icon_service_engine._handle_icx_send_transaction(
+            self._mock_context, {'from': from_, 'to': to_})
 
+        self.assertEqual(1, tx_result.status)
+        self.assertEqual(to_, tx_result.to)
+        self.assertIsNone(tx_result.score_address)
 
-class TestJsonSerializer(unittest.TestCase):
-    SAMPLE_SERIALIZED_RESULT = b'[{"tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000", "block_height": 0, "to": "hx0000000000000000000000000000000000000000", "score_address": null, "step_used": 0, "status": 1}, {"tx_hash": "0x1111111111111111111111111111111111111111111111111111111111111111", "block_height": 0, "to": null, "score_address": "cx1111111111111111111111111111111111111111", "step_used": 0, "status": 1}, {"tx_hash": "0x2222222222222222222222222222222222222222222222222222222222222222", "block_height": 0, "to": "cx1111111111111111111111111111111111111111", "score_address": null, "step_used": 0, "status": 0}]'
+    def test_tx_failure(self):
+        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
+            Mock(return_value=False), 'is_data_type_supported')
 
-    def setUp(self):
-        self._json_serializer = JsonSerializer()
+        self._icon_service_engine._icon_score_engine. \
+            attach_mock(Mock(side_effect=IconServiceBaseException("error")),
+                        "invoke")
 
-    def tearDown(self):
-        self._json_serializer = None
+        from_ = Mock(spec=Address)
+        to_ = Mock(spec=Address)
+        tx_result = self._icon_service_engine._handle_icx_send_transaction(
+            self._mock_context, {'from': from_, 'to': to_})
 
-    def test_serialize(self):
-        eoa_address = f'hx{"0" * 40}'
-        ca_address = f'cx{"1" * 40}'
-        zero_block = Block(0, f'0x{"0" * 64}', 1)
+        print(tx_result)
+        self.assertEqual(0, tx_result.status)
+        self.assertEqual(to_, tx_result.to)
+        self.assertIsNone(tx_result.score_address)
 
-        transaction_results = []
+    def test_install_result(self):
+        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
+            Mock(return_value=True), 'is_data_type_supported')
 
-        # EOA to EOA
-        # {
-        #     "txHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        #     "blockHeight": 0,
-        #     "to": "hx0000000000000000000000000000000000000000",
-        #     "contractAddress": null,
-        #     "stepUsed": 0,
-        #     "status": 1
-        # }
-        transaction_results.append(TransactionResult(
-            f'0x{"0" * 64}', zero_block, eoa_address, TransactionResult.SUCCESS,
-            None, 0))
+        from_ = Address.from_data(AddressPrefix.EOA, b'test')
+        self._mock_context.tx.timestamp = 0
+        self._mock_context.tx.origin = from_
+        self._mock_context.tx.nonce = None
+        tx_result = self._icon_service_engine._handle_icx_send_transaction(
+            self._mock_context,
+            {
+                'from': from_,
+                'dataType': 'install',
+                'timestamp': 0,
+                'data': {}}
+        )
 
-        # Install Score
-        # {
-        #     "txHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
-        #     "blockHeight": 0,
-        #     "to": null,
-        #     "contractAddress": "cx1111111111111111111111111111111111111111",
-        #     "stepUsed": 0,
-        #     "status": 1
-        # }
-        transaction_results.append(TransactionResult(
-            f'0x{"1" * 64}', zero_block, None, TransactionResult.SUCCESS,
-            ca_address, 0))
-
-        # EOA to CA
-        # {
-        #     "txHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
-        #     "blockHeight": 0,
-        #     "to": "cx1111111111111111111111111111111111111111",
-        #     "contractAddress": null,
-        #     "stepUsed": 0,
-        #     "status": 0
-        # }
-        transaction_results.append(TransactionResult(
-            f'0x{"2" * 64}', zero_block, ca_address, TransactionResult.FAILURE,
-            None, 0))
-
-        serialized = self._json_serializer.serialize(transaction_results)
-
-        # The result string should be
-        # [{"tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000", "block_height": 0, "to": "hx0000000000000000000000000000000000000000", "score_address": null, "step_used": 0, "status": 1}, {"tx_hash": "0x1111111111111111111111111111111111111111111111111111111111111111", "block_height": 0, "to": null, "score_address": "cx1111111111111111111111111111111111111111", "step_used": 0, "status": 1}, {"tx_hash": "0x2222222222222222222222222222222222222222222222222222222222222222", "block_height": 0, "to": "cx1111111111111111111111111111111111111111", "score_address": null, "step_used": 0, "status": 0}]
-        # FIXME: consider failure attribute
-        # assert serialized == TestJsonSerializer.SAMPLE_SERIALIZED_RESULT
+        self.assertEqual(1, tx_result.status)
+        self.assertIsNone(tx_result.to)
+        self.assertIsNotNone(tx_result.score_address)
