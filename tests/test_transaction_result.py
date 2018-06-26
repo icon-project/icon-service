@@ -31,9 +31,14 @@ class TestTransactionResult(unittest.TestCase):
         tx_index = 0
         to = create_address(AddressPrefix.EOA, b'to')
 
-        block = Block(block_height=0, block_hash=block_hash, timestamp=0x1234567890, prev_hash=None)
+        block = Block(block_height=0,
+                      block_hash=block_hash,
+                      timestamp=0x1234567890,
+                      prev_hash=None)
+
         tx_result = TransactionResult(
             tx_hash=tx_hash, block=block, tx_index=tx_index, to=to)
+
         tx_result.failure = TransactionResult.Failure(
             code=ExceptionCode.SERVER_ERROR, message=str('Server error'))
 

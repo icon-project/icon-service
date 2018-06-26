@@ -21,7 +21,6 @@ from typing import Optional
 class Block(object):
     """Block Information included in IconScoreContext
     """
-
     _VERSION = 0
     # leveldb account value structure (bigendian, 1 + 32 + 32 + 32 + 32 bytes)
     # version(1)

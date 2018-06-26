@@ -21,7 +21,7 @@ import os
 import unittest
 
 from iconservice.base.address import AddressPrefix
-from iconservice.base.address import ICX_ENGINE_ADDRESS
+from iconservice.base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
@@ -64,6 +64,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self.score_deploy_engine = IconScoreDeployEngine(
             icon_score_root_path=score_path,
             flags=IconScoreDeployEngine.Flag.NONE,
+            context_db=None,
             icx_storage=self._icx_storage,
             icon_score_mapper=self._icon_score_mapper)
 
@@ -97,32 +98,37 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._one_icx_to_token = 1
 
     def tearDown(self):
-        self.score_engine = None
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
-        info = self._icon_score_mapper.get(self._addr_token_score)
-        if info is not None and not self._context.readonly:
-            score = info.icon_score
-            score.db._context_db.close(self._context)
-        self._factory.destroy(self._context)
-        self._icx_storage.close(self._context)
-
-        remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        rmtree(remove_path)
-        remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        rmtree(remove_path)
+        try:
+            self.score_engine = None
+            self._context = self._factory.create(IconScoreContextType.GENESIS)
+            info = self._icon_score_mapper.get(self._addr_token_score)
+            if info is not None and not self._context.readonly:
+                score = info.icon_score
+                score.db._context_db.close(self._context)
+            self._factory.destroy(self._context)
+            self._icx_storage.close(self._context)
+        finally:
+            remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+            rmtree(remove_path)
+            remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+            rmtree(remove_path)
 
     @staticmethod
     def __ensure_dir(dir_path):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-    def __request_install(self, project_name: str, addr_score: 'Address'):
+    def __request_install(self, project_name: str, score_address: 'Address'):
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, f'tests/sample/{project_name}')
         install_data = {'contentType': 'application/tbears', 'content': path}
 
         self.score_deploy_engine.invoke(
-            self._context, addr_score, 'install', install_data)
+            context=self._context,
+            to=ZERO_SCORE_ADDRESS,
+            icon_score_address=score_address,
+            data=install_data)
+
         self.score_deploy_engine.commit(self._context)
 
     def test_call_get_api(self):

@@ -61,17 +61,20 @@ class TestIconZipDeploy(unittest.TestCase):
         self._engine = IconScoreDeployEngine(
             icon_score_root_path=score_path,
             flags=IconScoreDeployEngine.Flag.NONE,
+            context_db=None,
             icx_storage=self._icx_storage,
             icon_score_mapper=self._icon_score_mapper)
 
         self.from_address = create_address(AddressPrefix.EOA, b'from')
 
-        self.sample_token_address = create_address(AddressPrefix.CONTRACT, b'sample_token')
+        self.sample_token_address = create_address(
+            AddressPrefix.CONTRACT, b'sample_token')
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.GENESIS)
         self._context.msg = Message(self.from_address, 0)
-        self._context.tx = Transaction('test_01', origin=self.from_address)
+        self._context.tx =\
+            Transaction('test_01', origin=self.from_address, index=0)
         self._context.block = Block(1, 'block_hash', 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
@@ -106,16 +109,18 @@ class TestIconZipDeploy(unittest.TestCase):
             byte_data = f.read()
             return byte_data
 
-    def test_deploy_on_invoke(self):
+    def test_install_on_commit(self):
         content: bytes = self.read_zipfile_as_byte(
-            os.path.join(TEST_ROOT_PATH, 'test.zip'))
+            os.path.join(TEST_ROOT_PATH, 'sample_token.zip'))
 
-        data_type = 'install'
         data = {
             "contentType": "application/zip",
-            "content": f'0x{content.hex()}'
+            "content": content
         }
-        self._engine._deploy_on_invoke(
-            self._context, self.from_address, data_type, data)
+        self._engine._install_on_commit(
+            context=self._context,
+            icon_score_address=self.sample_token_address,
+            data=data)
+
         self.assertTrue(
             os.path.join(TEST_ROOT_PATH, self.from_address.body.hex()))
