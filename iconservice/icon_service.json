@@ -1,10 +1,13 @@
 {
-    "log": {
-        "colorLog": true,
-        "level": "DEBUG",
-        "filePath": "./icon_service.log",
-        "outputType": "console|file"
-    },
-    "amqp_target": "127.0.0.1",
-    "icon_score_state_db_root_path": ".db"
+	"log": {
+		"colorLog": true,
+		"level": "DEBUG",
+		"filePath": "./icon_service.log",
+		"outputType": "console|file"
+	},
+	"icon_score_root_path": ".score1",
+	"icon_score_state_db_root_path": ".db1",
+	"channel": "loopchain_default",
+	"amqp_key": "7100",
+	"amqp_target": "127.0.0.1"
 }

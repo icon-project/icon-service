@@ -6,7 +6,8 @@ requires = [
     'plyvel',
     'jsonpickle',
     'coloredlogs',
-    'aio_pika'
+    'aio_pika',
+    'setproctitle'
 ]
 
 setup_options = {

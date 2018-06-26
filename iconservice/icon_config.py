@@ -33,6 +33,13 @@ DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
                                             'amqp_key': 'amqp_key',
                                             'amqp_target': '127.0.0.1'}
 
+ICON_SERVICE_PROCTITLE_FORMAT = "icon_service.{type}." \
+                                "{icon_score_root_path}." \
+                                "{icon_score_state_db_root_path}." \
+                                "{channel}.{amqp_key}." \
+                                "{amqp_target}." \
+                                "{config}"
+
 ICON_SERVICE_BIG_STEP_LIMIT = 5000000
 
 
