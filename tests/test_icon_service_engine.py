@@ -22,7 +22,7 @@ import shutil
 import unittest
 
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
-from iconservice.base.exception import ExceptionCode, IconException, ServerErrorException
+from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.transaction import Transaction
 from iconservice.base.message import Message
 from iconservice.database.batch import BlockBatch, TransactionBatch

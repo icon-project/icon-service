@@ -16,7 +16,7 @@
 
 import unittest
 
-from iconservice.base.exception import ExceptionCode, IconException, InvalidRequestException, InvalidParamsException
+from iconservice.base.exception import ExceptionCode, InvalidRequestException, InvalidParamsException
 from iconservice.base.address import AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_pre_validator import IconPreValidator

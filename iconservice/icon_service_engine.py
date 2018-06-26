@@ -20,7 +20,7 @@ from collections import namedtuple
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS
 from .base.exception import ExceptionCode
-from .base.exception import IconServiceBaseException, ServerErrorException, IconException
+from .base.exception import IconServiceBaseException, ServerErrorException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
