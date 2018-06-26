@@ -149,8 +149,12 @@ class ScoreApiGenerator:
     @staticmethod
     def __generate_inputs(params: dict, index_args_count: int = 0) -> list:
         tmp_list = []
-        for index, (param_name, param) in enumerate(params.items()):
-            is_indexed = index < index_args_count
+        args_index = 0
+        for param_name, param in enumerate(params.items()):
+            if param.name == 'self' or param.name == 'cls':
+                continue
+            args_index += 1
+            is_indexed = args_index < index_args_count
             ScoreApiGenerator.__generate_input(tmp_list, param, is_indexed)
         return tmp_list
 

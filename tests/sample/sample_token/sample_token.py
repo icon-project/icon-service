@@ -50,4 +50,3 @@ class SampleToken(IconScoreBase):
 
     def fallback(self) -> None:
         pass
-
