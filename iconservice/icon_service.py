@@ -16,7 +16,7 @@ from message_queue import MessageQueueService
 from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_config import *
 from iconservice.logger import Logger
-from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE
+from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, CONFIG_JSON_PATH
 
 
 class IconService(object):
@@ -67,7 +67,7 @@ def main():
     parser.add_argument("--channel", default='loopchain_default')
     parser.add_argument("--amqp_key", default='amqp_key')
     parser.add_argument("--amqp_target", default='127.0.0.1')
-    parser.add_argument("--config", default='./icon_service.json')
+    parser.add_argument("--config", default=CONFIG_JSON_PATH)
     args = parser.parse_args()
 
     params = {'icon_score_root_path': args.icon_score_root_path,
