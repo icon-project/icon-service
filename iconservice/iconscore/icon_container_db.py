@@ -192,17 +192,14 @@ class ArrayDB(Iterator):
             return None
 
         index = self.__size - 1
-        last_val = self.get(index)
+        last_val = self[index]
         self.__db.delete(ContainerUtil.encode_key(index))
         self.__size -= 1
         self.__set_size()
         return last_val
 
     def get(self, index: int=0) -> V:
-        if index >= self.__size:
-            raise ContainerDBException(f'ArrayDB out of range')
-        index_byte_key = ContainerUtil.encode_key(index)
-        return ContainerUtil.decode_object(self.__db.get(index_byte_key), self.__value_type)
+        return self[index]
 
     def __iter__(self):
         self.__index = 0
@@ -251,109 +248,113 @@ class ArrayDB(Iterator):
         return False
 
 
-# class QueueDB(Iterator):
-#     __SIZE = 'size'
-#     __START_INDEX = 'start_index'
-#     __END_INDEX = 'end_index'
-#     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
-#     __START_INDEX_BYTE_KEY = ContainerUtil.encode_key(__START_INDEX)
-#     __END_INDEX_BYTE_KEY = ContainerUtil.encode_key(__END_INDEX)
-#
-#     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
-#         self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
-#         self.__size = self.__get_size()
-#
-#         self.__start_index = ContainerUtil.decode_object(self.__db.get(QueueDB.__START_INDEX_BYTE_KEY), int)
-#         self.__end_index = ContainerUtil.decode_object(self.__db.get(QueueDB.__END_INDEX_BYTE_KEY), int)
-#         self.__index = 0
-#         self.__value_type = value_type
-#
-#     def put(self, value: V) -> None:
-#         byte_value = ContainerUtil.encode_value(value)
-#         self.__db.put(ContainerUtil.encode_key(self.__end_index), byte_value)
-#
-#         start_index = self.__start_index
-#         end_index = self.__end_index + 1
-#         size = self.__size + 1
-#
-#         self.__set_size(size, start_index, end_index)
-#
-#     def pop(self) -> None:
-#         start_index = self.__start_index
-#         self.__db.delete(ContainerUtil.encode_key(start_index))
-#
-#         start_index += 1
-#         end_index = self.__end_index
-#         size = self.__size - 1
-#         self.__set_size(size, start_index, end_index)
-#
-#     def __get(self, index: int = 0) -> V:
-#         if index >= self.__size:
-#             raise ContainerDBException(f'QueueDB out of range')
-#
-#         return ContainerUtil.decode_object(
-#             self.__db.get(ContainerUtil.encode_key(index + self.__start_index)), self.__value_type)
-#
-#     def __iter__(self):
-#         self.__index = 0
-#         return self
-#
-#     def __next__(self) -> V:
-#         if self.__index < self.__size:
-#             index = self.__index
-#             self.__index += 1
-#             return self.__get(index)
-#         else:
-#             raise StopIteration
-#
-#     def __len__(self):
-#         return self.__size
-#
-#     def __get_size(self) -> int:
-#         size = 0
-#         db_list_size = ContainerUtil.decode_object(self.__db.get(QueueDB.__SIZE_BYTE_KEY), int)
-#         if db_list_size:
-#             size = db_list_size
-#
-#         return size
-#
-#     def __set_size(self, size: int, start_index: int, end_index: int) -> None:
-#         sub_db = self.__db
-#         if self.__size != size:
-#             byte_value = ContainerUtil.encode_value(self.__size)
-#             sub_db.put(QueueDB.__SIZE_BYTE_KEY, byte_value)
-#         if self.__start_index != start_index:
-#             byte_value = ContainerUtil.encode_value(self.__start_index)
-#             sub_db.put(QueueDB.__START_INDEX_BYTE_KEY, byte_value)
-#         if self.__end_index != end_index:
-#             byte_value = ContainerUtil.encode_value(self.__end_index)
-#             sub_db.put(QueueDB.__END_INDEX_BYTE_KEY, byte_value)
-#
-#     def __setitem__(self, index: int, value: V) -> None:
-#         if index >= self.__size:
-#             raise ContainerDBException(f'QueueDB out of range')
-#
-#         sub_db = self.__db
-#         db_index = index + self.__start_index
-#         byte_value = ContainerUtil.encode_value(value)
-#         sub_db.put(ContainerUtil.encode_key(db_index), byte_value)
-#
-#     def __getitem__(self, index: int) -> V:
-#         if isinstance(index, int):
-#             if index < 0:
-#                 index += len(self)
-#             if index < 0 or index >= len(self):
-#                 raise ContainerDBException(f'QueueDB out of range, {index}')
-#
-#             sub_db = self.__db
-#             db_index = index + self.__start_index
-#             return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(db_index)), self.__value_type)
-#
-#     def __contains__(self, item: V) -> bool:
-#         for e in self:
-#             if e == item:
-#                 return True
-#         return False
+class QueueDB(Iterator):
+    __SIZE = 'size'
+    __START_INDEX = 'start_index'
+    __END_INDEX = 'end_index'
+    __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
+    __START_INDEX_BYTE_KEY = ContainerUtil.encode_key(__START_INDEX)
+    __END_INDEX_BYTE_KEY = ContainerUtil.encode_key(__END_INDEX)
+
+    def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
+        self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
+        self.__size = self.__get_size()
+
+        self.__start_index = ContainerUtil.decode_object(self.__db.get(QueueDB.__START_INDEX_BYTE_KEY), int)
+        self.__end_index = ContainerUtil.decode_object(self.__db.get(QueueDB.__END_INDEX_BYTE_KEY), int)
+        self.__index = 0
+        self.__value_type = value_type
+
+    def put(self, value: V) -> None:
+        byte_value = ContainerUtil.encode_value(value)
+        self.__db.put(ContainerUtil.encode_key(self.__end_index), byte_value)
+
+        start_index = self.__start_index
+        end_index = self.__end_index + 1
+        size = self.__size + 1
+
+        self.__set_size(size, start_index, end_index)
+
+    def pop(self) -> Optional[V]:
+        if self.__size == 0:
+            return None
+
+        start_index = self.__start_index
+        last_val = self[0]
+        self.__db.delete(ContainerUtil.encode_key(start_index))
+
+        start_index += 1
+        end_index = self.__end_index
+        size = self.__size - 1
+        self.__set_size(size, start_index, end_index)
+        return last_val
+
+    def get(self, index: int = 0) -> V:
+        return self[index]
+
+    def __iter__(self):
+        self.__index = 0
+        return self
+
+    def __next__(self) -> V:
+        if self.__index < self.__size:
+            index = self.__index
+            self.__index += 1
+            return self[index]
+        else:
+            raise StopIteration
+
+    def __len__(self):
+        return self.__size
+
+    def __get_size(self) -> int:
+        size = 0
+        db_list_size = ContainerUtil.decode_object(self.__db.get(QueueDB.__SIZE_BYTE_KEY), int)
+        if db_list_size:
+            size = db_list_size
+
+        return size
+
+    def __set_size(self, size: int, start_index: int, end_index: int) -> None:
+        sub_db = self.__db
+        if self.__size != size:
+            byte_value = ContainerUtil.encode_value(size)
+            sub_db.put(QueueDB.__SIZE_BYTE_KEY, byte_value)
+            self.__size = size
+        if self.__start_index != start_index:
+            byte_value = ContainerUtil.encode_value(start_index)
+            sub_db.put(QueueDB.__START_INDEX_BYTE_KEY, byte_value)
+            self.__start_index = start_index
+        if self.__end_index != end_index:
+            byte_value = ContainerUtil.encode_value(end_index)
+            sub_db.put(QueueDB.__END_INDEX_BYTE_KEY, byte_value)
+            self.__end_index = end_index
+
+    def __setitem__(self, index: int, value: V) -> None:
+        if index >= self.__size:
+            raise ContainerDBException(f'QueueDB out of range')
+
+        sub_db = self.__db
+        db_index = index + self.__start_index
+        byte_value = ContainerUtil.encode_value(value)
+        sub_db.put(ContainerUtil.encode_key(db_index), byte_value)
+
+    def __getitem__(self, index: int) -> V:
+        if isinstance(index, int):
+            if index < 0:
+                index += len(self)
+            if index < 0 or index >= len(self):
+                raise ContainerDBException(f'QueueDB out of range, {index}')
+
+            sub_db = self.__db
+            db_index = index + self.__start_index
+            return ContainerUtil.decode_object(sub_db.get(ContainerUtil.encode_key(db_index)), self.__value_type)
+
+    def __contains__(self, item: V) -> bool:
+        for e in self:
+            if e == item:
+                return True
+        return False
 
 
 class VarDB(object):

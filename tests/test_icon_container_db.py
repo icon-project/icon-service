@@ -19,7 +19,7 @@ import unittest
 from iconservice import Address, IconScoreContextType
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ContainerDBException
-from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
+from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, QueueDB, VarDB
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContextFactory
 from tests.mock_db import create_mock_icon_score_db
 from tests import create_address
@@ -187,3 +187,26 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(7, testarray.pop())
         self.assertEqual(5, testarray.pop())
         self.assertEqual(2, len(testarray))
+
+    def test_Queue_db(self):
+        testqueue = QueueDB("TEST", self.db, value_type=int)
+        testqueue.put(1)
+        testqueue.put(3)
+        testqueue.put(5)
+        testqueue.put(7)
+
+        self.assertEqual(1, testqueue.get(0))
+        self.assertEqual(3, testqueue.get(1))
+        self.assertEqual(5, testqueue.get(2))
+        self.assertEqual(7, testqueue.get(3))
+
+        self.assertEqual(4, len(testqueue))
+        self.assertEqual(1, testqueue.pop())
+        self.assertEqual(3, testqueue.pop())
+        self.assertEqual(2, len(testqueue))
+
+        testqueue.put(9)
+        testqueue.put(11)
+
+        self.assertEqual(5, testqueue.pop())
+        self.assertEqual(7, testqueue.pop())
