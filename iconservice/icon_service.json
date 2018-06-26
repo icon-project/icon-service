@@ -5,7 +5,7 @@
 		"filePath": "./icon_service.log",
 		"outputType": "console|file"
 	},
-	"icon_state_db_root_path": ".score1",
+	"icon_score_root_path": ".score1",
 	"icon_score_state_db_root_path": ".db1",
 	"channel": "loopchain_default",
 	"amqp_key": "7100",
