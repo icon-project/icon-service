@@ -16,7 +16,7 @@
 
 import unittest
 
-from iconservice.base.exception import ExceptionCode, IconException
+from iconservice.base.exception import ExceptionCode, IconException, InvalidRequestException, InvalidParamsException
 from iconservice.base.address import AddressPrefix
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
@@ -81,7 +81,7 @@ class TestTransactionValidator(unittest.TestCase):
         try:
             self.tx['params']['value'] = 1
             self.icon_pre_validator.tx_validate(self._context, self.tx, step_price)
-        except IconException as e:
+        except InvalidRequestException as e:
             response = {'code': e.code, 'message': e.message}
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, response['code'])
@@ -98,7 +98,7 @@ class TestTransactionValidator(unittest.TestCase):
         response = {}
         try:
             self.icon_pre_validator.tx_validate(self._context, self.tx, step_price)
-        except IconException as e:
+        except InvalidParamsException as e:
             response = {'code': e.code, 'message': e.message}
 
         self.assertEqual(ExceptionCode.INVALID_PARAMS, response['code'])

@@ -20,8 +20,13 @@
 import unittest
 
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
+<<<<<<< HEAD
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconException
+=======
+from iconservice.base.exception import ExceptionCode, IconException, ServerErrorException
+from iconservice.base.transaction import Transaction
+>>>>>>> change icxexception, iconexception to proper exceptions.
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
@@ -235,7 +240,7 @@ class TestIconServiceEngine(unittest.TestCase):
         context_factory.destroy(context)
 
     def test_commit(self):
-        with self.assertRaises(IconException) as cm:
+        with self.assertRaises(ServerErrorException) as cm:
             self._engine.commit()
         e = cm.exception
         self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
