@@ -62,20 +62,20 @@ class IconService(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--t", dest='type', type=str, default='user',
+    parser.add_argument("-t", dest='type', type=str, default='user',
                         choices=['tbears', 'user'],
                         help="icon service type [tbears|user]")
-    parser.add_argument("--sc", dest='icon_score_root_path', type=str, default='.score',
+    parser.add_argument("-sc", dest='icon_score_root_path', type=str, default='.score',
                         help="icon score root path  example : .score")
-    parser.add_argument("--st", dest='icon_score_state_db_root_path', type=str, default='.db',
+    parser.add_argument("-st", dest='icon_score_state_db_root_path', type=str, default='.db',
                         help="icon score state db root path  example : .db")
-    parser.add_argument("--ch", dest='channel', type=str, default='loopchain_default',
+    parser.add_argument("-ch", dest='channel', type=str, default='loopchain_default',
                         help="icon score channel")
-    parser.add_argument("--ak", dest='amqp_key', type=str, default='amqp_key',
+    parser.add_argument("-ak", dest='amqp_key', type=str, default='amqp_key',
                         help="icon score amqp_key : [amqp_key]")
-    parser.add_argument("--at", dest='amqp_target', type=str, default='127.0.0.1',
+    parser.add_argument("-at", dest='amqp_target', type=str, default='127.0.0.1',
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("--c", dest='config', type=str, default=CONFIG_JSON_PATH,
+    parser.add_argument("-c", dest='config', type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
     args = parser.parse_args()
 
