@@ -187,7 +187,7 @@ class IconServiceEngine(object):
         block_result = []
 
         for index, tx in enumerate(tx_params):
-            if self._check_invoke_genesis(index, block.height, tx):
+            if self._is_genesis_block(index, block.height, tx):
                 tx_result = self._invoke_genesis(context, tx, index)
             else:
                 tx_result = self._invoke(context, tx, index)
@@ -209,15 +209,13 @@ class IconServiceEngine(object):
         if last_block is None:
             return
 
-        if block.height <= last_block.height:
-            raise IconException('NextBlockHeight <= LastBlockHeight')
-        elif block.height != last_block.height + 1:
+        if block.height != last_block.height + 1:
             raise IconException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
         elif block.prev_hash != last_block.hash:
             raise IconException(f'NextBlock.prevHash[{block.prev_hash}] is not LastBlockHash[{last_block.hash}]')
 
     @staticmethod
-    def _check_invoke_genesis(index: int, block_height: int, tx_params: dict) -> bool:
+    def _is_genesis_block(index: int, block_height: int, tx_params: dict) -> bool:
         if block_height != 0 or index != 0:
             return False
 
@@ -536,7 +534,8 @@ class IconServiceEngine(object):
 
         block = self._precommit_state.block_batch.block
 
-        if block != precommit_block:
+        is_match = block.hash == precommit_block.hash and block.height == precommit_block.height
+        if not is_match:
             raise IconException('mismatch block')
 
     def rollback(self) -> None:

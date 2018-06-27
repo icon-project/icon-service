@@ -23,9 +23,14 @@ class Block(object):
     """
 
     _VERSION = 0
-    # leveldb account value structure (bigendian, 1 + 32 + 32 + 32  bytes)
-    # version(1) | height(BALANCE_BYTE_SIZE) | hash(BALANCE_BYTE_SIZE) | timestamp(BALANCE_BYTE_SIZE)
-    _struct = Struct(f'>c{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s')
+    # leveldb account value structure (bigendian, 1 + 32 + 32 + 32 + 32 bytes)
+    # version(1)
+    # | height(BALANCE_BYTE_SIZE)
+    # | hash(BALANCE_BYTE_SIZE)
+    # | timestamp(BALANCE_BYTE_SIZE)
+    # | prev_hash(BALANCE_BYTE_SIZE)
+
+    _struct = Struct(f'>c{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s')
 
     def __init__(self, block_height: int, block_hash: str, timestamp: int, prev_hash: Optional[str]) -> None:
         """Constructor
@@ -39,8 +44,6 @@ class Block(object):
         self._hash = block_hash
         # unit: microsecond
         self._timestamp = timestamp
-
-        # don't write DB
         self._prev_hash = prev_hash
 
     @property
@@ -84,15 +87,18 @@ class Block(object):
         """
         byteorder = DATA_BYTE_ORDER
 
-        version_bytes, block_height_bytes, block_hash_bytes, timestamp_bytes = \
+        version_bytes, block_height_bytes, block_hash_bytes, timestamp_bytes, block_prev_hash_bytes = \
             Block._struct.unpack(buf)
 
         # version = int.from_bytes(version_bytes, byteorder)
         block_height = int.from_bytes(block_height_bytes, byteorder)
         block_hash = bytes.hex(block_hash_bytes)
         timestamp = int.from_bytes(timestamp_bytes, byteorder)
-
-        block = Block(block_height, block_hash, timestamp, None)
+        byte_prev_hash = bytes.hex(block_prev_hash_bytes)
+        prev_block_hash = None
+        if int(byte_prev_hash, 16):
+            prev_block_hash = byte_prev_hash
+        block = Block(block_height, block_hash, timestamp, prev_block_hash)
         return block
 
     def to_bytes(self) -> bytes:
@@ -107,12 +113,16 @@ class Block(object):
         block_height_bytes = self._height.to_bytes(BALANCE_BYTE_SIZE, byteorder)
         block_hash_bytes = bytes.fromhex(self._hash)
         timestamp_bytes = self._timestamp.to_bytes(BALANCE_BYTE_SIZE, byteorder)
+        if not self._prev_hash:
+            self._prev_hash = str()
+        prev_block_hash_bytes = bytes.fromhex(self._prev_hash)
 
         return Block._struct.pack(
             version_bytes,
             block_height_bytes,
             block_hash_bytes,
-            timestamp_bytes)
+            timestamp_bytes,
+            prev_block_hash_bytes)
 
     def __bytes__(self) -> bytes:
         """operator bytes() overriding
@@ -120,6 +130,3 @@ class Block(object):
         :return: binary data including information of account object
         """
         return self.to_bytes()
-
-    def __eq__(self, other):
-        return self.height == other.height and self.hash == other.hash

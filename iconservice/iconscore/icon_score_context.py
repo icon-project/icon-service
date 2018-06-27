@@ -271,13 +271,10 @@ def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
                 addr_from: Optional['Address'] = None, arg_params: list = None) -> object:
     __check_call_score_invalid(icon_score, addr_from)
 
-    try:
-        if arg_params is None:
-            arg_params = []
-        call_method_func = getattr(icon_score, ATTR_CALL_METHOD)
-        return call_method_func(func_name, arg_params, kw_params)
-    except (IconScoreException, Exception):
-        raise
+    if arg_params is None:
+        arg_params = []
+    call_method_func = getattr(icon_score, ATTR_CALL_METHOD)
+    return call_method_func(func_name, arg_params, kw_params)
 
 
 def __check_call_score_invalid(icon_score: 'IconScoreBase', addr_from: Optional['Address']) -> None:

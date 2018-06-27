@@ -97,6 +97,11 @@ class IconScoreInfoMapper(dict, ContextGetter):
         self._check_value_type(info)
         super().__setitem__(icon_score_address, info)
 
+    def close(self, context: 'IconScoreContext'):
+        for score_address in self:
+            db = self._create_icon_score_database(score_address)
+            db._context_db.close(context)
+
     @staticmethod
     def _check_key_type(address: Address) -> None:
         """Check if key type is an icon score address type or not.
