@@ -19,7 +19,7 @@ import unittest
 from iconservice import Address, IconScoreContextType
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ContainerDBException
-from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, QueueDB, VarDB
+from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContextFactory
 from tests.mock_db import create_mock_icon_score_db
 from tests import create_address
