@@ -18,12 +18,12 @@ from .icx_account import Account
 from ..base.address import Address, AddressPrefix
 from ..utils import sha3_256, int_to_bytes
 from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
+from ..base.block import Block
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..base.block import Block
 
 
 class IcxStorage(object):

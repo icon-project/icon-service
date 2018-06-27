@@ -60,7 +60,8 @@ class IconScoreInnerTask(object):
             'balance': 'int',
             'stepLimit': 'int',
             'timestamp': 'int',
-            'blockHeight': 'int'
+            'blockHeight': 'int',
+            'nonce': 'int'
         }
         self._type_converter = TypeConverter(type_table)
 
