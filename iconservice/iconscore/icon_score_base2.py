@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     pass
 
 T = TypeVar('T')
-BaseType = TypeVar('BaseType', int, str, bytes, bool, Address)
+BaseType = TypeVar('BaseType', bool, int, str, bytes, Address)
 
 CONST_CLASS_EXTERNALS = '__externals'
 CONST_CLASS_PAYABLES = '__payables'

@@ -18,11 +18,10 @@
 """
 
 import unittest
-from typing import NewType, Any
 from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, EventLogException
+    external, IconScoreException
 from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
@@ -65,11 +64,11 @@ class TestEventlog(unittest.TestCase):
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
-        self.assertRaises(EventLogException, self._mock_score.ThreeIndexEvent,
+        self.assertRaises(IconScoreException, self._mock_score.ThreeIndexEvent,
                           name, address)
 
         # This event is declared 4 indexed_count
-        self.assertRaises(EventLogException, self._mock_score.FourIndexEvent,
+        self.assertRaises(IconScoreException, self._mock_score.FourIndexEvent,
                           name, address, age, phone_number)
 
     def test_call_event_kwarg(self):
@@ -97,12 +96,12 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(event_log_ordered_args.data,
                          event_log_keyword_args.data)
 
-    def test_call_event_no_hint_exception(self):
-        name = "name"
-        address = Mock(spec=Address)
-        age = 10
-        self.assertRaises(EventLogException, self._mock_score.HintlessEvent,
-                          name, address, age)
+    # def test_call_event_no_hint_exception(self):
+    #     name = "name"
+    #     address = Mock(spec=Address)
+    #     age = 10
+    #     self.assertRaises(IconScoreException, self._mock_score.HintlessEvent,
+    #                       name, address, age)
 
     def test_call_event_mismatch_arg(self):
         name = "name"
@@ -110,7 +109,7 @@ class TestEventlog(unittest.TestCase):
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
-        self.assertRaises(EventLogException, self._mock_score.OneIndexEvent,
+        self.assertRaises(IconScoreException, self._mock_score.OneIndexEvent,
                           name, address, age)
 
     # def test_call_event_unsupported_arg(self):
@@ -157,9 +156,9 @@ class EventlogScore(IconScoreBase):
             self, name: str, address: Address, age: int, phone_number: str):
         pass
 
-    @eventlog
-    def HintlessEvent(self, name, address, age):
-        pass
+    # @eventlog
+    # def HintlessEvent(self, name, address, age):
+    #     pass
 
     # @eventlog
     # def ArrayEvent(self, name: str, address: List[Address], ):
