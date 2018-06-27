@@ -72,7 +72,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.GENESIS)
         self._context.msg = Message(self.from_address, 0)
         self._context.tx = Transaction('test_01', origin=self.from_address)
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)

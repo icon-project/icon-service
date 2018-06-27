@@ -187,8 +187,8 @@ class IconServiceEngine(object):
         block_result = []
 
         for index, tx in enumerate(tx_params):
-            if self._check_genesis_invoke(index, block.height, tx):
-                tx_result = self._genesis_invoke(context, tx, index)
+            if self._check_invoke_genesis(index, block.height, tx):
+                tx_result = self._invoke_genesis(context, tx, index)
             else:
                 tx_result = self._invoke(context, tx, index)
             block_result.append(tx_result)
@@ -204,7 +204,7 @@ class IconServiceEngine(object):
         self._context_factory.destroy(context)
         return block_result
 
-    def check_block_validate(self, block: 'Block') -> None:
+    def validate_next_block(self, block: 'Block') -> None:
         last_block = self._icx_storage.last_block
         if last_block is None:
             return
@@ -213,14 +213,17 @@ class IconServiceEngine(object):
             raise IconException('NextBlockHeight <= LastBlockHeight')
         elif block.height != last_block.height + 1:
             raise IconException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
+        elif block.prev_hash != last_block.hash:
+            raise IconException(f'NextBlock.prevHash[{block.prev_hash}] is not LastBlockHash[{last_block.hash}]')
 
     @staticmethod
-    def _check_genesis_invoke(index: int, block_height: int, tx_params: dict) -> bool:
+    def _check_invoke_genesis(index: int, block_height: int, tx_params: dict) -> bool:
         if block_height != 0 or index != 0:
             return False
-        return 'accounts' in tx_params
 
-    def _genesis_invoke(self,
+        return 'genesisData' in tx_params
+
+    def _invoke_genesis(self,
                         context: 'IconScoreContext',
                         tx_params: dict,
                         index: int) -> 'TransactionResult':
@@ -235,7 +238,9 @@ class IconServiceEngine(object):
         tx_result = TransactionResult(context.tx.hash, context.block)
 
         try:
-            accounts = tx_params['accounts']
+            genesis_data = tx_params['genesisData']
+            accounts = genesis_data['accounts']
+
             genesis = accounts[0]
             treasury = accounts[1]
             others = accounts[2:]
@@ -531,10 +536,8 @@ class IconServiceEngine(object):
 
         block = self._precommit_state.block_batch.block
 
-        if block.height != precommit_block.height:
-            raise IconException('mismatch block height')
-        elif block.hash != precommit_block.hash:
-            raise IconException('mismatch block hash')
+        if block != precommit_block:
+            raise IconException('mismatch block')
 
     def rollback(self) -> None:
         """Throw away a precommit state

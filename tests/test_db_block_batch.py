@@ -24,7 +24,8 @@ from iconservice.database.batch import BlockBatch, TransactionBatch
 
 class TestBlockBatch(unittest.TestCase):
     def setUp(self):
-        self.batch = BlockBatch(block=Block(0, 'd1e7281723bfa4c9e358080bfe57a6c36c67eba94a974d8a2ea4c3cdb0229399', 0))
+        self.batch = \
+            BlockBatch(block=Block(0, 'd1e7281723bfa4c9e358080bfe57a6c36c67eba94a974d8a2ea4c3cdb0229399', 0, ''))
 
         score_address = Address.from_string(f'cx{"0" * 40}')
         address = Address.from_string(f'hx{"1" * 40}')

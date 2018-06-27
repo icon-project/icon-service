@@ -76,11 +76,6 @@ class IconScoreInnerTask(object):
         MessageQueueService.loop.stop()
 
     @message_queue_task
-    async def genesis_invoke(self, request: dict):
-        Logger.debug(f'genesis invoke request with {request}', ICON_INNER_LOG_TAG)
-        return self._invoke(request)
-
-    @message_queue_task
     async def invoke(self, request: dict):
         Logger.debug(f'invoke request with {request}', ICON_INNER_LOG_TAG)
         if ENABLE_INNER_SERVICE_THREAD & EnableThreadFlag.Invoke:
@@ -97,7 +92,7 @@ class IconScoreInnerTask(object):
             converted_block_params = self._type_converter.convert(block_params, recursive=True)
 
             block = Block.from_dict(converted_block_params)
-            self._icon_service_engine.check_block_validate(block)
+            self._icon_service_engine.validate_next_block(block)
 
             transactions_params = params['transactions']
 

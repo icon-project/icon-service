@@ -15,6 +15,7 @@
 # limitations under the License.
 from struct import Struct
 from ..icon_config import DATA_BYTE_ORDER, BALANCE_BYTE_SIZE
+from typing import Optional
 
 
 class Block(object):
@@ -26,16 +27,21 @@ class Block(object):
     # version(1) | height(BALANCE_BYTE_SIZE) | hash(BALANCE_BYTE_SIZE) | timestamp(BALANCE_BYTE_SIZE)
     _struct = Struct(f'>c{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s')
 
-    def __init__(self, block_height: int, block_hash: str, timestamp: int) -> None:
+    def __init__(self, block_height: int, block_hash: str, timestamp: int, prev_hash: Optional[str]) -> None:
         """Constructor
 
         :param block_height: block height
         :param block_hash: block hash
+        :param timestamp: block timestamp
+        :param prev_hash: prev block hash
         """
         self._height = block_height
         self._hash = block_hash
         # unit: microsecond
         self._timestamp = timestamp
+
+        # don't write DB
+        self._prev_hash = prev_hash
 
     @property
     def height(self) -> int:
@@ -49,19 +55,25 @@ class Block(object):
     def timestamp(self) -> int:
         return self._timestamp
 
+    @property
+    def prev_hash(self) -> str:
+        return self._prev_hash
+
     @staticmethod
     def from_dict(params: dict):
         block_height = params.get('blockHeight')
         block_hash = params.get('blockHash')
         timestamp = params.get('timestamp')
-        return Block(block_height, block_hash, timestamp)
+        prev_hash = params.get('prevBlockHash')
+        return Block(block_height, block_hash, timestamp, prev_hash)
 
     @staticmethod
     def from_block(block: 'Block'):
         block_height = block.height
         block_hash = block.hash
         timestamp = block.timestamp
-        return Block(block_height, block_hash, timestamp)
+        prev_hash = block.prev_hash
+        return Block(block_height, block_hash, timestamp, prev_hash)
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'Block':
@@ -80,7 +92,7 @@ class Block(object):
         block_hash = bytes.hex(block_hash_bytes)
         timestamp = int.from_bytes(timestamp_bytes, byteorder)
 
-        block = Block(block_height, block_hash, timestamp)
+        block = Block(block_height, block_hash, timestamp, None)
         return block
 
     def to_bytes(self) -> bytes:
@@ -108,3 +120,6 @@ class Block(object):
         :return: binary data including information of account object
         """
         return self.to_bytes()
+
+    def __eq__(self, other):
+        return self.height == other.height and self.hash == other.hash
