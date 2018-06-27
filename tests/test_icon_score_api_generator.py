@@ -132,6 +132,13 @@ class TestScoreApiGenerator(unittest.TestCase):
         self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
                           functions)
 
+    def test_return_bool(self):
+        function_name = 'empty_param_bool_return'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual('bool', api['outputs'][0]['type'])
+
     def tearDown(self):
         self._members = None
 
@@ -191,4 +198,8 @@ class TestScore:
 
     @external
     def empty_param_unsupported_optional_return(self) -> Optional[Decimal]:
+        pass
+
+    @external
+    def empty_param_bool_return(self) -> bool:
         pass
