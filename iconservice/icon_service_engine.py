@@ -330,7 +330,7 @@ class IconServiceEngine(object):
 
         return ret
 
-    def tx_pre_validate(self, tx: dict) -> None:
+    def validate_for_invoke(self, tx: dict) -> None:
         """Validate a transaction before putting it into tx pool.
         If failed to validate a tx, client will get a json-rpc error response
 
@@ -342,7 +342,7 @@ class IconServiceEngine(object):
         self._icon_pre_validator.tx_validate(context, tx, step_price=0)
         self._context_factory.destroy(context)
 
-    def query_pre_validate(self, request: dict) -> None:
+    def validate_for_query(self, request: dict) -> None:
         self._icon_pre_validator.query_validate(request)
 
     def _call(self,
@@ -525,7 +525,7 @@ class IconServiceEngine(object):
         self._icx_storage.put_block_info(context, block_batch.block)
         self._context_factory.destroy(context)
 
-    def precommit_validate(self, precommit_block: 'Block') -> None:
+    def validate_precommit(self, precommit_block: 'Block') -> None:
         if self._precommit_state is None:
             raise IconException('_precommit_state is None')
 

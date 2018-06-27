@@ -128,7 +128,7 @@ class IconScoreInnerTask(object):
     def _query(self, request: dict):
         try:
             converted_request = self._convert_request_params(request)
-            self._icon_service_engine.query_pre_validate(converted_request)
+            self._icon_service_engine.validate_for_query(converted_request)
 
             value = self._icon_service_engine.query(method=converted_request['method'],
                                                     params=converted_request['params'])
@@ -158,7 +158,7 @@ class IconScoreInnerTask(object):
         try:
             converted_block_params = self._type_converter.convert(request, recursive=False)
             block = Block.from_dict(converted_block_params)
-            self._icon_service_engine.precommit_validate(block)
+            self._icon_service_engine.validate_precommit(block)
 
             self._icon_service_engine.commit()
             response = make_response(ExceptionCode.OK)
@@ -184,7 +184,7 @@ class IconScoreInnerTask(object):
         try:
             # TODO check block validate
             block = Block.from_dict(request)
-            self._icon_service_engine.precommit_validate(block)
+            self._icon_service_engine.validate_precommit(block)
 
             self._icon_service_engine.rollback()
             response = make_response(ExceptionCode.OK)
@@ -197,19 +197,19 @@ class IconScoreInnerTask(object):
         return response
 
     @message_queue_task
-    async def pre_validate_check(self, request: dict):
+    async def validate_transaction(self, request: dict):
         Logger.debug(f'pre_validate_check request', ICON_INNER_LOG_TAG)
         if ENABLE_INNER_SERVICE_THREAD & EnableThreadFlag.Validate:
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
-                                              self._pre_validate_check, request)
+                                              self._validate_transaction, request)
         else:
-            return self._pre_validate_check(request)
+            return self._validate_transaction(request)
 
-    def _pre_validate_check(self, request: dict):
+    def _validate_transaction(self, request: dict):
         try:
             converted_request = self._convert_request_params(request)
-            self._icon_service_engine.tx_pre_validate(converted_request)
+            self._icon_service_engine.validate_for_invoke(converted_request)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
             return make_error_response(icon_e.code, icon_e.message)
