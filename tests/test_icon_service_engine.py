@@ -102,10 +102,10 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         ]
 
-        block = Block(0, create_block_hash(b'block'), 0)
+        block = Block(0, create_block_hash(b'block'), 0, None)
         tx = {'method': '',
               'params': {'txHash': self._tx_hash},
-              'accounts': accounts}
+              'genesisData': {'accounts': accounts}}
         tx_lists = [tx]
 
         self._engine.invoke(block, tx_lists)
@@ -196,7 +196,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         }
 
-        block = Block(block_height, block_hash, block_timestamp)
+        block = Block(block_height, block_hash, block_timestamp, create_block_hash(b'prev'))
 
         tx_results = self._engine.invoke(block, [tx])
         print(tx_results[0])

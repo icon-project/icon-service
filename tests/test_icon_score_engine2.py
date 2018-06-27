@@ -83,7 +83,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.GENESIS)
         self._context.msg = Message(self._addr1, 0)
         self._context.tx = Transaction('test_01', origin=self._addr1)
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()
@@ -208,7 +208,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         join_icx = 1
         self._context.msg = Message(self._addr1, join_icx * self._one_icx)
         self._context.tx = Transaction('test_01', origin=self._addr1)
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
         self._context.type = IconScoreContextType.GENESIS
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, '', {})
@@ -217,7 +217,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.type = IconScoreContextType.QUERY
         self._context.msg = Message(self._addr1, 0)
         self._context.tx = Transaction('test_01', origin=self._addr1)
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
         call_data = {
             'method': 'balance_of',
             'params': {'addr_from': str(self._addr_crowd_sale_score)}
@@ -247,7 +247,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         join_icx = 100
         self._context.msg = Message(self._addr2, join_icx * self._one_icx)
         self._context.tx = Transaction('test_01', origin=self._addr2)
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, '', {})
 
@@ -255,7 +255,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.type = IconScoreContextType.QUERY
         self._context.msg = Message(self._addr2, 0)
         self._context.tx = Transaction('test_01', origin=self._addr2)
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
         expected = expected - join_icx * self._one_icx_to_token
         call_data = {
             'method': 'balance_of',
@@ -287,7 +287,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         one_second_to_microsec = 1 * 10 ** 6
 
         self._context.block = Block(
-            2, 'block_hash', 1 * one_minute_to_sec * one_second_to_microsec)
+            2, 'block_hash', 1 * one_minute_to_sec * one_second_to_microsec, None)
 
         self._context.type = IconScoreContextType.GENESIS
         call_data = {'method': 'check_goal_reached', 'params': {}}

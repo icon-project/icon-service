@@ -50,7 +50,12 @@ class EnableThreadFlag(IntEnum):
     Validate = 4
 
 
-ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
+ENABLE_RABBITMQ = False
+
+if ENABLE_RABBITMQ:
+    ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
+else:
+    ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.NonFlag
 
 
 JSONRPC_VERSION = '2.0'

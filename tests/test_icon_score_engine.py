@@ -77,7 +77,7 @@ class TestIconScoreEngine(unittest.TestCase):
         self._context.tx = Transaction(
             'test_01',
             origin=create_address(AddressPrefix.EOA, b'owner'))
-        self._context.block = Block(1, 'block_hash', 0)
+        self._context.block = Block(1, 'block_hash', 0, None)
 
     def tearDown(self):
         self._engine = None

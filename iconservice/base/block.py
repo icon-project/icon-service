@@ -15,6 +15,7 @@
 # limitations under the License.
 from struct import Struct
 from ..icon_config import DATA_BYTE_ORDER, BALANCE_BYTE_SIZE
+from typing import Optional
 
 
 class Block(object):
@@ -22,20 +23,28 @@ class Block(object):
     """
 
     _VERSION = 0
-    # leveldb account value structure (bigendian, 1 + 32 + 32 + 32  bytes)
-    # version(1) | height(BALANCE_BYTE_SIZE) | hash(BALANCE_BYTE_SIZE) | timestamp(BALANCE_BYTE_SIZE)
-    _struct = Struct(f'>c{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s')
+    # leveldb account value structure (bigendian, 1 + 32 + 32 + 32 + 32 bytes)
+    # version(1)
+    # | height(BALANCE_BYTE_SIZE)
+    # | hash(BALANCE_BYTE_SIZE)
+    # | timestamp(BALANCE_BYTE_SIZE)
+    # | prev_hash(BALANCE_BYTE_SIZE)
 
-    def __init__(self, block_height: int, block_hash: str, timestamp: int) -> None:
+    _struct = Struct(f'>c{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s')
+
+    def __init__(self, block_height: int, block_hash: str, timestamp: int, prev_hash: Optional[str]) -> None:
         """Constructor
 
         :param block_height: block height
         :param block_hash: block hash
+        :param timestamp: block timestamp
+        :param prev_hash: prev block hash
         """
         self._height = block_height
         self._hash = block_hash
         # unit: microsecond
         self._timestamp = timestamp
+        self._prev_hash = prev_hash
 
     @property
     def height(self) -> int:
@@ -49,19 +58,25 @@ class Block(object):
     def timestamp(self) -> int:
         return self._timestamp
 
+    @property
+    def prev_hash(self) -> str:
+        return self._prev_hash
+
     @staticmethod
     def from_dict(params: dict):
         block_height = params.get('blockHeight')
         block_hash = params.get('blockHash')
         timestamp = params.get('timestamp')
-        return Block(block_height, block_hash, timestamp)
+        prev_hash = params.get('prevBlockHash')
+        return Block(block_height, block_hash, timestamp, prev_hash)
 
     @staticmethod
     def from_block(block: 'Block'):
         block_height = block.height
         block_hash = block.hash
         timestamp = block.timestamp
-        return Block(block_height, block_hash, timestamp)
+        prev_hash = block.prev_hash
+        return Block(block_height, block_hash, timestamp, prev_hash)
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'Block':
@@ -72,15 +87,18 @@ class Block(object):
         """
         byteorder = DATA_BYTE_ORDER
 
-        version_bytes, block_height_bytes, block_hash_bytes, timestamp_bytes = \
+        version_bytes, block_height_bytes, block_hash_bytes, timestamp_bytes, block_prev_hash_bytes = \
             Block._struct.unpack(buf)
 
         # version = int.from_bytes(version_bytes, byteorder)
         block_height = int.from_bytes(block_height_bytes, byteorder)
         block_hash = bytes.hex(block_hash_bytes)
         timestamp = int.from_bytes(timestamp_bytes, byteorder)
-
-        block = Block(block_height, block_hash, timestamp)
+        byte_prev_hash = bytes.hex(block_prev_hash_bytes)
+        prev_block_hash = None
+        if int(byte_prev_hash, 16):
+            prev_block_hash = byte_prev_hash
+        block = Block(block_height, block_hash, timestamp, prev_block_hash)
         return block
 
     def to_bytes(self) -> bytes:
@@ -95,12 +113,16 @@ class Block(object):
         block_height_bytes = self._height.to_bytes(BALANCE_BYTE_SIZE, byteorder)
         block_hash_bytes = bytes.fromhex(self._hash)
         timestamp_bytes = self._timestamp.to_bytes(BALANCE_BYTE_SIZE, byteorder)
+        if not self._prev_hash:
+            self._prev_hash = str()
+        prev_block_hash_bytes = bytes.fromhex(self._prev_hash)
 
         return Block._struct.pack(
             version_bytes,
             block_height_bytes,
             block_hash_bytes,
-            timestamp_bytes)
+            timestamp_bytes,
+            prev_block_hash_bytes)
 
     def __bytes__(self) -> bytes:
         """operator bytes() overriding

@@ -24,17 +24,35 @@ from tests import create_block_hash
 class TestBlock(unittest.TestCase):
     def test_Block_from_bytes_to_bytes(self):
         block_hash = create_block_hash(b'block1')
+        prev_block_hash = create_block_hash(b'prev_block1')
         block_hash_str = f"{block_hash}"
-        block1 = Block(1, block_hash_str, 100)
+        block1 = Block(1, block_hash_str, 100, prev_block_hash)
         data = Block.to_bytes(block1)
         self.assertEqual(bytes(block1), data)
         self.assertTrue(isinstance(data, bytes))
-        self.assertEqual(1+32+32+32, len(data))
+        self.assertEqual(1+32+32+32+32, len(data))
 
         block2 = Block.from_bytes(data)
         self.assertEqual(block2.height, 1)
         self.assertEqual(block2.hash, block_hash)
         self.assertEqual(block2.timestamp, 100)
+        self.assertEqual(block2.prev_hash, prev_block_hash)
+
+    def test_Block_from_bytes_to_bytes(self):
+        block_hash = create_block_hash(b'block1')
+        prev_block_hash = None
+        block_hash_str = f"{block_hash}"
+        block1 = Block(1, block_hash_str, 100, prev_block_hash)
+        data = Block.to_bytes(block1)
+        self.assertEqual(bytes(block1), data)
+        self.assertTrue(isinstance(data, bytes))
+        self.assertEqual(1+32+32+32+32, len(data))
+
+        block2 = Block.from_bytes(data)
+        self.assertEqual(block2.height, 1)
+        self.assertEqual(block2.hash, block_hash)
+        self.assertEqual(block2.timestamp, 100)
+        self.assertEqual(block2.prev_hash, prev_block_hash)
 
 
 if __name__ == '__main__':
