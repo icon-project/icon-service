@@ -40,7 +40,8 @@ build.sh [test|build|deploy]
   - build --ignore-test: build 실행
   - deploy: test, build 후 s3에 deploy
   - deploy --ignore-test: build 후 s3에 deploy
-  
+    \*\*deploy가 실행 되기 위해선 `AWS_ACCESS_KEY_ID`와 `AWS_SECRET_ACCESS_KEY`가 환경변수로 선언이 되어 있어야 한다
+
 * Tbears
   - tbears의 build script 사용법도 동일
   - **dependencies**: iconservice의 의존을 충족 하여야 함
