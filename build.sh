@@ -8,7 +8,10 @@ if [[ PYVER -ne 3 ]];then
 fi
 
 if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = "deploy") ]]; then
-  pip3 install -r requirements.txt
+  pip install -r requirements.txt
+  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey-0.0.0-py3-none-any.whl"
+  pip install --force-reinstall earlgrey-0.0.0-py3-none-any.whl
+  rm -rf earlgrey*
 
   if [[ "$2" != "--ignore-test" ]]; then
     python -m unittest
@@ -22,19 +25,22 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
     if [ "$1" = "deploy" ]; then
       VER=$(ls dist | sed -nE 's/[^-]+-([0-9\.]+)-.*/\1/p')
 
-      mkdir $VER
+      mkdir -p $VER
       cp dist/*$VER*.whl docs/CHANGELOG.md docs/dapp_guide.md docs/tbears_jsonrpc_api_v3.md $VER
 
+      if [[ -z "${AWS_ACCESS_KEY_ID}" || -z "${AWS_SECRET_ACCESS_KEY}" ]]; then
+        echo "Error: AWS keys should be in your environment"
+        rm -rf $VER
+        exit 1
+      fi
+
       pip install awscli
-      export AWS_ACCESS_KEY_ID=AKIAJYKHNVJS4GYQTV2Q
-      export AWS_SECRET_ACCESS_KEY=aVX6bv5nJ1etOgYWyWC9k/5UxZkQQVnxHz3G7X6z
       aws s3 cp $VER s3://tbears.icon.foundation/$VER --recursive --acl public-read
 
       rm -rf $VER
     fi
   fi
 
-  rm -rf $VER
 else
   echo "Usage: build.sh [test|build|deploy]"
   echo "  test: run test"
