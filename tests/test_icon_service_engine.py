@@ -17,24 +17,23 @@
 """IconScoreEngine testcase
 """
 
-
-import shutil
 import unittest
 
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
+from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconException
-from iconservice.base.transaction import Transaction
 from iconservice.base.message import Message
+from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
+from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_result import TransactionResult
+from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, \
+    StepType
 from iconservice.utils import sha3_256
-from iconservice.base.block import Block
-from tests import create_block_hash, create_address
+from tests import create_block_hash, create_address, rmtree
 
 context_factory = IconScoreContextFactory(max_size=1)
 
@@ -54,11 +53,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self._state_db_root_path = '.db'
         self._icon_score_root_path = '.score'
 
-        try:
-            shutil.rmtree(self._icon_score_root_path)
-            shutil.rmtree(self._state_db_root_path)
-        except:
-            pass
+        rmtree(self._icon_score_root_path)
+        rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
         engine.open(icon_score_root_path=self._icon_score_root_path,
@@ -113,8 +109,8 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._engine.close()
-        shutil.rmtree(self._icon_score_root_path)
-        shutil.rmtree(self._state_db_root_path)
+        rmtree(self._icon_score_root_path)
+        rmtree(self._state_db_root_path)
 
     def test_query(self):
         method = 'icx_getBalance'
@@ -198,7 +194,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         block = Block(block_height, block_hash, block_timestamp, create_block_hash(b'prev'))
 
-        tx_results = self._engine.invoke(block, [tx])
+        tx_results, _ = self._engine.invoke(block, [tx])
         print(tx_results[0])
 
     def test_score_invoke_failure(self):

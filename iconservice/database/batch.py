@@ -15,11 +15,17 @@
 # limitations under the License.
 
 
+import hashlib
+from collections import OrderedDict
+from typing import TYPE_CHECKING, Optional
+
 from ..base.address import Address
-from typing import Optional
+
+if TYPE_CHECKING:
+    from ..base.block import Block
 
 
-class IconScoreBatch(dict):
+class IconScoreBatch(OrderedDict):
     """Contains precommit states for an icon score
 
     key: state key
@@ -39,8 +45,11 @@ class IconScoreBatch(dict):
         """
         return self._address
 
+    def hash(self) -> bytes:
+        pass
 
-class TransactionBatch(dict):
+
+class TransactionBatch(OrderedDict):
     """Contains the states changed by a transaction.
 
     key: Score Address
@@ -61,7 +70,8 @@ class TransactionBatch(dict):
         :param value: a value of state
         """
 
-        if address in self: icon_score_batch = self[address]
+        if address in self:
+            icon_score_batch = self[address]
         else:
             icon_score_batch = IconScoreBatch(address)
             self[address] = icon_score_batch
@@ -98,7 +108,7 @@ class TransactionBatch(dict):
         super().clear()
 
 
-class BlockBatch(dict):
+class BlockBatch(OrderedDict):
     """Contains the states changed by a block
 
     key: Address
@@ -148,7 +158,27 @@ class BlockBatch(dict):
         else:
             return None
 
-    def clear(self):
-        self.height = -1
-        self.hash = None
+    def clear(self) -> None:
+        self.block = None
         super().clear()
+
+    def digest(self) -> bytes:
+        """Create sha3_256 hash value with included updated states
+
+        How to create a hash value:
+        sha3_256(
+            b'score_address(20)|key|value|key|value|...|
+            score_address(20)|key|value|...')
+
+        :return: sha3_256 hash value
+        """
+        separater = b'|'
+
+        data = []
+        for address, icon_score_batch in self.items():
+            data.append(address.body)
+            for key, value in icon_score_batch.items():
+                data.append(key)
+                data.append(value)
+
+        return hashlib.sha3_256(separater.join(data)).digest()

@@ -173,12 +173,12 @@ class IconServiceEngine(object):
 
     def invoke(self,
                block: 'Block',
-               tx_params: list) -> 'List[TransactionResult]':
+               tx_params: list) -> tuple:
         """Process transactions in a block sent by loopchain
 
         :param block:
         :param tx_params: transactions in a block
-        :return: The results of transactions
+        :return: (TransactionResult[], bytes)
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
@@ -202,7 +202,8 @@ class IconServiceEngine(object):
             block_result=block_result)
 
         self._context_factory.destroy(context)
-        return block_result
+
+        return block_result, self._precommit_state.block_batch.digest()
 
     def validate_next_block(self, block: 'Block') -> None:
         last_block = self._icx_storage.last_block
