@@ -58,6 +58,7 @@ class IconScoreInnerTask(object):
             'fee': 'int',
             'value': 'int',
             'balance': 'int',
+            'stepLimit': 'int',
             'timestamp': 'int',
             'blockHeight': 'int'
         }

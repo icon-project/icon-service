@@ -297,8 +297,9 @@ class IconServiceEngine(object):
 
         context.msg = Message(sender=addr_from, value=params.get('value', 0))
 
+        step_limit = params.get('stepLimit', ICON_SERVICE_BIG_STEP_LIMIT)
         context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(params.get('step', ICON_SERVICE_BIG_STEP_LIMIT))
+            self._step_counter_factory.create(step_limit)
 
         tx_result = self._call(context, method, params)
         tx_result.step_used = context.step_counter.step_used
