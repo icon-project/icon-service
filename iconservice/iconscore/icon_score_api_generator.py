@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter
-from typing import Any
+from inspect import signature, Signature, Parameter, isclass
+from typing import Any, Optional, Union
 from ..base.exception import IconScoreException
-from ..base.type_converter import score_base_support_type
-from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK
+from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
+    CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
 
 
 class ScoreApiGenerator:
@@ -140,9 +140,20 @@ class ScoreApiGenerator:
         if params_type is Signature.empty:
             return info_list
 
+        main_type = ScoreApiGenerator.__get_main_type(params_type)
+        # At first, finds if the type is a 'list' or a 'dict'
+        # if not, finds a base type
+        find = (t for t in [list, dict]
+                if isclass(main_type) and issubclass(main_type, t))
+        api_type = next(find, None)
+        if api_type is None:
+            api_type = ScoreApiGenerator.__find_base_super_type(main_type)
+        if api_type is None:
+            raise IconScoreException(
+                f"'Unsupported type for '{params_type}'")
+
         info = dict()
-        converted_type = ScoreApiGenerator.__generate_type(params_type)
-        info[ScoreApiGenerator.__API_TYPE] = converted_type
+        info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
         info_list.append(info)
         return info_list
 
@@ -160,30 +171,55 @@ class ScoreApiGenerator:
 
     @staticmethod
     def __generate_input(src: list, param: 'Parameter', is_indexed: bool):
+        # If there's no hint of argument in the function declaration,
+        # raise an exception
+        if param.annotation is Parameter.empty:
+            raise IconScoreException(
+                f"Missing argument hint for '{param.name}'")
+
+        main_type = ScoreApiGenerator.__get_main_type(param.annotation)
+        api_type = ScoreApiGenerator.__find_base_super_type(main_type)
+        if api_type is None:
+            raise IconScoreException(
+                f"'Unsupported type for "
+                f"'{param.name}: {param.annotation}'")
         info = dict()
         info[ScoreApiGenerator.__API_NAME] = param.name
-        convert_type = ScoreApiGenerator.__generate_type(param.annotation)
-        info[ScoreApiGenerator.__API_TYPE] = convert_type
+        info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
         if is_indexed:
             info[ScoreApiGenerator.__API_INPUTS_INDEXED] = is_indexed
         src.append(info)
 
     @staticmethod
-    def __generate_type(param_type: Any) -> str:
-        converted_type = ''
-
-        if param_type is not None and param_type is not Signature.empty:
-            if param_type in score_base_support_type:
-                converted_type = ScoreApiGenerator.__convert_type(param_type)
+    def __get_main_type(t: type) -> type:
+        """
+        Retrieves a main type of the input
+        :param t: target
+        :return: main_type
+        """
+        if hasattr(t, '_subs_tree'):
+            # Generic type has a '_subs_tree'
+            sub_tree = t._subs_tree()
+            if isinstance(sub_tree, tuple):
+                # Generic declaration with sub type. `Generic[T1,...]`
+                main_type = sub_tree[0]
+                if main_type is Union and len(sub_tree) == 3:
+                    # Retrieve base type in Optional
+                    main_type = sub_tree[1]
             else:
-                for sub in param_type._subs_tree():
-                    converted_type = ScoreApiGenerator.__convert_type(sub)
-
-        return converted_type
+                # Generic declaration only
+                main_type = sub_tree
+        else:
+            main_type = t
+        return main_type
 
     @staticmethod
-    def __convert_type(src_type: Any) -> str:
-        if src_type in score_base_support_type:
-            return src_type.__name__
-        else:
-            raise IconScoreException(f"can't convert {src_type}")
+    def __find_base_super_type(t: type) -> Optional[type]:
+        """
+        Finds a base type of the input and returns it if any
+        :param t: target
+        :return: base_super_type
+        """
+        find = (base_type for base_type in BaseType.__constraints__
+                if isclass(t) and issubclass(t, base_type))
+        return next(find, None)
