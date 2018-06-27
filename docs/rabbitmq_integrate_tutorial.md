@@ -47,10 +47,10 @@ pip install iconservice
 ### 3 loopchain 실행
 ``` bash
 # terminal1
-loop rs -d
+loop rs -d -o loop_rs_conf.json
 
 # terminal2
-loop peer -d -o loop_conf1.json
+loop peer -d -o loop_peer_conf1.json
 ```
 
 ### 4 iconservice 실행
@@ -60,3 +60,4 @@ iconservice start -c icon_conf1.json
 ```
 
 ### 5 curl 실행
+tbears 연동
