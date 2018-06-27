@@ -17,6 +17,7 @@ setup_options = {
     'long_description': open('docs/class.md').read(),
     'author': 'ICON foundation',
     'packages': find_packages(exclude=['tests*','docs']),
+    'package_data': {'iconservice': ['icon_service.json']},
     'license': "Apache License 2.0",
     'install_requires': requires,
     'entry_points': {
