@@ -60,4 +60,4 @@ iconservice start -c icon_conf1.json
 ```
 
 ### 5 curl 실행
-tbears 연동
+tbears deploy sample_token -k icon_keystore

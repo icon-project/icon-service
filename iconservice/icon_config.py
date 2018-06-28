@@ -23,7 +23,6 @@ ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
 ICON_DB_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_DB'
 ICON_INNER_LOG_TAG = f'IconInnerService'
 
-
 HOME_PATH = str(Path.home())
 
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
@@ -50,13 +49,13 @@ class EnableThreadFlag(IntEnum):
     Validate = 4
 
 
-ENABLE_RABBITMQ = False
+DEV = True
+ENABLE_RABBITMQ = True
 
 if ENABLE_RABBITMQ:
     ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
 else:
     ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.NonFlag
-
 
 JSONRPC_VERSION = '2.0'
 CHARSET_ENCODING = 'utf-8'
