@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Optional
 
 from .icx_account import Account
 from ..base.address import Address, AddressPrefix
+from ..base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
 from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
 from ..utils import sha3_256
@@ -214,6 +215,9 @@ class IcxStorage(object):
         :param icon_score_address:
         :return: True(installed) False(not installed)
         """
+        # Predefined SCORE addresses
+        if icon_score_address in (ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS):
+            return True
 
         return self.get_score_owner(context, icon_score_address) is not None
 
