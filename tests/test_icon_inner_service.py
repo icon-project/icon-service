@@ -23,7 +23,6 @@ import time
 import asyncio
 import os
 
-from time import sleep
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.base.address import AddressPrefix
 from tests import create_block_hash, create_address, create_tx_hash
