@@ -18,11 +18,11 @@ class SampleCrowdSale(IconScoreBase):
     __CROWD_SALE_CLOSED = 'crowd_sale_closed'
     __JOINER_LIST = 'joiner_list'
 
-    @eventlog(indexed_args_count=3)
+    @eventlog(indexed=3)
     def FundTransfer(self, backer: Address, amount: int, is_contribution: bool):
         pass
 
-    @eventlog(indexed_args_count=2)
+    @eventlog(indexed=2)
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 

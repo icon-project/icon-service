@@ -6,7 +6,7 @@ class SampleToken(IconScoreBase):
     __BALANCES = 'balances'
     __TOTAL_SUPPLY = 'total_supply'
 
-    @eventlog(indexed_args_count=3)
+    @eventlog(indexed=3)
     def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:

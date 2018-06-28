@@ -143,15 +143,15 @@ class EventlogScore(IconScoreBase):
     def ZeroIndexEvent(self, name: str, address: Address, age: int):
         pass
 
-    @eventlog(indexed_args_count=1)
+    @eventlog(indexed=1)
     def OneIndexEvent(self, name: str, address: Address, age: int):
         pass
 
-    @eventlog(indexed_args_count=3)
+    @eventlog(indexed=3)
     def ThreeIndexEvent(self, name: str, address: Address):
         pass
 
-    @eventlog(indexed_args_count=4)
+    @eventlog(indexed=4)
     def FourIndexEvent(
             self, name: str, address: Address, age: int, phone_number: str):
         pass
