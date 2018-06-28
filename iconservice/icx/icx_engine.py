@@ -19,7 +19,7 @@ import json
 from .icx_account import Account, AccountType
 from .icx_storage import IcxStorage
 from ..base.address import Address
-from ..base.exception import ExceptionCode, ICXException
+from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..logger import Logger
 from ..icon_config import *
 
@@ -176,9 +176,8 @@ class IcxEngine(object):
                           _amount: int,
                           _fee: int) -> bool:
         if _context.readonly:
-            raise ICXException(
-                'icx transfer is not allowed on readonly context',
-                ExceptionCode.INVALID_REQUEST)
+            raise InvalidRequestException(
+                'icx transfer is not allowed on readonly context')
 
         return self._transfer_with_fee(_context, _from, _to, _amount, _fee)
 
@@ -206,13 +205,13 @@ class IcxEngine(object):
                      ICX_LOG_TAG)
 
         if _from == _to:
-            raise ICXException('match _from and _to address', ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException('match _from and _to address')
         if _from == _fee_treasury_address:
-            raise ICXException('match _from and fee_treasure address', ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException('match _from and fee_treasure address')
         if _to == _fee_treasury_address:
-            raise ICXException('match _to and fee_treasure address', ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException('match _to and fee_treasure address')
         if _fee != FIXED_FEE:
-            raise ICXException('invalid fee', ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException('invalid fee')
 
         # get account info from state db.
         from_account = self._storage.get_account(context, _from)
@@ -255,13 +254,11 @@ class IcxEngine(object):
                  _to: Address,
                  _amount: int) -> bool:
         if _context.readonly:
-            raise ICXException(
-                'icx transfer is not allowed on readonly context',
-                ExceptionCode.INVALID_REQUEST)
+            raise InvalidRequestException(
+                'icx transfer is not allowed on readonly context')
 
         if _amount < 0:
-            raise ICXException('amount is less than zero',
-                               ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException('amount is less than zero')
 
         return self._transfer(_context, _from, _to, _amount)
 

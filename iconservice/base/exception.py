@@ -88,17 +88,7 @@ class InvalidRequestException(IconServiceBaseException):
         super().__init__(message, ExceptionCode.INVALID_REQUEST)
 
 
-class IconException(IconServiceBaseException):
-    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SERVER_ERROR):
-        super().__init__(message, code)
-
-
 class DatabaseException(IconServiceBaseException):
-    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SERVER_ERROR):
-        super().__init__(message, code)
-
-
-class ICXException(IconServiceBaseException):
     def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SERVER_ERROR):
         super().__init__(message, code)
 

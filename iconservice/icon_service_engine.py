@@ -20,7 +20,7 @@ from collections import namedtuple
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS
 from .base.exception import ExceptionCode
-from .base.exception import IconException, IconServiceBaseException
+from .base.exception import IconServiceBaseException, ServerErrorException
 from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
@@ -211,9 +211,9 @@ class IconServiceEngine(object):
             return
 
         if block.height != last_block.height + 1:
-            raise IconException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
+            raise ServerErrorException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
         elif block.prev_hash != last_block.hash:
-            raise IconException(f'NextBlock.prevHash[{block.prev_hash}] is not LastBlockHash[{last_block.hash}]')
+            raise ServerErrorException(f'NextBlock.prevHash[{block.prev_hash}] is not LastBlockHash[{last_block.hash}]')
 
     @staticmethod
     def _is_genesis_block(index: int, block_height: int, tx_params: dict) -> bool:
@@ -508,7 +508,7 @@ class IconServiceEngine(object):
         when the candidate block has been confirmed
         """
         if self._precommit_state is None:
-            raise IconException(
+            raise ServerErrorException(
                 'Precommit state is none on commit')
 
         context = self._context_factory.create(IconScoreContextType.GENESIS)
@@ -532,13 +532,13 @@ class IconServiceEngine(object):
 
     def validate_precommit(self, precommit_block: 'Block') -> None:
         if self._precommit_state is None:
-            raise IconException('_precommit_state is None')
+            raise ServerErrorException('_precommit_state is None')
 
         block = self._precommit_state.block_batch.block
 
         is_match = block.hash == precommit_block.hash and block.height == precommit_block.height
         if not is_match:
-            raise IconException('mismatch block')
+            raise ServerErrorException('mismatch block')
 
     def rollback(self) -> None:
         """Throw away a precommit state

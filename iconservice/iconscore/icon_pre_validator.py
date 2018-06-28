@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..base.exception import ExceptionCode, IconException
+from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.address import Address
 from typing import TYPE_CHECKING
 
@@ -93,8 +93,7 @@ class IconPreValidator:
 
             address = params.get(key)
             if not isinstance(address, Address):
-                raise IconException(
-                    code=ExceptionCode.INVALID_PARAMS,
+                raise InvalidParamsException(
                     message=f'Invalid address: {key}')
 
         @classmethod
@@ -106,8 +105,7 @@ class IconPreValidator:
 
             int_value = params.get(key)
             if not isinstance(int_value, int):
-                raise IconException(
-                    code=ExceptionCode.INVALID_PARAMS,
+                raise InvalidParamsException(
                     message=f'Invalid param: {int_value}')
 
         @classmethod
@@ -125,8 +123,7 @@ class IconPreValidator:
         @classmethod
         def _check_contains(cls, key: str, params: dict):
             if key not in params:
-                raise IconException(
-                    code=ExceptionCode.INVALID_PARAMS,
+                raise InvalidParamsException(
                     message=f"'{key}' not found")
 
     """IconService Pre Validator
@@ -171,8 +168,7 @@ class IconPreValidator:
     @staticmethod
     def _check_contain_dict(key, table: dict) -> None:
         if key not in table:
-            raise IconException(
-                code=ExceptionCode.INVALID_PARAMS,
+            raise InvalidParamsException(
                 message=f"'{key}' not found")
 
     def _icx_check_balance(self, context: 'IconScoreContext', tx: dict, step_price: int) -> None:
@@ -189,7 +185,7 @@ class IconPreValidator:
         balance = self._icx.get_balance(context=context, address=_from)
 
         if balance < value + step_limit * step_price:
-            raise IconException('Out of balance', ExceptionCode.INVALID_REQUEST)
+            raise InvalidRequestException('Out of balance')
 
     def _icx_check_to_address(self, context: 'IconScoreContext', tx: dict) -> None:
         """Check the validation of to
@@ -205,5 +201,5 @@ class IconPreValidator:
         elif to and not isinstance(to, Address):
             Address.from_string(to)
         elif to.is_contract and not self._icx.storage.is_score_installed(context=context, icon_score_address=to):
-            raise IconException(f'Score is not installed {str(to)}', ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException(f'Score is not installed {str(to)}')
 
