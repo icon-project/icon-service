@@ -494,7 +494,11 @@ class IconServiceEngine(object):
                 score_address = to
 
             tx_result.score_address = score_address
-            self._icon_score_deploy_engine.invoke(context, to, data_type, data)
+            self._icon_score_deploy_engine.invoke(
+                context=context,
+                to=to,
+                icon_score_address=score_address,
+                data=data)
         else:
             self._icon_score_engine.invoke(
                 context, to, data_type, data)
