@@ -301,8 +301,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         self.__db.set_observer(self.__create_db_observer())
 
-    def on_selfdestruct(self, recipient: 'Address') -> None:
-        raise NotImplementedError()
+    # def on_selfdestruct(self, recipient: 'Address') -> None:
+    #     raise NotImplementedError()
 
     def fallback(self) -> None:
         pass
