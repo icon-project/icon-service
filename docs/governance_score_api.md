@@ -21,7 +21,6 @@ Governance SCORE가 제공하는 API를 설명한다.
 | <a id="T_INT">T_INT</a> | "0x" + lowercase HEX 문자열 | 0xa |
 | <a id="T_BIN_DATA">T_BIN_DATA</a> | "0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다 | 0x34b2 |
 | <a id="T_SIG">T_SIG</a> | base64 encoded 문자열 | VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA= |
-| <a id="T_DATA_TYPE">T_DATA_TYPE</a> | install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출 | - |
 
 # Overview
 
@@ -192,6 +191,7 @@ Governance SCORE가 제공하는 API를 설명한다.
     "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
+        "version": "0x3",
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cx0000000000000000000000000000000000000001",
         "stepLimit": "0x12345",
@@ -232,6 +232,7 @@ Governance SCORE가 제공하는 API를 설명한다.
     "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
+        "version": "0x3",
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cx0000000000000000000000000000000000000001",
         "stepLimit": "0x12345",
@@ -250,45 +251,11 @@ Governance SCORE가 제공하는 API를 설명한다.
 }
 ```
 
-## selfRevoke
-
-* SCORE 등록을 심사할 수 있는 권한을 가진 주소 목록에서 해당 주소를 제거한다.
-* Auditor 주소의 키가 유출되는 경우 대비
-
-### Parameters
-
-없음
-
-### Examples
-
-#### Request
-
-```json
-// Request
-{
-    "jsonrpc": "2.0",
-    "id": 1234,
-    "method": "icx_sendTransaction",
-    "params": {
-        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
-        "to": "cx0000000000000000000000000000000000000001",
-        "stepLimit": "0x12345",
-        "timestamp": "0x563a6cf330136",
-        "nonce": "0x1",
-        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
-        "dataType": "call",
-        "data": {
-            "method": "selfRevoke"
-        }
-    }
-}
-```
-
 ## addAuditor
 
 * SCORE 등록 심사 권한을 가진 주소 목록에 새로운 주소를 추가한다.
 * 해당 목록에 등록된 주소만이 acceptScore와 rejectScore를 호출할 수 있다.
-* Genesis 주소 전용 메소드
+* SCORE Owner만 호출할 수 있다.
 
 ### Parameters
 
@@ -307,6 +274,7 @@ Governance SCORE가 제공하는 API를 설명한다.
     "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
+        "version": "0x3",
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genesis address
         "to": "cx0000000000000000000000000000000000000001",
         "stepLimit": "0x12345",
@@ -328,13 +296,13 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 * SCORE 등록 심사 권한을 가진 주소 목록에서 기존 주소를 제거한다.
 * 해당 목록에서 제거된 주소는 더이상 SCORE 등록 심사를 할 수 없다.
-* Genesis 주소 전용 메소드
+* SCORE Owner 혹은 목록에 있는 Auditor 본인이 자신을 제거할 수 있다.
 
 ### Parameters
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:-----------|-----|
-| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 추가한 새로운 EOA 주소 |
+| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 있는 EOA 주소 |
 
 ### Examples
 
@@ -347,6 +315,7 @@ Governance SCORE가 제공하는 API를 설명한다.
     "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
+        "version": "0x3",
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genensis address
         "to": "cx0000000000000000000000000000000000000001",
         "stepLimit": "0x12345",
