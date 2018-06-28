@@ -115,16 +115,16 @@ class IconScoreContext(object):
     def readonly(self):
         return self.type == IconScoreContextType.QUERY
 
-    def gasleft(self) -> int:
-        """Returns the amount of gas left
-
-        If gasleft is zero before tx handling is complete,
-        rollback all changed state for the tx
-        Consumed gas doesn't need to be paid back to tx owner.
-
-        :return: the amount of gas left
-        """
-        raise NotImplementedError()
+    # def gasleft(self) -> int:
+    #     """Returns the amount of gas left
+    #
+    #     If gasleft is zero before tx handling is complete,
+    #     rollback all changed state for the tx
+    #     Consumed gas doesn't need to be paid back to tx owner.
+    #
+    #     :return: the amount of gas left
+    #     """
+    #     raise NotImplementedError()
 
     def get_balance(self, address: 'Address') -> int:
         """Returns the icx balance of context owner (icon score)
@@ -184,11 +184,11 @@ class IconScoreContext(object):
 
         return ret
 
-    def self_destruct(self, recipient: 'Address') -> None:
-        """Destroy the current icon score, sending its funds to the given address
-
-        :param recipient: fund recipient
-        """
+    # def self_destruct(self, recipient: 'Address') -> None:
+    #     """Destroy the current icon score, sending its funds to the given address
+    #
+    #     :param recipient: fund recipient
+    #     """
 
     def revert(self, message: Optional[str], code: Union[ExceptionCode, int]) -> None:
         """Abort score execution and revert state changes
