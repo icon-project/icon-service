@@ -65,6 +65,9 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
+        dict_as_camel = tx_result.to_response_json()
+        self.assertNotIn('failure', dict_as_camel)
+        self.assertNotIn('scoreAddress', dict_as_camel)
 
     def test_tx_failure(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
@@ -85,6 +88,7 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
+        self.assertNotIn('scoreAddress', tx_result.to_response_json())
 
     def test_install_result(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(

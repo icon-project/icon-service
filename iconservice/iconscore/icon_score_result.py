@@ -74,6 +74,10 @@ class TransactionResult(object):
         """
         new_dict = {}
         for key, value in self.__dict__.items():
+            if value is None:
+                # Excludes properties which have `None` value
+                continue
+
             if isinstance(value, Block):
                 new_dict["block_height"] = value.height
             elif isinstance(value, Address):
