@@ -13,22 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag
 from collections import namedtuple
+from enum import IntFlag
 from os import path, symlink, makedirs
+from typing import TYPE_CHECKING, Optional, Callable
 
+from . import DeployType
+from .icon_score_deploy_storage import IconScoreDeployInfo
+from .icon_score_deploy_storage import IconScoreDeployStorage
+from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
+from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
-from ..logger import Logger
+from ..database.db import ContextDatabase
 from ..iconscore.icon_score_context import ContextContainer
-from ..icx.icx_storage import IcxStorage
-from .icon_score_deployer import IconScoreDeployer
+from ..logger import Logger
 
-from typing import TYPE_CHECKING, Optional, Callable
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
+    from ..icx.icx_storage import IcxStorage
 
 
 class IconScoreDeployEngine(ContextContainer):
@@ -45,13 +50,12 @@ class IconScoreDeployEngine(ContextContainer):
     # This namedtuple should be used only in IconScoreDeployEngine.
     _Task = namedtuple(
         'Task',
-        ('block', 'tx', 'msg', 'icon_score_address', 'data_type', 'data'))
-
-    _SUPPORT_DATA_TYPES = ['install', 'update']
+        ('block', 'tx', 'msg', 'deploy_type', 'icon_score_address', 'data'))
 
     def __init__(self,
                  icon_score_root_path: str,
                  flags: 'Flag',
+                 context_db: 'ContextDatabase',
                  icx_storage: 'IcxStorage',
                  icon_score_mapper: 'IconScoreInfoMapper') -> None:
         """Constructor
@@ -60,6 +64,7 @@ class IconScoreDeployEngine(ContextContainer):
         :param flags: flags composed by IconScoreDeployEngine
         """
         self._flags = flags
+        self._score_deploy_storage = IconScoreDeployStorage(db=context_db)
         self._icx_storage = icx_storage
         self._icon_score_mapper = icon_score_mapper
 
@@ -67,42 +72,25 @@ class IconScoreDeployEngine(ContextContainer):
         self._icon_score_deployer: IconScoreDeployer =\
             IconScoreDeployer(icon_score_root_path)
 
-        if self.is_flag_on(self.Flag.ENABLE_DEPLOY_AUDIT):
-            self._SUPPORT_DATA_TYPES.append('audit')
-
     def is_flag_on(self, flag: 'Flag') -> bool:
         return (self._flags & flag) == flag
 
-    def is_data_type_supported(self, data_type: str) -> bool:
-        """Check if IconScoreDeployEngine supports the given data_type or not
-
-        :param data_type:
-        :return:
-        """
-        return data_type in self._SUPPORT_DATA_TYPES
-
     def invoke(self,
                context: 'IconScoreContext',
+               to: 'Address',
                icon_score_address: 'Address',
-               data_type: str,
                data: dict) -> None:
         """Handle calldata contained in icx_sendTransaction message
 
         :param icon_score_address:
+            cx0000000000000000000000000000000000000000 on install
+            otherwise score address to update
         :param context:
         :param data_type:
         :param data: calldata
         """
-        if not self.is_data_type_supported(data_type):
-            raise InvalidParamsException(f'Invalid dataType: {data_type}')
-
-        self._deploy_on_invoke(context, icon_score_address, data_type, data)
-
-    def _deploy_on_invoke(self,
-                          context: 'IconScoreContext',
-                          icon_score_address: 'Address',
-                          data_type: str,
-                          data: dict):
+        deploy_type: 'DeployType' =\
+            DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
@@ -118,19 +106,18 @@ class IconScoreDeployEngine(ContextContainer):
 
         self._put_deferred_task(
             context=context,
+            deploy_type=deploy_type,
             icon_score_address=icon_score_address,
-            data_type=data_type,
             data=data)
 
     def _put_deferred_task(self,
                            context: 'IconScoreContext',
+                           deploy_type: 'DeployType',
                            icon_score_address: 'Address',
-                           data_type: str,
                            data: dict) -> None:
         """Queue a deferred task to install, update or remove a score
 
         :param context:
-        :param data_type:
         :param icon_score_address:
         :param data:
         """
@@ -138,8 +125,8 @@ class IconScoreDeployEngine(ContextContainer):
             block=context.block,
             tx=context.tx,
             msg=context.msg,
+            deploy_type=deploy_type,
             icon_score_address=icon_score_address,
-            data_type=data_type,
             data=data)
 
         self._deferred_tasks.append(task)
@@ -163,20 +150,36 @@ class IconScoreDeployEngine(ContextContainer):
             context.block = task.block
             context.tx = task.tx
             context.msg = task.msg
+            deploy_type = task.deploy_type
             icon_score_address = task.icon_score_address
-            data_type = task.data_type
             data = task.data
 
             try:
-                if data_type == 'install':
+                self.write_score_deploy_info(task)
+
+                if deploy_type == DeployType.INSTALL:
+                    # install a SCORE
                     self._install_on_commit(context, icon_score_address, data)
-                elif data_type == 'update':
+                else:
                     self._update_on_commit(context, icon_score_address, data)
-                # Invalid task.type has been already filtered in invoke()
             except BaseException as e:
                 Logger.exception(e)
 
         self._deferred_tasks.clear()
+
+    def write_score_deploy_info(self, task) -> None:
+        """Write score deploy info to context db
+        """
+        params = task.data.get('params', {})
+
+        info = IconScoreDeployInfo(
+            score_address=task.icon_score_address,
+            owner=task.tx.origin,
+            tx_hash=task.tx.hash,
+            params=params,
+            deploy_type=DeployType.INSTALL)
+
+        self._score_deploy_storage.put_score_deploy_info(info)
 
     def _install_on_commit(self,
                            context: Optional['IconScoreContext'],
@@ -188,9 +191,9 @@ class IconScoreDeployEngine(ContextContainer):
         - Install IconScore package file to file system
 
         """
-        content_type = data.get('contentType')
-        content = data.get('content')
-        params = data.get('params', {})
+        content_type: str = data.get('contentType')
+        content: bytes = data.get('content')
+        params: dict = data.get('params', {})
 
         if content_type == 'application/tbears':
             self._icon_score_mapper.delete_icon_score(icon_score_address)
@@ -209,6 +212,12 @@ class IconScoreDeployEngine(ContextContainer):
 
         self._icx_storage.put_score_owner(
             context, icon_score_address, context.tx.origin)
+
+        self._icon_score_deployer.deploy(
+            address=icon_score_address,
+            data=content,
+            block_height=context.block.height,
+            transaction_index=context.tx.index)
 
         db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
         score = self._icon_score_mapper.get_icon_score(icon_score_address)

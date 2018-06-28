@@ -31,15 +31,17 @@ class IconScoreDeployer(object):
     def __init__(self, icon_score_root_path: str) -> None:
         self.icon_score_root_path = icon_score_root_path
 
-    def deploy(self, address: 'Address', data: bytes, block_height: int, transaction_index: int,
-               tx_hash: bytes=None) -> bool:
+    def deploy(self,
+               address: 'Address',
+               data: bytes,
+               block_height: int,
+               transaction_index: int) -> bool:
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
-        :param address: contract address
+        :param address: score address
         :param data: The byte value of the zip file.
         :param block_height:
         :param transaction_index:
-        :param tx_hash:
         :return:
         """
         str_address = address.body.hex()

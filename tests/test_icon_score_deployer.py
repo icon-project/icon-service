@@ -16,8 +16,9 @@
 
 import os
 import unittest
-from iconservice.deploy.icon_score_deployer import IconScoreDeployer
+
 from iconservice.base.address import Address
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
 

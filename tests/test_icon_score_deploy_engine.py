@@ -35,21 +35,12 @@ class TestScoreDeployEngine(unittest.TestCase):
         self.engine = IconScoreDeployEngine(
             icon_score_root_path='./score',
             flags=flags,
+            context_db=None,
             icx_storage=icx_storage,
             icon_score_mapper=icon_score_mapper)
 
     def tearDown(self):
         pass
-
-    def test_is_data_type_supported(self):
-        data_types = [
-            'install', 'update', 'audit', 'call', 'message', '', None
-        ]
-        results = [True, True, True, False, False, False]
-
-        for data_type, results in zip(data_types, results):
-            self.assertEqual(
-                results, self.engine.is_data_type_supported(data_type))
 
     def test_call_on_init_of_score(self):
         params = {

@@ -21,6 +21,7 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
@@ -99,12 +100,17 @@ class TestTransactionResult(unittest.TestCase):
             self._mock_context,
             {
                 'from': from_,
-                'dataType': 'install',
+                'to': ZERO_SCORE_ADDRESS,
+                'dataType': 'deploy',
                 'timestamp': 0,
-                'data': {}}
+                'data': {
+                    'contentType': 'application/tbears',
+                    'content': '/home/haha'
+                }
+            }
         )
 
         self.assertEqual(1, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
-        self.assertIsNone(tx_result.to)
+        self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
         self.assertIsNotNone(tx_result.score_address)

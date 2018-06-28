@@ -14,35 +14,34 @@
 # limitations under the License.
 
 
-from os import makedirs
 from collections import namedtuple
+from os import makedirs
+from typing import TYPE_CHECKING, Any
 
 from .base.address import Address, AddressPrefix
-from .base.address import ICX_ENGINE_ADDRESS
+from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
+from .base.block import Block
 from .base.exception import ExceptionCode
 from .base.exception import IconServiceBaseException, ServerErrorException
-from .base.block import Block
 from .base.message import Message
 from .base.transaction import Transaction
-from .database.factory import DatabaseFactory
 from .database.batch import BlockBatch, TransactionBatch
-from .icx.icx_engine import IcxEngine
-from .icx.icx_storage import IcxStorage
-from .icx.icx_account import AccountType
-from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from .database.factory import DatabaseFactory
+from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from .icon_config import *
+from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext
-from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context import IconScoreContextFactory
+from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
-from .iconscore.icon_pre_validator import IconPreValidator
-from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from .icx.icx_account import AccountType
+from .icx.icx_engine import IcxEngine
+from .icx.icx_storage import IcxStorage
 from .logger import Logger
-from .icon_config import *
-
-from typing import TYPE_CHECKING, Optional, Any, List
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
@@ -147,6 +146,7 @@ class IconServiceEngine(object):
         self._icon_score_deploy_engine = IconScoreDeployEngine(
             icon_score_root_path=icon_score_root_path,
             flags=icon_score_deploy_engine_flags,
+            context_db=self._icx_context_db,
             icx_storage=self._icx_storage,
             icon_score_mapper=self._icon_score_mapper)
 
@@ -422,7 +422,7 @@ class IconServiceEngine(object):
         """icx_sendTransaction message handler
 
         * EOA to EOA
-        * EOA to Score
+        * EOA to SCORE
 
         :param params: jsonrpc params
         :return: return value of an IconScoreBase method
@@ -432,7 +432,8 @@ class IconServiceEngine(object):
             context.tx.hash, context.block, context.tx.index)
 
         try:
-            to: Address = params.get('to', None)
+            # all transactions have 'to' field.
+            to: Address = params['to']
             tx_result.to = to
 
             _from: Address = params['from']
@@ -440,7 +441,7 @@ class IconServiceEngine(object):
 
             self._icx_engine.transfer(context, _from, to, value)
 
-            if to is None or to.is_contract:
+            if to.is_contract:
                 data_type: str = params.get('dataType')
                 data: dict = params.get('data')
 
@@ -462,7 +463,7 @@ class IconServiceEngine(object):
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',
-                             to: Optional['Address'],
+                             to: 'Address',
                              data_type: str,
                              data: dict,
                              tx_result: 'TransactionResult') -> None:
@@ -475,19 +476,25 @@ class IconServiceEngine(object):
         :param tx_result: transaction result
         :return: result of score transaction execution
         """
-        if data_type == 'install':
-            content_type = data.get('contentType')
-            if content_type == 'application/tbears':
-                path: str = data.get('content')
-                to = _generate_score_address_for_tbears(path)
-            else:
-                to = _generate_score_address(
-                    context.tx.origin, context.tx.timestamp, context.tx.nonce)
-            tx_result.score_address = to
+        if data_type == 'deploy':
+            if to == ZERO_SCORE_ADDRESS:
+                # SCORE install
+                content_type = data.get('contentType')
 
-        if self._icon_score_deploy_engine.is_data_type_supported(data_type):
-            self._icon_score_deploy_engine.invoke(
-                context, to, data_type, data)
+                if content_type == 'application/tbears':
+                    path: str = data.get('content')
+                    score_address = _generate_score_address_for_tbears(path)
+                else:
+                    score_address = _generate_score_address(
+                        context.tx.origin,
+                        context.tx.timestamp,
+                        context.tx.nonce)
+            else:
+                # SCORE update
+                score_address = to
+
+            tx_result.score_address = score_address
+            self._icon_score_deploy_engine.invoke(context, to, data_type, data)
         else:
             self._icon_score_engine.invoke(
                 context, to, data_type, data)

@@ -19,8 +19,9 @@
 
 import hashlib
 from enum import IntEnum
-from ..utils import is_lowercase_hex_string
+
 from .exception import InvalidParamsException
+from ..utils import is_lowercase_hex_string
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
@@ -98,7 +99,7 @@ class Address(object):
         if not isinstance(address_body, bytes):
             raise InvalidParamsException('Invalid address body type')
         if len(address_body) != 20:
-            raise InvalidParamsException('Length of address body should be 20 in bytes')
+            raise InvalidParamsException('Address length is not 20 in bytes')
 
         self.__prefix = address_prefix
         self.__body = address_body
@@ -183,4 +184,9 @@ class Address(object):
         return Address(prefix, hash_value[-20:])
 
 
+# cx0000000000000000000000000000000000000000
+ZERO_SCORE_ADDRESS = Address(AddressPrefix.CONTRACT, b'\x00' * 20)
+# cx0000000000000000000000000000000000000001
+GOVERNANCE_SCORE_ADDRESS = Address(
+    AddressPrefix.CONTRACT, b'\x00' * 19 + b'\x01')
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')
