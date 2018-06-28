@@ -20,6 +20,7 @@ from iconservice.base.type_converter import TypeConverter
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
+from iconservice.base.jsonschema_validator import validate_jsonschema
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
 from iconservice.utils import make_response, make_error_response
@@ -135,6 +136,7 @@ class IconScoreInnerTask(object):
     def _query(self, request: dict):
         response = None
         try:
+            validate_jsonschema(request)
             converted_request = self._convert_request_params(request)
             self._icon_service_engine.validate_for_query(converted_request)
 
@@ -243,6 +245,7 @@ class IconScoreInnerTask(object):
     def _validate_transaction(self, request: dict):
         response = None
         try:
+            validate_jsonschema(request)
             converted_request = self._convert_request_params(request)
             self._icon_service_engine.validate_for_invoke(converted_request)
             response = make_response(ExceptionCode.OK)

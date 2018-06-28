@@ -1,3 +1,4 @@
+jsonschema
 setproctitle
 hypothesis
 pytest
