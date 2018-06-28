@@ -207,11 +207,14 @@ def test_combining_filters():
 def test_icon_bloom():
     b1 = BloomFilter()
 
-    # make key from string
-    key = "func_name" + "index1" + "index2" + "index3"
+    keys = ["func_name", "index1", "index2", "index3"]
 
-    #  add to bloom filter as bytes type
-    b1.add(key.encode())
+    # make key from string
+    i: int = 0
+    for key in keys:
+        # add to bloom filter as bytes type
+        item = key + str(i)
+        b1.add(item.encode())
 
     # backup bloom filter with int casting
     b1_int = int(b1)
@@ -220,4 +223,5 @@ def test_icon_bloom():
     b2 = BloomFilter(b1_int)
 
     # check bloom filter has key value
-    assert key.encode() in b2
+    item = keys[0] + str(0)
+    assert item.encode() in b2
