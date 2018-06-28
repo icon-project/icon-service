@@ -23,7 +23,7 @@ class SampleToken(IconScoreBase):
     __BALANCES = 'balances'
     __TOTAL_SUPPLY = 'total_supply'
 
-    @eventlog(indexed_args_count=3)
+    @eventlog(indexed=3)
     def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
 
     def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
@@ -94,11 +94,11 @@ class SampleCrowdSale(IconScoreBase):
     __CROWD_SALE_CLOSED = 'crowd_sale_closed'
     __JOINER_LIST = 'joiner_list'
 
-    @eventlog(indexed_args_count=3)
+    @eventlog(indexed=3)
     def FundTransfer(self, backer: Address, amount: int, is_contribution: bool):
         pass
 
-    @eventlog(indexed_args_count=2)
+    @eventlog(indexed=2)
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
@@ -320,9 +320,9 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 
 #### eventlog 데코레이터 (@eventlog)
 이 데코레이터가 붙은 함수는 TxResult에 'eventlogs'의 내용으로 로그가 기록됩니다.<br/>
-해당 함수 선언은 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
-함수 선언 시 매개 변수의 Type Hint는 필수 입니다. Type Hint가 없다면 트랜잭션은 성공하지 못합니다.<br/>
-함수 선언 시에 데코레이터의 매개 변수에 `indexed_args_count` 값을 설정하면 해당 수 만큼의 변수(선언된 순서 순)가 인덱싱이 되어 불룸필터(Bloom filter)에 적용이 됩니다.<br/>
+해당 함수 선언은 구현 부가 없는 함수 작성을 권장하며, 설사 구현 부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
+함수 선언 시 매개 변수의 Type Hint는 필수입니다. Type Hint가 없다면 트랜잭션은 성공하지 못합니다.<br/>
+함수 선언 시에 데코레이터의 매개 변수에 `indexed` 값을 설정하면 해당 수 만큼의 변수(선언된 순서 순)가 인덱싱이 되어 블룸 필터(Bloom filter)에 적용이 됩니다.<br/>
 
 예시)<br/>
 ```python
@@ -330,7 +330,7 @@ external 데코레이터가 중복으로 선언되어 있다면 import 타임에
 @eventlog
 def FundTransfer1(self, backer: Address, amount: int, is_contribution: bool): pass
 
-@eventlog(indexed_args_count=1) # 변수 1개(backer)만 인덱싱 됨
+@eventlog(indexed=1) # 변수 1개(backer)만 인덱싱 됨
 def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
 
 # 실행부
