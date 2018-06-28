@@ -61,7 +61,6 @@ pip install earlgrey #rabbitmq 패키지
 pip install loopchain
 pip install iconservice
 pip install tbears
-
 ```
 
 ### 3 loopchain 실행
@@ -81,8 +80,14 @@ loop peer -d -o loop_peer_conf1.json
 iconservice start -c icon_conf1.json
 ```
 
-### 5 배포
+### 5 샘플코드 생성
+```bash
+tbears samples
+```
+
+### 6 배포
 ``` bash
 tbears deploy sample_token -k icon_keystore
+키체인 암호 : qwer1234%
 ```
 
