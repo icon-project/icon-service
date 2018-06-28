@@ -136,7 +136,7 @@ class IconPreValidator:
         """
         self._icx = icx
 
-    def tx_validate(self, context: 'IconScoreContext', converted_tx: dict, step_price: int) -> None:
+    def validate_tx(self, context: 'IconScoreContext', converted_tx: dict, step_price: int) -> None:
         """Validate a transaction before accepting it
                 If failed to validate a tx, client will get a json-rpc error response
 
@@ -145,18 +145,18 @@ class IconPreValidator:
                 :param step_price:
                 """
 
-        self._tx_validate(converted_tx)
+        self._validate_tx(converted_tx)
         self._icx_check_balance(context, converted_tx, step_price)
         self._icx_check_to_address(context, converted_tx)
 
     @staticmethod
-    def query_validate(converted_tx: dict) -> None:
+    def validate_query(converted_tx: dict) -> None:
         method = converted_tx['method']
         params = converted_tx['params']
         IconPreValidator.JsonRpcMessageValidator.validate(method, params)
 
     @staticmethod
-    def _tx_validate(request: dict) -> None:
+    def _validate_tx(request: dict) -> None:
         IconPreValidator._check_contain_dict('method', request)
         method = request['method']
         IconPreValidator._check_contain_dict('params', request)

@@ -73,14 +73,14 @@ class TestTransactionValidator(unittest.TestCase):
     def test_check_balance(self):
         step_price = 0
         try:
-            self.icon_pre_validator.tx_validate(self._context, self.tx, step_price)
+            self.icon_pre_validator.validate_tx(self._context, self.tx, step_price)
         except:
             self.fail('raise exception!')
 
         response = {}
         try:
             self.tx['params']['value'] = 1
-            self.icon_pre_validator.tx_validate(self._context, self.tx, step_price)
+            self.icon_pre_validator.validate_tx(self._context, self.tx, step_price)
         except InvalidRequestException as e:
             response = {'code': e.code, 'message': e.message}
 
@@ -90,14 +90,14 @@ class TestTransactionValidator(unittest.TestCase):
     def test_check_score_installed(self):
         step_price = 0
         try:
-            self.icon_pre_validator.tx_validate(self._context, self.tx, step_price)
+            self.icon_pre_validator.validate_tx(self._context, self.tx, step_price)
         except:
             self.fail('raise exception!')
 
         self.icx_engine.storage.score_installed = False
         response = {}
         try:
-            self.icon_pre_validator.tx_validate(self._context, self.tx, step_price)
+            self.icon_pre_validator.validate_tx(self._context, self.tx, step_price)
         except InvalidParamsException as e:
             response = {'code': e.code, 'message': e.message}
 
