@@ -63,9 +63,9 @@ def interface(func):
     return __wrapper
 
 
-def eventlog(func=None, *, indexed_args_count=0):
+def eventlog(func=None, *, indexed=0):
     if func is None:
-        return partial(eventlog, indexed_args_count=indexed_args_count)
+        return partial(eventlog, indexed=indexed)
 
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
@@ -78,7 +78,7 @@ def eventlog(func=None, *, indexed_args_count=0):
 
     bit_flag = getattr(func, CONST_BIT_FLAG, 0) | ConstBitFlag.EventLog
     setattr(func, CONST_BIT_FLAG, bit_flag)
-    setattr(func, CONST_INDEXED_ARGS_COUNT, indexed_args_count)
+    setattr(func, CONST_INDEXED_ARGS_COUNT, indexed)
 
     parameters = signature(func).parameters.values()
     event_signature = __retrieve_event_signature(func_name, parameters)
@@ -94,7 +94,7 @@ def eventlog(func=None, *, indexed_args_count=0):
             raise EventLogException(str(e))
 
         call_method = getattr(calling_obj, '_IconScoreBase__put_eventlog')
-        return call_method(event_signature, arguments, indexed_args_count)
+        return call_method(event_signature, arguments, indexed)
 
     return __wrapper
 
