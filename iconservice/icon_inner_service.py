@@ -88,6 +88,7 @@ class IconScoreInnerTask(object):
             return self._invoke(request)
 
     def _invoke(self, request: dict):
+        response = None
         try:
             params = self._type_converter.convert(request, recursive=False)
             block_params = params['block']
@@ -107,14 +108,17 @@ class IconScoreInnerTask(object):
             response = make_response(results)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(icon_e.code, icon_e.message)
+            response = make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             Logger.error(e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
-        return response
+            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        finally:
+            Logger.debug(f'invoke response with {response}', ICON_INNER_LOG_TAG)
+            return response
 
     @message_queue_task
     async def query(self, request: dict):
+        Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
         if ENABLE_INNER_SERVICE_THREAD & EnableThreadFlag.Query:
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
@@ -123,6 +127,7 @@ class IconScoreInnerTask(object):
             return self._query(request)
 
     def _query(self, request: dict):
+        response = None
         try:
             converted_request = self._convert_request_params(request)
             self._icon_service_engine.validate_for_query(converted_request)
@@ -135,15 +140,17 @@ class IconScoreInnerTask(object):
             response = make_response(value)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(icon_e.code, icon_e.message)
+            response = make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             Logger.error(e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
-        return response
+            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        finally:
+            Logger.debug(f'query response with {response}', ICON_INNER_LOG_TAG)
+            return response
 
     @message_queue_task
     async def write_precommit_state(self, request: dict):
-        Logger.debug(f'write_precommit_state request', ICON_INNER_LOG_TAG)
+        Logger.debug(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
         if ENABLE_INNER_SERVICE_THREAD & EnableThreadFlag.Invoke:
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -152,6 +159,7 @@ class IconScoreInnerTask(object):
             return self._write_precommit_state(request)
 
     def _write_precommit_state(self, request: dict):
+        response = None
         try:
             converted_block_params = self._type_converter.convert(request, recursive=False)
             block = Block.from_dict(converted_block_params)
@@ -161,15 +169,17 @@ class IconScoreInnerTask(object):
             response = make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(icon_e.code, icon_e.message)
+            response = make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             Logger.error(e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
-        return response
+            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        finally:
+            Logger.debug(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            return response
 
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
-        Logger.debug(f'remove_precommit_state request', ICON_INNER_LOG_TAG)
+        Logger.debug(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
         if ENABLE_INNER_SERVICE_THREAD & EnableThreadFlag.Invoke:
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -178,6 +188,7 @@ class IconScoreInnerTask(object):
             return self._remove_precommit_state(request)
 
     def _remove_precommit_state(self, request: dict):
+        response = None
         try:
             # TODO check block validate
             block = Block.from_dict(request)
@@ -187,15 +198,17 @@ class IconScoreInnerTask(object):
             response = make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(icon_e.code, icon_e.message)
+            response = make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             Logger.error(e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
-        return response
+            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        finally:
+            Logger.debug(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            return response
 
     @message_queue_task
     async def validate_transaction(self, request: dict):
-        Logger.debug(f'pre_validate_check request', ICON_INNER_LOG_TAG)
+        Logger.debug(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
         if ENABLE_INNER_SERVICE_THREAD & EnableThreadFlag.Validate:
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
@@ -204,16 +217,20 @@ class IconScoreInnerTask(object):
             return self._validate_transaction(request)
 
     def _validate_transaction(self, request: dict):
+        response = None
         try:
             converted_request = self._convert_request_params(request)
             self._icon_service_engine.validate_for_invoke(converted_request)
+            response = make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(icon_e.code, icon_e.message)
+            response = make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             Logger.error(e, ICON_SERVICE_LOG_TAG)
-            return make_error_response(ExceptionCode.SERVER_ERROR, str(e))
-        return make_response(ExceptionCode.OK)
+            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        finally:
+            Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            return response
 
     def _convert_request_params(self, request: dict) -> dict:
         params = request['params']
