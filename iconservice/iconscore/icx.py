@@ -30,13 +30,11 @@ class Icx(object):
         self._address = address
 
     def transfer(self, addr_to: Address, amount: int) -> bool:
-        ret = self._context.transfer(self._address, addr_to, amount)
         if amount > 0:
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
-        return ret
+        return self._context.transfer(self._address, addr_to, amount)
 
     def send(self, addr_to: Address, amount: int) -> bool:
-        ret = self._context.send(self._address, addr_to, amount)
         if amount > 0:
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
-        return ret
+        return self._context.send(self._address, addr_to, amount)
