@@ -101,10 +101,9 @@ class IconScoreInnerTask(object):
             converted_tx_params = []
             for transaction_params in transactions_params:
                 converted_tx_params.append(self._type_converter.convert(transaction_params, recursive=True))
-
             tx_results, state_root_hash = self._icon_service_engine.invoke(block=block, tx_params=converted_tx_params)
-            results = {"txResults": {tx_result.tx_hash: tx_result.to_response_json() for tx_result in tx_results},
-                       "stateRootHash" : state_root_hash}
+            convert_tx_results = {tx_result.tx_hash: tx_result.to_response_json() for tx_result in tx_results}
+            results = {'txResults': convert_tx_results, 'stateRootHash': state_root_hash}
             response = make_response(results)
         except IconServiceBaseException as icon_e:
             Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
