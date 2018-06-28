@@ -36,6 +36,7 @@ class TransactionResult(object):
             self,
             tx_hash: str,
             block: Block,
+            tx_index: int,
             to: Address = None,
             status: int = FAILURE,
             score_address: Address = None,
@@ -44,6 +45,7 @@ class TransactionResult(object):
 
         :param tx_hash: transaction hash
         :param block: a block that the transaction belongs to
+        :param tx_index: an index of a transaction on the block
         :param to: a recipient address
         :param step_used: the amount of steps used in the transaction
         :param score_address:hex string that represent the contract address
@@ -52,6 +54,7 @@ class TransactionResult(object):
         """
         self.tx_hash = tx_hash
         self.block = block
+        self.tx_index = tx_index
         self.to = to
         self.score_address = score_address
         self.step_used = step_used
@@ -62,12 +65,7 @@ class TransactionResult(object):
         self.failure = None
 
     def __str__(self) -> str:
-        return \
-            f'status: {self.status}\n' \
-            f'tx_hash: {self.tx_hash}\n' \
-            f'to: {self.to}\n' \
-            f'score_address: {self.score_address}\n' \
-            f'step_used: {self.step_used}'
+        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
     def to_dict(self) -> dict:
         """
