@@ -52,7 +52,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
@@ -93,6 +93,7 @@ class TestIconServiceEngine(unittest.TestCase):
                              'blockHash': block_hash}
 
         response = await self._inner_task.invoke(make_request)
+        response = response['txResults']
         if not isinstance(response, dict):
             response = await self._inner_task.remove_precommit_state(precommit_request)
         elif response[tx_hash]['status'] == hex(1):
@@ -138,6 +139,7 @@ class TestIconServiceEngine(unittest.TestCase):
                              'blockHash': block_hash}
 
         response = await self._inner_task.invoke(make_request)
+        response = response['txResults']
         is_commit = False
         if not isinstance(response, dict):
             response = await self._inner_task.remove_precommit_state(precommit_request)
@@ -188,17 +190,18 @@ class TestIconServiceEngine(unittest.TestCase):
         precommit_request = {'blockHeight': hex(block_height),
                              'blockHash': block_hash}
 
-        tx_result = await self._inner_task.invoke(make_request)
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response['txResults']
         is_commit = False
-        if not isinstance(tx_result, dict):
+        if not isinstance(tx_results, dict):
             response = await self._inner_task.remove_precommit_state(precommit_request)
-        elif tx_result[tx_hash]['status'] == hex(1):
+        elif tx_results[tx_hash]['status'] == hex(1):
             is_commit = True
             response = await self._inner_task.write_precommit_state(precommit_request)
         else:
             response = await self._inner_task.remove_precommit_state(precommit_request)
 
-        return block_hash, is_commit, list(tx_result.values()), response
+        return block_hash, is_commit, list(tx_results.values()), response
 
     async def _icx_call(self, request: dict):
         method = 'icx_call'
@@ -216,7 +219,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_invoke_success(self):
@@ -236,7 +239,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_invoke_fail1(self):
@@ -252,7 +255,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_invoke_fail2(self):
@@ -272,7 +275,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_invoke_fail3(self):
@@ -292,7 +295,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_invoke_fail4(self):
@@ -312,7 +315,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_install_sample_token(self):
@@ -328,7 +331,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
     def test_query_method_sample_token(self):
@@ -357,7 +360,7 @@ class TestIconServiceEngine(unittest.TestCase):
         try:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(_run())
-        except:
+        except RuntimeError:
             pass
 
 
