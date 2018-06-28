@@ -234,7 +234,8 @@ class IconServiceEngine(object):
                                  timestamp=context.block.timestamp,
                                  nonce=params.get('nonce', None))
 
-        tx_result = TransactionResult(context.tx.hash, context.block)
+        tx_result = TransactionResult(
+            context.tx.hash, context.block, context.tx.index)
 
         try:
             genesis_data = tx_params['genesisData']
@@ -427,7 +428,8 @@ class IconServiceEngine(object):
         :return: return value of an IconScoreBase method
             None is allowed
         """
-        tx_result = TransactionResult(context.tx.hash, context.block)
+        tx_result = TransactionResult(
+            context.tx.hash, context.block, context.tx.index)
 
         try:
             to: Address = params.get('to', None)

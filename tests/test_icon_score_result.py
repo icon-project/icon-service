@@ -46,12 +46,14 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.attach_mock(Mock(spec=Block), "block")
 
     def tearDown(self):
-        self._block_result = None
-        self._mock_serializer = None
+        self._icon_service_engine = None
+        self._mock_context = None
 
     def test_tx_success(self):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
+        tx_index = Mock(spec=int)
+        self._mock_context.tx.attach_mock(tx_index, "index")
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
@@ -59,6 +61,7 @@ class TestTransactionResult(unittest.TestCase):
             self._mock_context, {'from': from_, 'to': to_})
 
         self.assertEqual(1, tx_result.status)
+        self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
 
@@ -72,11 +75,13 @@ class TestTransactionResult(unittest.TestCase):
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
+        tx_index = Mock(spec=int)
+        self._mock_context.tx.attach_mock(tx_index, "index")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
 
-        print(tx_result)
         self.assertEqual(0, tx_result.status)
+        self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
 
@@ -85,6 +90,8 @@ class TestTransactionResult(unittest.TestCase):
             Mock(return_value=True), 'is_data_type_supported')
 
         from_ = Address.from_data(AddressPrefix.EOA, b'test')
+        tx_index = Mock(spec=int)
+        self._mock_context.tx.attach_mock(tx_index, "index")
         self._mock_context.tx.timestamp = 0
         self._mock_context.tx.origin = from_
         self._mock_context.tx.nonce = None
@@ -98,5 +105,6 @@ class TestTransactionResult(unittest.TestCase):
         )
 
         self.assertEqual(1, tx_result.status)
+        self.assertEqual(tx_index, tx_result.tx_index)
         self.assertIsNone(tx_result.to)
         self.assertIsNotNone(tx_result.score_address)
