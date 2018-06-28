@@ -22,7 +22,6 @@ import unittest
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, ServerErrorException
-from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
