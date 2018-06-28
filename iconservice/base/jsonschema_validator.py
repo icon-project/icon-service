@@ -42,21 +42,31 @@ icx_call: dict = {
     "id": "https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3#icx_call",
     "type": "object",
     "properties": {
-        "from": {"type": "string", "maxLength": 42},
-        "to": {"type": "string", "maxLength": 42},
-        "dataType": {"type": "string", "enum": ["call"]},
-        "data": {
+        "jsonrpc": {"type": "string", "enum": ["2.0"]},
+        "method": {"type": "string", "enum": ["icx_call"]},
+        "id": {"type": "number"},
+        "params": {
             "type": "object",
             "properties": {
-                "method": {"type": "string"},
-                "params": {"type": "object"}
+                "from": {"type": "string", "maxLength": 42},
+                "to": {"type": "string", "maxLength": 42},
+                "dataType": {"type": "string", "enum": ["call"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "method": {"type": "string"},
+                        "params": {"type": "object"}
+                    },
+                    "additionalProperties": False,
+                    "required": ["method"]
+                },
             },
             "additionalProperties": False,
-            "required": ["method", "params"]
-        },
+            "required": ["from", "to", "dataType", "data"]
+        }
     },
     "additionalProperties": False,
-    "required": ["from", "to", "dataType", "data"]
+    "required": ["jsonrpc", "method", "id", "params"]
 }
 
 icx_getBalance: dict = {
@@ -65,10 +75,20 @@ icx_getBalance: dict = {
     "id": "https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3#icx_getbalance",
     "type": "object",
     "properties": {
-        "address": {"type": "string", "maxLength": 42},
+        "jsonrpc": {"type": "string", "enum": ["2.0"]},
+        "method": {"type": "string"},
+        "id": {"type": "number"},
+        "params": {
+            "type": "object",
+            "properties": {
+                "address": {"type": "string", "maxLength": 42},
+            },
+            "additionalProperties": False,
+            "required": ["address"]
+        }
     },
     "additionalProperties": False,
-    "required": ["address"]
+    "required": ["jsonrpc", "method", "id", "params"]
 }
 
 icx_getScoreApi: dict = {
@@ -77,10 +97,34 @@ icx_getScoreApi: dict = {
     "id": "https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3#icx_getscoreapi",
     "type": "object",
     "properties": {
-        "address": {"type": "string", "maxLength": 42},
+        "jsonrpc": {"type": "string", "enum": ["2.0"]},
+        "method": {"type": "string"},
+        "id": {"type": "number"},
+        "params": {
+            "type": "object",
+            "properties": {
+                "address": {"type": "string", "maxLength": 42},
+            },
+            "additionalProperties": False,
+            "required": ["address"]
+        }
     },
     "additionalProperties": False,
-    "required": ["address"]
+    "required": ["jsonrpc", "method", "id", "params"]
+}
+
+icx_getTotalSupply: dict = {
+    "$schema": "http://json-schema.org/schema#",
+    "title": "icx_getBalance",
+    "id": "https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3#icx_gettotalsupply",
+    "type": "object",
+    "properties": {
+        "jsonrpc": {"type": "string", "enum": ["2.0"]},
+        "method": {"type": "string"},
+        "id": {"type": "number"},
+    },
+    "additionalProperties": False,
+    "required": ["jsonrpc", "method", "id"]
 }
 
 icx_getTransactionResult: dict = {
@@ -89,10 +133,20 @@ icx_getTransactionResult: dict = {
     "id": "https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3#icx_gettransactionresult",
     "type": "object",
     "properties": {
-        "txHash": {"type": "string"}
+        "jsonrpc": {"type": "string", "enum": ["2.0"]},
+        "method": {"type": "string"},
+        "id": {"type": "number"},
+        "params": {
+            "type": "object",
+            "properties": {
+                "txHash": {"type": "string"}
+            },
+            "additionalProperties": False,
+            "required": ["txHash"]
+        }
     },
     "additionalProperties": False,
-    "required": ["txHash"]
+    "required": ["jsonrpc", "method", "id", "params"]
 }
 
 icx_sendTransaction: dict = {
@@ -101,42 +155,52 @@ icx_sendTransaction: dict = {
     "id": "https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3#icx_sendtransaction",
     "type": "object",
     "properties": {
-        "version": {"type": "string"},
-        "from": {"type": "string", "maxLength": 42},
-        "to": {"type": "string", "maxLength": 42},
-        "value": {"type": "string"},
-        "stepLimit": {"type": "string"},
-        "timestamp": {"type": "string"},
-        "nonce": {"type": "string"},
-        "signature": {"type": "string"},
-        "dataType": {"type": "string", "enum": ["call", "deploy"]},
-        "data": {
+        "jsonrpc": {"type": "string", "enum": ["2.0"]},
+        "method": {"type": "string"},
+        "id": {"type": "number"},
+        "params": {
             "type": "object",
             "properties": {
-                "method": {"type": "string"},
-                "contentType": {"type": "string"},
-                "content": {"type": "string"},
-                "params": {"type": "object"}
+                "version": {"type": "string"},
+                "from": {"type": "string", "maxLength": 42},
+                "to": {"type": "string", "maxLength": 42},
+                "value": {"type": "string"},
+                "stepLimit": {"type": "string"},
+                "timestamp": {"type": "string"},
+                "nonce": {"type": "string"},
+                "signature": {"type": "string"},
+                "dataType": {"type": "string", "enum": ["call", "deploy"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "method": {"type": "string"},
+                        "contentType": {"type": "string"},
+                        "content": {"type": "string"},
+                        "params": {"type": "object"}
+                    },
+                    "additionalProperties": False,
+                },
             },
             "additionalProperties": False,
-        },
+            "required": ["version", "from", "stepLimit", "timestamp", "signature"]
+        }
     },
     "additionalProperties": False,
-    "required": ["version", "from", "stepLimit", "timestamp", "signature"]
-}
+    "required": ["jsonrpc", "method", "id", "params"]
 
+}
 
 SCHEMA: dict = {
     "icx_call": icx_call,
     "icx_getBalance": icx_getBalance,
     "icx_getScoreApi": icx_getScoreApi,
-    "icx_getTotalSupply": has_no_params,
+    "icx_getTotalSupply": icx_getTotalSupply,
     "icx_getTransactionResult": icx_getTransactionResult,
     "icx_sendTransaction": icx_sendTransaction
 }
 
 
-def validate_jsonschema(request: dict):
+def validate_jsonschema(request: object):
     """ Validate JSON-RPC v3 schema.
 
     refer to https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3
@@ -144,23 +208,19 @@ def validate_jsonschema(request: dict):
     :param request: JSON-RPC request
     :return: N/A
     """
-    # check JSON_RPC request format
-    try:
-        validate(instance=request, schema=json_request)
-    except ValidationError as e:
-        raise InvalidParamsException(message=f"JSON schema validation error: {e}")
+    # get JSON-RPC batch request
+    if isinstance(request, list):
+        for req in request:
+            validate_jsonschema(req)
+        return
 
     # get schema for 'method'
     schema = SCHEMA.get(request['method'], None)
     if schema is None:
         raise ServerErrorException(message=f"Method '{request['method']}' is not supported'")
 
-    # some 'method' has no 'params'
-    if schema is has_no_params:
-        return
-
-    # check 'params'
+    # check request
     try:
-        validate(instance=request['params'], schema=schema)
+        validate(instance=request, schema=schema)
     except ValidationError as e:
         raise InvalidParamsException(message=f"JSON schema validation error: {e}")

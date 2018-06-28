@@ -109,10 +109,6 @@ class TestJsonschemValidator(unittest.TestCase):
         except:
             self.fail('raise exception!')
 
-    def test_invalid_method(self):
-        self.sendTransaction['method'] = 'wrong_method'
-        self.assertRaises(ServerErrorException, validate_jsonschema, self.sendTransaction)
-
     def test_call(self):
         try:
             validate_jsonschema(self.call)
@@ -142,7 +138,6 @@ class TestJsonschemValidator(unittest.TestCase):
 
         data = self.call['params']['data']
         self.check_required(self.call, data, 'method')
-        self.check_required(self.call, data, 'params')
 
     def test_getBalance(self):
         try:
@@ -185,6 +180,15 @@ class TestJsonschemValidator(unittest.TestCase):
             validate_jsonschema(self.getTotalSupply)
         except:
             self.fail('raise exception!')
+
+    def test_getTotalSupply_invalid_key(self):
+        # add invalid key to params
+        self.getTotalSupply['invalid_key'] = "invalid_value"
+        self.assertRaises(InvalidParamsException, validate_jsonschema, self.getTotalSupply)
+        self.getTotalSupply.pop('invalid_key')
+
+    def test_getTotalSupply_required(self):
+        self.check_required(self.getTotalSupply, self.getTotalSupply, 'id', invalid_value="1234")
 
     def test_getTransactionResult(self):
         try:
@@ -236,3 +240,10 @@ class TestJsonschemValidator(unittest.TestCase):
         self.check_required(self.sendTransaction, params, 'stepLimit')
         self.check_required(self.sendTransaction, params, 'timestamp')
         self.check_required(self.sendTransaction, params, 'signature')
+
+    def test_batch_request(self):
+        batch_request = [self.call, self.sendTransaction, self.getTotalSupply]
+        try:
+            validate_jsonschema(batch_request)
+        except:
+            self.fail('raise exception!')
