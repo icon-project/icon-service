@@ -79,7 +79,7 @@ loop peer -d -r 127.0.0.1:7102 -o ./conf/loop_peer_conf1.json
 * loopchain peer와 1:1 매칭
 ``` bash
 # terminal3
--c 설정파일
+# -c 설정파일
 iconservice start -c ./conf/icon_conf1.json
 ```
 
