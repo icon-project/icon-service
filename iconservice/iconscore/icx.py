@@ -13,9 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from .icon_score_context import IconScoreContext
 from .icon_score_step import StepType
+from .icon_score_trace import Trace, TraceType
 from ..base.address import Address
 
 
@@ -30,13 +30,17 @@ class Icx(object):
         self._address = address
 
     def transfer(self, addr_to: Address, amount: int) -> bool:
-        ret = self._context.transfer(self._address, addr_to, amount)
         if amount > 0:
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
+        ret = self._context.transfer(self._address, addr_to, amount)
+        trace = Trace(self._address, TraceType.TRANSFER, [addr_to, amount])
+        self._context.traces.append(trace)
         return ret
 
     def send(self, addr_to: Address, amount: int) -> bool:
-        ret = self._context.send(self._address, addr_to, amount)
         if amount > 0:
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
+        ret = self._context.send(self._address, addr_to, amount)
+        trace = Trace(self._address, TraceType.TRANSFER, [addr_to, amount])
+        self._context.traces.append(trace)
         return ret

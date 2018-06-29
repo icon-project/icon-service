@@ -1,0 +1,88 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2017-2018 theloop Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from enum import Enum, unique
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from ..base.address import Address
+
+
+@unique
+class TraceType(Enum):
+    TRANSFER = 0
+    CALL = 1
+    REVERT = 2
+    THROW = 3
+    DESTROY = 4
+
+
+class Trace(object):
+    """
+    A DataClass of a Trace.
+    sample
+    {
+        "scoreAddress": "cx00...",
+        "trace": "CALL",
+        "data": ["cx11...", "transfer", ["hx00...", "0x1234"]]
+    }
+
+    """
+
+    def __init__(
+            self,
+            score_address: 'Address',
+            trace: TraceType,
+            data: list = None) -> None:
+        """
+        Constructor
+
+        :param score_address: an address of SCORE in which the trace is occurred
+        :param trace: trace type
+        :param data: a list of arguments or call function name
+          e.g.
+            transfer: [RECIPIENT, AMOUNT]
+            call: [SCORE_ADDRESS_TO_CALL, METHOD, [ARGS_OF_METHOD]]
+            revert: [CODE, MESSAGE]
+            throw: [CODE, MESSAGE]
+        """
+        self.score_address: 'Address' = score_address
+        self.trace: TraceType = trace
+        self.data: list = data
+
+    def __str__(self) -> str:
+        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+
+    def to_dict(self, casing: Optional) -> dict:
+        """
+        Returns properties as `dict`
+        :return: a dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if value is None:
+                # Excludes properties which have `None` value
+                continue
+
+            new_key = casing(key) if casing else key
+            if isinstance(value, TraceType):
+                new_dict[new_key] = value.name
+            elif isinstance(value, Address):
+                new_dict[new_key] = str(value)
+            else:
+                new_dict[new_key] = value
+
+        return new_dict

@@ -14,15 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""IconScoreEngine testcase
-"""
-
 import unittest
 from inspect import isfunction, getmembers
 from typing import Optional, List, Dict
 
 from iconservice.iconscore.icon_score_api_generator import ScoreApiGenerator
-from iconservice.iconscore.icon_score_base import external, IconScoreException
+from iconservice.iconscore.icon_score_base import \
+    external, IconScoreException, eventlog, Address
 
 
 class TestScoreApiGenerator(unittest.TestCase):
@@ -139,6 +137,25 @@ class TestScoreApiGenerator(unittest.TestCase):
         api = ScoreApiGenerator.generate(functions)[0]
         self.assertEqual('bool', api['outputs'][0]['type'])
 
+    def test_fallback(self):
+        function_name = 'fallback'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual('fallback', api['type'])
+        self.assertEqual(function_name, api['name'])
+        self.assertEqual(1, len(api['inputs']))
+        self.assertEqual('str', api['inputs'][0]['type'])
+
+    def test_event(self):
+        function_name = 'TestEvent'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual('eventlog', api['type'])
+        self.assertEqual(function_name, api['name'])
+        self.assertEqual(3, len(api['inputs']))
+
     def tearDown(self):
         self._members = None
 
@@ -202,4 +219,11 @@ class TestScore:
 
     @external
     def empty_param_bool_return(self) -> bool:
+        pass
+
+    def fallback(self, name: str):
+        pass
+
+    @eventlog(indexed=2)
+    def TestEvent(self, name: str, address: Address, age: int):
         pass

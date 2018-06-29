@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""IconScoreEngine testcase
-"""
-
 import unittest
 from unittest.mock import Mock
 
@@ -45,6 +42,8 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context = Mock(spec=IconScoreContext)
         self._mock_context.attach_mock(Mock(spec=Transaction), "tx")
         self._mock_context.attach_mock(Mock(spec=Block), "block")
+        self._mock_context.attach_mock(Mock(spec=list), "traces")
+        self._mock_context.attach_mock(Mock(spec=Address), "current_address")
 
     def tearDown(self):
         self._icon_service_engine = None
@@ -88,7 +87,8 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
-        self.assertNotIn('scoreAddress', tx_result.to_response_json())
+        dict_as_camel = tx_result.to_response_json()
+        self.assertNotIn('scoreAddress', dict_as_camel)
 
     def test_install_result(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
@@ -118,3 +118,5 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
         self.assertIsNotNone(tx_result.score_address)
+        dict_as_camel = tx_result.to_response_json()
+        self.assertNotIn('failure', dict_as_camel)

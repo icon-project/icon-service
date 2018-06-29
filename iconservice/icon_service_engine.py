@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
 from .base.block import Block
-from .base.exception import ExceptionCode
+from .base.exception import ExceptionCode, RevertException
 from .base.exception import IconServiceBaseException, ServerErrorException
 from .base.message import Message
 from .base.transaction import Transaction
@@ -41,6 +41,7 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
+from .iconscore.icon_score_trace import Trace, TraceType
 from .logger import Logger
 
 if TYPE_CHECKING:
@@ -293,6 +294,7 @@ class IconServiceEngine(object):
         method = tx_params['method']
         params = tx_params['params']
         addr_from = params['from']
+        addr_to = params['to']
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -301,6 +303,7 @@ class IconServiceEngine(object):
                                  nonce=params.get('nonce', None))
 
         context.msg = Message(sender=addr_from, value=params.get('value', 0))
+        context.current_address = addr_to
 
         step_limit = params.get('stepLimit', ICON_SERVICE_BIG_STEP_LIMIT)
         context.step_counter: IconScoreStepCounter = \
@@ -308,6 +311,7 @@ class IconServiceEngine(object):
 
         tx_result = self._call(context, method, params)
         tx_result.step_used = context.step_counter.step_used
+        context.clear_stack()
         return tx_result
 
     def query(self, method: str, params: dict) -> Any:
@@ -454,6 +458,11 @@ class IconServiceEngine(object):
             # Add failure info to transaction result
             tx_result.failure = TransactionResult.Failure(
                 code=e.code, message=e.message)
+            trace_type = TraceType.REVERT if isinstance(e, RevertException) \
+                else TraceType.THROW
+            context.traces.append(
+                Trace(context.current_address, trace_type, [e.code, e.message])
+            )
         except Exception as e:
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
             tx_result.failure = TransactionResult.Failure(
