@@ -174,10 +174,15 @@ class BlockBatch(OrderedDict):
         """
         separater = b'|'
 
+        # items in data MUST be byte-like objects
         data = []
         for address, icon_score_batch in self.items():
             data.append(address.body)
+
             for key, value in icon_score_batch.items():
+                if value is None:
+                    value = b''
+
                 data.append(key)
                 data.append(value)
 
