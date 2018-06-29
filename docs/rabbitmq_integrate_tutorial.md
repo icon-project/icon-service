@@ -90,7 +90,7 @@ tbears samples
 
 ### 6 배포
 ``` bash
-tbears deploy sample_token -k ./icon_keys/icon_keystore
+tbears deploy sample_token -k ./icon_keys/key1
 키체인 암호 : qwer1234%
 ```
 
