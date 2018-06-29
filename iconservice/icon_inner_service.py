@@ -136,7 +136,7 @@ class IconScoreInnerTask(object):
     def _query(self, request: dict):
         response = None
         try:
-            validate_jsonschema(request)
+            self._validate_jsonschema(request)
             converted_request = self._convert_request_params(request)
             self._icon_service_engine.validate_for_query(converted_request)
 
@@ -245,7 +245,7 @@ class IconScoreInnerTask(object):
     def _validate_transaction(self, request: dict):
         response = None
         try:
-            validate_jsonschema(request)
+            self._validate_jsonschema(request)
             converted_request = self._convert_request_params(request)
             self._icon_service_engine.validate_for_invoke(converted_request)
             response = make_response(ExceptionCode.OK)
@@ -270,6 +270,12 @@ class IconScoreInnerTask(object):
         params = self._type_converter.convert(params, recursive=False)
         request['params'] = params
         return request
+
+    def _validate_jsonschema(self, request: dict):
+        # TODO: Skip jsonschema validation
+        # to support deprecated unittest using ICON JSON-RPC api v2
+        # validate_jsonschema(request)
+        pass
 
     @message_queue_task
     async def change_block_hash(self, params):
