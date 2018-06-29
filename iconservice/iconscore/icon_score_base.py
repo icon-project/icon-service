@@ -19,7 +19,8 @@ from inspect import isfunction, getmembers, signature, Parameter
 from abc import abstractmethod
 from functools import partial
 
-from iconservice.iconscore.icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
+from .icon_score_trace import Trace, TraceType
+from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import *
 from .icon_score_step import StepType
@@ -360,8 +361,26 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param arg_list:
         :param kw_dict:
         """
+        return self.__call(addr_to, func_name, arg_list, kw_dict)
+
+    def __call(self, to_: 'Address', func_name: str, args: list, kwargs: dict):
+        """
+        Call external function provided by other IconScore with arguments
+        without fallback
+
+        :param to_: the address of other IconScore
+        :param func_name: function name provided by other IconScore
+        :param args: arguments
+        :param kwargs: keyword arguments
+        """
         self._context.step_counter.increase_step(StepType.CALL, 1)
-        return self._context.call(self.address, addr_to, func_name, arg_list, kw_dict)
+        ret = self._context.call(
+            self.address, to_, func_name, args, kwargs)
+        arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
+        trace = Trace(
+            self.__address, TraceType.CALL, [to_, func_name, arg_data])
+        self._context.traces.append(trace)
+        return ret
 
     def __put_eventlog(self,
                        event_signature: str,
@@ -406,6 +425,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 return True
         return False
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def __on_db_put(context: 'IconScoreContext',
                     key: bytes,
@@ -433,6 +453,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 context.step_counter.increase_step(
                     StepType.STORAGE_SET, len(new_value))
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def __on_db_delete(context: 'IconScoreContext',
                        key: bytes,
@@ -500,8 +521,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param arg_list:
         :param kw_dict:
         """
-        self._context.step_counter.increase_step(StepType.TRANSFER, 1)
-        return self._context.call(self.address, addr_to, func_name, [], kw_dict)
+        return self.__call(addr_to, func_name, [], kw_dict)
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:

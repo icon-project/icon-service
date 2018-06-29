@@ -29,9 +29,11 @@ from ..database.batch import BlockBatch, TransactionBatch
 from typing import TYPE_CHECKING, Optional, Union, List
 
 if TYPE_CHECKING:
-    from .icon_score_step import IconScoreStepCounter
     from .icon_score_base import IconScoreBase
     from .icon_score_info_mapper import IconScoreInfoMapper
+    from .icon_score_step import IconScoreStepCounter
+    from .icon_score_event_log import EventLog
+    from .icon_score_trace import Trace
 
 _thread_local_data = threading.local()
 
@@ -104,10 +106,12 @@ class IconScoreContext(object):
         self.block = block
         self.tx = tx
         self.msg = msg
+        self.current_address: Address = None
         self.block_batch = block_batch
         self.tx_batch = tx_batch
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = []
+        self.traces: List['Trace'] = []
 
         self.__msg_stack = []
 
@@ -175,11 +179,13 @@ class IconScoreContext(object):
         self.__msg_stack.append(self.msg)
 
         self.msg = Message(sender=addr_from)
+        self.current_address = addr_to
         icon_score = self.icon_score_mapper.get_icon_score(addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
                           addr_from=addr_from, arg_params=arg_params, kw_params=kw_params)
 
+        self.current_address = addr_from
         self.msg = self.__msg_stack.pop()
 
         return ret
@@ -198,6 +204,9 @@ class IconScoreContext(object):
         """
         raise RevertException(message, code)
 
+    def clear_stack(self):
+        self.__msg_stack.clear()
+
     def clear(self) -> None:
         """Set instance member variables to None
         """
@@ -206,7 +215,7 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
-        self.__msg_stack.clear()
+        self.clear_stack()
 
     def commit(self) -> None:
         """Write changed states in block_batch to StateDB
