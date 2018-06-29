@@ -1,5 +1,18 @@
 # ChangeLog
 
+## 0.9.2 - 2018-06-29
+
+* loopchain + iconservice 연동
+* EventLog 형식 변경
+* InterfaceScore 추가
+  - 외부 스코어의 external function 호출시 Interface로 호출하도록 추가
+* IconScore Coin API 변경
+  - self.send, self.transfer -> self.icx.send, self.icx.transfer
+* JSON-RPC API v3 업데이트
+  - 모든 프로토콜에 version 필드 추가
+  - 블록정보 조회 API 추가
+  - 트랜젝션 정보 조회 API 추가
+
 ## 0.9.1 - 2018-06-11
 
 ### SCORE
