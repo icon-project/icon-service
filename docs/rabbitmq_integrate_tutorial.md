@@ -67,17 +67,20 @@ pip install tbears
 * 4개의 peer이상 사용하기를 권장
 ``` bash
 # terminal1
-loop rs -d -o loop_rs_conf.json
+# -d 디버그, -o 설정파일
+loop rs -d -o ./conf/loop_rs_conf.json
 
 # terminal2
-loop peer -d -o loop_peer_conf1.json
+# -d 디버그, -r target radio station -o 설정파일
+loop peer -d -r 127.0.0.1:7102 -o ./conf/loop_peer_conf1.json
 ```
 
 ### 4 iconservice 실행
 * loopchain peer와 1:1 매칭
 ``` bash
 # terminal3
-iconservice start -c icon_conf1.json
+-c 설정파일
+iconservice start -c ./conf/icon_conf1.json
 ```
 
 ### 5 샘플코드 생성
@@ -87,7 +90,7 @@ tbears samples
 
 ### 6 배포
 ``` bash
-tbears deploy sample_token -k icon_keystore
+tbears deploy sample_token -k ./icon_keys/icon_keystore
 키체인 암호 : qwer1234%
 ```
 
