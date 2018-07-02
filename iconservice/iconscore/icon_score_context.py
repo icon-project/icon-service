@@ -17,6 +17,7 @@
 import threading
 from enum import IntEnum, unique
 
+from iconservice.utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message
@@ -111,6 +112,7 @@ class IconScoreContext(object):
         self.tx_batch = tx_batch
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = []
+        self.logs_bloom: BloomFilter = BloomFilter()
         self.traces: List['Trace'] = []
 
         self.__msg_stack = []

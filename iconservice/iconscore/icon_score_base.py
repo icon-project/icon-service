@@ -19,6 +19,7 @@ from inspect import isfunction, getmembers, signature, Parameter
 from abc import abstractmethod
 from functools import partial
 
+from iconservice.utils import int_to_bytes
 from .icon_score_trace import Trace, TraceType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
@@ -94,7 +95,7 @@ def eventlog(func=None, *, indexed=0):
         except TypeError as e:
             raise EventLogException(str(e))
 
-        call_method = getattr(calling_obj, '_IconScoreBase__put_eventlog')
+        call_method = getattr(calling_obj, '_IconScoreBase__put_event_log')
         return call_method(event_signature, arguments, indexed)
 
     return __wrapper
@@ -382,7 +383,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self._context.traces.append(trace)
         return ret
 
-    def __put_eventlog(self,
+    def __put_event_log(self,
                        event_signature: str,
                        arguments: List[Any],
                        indexed_args_count: int):
@@ -401,6 +402,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f'declared indexed_args_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 
+        self._context.logs_bloom.add(self.__get_bloom_data(0, event_signature))
         indexed: List[BaseType] = [event_signature]
         data: List[BaseType] = []
         for i, argument in enumerate(arguments):
@@ -412,11 +414,28 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             # Separates indexed type and base type with keeping order.
             if i < indexed_args_count:
                 indexed.append(argument)
+                bloom_data = self.__get_bloom_data(i + 1, argument)
+                self._context.logs_bloom.add(bloom_data)
             else:
                 data.append(argument)
 
         event = EventLog(self.address, indexed, data)
         self._context.event_logs.append(event)
+
+    @staticmethod
+    def __get_bloom_data(index: int, data: BaseType) -> bytes:
+        raw = index.to_bytes(1, 'big')
+        if isinstance(data, int):
+            raw += int_to_bytes(data)
+        elif isinstance(data, str):
+            raw += data.encode('utf-8')
+        elif isinstance(data, Address):
+            raw += data.prefix.to_bytes(1, 'big') + data.body
+        elif isinstance(data, bool):
+            raw += int_to_bytes(int(data))
+        elif isinstance(data, bytes):
+            raw += data
+        return raw
 
     @staticmethod
     def __is_base_type(value) -> bool:

@@ -21,10 +21,11 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, IconScoreException
+    external, IconScoreException, int_to_bytes
 from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
+from iconservice.utils.bloom import BloomFilter
 
 
 class TestEventlog(unittest.TestCase):
@@ -33,8 +34,10 @@ class TestEventlog(unittest.TestCase):
         address = Mock(spec=Address)
         context = Mock(spec=IconScoreContext)
         event_logs = Mock(spec=List['EventLog'])
+        logs_bloom = BloomFilter()
 
         context.attach_mock(event_logs, 'event_logs')
+        context.attach_mock(logs_bloom, 'logs_bloom')
         ContextContainer._put_context(context)
 
         self._mock_score = EventlogScore(db, address)
@@ -61,6 +64,19 @@ class TestEventlog(unittest.TestCase):
         event_log = context.event_logs.append.call_args[0][0]
         self.assertEqual(2, len(event_log.indexed))
         self.assertEqual(2, len(event_log.data))
+
+        zero_event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertIn(zero_event_bloom_data, context.logs_bloom)
+
+        one_event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertIn(one_event_bloom_data, context.logs_bloom)
+
+        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
+        self.assertIn(name_bloom_data, context.logs_bloom)
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
@@ -96,6 +112,14 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(event_log_ordered_args.data,
                          event_log_keyword_args.data)
 
+        one_event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertIn(one_event_bloom_data, context.logs_bloom)
+
+        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
+        self.assertIn(name_bloom_data, context.logs_bloom)
+
     # def test_call_event_no_hint_exception(self):
     #     name = "name"
     #     address = Mock(spec=Address)
@@ -104,6 +128,8 @@ class TestEventlog(unittest.TestCase):
     #                       name, address, age)
 
     def test_call_event_mismatch_arg(self):
+        context = ContextContainer._get_context()
+
         name = "name"
         address = Mock(spec=Address)
         age = "10"
@@ -111,6 +137,14 @@ class TestEventlog(unittest.TestCase):
 
         self.assertRaises(IconScoreException, self._mock_score.OneIndexEvent,
                           name, address, age)
+
+        one_event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertNotIn(one_event_bloom_data, context.logs_bloom)
+
+        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
+        self.assertNotIn(name_bloom_data, context.logs_bloom)
 
     # def test_call_event_unsupported_arg(self):
     #     context = ContextContainer._get_context()
@@ -155,14 +189,6 @@ class EventlogScore(IconScoreBase):
     def FourIndexEvent(
             self, name: str, address: Address, age: int, phone_number: str):
         pass
-
-    # @eventlog
-    # def HintlessEvent(self, name, address, age):
-    #     pass
-
-    # @eventlog
-    # def ArrayEvent(self, name: str, address: List[Address], ):
-    #     pass
 
     @external
     def empty(self):
