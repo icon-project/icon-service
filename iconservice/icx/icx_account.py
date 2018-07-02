@@ -19,7 +19,7 @@ from struct import Struct
 
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
-from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
+from ..icon_config import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 ACCOUNT_DATA_STRUCTURE_VERSION = 0
 
@@ -67,8 +67,8 @@ class Account(object):
 
     # leveldb account value structure (bigendian, 36 bytes)
     # version(1) | type(1) | flags(1) | reserved(1) |
-    # icx(BALANCE_BYTE_SIZE)
-    _struct = Struct(f'>cccx{BALANCE_BYTE_SIZE}s')
+    # icx(DEFAULT_BYTE_SIZE)
+    _struct = Struct(f'>cccx{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self,
                  account_type: AccountType=AccountType.GENERAL,
@@ -258,7 +258,7 @@ class Account(object):
             version.to_bytes(1, byteorder),
             self._type.to_bytes(1, byteorder),
             flags.to_bytes(1, byteorder),
-            self._icx.to_bytes(BALANCE_BYTE_SIZE, byteorder))
+            self._icx.to_bytes(DEFAULT_BYTE_SIZE, byteorder))
 
     def __bytes__(self) -> bytes:
         """operator bytes() overriding

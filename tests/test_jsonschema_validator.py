@@ -66,7 +66,7 @@ class TestJsonschemValidator(unittest.TestCase):
             "id": 1234,
             "method": "icx_getTransactionResult",
             "params": {
-                'txHash': create_tx_hash(b'tx'),
+                'txHash': bytes.hex(create_tx_hash(b'tx')),
             }
         }
         self.sendTransaction = {

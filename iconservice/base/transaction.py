@@ -25,18 +25,18 @@ class Transaction(object):
     """
 
     def __init__(self,
-                 tx_hash: str = None,
+                 tx_hash: Optional[bytes] = None,
                  index: int = -1,
                  origin: Optional['Address'] = None,
                  timestamp: int = None,
                  nonce: int = None) -> None:
         """Transaction class for icon score context
         """
-        self.__hash = tx_hash
-        self.__index = index
-        self.__origin = origin
-        self.__timestamp = timestamp
-        self.__nonce = nonce
+        self._hash = tx_hash
+        self._index = index
+        self._origin = origin
+        self._timestamp = timestamp
+        self._nonce = nonce
 
     @property
     def origin(self) -> 'Address':
@@ -44,32 +44,32 @@ class Transaction(object):
 
         :return:
         """
-        return self.__origin
+        return self._origin
 
     @property
     def index(self) -> int:
         """tx index in a block
         """
-        return self.__index
+        return self._index
 
     @property
-    def hash(self) -> str:
+    def hash(self) -> bytes:
         """transaction hash
         """
-        return self.__hash
+        return self._hash
 
     @property
     def timestamp(self) -> int:
         """timestamp of a transaction request
         This is NOT a block timestamp
         """
-        return self.__timestamp
+        return self._timestamp
 
     @property
     def nonce(self) -> int:
         """nonce of a transaction request
         """
-        return self.__nonce
+        return self._nonce
 
     @staticmethod
     def create_transaction(index: int, origin: 'Address', params: dict):

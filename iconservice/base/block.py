@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from struct import Struct
-from ..icon_config import DATA_BYTE_ORDER, BALANCE_BYTE_SIZE
+from ..icon_config import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
 from typing import Optional
 
 
@@ -24,14 +24,14 @@ class Block(object):
     _VERSION = 0
     # leveldb account value structure (bigendian, 1 + 32 + 32 + 32 + 32 bytes)
     # version(1)
-    # | height(BALANCE_BYTE_SIZE)
-    # | hash(BALANCE_BYTE_SIZE)
-    # | timestamp(BALANCE_BYTE_SIZE)
-    # | prev_hash(BALANCE_BYTE_SIZE)
+    # | height(DEFAULT_BYTE_SIZE)
+    # | hash(DEFAULT_BYTE_SIZE)
+    # | timestamp(DEFAULT_BYTE_SIZE)
+    # | prev_hash(DEFAULT_BYTE_SIZE)
 
-    _struct = Struct(f'>c{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s{BALANCE_BYTE_SIZE}s')
+    _struct = Struct(f'>c{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s')
 
-    def __init__(self, block_height: int, block_hash: str, timestamp: int, prev_hash: Optional[str]) -> None:
+    def __init__(self, block_height: int, block_hash: bytes, timestamp: int, prev_hash: Optional[bytes]) -> None:
         """Constructor
 
         :param block_height: block height
@@ -50,7 +50,7 @@ class Block(object):
         return self._height
 
     @property
-    def hash(self) -> str:
+    def hash(self) -> bytes:
         return self._hash
 
     @property
@@ -58,7 +58,7 @@ class Block(object):
         return self._timestamp
 
     @property
-    def prev_hash(self) -> str:
+    def prev_hash(self) -> bytes:
         return self._prev_hash
 
     @staticmethod
@@ -91,12 +91,14 @@ class Block(object):
 
         # version = int.from_bytes(version_bytes, byteorder)
         block_height = int.from_bytes(block_height_bytes, byteorder)
-        block_hash = bytes.hex(block_hash_bytes)
+        block_hash = block_hash_bytes
         timestamp = int.from_bytes(timestamp_bytes, byteorder)
-        byte_prev_hash = bytes.hex(block_prev_hash_bytes)
-        prev_block_hash = None
-        if int(byte_prev_hash, 16):
-            prev_block_hash = byte_prev_hash
+        byte_prev_hash = block_prev_hash_bytes
+
+        if int(bytes.hex(byte_prev_hash), 16) == 0:
+            byte_prev_hash = None
+        prev_block_hash = byte_prev_hash
+
         block = Block(block_height, block_hash, timestamp, prev_block_hash)
         return block
 
@@ -109,12 +111,14 @@ class Block(object):
         byteorder = DATA_BYTE_ORDER
         # for extendability
         version_bytes = self._VERSION.to_bytes(1, byteorder)
-        block_height_bytes = self._height.to_bytes(BALANCE_BYTE_SIZE, byteorder)
-        block_hash_bytes = bytes.fromhex(self._hash)
-        timestamp_bytes = self._timestamp.to_bytes(BALANCE_BYTE_SIZE, byteorder)
-        if not self._prev_hash:
-            self._prev_hash = str()
-        prev_block_hash_bytes = bytes.fromhex(self._prev_hash)
+        block_height_bytes = self._height.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
+        block_hash_bytes = self._hash
+        timestamp_bytes = self._timestamp.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
+
+        tmp_prev_hash = self._prev_hash
+        if tmp_prev_hash is None:
+            tmp_prev_hash = bytes(DEFAULT_BYTE_SIZE)
+        prev_block_hash_bytes = tmp_prev_hash
 
         return Block._struct.pack(
             version_bytes,

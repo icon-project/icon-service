@@ -251,7 +251,7 @@ class IconScoreDeployEngine(ContextContainer):
         """
 
         annotations = TypeConverter.make_annotations_from_method(on_init)
-        TypeConverter.convert_params(annotations, params)
+        TypeConverter.convert_data_params(annotations, params)
 
         try:
             self._put_context(context)

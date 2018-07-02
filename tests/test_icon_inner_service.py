@@ -58,9 +58,9 @@ class TestIconServiceEngine(unittest.TestCase):
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
         tx_timestamp_us = int(time.time() * 10 ** 6)
-        request_params = {'txHash': tx_hash, 'timestamp': hex(tx_timestamp_us)}
+        request_params = {'txHash': bytes.hex(tx_hash), 'timestamp': hex(tx_timestamp_us)}
         tx = {
-            'method': '',
+            'method': 'icx_sendTransaction',
             'params': request_params,
             'genesisData': {
                 "accounts": [
@@ -85,12 +85,12 @@ class TestIconServiceEngine(unittest.TestCase):
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
-            'blockHash': block_hash,
+            'blockHash': bytes.hex(block_hash),
             'timestamp': hex(block_timestamp_us)
         }
 
         precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': block_hash}
+                             'blockHash': bytes.hex(block_hash)}
 
         response = await self._inner_task.invoke(make_request)
         response = response['txResults']

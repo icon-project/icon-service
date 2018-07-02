@@ -331,7 +331,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         score_func = getattr(self, func_name)
 
         annotation_params = TypeConverter.make_annotations_from_method(score_func)
-        TypeConverter.convert_params(annotation_params, kw_params)
+        TypeConverter.convert_data_params(annotation_params, kw_params)
         return score_func(*arg_params, **kw_params)
 
     def __call_fallback(self):
