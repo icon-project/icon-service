@@ -155,6 +155,91 @@ class TestEventlog(unittest.TestCase):
     #     self.assertRaises(EventLogException, self._mock_score.ArrayEvent,
     #                       name, address)
 
+    def test_address_index_event(self):
+        context = ContextContainer._get_context()
+
+        address = Address.from_string("hx0123456789abcdef0123456789abcdef01234567")
+
+        # Tests simple event emit
+        self._mock_score.AddressIndexEvent(address)
+        context.event_logs.append.assert_called()
+        event_log = context.event_logs.append.call_args[0][0]
+        self.assertEqual(2, len(event_log.indexed))
+        self.assertEqual(0, len(event_log.data))
+
+        event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'AddressIndexEvent(Address)'.encode('utf-8')
+        self.assertIn(event_bloom_data, context.logs_bloom)
+
+        indexed_bloom_data = \
+            int(1).to_bytes(1, 'big') + \
+            address.prefix.to_bytes(1, 'big') + address.body
+        self.assertIn(indexed_bloom_data, context.logs_bloom)
+
+    def test_bool_index_event(self):
+        context = ContextContainer._get_context()
+
+        yes_no = True
+
+        # Tests simple event emit
+        self._mock_score.BoolIndexEvent(yes_no)
+        context.event_logs.append.assert_called()
+        event_log = context.event_logs.append.call_args[0][0]
+        self.assertEqual(2, len(event_log.indexed))
+        self.assertEqual(0, len(event_log.data))
+
+        event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'BoolIndexEvent(bool)'.encode('utf-8')
+        self.assertIn(event_bloom_data, context.logs_bloom)
+
+        indexed_bloom_data = \
+            int(1).to_bytes(1, 'big') + int_to_bytes(yes_no)
+        self.assertIn(indexed_bloom_data, context.logs_bloom)
+
+    def test_int_index_event(self):
+        context = ContextContainer._get_context()
+
+        amount = 123456789
+
+        # Tests simple event emit
+        self._mock_score.IntIndexEvent(amount)
+        context.event_logs.append.assert_called()
+        event_log = context.event_logs.append.call_args[0][0]
+        self.assertEqual(2, len(event_log.indexed))
+        self.assertEqual(0, len(event_log.data))
+
+        event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'IntIndexEvent(int)'.encode('utf-8')
+        self.assertIn(event_bloom_data, context.logs_bloom)
+
+        indexed_bloom_data = \
+            int(1).to_bytes(1, 'big') + int_to_bytes(amount)
+        self.assertIn(indexed_bloom_data, context.logs_bloom)
+
+    def test_bytes_index_event(self):
+        context = ContextContainer._get_context()
+
+        data = b'0123456789abc'
+
+        # Tests simple event emit
+        self._mock_score.BytesIndexEvent(data)
+        context.event_logs.append.assert_called()
+        event_log = context.event_logs.append.call_args[0][0]
+        self.assertEqual(2, len(event_log.indexed))
+        self.assertEqual(0, len(event_log.data))
+
+        event_bloom_data = \
+            int(0).to_bytes(1, 'big') + \
+            'BytesIndexEvent(bytes)'.encode('utf-8')
+        self.assertIn(event_bloom_data, context.logs_bloom)
+
+        indexed_bloom_data = \
+            int(1).to_bytes(1, 'big') + data
+        self.assertIn(indexed_bloom_data, context.logs_bloom)
+
     def tearDown(self):
         self._mock_icon_score = None
 
@@ -189,6 +274,30 @@ class EventlogScore(IconScoreBase):
     def FourIndexEvent(
             self, name: str, address: Address, age: int, phone_number: str):
         pass
+
+    @eventlog(indexed=1)
+    def AddressIndexEvent(self, address: Address):
+        pass
+
+    @eventlog(indexed=1)
+    def BoolIndexEvent(self, yes_no: bool):
+        pass
+
+    @eventlog(indexed=1)
+    def IntIndexEvent(self, amount: int):
+        pass
+
+    @eventlog(indexed=1)
+    def BytesIndexEvent(self, data: bytes):
+        pass
+
+    # @eventlog
+    # def HintlessEvent(self, name, address, age):
+    #     pass
+
+    # @eventlog
+    # def ArrayEvent(self, name: str, address: List[Address], ):
+    #     pass
 
     @external
     def empty(self):
