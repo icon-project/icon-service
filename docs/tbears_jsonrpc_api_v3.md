@@ -5,11 +5,12 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:-----|:-----:|:----|
+| 2018.06.29 | 박지윤 | 일부 API 오류 수정 |
 | 2018.06.12 | 조치원 | 일부 표 오류 수정 |
 | 2018.06.08 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
 | 2018.05.18 | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
 | 2018.05.17 | 박은수 | API 작성 규칙 추가, 문서 고도화 |
-| 2018.05.15 | 조치원 | 최초 작성 (라인 플러스에 제공) |
+| 2018.05.15 | 조치원 | 최초 작성 |
 
 # API 작성 규칙
 * [JSON-RPC 2.0 표준안](http://www.jsonrpc.org/specification)을 따른다.
@@ -57,7 +58,7 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 # VALUE 형식
 
-기본적으로 모든 JSON-RPC 메시지 내의 VALUE는 문자열 형식으로 되어 있다.<BR>
+기본적으로 모든 JSON-RPC 메시지 내의 VALUE는 문자열 형식으로 되어 있다.<br/>
 많이 사용하는 "VALUE 형식"은 다음과 같다.
 
 | VALUE 형식 | 설명 | 예 |
@@ -68,18 +69,18 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 | <a id="T_INT">T_INT</a> | "0x" + lowercase HEX 문자열 | 0xa |
 | <a id="T_BIN_DATA">T_BIN_DATA</a> | "0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다 | 0x34b2 |
 | <a id="T_SIG">T_SIG</a> | base64 encoded 문자열 | VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA= |
-| <a id="T_DATA_TYPE">T_DATA_TYPE</a> | install: SCORE 설치<br>update: 기존 SCORE 업데이트<br>call: SCORE에서 제공하는 함수 호출 | - |
+| <a id="T_DATA_TYPE">T_DATA_TYPE</a> | call: SCORE에서 제공하는 함수 호출<br/>deploy: SCORE 설치 및 업데이트 | - |
 
 # JSON-RPC 에러 코드
 
-ICON JSON-RPC API Response에서 사용되는 기본적인 에러 코드 및 설명  
+ICON JSON-RPC API Response에서 사용되는 기본적인 에러 코드 및 설명.<br/>
 아래 표의 메시지는 에러 코드에 대응하는 기본 메시지이며 구현에 따라 다른 메시지가 사용될 수 있다.
 
 ## 에러 코드표
 
 | 에러 코드 | 메시지 | 설명 |
 |:---------|:------|:-----|
-| -32700 | Parse error | Invalid JSON was received by the server.<br>An error occurred on the server while parsing the JSON text. |
+| -32700 | Parse error | Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text. |
 | -32600 | Invalid Request | The JSON sent is not a valid Request object. |
 | -32601 | Method not found | The method does not exist / is not available. |
 | -32602 | Invalid params | Invalid method parameter(s). |
@@ -128,7 +129,7 @@ ICON JSON-RPC API Response에서 사용되는 기본적인 에러 코드 및 설
 
 * [icx_call](#icx_call)
 * [icx_getBalance](#icx_getbalance)
-* [icx_getScoreInfo](#icx_getScoreInfo)
+* [icx_getScoreApi](#icx_getscoreapi)
 * [icx_getTotalSupply](#icx_gettotalsupply)
 * [icx_getTransactionResult](#icx_gettransactionresult)
 * [icx_sendTransaction](#icx_sendtransaction)
@@ -140,14 +141,17 @@ ICON JSON-RPC API Response에서 사용되는 기본적인 에러 코드 및 설
 
 ### Parameters
 
-KEY | VALUE 형식 | 설명
-----|----------|-----
-from|[T_ADDR_EOA](#T_ADDR_EOA)|메시지를 보내는 주체의 주소
-to|[T_ADDR_SCORE](#T_ADDR_SCORE)|transaction에 포함된 메시지콜 데이터를 처리할 SCORE 주소
-dataType|[T_DATA_TYPE](#T_DATA_TYPE)|data 종류 명시. "call"만 가능
-data|N/A|SCORE 구현에 따른 함수명 및 함수 Parameter
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|:-----|
+|from|[T_ADDR_EOA](#T_ADDR_EOA)|메시지를 보내는 주체의 주소|
+|to|[T_ADDR_SCORE](#T_ADDR_SCORE)|transaction에 포함된 메시지콜 데이터를 처리할 SCORE 주소|
+|dataType|[T_DATA_TYPE](#T_DATA_TYPE)|data 종류 명시. "call"만 가능|
+|data| - |SCORE 구현에 따른 함수명 및 함수 Parameter|
+|data.method | 문자열 | 해당 SCORE 내의 함수 |
+|data.params | T_DICT | SCORE 함수로 전달되는 파라미터 값 |
 
 ### Returns
+
 SCORE 함수 실행 결과
 
 ### Example
@@ -165,7 +169,7 @@ SCORE 함수 실행 결과
         "data": {           // 메시지콜 데이터
             "method": "get_balance", // SCORE External 함수
             "params": {
-                "address": "hx1f9a3310f60a03934b917509c86442db703cbd52" // 토큰 잔고를 조회할 계좌 주소
+                "address": "hx1f9a3310f60a03934b917509c86442db703cbd52" // "get_balance" 함수의 파라미터
             }
         }
     }
@@ -177,6 +181,7 @@ SCORE 함수 실행 결과
     "id": 1234,
     "result": "0x2961fff8ca4a62327800000"
 }
+
 // Response - 실패1
 {
     "jsonrpc": "2.0",
@@ -186,6 +191,7 @@ SCORE 함수 실행 결과
         "message": "Method not found"
     }
 }
+
 // Response - 실패2
 {
     "jsonrpc": "2.0",
@@ -197,45 +203,6 @@ SCORE 함수 실행 결과
 }
 ```
 
-## icx_getScoreApi
-
-### 반환정보
-* 스코어의 API 함수 (external, payable, fallback, on_install, on_update, eventlog)의 정보들(배열)로 반환
-* 함수정보에 대한 필드는 다음과 같습니다.
-    - type : function, fallback, on_install, on_update, eventlog
-    - name : 함수 이름
-    - inputs : 파라미터 정보(배열)
-        + name : 파라미터 이름
-        + type : 파라미터 타입 (int, str, bytes, bool, Address)
-        + indexed : eventlog 의 경우에 다음 정보가 표기
-    - outputs : 리턴값 정보
-        + type : 리턴값 타입 (int, str, bytes, bool, Address)
-    - readonly : external(readonly=True)
-    - payable : payable
- 
-* 예시
-```json
-// Request
-{
-    "jsonrpc": "2.0",
-    "method": "icx_getScoreApi",
-    "id": 1234,
-    "params": {
-        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // TX 송신자 주소
-        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"   // SCORE 주소
-    }
-}
-
-// Response - 성공
-{
-    "jsonrpc": "2.0",
-    "id": 1234,
-    "result": [...]
-}
-// Response - 실패
-// icx_call 실패와 동일
-```
-
 ## icx_getBalance
 
 * 지정된 계좌 주소 또는 SCORE의 코인 수를 조회한다.
@@ -244,10 +211,11 @@ SCORE 함수 실행 결과
 ### Parameters
 
 | KEY | VALUE 형식 | 설명 |
-|:----|:-----------|------|
+|:----|:-----------|:-----|
 | address | [T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE) | 조회할 주소 |
 
 ### Returns
+
 코인 수
 
 ### Example
@@ -257,23 +225,23 @@ SCORE 함수 실행 결과
 {
     "jsonrpc": "2.0",
     "method": "icx_getBalance",
-    "id": 10,
+    "id": 1234,
     "params": {
         "address": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
     }
-} 
+}
 
 // Response - 성공
 {
     "jsonrpc": "2.0",
-    "id": 10,
+    "id": 1234,
     "result": "0xde0b6b3a7640000"
 }
 
 // Response - 실패
 {
     "jsonrpc": "2.0",
-    "id": 10,
+    "id": 1234,
     "error": {
         "code": -32602,
         "message": "Invalid address"
@@ -281,15 +249,29 @@ SCORE 함수 실행 결과
 }
 ```
 
-## icx_getScoreInfo
+## icx_getScoreApi
 
-* 현재 설치되어 있거나 검수 중인 SCORE의 정보를 가져온다.
+* 스코어의 API 함수 (external, payable, fallback, on_install, on_update, eventlog) 정보(배열) 반환
 
 ### Parameters
 
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|:-----|
+| address | [T_ADDR_SCORE](#T_ADDR_SCORE) | 조회할 SCORE 주소 |
+
 ### Returns
 
-* 명시된 주소가 가리키는 SCORE의 정보를 리턴한다.
+* 함수 정보에 대한 필드
+    - type : function, fallback, on_install, on_update, eventlog
+    - name : 함수 이름
+    - inputs : 파라미터 정보(배열)
+        + name : 파라미터 이름
+        + type : 파라미터 타입 (int, str, bytes, bool, Address)
+        + indexed : eventlog의 경우에 다음 정보가 표기
+    - outputs : 리턴 값 정보
+        + type : 리턴 값 타입 (int, str, bytes, bool, Address)
+    - readonly : external(readonly=True)
+    - payable : payable
 
 ### Example
 
@@ -297,86 +279,22 @@ SCORE 함수 실행 결과
 // Request
 {
     "jsonrpc": "2.0",
-    "id": 0,
-    "method": "icx_getScoreInfo",
+    "method": "icx_getScoreApi",
+    "id": 1234,
     "params": {
-        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"  // SCORE 주소
     }
 }
-```
 
-```json
-// Response - 성공 1
+// Response - 성공
 {
     "jsonrpc": "2.0",
-    "id": 0,
-    "result": {
-        "status": "running",
-        "owner": "hxb1258ceb872e08851f1f59694dac2558708ece11", 
-        "verifier": "hx8a4892bb7209e8a9d2fcb6094dac2558708ecb92",
-        "verifyStatus": "accepted",
-        "deployTxHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-        "verifyTxHash": "0xa84f2e3c85433ebb5dc1ba6579132b143087c68db1b2168786408fcbce568e90",
-        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
-    }
+    "id": 1234,
+    "result": [...]
 }
-```
 
-```json
-// Response - 성공 2
-{
-    "jsonrpc": "2.0",
-    "id": 0,
-    "result": {
-        "status": "running",
-        "verifyStatus": "rejected",
-        "owner": "hxb1258ceb872e08851f1f59694dac2558708ece11", 
-        "verifier": "hx8a4892bb7209e8a9d2fcb6094dac2558708ecb92",
-        "deployTxHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-        "verifyTxHash": "0xa84f2e3c85433ebb5dc1ba6579132b143087c68db1b2168786408fcbce568e90",
-        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
-        "message": "Too much size"
-    }
-}
-```
-
-```json
-// Response - 성공 3
-{
-    "jsonrpc": "2.0",
-    "id": 0,
-    "result": {
-        "status": "notReady",
-        "verifyStatus": "pending",
-        "owner": "hxb1258ceb872e08851f1f59694dac2558708ece11",
-        "deployTxHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-        "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
-    }
-}
-```
-
-```json
 // Response - 실패
-{
-    "jsonrpc": "2.0",
-    "id": 0,
-    "error": {
-        "code": -32000,
-        "message": "SCORE not found"
-    }
-}
-```
-
-```json
-// Response - 실패
-{
-    "jsonrpc": "2.0",
-    "id": 0,
-    "error": {
-        "code": -32000,
-        "message": "Invalid address"
-    }
-}
+// icx_call 실패와 동일
 ```
 
 ## icx_getTotalSupply
@@ -397,7 +315,7 @@ SCORE 함수 실행 결과
 {
     "jsonrpc": "2.0",
     "method": "icx_getTotalSupply",
-    "id": 0
+    "id": 1234
 }
 
 // Response - 성공
@@ -422,15 +340,15 @@ SCORE 함수 실행 결과
 
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:-----|
-| status | [T_INT](#T_INT) | 1(success), 0(failure) |
+| status | [T_INT](#T_INT) | 1 (success), 0 (failure) |
 | failure | T_DICT | status가 0(failure)인 경우에만 존재. code(str), message(str) 속성 포함 |
 | txHash | [T_HASH](#T_HASH) | transaction hash |
 | txIndex | [T_INT](#T_INT) | transaction index in a block |
 | blockHeight | [T_INT](#T_INT) | transaction이 포함된 block의 height |
 | blockHash | [T_HASH](#T_HASH) | transaction이 포함된 block의 hash |
-| cumulativeStepUsed | [T_INT](#T_INT) | 블록 내에서 해당 transaction을 수행하는데 까지 소비된 step의 누적양 |
+| cumulativeStepUsed | [T_INT](#T_INT) | 블록 내에서 해당 transaction을 수행하기까지 소비된 step의 누적량 |
 | stepUsed | [T_INT](#T_INT) | 해당 transaction을 수행하는데 소비된 step 양 |
-| scoreAddress | [T_ADDR_SCORE](#T_ADDR_SCORE) | 해당 transaction이 SCORE을 생성했을 때 해당 SCORE 주소 (optional) |
+| scoreAddress | [T_ADDR_SCORE](#T_ADDR_SCORE) | 해당 transaction이 SCORE을 생성했을 경우 해당 SCORE 주소 (optional) |
 
 ### Example
 
@@ -439,7 +357,7 @@ SCORE 함수 실행 결과
 {
     "jsonrpc": "2.0",
     "method": "icx_getTransactionResult",
-    "id": 578,
+    "id": 1234,
     "params": {
         "txHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238"
     }
@@ -448,7 +366,7 @@ SCORE 함수 실행 결과
 // Response - 성공 한 tx에 대한 결과
 {
     "jsonrpc": "2.0",
-    "id": 578,
+    "id": 1234,
     "result": {
         "status": "0x1",
         "txHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
@@ -459,11 +377,12 @@ SCORE 함수 실행 결과
         "stepUsed": "0x1234",
         "scoreAddress": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
     }
-    
+}
+
 // Response - 실패 한 tx에 대한 결과
 {
     "jsonrpc": "2.0",
-    "id": 578,
+    "id": 1234,
     "result": {
         "status": "0x0",
         "failure": {
@@ -477,6 +396,16 @@ SCORE 함수 실행 결과
         "cumulativeStepUsed": "0x1234",
         "stepUsed": "0x1234",
         "scoreAddress": null
+    }
+}
+
+// Response - 실패 (잘못된 txHash에 대한 요청)
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "error": {
+        "code": -32602,
+        "message": "Invalid params txHash"
     }
 }
 ```
@@ -493,110 +422,61 @@ SCORE 함수 실행 결과
 
 | KEY | VALUE 형식 | 속성 | 설명 |
 |:----|:----------|:----:|:-----|
+| version | [T_INT](#T_INT) | required | 프로토콜 버전 ("0x3" for V3) |
 | from | [T_ADDR_EOA](#T_ADDR_EOA) | required | transaction을 생성한 주체의 주소 |
-| to | [T_ADDR_EOA](#T_ADDR_EOA) or [T_ADDR_SCORE](#T_ADDR_SCORE) | optional | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
-| value | [T_INT](#T_INT) | optional | to 주소로 이체할 코인양<br/> 생략할 경우 0으로 간주 |
+| to | [T_ADDR_EOA](#T_ADDR_EOA) or<br/> [T_ADDR_SCORE](#T_ADDR_SCORE) | optional | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
+| value | [T_INT](#T_INT) | optional | to 주소로 이체할 ICX 코인양, 생략할 경우 0으로 간주 |
 | stepLimit |[T_INT](#T_INT) | required | transaction을 수행하는데 소비되는 최대 step 허용치 |
-| timestamp | [T_INT](#T_INT) | required | transaction을 전송할 때의 timestamp 단위: microsecond |
+| timestamp | [T_INT](#T_INT) | required | transaction을 전송할 때의 timestamp (단위: microsecond) |
 | nonce | [T_INT](#T_INT) | optional | transaction hash 출동 방지를 위한 임의의 정수 |
 | signature | [T_SIG](#T_SIG) | required | transaction의 전자 서명 데이터 |
-| dataType | [T_DATA_TYPE](#T_DATA_TYPE) | optional | data 항목의 종류를 알려주는 값 (optional) |
-| to | T_ADDR_EOA or T_ADDR_SCORE | 코인을 받거나 EOA 주소 혹은 transaction을 수행할 SCORE 주소 |
+| dataType | [T_DATA_TYPE](#T_DATA_TYPE) | optional | data 항목의 종류를 알려주는 값 (call, deploy) |
 | data | N/A | optional | transaction의 목적에 따라 다양한 형식의 데이터가 포함됨 |
-| contentType | 문자열 | optional | content의 mime-type |
-| content | [T_BIN_DATA](#T_BIN_DATA) | optional | 이진 데이터 |
-| params | T_DICT | optional | on_install 혹은 on_update 로 전달되는 파라메터 값 |
+| data.method | 문자열 | optional | 해당 SCORE 내의 함수 (call) |
+| data.contentType | 문자열 | optional | content의 mime-type (deploy) |
+| data.content | [T_BIN_DATA](#T_BIN_DATA) | optional | 이진 데이터 (deploy) |
+| data.params | T_DICT | optional | SCORE 함수로 전달되는 파라미터 값 |
 
 ### Returns
 
-* 성공: transaction hash 값
+* 성공: transaction hash ([T_HASH](#T_HASH))
 * 실패: 오류 코드 및 오류 메시지
 
 ### Example
-* SCORE install
+
+* 단순 코인 이체
+
 ```json
 // Request
 {
     "jsonrpc": "2.0",
     "method": "icx_sendTransaction",
-    "id": 9876,
+    "id": 1234,
     "params": {
+        "version": "0x3",
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
-        "to": "0x0",
+        "to": "hx5bfdb090f43a808005ffc27c25b213145e80b7cd",
+        "value": "0xde0b6b3a7640000",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
         "nonce": "0x1",
-        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
-        "dataType": "install",
-        "data": {
-            "contentType": "application/zip", // content의 mime-type
-            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e...", // SCORE 압축 데이터
-            "params": {
-                "name": "ABCToken",
-                "symbol": "abc",
-                "decimals": "0x12"
-            }
-        }
-    }
-}
-```
-
-* SCORE update
-```json
-// Request
-{
-    "jsonrpc": "2.0", // jsonrpc 버전
-    "method": "icx_sendTransaction", // jsonrpc 메소드명
-    "id": 9876, // jsonrpc message id
-    "params": {
-        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // transaction 생성 주체의 주소
-        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // transaction의 메시지콜을 처리할 SCORE 주소
-        "stepLimit": "0x12345", // Ethereum의 gas 개념
-        "timestamp": "0x563a6cf330136", // transaction 생성 시간. 단위: microsecond
-        "nonce": "0x1", // 임의의 정수
-        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
-        "dataType": "update", // SCORE 업데이트
-        "data": {
-            "contentType": "application/zip", // content의 mime-type
-            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e...", // SCORE 압축 데이터
-            "params": {
-                "amount": "0x1234"
-            }
-        }
-    }
-}
-```
-
-* SCORE approval
-```json
-// Request
-{
-    "jsonrpc": "2.0", // jsonrpc 버전
-    "method": "icx_sendTransaction", // jsonrpc 메소드명
-    "id": 9876, // jsonrpc message id
-    "params": {
-        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // transaction 생성 주체의 주소
-        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // transaction의 메시지콜을 처리할 SCORE 주소
-        "stepLimit": "0x12345",
-        "timestamp": "0x563a6cf330136", // transaction 생성 시간. 단위: microsecond
-        "nonce": "0x1", // 임의의 정수
-        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
-        "dataType": "approval", // SCORE 설치 승인
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
     }
 }
 ```
 
 * SCORE 함수 호출
+
 ```json
 // Request
 {
     "jsonrpc": "2.0",
     "method": "icx_sendTransaction",
-    "id": 9876,
+    "id": 1234,
     "params": {
+        "version": "0x3",
         "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
-        "value": "0xde0b6b3a7640000",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
         "nonce": "0x1",
@@ -613,19 +493,78 @@ SCORE 함수 실행 결과
 }
 ```
 
+* SCORE 설치
+
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "method": "icx_sendTransaction",
+    "id": 1234,
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
+        "to": "cx0000000000000000000000000000000000000000", // SCORE 주소가 0이면 SCORE install 의미
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "deploy",
+        "data": {
+            "contentType": "application/zip",
+            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e...", // SCORE 압축 데이터
+            "params": {  // on_install() 함수로 전달되는 파라미터
+                "name": "ABCToken",
+                "symbol": "abc",
+                "decimals": "0x12"
+            }
+        }
+    }
+}
+```
+
+* SCORE 업데이트
+
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "method": "icx_sendTransaction",
+    "id": 1234,
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
+        "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // 업데이트할 SCORE 주소
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "deploy",
+        "data": {
+            "contentType": "application/zip",
+            "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e...", // SCORE 압축 데이터
+            "params": {  // on_update() 함수로 전달되는 파라미터
+                "amount": "0x1234"
+            }
+        }
+    }
+}
+```
+
+* Response
 
 ```json
 // Response - 성공
 {
     "jsonrpc": "2.0",
-    "id": 9876,
+    "id": 1234,
     "result": "0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed" // transaction hash
 }
 
 // Response - 실패
 {
     "jsonrpc": "2.0",
-    "id": 9876,
+    "id": 1234,
     "error": {
         "code": -32600,
         "message": "Invalid signature"
@@ -635,7 +574,7 @@ SCORE 함수 실행 결과
 // Response - 실패
 {
     "jsonrpc": "2.0",
-    "id": 9876,
+    "id": 1234,
     "error": {
         "code": -32601,
         "message": "Method not found"
