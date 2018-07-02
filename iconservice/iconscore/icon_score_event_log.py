@@ -31,7 +31,6 @@ class EventLog(object):
     def __init__(
             self,
             score_address: 'Address',
-            indexed: 'List[BaseType]' = None,
             data: 'List[BaseType]' = None) -> None:
         """
         Constructor
@@ -41,7 +40,6 @@ class EventLog(object):
         :param data: a list of normal arguments
         """
         self.score_address: 'Address' = score_address
-        self.indexed: 'List[BaseType]' = indexed
         self.data: 'List[BaseType]' = data
 
     def __str__(self) -> str:

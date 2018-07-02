@@ -21,7 +21,7 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, IconScoreException, int_to_bytes
+    external, IconScoreException, int_to_bytes, sha3_256
 from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
@@ -54,29 +54,26 @@ class TestEventlog(unittest.TestCase):
         self._mock_score.ZeroIndexEvent(name, address, age)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
-        self.assertEqual(1, len(event_log.indexed))
-        self.assertEqual(3, len(event_log.data))
+        self.assertEqual(4, len(event_log.data))
 
         # This event has a indexed parameter,
         # so the list of indexed Should have 2 items
         self._mock_score.OneIndexEvent(name, address, age)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
-        self.assertEqual(2, len(event_log.indexed))
-        self.assertEqual(2, len(event_log.data))
+        self.assertEqual(4, len(event_log.data))
 
-        zero_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
-        self.assertIn(zero_event_bloom_data, context.logs_bloom)
+        zero_event_sig = 'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertIn(int(0).to_bytes(1, 'big') + sha3_256(zero_event_sig),
+                      context.logs_bloom)
 
-        one_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'OneIndexEvent(str,Address,int)'.encode('utf-8')
-        self.assertIn(one_event_bloom_data, context.logs_bloom)
+        one_event_sig = 'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertIn(int(0).to_bytes(1, 'big') + sha3_256(one_event_sig),
+                      context.logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
-        self.assertIn(name_bloom_data, context.logs_bloom)
+        self.assertIn(
+            int(1).to_bytes(1, 'big') + sha3_256(name.encode('utf-8')),
+            context.logs_bloom)
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
@@ -107,18 +104,16 @@ class TestEventlog(unittest.TestCase):
 
         self.assertEqual(event_log_ordered_args.score_address,
                          event_log_keyword_args.score_address)
-        self.assertEqual(event_log_ordered_args.indexed,
-                         event_log_keyword_args.indexed)
         self.assertEqual(event_log_ordered_args.data,
                          event_log_keyword_args.data)
 
-        one_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'OneIndexEvent(str,Address,int)'.encode('utf-8')
-        self.assertIn(one_event_bloom_data, context.logs_bloom)
+        one_event_sig = 'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertIn(int(0).to_bytes(1, 'big') + sha3_256(one_event_sig),
+                      context.logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
-        self.assertIn(name_bloom_data, context.logs_bloom)
+        self.assertIn(
+            int(1).to_bytes(1, 'big') + sha3_256(name.encode('utf-8')),
+            context.logs_bloom)
 
     # def test_call_event_no_hint_exception(self):
     #     name = "name"
@@ -138,13 +133,13 @@ class TestEventlog(unittest.TestCase):
         self.assertRaises(IconScoreException, self._mock_score.OneIndexEvent,
                           name, address, age)
 
-        one_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'OneIndexEvent(str,Address,int)'.encode('utf-8')
-        self.assertNotIn(one_event_bloom_data, context.logs_bloom)
+        one_event_sig = 'OneIndexEvent(str,Address,int)'.encode('utf-8')
+        self.assertNotIn(int(0).to_bytes(1, 'big') + sha3_256(one_event_sig),
+                      context.logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
-        self.assertNotIn(name_bloom_data, context.logs_bloom)
+        self.assertNotIn(
+            int(1).to_bytes(1, 'big') + sha3_256(name.encode('utf-8')),
+            context.logs_bloom)
 
     # def test_call_event_unsupported_arg(self):
     #     context = ContextContainer._get_context()
@@ -164,17 +159,15 @@ class TestEventlog(unittest.TestCase):
         self._mock_score.AddressIndexEvent(address)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
-        self.assertEqual(2, len(event_log.indexed))
-        self.assertEqual(0, len(event_log.data))
+        # self.assertEqual(2, len(event_log.indexed))
+        self.assertEqual(2, len(event_log.data))
 
-        event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'AddressIndexEvent(Address)'.encode('utf-8')
+        sig_bytes = 'AddressIndexEvent(Address)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(1, 'big') + sha3_256(sig_bytes)
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
-            int(1).to_bytes(1, 'big') + \
-            address.prefix.to_bytes(1, 'big') + address.body
+            int(1).to_bytes(1, 'big') + address.body
         self.assertIn(indexed_bloom_data, context.logs_bloom)
 
     def test_bool_index_event(self):
@@ -186,12 +179,10 @@ class TestEventlog(unittest.TestCase):
         self._mock_score.BoolIndexEvent(yes_no)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
-        self.assertEqual(2, len(event_log.indexed))
-        self.assertEqual(0, len(event_log.data))
+        self.assertEqual(2, len(event_log.data))
 
-        event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'BoolIndexEvent(bool)'.encode('utf-8')
+        sig_bytes = 'BoolIndexEvent(bool)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(1, 'big') + sha3_256(sig_bytes)
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
@@ -207,12 +198,10 @@ class TestEventlog(unittest.TestCase):
         self._mock_score.IntIndexEvent(amount)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
-        self.assertEqual(2, len(event_log.indexed))
-        self.assertEqual(0, len(event_log.data))
+        self.assertEqual(2, len(event_log.data))
 
-        event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'IntIndexEvent(int)'.encode('utf-8')
+        sig_bytes = 'IntIndexEvent(int)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(1, 'big') + sha3_256(sig_bytes)
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
@@ -228,12 +217,10 @@ class TestEventlog(unittest.TestCase):
         self._mock_score.BytesIndexEvent(data)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
-        self.assertEqual(2, len(event_log.indexed))
-        self.assertEqual(0, len(event_log.data))
+        self.assertEqual(2, len(event_log.data))
 
-        event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
-            'BytesIndexEvent(bytes)'.encode('utf-8')
+        sig_bytes = 'BytesIndexEvent(bytes)'.encode('utf-8')
+        event_bloom_data = int(0).to_bytes(1, 'big') + sha3_256(sig_bytes)
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \

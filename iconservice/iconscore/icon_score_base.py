@@ -19,7 +19,7 @@ from inspect import isfunction, getmembers, signature, Parameter
 from abc import abstractmethod
 from functools import partial
 
-from iconservice.utils import int_to_bytes
+from iconservice.utils import int_to_bytes, sha3_256
 from .icon_score_trace import Trace, TraceType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
@@ -403,8 +403,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f'but argument count is {len(arguments)}')
 
         self._context.logs_bloom.add(self.__get_bloom_data(0, event_signature))
-        indexed: List[BaseType] = [event_signature]
-        data: List[BaseType] = []
+        data: List[BaseType] = [event_signature]
         for i, argument in enumerate(arguments):
             # Raises an exception if the types are not supported
             if not IconScoreBase.__is_base_type(argument):
@@ -413,13 +412,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
             # Separates indexed type and base type with keeping order.
             if i < indexed_args_count:
-                indexed.append(argument)
                 bloom_data = self.__get_bloom_data(i + 1, argument)
                 self._context.logs_bloom.add(bloom_data)
-            else:
-                data.append(argument)
 
-        event = EventLog(self.address, indexed, data)
+            data.append(argument)
+
+        event = EventLog(self.address, data)
         self._context.event_logs.append(event)
 
     @staticmethod
@@ -428,9 +426,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if isinstance(data, int):
             raw += int_to_bytes(data)
         elif isinstance(data, str):
-            raw += data.encode('utf-8')
+            raw += sha3_256(data.encode('utf-8'))
         elif isinstance(data, Address):
-            raw += data.prefix.to_bytes(1, 'big') + data.body
+            raw += data.body
         elif isinstance(data, bool):
             raw += int_to_bytes(int(data))
         elif isinstance(data, bytes):
