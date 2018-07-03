@@ -54,8 +54,6 @@ build.sh [test|build|deploy]
         $ build.sh test
         ```
 
-
-
 ## CI/CD
 * Jenkins Url: [https://jenkins.theloop.co.kr](https://jenkins.theloop.co.kr) (goldworm/@ucoin)
 * Path: 
@@ -68,7 +66,6 @@ build.sh [test|build|deploy]
 ## 배포 URL
 > http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com
 
-
 ## Directories
 
 * docs: 문서
@@ -76,6 +73,10 @@ build.sh [test|build|deploy]
 * message_queue: MQ 패키지 코드
 * tests: 테스트 코드
 * tools: curl을 사용하는 tbears 테스트용 bash script
+
+## License
+
+This project follows the Apache 2.0 License. Please refer to [LICENSE](https://www.apache.org/licenses/LICENSE-2.0) for details.
 
 ## Documents
 
