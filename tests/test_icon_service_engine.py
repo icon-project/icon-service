@@ -88,13 +88,13 @@ class TestIconServiceEngine(unittest.TestCase):
         accounts = [
             {
                 'name': 'god',
-                'address': str(self._genesis_address),
-                'balance': hex(self._total_supply)
+                'address': self._genesis_address,
+                'balance': self._total_supply
             },
             {
                 'name': 'treasury',
-                'address': str(self._treasury_address),
-                'balance': hex(0)
+                'address': self._treasury_address,
+                'balance': 0
             }
         ]
 

@@ -242,8 +242,8 @@ class IconServiceEngine(object):
             context.tx.hash, context.block, context.tx.index)
 
         try:
-            converted_params = TypeConverter.convert(tx_params['genesisData'], ParamType.genesis_data)
-            accounts = converted_params['accounts']
+            genesis_data = tx_params['genesisData']
+            accounts = genesis_data['accounts']
 
             genesis = accounts[0]
             treasury = accounts[1]

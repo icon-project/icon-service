@@ -73,14 +73,15 @@ class IconScoreInnerTask(object):
     def _invoke(self, request: dict):
         response = None
         try:
-            params = TypeConverter.convert(request, ParamType.invoke)
+            params = TypeConverter.convert(request, ParamType.INVOKE)
             converted_block_params = params['block']
             block = Block.from_dict(converted_block_params)
             self._icon_service_engine.validate_next_block(block)
             converted_tx_params = params['transactions']
 
             tx_results, state_root_hash = self._icon_service_engine.invoke(block=block, tx_params=converted_tx_params)
-            convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_response_json() for tx_result in tx_results}
+            convert_tx_results = \
+                {bytes.hex(tx_result.tx_hash): tx_result.to_response_json() for tx_result in tx_results}
             results = {'txResults': convert_tx_results, 'stateRootHash': bytes.hex(state_root_hash)}
             response = make_response(results)
         except IconServiceBaseException as icon_e:
@@ -113,7 +114,7 @@ class IconScoreInnerTask(object):
         response = None
         try:
             self._validate_jsonschema(request)
-            converted_request = TypeConverter.convert(request, ParamType.query)
+            converted_request = TypeConverter.convert(request, ParamType.QUERY)
             self._icon_service_engine.validate_for_query(converted_request)
 
             value = self._icon_service_engine.query(method=converted_request['method'],
@@ -151,7 +152,7 @@ class IconScoreInnerTask(object):
     def _write_precommit_state(self, request: dict):
         response = None
         try:
-            converted_block_params = TypeConverter.convert(request, ParamType.write_precommit)
+            converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
             block = Block.from_dict(converted_block_params)
             self._icon_service_engine.validate_precommit(block)
 
@@ -186,7 +187,7 @@ class IconScoreInnerTask(object):
     def _remove_precommit_state(self, request: dict):
         response = None
         try:
-            converted_block_params = TypeConverter.convert(request, ParamType.write_precommit)
+            converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
             block = Block.from_dict(converted_block_params)
             self._icon_service_engine.validate_precommit(block)
 
@@ -222,7 +223,7 @@ class IconScoreInnerTask(object):
         response = None
         try:
             self._validate_jsonschema(request)
-            converted_request = TypeConverter.convert(request, ParamType.validate_transaction)
+            converted_request = TypeConverter.convert(request, ParamType.VALIDATE_TRANSACTION)
             self._icon_service_engine.validate_for_invoke(converted_request)
             response = make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
@@ -240,7 +241,6 @@ class IconScoreInnerTask(object):
         finally:
             Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
             return response
-
 
     def _validate_jsonschema(self, request: dict):
         # TODO: Skip jsonschema validation

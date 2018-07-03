@@ -25,26 +25,25 @@ score_base_support_type = (int, str, bytes, bool, Address)
 
 
 class ParamType(IntEnum):
-    block = 0
-    transaction = 1
+    BLOCK = 0
 
-    invoke_call = 2
-    invoke_deploy = 3
+    TRANSACTION = 100
+    ACCOUNT_DATA = 101
+    CALL_DATA = 102
+    DEPLOY_DATA = 103
 
-    invoke = 4
-    query = 5
+    INVOKE = 200
 
-    icx_call = 6
-    icx_get_balance = 7
-    icx_get_total_supply = 8
-    icx_get_score_api = 9
+    QUERY = 300
+    ICX_CALL = 301
+    ICX_GET_BALANCE = 302
+    ICX_GET_TOTAL_SUPPLY = 303
+    ICX_GET_SCORE_API = 304
 
-    write_precommit = 10
-    remove_precommit = 11
+    WRITE_PRECOMMIT = 400
+    REMOVE_PRECOMMIT = 500
 
-    validate_transaction = 12
-    account_data = 13
-    genesis_data = 14
+    VALIDATE_TRANSACTION = 600
 
 
 class ValueType(IntEnum):
@@ -58,7 +57,7 @@ class ValueType(IntEnum):
 
 
 type_convert_templates = dict()
-CONVERT_USING_METHOD = 'CONVERT_USING_METHOD'
+CONVERT_USING_SWITCH_KEY = 'CONVERT_USING_SWITCH_KEY'
 SWITCH_KEY = "SWITCH_KEY"
 
 
@@ -103,13 +102,13 @@ class TypeConverter:
     def _check_convert_using_method(param: str, template: dict) -> bool:
         params = template.get(param)
         if isinstance(params, dict):
-            return CONVERT_USING_METHOD in params
+            return CONVERT_USING_SWITCH_KEY in params
         return False
 
     @staticmethod
     def _get_convert_using_method_template(key: str, template: dict) -> dict:
         tmp_params = template.get(key)
-        return tmp_params.get(CONVERT_USING_METHOD)
+        return tmp_params.get(CONVERT_USING_SWITCH_KEY)
 
     @staticmethod
     def _convert_using_switch(params: dict, tmp_params: dict, template: Union[list, dict]) -> Any:
@@ -222,13 +221,31 @@ class TypeConverter:
         return param
 
 
-type_convert_templates[ParamType.block] = {
+type_convert_templates[ParamType.BLOCK] = {
     "blockHeight": ValueType.INT,
     "blockHash": ValueType.BYTES,
     "timestamp": ValueType.INT,
     "prevBlockHash": ValueType.BYTES,
 }
-type_convert_templates[ParamType.transaction] = {
+
+type_convert_templates[ParamType.ACCOUNT_DATA] = {
+    "name": ValueType.STRING,
+    "address": ValueType.ADDRESS,
+    "balance": ValueType.INT
+}
+
+type_convert_templates[ParamType.CALL_DATA] = {
+    "method": ValueType.STRING,
+    "params": ValueType.LATER
+}
+
+type_convert_templates[ParamType.DEPLOY_DATA] = {
+    "contentType": ValueType.STRING,
+    "content": ValueType.IGNORE,
+    "params": ValueType.LATER
+}
+
+type_convert_templates[ParamType.TRANSACTION] = {
     "method": ValueType.STRING,
     "params": {
         "txHash": ValueType.BYTES,
@@ -241,64 +258,62 @@ type_convert_templates[ParamType.transaction] = {
         "nonce": ValueType.INT,
         "signature": ValueType.IGNORE,
         "dataType": ValueType.STRING,
-        "data": ValueType.LATER
+        "data": {
+            CONVERT_USING_SWITCH_KEY: {
+                SWITCH_KEY: "dataType",
+                "call": type_convert_templates[ParamType.CALL_DATA],
+                "deploy": type_convert_templates[ParamType.DEPLOY_DATA]
+            }
+        }
     },
-    "genesisData": ValueType.LATER
+    "genesisData": {
+        "accounts": [
+            type_convert_templates[ParamType.ACCOUNT_DATA]
+        ],
+        "message": ValueType.STRING
+    }
 }
 
-type_convert_templates[ParamType.invoke] = {
-    "block": type_convert_templates[ParamType.block],
+type_convert_templates[ParamType.INVOKE] = {
+    "block": type_convert_templates[ParamType.BLOCK],
     "transactions": [
-        type_convert_templates[ParamType.transaction]
+        type_convert_templates[ParamType.TRANSACTION]
     ]
 }
 
-type_convert_templates[ParamType.icx_call] = {
+type_convert_templates[ParamType.ICX_CALL] = {
     "version": ValueType.INT,
     "from": ValueType.ADDRESS,
     "to": ValueType.ADDRESS,
     "dataType": ValueType.STRING,
     "data": ValueType.LATER
 }
-type_convert_templates[ParamType.icx_get_balance] = {
+type_convert_templates[ParamType.ICX_GET_BALANCE] = {
     "version": ValueType.INT,
     "address": ValueType.ADDRESS
 }
-type_convert_templates[ParamType.icx_get_total_supply] = {
+type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
     "version": ValueType.INT
 }
-type_convert_templates[ParamType.icx_get_score_api] = type_convert_templates[ParamType.icx_get_balance]
+type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[ParamType.ICX_GET_BALANCE]
 
-type_convert_templates[ParamType.query] = {
+type_convert_templates[ParamType.QUERY] = {
     "method": ValueType.STRING,
     "params": {
-        CONVERT_USING_METHOD: {
+        CONVERT_USING_SWITCH_KEY: {
             SWITCH_KEY: "method",
-            "icx_call": type_convert_templates[ParamType.icx_call],
-            "icx_getBalance": type_convert_templates[ParamType.icx_get_balance],
-            "icx_getTotalSupply": type_convert_templates[ParamType.icx_get_total_supply],
-            "icx_getScoreApi": type_convert_templates[ParamType.icx_get_score_api],
+            "icx_call": type_convert_templates[ParamType.ICX_CALL],
+            "icx_getBalance": type_convert_templates[ParamType.ICX_GET_BALANCE],
+            "icx_getTotalSupply": type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
+            "icx_getScoreApi": type_convert_templates[ParamType.ICX_GET_SCORE_API],
         }
     }
 }
 
-type_convert_templates[ParamType.write_precommit] = {
+type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     "blockHeight": ValueType.INT,
     "blockHash": ValueType.BYTES
 }
-type_convert_templates[ParamType.remove_precommit] = type_convert_templates[ParamType.write_precommit]
+type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
-type_convert_templates[ParamType.validate_transaction] = type_convert_templates[ParamType.transaction]
-
-type_convert_templates[ParamType.account_data] = {
-    "name": ValueType.STRING,
-    "address": ValueType.ADDRESS,
-    "balance": ValueType.INT
-}
-
-type_convert_templates[ParamType.genesis_data] = {
-    "accounts": [
-        type_convert_templates[ParamType.account_data]
-    ],
-    "message": ValueType.STRING
-}
+type_convert_templates[ParamType.VALIDATE_TRANSACTION] = type_convert_templates[ParamType.TRANSACTION]
