@@ -5,7 +5,8 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:----|:-----:|:----|
-| 2018.06.22 | 조치원 | revokeAuditor -> selfRevoke로 변경<br>AddAuditor, RemoveAuditor 추가 |
+| 2018.07.03 | 남궁재창 | Accepted, Rejected eventlog 추가 |
+| 2018.06.22 | 조치원 | AddAuditor, RemoveAuditor 추가 |
 | 2018.06.21 | 조치원 | 초기 작성 |
 
 # VALUE 형식
@@ -26,6 +27,20 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 * 블록 체인 망을 운영하는데 필요한 각종 항목을 관리하는 Built-in SCORE를 의미한다.
 * 주소: cx0000000000000000000000000000000000000001
+
+# Methods List
+
+* Query methods
+    * [getScoreStatus](#getscorestatus)
+* Invoke methods
+    * [acceptScore](#acceptscore)
+    * [rejectScore](#rejectscore)
+    * [addAuditor](#addauditor)
+    * [removeAuditor](#removeauditor)
+* Eventlog
+    * [Accepted](#accepted)
+    * [Rejected](#rejected)
+
 
 # Query Methods
 
@@ -354,4 +369,26 @@ Governance SCORE가 제공하는 API를 설명한다.
         "message": "Forbidden method"
     }
 }
+```
+
+# Eventlog
+
+## Accepted
+
+Must trigger on any successful acceptScore transaction.
+
+```python
+@eventlog(indexed=1)
+Accepted(self, tx_hash: str):
+    pass
+```
+
+## Rejected
+
+Must trigger on any successful rejectScore transaction.
+
+```python
+@eventlog(indexed=1)
+Rejected(self, tx_hash: str):
+    pass
 ```
