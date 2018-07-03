@@ -39,6 +39,8 @@ class TestTransactionResult(unittest.TestCase):
         tx_result = TransactionResult(
             tx_hash=tx_hash, block=block, tx_index=tx_index, to=to)
 
+        tx_result.event_logs = []
+
         tx_result.failure = TransactionResult.Failure(
             code=ExceptionCode.SERVER_ERROR, message=str('Server error'))
 

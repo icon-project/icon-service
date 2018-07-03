@@ -18,6 +18,7 @@ from collections import namedtuple
 from os import makedirs
 from typing import TYPE_CHECKING, Any
 
+from iconservice.utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
 from .base.block import Block
@@ -314,6 +315,12 @@ class IconServiceEngine(object):
 
         tx_result = self._call(context, method, params)
         tx_result.step_used = context.step_counter.step_used
+        if tx_result.status == TransactionResult.SUCCESS:
+            tx_result.event_logs = context.event_logs
+            tx_result.logs_bloom = context.logs_bloom
+        else:
+            tx_result.event_logs = []
+            tx_result.logs_bloom = BloomFilter()
         context.clear_stack()
         return tx_result
 

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from ..base.address import Address
 
@@ -31,8 +31,8 @@ class EventLog(object):
     def __init__(
             self,
             score_address: 'Address',
-            indexed: 'List[BaseType]' = None,
-            data: 'List[BaseType]' = None) -> None:
+            indexed: List['BaseType'] = None,
+            data: List['BaseType'] = None) -> None:
         """
         Constructor
 
@@ -46,3 +46,24 @@ class EventLog(object):
 
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+
+    def to_dict(self, casing: Optional = None) -> dict:
+        """
+        Returns properties as `dict`
+        :return: a dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if value is None:
+                # Excludes properties which have `None` value
+                continue
+
+            if isinstance(value, Address):
+                value = str(value)
+            elif isinstance(value, list):
+                value = list(map(
+                    lambda v: str(v) if isinstance(v, Address) else v, value))
+
+            new_dict[casing(key) if casing else key] = value
+
+        return new_dict

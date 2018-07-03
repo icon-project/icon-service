@@ -13,13 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import TYPE_CHECKING, List, Optional
 
-
+from iconservice.utils.bloom import BloomFilter
 from ..utils import to_camel_case
 from ..base.address import Address
 from ..base.block import Block
+from .icon_score_event_log import EventLog
 
-from typing import Optional
+if TYPE_CHECKING:
+    pass
 
 
 class TransactionResult(object):
@@ -42,16 +45,20 @@ class TransactionResult(object):
             to: Optional['Address'] = None,
             status: int = FAILURE,
             score_address: Optional['Address'] = None,
-            step_used: int = 0) -> None:
+            event_logs: Optional[List['EventLog']] = None,
+            logs_bloom: Optional[BloomFilter] = None,
+            step_used: int = FAILURE) -> None:
         """Constructor
 
         :param tx_hash: transaction hash
         :param block: a block that the transaction belongs to
         :param tx_index: an index of a transaction on the block
         :param to: a recipient address
-        :param step_used: the amount of steps used in the transaction
         :param score_address:hex string that represent the contract address
             if the transaction`s target is contract
+        :param step_used: the amount of steps used in the transaction
+        :param event_logs: the amount of steps used in the transaction
+        :param logs_bloom: bloom filter data of event logs
         :param status: a status of result. 1 (success) or 0 (failure)
         """
         self.tx_hash = tx_hash
@@ -60,6 +67,8 @@ class TransactionResult(object):
         self.to = to
         self.score_address = score_address
         self.step_used = step_used
+        self.event_logs = event_logs
+        self.logs_bloom = logs_bloom
         self.status = status
 
         # failure object which has code(int) and message(str) attributes
@@ -69,31 +78,38 @@ class TransactionResult(object):
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
-    def _to_dict(self) -> dict:
+    def to_dict(self, casing: Optional = None) -> dict:
         """
         Returns properties as `dict`
         :return: a dict
         """
         new_dict = {}
         for key, value in self.__dict__.items():
-            if value is None:
-                # Excludes properties which have `None` value
-                continue
-
             if isinstance(value, Block):
-                new_dict["block_height"] = value.height
+                key = "block_height"
+                value = value.height
             elif isinstance(value, Address):
-                new_dict[key] = str(value)
+                value = str(value)
             elif isinstance(value, bytes):
-                new_dict[key] = bytes.hex(value)
+                value = bytes.hex(value)
+            elif isinstance(value, list):
+                value = [v.to_dict(casing) for v in value
+                         if isinstance(v, EventLog)]
+            elif isinstance(value, BloomFilter):
+                # value = hex(value)[2:]
+                value = "0x{0:0>512}".format(hex(value)[2:])
             elif key == 'failure' and value:
                 if self.status == self.FAILURE:
-                    new_dict[key] = {
+                    value = {
                         'code': value.code,
                         'message': value.message
                     }
-            else:
-                new_dict[key] = value
+                else:
+                    value = None
+
+            # Excludes properties which have `None` value
+            if value is not None:
+                new_dict[casing(key) if casing else key] = value
 
         return new_dict
 
@@ -102,9 +118,4 @@ class TransactionResult(object):
         Returns properties as json-rpc-v3 json
         :return: a dict
         """
-        response_json = {}
-        tx_dict = self._to_dict()
-        for key, value in tx_dict.items():
-            key = to_camel_case(key)
-            response_json[key] = value
-        return response_json
+        return self.to_dict(to_camel_case)

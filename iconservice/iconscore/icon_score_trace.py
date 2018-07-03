@@ -66,7 +66,7 @@ class Trace(object):
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
-    def to_dict(self, casing: Optional) -> dict:
+    def to_dict(self, casing: Optional = None) -> dict:
         """
         Returns properties as `dict`
         :return: a dict
@@ -77,12 +77,14 @@ class Trace(object):
                 # Excludes properties which have `None` value
                 continue
 
-            new_key = casing(key) if casing else key
             if isinstance(value, TraceType):
-                new_dict[new_key] = value.name
+                value = value.name
             elif isinstance(value, Address):
-                new_dict[new_key] = str(value)
-            else:
-                new_dict[new_key] = value
+                value = str(value)
+            elif isinstance(value, list):
+                value = list(map(
+                    lambda v: str(v) if isinstance(v, Address) else v, value))
+
+            new_dict[casing(key) if casing else key] = value
 
         return new_dict
