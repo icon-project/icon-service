@@ -55,7 +55,7 @@ class TransactionBatch(OrderedDict):
     key: Score Address
     value: IconScoreBatch
     """
-    def __init__(self, tx_hash: str=None) -> None:
+    def __init__(self, tx_hash: Optional[bytes]=None) -> None:
         """Constructor
 
         :param tx_hash: tx_hash
@@ -89,8 +89,8 @@ class TransactionBatch(OrderedDict):
             return None
 
     def __setitem__(self,
-                    key: Address,
-                    value: IconScoreBatch) -> None:
+                    key: 'Address',
+                    value: 'IconScoreBatch') -> None:
         """operator[] overriding
 
         :param key: icon_score_address

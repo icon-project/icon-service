@@ -44,7 +44,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
     def test_call_on_init_of_score(self):
         params = {
-            'test1': '100',
+            'test1': hex(100),
             'test2': 'hello'
         }
         score = MockScore(self)

@@ -144,18 +144,6 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.type = IconScoreContextType.QUERY
         call_data = {
             'method': 'balance_of',
-            'params': {'addr_from': self._addr1}
-        }
-
-        value = self.score_engine.query(
-            self._context, self._addr_token_score, 'call', call_data)
-        self.assertEqual(self._total_supply, value)
-
-    def test_call_balance_of2(self):
-        self.__request_install('sample_token', self._addr_token_score)
-        self._context.type = IconScoreContextType.QUERY
-        call_data = {
-            'method': 'balance_of',
             'params': {'addr_from': str(self._addr1)}
         }
 
@@ -192,7 +180,7 @@ class TestIconScoreEngine2(unittest.TestCase):
             'method': 'transfer',
             'params': {
                 'addr_to': str(self._addr_crowd_sale_score),
-                'value': self._total_supply
+                'value': hex(self._total_supply)
             }
         }
         self._context.type = IconScoreContextType.GENESIS

@@ -22,6 +22,9 @@ from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, \
     IconScoreStepCounter, OutOfStepException, StepType
 
+from iconservice.base.address import AddressPrefix
+from tests import create_block_hash, create_tx_hash, create_address
+
 
 class TestIconScoreStepCounter(unittest.TestCase):
     def setUp(self):
@@ -95,28 +98,32 @@ class TestIconScoreStepCounter(unittest.TestCase):
         inner_task._icon_service_engine._step_counter_factory = \
             Mock(spec=IconScoreStepCounterFactory)
 
-        step_limit = '0x12345'
+        step_limit = hex(12345)
+
         req = {
-            'block': {'block_height': '0x1234'},
+            'block': {
+                'blockHash': bytes.hex(create_block_hash(b'block')),
+                'blockHeight': hex(100),
+                'timestamp': hex(1234),
+                'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
+            },
             'transactions': [{
                 'method': 'icx_sendTransaction',
                 'params': {
-                    'txHash': '0x'
-                              'e0f6dc6607aa9b5550cd1e6d57549f67'
-                              'fe9718654cde15258922d0f88ff58b27',
-                    'version': '0x3',
-                    'from': 'hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-                    'to': 'cx5cdb9522e8e3a7a1ef829913c6cc1da2af9db17f',
+                    'txHash': bytes.hex(create_tx_hash(b'tx')),
+                    'version': hex(3),
+                    'from': str(create_address(AddressPrefix.EOA, b'from')),
+                    'to': str(create_address(AddressPrefix.CONTRACT, b'score')),
                     'stepLimit': step_limit,
-                    'timestamp': '0x563a6cf330136',
+                    'timestamp': hex(123456),
                     'dataType': 'call',
                     'data': {},
                 }
             }]
         }
         inner_task._invoke(req)
-        inner_task._icon_service_engine._step_counter_factory.\
+        inner_task._icon_service_engine._step_counter_factory. \
             create.assert_called()
-        call_arg = inner_task._icon_service_engine._step_counter_factory.\
+        call_arg = inner_task._icon_service_engine._step_counter_factory. \
             create.call_args[0][0]
         self.assertEqual(call_arg, int(step_limit, 16))

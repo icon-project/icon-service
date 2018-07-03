@@ -20,7 +20,7 @@ from .icx_account import Account
 from ..base.address import Address, AddressPrefix
 from ..base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
-from ..icon_config import BALANCE_BYTE_SIZE, DATA_BYTE_ORDER
+from ..icon_config import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 from ..utils import sha3_256
 
 if TYPE_CHECKING:
@@ -164,7 +164,7 @@ class IcxStorage(object):
         :param value: coin total supply
         """
         key = b'total_supply'
-        value = value.to_bytes(BALANCE_BYTE_SIZE, DATA_BYTE_ORDER)
+        value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
         self._db.put(context, key, value)
 
     def get_score_owner(self,

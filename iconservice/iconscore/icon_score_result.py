@@ -19,6 +19,8 @@ from ..utils import to_camel_case
 from ..base.address import Address
 from ..base.block import Block
 
+from typing import Optional
+
 
 class TransactionResult(object):
     """ A DataClass of a transaction result.
@@ -34,12 +36,12 @@ class TransactionResult(object):
 
     def __init__(
             self,
-            tx_hash: str,
-            block: Block,
+            tx_hash: bytes,
+            block: 'Block',
             tx_index: int,
-            to: Address = None,
+            to: Optional['Address'] = None,
             status: int = FAILURE,
-            score_address: Address = None,
+            score_address: Optional['Address'] = None,
             step_used: int = 0) -> None:
         """Constructor
 
@@ -67,7 +69,7 @@ class TransactionResult(object):
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
-    def to_dict(self) -> dict:
+    def _to_dict(self) -> dict:
         """
         Returns properties as `dict`
         :return: a dict
@@ -82,6 +84,8 @@ class TransactionResult(object):
                 new_dict["block_height"] = value.height
             elif isinstance(value, Address):
                 new_dict[key] = str(value)
+            elif isinstance(value, bytes):
+                new_dict[key] = bytes.hex(value)
             elif key == 'failure' and value:
                 if self.status == self.FAILURE:
                     new_dict[key] = {
@@ -99,7 +103,7 @@ class TransactionResult(object):
         :return: a dict
         """
         response_json = {}
-        tx_dict = self.to_dict()
+        tx_dict = self._to_dict()
         for key, value in tx_dict.items():
             key = to_camel_case(key)
             response_json[key] = value

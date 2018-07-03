@@ -25,6 +25,7 @@ from .base.exception import ExceptionCode, RevertException
 from .base.exception import IconServiceBaseException, ServerErrorException
 from .base.message import Message
 from .base.transaction import Transaction
+from .base.type_converter import TypeConverter, ParamType
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import DatabaseFactory
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
@@ -212,9 +213,11 @@ class IconServiceEngine(object):
             return
 
         if block.height != last_block.height + 1:
-            raise ServerErrorException(f'NextBlockHeight[{block.height}] is not LastBlockHeight[{last_block.height}] + 1')
+            raise ServerErrorException(f'NextBlockHeight[{block.height}] '
+                                       f'is not LastBlockHeight[{last_block.height}] + 1')
         elif block.prev_hash != last_block.hash:
-            raise ServerErrorException(f'NextBlock.prevHash[{block.prev_hash}] is not LastBlockHash[{last_block.hash}]')
+            raise ServerErrorException(f'NextBlock.prevHash[{block.prev_hash}] '
+                                       f'is not LastBlockHash[{last_block.hash}]')
 
     @staticmethod
     def _is_genesis_block(index: int, block_height: int, tx_params: dict) -> bool:

@@ -82,11 +82,11 @@ class IconScoreDeployEngine(ContextContainer):
                data: dict) -> None:
         """Handle calldata contained in icx_sendTransaction message
 
+        :param context:
+        :param to:
         :param icon_score_address:
             cx0000000000000000000000000000000000000000 on install
             otherwise score address to update
-        :param context:
-        :param data_type:
         :param data: calldata
         """
         deploy_type: 'DeployType' =\
@@ -251,7 +251,7 @@ class IconScoreDeployEngine(ContextContainer):
         """
 
         annotations = TypeConverter.make_annotations_from_method(on_init)
-        TypeConverter.convert_params(annotations, params)
+        TypeConverter.convert_data_params(annotations, params)
 
         try:
             self._put_context(context)

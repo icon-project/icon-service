@@ -58,21 +58,21 @@ class TestIconServiceEngine(unittest.TestCase):
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
         tx_timestamp_us = int(time.time() * 10 ** 6)
-        request_params = {'txHash': tx_hash, 'timestamp': hex(tx_timestamp_us)}
+        request_params = {'txHash': bytes.hex(tx_hash), 'timestamp': hex(tx_timestamp_us)}
         tx = {
-            'method': '',
+            'method': 'icx_sendTransaction',
             'params': request_params,
             'genesisData': {
                 "accounts": [
                     {
                         "name": "genesis",
-                        "address": f"{self._genesis_addr}",
-                        "balance": "0x2961fff8ca4a62327800000"
+                        "address": str(self._genesis_addr),
+                        "balance": hex(100 * 10 ** 18)
                     },
                     {
                         "name": "fee_treasury",
                         "address": "hx1000000000000000000000000000000000000000",
-                        "balance": "0x0"
+                        "balance": hex(0)
                     }
                 ]
             },
@@ -85,29 +85,35 @@ class TestIconServiceEngine(unittest.TestCase):
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
-            'blockHash': block_hash,
+            'blockHash': bytes.hex(block_hash),
             'timestamp': hex(block_timestamp_us)
         }
 
         precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': block_hash}
+                             'blockHash': bytes.hex(block_hash)}
 
-        response = await self._inner_task.invoke(make_request)
-        response = response['txResults']
-        if not isinstance(response, dict):
-            response = await self._inner_task.remove_precommit_state(precommit_request)
-        elif response[tx_hash]['status'] == hex(1):
-            response = await self._inner_task.write_precommit_state(precommit_request)
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
+        is_commit = False
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
+            is_commit = True
+            await self._inner_task.write_precommit_state(precommit_request)
         else:
-            response = await self._inner_task.remove_precommit_state(precommit_request)
-        return block_hash, response
+            await self._inner_task.remove_precommit_state(precommit_request)
 
-    async def _send_icx_invoke(self, addr_from, addr_to, value, block_index: int, prev_block_hash: str):
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
+
+    async def _send_icx_invoke(self, addr_from: 'Address', addr_to: 'Address', value: int, block_index: int, prev_block_hash: str):
 
         request_params = {
-            "from": addr_from,
-            "to": addr_to,
-            "value": value,
+            "from": str(addr_from),
+            "to": str(addr_to),
+            "value": hex(value),
             "fee": "0x2386f26fc10000",
             "timestamp": "0x1523327456264040",
         }
@@ -115,13 +121,14 @@ class TestIconServiceEngine(unittest.TestCase):
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         tx_hash = create_tx_hash(b'txHash1')
-        request_params['txHash'] = tx_hash
+        request_params['txHash'] = bytes.hex(tx_hash)
         tx = {
             'method': method,
             'params': request_params
         }
 
         response = await self._inner_task.validate_transaction(tx)
+        self.assertEqual(response, hex(0))
 
         make_request = {'transactions': [tx]}
         block_height: int = block_index
@@ -130,26 +137,29 @@ class TestIconServiceEngine(unittest.TestCase):
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
-            'blockHash': block_hash,
+            'blockHash': bytes.hex(block_hash),
             'timestamp': hex(block_timestamp_us),
             'prevBlockHash': prev_block_hash
         }
 
         precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': block_hash}
+                             'blockHash': bytes.hex(block_hash)}
 
-        response = await self._inner_task.invoke(make_request)
-        response = response['txResults']
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
         is_commit = False
-        if not isinstance(response, dict):
-            response = await self._inner_task.remove_precommit_state(precommit_request)
-        elif response[tx_hash]['status'] == hex(1):
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
             is_commit = True
-            response = await self._inner_task.write_precommit_state(precommit_request)
+            await self._inner_task.write_precommit_state(precommit_request)
         else:
-            response = await self._inner_task.remove_precommit_state(precommit_request)
+            await self._inner_task.remove_precommit_state(precommit_request)
 
-        return block_hash, is_commit, response
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
     async def _install_sample_token_invoke(self, block_index: int, prev_block_hash: str):
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -158,16 +168,17 @@ class TestIconServiceEngine(unittest.TestCase):
 
         request_params = {
             "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "to": "cx0000000000000000000000000000000000000000",
             "fee": "0x2386f26fc10000",
             "timestamp": "0x1523327456264040",
-            "dataType": "install",
+            "dataType": "deploy",
             "data": install_data
         }
 
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         tx_hash = create_tx_hash(b'txHash1')
-        request_params['txHash'] = tx_hash
+        request_params['txHash'] = bytes.hex(tx_hash)
         tx = {
             'method': method,
             'params': request_params
@@ -182,26 +193,29 @@ class TestIconServiceEngine(unittest.TestCase):
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
-            'blockHash': block_hash,
+            'blockHash': bytes.hex(block_hash),
             'timestamp': hex(block_timestamp_us),
             'prevBlockHash': prev_block_hash
         }
 
         precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': block_hash}
+                             'blockHash': bytes.hex(block_hash)}
 
         invoke_response = await self._inner_task.invoke(make_request)
-        tx_results = invoke_response['txResults']
+        tx_results = invoke_response.get('txResults')
         is_commit = False
         if not isinstance(tx_results, dict):
-            response = await self._inner_task.remove_precommit_state(precommit_request)
-        elif tx_results[tx_hash]['status'] == hex(1):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
             is_commit = True
-            response = await self._inner_task.write_precommit_state(precommit_request)
+            await self._inner_task.write_precommit_state(precommit_request)
         else:
-            response = await self._inner_task.remove_precommit_state(precommit_request)
+            await self._inner_task.remove_precommit_state(precommit_request)
 
-        return block_hash, is_commit, list(tx_results.values()), response
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
     async def _icx_call(self, request: dict):
         method = 'icx_call'
@@ -213,8 +227,8 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_genesis_invoke(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
+            self.assertEqual(is_commit, True)
 
         try:
             loop = asyncio.get_event_loop()
@@ -225,16 +239,19 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_invoke_success(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
-            prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 1, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
-            prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 2, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_results = \
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_results = \
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
 
         try:
             loop = asyncio.get_event_loop()
@@ -245,12 +262,14 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_invoke_fail1(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
             prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 0, prev_block_hash)
-            self.assertEqual(response, hex(0))
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, prev_block_hash)
             self.assertEqual(is_commit, False)
+            self.assertEqual(response['error']['code'], 32000)
 
         try:
             loop = asyncio.get_event_loop()
@@ -261,16 +280,19 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_invoke_fail2(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
-            prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 1, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_results = \
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
             prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 3, prev_block_hash)
-            self.assertEqual(response, hex(0))
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 3, prev_block_hash)
             self.assertEqual(is_commit, False)
+            self.assertEqual(response['error']['code'], 32000)
 
         try:
             loop = asyncio.get_event_loop()
@@ -281,16 +303,19 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_invoke_fail3(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
-            prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 1, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_results = \
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
             prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 0, prev_block_hash)
-            self.assertEqual(response, hex(0))
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, prev_block_hash)
             self.assertEqual(is_commit, False)
+            self.assertEqual(response['error']['code'], 32000)
 
         try:
             loop = asyncio.get_event_loop()
@@ -301,16 +326,19 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_invoke_fail4(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
-            prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 1, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_results = \
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
             prev_block_hash, is_commit, response = \
-                await self._send_icx_invoke(self._genesis_addr, self._addr1, hex(1), 2, "")
-            self.assertEqual(response, hex(0))
+                await self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, "")
             self.assertEqual(is_commit, False)
+            self.assertEqual(response['error']['code'], 32000)
 
         try:
             loop = asyncio.get_event_loop()
@@ -321,12 +349,14 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_install_sample_token(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            self.assertEqual(response, hex(0))
-            prev_block_hash, is_commit, tx_result, response = \
-                await self._install_sample_token_invoke(1, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._install_sample_token_invoke(1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
 
         try:
             loop = asyncio.get_event_loop()
@@ -337,14 +367,16 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_query_method_sample_token(self):
         async def _run():
             await asyncio.sleep(1)
-            prev_block_hash, response = await self._genesis_invoke(0)
-            prev_block_hash, is_commit, tx_result, response = \
-                await self._install_sample_token_invoke(1, prev_block_hash)
-            self.assertEqual(response, hex(0))
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._install_sample_token_invoke(1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
 
             token_addr = tx_result[0]['scoreAddress']
-            self.assertEqual(response, hex(0))
             request = {
                 "from": "hx0000000000000000000000000000000000000000",
                 "to": token_addr,

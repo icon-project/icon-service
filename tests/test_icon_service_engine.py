@@ -33,7 +33,7 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, \
     StepType
 from iconservice.utils import sha3_256
-from tests import create_block_hash, create_address, rmtree
+from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
 context_factory = IconScoreContextFactory(max_size=1)
 
@@ -66,7 +66,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._treasury_address = create_address(
             AddressPrefix.EOA, b'treasury')
 
-        self._tx_hash = sha3_256(b'tx_hash').hex()
+        self._tx_hash = create_tx_hash(b'tx')
         self._from = self._genesis_address
         self._to = create_address(AddressPrefix.EOA, b'to')
         self._icon_score_address = create_address(
@@ -145,7 +145,7 @@ class TestIconServiceEngine(unittest.TestCase):
             'to': _to,
             'value': value,
             'fee': 10 ** 16,
-            'timestamp': hex(1234567890),
+            'timestamp': 1234567890,
             'txHash': self._tx_hash
         }
 
@@ -188,7 +188,7 @@ class TestIconServiceEngine(unittest.TestCase):
                 'value': value,
                 'fee': 10 ** 16,
                 'timestamp': 1234567890,
-                'txHash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+                'txHash': create_tx_hash(b'txHash'),
             }
         }
 
@@ -246,50 +246,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(self._engine._precommit_state)
         self.assertEqual(
             0, len(self._engine._icon_score_deploy_engine._deferred_tasks))
-
-    '''
-    def test_score_invoke(self):
-        method = 'icx_sendTransaction'
-        params = {
-            'from': self._from,
-            'to': self._icon_score_address,
-            'value': 0,
-            'fee': 10 ** 16,
-            'tx_hash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
-            'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=',
-            'data': {
-                'method': 'transfer',
-                'params': {
-                    'to': self._to,
-                    'value': 777
-                }
-            }
-        }
-
-        ret = self._engine._call(method, params)
-        self.assertTrue(ret)
-    '''
-
-    '''
-    def test_score_query(self):
-        method = 'icx_call'
-        params = {
-            'from': self._from,
-            'to': self._icon_score_address,
-            'value': 10 ** 18,
-            'data': {
-                'method': 'balance_of',
-                'params': {
-                    'address': self._from
-                }
-            }
-        }
-
-        balance = self._engine._call(method, params)
-        self.assertTrue(isinstance(balance, int))
-        self.assertEqual(0, balance)
-    '''
-
+        
 
 if __name__ == '__main__':
     unittest.main()
