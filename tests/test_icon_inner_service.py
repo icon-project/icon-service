@@ -58,7 +58,13 @@ class TestIconServiceEngine(unittest.TestCase):
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
         tx_timestamp_us = int(time.time() * 10 ** 6)
-        request_params = {'txHash': bytes.hex(tx_hash), 'timestamp': hex(tx_timestamp_us)}
+        version = 3
+        request_params = {
+            'txHash': bytes.hex(tx_hash),
+            'version': hex(version),
+            'timestamp': hex(tx_timestamp_us)
+        }
+
         tx = {
             'method': 'icx_sendTransaction',
             'params': request_params,
@@ -110,12 +116,21 @@ class TestIconServiceEngine(unittest.TestCase):
 
     async def _send_icx_invoke(self, addr_from: 'Address', addr_to: 'Address', value: int, block_index: int, prev_block_hash: str):
 
+        version = 3
+        step_limit = 1000
+        timestamp = 12345
+        nonce = 1
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
         request_params = {
+            "version": hex(version),
             "from": str(addr_from),
             "to": str(addr_to),
             "value": hex(value),
-            "fee": "0x2386f26fc10000",
-            "timestamp": "0x1523327456264040",
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(timestamp),
+            "nonce": hex(nonce),
+            "signature": signature
         }
 
         method = 'icx_sendTransaction'
@@ -166,11 +181,22 @@ class TestIconServiceEngine(unittest.TestCase):
         path = os.path.join(root_path, f'tests/sample/sample_token')
         install_data = {'contentType': 'application/tbears', 'content': path}
 
+        version = 3
+        from_addr = create_address(AddressPrefix.EOA, b'addr1')
+        to_addr = "cx0000000000000000000000000000000000000000"
+        step_limit = 1000
+        timestamp = 12345
+        nonce = 1
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
         request_params = {
-            "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "to": "cx0000000000000000000000000000000000000000",
-            "fee": "0x2386f26fc10000",
-            "timestamp": "0x1523327456264040",
+            "version": hex(version),
+            "from": str(from_addr),
+            "to": str(to_addr),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(timestamp),
+            "nonce": hex(nonce),
+            "signature": signature,
             "dataType": "deploy",
             "data": install_data
         }
@@ -376,9 +402,13 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
 
+            version = 3
             token_addr = tx_result[0]['scoreAddress']
+            addr_from = create_address(AddressPrefix.EOA, b'addr1')
+
             request = {
-                "from": "hx0000000000000000000000000000000000000000",
+                "version": hex(version),
+                "from": str(addr_from),
                 "to": token_addr,
                 "dataType": "call",
                 "data": {

@@ -111,6 +111,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_transaction_convert1(self):
         method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'from')
         to_addr = create_address(AddressPrefix.CONTRACT, b'score')
@@ -128,6 +129,7 @@ class TestTypeConverter(unittest.TestCase):
         request_params = {
             "method": method,
             "params": {
+                "txHash": bytes.hex(tx_hash),
                 "version": hex(version),
                 "from": str(from_addr),
                 "to": str(to_addr),
@@ -151,6 +153,7 @@ class TestTypeConverter(unittest.TestCase):
         ret_params = TypeConverter.convert(request_params, ParamType.TRANSACTION)
 
         self.assertEqual(method, ret_params['method'])
+        self.assertEqual(tx_hash, ret_params['params']['txHash'])
         self.assertEqual(version, ret_params['params']['version'])
         self.assertEqual(from_addr, ret_params['params']['from'])
         self.assertEqual(to_addr, ret_params['params']['to'])
@@ -167,6 +170,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_transaction_conver2(self):
         method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'from')
         to_addr = create_address(AddressPrefix.CONTRACT, b'score')
@@ -185,6 +189,7 @@ class TestTypeConverter(unittest.TestCase):
         request_params = {
             "method": method,
             "params": {
+                "txHash": bytes.hex(tx_hash),
                 "version": hex(version),
                 "from": str(from_addr),
                 "to": str(to_addr),
@@ -209,6 +214,7 @@ class TestTypeConverter(unittest.TestCase):
         ret_params = TypeConverter.convert(request_params, ParamType.TRANSACTION)
 
         self.assertEqual(method, ret_params['method'])
+        self.assertEqual(tx_hash, ret_params['params']['txHash'])
         self.assertEqual(version, ret_params['params']['version'])
         self.assertEqual(from_addr, ret_params['params']['from'])
         self.assertEqual(to_addr, ret_params['params']['to'])
@@ -231,6 +237,7 @@ class TestTypeConverter(unittest.TestCase):
         prev_block_hash = create_block_hash(b'prevBlock1')
 
         method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'from')
         to_addr = create_address(AddressPrefix.CONTRACT, b'score')
@@ -255,6 +262,7 @@ class TestTypeConverter(unittest.TestCase):
                 {
                     "method": method,
                     "params": {
+                        "txHash": bytes.hex(tx_hash),
                         "version": hex(version),
                         "from": str(from_addr),
                         "to": str(to_addr),
@@ -285,6 +293,7 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(prev_block_hash, ret_params['block']['prevBlockHash'])
 
         self.assertEqual(method, ret_params['transactions'][0]['method'])
+        self.assertEqual(tx_hash, ret_params['transactions'][0]['params']['txHash'])
         self.assertEqual(version, ret_params['transactions'][0]['params']['version'])
         self.assertEqual(from_addr, ret_params['transactions'][0]['params']['from'])
         self.assertEqual(to_addr, ret_params['transactions'][0]['params']['to'])
@@ -486,6 +495,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_validate_tx_convert(self):
         method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'from')
         to_addr = create_address(AddressPrefix.CONTRACT, b'score')
@@ -503,6 +513,7 @@ class TestTypeConverter(unittest.TestCase):
         request_params = {
             "method": method,
             "params": {
+                "txHash": bytes.hex(tx_hash),
                 "version": hex(version),
                 "from": str(from_addr),
                 "to": str(to_addr),
@@ -526,6 +537,7 @@ class TestTypeConverter(unittest.TestCase):
         ret_params = TypeConverter.convert(request_params, ParamType.VALIDATE_TRANSACTION)
 
         self.assertEqual(method, ret_params['method'])
+        self.assertEqual(tx_hash, ret_params['params']['txHash'])
         self.assertEqual(version, ret_params['params']['version'])
         self.assertEqual(from_addr, ret_params['params']['from'])
         self.assertEqual(to_addr, ret_params['params']['to'])
@@ -539,3 +551,40 @@ class TestTypeConverter(unittest.TestCase):
         self.assertNotEqual(data_from, ret_params['params']['data']['params']['from'])
         self.assertNotEqual(data_to, ret_params['params']['data']['params']['to'])
         self.assertNotEqual(data_value, ret_params['params']['data']['params']['value'])
+
+    def test_v2_invoke_convert(self):
+        method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
+        from_addr = create_address(AddressPrefix.EOA, b'from')
+        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        value = 10 * 10 ** 18
+        fee = 10 * 10 ** 16
+        timestamp = 12345
+        nonce = 123
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
+        request_params = {
+            "method": method,
+            "params": {
+                "tx_hash": bytes.hex(tx_hash),
+                "from": str(from_addr),
+                "to": str(to_addr),
+                "value": hex(value),
+                "fee": hex(fee),
+                "timestamp": hex(timestamp),
+                "nonce": hex(nonce),
+                "signature": signature
+            }
+        }
+
+        ret_params = TypeConverter.convert(request_params, ParamType.VALIDATE_TRANSACTION)
+
+        self.assertEqual(method, ret_params['method'])
+        self.assertEqual(tx_hash, ret_params['params']['txHash'])
+        self.assertEqual(from_addr, ret_params['params']['from'])
+        self.assertEqual(to_addr, ret_params['params']['to'])
+        self.assertEqual(value, ret_params['params']['value'])
+        self.assertEqual(fee, ret_params['params']['fee'])
+        self.assertEqual(timestamp, ret_params['params']['timestamp'])
+        self.assertEqual(nonce, ret_params['params']['nonce'])
+        self.assertEqual(signature, ret_params['params']['signature'])

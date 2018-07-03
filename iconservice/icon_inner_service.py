@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
 from concurrent.futures.thread import ThreadPoolExecutor
 from asyncio import get_event_loop
 
@@ -22,7 +23,7 @@ from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
-from iconservice.utils import make_response, make_error_response
+from iconservice.utils import integers_to_hex, check_error_response
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
@@ -83,19 +84,19 @@ class IconScoreInnerTask(object):
             convert_tx_results = \
                 {bytes.hex(tx_result.tx_hash): tx_result.to_response_json() for tx_result in tx_results}
             results = {'txResults': convert_tx_results, 'stateRootHash': bytes.hex(state_root_hash)}
-            response = make_response(results)
+            response = MakeResponse.make_response(results)
         except IconServiceBaseException as icon_e:
             if DEV:
                 Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(icon_e.code, icon_e.message)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             if DEV:
                 Logger.exception(e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.debug(f'invoke response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -122,19 +123,19 @@ class IconScoreInnerTask(object):
 
             if isinstance(value, Address):
                 value = str(value)
-            response = make_response(value)
+            response = MakeResponse.make_response(value)
         except IconServiceBaseException as icon_e:
             if DEV:
                 Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(icon_e.code, icon_e.message)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             if DEV:
                 Logger.exception(e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.debug(f'query response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -157,19 +158,19 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.validate_precommit(block)
 
             self._icon_service_engine.commit()
-            response = make_response(ExceptionCode.OK)
+            response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             if DEV:
                 Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(icon_e.code, icon_e.message)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             if DEV:
                 Logger.exception(e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.debug(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -192,19 +193,19 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.validate_precommit(block)
 
             self._icon_service_engine.rollback()
-            response = make_response(ExceptionCode.OK)
+            response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             if DEV:
                 Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(icon_e.code, icon_e.message)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             if DEV:
                 Logger.exception(e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.debug(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -225,19 +226,19 @@ class IconScoreInnerTask(object):
             self._validate_jsonschema(request)
             converted_request = TypeConverter.convert(request, ParamType.VALIDATE_TRANSACTION)
             self._icon_service_engine.validate_for_invoke(converted_request)
-            response = make_response(ExceptionCode.OK)
+            response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             if DEV:
                 Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(icon_e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(icon_e.code, icon_e.message)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             if DEV:
                 Logger.exception(e, ICON_SERVICE_LOG_TAG)
             else:
                 Logger.error(e, ICON_SERVICE_LOG_TAG)
-            response = make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -251,6 +252,21 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def change_block_hash(self, params):
         return ExceptionCode.OK
+
+
+class MakeResponse:
+    @staticmethod
+    def make_response(response: Any):
+        if check_error_response(response):
+            return response
+        elif isinstance(response, (dict, list, int)):
+            return integers_to_hex(response)
+        else:
+            return response
+
+    @staticmethod
+    def make_error_response(code: Any, message: str):
+        return {'error': {'code': int(code), 'message': message}}
 
 
 class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):

@@ -78,18 +78,5 @@ def integers_to_hex(res: Any) -> Iterable:
     return res
 
 
-def make_response(result: Any):
-    if check_error_response(result):
-        return result
-    elif isinstance(result, (dict, list, int)):
-        return integers_to_hex(result)
-    else:
-        return result
-
-
 def check_error_response(result: Any):
     return isinstance(result, dict) and result.get('error')
-
-
-def make_error_response(code: Any, message: str):
-    return {'error': {'code': int(code), 'message': message}}

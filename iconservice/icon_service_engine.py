@@ -131,7 +131,7 @@ class IconServiceEngine(object):
         self._context_factory = IconScoreContextFactory(max_size=5)
         self._icon_score_loader = IconScoreLoader(icon_score_root_path)
 
-        self._icx_context_db = self._db_factory.create_by_name('icon_dex')
+        self._icx_context_db = self._db_factory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_context_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_context_db)
 

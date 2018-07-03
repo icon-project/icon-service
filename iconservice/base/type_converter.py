@@ -59,6 +59,7 @@ class ValueType(IntEnum):
 type_convert_templates = dict()
 CONVERT_USING_SWITCH_KEY = 'CONVERT_USING_SWITCH_KEY'
 SWITCH_KEY = "SWITCH_KEY"
+KEY_CONVERTER = 'KEY_CONVERTER'
 
 
 class TypeConverter:
@@ -75,6 +76,9 @@ class TypeConverter:
     def _convert(params: dict, template: Union[list, dict]) -> Any:
         if not params or not template:
             return params
+
+        if isinstance(template, dict) and KEY_CONVERTER in template:
+            params = TypeConverter._convert_key(params, template[KEY_CONVERTER])
 
         if isinstance(params, dict) and isinstance(template, dict):
             new_params = dict()
@@ -95,6 +99,19 @@ class TypeConverter:
             new_params = TypeConverter._convert_value(params, template)
         else:
             new_params = params
+
+        return new_params
+
+    @staticmethod
+    def _convert_key(params, key_convert_dict):
+        new_params = dict()
+        for key in params:
+            if key in key_convert_dict:
+                old_key = key
+                new_key = key_convert_dict[old_key]
+                new_params[new_key] = params[old_key]
+            else:
+                new_params[key] = params[key]
 
         return new_params
 
@@ -155,7 +172,10 @@ class TypeConverter:
     @staticmethod
     def _convert_value_int(value: str) -> int:
         if isinstance(value, str):
-            return int(value, 16)
+            if value.startswith('0x'):
+                return int(value, 16)
+            else:
+                return int(value)
         else:
             raise InvalidParamsException(f'TypeConvert Exception int value :{value}, type: {type(value)}')
 
@@ -254,6 +274,7 @@ type_convert_templates[ParamType.TRANSACTION] = {
         "to": ValueType.ADDRESS,
         "value": ValueType.INT,
         "stepLimit": ValueType.INT,
+        "fee": ValueType.INT,
         "timestamp": ValueType.INT,
         "nonce": ValueType.INT,
         "signature": ValueType.IGNORE,
@@ -264,6 +285,9 @@ type_convert_templates[ParamType.TRANSACTION] = {
                 "call": type_convert_templates[ParamType.CALL_DATA],
                 "deploy": type_convert_templates[ParamType.DEPLOY_DATA]
             }
+        },
+        KEY_CONVERTER: {
+            "tx_hash": "txHash"
         }
     },
     "genesisData": {
