@@ -173,8 +173,7 @@ class TestEventlog(unittest.TestCase):
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
-            int(1).to_bytes(1, 'big') + \
-            address.prefix.to_bytes(1, 'big') + address.body
+            int(1).to_bytes(1, 'big') + address.body
         self.assertIn(indexed_bloom_data, context.logs_bloom)
 
     def test_bool_index_event(self):

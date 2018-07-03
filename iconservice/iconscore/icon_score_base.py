@@ -430,7 +430,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         elif isinstance(data, str):
             raw += data.encode('utf-8')
         elif isinstance(data, Address):
-            raw += data.prefix.to_bytes(1, 'big') + data.body
+            raw += data.body
         elif isinstance(data, bool):
             raw += int_to_bytes(int(data))
         elif isinstance(data, bytes):
