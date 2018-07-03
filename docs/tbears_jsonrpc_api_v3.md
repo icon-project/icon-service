@@ -5,7 +5,7 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:-----|:-----:|:----|
-| 2018.07.03 | 이용우 | Message Type Transaction 추가 |
+| 2018.07.03 | 이용우 | 메시지 Transaction 추가 |
 | 2018.06.29 | 박지윤 | 일부 API 오류 수정 |
 | 2018.06.12 | 조치원 | 일부 표 오류 수정 |
 | 2018.06.08 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
@@ -555,7 +555,7 @@ SCORE 함수 실행 결과
 }
 ```
 
-* Message Type Transaction
+* 메시지
 
 ```json
 // Request
