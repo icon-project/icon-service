@@ -188,7 +188,7 @@ class TestIconServiceEngine(unittest.TestCase):
                 'value': value,
                 'fee': 10 ** 16,
                 'timestamp': 1234567890,
-                'txHash': '0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed',
+                'txHash': create_tx_hash(b'txHash'),
             }
         }
 

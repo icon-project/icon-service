@@ -84,6 +84,8 @@ class TransactionResult(object):
                 new_dict["block_height"] = value.height
             elif isinstance(value, Address):
                 new_dict[key] = str(value)
+            elif isinstance(value, bytes):
+                new_dict[key] = bytes.hex(value)
             elif key == 'failure' and value:
                 if self.status == self.FAILURE:
                     new_dict[key] = {

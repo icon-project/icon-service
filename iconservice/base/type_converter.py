@@ -28,29 +28,33 @@ class ParamType(IntEnum):
     block = 0
     transaction = 1
 
-    invoke = 2
-    query = 3
+    invoke_call = 2
+    invoke_deploy = 3
 
-    icx_call = 4
-    icx_get_balance = 5
-    icx_get_total_supply = 6
-    icx_get_score_api = 7
+    invoke = 4
+    query = 5
 
-    write_precommit = 8
-    remove_precommit = 9
+    icx_call = 6
+    icx_get_balance = 7
+    icx_get_total_supply = 8
+    icx_get_score_api = 9
 
-    validate_transaction = 10
-    account_data = 11
-    genesis_data = 12
+    write_precommit = 10
+    remove_precommit = 11
+
+    validate_transaction = 12
+    account_data = 13
+    genesis_data = 14
 
 
 class ValueType(IntEnum):
-    NONE = 0
-    INT = 1
-    STRING = 2
-    BOOL = 3
-    ADDRESS = 4
-    BYTES = 5
+    IGNORE = 0
+    LATER = 1
+    INT = 2
+    STRING = 3
+    BOOL = 4
+    ADDRESS = 5
+    BYTES = 6
 
 
 type_convert_templates = dict()
@@ -235,11 +239,11 @@ type_convert_templates[ParamType.transaction] = {
         "stepLimit": ValueType.INT,
         "timestamp": ValueType.INT,
         "nonce": ValueType.INT,
-        "signature": ValueType.NONE,
+        "signature": ValueType.IGNORE,
         "dataType": ValueType.STRING,
-        "data": ValueType.NONE
+        "data": ValueType.LATER
     },
-    "genesisData": ValueType.NONE
+    "genesisData": ValueType.LATER
 }
 
 type_convert_templates[ParamType.invoke] = {
@@ -254,7 +258,7 @@ type_convert_templates[ParamType.icx_call] = {
     "from": ValueType.ADDRESS,
     "to": ValueType.ADDRESS,
     "dataType": ValueType.STRING,
-    "data": ValueType.NONE
+    "data": ValueType.LATER
 }
 type_convert_templates[ParamType.icx_get_balance] = {
     "version": ValueType.INT,

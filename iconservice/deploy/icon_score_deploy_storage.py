@@ -14,23 +14,24 @@
 # limitations under the License.
 
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from ..base.address import Address
+
 from . import DeployType
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
+    from ..base.address import Address
 
 
 class IconScoreDeployInfo(object):
 
     def __init__(self,
                  deploy_type: 'DeployType',
-                 score_address: 'Address'=None,
-                 owner: 'Address'=None,
-                 tx_hash: str=None,
-                 params: dict=None):
+                 score_address: Optional['Address']=None,
+                 owner: Optional['Address']=None,
+                 tx_hash: Optional[bytes]=None,
+                 params: Optional[dict]=None):
         self.score_address = score_address
         self.owner = owner
         self.tx_hash = tx_hash
@@ -47,7 +48,7 @@ class IconScoreDeployStorage(object):
         super().__init__()
         self._db = db
 
-    def get_score_address_by_tx_hash(self, tx_hash: str):
+    def get_score_address_by_tx_hash(self, tx_hash: bytes):
         """Returns score address with SCORE install txHash
 
         :param tx_hash: SCORE deploy txHash
@@ -56,7 +57,7 @@ class IconScoreDeployStorage(object):
         pass
 
     def get_score_deploy_info_by_tx_hash(
-            self, tx_hash: str) -> 'IconScoreDeployInfo':
+            self, tx_hash: bytes) -> 'IconScoreDeployInfo':
         pass
 
     def get_score_deploy_info_by_address(
