@@ -39,6 +39,8 @@ class TestTransactionResult(unittest.TestCase):
         tx_result = TransactionResult(
             tx_hash=tx_hash, block=block, tx_index=tx_index, to=to)
 
+        tx_result.event_logs = []
+
         tx_result.failure = TransactionResult.Failure(
             code=ExceptionCode.SERVER_ERROR, message=str('Server error'))
 
@@ -49,7 +51,7 @@ class TestTransactionResult(unittest.TestCase):
 
     def test_to_dict(self):
         tx_result = self.tx_result
-        d = tx_result._to_dict()
+        d = tx_result.to_dict()
         self.assertTrue(isinstance(d, dict))
         self.assertTrue(
             isinstance(tx_result.failure, TransactionResult.Failure))
@@ -60,11 +62,11 @@ class TestTransactionResult(unittest.TestCase):
         tx_result.failure = TransactionResult.Failure(
             code=ExceptionCode.INVALID_PARAMS, message='Invalid params')
 
-        d = tx_result._to_dict()
+        d = tx_result.to_dict()
         self.assertFalse('failure' in d)
 
         tx_result.status = TransactionResult.FAILURE
-        d = tx_result._to_dict()
+        d = tx_result.to_dict()
         self.assertTrue('failure' in d)
 
         print(d)

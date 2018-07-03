@@ -36,6 +36,7 @@ from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import Trace, TraceType
 from iconservice.icx import IcxEngine
+from iconservice.utils import to_camel_case
 
 
 class TestTrace(unittest.TestCase):
@@ -187,6 +188,24 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(to_, trace.score_address)
         self.assertEqual(code, trace.data[0])
         self.assertEqual(error, trace.data[1])
+
+    def test_to_dict_camel(self):
+        context = ContextContainer._get_context()
+        score_address = Mock(spec=Address)
+        func_name = "testCall"
+        to_ = Mock(spec=Address)
+        amount = 100
+        params = {'to': to_, 'amount': amount}
+
+        self._score.call(score_address, func_name, params)
+        context.traces.append.assert_called()
+        trace = context.traces.append.call_args[0][0]
+        camel_dict = trace.to_dict(to_camel_case)
+        self.assertIn('scoreAddress', camel_dict)
+        self.assertIn('trace', camel_dict)
+        self.assertIn('data', camel_dict)
+        self.assertEqual(TraceType.CALL.name, camel_dict['trace'])
+        self.assertEqual(3, len(camel_dict['data']))
 
 
 class TestInterfaceScore(InterfaceScore):
