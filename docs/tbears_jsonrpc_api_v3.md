@@ -5,6 +5,7 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:-----|:-----:|:----|
+| 2018.07.03 | 이용우 | Message Type Transaction 추가 |
 | 2018.06.29 | 박지윤 | 일부 API 오류 수정 |
 | 2018.06.12 | 조치원 | 일부 표 오류 수정 |
 | 2018.06.08 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
@@ -550,6 +551,28 @@ SCORE 함수 실행 결과
                 "amount": "0x1234"
             }
         }
+    }
+}
+```
+
+* Message Type Transaction
+
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "method": "icx_sendTransaction",
+    "id": 1234,
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
+        "to": "hxbe258ceb872e08851f1f59694dac2558708ece11",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "message",
+        "data": "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
     }
 }
 ```
