@@ -183,7 +183,10 @@ class TypeConverter:
     @staticmethod
     def _convert_value_bytes(value: str) -> bytes:
         if isinstance(value, str):
-            return bytes.fromhex(value)
+            if value.startswith('0x'):
+                return bytes.fromhex(value[2:])
+            else:
+                return bytes.fromhex(value)
         else:
             raise InvalidParamsException(f'TypeConvert Exception bytes value :{value}, type: {type(value)}')
 
