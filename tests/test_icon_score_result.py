@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import unittest
+from typing import List
 from unittest.mock import Mock
 
+from iconservice import EventLog
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
@@ -27,6 +29,8 @@ from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.icx import IcxEngine
+from iconservice.utils import to_camel_case
+from iconservice.utils.bloom import BloomFilter
 
 
 class TestTransactionResult(unittest.TestCase):
@@ -120,3 +124,35 @@ class TestTransactionResult(unittest.TestCase):
         self.assertIsNotNone(tx_result.score_address)
         dict_as_camel = tx_result.to_response_json()
         self.assertNotIn('failure', dict_as_camel)
+
+    def test_to_dict_camel(self):
+        from_ = Mock(spec=Address)
+        to_ = Mock(spec=Address)
+        tx_index = Mock(spec=int)
+        self._mock_context.tx.attach_mock(tx_index, "index")
+        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
+            Mock(return_value=False), 'is_data_type_supported')
+
+        tx_result = self._icon_service_engine._handle_icx_send_transaction(
+            self._mock_context, {'from': from_, 'to': to_})
+
+        tx_result.score_address = Mock(spec=Address)
+        tx_result.event_logs = [EventLog(Mock(spec=Address), [], [])]
+        tx_result.logs_bloom = BloomFilter()
+
+        camel_dict = tx_result.to_dict(to_camel_case)
+
+        self.assertIn('txHash', camel_dict)
+        self.assertIn('blockHeight', camel_dict)
+        self.assertIn('txIndex', camel_dict)
+        self.assertIn('to', camel_dict)
+        self.assertIn('scoreAddress', camel_dict)
+        self.assertIn('stepUsed', camel_dict)
+        self.assertIn('eventLogs', camel_dict)
+        self.assertIn('logsBloom', camel_dict)
+        self.assertIn('status', camel_dict)
+        self.assertEqual(1, len(camel_dict['eventLogs']))
+        self.assertIn('scoreAddress', camel_dict['eventLogs'][0])
+        self.assertIn('indexed', camel_dict['eventLogs'][0])
+        self.assertIn('data', camel_dict['eventLogs'][0])
+

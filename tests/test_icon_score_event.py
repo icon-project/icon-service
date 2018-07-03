@@ -25,6 +25,7 @@ from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
 from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
+from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 
 
@@ -238,6 +239,25 @@ class TestEventlog(unittest.TestCase):
         indexed_bloom_data = \
             int(1).to_bytes(1, 'big') + data
         self.assertIn(indexed_bloom_data, context.logs_bloom)
+
+    def test_to_dict_camel(self):
+        context = ContextContainer._get_context()
+
+        name = "name"
+        address = Address.from_string("hx0123456789abcdef0123456789abcdef01234567")
+        age = 10
+        phone_number = "000"
+
+        self._mock_score.OneIndexEvent(name, address, age)
+        context.event_logs.append.assert_called()
+        event_log = context.event_logs.append.call_args[0][0]
+
+        camel_dict = event_log.to_dict(to_camel_case)
+        self.assertIn('scoreAddress', camel_dict)
+        self.assertIn('indexed', camel_dict)
+        self.assertIn('data', camel_dict)
+        self.assertEqual(2, len(camel_dict['indexed']))
+        self.assertEqual(2, len(camel_dict['data']))
 
     def tearDown(self):
         self._mock_icon_score = None
