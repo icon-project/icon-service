@@ -27,7 +27,7 @@ score_base_support_type = (int, str, bytes, bool, Address)
 class ParamType(IntEnum):
     BLOCK = 0
 
-    TRANSACTION = 100
+    INVOKE_TRANSACTION = 100
     ACCOUNT_DATA = 101
     CALL_DATA = 102
     DEPLOY_DATA = 103
@@ -268,7 +268,7 @@ type_convert_templates[ParamType.DEPLOY_DATA] = {
     "params": ValueType.LATER
 }
 
-type_convert_templates[ParamType.TRANSACTION] = {
+type_convert_templates[ParamType.INVOKE_TRANSACTION] = {
     "method": ValueType.STRING,
     "params": {
         "txHash": ValueType.BYTES,
@@ -304,7 +304,7 @@ type_convert_templates[ParamType.TRANSACTION] = {
 type_convert_templates[ParamType.INVOKE] = {
     "block": type_convert_templates[ParamType.BLOCK],
     "transactions": [
-        type_convert_templates[ParamType.TRANSACTION]
+        type_convert_templates[ParamType.INVOKE_TRANSACTION]
     ]
 }
 
@@ -343,4 +343,29 @@ type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
 }
 type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
-type_convert_templates[ParamType.VALIDATE_TRANSACTION] = type_convert_templates[ParamType.TRANSACTION]
+type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
+    "method": ValueType.STRING,
+    "params": {
+        "version": ValueType.INT,
+        "txHash": ValueType.BYTES,
+        "from": ValueType.ADDRESS,
+        "to": ValueType.ADDRESS,
+        "value": ValueType.INT,
+        "stepLimit": ValueType.INT,
+        "fee": ValueType.INT,
+        "timestamp": ValueType.INT,
+        "nonce": ValueType.INT,
+        "signature": ValueType.IGNORE,
+        "dataType": ValueType.STRING,
+        "data": {
+            CONVERT_USING_SWITCH_KEY: {
+                SWITCH_KEY: "dataType",
+                "call": type_convert_templates[ParamType.CALL_DATA],
+                "deploy": type_convert_templates[ParamType.DEPLOY_DATA]
+            }
+        },
+        KEY_CONVERTER: {
+            "tx_hash": "txHash"
+        }
+    }
+}

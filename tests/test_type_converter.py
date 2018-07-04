@@ -150,7 +150,7 @@ class TestTypeConverter(unittest.TestCase):
             }
         }
 
-        ret_params = TypeConverter.convert(request_params, ParamType.TRANSACTION)
+        ret_params = TypeConverter.convert(request_params, ParamType.INVOKE_TRANSACTION)
 
         self.assertEqual(method, ret_params['method'])
         self.assertEqual(tx_hash, ret_params['params']['txHash'])
@@ -211,7 +211,7 @@ class TestTypeConverter(unittest.TestCase):
             }
         }
 
-        ret_params = TypeConverter.convert(request_params, ParamType.TRANSACTION)
+        ret_params = TypeConverter.convert(request_params, ParamType.INVOKE_TRANSACTION)
 
         self.assertEqual(method, ret_params['method'])
         self.assertEqual(tx_hash, ret_params['params']['txHash'])
