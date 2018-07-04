@@ -1,12 +1,12 @@
-Event Log 의 Indexing과 Bloom Filter
+Event Log의 Indexing과 Bloom Filter
 ==
 
 ## 문서 이력
 
 | 일시 | 버전 | 작성자 | 비고 |
 |:-----|:----|:-----:|:-----|
-| 2018.07.02 | 0.0.1 | 이용우 | 신규 |
 | 2018.07.03 | 0.0.2 | 이용우 | indexed 필드, str타입 indexing rule |
+| 2018.07.02 | 0.0.1 | 이용우 | 신규 |
 
 ## Overview
 Event Log의 적용, Indexing Rule, Bloom Filter의 Filter search 방법에 대한 기술이다
@@ -29,8 +29,8 @@ Event Log의 적용, Indexing Rule, Bloom Filter의 Filter search 방법에 대�
 
 ```python
 @eventlog(indexed=2)
-def Transfer(self, from_: Address, to_: Address, amout: int):
-  pass
+def Transfer(self, from_: Address, to_: Address, amount: int):
+    pass
 ```
 
 
@@ -40,10 +40,10 @@ def Transfer(self, from_: Address, to_: Address, amout: int):
   예) `Transfer(Address,Address,int)`
 - `@eventlog`의 데코레이터의 `indexed`에 설정된 수 만큼 매개변수가(선언된 순서 순) 인덱싱이 된다.
 - 인덱싱에는 변수의 선언된 순서를 포함한다. 같은 값에 선언된 위치가 다르면 인덱싱 값도 다르다.
-- 인덱싱 매개 변수는 EventLog의 indexed 필드에 array형태로 저장이 된다
+- 인덱싱 매개 변수는 EventLog의 indexed 필드에 array 형태로 저장이 된다
 
 
-### Indexing Rule(Bloom filter hash function)
+### Indexing Rule (Bloom filter hash function)
 - `raw-data` = `매개변수순서(1byte)` + `data`
 
   -  bool, int, bytes: 원 값의 bytes를 `data`로 사용
@@ -56,7 +56,7 @@ def Transfer(self, from_: Address, to_: Address, amout: int):
 
 - `chunk[1]` = `hash-data[2:4]` & 2047 
 
-- `chunk[2]` = `hash-data[4:6]`  & 2047
+- `chunk[2]` = `hash-data[4:6]` & 2047
 
 - bloom-data = set(`chunk[0]`) | set(`chunk[1]`) | set(`chunk[2]`) 
 
@@ -69,8 +69,8 @@ def Transfer(self, from_: Address, to_: Address, amout: int):
 ### Filter Search
 - filter를 하는 값을  [Indexing Rule](#Indexing Rule(Bloom filter hash function)) 에 따라 bloom-data를 생성
 - Bloom 값에 포함되는지 판단
-  - 포함: 해당하는 조건에 충족될 확률이 높음 > 실제 Data 확인
-  - 포함하지않음: 해당하는 조건에 충족되지 않음
+  - 포함: 해당하는 조건에 충족될 확률이 높음 -> 실제 Data 확인
+  - 포함하지 않음: 해당하는 조건에 충족되지 않음
 
 
 ## Transaction Result에 포함되는 형태
