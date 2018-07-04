@@ -5,7 +5,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:----|:-----:|:----|
-| 2018.07.03 | 남궁재창 | Accepted, Rejected eventlog 추가 |
+| 2018.07.03 | 남궁재창 | Eventlog (Accepted, Rejected) 추가 |
 | 2018.06.22 | 조치원 | AddAuditor, RemoveAuditor 추가 |
 | 2018.06.21 | 조치원 | 초기 작성 |
 
@@ -379,7 +379,7 @@ Must trigger on any successful acceptScore transaction.
 
 ```python
 @eventlog(indexed=1)
-Accepted(self, tx_hash: str):
+def Accepted(self, tx_hash: str):
     pass
 ```
 
@@ -389,6 +389,6 @@ Must trigger on any successful rejectScore transaction.
 
 ```python
 @eventlog(indexed=1)
-Rejected(self, tx_hash: str):
+def Rejected(self, tx_hash: str):
     pass
 ```
