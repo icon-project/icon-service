@@ -161,7 +161,6 @@ class IconPreValidator:
         method = request['method']
         IconPreValidator._check_contain_dict('params', request)
         params = request['params']
-        IconPreValidator._check_contain_dict('txHash', params)
 
         IconPreValidator.JsonRpcMessageValidator.validate(method, params)
 

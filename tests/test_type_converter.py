@@ -495,7 +495,6 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_validate_tx_convert(self):
         method = "icx_sendTransaction"
-        tx_hash = create_block_hash(b'txHash')
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'from')
         to_addr = create_address(AddressPrefix.CONTRACT, b'score')
@@ -513,7 +512,6 @@ class TestTypeConverter(unittest.TestCase):
         request_params = {
             "method": method,
             "params": {
-                "txHash": bytes.hex(tx_hash),
                 "version": hex(version),
                 "from": str(from_addr),
                 "to": str(to_addr),
@@ -537,7 +535,6 @@ class TestTypeConverter(unittest.TestCase):
         ret_params = TypeConverter.convert(request_params, ParamType.VALIDATE_TRANSACTION)
 
         self.assertEqual(method, ret_params['method'])
-        self.assertEqual(tx_hash, ret_params['params']['txHash'])
         self.assertEqual(version, ret_params['params']['version'])
         self.assertEqual(from_addr, ret_params['params']['from'])
         self.assertEqual(to_addr, ret_params['params']['to'])
