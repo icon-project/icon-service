@@ -88,16 +88,11 @@ class TransactionResult(object):
             if isinstance(value, Block):
                 key = "block_height"
                 value = value.height
-            elif isinstance(value, Address):
-                value = str(value)
-            elif isinstance(value, bytes):
-                value = bytes.hex(value)
             elif isinstance(value, list):
                 value = [v.to_dict(casing) for v in value
                          if isinstance(v, EventLog)]
             elif isinstance(value, BloomFilter):
-                # value = hex(value)[2:]
-                value = "0x{0:0>512}".format(hex(value)[2:])
+                value = int(value).to_bytes(256, byteorder='big')
             elif key == 'failure' and value:
                 if self.status == self.FAILURE:
                     value = {
@@ -112,10 +107,3 @@ class TransactionResult(object):
                 new_dict[casing(key) if casing else key] = value
 
         return new_dict
-
-    def to_response_json(self) -> dict:
-        """
-        Returns properties as json-rpc-v3 json
-        :return: a dict
-        """
-        return self.to_dict(to_camel_case)

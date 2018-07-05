@@ -58,12 +58,6 @@ class EventLog(object):
                 # Excludes properties which have `None` value
                 continue
 
-            if isinstance(value, Address):
-                value = str(value)
-            elif isinstance(value, list):
-                value = list(map(
-                    lambda v: str(v) if isinstance(v, Address) else v, value))
-
             new_dict[casing(key) if casing else key] = value
 
         return new_dict

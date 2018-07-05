@@ -243,12 +243,11 @@ class TestEventlog(unittest.TestCase):
     def test_to_dict_camel(self):
         context = ContextContainer._get_context()
 
-        name = "name"
         address = Address.from_string("hx0123456789abcdef0123456789abcdef01234567")
         age = 10
-        phone_number = "000"
+        data = b'0123456789abc'
 
-        self._mock_score.OneIndexEvent(name, address, age)
+        self._mock_score.MixedEvent(address, age, data)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
 
@@ -308,6 +307,10 @@ class EventlogScore(IconScoreBase):
 
     @eventlog(indexed=1)
     def BytesIndexEvent(self, data: bytes):
+        pass
+
+    @eventlog(indexed=1)
+    def MixedEvent(self, address: Address, amount: int, data: bytes):
         pass
 
     # @eventlog

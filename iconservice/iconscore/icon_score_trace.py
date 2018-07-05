@@ -80,11 +80,6 @@ class Trace(object):
 
             if isinstance(value, TraceType):
                 value = value.name
-            elif isinstance(value, Address):
-                value = str(value)
-            elif isinstance(value, list):
-                value = list(map(
-                    lambda v: str(v) if isinstance(v, Address) else v, value))
 
             new_dict[casing(key) if casing else key] = value
 

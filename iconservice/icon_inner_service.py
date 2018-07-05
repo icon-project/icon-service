@@ -23,7 +23,7 @@ from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
-from iconservice.utils import integers_to_hex, check_error_response
+from iconservice.utils import check_error_response, to_camel_case
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
@@ -82,7 +82,7 @@ class IconScoreInnerTask(object):
 
             tx_results, state_root_hash = self._icon_service_engine.invoke(block=block, tx_params=converted_tx_params)
             convert_tx_results = \
-                {bytes.hex(tx_result.tx_hash): tx_result.to_response_json() for tx_result in tx_results}
+                {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case) for tx_result in tx_results}
             results = {'txResults': convert_tx_results, 'stateRootHash': bytes.hex(state_root_hash)}
             response = MakeResponse.make_response(results)
         except IconServiceBaseException as icon_e:
@@ -259,10 +259,36 @@ class MakeResponse:
     def make_response(response: Any):
         if check_error_response(response):
             return response
-        elif isinstance(response, (dict, list, int)):
-            return integers_to_hex(response)
         else:
-            return response
+            return MakeResponse.convert_type(response)
+
+    @staticmethod
+    def convert_type(value: Any):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                if isinstance(v, bytes):
+                    is_hash = k in ('blockHash', 'txHash')
+                    value[k] = MakeResponse.convert_bytes(v, is_hash)
+                else:
+                    value[k] = MakeResponse.convert_type(v)
+        elif isinstance(value, list):
+            for i, v in enumerate(value):
+                value[i] = MakeResponse.convert_type(v)
+        elif isinstance(value, int):
+            value = hex(value)
+        elif isinstance(value, Address):
+            value = str(value)
+        elif isinstance(value, bytes):
+            value = MakeResponse.convert_bytes(value)
+        return value
+
+    @staticmethod
+    def convert_bytes(value: bytes, is_hash: bool = False):
+        if is_hash:
+            # if the value is of 'txHash' or 'blockHash', excludes '0x' prefix
+            return bytes.hex(value)
+        else:
+            return f'0x{bytes.hex(value)}'
 
     @staticmethod
     def make_error_response(code: Any, message: str):
