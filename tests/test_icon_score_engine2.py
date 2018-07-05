@@ -19,6 +19,7 @@
 
 import os
 import unittest
+from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix
 from iconservice.base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
@@ -37,6 +38,7 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx.icx_account import Account, AccountType
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
+from iconservice.utils.bloom import BloomFilter
 from tests import rmtree, create_address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -92,6 +94,9 @@ class TestIconScoreEngine2(unittest.TestCase):
             self.__step_counter_factory.create(100)
         self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
+        self._context.event_logs = Mock(spec=list)
+        self._context.logs_bloom = Mock(spec=BloomFilter)
+        self._context.traces = Mock(spec=list)
 
         self._total_supply = 1000 * 10 ** 18
         self._one_icx = 1 * 10 ** 18

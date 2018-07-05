@@ -111,9 +111,9 @@ class IconScoreContext(object):
         self.block_batch = block_batch
         self.tx_batch = tx_batch
         self.step_counter: 'IconScoreStepCounter' = None
-        self.event_logs: List['EventLog'] = []
-        self.logs_bloom: BloomFilter = BloomFilter()
-        self.traces: List['Trace'] = []
+        self.event_logs: List['EventLog'] = None
+        self.logs_bloom: BloomFilter = None
+        self.traces: List['Trace'] = None
 
         self.__msg_stack = []
 
