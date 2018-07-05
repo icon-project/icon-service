@@ -86,4 +86,5 @@ This project follows the Apache 2.0 License. Please refer to [LICENSE](https://w
 * [ICON JSON-RPC API v3](docs/tbears_jsonrpc_api_v3.md)
 * [icx_getTransactionResult JSON API 확장](docs/improve-get-transaction-result.md)
 * [tbears tutorial](docs/tbears_tutorial.md)
-* [(Deprecated) tbears tutorial - GoogleDocs](https://docs.google.com/document/d/1TTD_eR8-LlgVAYGo7knwJ7kCA6AZ9-YpiWyVrTtiPj4/edit?usp=sharing)
+* [ICON SDK v2 for python](https://github.com/icon-project/icon_sdk_for_python)
+* [ICON JSON-RPC API v2](https://github.com/icon-project/icx_JSON_RPC)

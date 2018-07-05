@@ -207,7 +207,7 @@ class IcxStorage(object):
         self._db.delete(context, key)
 
     def is_score_installed(self,
-                           context: 'IconScoreContext',
+                           context: Optional['IconScoreContext'],
                            icon_score_address: Address) -> bool:
         """Returns whether IconScore is installed or not
 

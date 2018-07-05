@@ -39,10 +39,10 @@ from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
+from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
-from .iconscore.icon_score_trace import Trace, TraceType
 from .logger import Logger
 
 if TYPE_CHECKING:
@@ -162,7 +162,10 @@ class IconServiceEngine(object):
         self._step_counter_factory.set_step_unit(StepType.CALL, 1000)
         self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
 
-        self._icon_pre_validator = IconPreValidator(icx=self._icx_engine)
+        # TODO: Fix step_price
+        step_price = 0
+        self._icon_pre_validator = IconPreValidator(
+            icx=self._icx_engine, step_price=step_price)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -344,20 +347,19 @@ class IconServiceEngine(object):
 
         return ret
 
-    def validate_for_invoke(self, tx: dict) -> None:
-        """Validate a transaction before putting it into tx pool.
-        If failed to validate a tx, client will get a json-rpc error response
+    def validate_transaction(self, request: dict) -> None:
+        """Validate JSON-RPC transaction request
 
-        :param tx: dict including tx info
+        JSON Schema validator checks basic JSON-RPC request syntax
+        on JSON-RPC Server
+        IconPreValidator focuses on business logic and semantic problems
+
+        :param request: JSON-RPC request
+            values in request have been already converted to original format
+            in IconInnerService
+        :return:
         """
-
-        # FIXME: If step_price is defined, it should be updated.
-        context = self._context_factory.create(IconScoreContextType.QUERY)
-        self._icon_pre_validator.validate_tx(context, tx, step_price=0)
-        self._context_factory.destroy(context)
-
-    def validate_for_query(self, request: dict) -> None:
-        self._icon_pre_validator.validate_query(request)
+        self._icon_pre_validator.execute(request)
 
     def _call(self,
               context: 'IconScoreContext',
@@ -439,14 +441,16 @@ class IconServiceEngine(object):
         tx_result = TransactionResult(context.tx, context.block)
 
         try:
-            # all transactions have 'to' field.
+            # protocol version
+            version: int = params.get('version', 2)
             to: Address = params['to']
             tx_result.to = to
 
-            _from: Address = params['from']
-            value: int = params.get('value', 0)
-
-            self._icx_engine.transfer(context, _from, to, value)
+            if version < 3:
+                # Support obsolete coin transfer based on protocol v2
+                self._transfer_coin_v2(context, params)
+            else:
+                self._transfer_coin_v3(context, params)
 
             if to.is_contract:
                 data_type: str = params.get('dataType')
@@ -471,6 +475,38 @@ class IconServiceEngine(object):
             tx_result.traces = context.traces
 
         return tx_result
+
+    def _transfer_coin_v2(self,
+                          context: 'IconScoreContext',
+                          params: dict) -> None:
+        """Transfer coin between EOA and EOA based on protocol v2
+        JSON-RPC syntax validation has been already complete
+
+        :param context:
+        :param params:
+        :return:
+        """
+        from_: 'Address' = params['from']
+        to: 'Address' = params['to']
+        value: int = params.get('value', 0)
+        fee: int = params['fee']
+
+        self._icx_engine.transfer_with_fee(context, from_, to, value, fee)
+
+    def _transfer_coin_v3(self,
+                          context: 'IconScoreContext',
+                          params: dict) -> None:
+        """
+        
+        :param context:
+        :param params:
+        :return:
+        """
+        from_: 'Address' = params['from']
+        to: 'Address' = params['to']
+        value: int = params.get('value', 0)
+
+        self._icx_engine.transfer(context, from_, to, value)
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',

@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
 
 def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
-    if context:
-        return context.type
-    else:
+    if context is None:
         return IconScoreContextType.GENESIS
+    else:
+        return context.type
 
 
 class PlyvelDatabase(object):

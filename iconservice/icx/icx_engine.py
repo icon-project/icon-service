@@ -142,7 +142,7 @@ class IcxEngine(object):
         Logger.debug('_load_total_supply_amount() end', ICX_LOG_TAG)
 
     def get_balance(self,
-                    context: 'IconScoreContext',
+                    context: Optional['IconScoreContext'],
                     address: Address) -> int:
         """Get the balance of address
 
@@ -175,6 +175,15 @@ class IcxEngine(object):
                           _to: Address,
                           _amount: int,
                           _fee: int) -> bool:
+        """Support coin transfer based on protocol v2
+
+        :param _context:
+        :param _from:
+        :param _to:
+        :param _amount:
+        :param _fee:
+        :return:
+        """
         if _context.readonly:
             raise InvalidRequestException(
                 'icx transfer is not allowed on readonly context')
