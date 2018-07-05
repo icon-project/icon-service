@@ -5,6 +5,7 @@ Event Log의 Indexing과 Bloom Filter
 
 | 일시 | 버전 | 작성자 | 비고 |
 |:-----|:----|:-----:|:-----|
+| 2018.07.05 | 0.0.3 | 이용우 | None값의 indexing rule |
 | 2018.07.03 | 0.0.2 | 이용우 | indexed 필드, str타입 indexing rule |
 | 2018.07.02 | 0.0.1 | 이용우 | 신규 |
 
@@ -49,6 +50,7 @@ def Transfer(self, from_: Address, to_: Address, amount: int):
   -  bool, int, bytes: 원 값의 bytes를 `data`로 사용
   -  Address: body의 20 bytes를 `data`로 사용
   -  str: utf-8 인코딩을 한 bytes를 `data`로 사용
+  -  None: `data`를 추가하지 않고 `매개변수순서(1byte)`로 `hash-data`를 만든다
 
 - `hash-data` = sha3-256(`raw-data`)
 

@@ -13,9 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import hashlib
 import unittest
-from typing import List
 from unittest.mock import Mock
 
 from iconservice import EventLog
@@ -25,6 +24,7 @@ from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.icon_inner_service import MakeResponse
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
@@ -68,9 +68,9 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
-        dict_as_camel = tx_result.to_response_json()
-        self.assertNotIn('failure', dict_as_camel)
-        self.assertNotIn('scoreAddress', dict_as_camel)
+        camel_dict = tx_result.to_dict(to_camel_case)
+        self.assertNotIn('failure', camel_dict)
+        self.assertNotIn('scoreAddress', camel_dict)
 
     def test_tx_failure(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
@@ -91,8 +91,8 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
         self.assertIsNone(tx_result.score_address)
-        dict_as_camel = tx_result.to_response_json()
-        self.assertNotIn('scoreAddress', dict_as_camel)
+        camel_dict = tx_result.to_dict(to_camel_case)
+        self.assertNotIn('scoreAddress', camel_dict)
 
     def test_install_result(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
@@ -122,23 +122,34 @@ class TestTransactionResult(unittest.TestCase):
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
         self.assertIsNotNone(tx_result.score_address)
-        dict_as_camel = tx_result.to_response_json()
-        self.assertNotIn('failure', dict_as_camel)
+        camel_dict = tx_result.to_dict(to_camel_case)
+        self.assertNotIn('failure', camel_dict)
 
-    def test_to_dict_camel(self):
-        from_ = Mock(spec=Address)
-        to_ = Mock(spec=Address)
-        tx_index = Mock(spec=int)
-        self._mock_context.tx.attach_mock(tx_index, "index")
+    def test_sample_result(self):
+        from_ = Address.from_data(AddressPrefix.EOA, b'from')
+        to_ = Address.from_data(AddressPrefix.CONTRACT, b'to')
+        self._mock_context.tx.index = 1234
+        self._mock_context.tx.hash = hashlib.sha256(b'hash').digest()
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
 
-        tx_result.score_address = Mock(spec=Address)
-        tx_result.event_logs = [EventLog(Mock(spec=Address), [], [])]
+        tx_result.score_address = \
+            Address.from_data(AddressPrefix.CONTRACT, b'score_address')
+        tx_result.event_logs = [
+            EventLog(
+                Address.from_data(AddressPrefix.CONTRACT, b'addr_to'),
+                [b'indexed', Address.from_data(AddressPrefix.EOA, b'index')],
+                [True, 1234, 'str', None, b'test']
+            )
+        ]
         tx_result.logs_bloom = BloomFilter()
+        tx_result.logs_bloom.add(b'1')
+        tx_result.logs_bloom.add(b'2')
+        tx_result.logs_bloom.add(b'3')
+        tx_result.block = Block(123, hashlib.sha256(b'block').digest(), 1, None)
 
         camel_dict = tx_result.to_dict(to_camel_case)
 
@@ -155,4 +166,14 @@ class TestTransactionResult(unittest.TestCase):
         self.assertIn('scoreAddress', camel_dict['eventLogs'][0])
         self.assertIn('indexed', camel_dict['eventLogs'][0])
         self.assertIn('data', camel_dict['eventLogs'][0])
+        self.assertEqual(256, len(camel_dict['logsBloom']))
 
+        converted_result = MakeResponse.convert_type(camel_dict)
+        self.assertFalse(converted_result['txHash'].startswith('0x'))
+        self.assertTrue(converted_result['blockHeight'].startswith('0x'))
+        self.assertTrue(converted_result['txIndex'].startswith('0x'))
+        self.assertTrue(converted_result['to'].startswith('cx'))
+        self.assertTrue(converted_result['scoreAddress'].startswith('cx'))
+        self.assertTrue(converted_result['stepUsed'].startswith('0x'))
+        self.assertTrue(converted_result['logsBloom'].startswith('0x'))
+        self.assertTrue(converted_result['status'].startswith('0x'))
