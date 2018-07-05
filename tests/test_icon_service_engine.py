@@ -123,23 +123,24 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_call_in_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
 
-        _from = self._genesis_address
-        _to = self._to
-        value = 1 * 10 ** 18
+        from_ = self._genesis_address
+        to = self._to
+        value = 1 * 10 ** 18  # 1 coin
+        fee = 10 ** 16  # 0.01 coin
 
         method = 'icx_sendTransaction'
         params = {
-            'from': _from,
-            'to': _to,
+            'from': from_,
+            'to': to,
             'value': value,
-            'fee': 10 ** 16,
+            'fee': fee,
             'timestamp': 1234567890,
             'txHash': self._tx_hash
         }
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
-                                 origin=_from,
+                                 origin=from_,
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
@@ -153,16 +154,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(1, len(tx_batch))
         self.assertTrue(ICX_ENGINE_ADDRESS in tx_batch)
 
+        # from(genesis), to, fee_treasury
         icon_score_batch = tx_batch[ICX_ENGINE_ADDRESS]
-        self.assertEqual(2, len(icon_score_batch))
+        self.assertEqual(3, len(icon_score_batch))
 
         balance = int.from_bytes(
-            icon_score_batch[_to.body][-32:], 'big')
+            icon_score_batch[to.body][-32:], 'big')
         self.assertEqual(value, balance)
 
         balance = int.from_bytes(
-            icon_score_batch[_from.body][-32:], 'big')
-        self.assertEqual(self._total_supply - value, balance)
+            icon_score_batch[from_.body][-32:], 'big')
+        self.assertEqual(self._total_supply - value - fee, balance)
 
         context_factory.destroy(context)
 

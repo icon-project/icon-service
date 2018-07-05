@@ -24,7 +24,9 @@ if TYPE_CHECKING:
 
 
 class IconPreValidator:
-    """Validate icx_sendTransaction request before putting it into tx pool
+    """Validate only icx_sendTransaction request before putting it into tx pool
+
+    It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
     def __init__(self, icx: 'IcxEngine', step_price: int) -> None:
@@ -43,7 +45,7 @@ class IconPreValidator:
         """Validate a JSON-RPC request before passing it into IconServiceEngine
         If failed to validate the request, raise an exception
 
-        Assume that values in request have been already converted
+        Assume that values in request have already been converted
         to original format (string -> int, string -> Address, etc)
 
         :param request: JSON-RPC request
@@ -58,28 +60,65 @@ class IconPreValidator:
         handler(params)
 
     def _validate_send_transaction(self, params: dict) -> None:
-        data_type = params.get('dataType', None)
-
         version: int = params.get('version', 2)
 
         if version < 3:
             self._validate_transfer_transaction_v2(params)
         else:
+            data_type = params.get('dataType', None)
+
             if data_type == 'call':
                 self._validate_call_transaction(params)
             elif data_type == 'deploy':
                 self._validate_deploy_transaction(params)
             else:
-                self._check_balance_v3(params)
+                self._validate_transfer_transaction_v3(params)
 
     def _validate_transfer_transaction_v2(self, params: dict):
-        """
+        """Validate transfer transaction based on protocol v2
 
         :param params:
         :return:
         """
-        self._check_to_address_v2(params)
-        self._check_balance_v2(params)
+        # Check out of balance
+        from_: 'Address' = params['from']
+        value: int = params.get('value', 0)
+        fee: int = params['fee']
+
+        self._check_balance(from_, value, fee)
+
+        # Check 'to' is not a SCORE address
+        to: 'Address' = params['to']
+        if self._icx.storage.is_score_installed(
+                context=None, icon_score_address=to):
+            raise InvalidRequestException(
+                'It is not allowed to transfer coin to SCORE on protocol v2')
+
+    def _validate_transfer_transaction_v3(self, params: dict):
+        """Validate transfer transaction based on protocol v2
+
+        :param params:
+        :return:
+        """
+        # Check out of balance
+        from_: 'Address' = params['from']
+        value: int = params.get('value', 0)
+
+        step_limit = params.get('stepLimit', 0)
+        fee = step_limit * self.step_price
+
+        self._check_balance(from_, value, fee)
+
+        # Check if to address is valid
+        to: 'Address' = params['to']
+
+        if to.is_contract and not self._icx.storage.is_score_installed(
+                context=None, icon_score_address=to):
+            raise InvalidRequestException(f'Invalid address: {to}')
+
+        if not to.is_contract and self._icx.storage.is_score_installed(
+                context=None, icon_score_address=to):
+            raise InvalidRequestException(f'Invalid address: {to}')
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -116,64 +155,8 @@ class IconPreValidator:
         if 'content' not in data:
             raise InvalidRequestException(f'content not found')
 
-    def _check_balance_v2(self, params: dict) -> None:
-        """Check the balance of from address is enough
-        to pay for tx fee and value
-
-        It supports coin transfer based on both protocol v2 and v3
-
-        :param params:
-        """
-        from_: 'Address' = params['from']
-        value: int = params.get('value', 0)
-        fee: int = params['fee']
-
-        self._check_balance(from_, value, fee)
-
-    def _check_balance_v3(self, params: dict) -> None:
-        """Check the balance of from address is enough
-        to pay for tx fee and value
-
-        It supports coin transfer based on both protocol v2 and v3
-
-        :param params:
-        """
-        from_: 'Address' = params['from']
-        value: int = params.get('value', 0)
-
-        step_limit = params.get('stepLimit', 0)
-        fee = step_limit * self.step_price
-
-        self._check_balance(from_, value, fee)
-
-    def _check_to_address_v2(self, params: dict) -> None:
-        """Prevent transfer coin to SCORE using protocol v2
-
-        Check to address prefix mistake
-        JSON-RPC Server has already checked 'hx' prefix of to address
-
-        :param params:
-        :return:
-        """
-        to: 'Address' = params['to']
-        score_address = Address(AddressPrefix.CONTRACT, to.body)
-
-        if self._icx.storage.is_score_installed(
-                context=None, icon_score_address=score_address):
-            raise InvalidRequestException(
-                'It is not allowed to transfer coin to SCORE on protocol v2')
-
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)
 
         if balance < value + fee:
             raise InvalidRequestException('Out of balance')
-
-    def _is_score_address(self, address: 'Address') -> bool:
-        """Check the validation of to address
-
-        :param address:
-        :return:
-        """
-        return address.is_contract and \
-            self._icx.storage.is_score_installed(None, address)

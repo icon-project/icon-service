@@ -110,7 +110,7 @@ class IconServiceEngine(object):
             'icx_getScoreApi': self._handle_icx_get_score_api
         }
 
-        # The precommit state is the state that been already invoked,
+        # The precommit state is the state that has already been invoked,
         # but not written to levelDB or file system.
         self._PrecommitState = namedtuple(
             'PrecommitState', ['block_batch', 'block_result'])
@@ -355,7 +355,7 @@ class IconServiceEngine(object):
         IconPreValidator focuses on business logic and semantic problems
 
         :param request: JSON-RPC request
-            values in request have been already converted to original format
+            values in request have already been converted to original format
             in IconInnerService
         :return:
         """
@@ -368,7 +368,7 @@ class IconServiceEngine(object):
         """Call invoke and query requests in jsonrpc format
 
         This method is designed to be called in icon_outer_service.py.
-        We assume that all param values have been already converted to the proper types.
+        We assume that all param values have already been converted to the proper types.
         (types: Address, int, str, bool, bytes and array)
 
         invoke: Changes states of icon scores or icx
@@ -480,7 +480,7 @@ class IconServiceEngine(object):
                           context: 'IconScoreContext',
                           params: dict) -> None:
         """Transfer coin between EOA and EOA based on protocol v2
-        JSON-RPC syntax validation has been already complete
+        JSON-RPC syntax validation has already been complete
 
         :param context:
         :param params:

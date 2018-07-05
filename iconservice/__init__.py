@@ -15,6 +15,7 @@
 
 from .base.address import Address
 from .base.exception import *
+from .icon_service_cli import main
 from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
 from .iconscore.icon_score_base import *
 from .logger import Logger
@@ -22,6 +23,6 @@ from .logger import Logger
 # Version of iconservice.
 __version__ = "0.9.2"
 
-from .icon_service_cli import main
+
 if __name__ == '__main__':
     main()

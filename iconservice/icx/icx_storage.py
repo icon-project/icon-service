@@ -178,10 +178,10 @@ class IcxStorage(object):
         """
         key = self._get_owner_key(icon_score_address)
         value = self._db.get(context, key)
-        if value:
-            return Address(AddressPrefix.EOA, value)
-        else:
+        if value is None:
             return None
+
+        return Address(AddressPrefix.EOA, value)
 
     def put_score_owner(self,
                         context: 'IconScoreContext',
@@ -216,7 +216,8 @@ class IcxStorage(object):
         :return: True(installed) False(not installed)
         """
         # Predefined SCORE addresses
-        if icon_score_address in (ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS):
+        if icon_score_address.body in \
+                (ZERO_SCORE_ADDRESS.body, GOVERNANCE_SCORE_ADDRESS.body):
             return True
 
         return self.get_score_owner(context, icon_score_address) is not None
