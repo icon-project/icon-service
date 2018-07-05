@@ -18,6 +18,7 @@
 """
 
 import unittest
+from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
@@ -223,6 +224,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
         context.msg = Message(sender=params['from'], value=params['value'])
+        context.traces = Mock(spec=list)
 
         tx_result = self._engine._call(context, method, params)
         self.assertTrue(isinstance(tx_result, TransactionResult))
@@ -230,6 +232,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(self._icon_score_address, tx_result.to)
         self.assertEqual(self._tx_hash, tx_result.tx_hash)
         self.assertIsNone(tx_result.score_address)
+        context.traces.append.assert_called()
         print(tx_result)
 
         context_factory.destroy(context)

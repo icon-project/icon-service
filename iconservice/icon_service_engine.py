@@ -16,7 +16,7 @@
 
 from collections import namedtuple
 from os import makedirs
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List
 
 from iconservice.utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
@@ -26,7 +26,6 @@ from .base.exception import ExceptionCode, RevertException
 from .base.exception import IconServiceBaseException, ServerErrorException
 from .base.message import Message
 from .base.transaction import Transaction
-from .base.type_converter import TypeConverter, ParamType
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import DatabaseFactory
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
@@ -48,6 +47,7 @@ from .logger import Logger
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
+    from .iconscore.icon_score_event_log import EventLog
 
 
 def _generate_score_address_for_tbears(path: str) -> 'Address':
@@ -308,7 +308,9 @@ class IconServiceEngine(object):
 
         context.msg = Message(sender=addr_from, value=params.get('value', 0))
         context.current_address = addr_to
-
+        context.event_logs: List['EventLog'] = []
+        context.logs_bloom: BloomFilter = BloomFilter()
+        context.traces: List['Trace'] = []
         step_limit = params.get('stepLimit', ICON_SERVICE_BIG_STEP_LIMIT)
         context.step_counter: IconScoreStepCounter = \
             self._step_counter_factory.create(step_limit)
