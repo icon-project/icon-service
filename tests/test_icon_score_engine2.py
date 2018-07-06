@@ -83,7 +83,7 @@ class TestIconScoreEngine2(unittest.TestCase):
             AddressPrefix.CONTRACT, b'sample_crowd_sale')
 
         self._factory = IconScoreContextFactory(max_size=1)
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._addr1, 0)
         self._context.tx = Transaction('test_01', origin=self._addr1)
         self._context.block = Block(1, 'block_hash', 0, None)
@@ -91,7 +91,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()
         self._step_counter: IconScoreStepCounter =\
-            self.__step_counter_factory.create(100)
+            self.__step_counter_factory.create(100, step_price=0)
         self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
         self._context.event_logs = Mock(spec=list)
@@ -105,7 +105,7 @@ class TestIconScoreEngine2(unittest.TestCase):
     def tearDown(self):
         try:
             self.score_engine = None
-            self._context = self._factory.create(IconScoreContextType.GENESIS)
+            self._context = self._factory.create(IconScoreContextType.DIRECT)
             info = self._icon_score_mapper.get(self._addr_token_score)
             if info is not None and not self._context.readonly:
                 score = info.icon_score
@@ -188,7 +188,7 @@ class TestIconScoreEngine2(unittest.TestCase):
                 'value': hex(self._total_supply)
             }
         }
-        self._context.type = IconScoreContextType.GENESIS
+        self._context.type = IconScoreContextType.DIRECT
         self.score_engine.invoke(
             self._context, self._addr_token_score, 'call', call_data)
 
@@ -208,7 +208,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.msg = Message(self._addr1, join_icx * self._one_icx)
         self._context.tx = Transaction('test_01', origin=self._addr1)
         self._context.block = Block(1, 'block_hash', 0, None)
-        self._context.type = IconScoreContextType.GENESIS
+        self._context.type = IconScoreContextType.DIRECT
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, '', {})
 
@@ -242,7 +242,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self.assertEqual(1, ret)
 
         # addr2이 100ICX로 sample ICO참가
-        self._context.type = IconScoreContextType.GENESIS
+        self._context.type = IconScoreContextType.DIRECT
         join_icx = 100
         self._context.msg = Message(self._addr2, join_icx * self._one_icx)
         self._context.tx = Transaction('test_01', origin=self._addr2)
@@ -288,7 +288,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.block = Block(
             2, 'block_hash', 1 * one_minute_to_sec * one_second_to_microsec, None)
 
-        self._context.type = IconScoreContextType.GENESIS
+        self._context.type = IconScoreContextType.DIRECT
         call_data = {'method': 'check_goal_reached', 'params': {}}
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, 'call', call_data)
@@ -299,7 +299,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._icx_storage.put_account(
             self._context, self._addr_crowd_sale_score, account)
 
-        self._context.type = IconScoreContextType.GENESIS
+        self._context.type = IconScoreContextType.DIRECT
         call_data = {'method': 'safe_withdrawal', 'params': {}}
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, 'call', call_data)

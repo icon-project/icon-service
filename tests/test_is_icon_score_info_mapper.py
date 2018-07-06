@@ -50,7 +50,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         self.mapper[self.score_address] = IconScoreInfo(icon_score=None)
 
         self._factory = IconScoreContextFactory(max_size=1)
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
 
         self._score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         self._loader = IconScoreLoader(self._score_path)

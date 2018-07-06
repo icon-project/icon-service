@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import Enum, unique
+from enum import IntEnum, unique
 from ..base.exception import IconServiceBaseException
 
 
 @unique
-class StepType(Enum):
+class StepType(IntEnum):
     TRANSACTION = 0
     STORAGE_SET = 1
     STORAGE_REPLACE = 2
@@ -33,9 +33,12 @@ class IconScoreStepCounterFactory(object):
     """
 
     def __init__(self) -> None:
-        self.__step_unit_dict = dict()
+        self.__step_unit_dict = {}
 
-    def set_step_unit(self, step_type: StepType, value: int):
+    def get_step_unit(self, step_type: 'StepType') -> int:
+        return self.__step_unit_dict.get(step_type, 0)
+
+    def set_step_unit(self, step_type: 'StepType', value: int):
         """Sets a step unit for specific action.
 
         :param step_type: specific action
@@ -43,15 +46,18 @@ class IconScoreStepCounterFactory(object):
         """
         self.__step_unit_dict[step_type] = value
 
-    def create(self, step_limit: int) -> 'IconScoreStepCounter':
+    def create(self,
+               step_limit: int, step_price: int) -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
         :param step_limit: step limit of the transaction
+        :param step_price:
         :return: step counter
         """
         # Copying a `dict` so as not to change step units when processing a
         # transaction.
-        return IconScoreStepCounter(self.__step_unit_dict.copy(), step_limit)
+        return IconScoreStepCounter(
+            self.__step_unit_dict.copy(), step_limit, step_price)
 
 
 class OutOfStepException(IconServiceBaseException):
@@ -108,7 +114,10 @@ class IconScoreStepCounter(object):
     """ Counts steps in a transaction
     """
 
-    def __init__(self, step_unit_dict: dict, step_limit: int) -> None:
+    def __init__(self,
+                 step_unit_dict: dict,
+                 step_limit: int,
+                 step_price: int) -> None:
         """Constructor
 
         :param step_unit_dict: a dict of base step units
@@ -116,8 +125,12 @@ class IconScoreStepCounter(object):
         """
         self.__step_unit_dict: dict = step_unit_dict
         self.__step_limit: int = step_limit
+        self.step_price = step_price
         self.__step_used: int = \
             self.__step_unit_dict.get(StepType.TRANSACTION, 0)
+
+    def get_step_unit(self, step_type: 'StepType') -> int:
+        return self.__step_unit_dict.get(step_type, 0)
 
     @property
     def step_used(self) -> int:
@@ -146,8 +159,11 @@ class IconScoreStepCounter(object):
     def __increase_step(self, step_to_increase) -> int:
         """ Increases step
         """
-        if step_to_increase + self.step_used > self.__step_limit:
-            raise OutOfStepException(self.__step_limit, self.step_used,
-                                     step_to_increase)
+        # If step_price is 0, do not raise OutOfStepException
+        if self.step_price > 0:
+            if step_to_increase + self.step_used > self.__step_limit:
+                raise OutOfStepException(
+                    self.__step_limit, self.step_used, step_to_increase)
+
         self.__step_used += step_to_increase
         return self.__step_used

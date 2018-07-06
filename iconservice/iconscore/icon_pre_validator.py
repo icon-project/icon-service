@@ -16,8 +16,9 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.address import Address, AddressPrefix
+from ..base.address import Address
 from ..base.exception import InvalidRequestException
+from ..icon_config import FIXED_FEE
 
 if TYPE_CHECKING:
     from ..icx.icx_engine import IcxEngine
@@ -29,63 +30,56 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx: 'IcxEngine', step_price: int) -> None:
+    def __init__(self, icx: 'IcxEngine') -> None:
         """Constructor
 
         :param icx: icx engine
         """
-        self._handlers = {
-            'icx_sendTransaction': self._validate_send_transaction
-        }
-
         self._icx = icx
-        self.step_price = step_price
 
-    def execute(self, request: dict) -> None:
-        """Validate a JSON-RPC request before passing it into IconServiceEngine
-        If failed to validate the request, raise an exception
+    def execute(self, params: dict, step_price: int) -> None:
+        """Validate a transaction on icx_sendTransaction
+        If failed to validate a tx, raise an exception
 
-        Assume that values in request have already been converted
+        Assume that values in params have already been converted
         to original format (string -> int, string -> Address, etc)
 
-        :param request: JSON-RPC request
+        :param params: params of icx_sendTransaction JSON-RPC request
+        :param step_price:
         """
-        method = request.get('method')
-        if method not in self._handlers:
-            raise InvalidRequestException(f'Unsupported method: {method}')
+        version: int = params.get('version', 2)
+        if version < 3:
+            self._validate_transaction_v2(params)
+        else:
+            self._validate_transaction_v3(params, step_price)
 
-        handler = self._handlers[method]
-
-        params = request.get('params', {})
-        handler(params)
-
-    def _validate_send_transaction(self, params: dict) -> None:
+    def execute_to_check_out_of_balance(
+            self, params: dict, step_price: int) -> None:
         version: int = params.get('version', 2)
 
         if version < 3:
-            self._validate_transfer_transaction_v2(params)
+            self._check_from_can_charge_fee_v2(params)
         else:
-            data_type = params.get('dataType', None)
+            self._check_from_can_charge_fee_v3(params, step_price)
 
-            if data_type == 'call':
-                self._validate_call_transaction(params)
-            elif data_type == 'deploy':
-                self._validate_deploy_transaction(params)
-            else:
-                self._validate_transfer_transaction_v3(params)
+    def _check_from_can_charge_fee_v2(self, params: dict):
+        fee: int = params['fee']
+        if fee != FIXED_FEE:
+            raise InvalidRequestException(f'Invalid fee: {fee}')
 
-    def _validate_transfer_transaction_v2(self, params: dict):
+        from_: 'Address' = params['from']
+        value: int = params.get('value', 0)
+
+        self._check_balance(from_, value, fee)
+
+    def _validate_transaction_v2(self, params: dict):
         """Validate transfer transaction based on protocol v2
 
         :param params:
         :return:
         """
         # Check out of balance
-        from_: 'Address' = params['from']
-        value: int = params.get('value', 0)
-        fee: int = params['fee']
-
-        self._check_balance(from_, value, fee)
+        self._check_from_can_charge_fee_v2(params)
 
         # Check 'to' is not a SCORE address
         to: 'Address' = params['to']
@@ -94,22 +88,15 @@ class IconPreValidator:
             raise InvalidRequestException(
                 'It is not allowed to transfer coin to SCORE on protocol v2')
 
-    def _validate_transfer_transaction_v3(self, params: dict):
+    def _validate_transaction_v3(self, params: dict, step_price: int):
         """Validate transfer transaction based on protocol v2
 
         :param params:
         :return:
         """
-        # Check out of balance
-        from_: 'Address' = params['from']
-        value: int = params.get('value', 0)
+        self._check_from_can_charge_fee_v3(params, step_price)
 
-        step_limit = params.get('stepLimit', 0)
-        fee = step_limit * self.step_price
-
-        self._check_balance(from_, value, fee)
-
-        # Check if to address is valid
+        # Check if "to" address is valid
         to: 'Address' = params['to']
 
         if to.is_contract and not self._icx.storage.is_score_installed(
@@ -119,6 +106,22 @@ class IconPreValidator:
         if not to.is_contract and self._icx.storage.is_score_installed(
                 context=None, icon_score_address=to):
             raise InvalidRequestException(f'Invalid address: {to}')
+
+        # Check data_type-specific elements
+        data_type = params.get('dataType', None)
+        if data_type == 'call':
+            self._validate_call_transaction(params)
+        elif data_type == 'deploy':
+            self._validate_deploy_transaction(params)
+
+    def _check_from_can_charge_fee_v3(self, params: dict, step_price: int):
+        from_: 'Address' = params['from']
+        value: int = params.get('value', 0)
+
+        step_limit = params.get('stepLimit', 0)
+        fee = step_limit * step_price
+
+        self._check_balance(from_, value, fee)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -160,3 +163,7 @@ class IconPreValidator:
 
         if balance < value + fee:
             raise InvalidRequestException('Out of balance')
+
+    def _is_score_address(self, address: 'Address') -> bool:
+        return address.is_contract and self._icx.storage.is_score_installed(
+            context=None, icon_score_address=address)

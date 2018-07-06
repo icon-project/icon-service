@@ -178,8 +178,9 @@ class Account(object):
         :param value: amount to deposit in loop (1 icx == 1e18 loop)
 
         """
-        if not isinstance(value, int) or value <= 0:
-            raise InvalidParamsException('deposit coin invalid params')
+        if not isinstance(value, int) or value < 0:
+            raise InvalidParamsException(
+                'Failed to deposit:value is not int type or value < 0')
 
         self._icx += value
 
@@ -188,10 +189,11 @@ class Account(object):
 
         :param value: coin amount to withdraw
         """
-        if not isinstance(value, int) or value <= 0:
-            raise InvalidParamsException('withdraw coin invalid params')
+        if not isinstance(value, int) or value < 0:
+            raise InvalidParamsException(
+                'Failed to withdraw: value is not int type or value < 0')
         if self._icx < value:
-            raise InvalidParamsException('not enough balance')
+            raise InvalidParamsException('Out of balance')
 
         self._icx -= value
 

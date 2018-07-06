@@ -72,7 +72,7 @@ class TestIconScoreEngine(unittest.TestCase):
             create_address(AddressPrefix.CONTRACT, b'SampleToken')
 
         self._factory = IconScoreContextFactory(max_size=1)
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         self._context.tx = Transaction(
             'test_01',
@@ -81,7 +81,7 @@ class TestIconScoreEngine(unittest.TestCase):
 
     def tearDown(self):
         self._engine = None
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
         info = self._icon_score_mapper.get(self._icon_score_address)
         if info is not None and not self._context.readonly:
             score = info.icon_score

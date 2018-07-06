@@ -76,8 +76,11 @@ class ContextGetter(object):
 
 @unique
 class IconScoreContextType(IntEnum):
-    GENESIS = 0
+    # Write data to db directly
+    DIRECT = 0
+    # Record data to cache and after confirming the block, write them to db
     INVOKE = 1
+    # Not possible to write data to db
     QUERY = 2
 
 

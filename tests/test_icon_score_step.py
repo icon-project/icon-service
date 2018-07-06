@@ -42,19 +42,19 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     def test_increase_storage_set_step(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(10000)
+            = self.__step_counter_factory.create(10000, step_price=0)
         step_counter.increase_step(StepType.STORAGE_SET, 2)
         self.assertEqual(step_counter.step_used, 6400)
 
     def test_increase_storage_replace_step(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(10000)
+            = self.__step_counter_factory.create(10000, 0)
         step_counter.increase_step(StepType.STORAGE_REPLACE, 2)
         self.assertEqual(step_counter.step_used, 6100)
 
     def test_increase_storage_delete_step(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(10000)
+            = self.__step_counter_factory.create(10000, 0)
         step_counter.increase_step(StepType.STORAGE_DELETE, 2)
         self.assertEqual(step_counter.step_used, 5800)
         step_counter.increase_step(StepType.STORAGE_DELETE, 100)
@@ -62,25 +62,25 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     def test_increase_transfer_step(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(20000)
+            = self.__step_counter_factory.create(20000, 0)
         step_counter.increase_step(StepType.TRANSFER, 1)
         self.assertEqual(step_counter.step_used, 16000)
 
     def test_increase_call_step(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(10000)
+            = self.__step_counter_factory.create(10000, 0)
         step_counter.increase_step(StepType.CALL, 2)
         self.assertEqual(step_counter.step_used, 8000)
 
     def test_increase_eventlog_step(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(10000)
+            = self.__step_counter_factory.create(10000, 0)
         step_counter.increase_step(StepType.EVENTLOG, 2)
         self.assertEqual(step_counter.step_used, 6040)
 
     def test_out_of_step_exception(self):
         step_counter: IconScoreStepCounter \
-            = self.__step_counter_factory.create(10000)
+            = self.__step_counter_factory.create(10000, step_price=10**12)
         step_counter.increase_step(StepType.EVENTLOG, 1)
         self.assertEqual(step_counter.step_used, 6020)
         self.assertRaises(OutOfStepException,
