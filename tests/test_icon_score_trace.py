@@ -147,7 +147,7 @@ class TestTrace(unittest.TestCase):
             mock_revert, "invoke")
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
-            context, {'from': from_, 'to': to_})
+            context, {'version': 3, 'from': from_, 'to': to_})
         self.assertEqual(0, tx_result.status)
 
         context.traces.append.assert_called()
@@ -183,7 +183,7 @@ class TestTrace(unittest.TestCase):
             mock_exception, "invoke")
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
-            context, {'from': from_, 'to': to_})
+            context, {'version': 3, 'from': from_, 'to': to_})
         self.assertEqual(0, tx_result.status)
 
         context.traces.append.assert_called()

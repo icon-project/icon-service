@@ -73,7 +73,7 @@ class TestTransactionResult(unittest.TestCase):
             Mock(return_value=False), 'is_data_type_supported')
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
-            self._mock_context, {'from': from_, 'to': to_})
+            self._mock_context, {'version': 3, 'from': from_, 'to': to_})
 
         self.assertEqual(1, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
@@ -118,6 +118,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context,
             {
+                'version': 3,
                 'from': from_,
                 'to': ZERO_SCORE_ADDRESS,
                 'dataType': 'deploy',
