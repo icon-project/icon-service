@@ -28,6 +28,7 @@ from iconservice.icon_inner_service import MakeResponse
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
+from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
@@ -46,7 +47,10 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context = Mock(spec=IconScoreContext)
         self._mock_context.attach_mock(Mock(spec=Transaction), "tx")
         self._mock_context.attach_mock(Mock(spec=Block), "block")
-        self._mock_context.attach_mock(Mock(spec=list), "traces")
+        self._mock_context.event_logs = []
+        self._mock_context.logs_bloom = BloomFilter()
+        self._mock_context.traces = []
+        self._mock_context.attach_mock(Mock(spec=IconScoreStepCounter), "step_counter")
         self._mock_context.attach_mock(Mock(spec=Address), "current_address")
 
     def tearDown(self):

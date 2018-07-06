@@ -75,6 +75,9 @@ class TransactionResult(object):
         # It is only available on self.status == FAILURE
         self.failure = None
 
+        # Traces are managed in TransactionResult but not passed to chain engine
+        self.traces = None
+
     def __str__(self) -> str:
         return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
 
@@ -88,7 +91,7 @@ class TransactionResult(object):
             if isinstance(value, Block):
                 key = "block_height"
                 value = value.height
-            elif isinstance(value, list):
+            elif key == 'event_logs' and value:
                 value = [v.to_dict(casing) for v in value
                          if isinstance(v, EventLog)]
             elif isinstance(value, BloomFilter):
@@ -101,6 +104,9 @@ class TransactionResult(object):
                     }
                 else:
                     value = None
+            elif key == 'traces':
+                # traces are excluded from dict property
+                continue
 
             # Excludes properties which have `None` value
             if value is not None:

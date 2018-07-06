@@ -32,8 +32,9 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, \
-    StepType
+    StepType, IconScoreStepCounter
 from iconservice.utils import sha3_256
+from iconservice.utils.bloom import BloomFilter
 from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
 context_factory = IconScoreContextFactory(max_size=1)
@@ -156,6 +157,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
+        context.step_counter = Mock(spec=IconScoreStepCounter)
         self._engine._call(context, method, params)
 
         tx_batch = context.tx_batch
@@ -224,7 +226,10 @@ class TestIconServiceEngine(unittest.TestCase):
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
         context.msg = Message(sender=params['from'], value=params['value'])
+        context.event_logs = Mock(spec=list)
+        context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = Mock(spec=list)
+        context.step_counter = Mock(spec=IconScoreStepCounter)
 
         tx_result = self._engine._call(context, method, params)
         self.assertTrue(isinstance(tx_result, TransactionResult))
