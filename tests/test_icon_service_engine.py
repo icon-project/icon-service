@@ -31,9 +31,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_result import TransactionResult
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, \
-    StepType, IconScoreStepCounter
-from iconservice.utils import sha3_256
+from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.utils.bloom import BloomFilter
 from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
@@ -74,18 +72,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self._icon_score_address = create_address(
             AddressPrefix.CONTRACT, b'score')
         self._total_supply = 100 * 10 ** 18
-
-        self._step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter_factory.set_step_unit(StepType.TRANSACTION, 10)
-        self._step_counter_factory.set_step_unit(StepType.STORAGE_SET, 10)
-        self._step_counter_factory.set_step_unit(StepType.STORAGE_REPLACE, 10)
-        self._step_counter_factory.set_step_unit(StepType.STORAGE_DELETE, 10)
-        self._step_counter_factory.set_step_unit(StepType.TRANSFER, 10)
-        self._step_counter_factory.set_step_unit(StepType.CALL, 10)
-        self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 10)
-
-        self._engine._step_counter_factory = self._step_counter_factory
-        self._engine._precommit_state = None
 
         accounts = [
             {
@@ -137,23 +123,24 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_call_in_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
 
-        _from = self._genesis_address
-        _to = self._to
-        value = 1 * 10 ** 18
+        from_ = self._genesis_address
+        to = self._to
+        value = 1 * 10 ** 18  # 1 coin
+        fee = 10 ** 16  # 0.01 coin
 
         method = 'icx_sendTransaction'
         params = {
-            'from': _from,
-            'to': _to,
+            'from': from_,
+            'to': to,
             'value': value,
-            'fee': 10 ** 16,
+            'fee': fee,
             'timestamp': 1234567890,
             'txHash': self._tx_hash
         }
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
-                                 origin=_from,
+                                 origin=from_,
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
@@ -167,16 +154,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(1, len(tx_batch))
         self.assertTrue(ICX_ENGINE_ADDRESS in tx_batch)
 
+        # from(genesis), to, fee_treasury
         icon_score_batch = tx_batch[ICX_ENGINE_ADDRESS]
-        self.assertEqual(2, len(icon_score_batch))
+        self.assertEqual(3, len(icon_score_batch))
 
         balance = int.from_bytes(
-            icon_score_batch[_to.body][-32:], 'big')
+            icon_score_batch[to.body][-32:], 'big')
         self.assertEqual(value, balance)
 
         balance = int.from_bytes(
-            icon_score_batch[_from.body][-32:], 'big')
-        self.assertEqual(self._total_supply - value, balance)
+            icon_score_batch[from_.body][-32:], 'big')
+        self.assertEqual(self._total_supply - value - fee, balance)
 
         context_factory.destroy(context)
 
@@ -186,7 +174,19 @@ class TestIconServiceEngine(unittest.TestCase):
         block_timestamp = 0
         value = 1 * 10 ** 18
 
-        tx = {
+        tx_v3 = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'version': 3,
+                'from': self._genesis_address,
+                'to': self._to,
+                'value': value,
+                'timestamp': 1234567890,
+                'txHash': create_tx_hash(b'txHash'),
+            }
+        }
+
+        tx_v2 = {
             'method': 'icx_sendTransaction',
             'params': {
                 'from': self._genesis_address,
@@ -194,14 +194,18 @@ class TestIconServiceEngine(unittest.TestCase):
                 'value': value,
                 'fee': 10 ** 16,
                 'timestamp': 1234567890,
-                'txHash': create_tx_hash(b'txHash'),
+                'txHash': create_tx_hash(b'txHash_v2'),
             }
         }
 
-        block = Block(block_height, block_hash, block_timestamp, create_block_hash(b'prev'))
+        block = Block(block_height,
+                      block_hash,
+                      block_timestamp,
+                      create_block_hash(b'prev'))
 
-        tx_results, _ = self._engine.invoke(block, [tx])
+        tx_results, _ = self._engine.invoke(block, [tx_v2, tx_v3])
         print(tx_results[0])
+        print(tx_results[1])
 
     def test_score_invoke_failure(self):
         method = 'icx_sendTransaction'

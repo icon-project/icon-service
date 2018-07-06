@@ -116,7 +116,6 @@ class IconScoreInnerTask(object):
         try:
             self._validate_jsonschema(request)
             converted_request = TypeConverter.convert(request, ParamType.QUERY)
-            self._icon_service_engine.validate_for_query(converted_request)
 
             value = self._icon_service_engine.query(method=converted_request['method'],
                                                     params=converted_request['params'])
@@ -224,8 +223,9 @@ class IconScoreInnerTask(object):
         response = None
         try:
             self._validate_jsonschema(request)
-            converted_request = TypeConverter.convert(request, ParamType.VALIDATE_TRANSACTION)
-            self._icon_service_engine.validate_for_invoke(converted_request)
+            converted_request = TypeConverter.convert(
+                request, ParamType.VALIDATE_TRANSACTION)
+            self._icon_service_engine.validate_transaction(converted_request)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             if DEV:

@@ -98,7 +98,7 @@ class IconScoreDeployEngine(ContextContainer):
             pass
         elif content_type == 'application/zip':
             # Remove '0x' prefix
-            # Assume that pre validation has been already done
+            # Assume that pre validation has already been done
             data['content'] = bytes.fromhex(data['content'][2:])
         else:
             raise InvalidParamsException(
@@ -187,7 +187,7 @@ class IconScoreDeployEngine(ContextContainer):
                            data: dict) -> None:
         """Install an icon score on commit
 
-        Owner check has been already done in IconServiceEngine
+        Owner check has already been done in IconServiceEngine
         - Install IconScore package file to file system
 
         """
@@ -234,7 +234,7 @@ class IconScoreDeployEngine(ContextContainer):
                           data: dict) -> None:
         """Update an icon score
 
-        Owner check has been already done in IconServiceEngine
+        Owner check has already been done in IconServiceEngine
         """
         raise NotImplementedError('Score update is not implemented')
 

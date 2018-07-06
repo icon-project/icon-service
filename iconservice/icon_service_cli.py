@@ -19,7 +19,7 @@ from enum import IntEnum
 import asyncio
 
 import iconservice
-from .icon_inner_service import IconScoreInnerStub
+# from .icon_inner_service import IconScoreInnerStub
 from .icon_config import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT
 from .logger import Logger
 
@@ -152,7 +152,10 @@ def _make_icon_score_queue_name(channel: str, amqp_key: str) -> str:
     return ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key)
 
 
-async def _create_icon_score_stub(amqp_target: str, icon_score_queue_name: str) -> 'IconScoreInnerStub':
+async def _create_icon_score_stub(
+        amqp_target: str, icon_score_queue_name: str) -> 'IconScoreInnerStub':
+    from .icon_inner_service import IconScoreInnerStub
+
     stub = IconScoreInnerStub(amqp_target, icon_score_queue_name)
     await stub.connect()
     return stub
