@@ -20,6 +20,7 @@ import unittest
 from iconservice.base.exception import ExceptionCode
 from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
+from iconservice.base.transaction import Transaction
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests import create_block_hash, create_tx_hash, create_address
 
@@ -31,13 +32,14 @@ class TestTransactionResult(unittest.TestCase):
         tx_index = 0
         to = create_address(AddressPrefix.EOA, b'to')
 
+        tx = Transaction(tx_hash, tx_index)
+
         block = Block(block_height=0,
                       block_hash=block_hash,
                       timestamp=0x1234567890,
                       prev_hash=None)
 
-        tx_result = TransactionResult(
-            tx_hash=tx_hash, block=block, tx_index=tx_index, to=to)
+        tx_result = TransactionResult(tx=tx, block=block, to=to)
 
         tx_result.event_logs = []
 

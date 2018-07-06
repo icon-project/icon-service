@@ -239,8 +239,7 @@ class IconServiceEngine(object):
                                  timestamp=context.block.timestamp,
                                  nonce=params.get('nonce', None))
 
-        tx_result = TransactionResult(
-            context.tx.hash, context.block, context.tx.index)
+        tx_result = TransactionResult(context.tx, context.block)
 
         try:
             genesis_data = tx_params['genesisData']
@@ -437,8 +436,7 @@ class IconServiceEngine(object):
         :return: return value of an IconScoreBase method
             None is allowed
         """
-        tx_result = TransactionResult(
-            context.tx.hash, context.block, context.tx.index)
+        tx_result = TransactionResult(context.tx, context.block)
 
         try:
             # all transactions have 'to' field.
@@ -465,7 +463,9 @@ class IconServiceEngine(object):
             context.event_logs.clear()
             context.logs_bloom.value = 0
         finally:
+            context.cumulative_step_used += context.step_counter.step_used
             tx_result.step_used = context.step_counter.step_used
+            tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = context.logs_bloom
             tx_result.traces = context.traces
