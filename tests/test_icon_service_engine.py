@@ -229,6 +229,7 @@ class TestIconServiceEngine(unittest.TestCase):
         context.event_logs = Mock(spec=list)
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = Mock(spec=list)
+        context.step_counter = Mock(spec=IconScoreStepCounter)
 
         tx_result = self._engine._call(context, method, params)
         self.assertTrue(isinstance(tx_result, TransactionResult))
