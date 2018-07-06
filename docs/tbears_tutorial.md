@@ -108,32 +108,37 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 
 ```json
 {
-    "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "port": 9000,
-    "scoreRoot": "./.score",
-    "dbRoot": "./.db",
-    "accounts": [
-        {
-            "name": "genesis",
-            "address": "hx0000000000000000000000000000000000000000",
-            "balance": "0x2961fff8ca4a62327800000"
+        "log": {
+            "colorLog": true,
+            "level": "debug",
+            "filePath": "./tbears.log",
+            "outputType": "console|file"
         },
-        {
-            "name": "fee_treasury",
-            "address": "hx1000000000000000000000000000000000000000",
-            "balance": "0x0"
+        "global": {
+            "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "port": 9000,
+            "scoreRoot": "./.score",
+            "dbRoot": "./.db",
+            "genesisData": {
+                "accounts": [
+                    {
+                        "name": "genesis",
+                        "address": "hx0000000000000000000000000000000000000000",
+                        "balance": "0x2961fff8ca4a62327800000"
+                    },
+                    {
+                        "name": "fee_treasury",
+                        "address": "hx1000000000000000000000000000000000000000",
+                        "balance": "0x0"
+                    }
+                ]
+            }
         },
-        {
-            "name": "test_account",
-            "address": "hxb5618548d56c2491849b980a03db35f5578dd494",
-            "balance": "0x100000"
+        "deploy": {
+            "uri": "http://localhost:9000/api/v3",
+            "stepLimit": "0x12345",
+            "deploy": "0x123"
         }
-    ],
-    "log": {
-        "level": "debug",
-        "filePath": "./tbears.log",
-        "outputType": "console|file"
-    }
 }
 ```
 
@@ -141,6 +146,11 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 
 | 항목명 | 데이터 형식 | 설명 |
 |:------|:-----------|:-----|
+| global | dict | tbears에서 전역적으로 사용하는 설정 |
+| deploy | dict | SCORE 배포 시, 사용하는 설정 |
+| deploy.uri | string | 요청을 보낼 uri |
+| deploy.stepLimit | string | -(optional) |
+| deploy.nonce | string | -(optional) |
 | from | string | tbears에서 JSON-RPC 서버로 메시지를 전송할 때 사용하는 from 주소 |
 | port | int | JSON-RPC 서버의 포트 번호 |
 | scoreRoot | string | SCORE가 설치될 루트 디렉토리 |
@@ -150,6 +160,23 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 | log.level | string | 로그 메시지 표시 수준 정의<br/>"debug", "info", "warning", "error" |
 | log.filePath | string | 로그 파일 경로 |
 | log.outputType | string | “console”: tbears를 실행한 콘솔창에 로그 표시<br/>“file”: 지정된 파일 경로에 로그 기록<br/>“console&#x7c;file”: 콘솔과 파일에 동시 기록 |
+
+### score 배포 설정 파일 형식(tbears config파일과 별도로 존재)
+```json
+{
+  "socreAddress": "cx0123456789abcdef0123456789abcdef01234567",
+  "params": {
+      "user_param1": "0x123",
+      "user_param2": "hello"
+      }
+}
+
+```
+
+| 항목명 | 데이터 형식 | 설명 |
+|:------|:-----------|:-----|
+| scoreAddress | string | SCORE 업데이트시 사용(update 할 SCORE의 주소), 최초 배포시에는 사용 안함. |
+| params | dict | on_install() 혹은 on_update()의 인자로 전달 할 값들의 정보 |
 
 ### tbears samples
 
@@ -184,6 +211,7 @@ abc.py  __init__.py  package.json
 | 항목 | 설명 |
 |:------|:-----|
 | \<project> | 이름의 SCORE 프로젝트 디렉토리 생성 |
+| tbears.json | tbears의 기본 설정파일 생성 |
 | \<project>/\_\_init\_\_.py | SCORE 프로젝트 디렉토리가 python 패키지 형식으로 인식되도록 한다. |
 | \<project>/package.json | SCORE의 메타 데이터 |
 | \<project>/\<project>.py | SCORE의 메인 파일. 내부에 ABCToken class가 정의되어 있다. |
@@ -226,10 +254,10 @@ JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설�
 | 옵션 | 속성 | 설명 |
 |:------|:-----|:-----|
 | project | required | SCORE 코드를 포함하는 디렉토리 경로명 |
-| --install | optional | SCORE를 설치한다. on_install()이 호출된다. |
+| --install | optional | SCORE를 설치한다. on_install()이 호출된다.(on_install()의 인자에 값을 전달할 경우에 사용. |
 | --update | optional | SCORE를 업데이트한다. on_update()가 호출된다.<br/>(--update 옵션은 현재 미구현으로 차기 버전에서 지원 예정) |
 | config param path | optional | on\_install() 혹은 on_update()에 파라메터로 입력되는 데이터 내용을 담은 파일의 경로<br/>해당 파일의 내용은 json 형식을 따라야 한다. |
-| --install 혹은 --update가 생략된 경우 | - | SCORE reload를 수행한다.<br/>on_install() 혹은 on_update()가 호출되지 않는다. |
+| --install, --update가 생략된 경우 <br>(아무 옵션 없는 경우)| - | SCORE를 설치한다. on_install()에 값을 전달하고 싶지 않을 때 사용. |
 
 ### tbears stop
 
