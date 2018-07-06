@@ -468,7 +468,7 @@ class IconServiceEngine(object):
             tx_result.step_used = context.step_counter.step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = context.logs_bloom
-            # tx_result.traces = context.traces
+            tx_result.traces = context.traces
 
         return tx_result
 
@@ -545,7 +545,8 @@ class IconServiceEngine(object):
             address,
             TraceType.REVERT if isinstance(e, RevertException) else
             TraceType.THROW,
-            [e.code, e.message]
+            [e.code, e.message] if isinstance(e, IconServiceBaseException) else
+            [ExceptionCode.SERVER_ERRORcode, str(e)]
         )
 
     def _handle_icx_get_score_api(self,
