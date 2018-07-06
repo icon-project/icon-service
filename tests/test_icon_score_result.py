@@ -15,7 +15,7 @@
 # limitations under the License.
 import hashlib
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice import EventLog
 from iconservice.base.address import Address, AddressPrefix
@@ -23,15 +23,20 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
+from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.icon_inner_service import MakeResponse
+from iconservice.icon_inner_service import MakeResponse, IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
+    external
+from iconservice.iconscore.icon_score_context import IconScoreContext, \
+    ContextContainer
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
+from tests import create_block_hash, create_tx_hash, create_address
 
 
 class TestTransactionResult(unittest.TestCase):
@@ -50,6 +55,8 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.event_logs = []
         self._mock_context.logs_bloom = BloomFilter()
         self._mock_context.traces = []
+        self._mock_context.attach_mock(Mock(spec=int), "cumulative_step_used")
+        self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
         self._mock_context.attach_mock(Mock(spec=IconScoreStepCounter), "step_counter")
         self._mock_context.attach_mock(Mock(spec=Address), "current_address")
 
@@ -181,3 +188,110 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['stepUsed'].startswith('0x'))
         self.assertTrue(converted_result['logsBloom'].startswith('0x'))
         self.assertTrue(converted_result['status'].startswith('0x'))
+
+    @patch('iconservice.icon_service_engine.IconServiceEngine.'
+           '_handle_score_invoke')
+    @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
+    @patch('iconservice.icx.icx_engine.IcxEngine.open')
+    def test_request(self,
+                     IcxEngine_open,
+                     DatabaseFactory_create_by_name,
+                     IconServiceEngine__handle_score_invoke):
+
+        inner_task = IconScoreInnerTask(".", ".")
+        IcxEngine_open.assert_called()
+        DatabaseFactory_create_by_name.assert_called()
+
+        inner_task._icon_service_engine._icon_score_engine = \
+            Mock(spec=IconScoreEngine)
+
+        from_ = create_address(AddressPrefix.EOA, b'from')
+        to_ = create_address(AddressPrefix.CONTRACT, b'score')
+
+        def intercept_invoke(*args, **kwargs):
+            ContextContainer._put_context(args[0])
+            context_db = inner_task._icon_service_engine._icx_context_db
+            score = SampleScore(IconScoreDatabase(context_db), to_)
+            address = create_address(AddressPrefix.EOA, b'address')
+            score.SampleEvent(b'i_data', address, 10, b'data', 'text')
+
+        IconServiceEngine__handle_score_invoke.side_effect = intercept_invoke
+
+        request = self.create_req(from_, to_)
+        response = inner_task._invoke(request)
+        IconServiceEngine__handle_score_invoke.assert_called()
+
+        step_total = 0
+
+        for tx_hash in response['txResults'].keys():
+            result = response['txResults'][tx_hash]
+            step_total += int(result['stepUsed'], 16)
+            self.assertIn('status', result)
+            self.assertIn('txHash', result)
+            self.assertIn('txIndex', result)
+            self.assertIn('blockHeight', result)
+            self.assertIn('blockHash', result)
+            self.assertIn('cumulativeStepUsed', result)
+            self.assertIn('stepUsed', result)
+            self.assertEqual(1, len(result['eventLogs']))
+            self.assertEqual(step_total, int(result['cumulativeStepUsed'], 16))
+
+    @staticmethod
+    def create_req(from_, to_):
+        req = {
+            'block': {
+                'blockHash': bytes.hex(create_block_hash(b'block')),
+                'blockHeight': hex(100),
+                'timestamp': hex(1234),
+                'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
+            },
+            'transactions': [
+                {
+                    'method': 'icx_sendTransaction',
+                    'params': {
+                        'txHash': bytes.hex(create_tx_hash(b'tx1')),
+                        'version': hex(3),
+                        'from': str(from_),
+                        'to': str(to_),
+                        'stepLimit': hex(12345),
+                        'timestamp': hex(123456),
+                        'dataType': 'call',
+                        'data': {},
+                    }
+                },
+                {
+                    'method': 'icx_sendTransaction',
+                    'params': {
+                        'txHash': bytes.hex(create_tx_hash(b'tx2')),
+                        'version': hex(3),
+                        'from': str(from_),
+                        'to': str(to_),
+                        'stepLimit': hex(12345),
+                        'timestamp': hex(123456),
+                        'dataType': 'call',
+                        'data': {},
+                    }
+                }]
+        }
+        return req
+
+
+class SampleScore(IconScoreBase):
+
+    def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
+        super().__init__(db, owner)
+
+    def on_install(self) -> None:
+        pass
+
+    def on_update(self) -> None:
+        pass
+
+    @eventlog(indexed=2)
+    def SampleEvent(self, i_data: bytes, address: Address, amount: int,
+                   data: bytes, text: str):
+        pass
+
+    @external
+    def empty(self):
+        pass

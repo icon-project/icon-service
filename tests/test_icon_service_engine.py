@@ -157,6 +157,9 @@ class TestIconServiceEngine(unittest.TestCase):
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
+        context.block = Mock(spec=Block)
+        context.cumulative_step_used = Mock(spec=int)
+        context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter = Mock(spec=IconScoreStepCounter)
         self._engine._call(context, method, params)
 
@@ -225,11 +228,14 @@ class TestIconServiceEngine(unittest.TestCase):
                                  index=0,
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
+        context.block = Mock(spec=Block)
         context.msg = Message(sender=params['from'], value=params['value'])
+        context.cumulative_step_used = Mock(spec=int)
+        context.cumulative_step_used.attach_mock(Mock(), '__add__')
+        context.step_counter = Mock(spec=IconScoreStepCounter)
         context.event_logs = Mock(spec=list)
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = Mock(spec=list)
-        context.step_counter = Mock(spec=IconScoreStepCounter)
 
         tx_result = self._engine._call(context, method, params)
         self.assertTrue(isinstance(tx_result, TransactionResult))

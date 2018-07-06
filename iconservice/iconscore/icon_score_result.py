@@ -39,20 +39,19 @@ class TransactionResult(object):
 
     def __init__(
             self,
-            tx_hash: bytes,
+            tx: 'Transaction',
             block: 'Block',
-            tx_index: int,
             to: Optional['Address'] = None,
-            status: int = FAILURE,
             score_address: Optional['Address'] = None,
+            step_used: int = 0,
+            cumulative_step_used: int = 0,
             event_logs: Optional[List['EventLog']] = None,
             logs_bloom: Optional[BloomFilter] = None,
-            step_used: int = FAILURE) -> None:
+            status: int = FAILURE) -> None:
         """Constructor
 
-        :param tx_hash: transaction hash
+        :param tx: transaction
         :param block: a block that the transaction belongs to
-        :param tx_index: an index of a transaction on the block
         :param to: a recipient address
         :param score_address:hex string that represent the contract address
             if the transaction`s target is contract
@@ -61,12 +60,14 @@ class TransactionResult(object):
         :param logs_bloom: bloom filter data of event logs
         :param status: a status of result. 1 (success) or 0 (failure)
         """
-        self.tx_hash = tx_hash
-        self.block = block
-        self.tx_index = tx_index
+        self.tx_hash = tx.hash
+        self.block_height = block.height
+        self.block_hash = block.hash
+        self.tx_index = tx.index
         self.to = to
         self.score_address = score_address
         self.step_used = step_used
+        self.cumulative_step_used = cumulative_step_used
         self.event_logs = event_logs
         self.logs_bloom = logs_bloom
         self.status = status
@@ -88,28 +89,26 @@ class TransactionResult(object):
         """
         new_dict = {}
         for key, value in self.__dict__.items():
-            if isinstance(value, Block):
-                key = "block_height"
-                value = value.height
-            elif key == 'event_logs' and value:
-                value = [v.to_dict(casing) for v in value
-                         if isinstance(v, EventLog)]
+            # Excludes properties which have `None` value
+            if value is None:
+                continue
+
+            new_key = casing(key) if casing else key
+            if key == 'event_logs':
+                new_dict[new_key] = [v.to_dict(casing) for v in value if
+                                     isinstance(v, EventLog)]
             elif isinstance(value, BloomFilter):
-                value = int(value).to_bytes(256, byteorder='big')
+                new_dict[new_key] = int(value).to_bytes(256, byteorder='big')
             elif key == 'failure' and value:
                 if self.status == self.FAILURE:
-                    value = {
+                    new_dict[new_key] = {
                         'code': value.code,
                         'message': value.message
                     }
-                else:
-                    value = None
             elif key == 'traces':
                 # traces are excluded from dict property
                 continue
-
-            # Excludes properties which have `None` value
-            if value is not None:
-                new_dict[casing(key) if casing else key] = value
+            else:
+                new_dict[new_key] = value
 
         return new_dict

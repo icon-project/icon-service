@@ -48,8 +48,15 @@ class TestTrace(unittest.TestCase):
         context = Mock(spec=IconScoreContext)
         traces = Mock(spec=List[Trace])
 
-        context.attach_mock(traces, 'traces')
+        context.attach_mock(Mock(spec=Transaction), "tx")
+        context.attach_mock(Mock(spec=Block), "block")
+        context.attach_mock(Mock(spec=int), 'cumulative_step_used')
+        context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.attach_mock(Mock(spec=IconScoreStepCounter), 'step_counter')
+        context.attach_mock(Mock(spec=list), "event_logs")
+        context.attach_mock(Mock(spec=BloomFilter), "logs_bloom")
+        context.attach_mock(traces, 'traces')
+
         context.attach_mock(
             Mock(side_effect=RevertException('testRevert')), 'revert')
 
@@ -128,11 +135,7 @@ class TestTrace(unittest.TestCase):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
 
-        context.attach_mock(Mock(spec=Transaction), "tx")
-        context.attach_mock(Mock(spec=Block), "block")
         context.attach_mock(to_, "current_address")
-        context.attach_mock(Mock(spec=list), "event_logs")
-        context.attach_mock(Mock(spec=BloomFilter), "logs_bloom")
 
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
@@ -168,11 +171,7 @@ class TestTrace(unittest.TestCase):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
 
-        context.attach_mock(Mock(spec=Transaction), "tx")
-        context.attach_mock(Mock(spec=Block), "block")
         context.attach_mock(to_, "current_address")
-        context.attach_mock(Mock(spec=list), "event_logs")
-        context.attach_mock(Mock(spec=BloomFilter), "logs_bloom")
 
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')

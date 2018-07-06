@@ -18,18 +18,16 @@
 """
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
     external, IconScoreException, int_to_bytes
-from iconservice.base.address import Address, AddressPrefix
-from iconservice.icon_inner_service import IconScoreInnerTask
+from iconservice.base.address import Address
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
-from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from tests import create_block_hash, create_tx_hash, create_address
+
 
 
 class TestEventlog(unittest.TestCase):
@@ -260,80 +258,6 @@ class TestEventlog(unittest.TestCase):
         self.assertIn('data', camel_dict)
         self.assertEqual(3, len(camel_dict['indexed']))
         self.assertEqual(3, len(camel_dict['data']))
-
-    @patch('iconservice.icon_service_engine.IconServiceEngine.'
-           '_handle_score_invoke')
-    @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
-    @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def test_request(self,
-                     IcxEngine_open,
-                     DatabaseFactory_create_by_name,
-                     IconServiceEngine__handle_score_invoke):
-
-        inner_task = IconScoreInnerTask(".", ".")
-        IcxEngine_open.assert_called()
-        DatabaseFactory_create_by_name.assert_called()
-
-        inner_task._icon_service_engine._icon_score_engine = \
-            Mock(spec=IconScoreEngine)
-
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.CONTRACT, b'score')
-
-        def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
-            context_db = inner_task._icon_service_engine._icx_context_db
-            score = EventlogScore(IconScoreDatabase(context_db), to_)
-            address = create_address(AddressPrefix.EOA, b'address')
-            score.MixedEvent(b'i_data', address, 10, b'data', 'text')
-
-        IconServiceEngine__handle_score_invoke.side_effect = intercept_invoke
-
-        request = self.create_req(from_, to_)
-        response = inner_task._invoke(request)
-        IconServiceEngine__handle_score_invoke.assert_called()
-
-        for tx_hash in response['txResults'].keys():
-            self.assertEqual(1, len(response['txResults'][tx_hash]['eventLogs']))
-
-    @staticmethod
-    def create_req(from_, to_):
-        req = {
-            'block': {
-                'blockHash': bytes.hex(create_block_hash(b'block')),
-                'blockHeight': hex(100),
-                'timestamp': hex(1234),
-                'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
-            },
-            'transactions': [
-                {
-                    'method': 'icx_sendTransaction',
-                    'params': {
-                        'txHash': bytes.hex(create_tx_hash(b'tx1')),
-                        'version': hex(3),
-                        'from': str(from_),
-                        'to': str(to_),
-                        'stepLimit': hex(12345),
-                        'timestamp': hex(123456),
-                        'dataType': 'call',
-                        'data': {},
-                    }
-                },
-                {
-                    'method': 'icx_sendTransaction',
-                    'params': {
-                        'txHash': bytes.hex(create_tx_hash(b'tx2')),
-                        'version': hex(3),
-                        'from': str(from_),
-                        'to': str(to_),
-                        'stepLimit': hex(12345),
-                        'timestamp': hex(123456),
-                        'dataType': 'call',
-                        'data': {},
-                    }
-                }]
-        }
-        return req
 
     def tearDown(self):
         self._mock_icon_score = None

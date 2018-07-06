@@ -110,6 +110,7 @@ class IconScoreContext(object):
         self.current_address: Address = None
         self.block_batch = block_batch
         self.tx_batch = tx_batch
+        self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
         self.logs_bloom: BloomFilter = None
@@ -217,6 +218,7 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
+        self.cumulative_step_used = 0
         self.step_counter = None
         self.event_logs = None
         self.logs_bloom = None
