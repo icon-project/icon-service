@@ -138,7 +138,7 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
     "deploy": {
         "uri": "http://localhost:9000/api/v3",
         "stepLimit": "0x12345",
-        "deploy": "0x123"
+        "nonce": "0x123"
     }
 }
 ```
