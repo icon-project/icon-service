@@ -16,7 +16,7 @@
 
 from collections import namedtuple
 from os import makedirs
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from iconservice.utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
@@ -311,20 +311,13 @@ class IconServiceEngine(object):
         context.event_logs: List['EventLog'] = []
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
-        step_limit = params.get('stepLimit', ICON_SERVICE_BIG_STEP_LIMIT)
         context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit)
+            self._step_counter_factory.create(
+                params.get('stepLimit', ICON_SERVICE_BIG_STEP_LIMIT)
+            )
+        context.clear_msg_stack()
 
-        tx_result = self._call(context, method, params)
-        tx_result.step_used = context.step_counter.step_used
-        if tx_result.status == TransactionResult.SUCCESS:
-            tx_result.event_logs = context.event_logs
-            tx_result.logs_bloom = context.logs_bloom
-        else:
-            tx_result.event_logs = []
-            tx_result.logs_bloom = BloomFilter()
-        context.clear_stack()
-        return tx_result
+        return self._call(context, method, params)
 
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
@@ -461,24 +454,21 @@ class IconServiceEngine(object):
                 data_type: str = params.get('dataType')
                 data: dict = params.get('data')
 
-                self._handle_score_invoke(
-                    context, to, data_type, data, tx_result)
+                tx_result.score_address = \
+                    self._handle_score_invoke(context, to, data_type, data)
 
             tx_result.status = TransactionResult.SUCCESS
-        except IconServiceBaseException as e:
-            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
-            # Add failure info to transaction result
-            tx_result.failure = TransactionResult.Failure(
-                code=e.code, message=e.message)
-            trace_type = TraceType.REVERT if isinstance(e, RevertException) \
-                else TraceType.THROW
-            context.traces.append(
-                Trace(context.current_address, trace_type, [e.code, e.message])
-            )
-        except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
-            tx_result.failure = TransactionResult.Failure(
-                code=ExceptionCode.SERVER_ERROR, message=str(e))
+        except BaseException as e:
+            tx_result.failure = self._get_failure_from_exception(e)
+            trace = self._get_trace_from_exception(context.current_address, e)
+            context.traces.append(trace)
+            context.event_logs.clear()
+            context.logs_bloom.value = 0
+        finally:
+            tx_result.step_used = context.step_counter.step_used
+            tx_result.event_logs = context.event_logs
+            tx_result.logs_bloom = context.logs_bloom
+            # tx_result.traces = context.traces
 
         return tx_result
 
@@ -486,16 +476,14 @@ class IconServiceEngine(object):
                              context: 'IconScoreContext',
                              to: 'Address',
                              data_type: str,
-                             data: dict,
-                             tx_result: 'TransactionResult') -> None:
+                             data: dict,) -> Optional['Address']:
         """Handle score invocation
 
         :param context:
         :param to: a recipient address
         :param data_type:
         :param data:
-        :param tx_result: transaction result
-        :return: result of score transaction execution
+        :return: SCORE address if 'deploy' command. otherwise None
         """
         if data_type == 'deploy':
             if to == ZERO_SCORE_ADDRESS:
@@ -514,15 +502,51 @@ class IconServiceEngine(object):
                 # SCORE update
                 score_address = to
 
-            tx_result.score_address = score_address
             self._icon_score_deploy_engine.invoke(
                 context=context,
                 to=to,
                 icon_score_address=score_address,
                 data=data)
+            return score_address
         else:
             self._icon_score_engine.invoke(
                 context, to, data_type, data)
+            return None
+
+    @staticmethod
+    def _get_failure_from_exception(
+            e: BaseException) -> TransactionResult.Failure:
+        """
+        Gets `Failure` from an exception
+        :param e: exception
+        :return: a Failure
+        """
+
+        if isinstance(e, IconServiceBaseException):
+            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+            code = e.code
+            message = e.message
+        else:
+            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            code = ExceptionCode.SERVER_ERROR
+            message = str(e)
+
+        return TransactionResult.Failure(code, message)
+
+    @staticmethod
+    def _get_trace_from_exception(address: 'Address', e: BaseException):
+        """
+        Gets trace from an exception
+        :param address: The SCORE address the exception is thrown
+        :param e: exception
+        :return: a Trace
+        """
+        return Trace(
+            address,
+            TraceType.REVERT if isinstance(e, RevertException) else
+            TraceType.THROW,
+            [e.code, e.message]
+        )
 
     def _handle_icx_get_score_api(self,
                                   context: 'IconScoreContext',

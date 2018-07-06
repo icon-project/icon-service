@@ -206,7 +206,7 @@ class IconScoreContext(object):
         """
         raise RevertException(message, code)
 
-    def clear_stack(self):
+    def clear_msg_stack(self):
         self.__msg_stack.clear()
 
     def clear(self) -> None:
@@ -217,7 +217,7 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
-        self.clear_stack()
+        self.clear_msg_stack()
 
     def commit(self) -> None:
         """Write changed states in block_batch to StateDB

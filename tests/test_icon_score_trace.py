@@ -37,6 +37,7 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import Trace, TraceType
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
+from iconservice.utils.bloom import BloomFilter
 
 
 class TestTrace(unittest.TestCase):
@@ -130,6 +131,8 @@ class TestTrace(unittest.TestCase):
         context.attach_mock(Mock(spec=Transaction), "tx")
         context.attach_mock(Mock(spec=Block), "block")
         context.attach_mock(to_, "current_address")
+        context.attach_mock(Mock(spec=list), "event_logs")
+        context.attach_mock(Mock(spec=BloomFilter), "logs_bloom")
 
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
@@ -168,6 +171,8 @@ class TestTrace(unittest.TestCase):
         context.attach_mock(Mock(spec=Transaction), "tx")
         context.attach_mock(Mock(spec=Block), "block")
         context.attach_mock(to_, "current_address")
+        context.attach_mock(Mock(spec=list), "event_logs")
+        context.attach_mock(Mock(spec=BloomFilter), "logs_bloom")
 
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
