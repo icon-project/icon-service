@@ -546,7 +546,7 @@ class IconServiceEngine(object):
             TraceType.REVERT if isinstance(e, RevertException) else
             TraceType.THROW,
             [e.code, e.message] if isinstance(e, IconServiceBaseException) else
-            [ExceptionCode.SERVER_ERRORcode, str(e)]
+            [ExceptionCode.SERVER_ERROR, str(e)]
         )
 
     def _handle_icx_get_score_api(self,
