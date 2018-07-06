@@ -217,6 +217,10 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
+        self.step_counter = None
+        self.event_logs = None
+        self.logs_bloom = None
+        self.traces = None
         self.clear_msg_stack()
 
     def commit(self) -> None:
