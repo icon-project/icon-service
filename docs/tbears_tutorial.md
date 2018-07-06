@@ -4,6 +4,7 @@
 
 | 일시 | 버전 | 작성자 | 비고 |
 |:-----|:----|:-----:|:-----|
+| 2018.07.06 | 0.9.3 | 김인원 | 설정 파일 내용 변경 |
 | 2018.06.12 | 0.9.2 | 조치원 | Markdown 형식으로 변경 |
 | 2018.06.11 | 0.9.1 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
 | 2018.06.01 | 0.9.0 | 조치원 | JSON-RPC API v3 ChangeLog 추가 |
@@ -12,7 +13,7 @@
 
 ### Overview
 
-현시점에서 ICON SCORE 개발 및 실행을 위해서는 다음의 환경이 요구된다.
+현 시점에서 ICON SCORE 개발 및 실행을 위해서는 다음의 환경이 요구된다.
 
 * OS: MacOS, Linux
     * 현재 Windows는 미지원
@@ -75,16 +76,16 @@ __init__.py  package.json  __pycache__  sample_token.py
 
 # 여기서부터는 자신의 SCORE 프로젝트를 생성하고 실행하는 방법 설명
 
-# abc토큰 개발을 위한 프로젝트 초기 생성
+# abc 토큰 개발을 위한 프로젝트 초기 생성
 (work) $ tbears init <main python file name> <score class name>
 ex)
 (work) $ tbears init abc ABCToken
 
-# abc토큰 개발을 위한 프로젝트 생성 확인
+# abc 토큰 개발을 위한 프로젝트 생성 확인
 (work) $ ls abc
 abc.py  __init__.py  package.json
 
-# JSON-RPC 서버 구동 및 abc토큰 로딩
+# JSON-RPC 서버 구동 및 abc 토큰 로딩
 # DB 초기화되지 않음
 (work) $ tbears run abc
 
@@ -108,37 +109,37 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 
 ```json
 {
-        "log": {
-            "colorLog": true,
-            "level": "debug",
-            "filePath": "./tbears.log",
-            "outputType": "console|file"
-        },
-        "global": {
-            "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "port": 9000,
-            "scoreRoot": "./.score",
-            "dbRoot": "./.db",
-            "genesisData": {
-                "accounts": [
-                    {
-                        "name": "genesis",
-                        "address": "hx0000000000000000000000000000000000000000",
-                        "balance": "0x2961fff8ca4a62327800000"
-                    },
-                    {
-                        "name": "fee_treasury",
-                        "address": "hx1000000000000000000000000000000000000000",
-                        "balance": "0x0"
-                    }
-                ]
-            }
-        },
-        "deploy": {
-            "uri": "http://localhost:9000/api/v3",
-            "stepLimit": "0x12345",
-            "deploy": "0x123"
+    "global": {
+        "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "port": 9000,
+        "scoreRoot": "./.score",
+        "dbRoot": "./.db",
+        "genesisData": {
+            "accounts": [
+                {
+                    "name": "genesis",
+                    "address": "hx0000000000000000000000000000000000000000",
+                    "balance": "0x2961fff8ca4a62327800000"
+                },
+                {
+                    "name": "fee_treasury",
+                    "address": "hx1000000000000000000000000000000000000000",
+                    "balance": "0x0"
+                }
+            ]
         }
+    },
+    "log": {
+        "colorLog": true,
+        "level": "debug",
+        "filePath": "./tbears.log",
+        "outputType": "console|file"
+    },
+    "deploy": {
+        "uri": "http://localhost:9000/api/v3",
+        "stepLimit": "0x12345",
+        "deploy": "0x123"
+    }
 }
 ```
 
@@ -147,36 +148,36 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
 | 항목명 | 데이터 형식 | 설명 |
 |:------|:-----------|:-----|
 | global | dict | tbears에서 전역적으로 사용하는 설정 |
+| global.from | string | tbears에서 JSON-RPC 서버로 메시지를 전송할 때 사용하는 from 주소 |
+| global.port | int | JSON-RPC 서버의 포트 번호 |
+| global.scoreRoot | string | SCORE가 설치될 루트 디렉토리 |
+| global.dbRoot | string | 상태 기록을 위한 DB 파일이 생성되는 루트 디렉토리 |
+| global.accounts | list | 초기 코인을 가지고 있는 계좌 정보 목록<br>(index 0) genesis: 초기 코인을 가지고 있는 계좌 정보<br>(index 1) fee_treasury: transaction 처리 수수료를 수집하는 계좌 정보<br>(index 2~): 임의의 계좌 정보 |
+| log | dict | tbears 로깅 설정 |
+| log.level | string | 로그 메시지 표시 수준 정의<br/>"debug", "info", "warning", "error" |
+| log.filePath | string | 로그 파일 경로 |
+| log.outputType | string | “console”: tbears를 실행한 콘솔창에 로그 표시<br/>“file”: 지정된 파일 경로에 로그 기록<br/>“console\|file”: 콘솔과 파일에 동시 기록 |
 | deploy | dict | SCORE 배포 시, 사용하는 설정 |
 | deploy.uri | string | 요청을 보낼 uri |
 | deploy.stepLimit | string | -(optional) |
 | deploy.nonce | string | -(optional) |
-| from | string | tbears에서 JSON-RPC 서버로 메시지를 전송할 때 사용하는 from 주소 |
-| port | int | JSON-RPC 서버의 포트 번호 |
-| scoreRoot | string | SCORE가 설치될 루트 디렉토리 |
-| dbRoot | string | 상태 기록을 위한 DB 파일이 생성되는 루트 디렉토리 |
-| accounts | list | 초기 코인을 가지고 있는 계좌 정보 목록<br>(index 0) genesis: 초기 코인을 가지고 있는 계좌 정보<br>(index 1) fee_treasury: transaction 처리 수수료를 수집하는 계좌 정보<br>(index 2~): 임의의 계좌 정보 |
-| log | dict | tbears 로깅 설정 |
-| log.level | string | 로그 메시지 표시 수준 정의<br/>"debug", "info", "warning", "error" |
-| log.filePath | string | 로그 파일 경로 |
-| log.outputType | string | “console”: tbears를 실행한 콘솔창에 로그 표시<br/>“file”: 지정된 파일 경로에 로그 기록<br/>“console&#x7c;file”: 콘솔과 파일에 동시 기록 |
 
-### score 배포 설정 파일 형식(tbears config파일과 별도로 존재)
+### score 배포 설정 파일 형식 (tbears config 파일과 별도로 존재)
 ```json
 {
-  "socreAddress": "cx0123456789abcdef0123456789abcdef01234567",
-  "params": {
-      "user_param1": "0x123",
-      "user_param2": "hello"
-      }
+    "socreAddress": "cx0123456789abcdef0123456789abcdef01234567",
+    "params": {
+        "user_param1": "0x123",
+        "user_param2": "hello"
+    }
 }
 
 ```
 
 | 항목명 | 데이터 형식 | 설명 |
 |:------|:-----------|:-----|
-| scoreAddress | string | SCORE 업데이트시 사용(update 할 SCORE의 주소), 최초 배포시에는 사용 안함. |
-| params | dict | on_install() 혹은 on_update()의 인자로 전달 할 값들의 정보 |
+| scoreAddress | string | (optional) SCORE 업데이트 시 사용 (update 할 SCORE의 주소).<br/>최초 배포 시에는 사용 안함. |
+| params | dict | on_install() 혹은 on_update()의 인자로 전달할 값들의 정보 |
 
 ### tbears samples
 
@@ -239,8 +240,10 @@ JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설�
 ```bash
 (work) $ cat ./params.json
 {
-    "init_supply": "0x3e8",
-    "decimal": "0x12"
+    "params": {
+        "init_supply": "0x3e8",
+        "decimal": "0x12"
+    }
 } 
 
 (work) $ tbears run abc --install ./params.json
@@ -254,10 +257,10 @@ JSON-RPC 서버를 시작하고 project 디렉토리 내에 있는 SCORE를 설�
 | 옵션 | 속성 | 설명 |
 |:------|:-----|:-----|
 | project | required | SCORE 코드를 포함하는 디렉토리 경로명 |
-| --install | optional | SCORE를 설치한다. on_install()이 호출된다.(on_install()의 인자에 값을 전달할 경우에 사용. |
+| --install | optional | SCORE를 설치한다. on_install()이 호출되며 인자에 값을 전달할 경우에 사용 |
 | --update | optional | SCORE를 업데이트한다. on_update()가 호출된다.<br/>(--update 옵션은 현재 미구현으로 차기 버전에서 지원 예정) |
-| config param path | optional | on\_install() 혹은 on_update()에 파라메터로 입력되는 데이터 내용을 담은 파일의 경로<br/>해당 파일의 내용은 json 형식을 따라야 한다. |
-| --install, --update가 생략된 경우 <br>(아무 옵션 없는 경우)| - | SCORE를 설치한다. on_install()에 값을 전달하고 싶지 않을 때 사용. |
+| config param path | optional | on\_install() 혹은 on_update()에 파라미터로 입력되는 데이터 내용을 담은 파일의 경로. 해당 파일의 내용은 json 형식을 따라야 한다. |
+| --install, --update가 생략된 경우 | - | 해당 SCORE가 이미 설치된 상태라면 SCORE reload를 수행한다.<br/>SCORE를 설치하는 경우라면 파라미터 값 없이 on_install()이 호출된다. |
 
 ### tbears stop
 
@@ -311,6 +314,6 @@ Logger.error('error log', TAG)
 
 * tbears는 현 시점에서 loopchain 엔진을 포함하고 있지 않기 때문에 일부 SCORE 개발과 관련없는 JSON-RPC API 들은 동작하지 않을 수 있다.
     * tbears에서 지원하는 JSON-RPC API:
-        * icx_getBalance, icx_getTotalSupply, icx_getBalance, icx_sendTransaction, icx_getTransactionResult
+        * icx_getBalance, icx_getTotalSupply, icx_getBalance, icx_call, icx_sendTransaction, icx_getTransactionResult
 * 이후 tbears 버전에서는 사용 방법이나 SCORE 개발 방법이 일부 변경될 수 있다.
 * 개발의 편의성을 위해서 tbears에서 제공하는 JSON-RPC 서버는 transaction 내에 포함된  전자 서명을 검증하지 않는다.
