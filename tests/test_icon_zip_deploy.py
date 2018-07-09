@@ -71,7 +71,7 @@ class TestIconZipDeploy(unittest.TestCase):
             AddressPrefix.CONTRACT, b'sample_token')
 
         self._factory = IconScoreContextFactory(max_size=1)
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self.from_address, 0)
         self._context.tx =\
             Transaction('test_01', origin=self.from_address, index=0)

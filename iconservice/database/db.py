@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
     if context is None:
-        return IconScoreContextType.GENESIS
+        return IconScoreContextType.DIRECT
     else:
         return context.type
 

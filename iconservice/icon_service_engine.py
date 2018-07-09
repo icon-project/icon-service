@@ -17,6 +17,7 @@
 from collections import namedtuple
 from os import makedirs
 from typing import TYPE_CHECKING, Any, List, Optional
+from enum import IntFlag
 
 from iconservice.utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
@@ -81,13 +82,20 @@ class IconServiceEngine(object):
     """The entry of all icon service related components
 
     It MUST NOT have any loopchain dependencies.
-    It is contained in IconOuterService.
+    It is contained in IconInnerService.
     """
 
-    def __init__(self) -> None:
-        """Constructor
-        """
+    class Flag(IntFlag):
+        NONE = 0,
+        ENABLE_FEE = 1,
+        ENABLE_AUDIT = 2
 
+    def __init__(self, flags: int=Flag.NONE) -> None:
+        """Constructor
+
+        TODO: default flags?
+        """
+        self._flags = flags
         self._db_factory = None
         self._context_factory = None
         self._icon_score_loader = None
@@ -101,7 +109,7 @@ class IconServiceEngine(object):
         self._precommit_state = None
         self._icon_pre_validator = None
 
-        # jsonrpc handlers
+        # JSON-RPC handlers
         self._handlers = {
             'icx_getBalance': self._handle_icx_get_balance,
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
@@ -114,6 +122,9 @@ class IconServiceEngine(object):
         # but not written to levelDB or file system.
         self._PrecommitState = namedtuple(
             'PrecommitState', ['block_batch', 'block_result'])
+
+    def _is_on(self, flags: int) -> bool:
+        return (self._flags & flags) == flags
 
     def open(self,
              icon_score_root_path: str,
@@ -163,9 +174,7 @@ class IconServiceEngine(object):
         self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
 
         # TODO: Fix step_price
-        step_price = 0
-        self._icon_pre_validator = IconPreValidator(
-            icx=self._icx_engine, step_price=step_price)
+        self._icon_pre_validator = IconPreValidator(icx=self._icx_engine)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -179,11 +188,11 @@ class IconServiceEngine(object):
 
     def invoke(self,
                block: 'Block',
-               tx_params: list) -> tuple:
+               tx_requests: list) -> tuple:
         """Process transactions in a block sent by loopchain
 
         :param block:
-        :param tx_params: transactions in a block
+        :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
         context = self._context_factory.create(IconScoreContextType.INVOKE)
@@ -192,12 +201,14 @@ class IconServiceEngine(object):
         context.tx_batch = TransactionBatch()
         block_result = []
 
-        for index, tx in enumerate(tx_params):
-            if self._is_genesis_block(index, block.height, tx):
-                tx_result = self._invoke_genesis(context, tx, index)
-            else:
-                tx_result = self._invoke(context, tx, index)
+        if block.height == 0:
+            # Assume that there is only one tx in genesis_block
+            tx_result = self._invoke_genesis(context, tx_requests[0], 0)
             block_result.append(tx_result)
+        else:
+            for index, tx_request in enumerate(tx_requests):
+                tx_result = self._invoke_request(context, tx_request, index)
+                block_result.append(tx_result)
 
         context.block_batch.put_tx_batch(context.tx_batch)
         context.tx_batch.clear()
@@ -217,18 +228,21 @@ class IconServiceEngine(object):
             return
 
         if block.height != last_block.height + 1:
-            raise ServerErrorException(f'NextBlockHeight[{block.height}] '
-                                       f'is not LastBlockHeight[{last_block.height}] + 1')
+            raise ServerErrorException(
+                f'NextBlockHeight[{block.height}] '
+                f'!= LastBlockHeight[{last_block.height}] + 1')
         elif block.prev_hash != last_block.hash:
-            raise ServerErrorException(f'NextBlock.prevHash[{block.prev_hash}] '
-                                       f'is not LastBlockHash[{last_block.hash}]')
+            raise ServerErrorException(
+                f'NextBlock.prevHash[{block.prev_hash}] '
+                f'!= LastBlockHash[{last_block.hash}]')
 
     @staticmethod
-    def _is_genesis_block(index: int, block_height: int, tx_params: dict) -> bool:
-        if block_height != 0 or index != 0:
-            return False
+    def _is_genesis_block(
+            tx_index: int, block_height: int, tx_params: dict) -> bool:
 
-        return 'genesisData' in tx_params
+        return block_height == 0\
+               and tx_index == 0\
+               and 'genesisData' in tx_params
 
     def _invoke_genesis(self,
                         context: 'IconScoreContext',
@@ -292,31 +306,44 @@ class IconServiceEngine(object):
 
         return tx_result
 
-    def _invoke(self,
-                context: 'IconScoreContext',
-                tx_params: dict,
-                index: int) -> 'TransactionResult':
+    def _invoke_request(self,
+                        context: 'IconScoreContext',
+                        request: dict,
+                        index: int) -> 'TransactionResult':
+        """Invoke a transaction request
 
-        method = tx_params['method']
-        params = tx_params['params']
-        addr_from = params['from']
-        addr_to = params['to']
+        :param context:
+        :param request:
+        :param index:
+        :return:
+        """
+
+        method = request['method']
+        params = request['params']
+
+        version: int = params.get('version', 2)
+        from_ = params['from']
+        to = params['to']
+
+        step_limit = params.get('stepLimit', 0)
+        if version < 3:
+            step_price = 0
+        else:
+            step_price = self._get_step_price()
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
-                                 origin=addr_from,
+                                 origin=from_,
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
-        context.msg = Message(sender=addr_from, value=params.get('value', 0))
-        context.current_address = addr_to
+        context.msg = Message(sender=from_, value=params.get('value', 0))
+        context.current_address = to
         context.event_logs: List['EventLog'] = []
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(
-                params.get('stepLimit', ICON_SERVICE_BIG_STEP_LIMIT)
-            )
+            self._step_counter_factory.create(step_limit, step_price)
         context.clear_msg_stack()
 
         return self._call(context, method, params)
@@ -349,6 +376,7 @@ class IconServiceEngine(object):
 
     def validate_transaction(self, request: dict) -> None:
         """Validate JSON-RPC transaction request
+        before putting it into transaction pool
 
         JSON Schema validator checks basic JSON-RPC request syntax
         on JSON-RPC Server
@@ -359,7 +387,12 @@ class IconServiceEngine(object):
             in IconInnerService
         :return:
         """
-        self._icon_pre_validator.execute(request)
+        assert request['method'] == 'icx_sendTransaction'
+        assert 'params' in request
+
+        params: dict = request['params']
+        step_price: int = self._get_step_price()
+        self._icon_pre_validator.execute(params, step_price)
 
     def _call(self,
               context: 'IconScoreContext',
@@ -434,30 +467,26 @@ class IconServiceEngine(object):
         * EOA to EOA
         * EOA to SCORE
 
-        :param params: jsonrpc params
+        :param params: JSON-RPC params
         :return: return value of an IconScoreBase method
             None is allowed
         """
         tx_result = TransactionResult(context.tx, context.block)
 
         try:
-            # protocol version
-            version: int = params.get('version', 2)
             to: Address = params['to']
             tx_result.to = to
 
-            if version < 3:
-                # Support obsolete coin transfer based on protocol v2
-                self._transfer_coin_v2(context, params)
-            else:
-                self._transfer_coin_v3(context, params)
+            # Check if from account can charge a tx fee
+            self._icon_pre_validator.execute_to_check_out_of_balance(
+                params,
+                step_price=self._get_step_price())
+
+            self._transfer_coin(context, params)
 
             if to.is_contract:
-                data_type: str = params.get('dataType')
-                data: dict = params.get('data')
-
-                tx_result.score_address = \
-                    self._handle_score_invoke(context, to, data_type, data)
+                tx_result.score_address =\
+                    self._handle_score_invoke(context, to, params)
 
             tx_result.status = TransactionResult.SUCCESS
         except BaseException as e:
@@ -467,8 +496,17 @@ class IconServiceEngine(object):
             context.event_logs.clear()
             context.logs_bloom.value = 0
         finally:
-            context.cumulative_step_used += context.step_counter.step_used
-            tx_result.step_used = context.step_counter.step_used
+            # Charge a fee to from account
+            final_step_used, final_step_price =\
+                self._charge_transaction_fee(
+                    context,
+                    params,
+                    tx_result.status,
+                    context.step_counter.step_used)
+
+            # Finalize tx_result
+            context.cumulative_step_used += final_step_used
+            tx_result.step_used = final_step_used
             tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = context.logs_bloom
@@ -476,9 +514,9 @@ class IconServiceEngine(object):
 
         return tx_result
 
-    def _transfer_coin_v2(self,
-                          context: 'IconScoreContext',
-                          params: dict) -> None:
+    def _transfer_coin(self,
+                       context: 'IconScoreContext',
+                       params: dict) -> None:
         """Transfer coin between EOA and EOA based on protocol v2
         JSON-RPC syntax validation has already been complete
 
@@ -489,38 +527,80 @@ class IconServiceEngine(object):
         from_: 'Address' = params['from']
         to: 'Address' = params['to']
         value: int = params.get('value', 0)
-        fee: int = params['fee']
-
-        self._icx_engine.transfer_with_fee(context, from_, to, value, fee)
-
-    def _transfer_coin_v3(self,
-                          context: 'IconScoreContext',
-                          params: dict) -> None:
-        """
-        
-        :param context:
-        :param params:
-        :return:
-        """
-        from_: 'Address' = params['from']
-        to: 'Address' = params['to']
-        value: int = params.get('value', 0)
 
         self._icx_engine.transfer(context, from_, to, value)
+
+    def _charge_transaction_fee(self,
+                                context: 'IconScoreContext',
+                                params: dict,
+                                status: int,
+                                step_used: int) -> (int, int):
+        """Charge a fee to from account
+        Because it is on finalizing a transaction,
+        this method MUST NOT throw any exceptions
+
+        Assume that from account can charge a failed tx fee
+
+        :param params:
+        :param status: 1: SUCCESS, 0: FAILURE
+        :return: final step_used, step_price
+        """
+        version: int = params.get('version', 2)
+        from_: 'Address' = params['from']
+
+        min_step_used: int =\
+            context.step_counter.get_step_unit(StepType.TRANSACTION)
+        step_price = self._get_step_price()
+
+        if version < 3:
+            # Support coin transfer based on protocol v2
+            # 0.01 icx == 10**16 loop
+            # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
+            step_used = 10 ** 4
+
+            if status == TransactionResult.FAILURE:
+                # protocol v2 does not charge a fee for a failed tx
+                step_price = 0
+            elif self._is_on(self.Flag.ENABLE_FEE):
+                # 0.01 icx == 10**16 loop
+                # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
+                step_price = 10 ** 12
+        else:
+            step_used: int = max(step_used, min_step_used)
+
+        # Charge a fee to from account
+        fee: int = step_used * step_price
+        self._icx_engine.charge_fee(context, from_, fee)
+
+        # final step_used and step_price
+        return step_used, step_price
+
+    def _get_step_price(self):
+        """TODO: How to get step price?
+        from governance SCORE?
+
+        :return: step price in loop unit
+        """
+        # 1 icx == 10 ** 6 step
+        if self._is_on(self.Flag.ENABLE_FEE):
+            return 10 ** 12
+        else:
+            return 0
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',
                              to: 'Address',
-                             data_type: str,
-                             data: dict,) -> Optional['Address']:
+                             params: dict) -> Optional['Address']:
         """Handle score invocation
 
         :param context:
         :param to: a recipient address
-        :param data_type:
-        :param data:
+        :param params:
         :return: SCORE address if 'deploy' command. otherwise None
         """
+        data_type: str = params.get('dataType')
+        data: dict = params.get('data')
+
         if data_type == 'deploy':
             if to == ZERO_SCORE_ADDRESS:
                 # SCORE install
@@ -592,6 +672,7 @@ class IconServiceEngine(object):
 
         get score api
 
+        :param context:
         :param params:
         :return:
         """
@@ -606,7 +687,7 @@ class IconServiceEngine(object):
             raise ServerErrorException(
                 'Precommit state is none on commit')
 
-        context = self._context_factory.create(IconScoreContextType.GENESIS)
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
         block_batch = self._precommit_state.block_batch
 
         for address in block_batch:
@@ -627,12 +708,12 @@ class IconServiceEngine(object):
 
     def validate_precommit(self, precommit_block: 'Block') -> None:
         if self._precommit_state is None:
-            raise ServerErrorException('_precommit_state is None')
+            raise ServerErrorException('precommit_state is None')
 
         block = self._precommit_state.block_batch.block
 
-        is_match = block.hash == precommit_block.hash and block.height == precommit_block.height
-        if not is_match:
+        if block.hash != precommit_block.hash\
+                or block.height == precommit_block.height:
             raise ServerErrorException('mismatch block')
 
     def rollback(self) -> None:

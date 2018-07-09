@@ -39,7 +39,7 @@ class TestIcxStorage(unittest.TestCase):
         self.storage = IcxStorage(db)
 
         self.factory = IconScoreContextFactory(max_size=1)
-        context = self.factory.create(IconScoreContextType.GENESIS)
+        context = self.factory.create(IconScoreContextType.DIRECT)
         context.tx_batch = TransactionBatch()
         context.block_batch = BlockBatch()
         self.context = context

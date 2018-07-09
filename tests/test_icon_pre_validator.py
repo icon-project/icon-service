@@ -18,7 +18,6 @@ import unittest
 
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ExceptionCode, InvalidRequestException
-from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from tests import create_tx_hash, create_address
 
@@ -46,136 +45,148 @@ class TestTransactionValidator(unittest.TestCase):
         icx_storage = MockIcxStorage()
         self.icx_engine = MockIcxEngine()
         self.icx_engine.storage = icx_storage
-        self.validator = IconPreValidator(
-            self.icx_engine, step_price=0)
-
-        self.tx = {
-            'method': 'test',
-            'params': {
-                'version': 3,
-                'txHash': create_tx_hash(b'tx'),
-                'from': create_address(AddressPrefix.EOA, b'from'),
-                'to': create_address(AddressPrefix.CONTRACT, b'to'),
-                'value': 0,
-                'stepLimit': 100,
-                'timestamp': 123456,
-                'nonce': 1
-            }
-        }
+        self.validator = IconPreValidator(self.icx_engine)
 
     def tearDown(self):
-        self.tx = None
         self.icx_engine = None
-        self.tx_validator = None
+        self.validator = None
 
     def test_validate_success(self):
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'version': 3,
-                'txHash': create_tx_hash(b'tx'),
-                'from': create_address(AddressPrefix.EOA, b'from'),
-                'to': create_address(AddressPrefix.CONTRACT, b'to'),
-                'value': 0,
-                'stepLimit': 100,
-                'timestamp': 123456,
-                'nonce': 1
-            }
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': create_address(AddressPrefix.CONTRACT, b'to'),
+            'value': 0,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
         }
 
-        self.validator.execute(tx)
+        self.icx_engine.balance = 100
+        self.validator.execute(params, step_price=1)
 
     def test_check_balance(self):
+        step_price = 0
         self.icx_engine.balance = 0
 
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'version': 3,
-                'txHash': create_tx_hash(b'tx'),
-                'from': create_address(AddressPrefix.EOA, b'from'),
-                'to': create_address(AddressPrefix.CONTRACT, b'to'),
-                'value': 10,
-                'stepLimit': 100,
-                'timestamp': 123456,
-                'nonce': 1
-            }
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': create_address(AddressPrefix.CONTRACT, b'to'),
+            'value': 10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
         }
 
         # too small balance
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx)
+            self.validator.execute(params, step_price)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
 
         # balance is enough
         self.icx_engine.balance = 100
-        self.validator.execute(tx)
+        self.validator.execute(params, step_price)
 
         # too expensive fee
-        self.validator.step_price = 1
+        step_price = 1
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx)
+            self.validator.execute(params, step_price)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
 
     def test_transfer_to_invalid_score_address(self):
-        self.validator.step_price = 1
         self.icx_engine.balance = 1000
         self.icx_engine.storage.score_installed = False
 
         to = create_address(AddressPrefix.CONTRACT, b'to')
 
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'version': 3,
-                'txHash': create_tx_hash(b'tx'),
-                'from': create_address(AddressPrefix.EOA, b'from'),
-                'to': to,
-                'value': 10,
-                'stepLimit': 100,
-                'timestamp': 123456,
-                'nonce': 1
-            }
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': to,
+            'value': 10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
         }
 
         # The SCORE indicated by to is not installed
         # Invalid SCORE address
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx)
+            self.validator.execute(params, step_price=1)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual(f'Invalid address: {to}', cm.exception.message)
 
     def test_transfer_to_invalid_eoa_address(self):
-        self.validator.step_price = 1
         self.icx_engine.balance = 1000
         self.icx_engine.storage.score_installed = True
 
         to = create_address(AddressPrefix.EOA, b'to')
 
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'version': 3,
-                'txHash': create_tx_hash(b'tx'),
-                'from': create_address(AddressPrefix.EOA, b'from'),
-                'to': to,
-                'value': 10,
-                'stepLimit': 100,
-                'timestamp': 123456,
-                'nonce': 1
-            }
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': to,
+            'value': 10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
         }
 
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx)
+            self.validator.execute(params, step_price=1)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual(f'Invalid address: {to}', cm.exception.message)
+
+    def test_execute_to_check_out_of_balance(self):
+        step_price = 10 ** 12
+        value = 2 * 10 ** 18
+        step_limit = 20000
+
+        self.icx_engine.balance = 0
+        self.icx_engine.storage.score_installed = False
+
+        to = create_address(AddressPrefix.EOA, b'to')
+
+        params = {
+            'version': 3,
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': to,
+            'value': value,
+            'stepLimit': step_limit,
+            'timestamp': 1234567890,
+            'nonce': 1
+        }
+
+        # balance is 0
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator.execute_to_check_out_of_balance(params, step_price)
+
+        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+        self.assertEqual('Out of balance', cm.exception.message)
+
+        # balance(value) < value + fee
+        self.icx_engine.balance = value
+
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator.execute_to_check_out_of_balance(params, step_price)
+
+        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+        self.assertEqual('Out of balance', cm.exception.message)
+
+        # balance is enough to pay coin and fee
+        self.icx_engine.balance = value + step_limit * step_price
+        self.validator.execute_to_check_out_of_balance(params, step_price)
 
 
 class TestTransactionValidatorV2(unittest.TestCase):
@@ -183,8 +194,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
         icx_storage = MockIcxStorage()
         self.icx_engine = MockIcxEngine()
         self.icx_engine.storage = icx_storage
-        self.validator = IconPreValidator(
-            self.icx_engine, step_price=0)
+        self.validator = IconPreValidator(self.icx_engine)
 
     def tearDown(self):
         self.icx_engine = None
@@ -197,21 +207,18 @@ class TestTransactionValidatorV2(unittest.TestCase):
         to = create_address(AddressPrefix.EOA, b'to')
 
         tx = {
-            'method': 'icx_sendTransaction',
-            'params': {
-                'txHash': create_tx_hash(b'tx'),
-                'from': create_address(AddressPrefix.EOA, b'from'),
-                'to': to,
-                'value': 10 * 10 ** 18,
-                'fee': 10 ** 16,
-                'timestamp': 1234567890,
-                'nonce': 1
-            }
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': to,
+            'value': 10 * 10 ** 18,
+            'fee': 10 ** 16,
+            'timestamp': 1234567890,
+            'nonce': 1
         }
 
         # too small balance
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx)
+            self.validator.execute(tx, step_price=0)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
@@ -220,11 +227,48 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.icx_engine.balance = 10 * 10 ** 18
 
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx)
+            self.validator.execute(tx, step_price=0)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
 
         # balance is enough to pay coin and fee
         self.icx_engine.balance = 10 * 10 ** 18 + 10 ** 16
-        self.validator.execute(tx)
+        self.validator.execute(tx, step_price=0)
+
+    def test_execute_to_check_out_of_balance(self):
+        step_price = 10 ** 12
+        self.icx_engine.balance = 0
+        self.icx_engine.storage.score_installed = False
+
+        to = create_address(AddressPrefix.EOA, b'to')
+
+        tx = {
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': to,
+            'value': 10 * 10 ** 18,
+            'fee': 10 ** 16,
+            'timestamp': 1234567890,
+            'nonce': 1
+        }
+
+        # too small balance
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator.execute_to_check_out_of_balance(tx, step_price)
+
+        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+        self.assertEqual('Out of balance', cm.exception.message)
+
+        # too expensive fee
+        self.icx_engine.balance = 10 * 10 ** 18
+
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator.execute_to_check_out_of_balance(tx, step_price)
+
+        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+        self.assertEqual('Out of balance', cm.exception.message)
+
+        # balance is enough to pay coin and fee
+        self.icx_engine.balance = 10 * 10 ** 18 + 10 ** 16
+        self.validator.execute_to_check_out_of_balance(tx, step_price)

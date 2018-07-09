@@ -16,10 +16,9 @@
 from typing import TYPE_CHECKING, List, Optional
 
 from iconservice.utils.bloom import BloomFilter
-from ..utils import to_camel_case
+from .icon_score_event_log import EventLog
 from ..base.address import Address
 from ..base.block import Block
-from .icon_score_event_log import EventLog
 
 if TYPE_CHECKING:
     pass
@@ -44,6 +43,7 @@ class TransactionResult(object):
             to: Optional['Address'] = None,
             score_address: Optional['Address'] = None,
             step_used: int = 0,
+            step_price: int = 0,
             cumulative_step_used: int = 0,
             event_logs: Optional[List['EventLog']] = None,
             logs_bloom: Optional[BloomFilter] = None,
@@ -67,6 +67,7 @@ class TransactionResult(object):
         self.to = to
         self.score_address = score_address
         self.step_used = step_used
+        self.step_price = step_price
         self.cumulative_step_used = cumulative_step_used
         self.event_logs = event_logs
         self.logs_bloom = logs_bloom

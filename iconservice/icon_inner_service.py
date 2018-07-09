@@ -33,7 +33,8 @@ THREAD_VALIDATE = 'validate'
 
 
 class IconScoreInnerTask(object):
-    def __init__(self, icon_score_root_path: str, icon_score_state_db_root_path: str):
+    def __init__(self,
+                 icon_score_root_path: str, icon_score_state_db_root_path: str):
 
         self._icon_score_root_path = icon_score_root_path
         self._icon_score_state_db_root_path = icon_score_state_db_root_path
@@ -47,7 +48,8 @@ class IconScoreInnerTask(object):
 
     def _open(self):
         Logger.debug("icon_score_service open", ICON_INNER_LOG_TAG)
-        self._icon_service_engine.open(self._icon_score_root_path, self._icon_score_state_db_root_path)
+        self._icon_service_engine.open(
+            self._icon_score_root_path, self._icon_score_state_db_root_path)
 
     @message_queue_task
     async def hello(self):
@@ -78,12 +80,17 @@ class IconScoreInnerTask(object):
             converted_block_params = params['block']
             block = Block.from_dict(converted_block_params)
             self._icon_service_engine.validate_next_block(block)
-            converted_tx_params = params['transactions']
+            converted_tx_requests = params['transactions']
 
-            tx_results, state_root_hash = self._icon_service_engine.invoke(block=block, tx_params=converted_tx_params)
+            tx_results, state_root_hash = self._icon_service_engine.invoke(
+                block=block, tx_requests=converted_tx_requests)
+
             convert_tx_results = \
                 {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case) for tx_result in tx_results}
-            results = {'txResults': convert_tx_results, 'stateRootHash': bytes.hex(state_root_hash)}
+            results = {
+                'txResults': convert_tx_results,
+                'stateRootHash': bytes.hex(state_root_hash)
+            }
             response = MakeResponse.make_response(results)
         except IconServiceBaseException as icon_e:
             if DEV:

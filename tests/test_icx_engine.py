@@ -41,7 +41,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.total_supply = 10 ** 20  # 100 icx
 
         self.factory = IconScoreContextFactory(max_size=1)
-        self.context = self.factory.create(IconScoreContextType.GENESIS)
+        self.context = self.factory.create(IconScoreContextType.DIRECT)
 
         icx_storage = IcxStorage(db)
         self.engine.open(icx_storage)
@@ -75,10 +75,10 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         amount = 10 ** 18  # 1 icx
         _from = self.genesis_address
 
-        self.engine.transfer(_context=context,
-                             _from=_from,
-                             _to=self.to,
-                             _amount=amount)
+        self.engine.transfer(context=context,
+                             from_=_from,
+                             to=self.to,
+                             amount=amount)
 
         from_balance = self.engine.get_balance(
             context, self.genesis_address)
@@ -89,27 +89,6 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
         self.assertEqual(amount, to_balance)
         self.assertEqual(0, fee_treasury_balance)
-        self.assertEqual(
-            self.total_supply,
-            from_balance + to_balance + fee_treasury_balance)
-
-    def test_transfer_with_fee(self):
-        context = self.context
-        amount = 10 ** 18  # 1 icx
-        _from = self.genesis_address
-
-        self.engine.transfer_with_fee(_context=context,
-                                      _from=_from,
-                                      _to=self.to,
-                                      _amount=amount,
-                                      _fee=FIXED_FEE)
-
-        from_balance = self.engine.get_balance(context, self.genesis_address)
-        fee_treasury_balance = self.engine.get_balance(context, self.fee_treasury_address)
-        to_balance = self.engine.get_balance(context, self.to)
-
-        self.assertEqual(amount, to_balance)
-        self.assertEqual(FIXED_FEE, fee_treasury_balance)
         self.assertEqual(
             self.total_supply,
             from_balance + to_balance + fee_treasury_balance)

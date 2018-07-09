@@ -34,7 +34,7 @@ class TestIconContainerDB(unittest.TestCase):
     def setUp(self):
         self.db = create_mock_icon_score_db()
         self._factory = IconScoreContextFactory(max_size=1)
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
 
         self._context_container = TestContextContainer()
         self._context_container._put_context(self._context)

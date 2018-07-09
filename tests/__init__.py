@@ -35,7 +35,7 @@ def create_tx_hash(data: bytes=None):
     if data is None:
         data = int(time.time()).to_bytes(8, 'big')
 
-    return bytes.fromhex(hashlib.sha3_256(data).hexdigest())
+    return hashlib.sha3_256(data).digest()
 
 
 def create_block_hash(data: bytes=None):

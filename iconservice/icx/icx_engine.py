@@ -79,7 +79,8 @@ class IcxEngine(object):
                      address: 'Address',
                      amount: int) -> None:
 
-        account = Account(account_type=account_type, address=address, icx=int(amount))
+        account = Account(
+            account_type=account_type, address=address, icx=int(amount))
 
         obj = {
             'version': 0,
@@ -100,9 +101,10 @@ class IcxEngine(object):
             self._total_supply_amount += account.icx
             self._storage.put_total_supply(context, self._total_supply_amount)
 
-    def _load_genesis_account_from_storage(self,
-                                           context: Optional['IconScoreContext'],
-                                           storage: IcxStorage) -> None:
+    def _load_genesis_account_from_storage(
+            self,
+            context: Optional['IconScoreContext'],
+            storage: IcxStorage) -> None:
         """Load genesis account info from state db
 
         :param context:
@@ -113,9 +115,10 @@ class IcxEngine(object):
             obj = json.loads(text)
             self._genesis_address = Address.from_string(obj['address'])
 
-    def _load_fee_treasury_account_from_storage(self,
-                                                context: Optional['IconScoreContext'],
-                                                storage: IcxStorage) -> None:
+    def _load_fee_treasury_account_from_storage(
+            self,
+            context: Optional['IconScoreContext'],
+            storage: IcxStorage) -> None:
         """Load fee_treasury_account info from state db
 
         :param context:
@@ -126,9 +129,10 @@ class IcxEngine(object):
             obj = json.loads(text)
             self._fee_treasury_address = Address.from_string(obj['address'])
 
-    def _load_total_supply_amount_from_storage(self,
-                                               context: Optional['IconScoreContext'],
-                                               storage: IcxStorage) -> None:
+    def _load_total_supply_amount_from_storage(
+            self,
+            context: Optional['IconScoreContext'],
+            storage: IcxStorage) -> None:
         """Load total coin supply amount from state db
 
         :param context:
@@ -169,130 +173,57 @@ class IcxEngine(object):
         """
         return self._total_supply_amount
 
-    def transfer_with_fee(self,
-                          _context: 'IconScoreContext',
-                          _from: Address,
-                          _to: Address,
-                          _amount: int,
-                          _fee: int) -> bool:
-        """Support coin transfer based on protocol v2
-
-        :param _context:
-        :param _from:
-        :param _to:
-        :param _amount:
-        :param _fee:
-        :return:
-        """
-        if _context.readonly:
-            raise InvalidRequestException(
-                'icx transfer is not allowed on readonly context')
-
-        return self._transfer_with_fee(_context, _from, _to, _amount, _fee)
-
-    def _transfer_with_fee(self,
-                           context: 'IconScoreContext',
-                           _from: Address,
-                           _to: Address,
-                           _amount: int,
-                           _fee: int) -> bool:
-        """Transfer the amount of icx to an account indicated by _to address
+    def charge_fee(self,
+                   context: 'IconScoreContext',
+                   from_: Address,
+                   fee: int) -> None:
+        """Charge a fee for a tx
+        It MUST NOT raise any exceptions
 
         :param context:
-        :param _from: (string)
-        :param _to: (string)
-        :param _amount: (int) the amount of coin in loop to transfer
-        :param _fee: (int) transaction fee (0.01 icx)
-        :exception: ICXException
+        :param from_:
+        :param fee:
+        :return:
         """
-        _fee_treasury_address = self._fee_treasury_address
-
-        Logger.debug(f'from: {_from} '
-                     f'to: {_to} '
-                     f'amount: {_amount} '
-                     f'fee: {_fee}',
-                     ICX_LOG_TAG)
-
-        if _from == _to:
-            raise InvalidParamsException('match _from and _to address')
-        if _from == _fee_treasury_address:
-            raise InvalidParamsException('match _from and fee_treasure address')
-        if _to == _fee_treasury_address:
-            raise InvalidParamsException('match _to and fee_treasure address')
-        if _fee != FIXED_FEE:
-            raise InvalidParamsException('invalid fee')
-
-        # get account info from state db.
-        from_account = self._storage.get_account(context, _from)
-        to_account = self._storage.get_account(context, _to)
-        fee_account = self._storage.get_account(context, _fee_treasury_address)
-
-        Logger.info('before:  '
-                    f'from: {_from} '
-                    f'from_amount: {from_account.icx} '
-                    f'to: {_to} '
-                    f'to_amount: {to_account.icx} '
-                    f'fee_treasury: {fee_account.address} '
-                    f'fee_amount: {fee_account.icx}',
-                    ICX_LOG_TAG)
-
-        from_account.withdraw(_amount + _fee)
-        to_account.deposit(_amount)
-        fee_account.deposit(_fee)
-
-        # write newly updated state into state db.
-        self._storage.put_account(context, from_account.address, from_account)
-        self._storage.put_account(context, to_account.address, to_account)
-        self._storage.put_account(context, fee_account.address, fee_account)
-
-        Logger.info('after: '
-                    f'from: {_from} '
-                    f'from_amount: {from_account.icx} '
-                    f'to: {_to} '
-                    f'to_amount: {to_account.icx} '
-                    f'fee_treasury: {fee_account.address} '
-                    f'fee_amount: {fee_account.icx}',
-                    ICX_LOG_TAG)
-        Logger.debug('send_transaction() end', ICX_LOG_TAG)
-
-        return True
+        self._transfer(context, from_, self._fee_treasury_address, fee)
 
     def transfer(self,
-                 _context: 'IconScoreContext',
-                 _from: Address,
-                 _to: Address,
-                 _amount: int) -> bool:
-        if _context.readonly:
+                 context: 'IconScoreContext',
+                 from_: Address,
+                 to: Address,
+                 amount: int) -> bool:
+        if context.readonly:
             raise InvalidRequestException(
                 'icx transfer is not allowed on readonly context')
 
-        if _amount < 0:
-            raise InvalidParamsException('amount is less than zero')
+        if amount < 0:
+            raise InvalidParamsException('Amount is less than zero')
 
-        return self._transfer(_context, _from, _to, _amount)
+        return self._transfer(context, from_, to, amount)
 
     def _transfer(self,
                   context: 'IconScoreContext',
-                  _from: Address,
-                  _to: Address,
-                  _amount: int) -> bool:
+                  from_: Address,
+                  to: Address,
+                  amount: int) -> bool:
         """Transfer the amount of icx to the account indicated by _to address
 
         :param context:
-        :param _from: icx sender
-        :param _to: icx receiver
-        :param _amount: the amount of coin in loop to transfer
+        :param from_: icx sender
+        :param to: icx receiver
+        :param amount: the amount of coin in loop to transfer
         """
-        if _from != _to and _amount > 0:
+        if from_ != to and amount > 0:
             # get account info from state db.
-            from_account = self._storage.get_account(context, _from)
-            to_account = self._storage.get_account(context, _to)
+            from_account = self._storage.get_account(context, from_)
+            to_account = self._storage.get_account(context, to)
 
-            from_account.withdraw(_amount)
-            to_account.deposit(_amount)
+            from_account.withdraw(amount)
+            to_account.deposit(amount)
 
             # write newly updated state into state db.
-            self._storage.put_account(context, from_account.address, from_account)
+            self._storage.put_account(
+                context, from_account.address, from_account)
             self._storage.put_account(context, to_account.address, to_account)
 
         return True

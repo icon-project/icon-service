@@ -109,7 +109,7 @@ class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
         self._factory = IconScoreContextFactory(max_size=1)
-        self._context = self._factory.create(IconScoreContextType.GENESIS)
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
         self._context.tx = Transaction('test_01', origin=create_address(AddressPrefix.EOA, b'owner'))
         self._context.block = Block(1, 'block_hash', 0, None)

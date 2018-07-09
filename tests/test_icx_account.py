@@ -64,11 +64,18 @@ class TestAccount(unittest.TestCase):
 
         # wrong value
         self.assertRaises(InvalidParamsException, account1.deposit, -10)
-        self.assertRaises(InvalidParamsException, account1.deposit, 0)
+
+        # 0 transfer is possible
+        old = account1.icx
+        account1.deposit(0)
+        self.assertEqual(old, account1.icx)
 
         self.assertRaises(InvalidParamsException, account1.withdraw, -11234)
-        self.assertRaises(InvalidParamsException, account1.withdraw, 0)
         self.assertRaises(InvalidParamsException, account1.withdraw, 1)
+
+        old = account1.icx
+        account1.withdraw(0)
+        self.assertEqual(old, account1.icx)
 
     def test_account_from_bytes_to_bytes(self):
         account = Account()

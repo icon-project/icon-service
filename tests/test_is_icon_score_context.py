@@ -47,7 +47,7 @@ class TestIconScoreContextFactory(unittest.TestCase):
         self.assertEqual(IconScoreContextType.INVOKE, context.type)
         self.factory.destroy(context)
 
-        context = factory.create(IconScoreContextType.GENESIS)
+        context = factory.create(IconScoreContextType.DIRECT)
         self.assertEqual(0, len(factory._queue))
-        self.assertEqual(IconScoreContextType.GENESIS, context.type)
+        self.assertEqual(IconScoreContextType.DIRECT, context.type)
         self.factory.destroy(context)
