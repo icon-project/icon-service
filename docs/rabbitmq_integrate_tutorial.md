@@ -30,7 +30,8 @@ loopchain, iconservice 실행
 ============
 
 * rabbitmq서버가 실행되고 있어야 한다.
-* 배포 파일: line_test.tar.gz
+* 아래 서비스 실행 순서를 준수해야 한다.
+    - radiostation, iconservice, loopchain, restserver 순서로 실행 필요
 
 ## 라이브러리 및 실행 환경 설정
 
@@ -44,17 +45,24 @@ $ cd line_test
 $ virtualenv -p python3 venv
 $ source venv/bin/activate
 
-$ pip install ./lib/earlgrey-0.0.0-py3-none-any.whl
-$ pip install ./lib/iconservice-0.9.2-py3-none-any.whl
-$ pip install ./lib/tbears-0.9.2-py3-none-any.whl
-$ pip install ./lib/loopchain-1.21.0-py3-none-any.whl
+$ pip install ./lib/earlgrey-x.x.x-py3-none-any.whl
+$ pip install ./lib/iconservice-x.x.x-py3-none-any.whl
+$ pip install ./lib/tbears-x.x.x-py3-none-any.whl
+$ pip install ./lib/loopchain-x.x.x-py3-none-any.whl
+$ pip install ./lib/rest-x.x.x-py3-none-any.whl
 ```
 
-## radio station 서비스 실행
+## radiostation 서비스 실행
 
 ```bash
 # -d 디버그, -o 설정파일
 $ loop rs -d -o ./conf/loop_rs_conf.json
+```
+
+## iconservice 서비스 실행
+
+```bash
+$ iconservice start -c ./conf/icon_conf1.json
 ```
 
 ## loopchain 서비스 실행
@@ -64,10 +72,10 @@ $ loop rs -d -o ./conf/loop_rs_conf.json
 $ loop peer -d -r 127.0.0.1:7102 -o ./conf/loop_peer_conf1.json
 ```
 
-## iconservice 서비스 실행
+## restserver 서비스 실행
 
 ```bash
-$ iconservice start -c ./conf/icon_conf1.json
+$ rest start -o ./conf/rest_config.json
 ```
 
 ## tbears samples 코드 생성
@@ -82,4 +90,3 @@ $ tbears samples
 # 키체인 암호 : qwer1234%
 $ tbears deploy sample_token -k ./icon_keys/key1
 ```
-

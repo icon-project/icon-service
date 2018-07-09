@@ -1,5 +1,17 @@
 # ChangeLog
 
+## 0.9.3 - 2018-07-09
+
+### iconservice
+
+* 수수료 차감 기능 구현
+* icx_sendTransaction에 version 필드 추가 (icx_sendTransaction API 문서 참조)
+* TransactionResult에 새로운 항목 추가 (icx_getTransactionResult API 문서 참조)
+
+### 기타
+
+* loopchain에서 RestServer를 별도의 패키지로 분리
+
 ## 0.9.2 - 2018-06-29
 
 * loopchain + iconservice 연동

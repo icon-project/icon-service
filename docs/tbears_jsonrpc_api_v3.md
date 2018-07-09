@@ -369,12 +369,14 @@ SCORE 함수 실행 결과
     "id": 1234,
     "result": {
         "status": "0x1",
+        "to": "cx0000000000000000000000000000000000000000",
         "txHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
         "txIndex": "0x1",
         "blockHeight": "0x1234",
         "blockHash": "0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
         "cumulativeStepUsed": "0x1234",
         "stepUsed": "0x1234",
+        "stepPrice": "0x5678",
         "scoreAddress": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
     }
 }
@@ -389,13 +391,14 @@ SCORE 함수 실행 결과
             "code": "0x7d00",
             "message": "Out of balance"
         },
+        "to": "hx5bfdb090f43a808005ffc27c25b213145e80b7cd",
         "txHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
         "txIndex": "0x1",
         "blockHeight": "0x1234",
         "blockHash": "0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
         "cumulativeStepUsed": "0x1234",
         "stepUsed": "0x1234",
-        "scoreAddress": null
+        "stepPrice": "0x5678"
     }
 }
 
@@ -405,7 +408,7 @@ SCORE 함수 실행 결과
     "id": 1234,
     "error": {
         "code": -32602,
-        "message": "Invalid params txHash"
+        "message": "Invalid txHash"
     }
 }
 ```
