@@ -6,7 +6,6 @@ requires = [
     'plyvel',
     'jsonpickle',
     'coloredlogs',
-    'aio_pika',
     'setproctitle'
 ]
 
