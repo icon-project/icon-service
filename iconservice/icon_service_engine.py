@@ -713,8 +713,11 @@ class IconServiceEngine(object):
         block = self._precommit_state.block_batch.block
 
         if block.hash != precommit_block.hash\
-                or block.height == precommit_block.height:
-            raise ServerErrorException('mismatch block')
+                or block.height != precommit_block.height:
+            raise ServerErrorException(
+                f'block({block.height}, {block.hash.hex()}) != '
+                f'precommit block({precommit_block.height}, '
+                f'{precommit_block.hash.hex()})')
 
     def rollback(self) -> None:
         """Throw away a precommit state
