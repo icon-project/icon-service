@@ -4,7 +4,7 @@
 
 ### iconservice
 
-* 수수료 차감 기능 구현
+* 수수료 차감 기능 구현 (기본 설정: 비활성화)
 * icx_sendTransaction에 version 필드 추가 (icx_sendTransaction API 문서 참조)
 * TransactionResult에 새로운 항목 추가 (icx_getTransactionResult API 문서 참조)
 
