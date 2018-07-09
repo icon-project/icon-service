@@ -5,6 +5,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:----|:-----:|:----|
+| 2018.07.09 | 남궁재창 | getStepPrice 추가 |
 | 2018.07.03 | 남궁재창 | Eventlog (Accepted, Rejected) 추가 |
 | 2018.06.22 | 조치원 | AddAuditor, RemoveAuditor 추가 |
 | 2018.06.21 | 조치원 | 초기 작성 |
@@ -32,6 +33,7 @@ Governance SCORE가 제공하는 API를 설명한다.
 
 * Query methods
     * [getScoreStatus](#getscorestatus)
+    * [getStepPrice](#getstepprice)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -179,6 +181,50 @@ Governance SCORE가 제공하는 API를 설명한다.
     }
 }
 ```
+
+## getStepPrice
+
+* Returns the current step price in loop.
+
+### Parameters
+
+None
+
+### Returns
+
+`T_INT` - integer of the current step price in loop (1 ICX == 10^18 loop).
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_call",
+    "params": {
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
+        "to": "cx0000000000000000000000000000000000000001",
+        "dataType": "call",
+        "data": {
+            "method": "getStepPrice",
+            "params": {}
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": "0xe8d4a51000" // 1000000000000
+}
+```
+
 
 # Invoke Methods
 
