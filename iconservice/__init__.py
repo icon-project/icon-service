@@ -21,7 +21,7 @@ from .iconscore.icon_score_base import *
 from .logger import Logger
 
 # Version of iconservice.
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 
 
 if __name__ == '__main__':
