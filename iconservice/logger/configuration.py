@@ -14,6 +14,8 @@
 
 import logging
 import coloredlogs
+import os
+
 from enum import IntEnum
 from logging.handlers import TimedRotatingFileHandler
 
@@ -36,7 +38,14 @@ class LogConfiguration:
         self.__log_format = None
 
     def log_file_path(self, log_file_path: str):
+        self._ensure_dir(log_file_path)
         self.__log_file_path = log_file_path
+
+    @staticmethod
+    def _ensure_dir(file_path):
+        directory = os.path.dirname(file_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
     log_file_path = property(None, log_file_path)
 
