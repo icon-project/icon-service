@@ -186,7 +186,7 @@ class IconScoreContext(object):
 
         self.msg = Message(sender=addr_from)
         self.current_address = addr_to
-        icon_score = self.icon_score_mapper.get_icon_score(addr_to)
+        icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
                           addr_from=addr_from, arg_params=arg_params, kw_params=kw_params)

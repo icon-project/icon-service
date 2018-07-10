@@ -175,11 +175,7 @@ class IconScoreDeployEngine(ContextContainer):
 
         db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
 
-        try:
-            self._put_context(context)
-            score = self._icon_score_mapper.get_icon_score(icon_score_address)
-        finally:
-            self._delete_context(context)
+        score = self._icon_score_mapper.get_icon_score(context, icon_score_address)
 
         if not db_exist:
             self._call_on_init_of_score(

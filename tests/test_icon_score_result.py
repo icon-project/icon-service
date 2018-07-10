@@ -27,6 +27,7 @@ from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_inner_service import MakeResponse, IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
 from iconservice.iconscore.icon_score_context import IconScoreContext, \
@@ -54,6 +55,7 @@ class TestTransactionResult(unittest.TestCase):
         step_counter_factory = IconScoreStepCounterFactory()
         step_counter_factory.get_step_unit = MagicMock(return_value=6000)
         self._icon_service_engine._step_counter_factory = step_counter_factory
+        self._icon_service_engine._icon_pre_validator = Mock(spec=IconPreValidator)
 
         self._mock_context = Mock(spec=IconScoreContext)
         self._mock_context.attach_mock(Mock(spec=Transaction), "tx")
