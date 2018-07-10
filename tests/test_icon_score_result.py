@@ -55,7 +55,8 @@ class TestTransactionResult(unittest.TestCase):
         step_counter_factory = IconScoreStepCounterFactory()
         step_counter_factory.get_step_unit = MagicMock(return_value=6000)
         self._icon_service_engine._step_counter_factory = step_counter_factory
-        self._icon_service_engine._icon_pre_validator = Mock(spec=IconPreValidator)
+        self._icon_service_engine._icon_pre_validator = \
+            Mock(spec=IconPreValidator)
 
         self._mock_context = Mock(spec=IconScoreContext)
         self._mock_context.attach_mock(Mock(spec=Transaction), "tx")
@@ -65,15 +66,17 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.traces = []
         self._mock_context.attach_mock(Mock(spec=int), "cumulative_step_used")
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
-        self._mock_context.attach_mock(Mock(spec=IconScoreStepCounter), "step_counter")
+        self._mock_context.attach_mock(
+            Mock(spec=IconScoreStepCounter), "step_counter")
         self._mock_context.attach_mock(Mock(spec=Address), "current_address")
 
     def tearDown(self):
         self._icon_service_engine = None
         self._mock_context = None
 
-    """TODO
-    def test_tx_success(self):
+    @patch('iconservice.icon_service_engine.IconServiceEngine.'
+           '_charge_transaction_fee')
+    def test_tx_success(self, IconServiceEngine_charge_transaction_fee):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
         tx_index = Mock(spec=int)
@@ -90,9 +93,16 @@ class TestTransactionResult(unittest.TestCase):
             'nonce': 1
         }
 
+        def intercept_charge_transaction_fee(*args, **kwargs):
+            return Mock(spec=int), Mock(spec=int)
+
+        IconServiceEngine_charge_transaction_fee.side_effect = \
+            intercept_charge_transaction_fee
+
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, params)
 
+        IconServiceEngine_charge_transaction_fee.assert_called()
         self.assertEqual(1, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
@@ -100,10 +110,10 @@ class TestTransactionResult(unittest.TestCase):
         camel_dict = tx_result.to_dict(to_camel_case)
         self.assertNotIn('failure', camel_dict)
         self.assertNotIn('scoreAddress', camel_dict)
-    """
 
-    """TODO
-    def test_tx_failure(self):
+    @patch('iconservice.icon_service_engine.IconServiceEngine.'
+           '_charge_transaction_fee')
+    def test_tx_failure(self, IconServiceEngine_charge_transaction_fee):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
@@ -115,19 +125,26 @@ class TestTransactionResult(unittest.TestCase):
         to_ = Mock(spec=Address)
         tx_index = Mock(spec=int)
         self._mock_context.tx.attach_mock(tx_index, "index")
+
+        def intercept_charge_transaction_fee(*args, **kwargs):
+            return Mock(spec=int), Mock(spec=int)
+
+        IconServiceEngine_charge_transaction_fee.side_effect = \
+            intercept_charge_transaction_fee
+
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
 
+        IconServiceEngine_charge_transaction_fee.assert_called()
         self.assertEqual(0, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
-        
         self.assertIsNone(tx_result.score_address)
         camel_dict = tx_result.to_dict(to_camel_case)
         self.assertNotIn('scoreAddress', camel_dict)
-    """
 
-    """TODO
-    def test_install_result(self):
+    @patch('iconservice.icon_service_engine.IconServiceEngine.'
+           '_charge_transaction_fee')
+    def test_install_result(self, IconServiceEngine_charge_transaction_fee):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=True), 'is_data_type_supported')
 
@@ -137,6 +154,13 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.tx.timestamp = 0
         self._mock_context.tx.origin = from_
         self._mock_context.tx.nonce = None
+
+        def intercept_charge_transaction_fee(*args, **kwargs):
+            return Mock(spec=int), Mock(spec=int)
+
+        IconServiceEngine_charge_transaction_fee.side_effect = \
+            intercept_charge_transaction_fee
+
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context,
             {
@@ -152,13 +176,13 @@ class TestTransactionResult(unittest.TestCase):
             }
         )
 
+        IconServiceEngine_charge_transaction_fee.assert_called()
         self.assertEqual(1, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
         self.assertIsNotNone(tx_result.score_address)
         camel_dict = tx_result.to_dict(to_camel_case)
         self.assertNotIn('failure', camel_dict)
-    """
 
     def test_sample_result(self):
         from_ = Address.from_data(AddressPrefix.EOA, b'from')
@@ -214,13 +238,14 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['logsBloom'].startswith('0x'))
         self.assertTrue(converted_result['status'].startswith('0x'))
 
-    """TODO
     @patch('iconservice.icon_service_engine.IconServiceEngine.'
            '_handle_score_invoke')
     @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
+    @patch('iconservice.icx.icx_engine.IcxEngine.get_balance')
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
     def test_request(self,
                      IcxEngine_open,
+                     IcxEngine_get_balance,
                      DatabaseFactory_create_by_name,
                      IconServiceEngine__handle_score_invoke):
 
@@ -234,6 +259,11 @@ class TestTransactionResult(unittest.TestCase):
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
 
+        def intercept_get_balance(*args, **kwargs):
+            return 100e18
+
+        IcxEngine_get_balance.side_effect = intercept_get_balance
+
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = inner_task._icon_service_engine._icx_context_db
@@ -245,6 +275,7 @@ class TestTransactionResult(unittest.TestCase):
 
         request = self.create_req(from_, to_)
         response = inner_task._invoke(request)
+        IcxEngine_get_balance.assert_called()
         IconServiceEngine__handle_score_invoke.assert_called()
 
         step_total = 0
@@ -261,7 +292,6 @@ class TestTransactionResult(unittest.TestCase):
             self.assertIn('stepUsed', result)
             self.assertEqual(1, len(result['eventLogs']))
             self.assertEqual(step_total, int(result['cumulativeStepUsed'], 16))
-    """
 
     @staticmethod
     def create_req(from_, to_):

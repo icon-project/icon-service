@@ -19,7 +19,7 @@
 
 import unittest
 from typing import List
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address
 from iconservice.base.block import Block
@@ -27,6 +27,7 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, InterfaceScore, external, interface, RevertException, \
     IconScoreException, ExceptionCode
@@ -121,8 +122,9 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(to_, trace.data[2][0])
         self.assertEqual(amount, trace.data[2][1])
 
-    """TODO
-    def test_revert(self):
+    @patch('iconservice.icon_service_engine.IconServiceEngine.'
+           '_charge_transaction_fee')
+    def test_revert(self, IconServiceEngine_charge_transaction_fee):
         context = ContextContainer._get_context()
 
         self._icon_service_engine = IconServiceEngine()
@@ -132,11 +134,19 @@ class TestTrace(unittest.TestCase):
 
         self._icon_service_engine._icon_score_engine = Mock(
             spec=IconScoreEngine)
+        self._icon_service_engine._icon_pre_validator = Mock(
+            spec=IconPreValidator)
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
 
         context.attach_mock(to_, "current_address")
+
+        def intercept_charge_transaction_fee(*args, **kwargs):
+            return Mock(spec=int), Mock(spec=int)
+
+        IconServiceEngine_charge_transaction_fee.side_effect = \
+            intercept_charge_transaction_fee
 
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
@@ -151,16 +161,17 @@ class TestTrace(unittest.TestCase):
             context, {'version': 3, 'from': from_, 'to': to_})
         self.assertEqual(0, tx_result.status)
 
+        IconServiceEngine_charge_transaction_fee.assert_called()
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         self.assertEqual(TraceType.REVERT, trace.trace)
         self.assertEqual(to_, trace.score_address)
         self.assertEqual(code, trace.data[0])
         self.assertEqual(reason, trace.data[1])
-    """
 
-    """TODO
-    def test_throw(self):
+    @patch('iconservice.icon_service_engine.IconServiceEngine.'
+           '_charge_transaction_fee')
+    def test_throw(self, IconServiceEngine_charge_transaction_fee):
         context = ContextContainer._get_context()
 
         self._icon_service_engine = IconServiceEngine()
@@ -170,11 +181,19 @@ class TestTrace(unittest.TestCase):
 
         self._icon_service_engine._icon_score_engine = Mock(
             spec=IconScoreEngine)
+        self._icon_service_engine._icon_pre_validator = Mock(
+            spec=IconPreValidator)
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
 
         context.attach_mock(to_, "current_address")
+
+        def intercept_charge_transaction_fee(*args, **kwargs):
+            return Mock(spec=int), Mock(spec=int)
+
+        IconServiceEngine_charge_transaction_fee.side_effect = \
+            intercept_charge_transaction_fee
 
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
@@ -189,13 +208,13 @@ class TestTrace(unittest.TestCase):
             context, {'version': 3, 'from': from_, 'to': to_})
         self.assertEqual(0, tx_result.status)
 
+        IconServiceEngine_charge_transaction_fee.assert_called()
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         self.assertEqual(TraceType.THROW, trace.trace)
         self.assertEqual(to_, trace.score_address)
         self.assertEqual(code, trace.data[0])
         self.assertEqual(error, trace.data[1])
-    """
 
     def test_to_dict_camel(self):
         context = ContextContainer._get_context()
