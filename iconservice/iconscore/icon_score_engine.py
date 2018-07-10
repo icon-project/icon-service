@@ -85,18 +85,8 @@ class IconScoreEngine(ContextContainer):
         :param icon_score_address:
         """
 
-        try:
-            self._put_context(context)
-
-            icon_score = self.__icon_score_info_mapper.get_icon_score(
-                icon_score_address)
-            if icon_score is None:
-                raise ServerErrorException(
-                    f'SCORE not found: {icon_score_address}')
-
-            return icon_score.get_api()
-        finally:
-            self._delete_context(context)
+        icon_score = self._get_icon_score(context, icon_score_address)
+        return icon_score.get_api()
 
     def _call(self,
               context: 'IconScoreContext',
@@ -111,17 +101,11 @@ class IconScoreEngine(ContextContainer):
         method: str = data['method']
         kw_params: dict = data['params']
 
+        icon_score = self._get_icon_score(context, icon_score_address)
+
         try:
             self._put_context(context)
-
-            icon_score = self.__icon_score_info_mapper.get_icon_score(
-                icon_score_address)
-            if icon_score is None:
-                raise ServerErrorException(
-                    f'SCORE not found: {icon_score_address}')
-
-            return call_method(
-                icon_score=icon_score, func_name=method, kw_params=kw_params)
+            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
         finally:
             self._delete_context(context)
 
@@ -134,13 +118,20 @@ class IconScoreEngine(ContextContainer):
         :param icon_score_address:
         """
 
+        icon_score = self._get_icon_score(context, icon_score_address)
+
         try:
             self._put_context(context)
-            icon_score = self.__icon_score_info_mapper.get_icon_score(
-                icon_score_address)
             call_fallback(icon_score)
         finally:
             self._delete_context(context)
+
+    def _get_icon_score(self, context: 'IconScoreContext',icon_score_address: 'Address'):
+        icon_score = self.__icon_score_info_mapper.get_icon_score(context, icon_score_address)
+        if icon_score is None:
+            raise ServerErrorException(
+                f'SCORE not found: {icon_score_address}')
+        return icon_score
 
     def commit(self, context: 'IconScoreContext') -> None:
         """It is called when the previous block has been confirmed

@@ -68,8 +68,7 @@ class IconScoreDeployEngine(ContextContainer):
         self._icx_storage = icx_storage
         self._icon_score_mapper = icon_score_mapper
 
-        self._deferred_tasks = []
-        self._icon_score_deployer: IconScoreDeployer =\
+        self._icon_score_deployer: IconScoreDeployer = \
             IconScoreDeployer(icon_score_root_path)
 
     def is_flag_on(self, flag: 'Flag') -> bool:
@@ -89,7 +88,7 @@ class IconScoreDeployEngine(ContextContainer):
             otherwise score address to update
         :param data: calldata
         """
-        deploy_type: 'DeployType' =\
+        deploy_type: 'DeployType' = \
             DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
         content_type = data.get('contentType')
 
@@ -104,80 +103,35 @@ class IconScoreDeployEngine(ContextContainer):
             raise InvalidParamsException(
                 f'Invalid contentType: {content_type}')
 
-        self._put_deferred_task(
-            context=context,
-            deploy_type=deploy_type,
-            icon_score_address=icon_score_address,
-            data=data)
+        try:
+            self.write_score_deploy_info(context, deploy_type, icon_score_address, data)
 
-    def _put_deferred_task(self,
-                           context: 'IconScoreContext',
-                           deploy_type: 'DeployType',
-                           icon_score_address: 'Address',
-                           data: dict) -> None:
-        """Queue a deferred task to install, update or remove a score
-
-        :param context:
-        :param icon_score_address:
-        :param data:
-        """
-        task = self._Task(
-            block=context.block,
-            tx=context.tx,
-            msg=context.msg,
-            deploy_type=deploy_type,
-            icon_score_address=icon_score_address,
-            data=data)
-
-        self._deferred_tasks.append(task)
+            if deploy_type == DeployType.INSTALL:
+                # install a SCORE
+                self._install_on_commit(context, icon_score_address, data)
+            else:
+                self._update_on_commit(context, icon_score_address, data)
+        except BaseException as e:
+            Logger.exception(e)
 
     def commit(self, context: 'IconScoreContext') -> None:
-        """It is called when the previous block has been confirmed
+        pass
 
-        Execute a deferred tasks in queue (install, update or remove a score)
-
-        Process Order
-        - Install IconScore package file to file system
-        - Load IconScore wrapper
-        - Create Database
-        - Create an IconScore instance with owner and database
-        - Execute IconScoreBase.genesis_invoke() only if task.type is 'install'
-        - Add IconScoreInfo to IconScoreInfoMapper
-        - Write the owner of score to icx database
-
-        """
-        for task in self._deferred_tasks:
-            context.block = task.block
-            context.tx = task.tx
-            context.msg = task.msg
-            deploy_type = task.deploy_type
-            icon_score_address = task.icon_score_address
-            data = task.data
-
-            try:
-                self.write_score_deploy_info(task)
-
-                if deploy_type == DeployType.INSTALL:
-                    # install a SCORE
-                    self._install_on_commit(context, icon_score_address, data)
-                else:
-                    self._update_on_commit(context, icon_score_address, data)
-            except BaseException as e:
-                Logger.exception(e)
-
-        self._deferred_tasks.clear()
-
-    def write_score_deploy_info(self, task) -> None:
+    def write_score_deploy_info(self,
+                                context: 'IconScoreContext',
+                                deploy_type: 'DeployType',
+                                icon_score_address: 'Address',
+                                data: dict) -> None:
         """Write score deploy info to context db
         """
-        params = task.data.get('params', {})
+        params = data.get('params', {})
 
         info = IconScoreDeployInfo(
-            score_address=task.icon_score_address,
-            owner=task.tx.origin,
-            tx_hash=task.tx.hash,
+            score_address=icon_score_address,
+            owner=context.tx.origin,
+            tx_hash=context.tx.hash,
             params=params,
-            deploy_type=DeployType.INSTALL)
+            deploy_type=deploy_type)
 
         self._score_deploy_storage.put_score_deploy_info(info)
 
@@ -220,7 +174,8 @@ class IconScoreDeployEngine(ContextContainer):
             transaction_index=context.tx.index)
 
         db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
-        score = self._icon_score_mapper.get_icon_score(icon_score_address)
+
+        score = self._icon_score_mapper.get_icon_score(context, icon_score_address)
 
         if not db_exist:
             self._call_on_init_of_score(
@@ -266,4 +221,4 @@ class IconScoreDeployEngine(ContextContainer):
 
         Rollback install, update or remove tasks cached in the previous block
         """
-        self._deferred_tasks.clear()
+        pass

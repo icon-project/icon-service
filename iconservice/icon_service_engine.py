@@ -694,7 +694,7 @@ class IconServiceEngine(object):
             if address == ICX_ENGINE_ADDRESS:
                 context_db = self._icx_context_db
             else:
-                icon_score = self._icon_score_mapper.get_icon_score(address)
+                icon_score = self._icon_score_mapper.get_icon_score(context, address)
                 context_db = icon_score.db._context_db
 
             context_db.write_batch(context=None, states=block_batch[address])

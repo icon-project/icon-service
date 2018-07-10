@@ -336,8 +336,6 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_rollback(self):
         self._engine.rollback()
         self.assertIsNone(self._engine._precommit_state)
-        self.assertEqual(
-            0, len(self._engine._icon_score_deploy_engine._deferred_tasks))
         
 
 if __name__ == '__main__':
