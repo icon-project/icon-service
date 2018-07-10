@@ -26,7 +26,7 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
       VER=$(ls dist | sed -nE 's/[^-]+-([0-9\.]+)-.*/\1/p')
 
       mkdir -p $VER
-      cp dist/*$VER*.whl docs/CHANGELOG.md docs/dapp_guide.md docs/tbears_jsonrpc_api_v3.md $VER
+      cp dist/*$VER*.whl docs/CHANGELOG.md docs/dapp_guide.md docs/tbears_jsonrpc_api_v3.md docs/tbears_tutorial.md $VER
 
       if [[ -z "${AWS_ACCESS_KEY_ID}" || -z "${AWS_SECRET_ACCESS_KEY}" ]]; then
         echo "Error: AWS keys should be in your environment"

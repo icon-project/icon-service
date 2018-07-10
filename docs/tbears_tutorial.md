@@ -4,6 +4,7 @@
 
 | 일시 | 버전 | 작성자 | 비고 |
 |:-----|:----|:-----:|:-----|
+| 2018.07.10 | 0.9.3 | 조치원 | earlgrey 패키지 설명 추가 |
 | 2018.07.06 | 0.9.3 | 김인원 | 설정 파일 내용 변경 |
 | 2018.06.12 | 0.9.2 | 조치원 | Markdown 형식으로 변경 |
 | 2018.06.11 | 0.9.1 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
@@ -45,6 +46,7 @@ $ virtualenv -p python3 .
 $ source bin/activate
 
 # ICON SCORE 개발 도구 설치
+(work) $ pip install earlgrey-x.x.x-py3-none-any.whl
 (work) $ pip install iconservice-x.x.x-py3-none-any.whl
 (work) $ pip install tbears-x.x.x-py3-none-any.whl
 
