@@ -5,6 +5,7 @@ IconServiceEngine과 관련된 JSON-RPC API를 설명한다.
 
 | 일시 | 작성자 | 비고 |
 |:-----|:-----:|:----|
+| 2018.07.11 | 이용우 | icx_getTransactionResult에 to, eventLogs, logsBloom 속성 추가 |
 | 2018.06.29 | 박지윤 | 일부 API 오류 수정 |
 | 2018.06.12 | 조치원 | 일부 표 오류 수정 |
 | 2018.06.08 | 조치원 | 에러 코드표 추가, icx_getTransactionResult 내용 수정 |
@@ -341,6 +342,7 @@ SCORE 함수 실행 결과
 | KEY | VALUE 형식 | 설명 |
 |:----|:----------|:-----|
 | status | [T_INT](#T_INT) | 1 (success), 0 (failure) |
+| to | [T_ADDR_EOA](#T_ADDR_EOA) or<br/> [T_ADDR_SCORE](#T_ADDR_SCORE) | transaction 의 수신 address |
 | failure | T_DICT | status가 0(failure)인 경우에만 존재. code(str), message(str) 속성 포함 |
 | txHash | [T_HASH](#T_HASH) | transaction hash |
 | txIndex | [T_INT](#T_INT) | transaction index in a block |
@@ -349,6 +351,8 @@ SCORE 함수 실행 결과
 | cumulativeStepUsed | [T_INT](#T_INT) | 블록 내에서 해당 transaction을 수행하기까지 소비된 step의 누적량 |
 | stepUsed | [T_INT](#T_INT) | 해당 transaction을 수행하는데 소비된 step 양 |
 | scoreAddress | [T_ADDR_SCORE](#T_ADDR_SCORE) | 해당 transaction이 SCORE을 생성했을 경우 해당 SCORE 주소 (optional) |
+| eventLogs | [T_ARRAY](#T_ARRAY) | 해당 transaction의 실행 중에 발생한 EventLog의 목록 |
+| logsBloom | [T_BIN_DATA](#T_BIN_DATA) | 발생한 EventLog의 Data중 인덱싱된 Data의 Bloom Filter 값 |
 
 ### Example
 
@@ -377,7 +381,20 @@ SCORE 함수 실행 결과
         "cumulativeStepUsed": "0x1234",
         "stepUsed": "0x1234",
         "stepPrice": "0x5678",
-        "scoreAddress": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+        "scoreAddress": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
+        "eventLogs":[
+            {
+                "scoreAddress":"cx4d6f646441a3f9c9b91019c9b98e3c342cceb114",
+                "indexed":[
+                    "Transfer(Address,Address,int)",
+                    "hx4873b94352c8c1f3b2f09aaeccea31ce9e90bd31",
+                    "hx0000000000000000000000000000000000000000",
+                    "0x8ac7230489e80000"
+                ],
+                "data":[]
+            }
+        ],
+        "logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000002000000000021000000000000000000000000000000000000000000000000003000000000031400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000"
     }
 }
 
