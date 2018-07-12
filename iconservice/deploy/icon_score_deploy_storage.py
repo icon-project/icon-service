@@ -311,7 +311,7 @@ class IconScoreDeployStorage(object):
         :return:
         """
 
-        key = deploy_info.score_address.to_bytes()
+        key = b'di' + deploy_info.score_address.to_bytes()
         value = deploy_info.to_bytes()
         self._db.put(context, key, value)
 
