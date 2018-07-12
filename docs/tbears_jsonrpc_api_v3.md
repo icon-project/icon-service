@@ -438,6 +438,7 @@ SCORE 함수 실행 결과
 * 새로운 SCORE를 install한다.
 * to 주소가 가리키는 SCORE를 update 한다.
 * to 주소가 가리키는 SCORE의 함수를 호출한다.
+* 메시지를 전송한다.
 * 상태 전이가 발생한다.
 
 ### Parameters
@@ -578,7 +579,7 @@ SCORE 함수 실행 결과
 }
 ```
 
-* 메시지
+* 메시지 전송
 
 ```json
 // Request
@@ -592,6 +593,7 @@ SCORE 함수 실행 결과
         "to": "hxbe258ceb872e08851f1f59694dac2558708ece11",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
+        "nid": "0x3fcb",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "message",
