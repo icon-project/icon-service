@@ -24,7 +24,7 @@ import asyncio
 import os
 
 from iconservice.icon_inner_service import IconScoreInnerTask
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, ADMIN_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from tests import create_block_hash, create_address, create_tx_hash
 
 from typing import TYPE_CHECKING
@@ -189,6 +189,73 @@ class TestIconServiceEngine(unittest.TestCase):
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
         to_addr = ZERO_SCORE_ADDRESS
+        step_limit = 1000
+        timestamp = 12345
+        nonce = 1
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
+        request_params = {
+            "version": hex(version),
+            "from": str(from_addr),
+            "to": str(to_addr),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(timestamp),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "deploy",
+            "data": install_data
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        tx_hash = create_tx_hash(b'txHash1')
+        request_params['txHash'] = bytes.hex(tx_hash)
+        tx = {
+            'method': method,
+            'params': request_params
+        }
+
+        response = await self._inner_task.validate_transaction(tx)
+
+        make_request = {'transactions': [tx]}
+        block_height: int = block_index
+        block_timestamp_us = int(time.time() * 10 ** 6)
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, 'big'))
+
+        make_request['block'] = {
+            'blockHeight': hex(block_height),
+            'blockHash': bytes.hex(block_hash),
+            'timestamp': hex(block_timestamp_us),
+            'prevBlockHash': prev_block_hash
+        }
+
+        precommit_request = {'blockHeight': hex(block_height),
+                             'blockHash': bytes.hex(block_hash)}
+
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
+        is_commit = False
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
+            is_commit = True
+            await self._inner_task.write_precommit_state(precommit_request)
+        else:
+            await self._inner_task.remove_precommit_state(precommit_request)
+
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
+
+    async def _update_governance_invoke(self, block_index: int, prev_block_hash: str):
+        root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+        path = os.path.join(root_path, f'tests/sample/governance')
+        install_data = {'contentType': 'application/tbears', 'content': path}
+
+        version = 3
+        from_addr = ADMIN_SCORE_ADDRESS
+        to_addr = GOVERNANCE_SCORE_ADDRESS
         step_limit = 1000
         timestamp = 12345
         nonce = 1
@@ -415,6 +482,23 @@ class TestIconServiceEngine(unittest.TestCase):
             }
             response = await self._icx_call(request)
             self.assertEqual(response, "0x3635c9adc5dea00000")
+
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(_run())
+        except RuntimeError:
+            pass
+
+    def test_update_governance(self):
+        async def _run():
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._update_governance_invoke(1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
 
         try:
             loop = asyncio.get_event_loop()
