@@ -32,16 +32,22 @@ class IconScoreEngine(ContextContainer):
     """Calls external functions provided by each IconScore
     """
 
-    def __init__(self,
-                 icx_storage: 'IcxStorage',
-                 icon_score_info_mapper: 'IconScoreInfoMapper') -> None:
+    def __init__(self) -> None:
         """Constructor
+        """
+        super().__init__()
+
+        self.__icx_storage = None
+        self.__icon_score_info_mapper = None
+
+    def open(self,
+             icx_storage: 'IcxStorage',
+             icon_score_info_mapper: 'IconScoreInfoMapper') -> None:
+        """open
 
         :param icx_storage: Get IconScore owner info from icx_storage
         :param icon_score_info_mapper:
         """
-        super().__init__()
-
         self.__icx_storage = icx_storage
         self.__icon_score_info_mapper = icon_score_info_mapper
 
@@ -126,7 +132,7 @@ class IconScoreEngine(ContextContainer):
         finally:
             self._delete_context(context)
 
-    def _get_icon_score(self, context: 'IconScoreContext',icon_score_address: 'Address'):
+    def _get_icon_score(self, context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = self.__icon_score_info_mapper.get_icon_score(context, icon_score_address)
         if icon_score is None:
             raise ServerErrorException(

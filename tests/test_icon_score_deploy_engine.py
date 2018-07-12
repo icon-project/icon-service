@@ -13,9 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import unittest
+from unittest.mock import Mock
 
+from iconservice.base.address import AddressPrefix
+from iconservice.base.address import ICX_ENGINE_ADDRESS
+from iconservice.base.block import Block
+from iconservice.base.message import Message
+from iconservice.base.transaction import Transaction
+from iconservice.database.factory import DatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.icon_score_manager import IconScoreManager
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.iconscore.icon_score_step import IconScoreStepCounter
+from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
+from iconservice.icx.icx_engine import IcxEngine
+from iconservice.icx.icx_storage import IcxStorage
+from iconservice.utils.bloom import BloomFilter
+from tests import rmtree, create_address, create_tx_hash, create_block_hash
+
+TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 class MockScore(object):
@@ -28,24 +50,75 @@ class MockScore(object):
 
 
 class TestScoreDeployEngine(unittest.TestCase):
+    _ROOT_SCORE_PATH = 'tests/score'
+    _TEST_DB_PATH = 'tests/test_db'
+
     def setUp(self):
-        icx_storage = None
-        icon_score_mapper = None
-        flags = IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
-        self.engine = IconScoreDeployEngine(
-            icon_score_root_path='./score',
-            flags=flags,
-            context_db=None,
-            icx_storage=icx_storage,
-            icon_score_mapper=icon_score_mapper)
+        db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+        score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+
+        self._tx_index = 0
+
+        self.__ensure_dir(db_path)
+        self._db_factory = DatabaseFactory(db_path)
+        self._icx_db = self._db_factory.create_by_name('icon_dex')
+        self._icx_db.address = ICX_ENGINE_ADDRESS
+        self._icx_storage = IcxStorage(self._icx_db)
+        self._score_deploy_engine = IconScoreDeployEngine()
+        self._deploy_storage = IconScoreDeployStorage(self._icx_db)
+
+        icon_score_manager = IconScoreManager(self._score_deploy_engine)
+        self._icon_score_loader = IconScoreLoader(score_path)
+        self._icon_score_mapper = IconScoreInfoMapper(
+            self._db_factory, icon_score_manager, self._icon_score_loader)
+
+        self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        self._score_deploy_engine.open(
+            icon_score_root_path=score_path,
+            flags=IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT,
+            icon_score_mapper=self._icon_score_mapper,
+            icon_deploy_storage=self._deploy_storage)
+
+        self._factory = IconScoreContextFactory(max_size=1)
+        self.make_context()
 
     def tearDown(self):
-        pass
+        try:
+            self._context = self._factory.create(IconScoreContextType.DIRECT)
+            self._factory.destroy(self._context)
+            self._icx_storage.close(self._context)
+        finally:
+            remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+            rmtree(remove_path)
+            remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+            rmtree(remove_path)
 
-    def test_call_on_init_of_score(self):
-        params = {
-            'test1': hex(100),
-            'test2': 'hello'
-        }
-        score = MockScore(self)
-        self.engine._call_on_init_of_score(None, score.on_install, params)
+    def make_context(self):
+        self._tx_index += 1
+        self._context = self._factory.create(IconScoreContextType.DIRECT)
+        self._context.msg = Message(self._addr1, 0)
+        self._context.tx = Transaction(
+            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, 'big')), origin=self._addr1)
+        self._context.block = Block(1, create_block_hash(b'block'), 0, None)
+        self._context.icon_score_mapper = self._icon_score_mapper
+        self._context.icx = IcxEngine()
+        self.__step_counter_factory = IconScoreStepCounterFactory()
+        self._step_counter: IconScoreStepCounter =\
+            self.__step_counter_factory.create(100, step_price=0)
+        self._context.step_counter = self._step_counter
+        self._context.icx.open(self._icx_storage)
+        self._context.event_logs = Mock(spec=list)
+        self._context.logs_bloom = Mock(spec=BloomFilter)
+        self._context.traces = Mock(spec=list)
+
+    @staticmethod
+    def __ensure_dir(dir_path):
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+    # def test_goverance_score_load(self):
+    #     self._score_deploy_engine.invoke(
+    #         self._context,
+    #         ZERO_SCORE_ADDRESS,
+    #         create_address(AddressPrefix.CONTRACT, b'mock'),
+    #         {})

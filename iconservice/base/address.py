@@ -183,10 +183,31 @@ class Address(object):
         hash_value = hashlib.sha3_256(data).digest()
         return Address(prefix, hash_value[-20:])
 
+    @staticmethod
+    def from_bytes(buf: bytes) -> 'Address':
+        """Create Address object from bytes data
+
+        :param buf: (bytes) bytes data including Address information
+        :return: (Address) Address object
+        """
+
+        prefix = AddressPrefix.EOA if buf[-1] == 0 else AddressPrefix.CONTRACT
+        return Address(prefix, buf[:-1])
+
+    def to_bytes(self) -> bytes:
+        """Convert Address object to bytes
+
+        :return: data including information of Address object
+        """
+        byte_array = bytearray(self.body)
+        byte_array.append(self.prefix)
+        return bytes(byte_array)
+
 
 # cx0000000000000000000000000000000000000000
 ZERO_SCORE_ADDRESS = Address(AddressPrefix.CONTRACT, b'\x00' * 20)
 # cx0000000000000000000000000000000000000001
 GOVERNANCE_SCORE_ADDRESS = Address(
     AddressPrefix.CONTRACT, b'\x00' * 19 + b'\x01')
+ADMIN_SCORE_ADDRESS = Address.from_data(AddressPrefix.EOA, b'ADMIN')
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')

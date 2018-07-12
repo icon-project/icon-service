@@ -24,8 +24,12 @@ import asyncio
 import os
 
 from iconservice.icon_inner_service import IconScoreInnerTask
-from iconservice.base.address import AddressPrefix
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
 from tests import create_block_hash, create_address, create_tx_hash
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
 
 
 class TestIconServiceEngine(unittest.TestCase):
@@ -45,6 +49,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         async def _run():
+            await asyncio.sleep(1)
             await self._inner_task.close()
             shutil.rmtree(self._icon_score_root_path)
             shutil.rmtree(self._state_db_root_path)
@@ -183,7 +188,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
-        to_addr = "cx0000000000000000000000000000000000000000"
+        to_addr = ZERO_SCORE_ADDRESS
         step_limit = 1000
         timestamp = 12345
         nonce = 1
@@ -252,7 +257,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_genesis_invoke(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
 
@@ -264,7 +268,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_success(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -287,7 +290,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_fail1(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -305,7 +307,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_fail2(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -328,7 +329,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_fail3(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -351,7 +351,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_fail4(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -374,7 +373,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_install_sample_token(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -392,7 +390,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_query_method_sample_token(self):
         async def _run():
-            await asyncio.sleep(1)
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))

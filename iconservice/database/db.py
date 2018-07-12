@@ -24,7 +24,7 @@ from iconservice.utils import sha3_256
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContext
 
@@ -42,6 +42,7 @@ class PlyvelDatabase(object):
 
     @staticmethod
     def make_db(path: str, create_if_missing: bool=True) -> plyvel.DB:
+        Logger.debug(f'make_db path : {path}')
         return plyvel.DB(path, create_if_missing=create_if_missing)
 
     def __init__(self, db: plyvel.DB) -> None:
@@ -278,7 +279,7 @@ class ContextDatabase(PlyvelDatabase):
 
     @staticmethod
     def from_address_and_path(
-            address: Address,
+            address: Optional['Address'],
             path: str,
             create_if_missing=True) -> 'ContextDatabase':
         return ContextDatabase(

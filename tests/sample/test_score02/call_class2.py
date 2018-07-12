@@ -5,14 +5,14 @@ from test_func.test_func import test1_func
 
 
 class CallClass2(CallClass1):
-    def on_install(self, params) -> None:
+    def on_install(self) -> None:
         pass
 
-    def on_update(self, params) -> None:
+    def on_update(self) -> None:
         pass
 
-    def __init__(self, db: IconScoreDatabase, owner: Address):
-        # super().__init__(db, owner)
+    def __init__(self, db: IconScoreDatabase):
+        super().__init__(db)
         pass
 
     def func1(self):

@@ -29,7 +29,6 @@ from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 
 
-
 class TestEventlog(unittest.TestCase):
     def setUp(self):
         db = Mock(spec=IconScoreDatabase)
@@ -42,7 +41,7 @@ class TestEventlog(unittest.TestCase):
         context.attach_mock(logs_bloom, 'logs_bloom')
         ContextContainer._put_context(context)
 
-        self._mock_score = EventlogScore(db, address)
+        self._mock_score = EventlogScore(db)
 
     def test_call_event(self):
         context = ContextContainer._get_context()
@@ -265,8 +264,8 @@ class TestEventlog(unittest.TestCase):
 
 class EventlogScore(IconScoreBase):
 
-    def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: 'IconScoreDatabase') -> None:
+        super().__init__(db)
 
     def on_install(self) -> None:
         pass

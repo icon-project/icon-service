@@ -14,14 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TypeVar
 from abc import ABC, ABCMeta
 
 from ..base.exception import *
 from ..base.address import Address
-
-if TYPE_CHECKING:
-    pass
 
 T = TypeVar('T')
 BaseType = TypeVar('BaseType', bool, int, str, bytes, Address)

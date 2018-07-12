@@ -17,7 +17,7 @@ import os
 import shutil
 import unittest
 
-from iconservice import IconScoreBase, IconScoreContextType, IconScoreException
+from iconservice import IconScoreBase, IconScoreContextType, InvalidParamsException
 from iconservice.base.address import Address, ICX_ENGINE_ADDRESS
 from iconservice.database.factory import DatabaseFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
@@ -78,9 +78,9 @@ class TestIconScoreInfoMapper(unittest.TestCase):
     def test_setitem(self):
         info = IconScoreInfo(icon_score=None)
 
-        with self.assertRaises(IconScoreException):
+        with self.assertRaises(InvalidParamsException):
             self.mapper[self.address] = None
-        with self.assertRaises(IconScoreException):
+        with self.assertRaises(InvalidParamsException):
             self.mapper[self.score_address] = 1
 
         score_address = Address.from_string(f'cx{"1" * 40}')

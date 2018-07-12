@@ -19,7 +19,8 @@ from os import makedirs
 from typing import TYPE_CHECKING, Any, List, Optional
 from enum import IntFlag
 
-from iconservice.utils.bloom import BloomFilter
+from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG
+from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
 from .base.block import Block
@@ -30,7 +31,8 @@ from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import DatabaseFactory
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from .icon_config import *
+from .deploy.icon_score_manager import IconScoreManager
+from .deploy.icon_pre_builtin_score_loader import IconPreBuiltinScoreLoader
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -41,6 +43,7 @@ from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_score_trace import Trace, TraceType
+from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
@@ -108,6 +111,7 @@ class IconServiceEngine(object):
         self._step_counter_factory = None
         self._precommit_state = None
         self._icon_pre_validator = None
+        self._icon_score_deploy_storage = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -142,27 +146,19 @@ class IconServiceEngine(object):
         self._context_factory = IconScoreContextFactory(max_size=5)
         self._icon_score_loader = IconScoreLoader(icon_score_root_path)
 
+        self._icx_engine = IcxEngine()
+        self._icon_score_engine = IconScoreEngine()
+        self._icon_score_deploy_engine = IconScoreDeployEngine()
+
+        icon_score_manger = IconScoreManager(self._icon_score_deploy_engine)
+
         self._icx_context_db = self._db_factory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_context_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_context_db)
-
-        self._icx_engine = IcxEngine()
-        self._icx_engine.open(self._icx_storage)
+        self._icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
         self._icon_score_mapper = IconScoreInfoMapper(
-            self._icx_storage, self._db_factory, self._icon_score_loader)
-
-        self._icon_score_engine = IconScoreEngine(
-            self._icx_storage, self._icon_score_mapper)
-
-        icon_score_deploy_engine_flags = \
-            IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
-        self._icon_score_deploy_engine = IconScoreDeployEngine(
-            icon_score_root_path=icon_score_root_path,
-            flags=icon_score_deploy_engine_flags,
-            context_db=self._icx_context_db,
-            icx_storage=self._icx_storage,
-            icon_score_mapper=self._icon_score_mapper)
+            self._db_factory, icon_score_manger, self._icon_score_loader)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._step_counter_factory.set_step_unit(StepType.TRANSACTION, 6000)
@@ -174,10 +170,30 @@ class IconServiceEngine(object):
         self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
 
         # TODO: Fix step_price
-        self._icon_pre_validator = IconPreValidator(icx=self._icx_engine)
+        self._icon_pre_validator = IconPreValidator(self._icx_engine, icon_score_manger)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
+        IconScoreContext.icon_score_manager = icon_score_manger
+
+        self._icx_engine.open(self._icx_storage)
+        self._icon_score_engine.open(
+            self._icx_storage, self._icon_score_mapper)
+
+        icon_score_deploy_engine_flags = \
+            IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
+        self._icon_score_deploy_engine.open(
+            icon_score_root_path=icon_score_root_path,
+            flags=icon_score_deploy_engine_flags,
+            icon_score_mapper=self._icon_score_mapper,
+            icon_deploy_storage=self._icon_score_deploy_storage)
+
+        self.builtin_score_load()
+
+    def builtin_score_load(self):
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        icon_builtin_score_loader = IconPreBuiltinScoreLoader(self._icon_score_deploy_engine)
+        icon_builtin_score_loader.load_builtin_scores(context)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -185,6 +201,7 @@ class IconServiceEngine(object):
         """
 
         self._icx_engine.close()
+        self._icon_score_mapper.close()
 
     def invoke(self,
                block: 'Block',

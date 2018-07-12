@@ -16,11 +16,12 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.address import Address
+from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidRequestException
 from ..icon_config import FIXED_FEE
 
 if TYPE_CHECKING:
+    from ..deploy.icon_score_manager import IconScoreManager
     from ..icx.icx_engine import IcxEngine
 
 
@@ -30,12 +31,13 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx: 'IcxEngine') -> None:
+    def __init__(self, icx_engine: 'IcxEngine', score_manager: 'IconScoreManager') -> None:
         """Constructor
 
-        :param icx: icx engine
+        :param icx_engine: icx engine
         """
-        self._icx = icx
+        self._icx = icx_engine
+        self._score_manager = score_manager
 
     def execute(self, params: dict, step_price: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -83,7 +85,7 @@ class IconPreValidator:
 
         # Check 'to' is not a SCORE address
         to: 'Address' = params['to']
-        if self._icx.storage.is_score_installed(
+        if self._score_manager.is_deployed(
                 context=None, icon_score_address=to):
             raise InvalidRequestException(
                 'It is not allowed to transfer coin to SCORE on protocol v2')
@@ -99,12 +101,7 @@ class IconPreValidator:
         # Check if "to" address is valid
         to: 'Address' = params['to']
 
-        if to.is_contract and not self._icx.storage.is_score_installed(
-                context=None, icon_score_address=to):
-            raise InvalidRequestException(f'Invalid address: {to}')
-
-        if not to.is_contract and self._icx.storage.is_score_installed(
-                context=None, icon_score_address=to):
+        if not self._is_score_address(to):
             raise InvalidRequestException(f'Invalid address: {to}')
 
         # Check data_type-specific elements
@@ -165,5 +162,8 @@ class IconPreValidator:
             raise InvalidRequestException('Out of balance')
 
     def _is_score_address(self, address: 'Address') -> bool:
-        return address.is_contract and self._icx.storage.is_score_installed(
-            context=None, icon_score_address=address)
+        is_contract = address.is_contract
+        is_zero_score_address = address == ZERO_SCORE_ADDRESS
+        is_score_deployed = self._score_manager.is_deployed(context=None, icon_score_address=address)
+        is_score_address = is_contract and not is_zero_score_address and not is_score_deployed
+        return not is_score_address

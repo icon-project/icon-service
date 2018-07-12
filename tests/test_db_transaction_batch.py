@@ -17,24 +17,24 @@
 
 import unittest
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.database.batch import TransactionBatch, IconScoreBatch
+from iconservice.utils import int_to_bytes
+from tests import create_tx_hash, create_address
 
 
 class TestTransactionBatch(unittest.TestCase):
     def setUp(self):
-        self.tx_hash = '1c1efbdac604865ec9629f314e2fea57a3ee253283c8f0e5c1549a6a6c7a7775'
+        self.tx_hash = create_tx_hash(b'tx_hash')
         self.tx_batch = TransactionBatch(self.tx_hash)
 
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        eoa_address = Address.from_string(f'hx{"1" * 40}')
-        self.tx_batch.put(score_address, eoa_address, 1)
+        self.score_address = create_address(AddressPrefix.CONTRACT, b'score')
+        self.eoa_address = create_address(AddressPrefix.EOA, b'eoa')
+        self.tx_batch.put(self.score_address, self.eoa_address, value=int_to_bytes(1))
 
     def test_get_item(self):
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        eoa_address = Address.from_string(f'hx{"1" * 40}')
-        icon_score_batch = self.tx_batch[score_address]
-        self.assertEqual(1, icon_score_batch[eoa_address])
+        icon_score_batch = self.tx_batch[self.score_address]
+        self.assertEqual(int_to_bytes(1), icon_score_batch[self.eoa_address])
 
     def test_len(self):
         i = 0
@@ -47,15 +47,14 @@ class TestTransactionBatch(unittest.TestCase):
         self.assertEqual(i, len(self.tx_batch))
 
     def test_put(self):
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        address = Address.from_string(f'hx{"f" * 40}')
-        value = 15
-        self.tx_batch.put(score_address, address.body, value)
+        address = create_address(AddressPrefix.EOA, b'addr1')
+        value = int_to_bytes(15)
+        self.tx_batch.put(self.score_address, address.body, value)
         self.assertEqual(1, len(self.tx_batch))
-        self.assertEqual(value, self.tx_batch[score_address][address.body])
+        self.assertEqual(value, self.tx_batch[self.score_address][address.body])
 
-        score_address = Address.from_string(f'cx{"7" * 40}')
-        value = 7
+        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
+        value = int_to_bytes(7)
         self.tx_batch.put(score_address, address.body, value)
         self.assertEqual(2, len(self.tx_batch))
         self.assertEqual(value, self.tx_batch[score_address][address.body])

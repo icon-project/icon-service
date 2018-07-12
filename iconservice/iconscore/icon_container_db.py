@@ -20,7 +20,7 @@ from collections import Iterator
 
 from iconservice.utils import int_to_bytes
 
-from ..base.address import Address, AddressPrefix
+from ..base.address import Address
 from ..base.exception import ContainerDBException
 
 if TYPE_CHECKING:
@@ -68,9 +68,7 @@ class ContainerUtil(object):
         elif isinstance(value, str):
             byte_value = value.encode('utf-8')
         elif isinstance(value, Address):
-            byte_array = bytearray(value.body)
-            byte_array.append(value.prefix)
-            byte_value = bytes(byte_array)
+            byte_value = value.to_bytes()
         elif isinstance(value, bool):
             byte_value = int_to_bytes(int(value))
         elif isinstance(value, bytes):
@@ -90,8 +88,7 @@ class ContainerUtil(object):
         elif value_type == str:
             obj_value = value.decode()
         elif value_type == Address:
-            prefix = AddressPrefix.EOA if value[-1] == 0 else AddressPrefix.CONTRACT
-            obj_value = Address(prefix, value[:-1])
+            obj_value = Address.from_bytes(value)
         if value_type == bool:
             obj_value = bool(int(int.from_bytes(value, 'big', signed=True)))
         elif value_type == bytes:

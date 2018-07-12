@@ -2,14 +2,15 @@ from iconservice import *
 
 
 class CallClass1(IconScoreBase):
-    def on_install(self, params: dict) -> None:
-        super().on_install(params)
+    def on_install(self) -> None:
+        pass
 
-    def on_update(self, params: dict) -> None:
-        super().on_update(params)
+    def on_update(self) -> None:
+        pass
 
-    def __init__(self, db: IconScoreDatabase, owner: Address):
-        super().__init__(db, owner)
+    def __init__(self, db: IconScoreDatabase):
+        super().__init__(db)
+        pass
 
     @external(readonly=True)
     def func1(self):

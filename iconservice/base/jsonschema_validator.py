@@ -200,7 +200,7 @@ SCHEMA: dict = {
 }
 
 
-def validate_jsonschema(request: object):
+def validate_jsonschema(request: dict):
     """ Validate JSON-RPC v3 schema.
 
     refer to https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3

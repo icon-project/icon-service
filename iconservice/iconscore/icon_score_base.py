@@ -291,11 +291,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         super().on_update(**kwargs)
 
     @abstractmethod
-    def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: 'IconScoreDatabase') -> None:
+        super().__init__(db)
         self.__db = db
-        self.__owner = owner
         self.__address = db.address
+        self.__owner = self.get_owner(self.__address)
         self.__icx = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
@@ -384,9 +384,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return ret
 
     def __put_event_log(self,
-                       event_signature: str,
-                       arguments: List[Any],
-                       indexed_args_count: int):
+                        event_signature: str,
+                        arguments: List[Any],
+                        indexed_args_count: int):
         """
         Puts a eventlog to the context running
 
@@ -523,6 +523,17 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def now(self):
         return self.block.timestamp
+
+    def deploy(self, tx_hash: bytes):
+        self._context.icon_score_manager.deploy(self._context, self.address, tx_hash, self.tx.hash)
+
+    def is_deployed(self, score_address: 'Address'):
+        self._context.icon_score_manager.is_deployed(self._context, score_address)
+
+    def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
+        if score_address:
+            score_address = self.address
+        return self._context.icon_score_manager.get_owner(self._context, score_address)
 
     def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
         if interface_cls is InterfaceScore:

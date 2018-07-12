@@ -16,6 +16,6 @@
 from enum import IntEnum
 
 
-class DeployType(IntEnum):
+class DeployState(IntEnum):
     INSTALL = 0
     UPDATE = 1

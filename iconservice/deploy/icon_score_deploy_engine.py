@@ -16,24 +16,21 @@
 from collections import namedtuple
 from enum import IntFlag
 from os import path, symlink, makedirs
-from typing import TYPE_CHECKING, Optional, Callable
+from typing import TYPE_CHECKING, Callable
 
-from . import DeployType
-from .icon_score_deploy_storage import IconScoreDeployInfo
+from . import DeployState
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
-from ..database.db import ContextDatabase
 from ..iconscore.icon_score_context import ContextContainer
 from ..logger import Logger
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
-    from ..icx.icx_storage import IcxStorage
 
 
 class IconScoreDeployEngine(ContextContainer):
@@ -41,37 +38,49 @@ class IconScoreDeployEngine(ContextContainer):
     """
 
     class Flag(IntFlag):
-        NONE = 0
+        NONE = 1
         # To complete to install or update a SCORE,
         # some specified address owner like genesis address owner
         # MUST approve install or update SCORE transactions.
-        ENABLE_DEPLOY_AUDIT = 1
+        ENABLE_DEPLOY_AUDIT = 2
 
     # This namedtuple should be used only in IconScoreDeployEngine.
     _Task = namedtuple(
         'Task',
         ('block', 'tx', 'msg', 'deploy_type', 'icon_score_address', 'data'))
 
-    def __init__(self,
-                 icon_score_root_path: str,
-                 flags: 'Flag',
-                 context_db: 'ContextDatabase',
-                 icx_storage: 'IcxStorage',
-                 icon_score_mapper: 'IconScoreInfoMapper') -> None:
+    def __init__(self) -> None:
         """Constructor
+        """
+        self._flags = None
+        self._icon_score_deploy_storage = None
+        self._icon_score_mapper = None
+        self._icon_score_deployer = None
+        self._icon_builtin_score_loader = None
+        self._icon_score_manager = None
+
+    def open(self,
+             icon_score_root_path: str,
+             flags: 'Flag',
+             icon_score_mapper: 'IconScoreInfoMapper',
+             icon_deploy_storage: 'IconScoreDeployStorage') -> None:
+        """open
 
         :param icon_score_root_path:
         :param flags: flags composed by IconScoreDeployEngine
+        :param icon_score_mapper:
+        :param icon_deploy_storage:
         """
         self._flags = flags
-        self._score_deploy_storage = IconScoreDeployStorage(db=context_db)
-        self._icx_storage = icx_storage
+        self._icon_score_deploy_storage = icon_deploy_storage
         self._icon_score_mapper = icon_score_mapper
+        self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(icon_score_root_path)
 
-        self._icon_score_deployer: IconScoreDeployer = \
-            IconScoreDeployer(icon_score_root_path)
+    @property
+    def icon_deploy_storage(self):
+        return self._icon_score_deploy_storage
 
-    def is_flag_on(self, flag: 'Flag') -> bool:
+    def _is_flag_on(self, flag: 'Flag') -> bool:
         return (self._flags & flag) == flag
 
     def invoke(self,
@@ -88,55 +97,86 @@ class IconScoreDeployEngine(ContextContainer):
             otherwise score address to update
         :param data: calldata
         """
-        deploy_type: 'DeployType' = \
-            DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
+        deploy_state: 'DeployState' = \
+            DeployState.INSTALL if to == ZERO_SCORE_ADDRESS else DeployState.UPDATE
+
+        try:
+            self.write_total_deploy_info(context, deploy_state, icon_score_address, data)
+            if self._is_flag_on(IconScoreDeployEngine.Flag.NONE):
+                self.deploy(context, context.tx.hash, context.tx.hash)
+        except BaseException as e:
+            Logger.exception(e)
+            raise e
+
+    def deploy(self,
+               context: 'IconScoreContext',
+               tx_hash: bytes,
+               audit_tx_hash: bytes) -> None:
+
+        tx_params = self._icon_score_deploy_storage.get_deploy_tx_params(context, tx_hash)
+        if tx_params is None:
+            raise InvalidParamsException(f'tx_params is None : {tx_hash}')
+        score_address = tx_params.score_address
+        self._icon_score_deploy_storage.update_score_info(
+            context, score_address, tx_hash, audit_tx_hash)
+        deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
+        if deploy_info is None:
+            raise InvalidParamsException(f'deploy_info is None : {score_address}')
+        self._score_deploy(context, tx_params.deploy_state, score_address, tx_params.deploy_data)
+
+    def deploy_for_prebuiltin(self, context: 'IconScoreContext', score_address: 'Address', src_score_path: str):
+        self._score_deploy_for_prebuiltin(context, score_address, src_score_path)
+
+    def _score_deploy(self,
+                      context: 'IconScoreContext',
+                      deploy_state: 'DeployState',
+                      icon_score_address: 'Address',
+                      data: dict):
+
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
             # Install a score which is under development on tbears
             pass
         elif content_type == 'application/zip':
-            # Remove '0x' prefix
-            # Assume that pre validation has already been done
             data['content'] = bytes.fromhex(data['content'][2:])
         else:
             raise InvalidParamsException(
                 f'Invalid contentType: {content_type}')
 
-        try:
-            self.write_score_deploy_info(context, deploy_type, icon_score_address, data)
+        if deploy_state == DeployState.INSTALL:
+            self._install_on_commit(context, icon_score_address, data)
+        else:
+            self._update_on_commit(context, icon_score_address, data)
 
-            if deploy_type == DeployType.INSTALL:
-                # install a SCORE
-                self._install_on_commit(context, icon_score_address, data)
-            else:
-                self._update_on_commit(context, icon_score_address, data)
-        except BaseException as e:
-            Logger.exception(e)
+    def _score_deploy_for_prebuiltin(self, context: 'IconScoreContext', icon_score_address: 'Address', src_score_path: str):
+        self._install_on_commit_for_prebuiltin(context, icon_score_address, src_score_path)
 
     def commit(self, context: 'IconScoreContext') -> None:
         pass
 
-    def write_score_deploy_info(self,
+    def write_total_deploy_info(self,
                                 context: 'IconScoreContext',
-                                deploy_type: 'DeployType',
+                                deploy_state: 'DeployState',
                                 icon_score_address: 'Address',
                                 data: dict) -> None:
         """Write score deploy info to context db
         """
-        params = data.get('params', {})
 
-        info = IconScoreDeployInfo(
-            score_address=icon_score_address,
-            owner=context.tx.origin,
-            tx_hash=context.tx.hash,
-            params=params,
-            deploy_type=deploy_type)
+        self._icon_score_deploy_storage.put_total_deploy_info(context,
+                                                              icon_score_address,
+                                                              deploy_state,
+                                                              context.tx.origin,
+                                                              context.tx.hash,
+                                                              data)
 
-        self._score_deploy_storage.put_score_deploy_info(info)
+    def write_total_deploy_info_for_prebuiltin(self, icon_score_address: 'Address', owner_address: 'Address') -> None:
+        """Write score deploy info to context db for prebuiltin
+        """
+        self._icon_score_deploy_storage.put_total_deploy_info_for_prebuiltin(icon_score_address, owner_address)
 
     def _install_on_commit(self,
-                           context: Optional['IconScoreContext'],
+                           context: 'IconScoreContext',
                            icon_score_address: 'Address',
                            data: dict) -> None:
         """Install an icon score on commit
@@ -164,9 +204,6 @@ class IconScoreDeployEngine(ContextContainer):
         else:
             pass
 
-        self._icx_storage.put_score_owner(
-            context, icon_score_address, context.tx.origin)
-
         self._icon_score_deployer.deploy(
             address=icon_score_address,
             data=content,
@@ -176,6 +213,8 @@ class IconScoreDeployEngine(ContextContainer):
         db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
 
         score = self._icon_score_mapper.get_icon_score(context, icon_score_address)
+        if score is None:
+            raise InvalidParamsException(f'score is None : {icon_score_address}')
 
         if not db_exist:
             self._call_on_init_of_score(
@@ -183,8 +222,38 @@ class IconScoreDeployEngine(ContextContainer):
                 on_init=score.on_install,
                 params=params)
 
+    def _install_on_commit_for_prebuiltin(self,
+                                          context: 'IconScoreContext',
+                                          icon_score_address: 'Address',
+                                          src_score_path: str) -> None:
+        """Install an icon score for prebuiltin
+        """
+
+        self._icon_score_mapper.delete_icon_score(icon_score_address)
+        score_root_path = self._icon_score_mapper.score_root_path
+        target_path = path.join(score_root_path,
+                                icon_score_address.body.hex())
+        makedirs(target_path, exist_ok=True)
+        target_path = path.join(
+            target_path, f'{0}_{0}')
+        try:
+            symlink(src_score_path, target_path, target_is_directory=True)
+        except FileExistsError:
+            pass
+
+        db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
+        score = self._icon_score_mapper.get_icon_score(context, icon_score_address)
+        if score is None:
+            raise InvalidParamsException(f'score is None : {icon_score_address}')
+
+        if not db_exist:
+            self._call_on_init_of_score(
+                context=context,
+                on_init=score.on_install,
+                params={})
+
     def _update_on_commit(self,
-                          context: Optional['IconScoreContext'],
+                          context: 'IconScoreContext',
                           icon_score_address: 'Address',
                           data: dict) -> None:
         """Update an icon score
@@ -211,8 +280,6 @@ class IconScoreDeployEngine(ContextContainer):
         try:
             self._put_context(context)
             on_init(**params)
-        except Exception as e:
-            Logger.exception(str(e))
         finally:
             self._delete_context(context)
 

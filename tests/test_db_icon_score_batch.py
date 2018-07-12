@@ -19,38 +19,36 @@ import unittest
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.database.batch import IconScoreBatch
+from tests import create_address
 
 
 class TestIconScoreBatch(unittest.TestCase):
     def setUp(self):
-        self.address = Address.from_string(f'cx{"0" * 40}')
-        self.icon_score_batch = IconScoreBatch(self.address)
 
-        address = Address.from_string(f'hx{"1" * 40}')
-        self.icon_score_batch[address] = 100
+        self.addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        self.addr2 = create_address(AddressPrefix.EOA, b'addr2')
+        self.addr3 = create_address(AddressPrefix.EOA, b'addr3')
 
-        address = Address.from_string(f'hx{"2" * 40}')
-        self.icon_score_batch[address] = 200
+        self.icon_score_batch = IconScoreBatch(self.addr1)
+        self.icon_score_batch[self.addr2] = 100
+        self.icon_score_batch[self.addr3] = 200
 
     def tearDown(self):
         self.icon_score_batch = None
 
     def test_address_property(self):
-        address = Address.from_string(f'cx{"0" * 40}')
-        self.assertEqual(address, self.icon_score_batch.address)
+        self.assertEqual(self.addr1, self.icon_score_batch.address)
 
     def test_get_item(self):
-        address = Address.from_string(f'hx{"1" * 40}')
-        self.assertEqual(100, self.icon_score_batch[address])
-        address = Address.from_string(f'hx{"2" * 40}')
-        self.assertEqual(200, self.icon_score_batch[address])
+        self.assertEqual(100, self.icon_score_batch[self.addr2])
+        self.assertEqual(200, self.icon_score_batch[self.addr3])
 
     def test_len(self):
         self.assertEqual(2, len(self.icon_score_batch))
 
     def test_put_item(self):
-        icon_score_batch = IconScoreBatch(self.address)
-        address = Address.from_string(f'hx{"3" * 40}')
+        icon_score_batch = IconScoreBatch(self.addr1)
+        address = create_address(AddressPrefix.EOA, b'addr4')
         icon_score_batch[address] = 300
         self.assertEqual(300, icon_score_batch[address])
 

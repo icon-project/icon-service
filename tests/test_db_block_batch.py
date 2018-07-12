@@ -17,79 +17,75 @@
 
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.utils import sha3_256, int_to_bytes
+from tests import create_block_hash, create_address
 
 
 class TestBlockBatch(unittest.TestCase):
     def setUp(self):
-        block_hash =\
-            'd1e7281723bfa4c9e358080bfe57a6c36c67eba94a974d8a2ea4c3cdb0229399'
+        self.block_hash = create_block_hash(b'block')
+        self.prev_hash = create_block_hash(b'prev')
         block = Block(
             block_height=0,
-            block_hash=block_hash,
+            block_hash=self.block_hash,
             timestamp=0,
-            prev_hash='')
+            prev_hash=self.prev_hash)
         self.batch = BlockBatch(block)
 
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        address = Address.from_string(f'hx{"1" * 40}')
-        self.batch.put(score_address, address, int_to_bytes(1))
+        self.score_address = create_address(AddressPrefix.CONTRACT, b'score')
+        self.addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        self.batch.put(self.score_address, self.addr1, int_to_bytes(1))
 
     def test_property(self):
         self.assertEqual(0, self.batch.block.height)
         self.assertEqual(
-            'd1e7281723bfa4c9e358080bfe57a6c36c67eba94a974d8a2ea4c3cdb0229399',
+            self.block_hash,
             self.batch.block.hash)
 
     def test_len(self):
         self.assertEqual(1, len(self.batch))
 
     def test_get_item(self):
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        address = Address.from_string(f'hx{"1" * 40}')
         self.assertEqual(
-            1, int.from_bytes(self.batch[score_address][address], 'big'))
+            1, int.from_bytes(self.batch[self.score_address][self.addr1], 'big'))
 
     def test_put_tx_batch(self):
         tx_batch = TransactionBatch('')
 
-        score_address = Address.from_string(f'cx{"f" * 40}')
-        address = Address.from_string(f'hx{"2" * 40}')
+        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
+        address = create_address(AddressPrefix.EOA, b'addr2')
         tx_batch.put(score_address, address, int_to_bytes(2))
-        address = Address.from_string(f'hx{"3" * 40}')
+        address = create_address(AddressPrefix.EOA, b'addr3')
         tx_batch.put(score_address, address, int_to_bytes(3))
         self.batch.put_tx_batch(tx_batch)
 
         self.assertEqual(2, len(self.batch))
 
-        address = Address.from_string(f'hx{"2" * 40}')
+        address = create_address(AddressPrefix.EOA, b'addr2')
         self.assertEqual(
             2, int.from_bytes(self.batch[score_address][address], 'big'))
-        address = Address.from_string(f'hx{"3" * 40}')
+        address = create_address(AddressPrefix.EOA, b'addr3')
         self.assertEqual(
             3, int.from_bytes(self.batch[score_address][address], 'big'))
 
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        address = Address.from_string(f'hx{"1" * 40}')
         self.assertEqual(
-            1, int.from_bytes(self.batch[score_address][address], 'big'))
+            1, int.from_bytes(self.batch[self.score_address][self.addr1], 'big'))
 
     def test_put(self):
-        score_address = Address.from_string(f'cx{"0" * 40}')
-        self.assertEqual(1, len(self.batch[score_address]))
+        self.assertEqual(1, len(self.batch[self.score_address]))
 
-        address = Address.from_string(f'hx{"2" * 40}')
-        self.batch.put(score_address, address, int_to_bytes(2))
+        address = create_address(AddressPrefix.EOA, b'addr2')
+        self.batch.put(self.score_address, address, int_to_bytes(2))
         self.assertEqual(1, len(self.batch))
         self.assertEqual(
-            2, int.from_bytes(self.batch[score_address][address], 'big'))
-        self.assertEqual(2, len(self.batch[score_address]))
+            2, int.from_bytes(self.batch[self.score_address][address], 'big'))
+        self.assertEqual(2, len(self.batch[self.score_address]))
 
-        score_address = Address.from_string(f'cx{"b" * 40}')
-        address = Address.from_string(f'hx{"2" * 40}')
+        score_address = create_address(AddressPrefix.CONTRACT, b'score2')
+        address = create_address(AddressPrefix.EOA, b'addr2')
         self.batch.put(score_address, address, int_to_bytes(100))
         self.assertEqual(2, len(self.batch))
         self.assertEqual(
@@ -99,14 +95,13 @@ class TestBlockBatch(unittest.TestCase):
         self.batch.clear()
         self.assertEqual(sha3_256(b''), self.batch.digest())
 
-        score_address1 = Address.from_data(
-            AddressPrefix.CONTRACT, b'score_address1')
+        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
 
-        data = [score_address1.body]
+        data = [score_address.body]
         for i in range(3):
             value = int_to_bytes(i)
-            key = Address.from_data(AddressPrefix.EOA, value).body
-            self.batch.put(score_address1, key, value)
+            key = create_address(AddressPrefix.EOA, value).body
+            self.batch.put(score_address, key, value)
 
             data.append(key)
             data.append(value)
@@ -116,13 +111,13 @@ class TestBlockBatch(unittest.TestCase):
         ret1 = self.batch.digest()
         self.assertEqual(expected1, ret1)
 
-        data = [score_address1.body]
+        data = [score_address.body]
         self.batch.clear()
 
         for i in range(2, -1, -1):
             value = int_to_bytes(i)
-            key = Address.from_data(AddressPrefix.EOA, value).body
-            self.batch.put(score_address1, key, value)
+            key = create_address(AddressPrefix.EOA, value).body
+            self.batch.put(score_address, key, value)
 
             data.append(key)
             data.append(value)

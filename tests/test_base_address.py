@@ -19,7 +19,6 @@ import unittest
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import is_icon_address_valid
 from iconservice.base.address import split_icon_address
-from iconservice.logger import Logger
 
 
 class TestAddress(unittest.TestCase):

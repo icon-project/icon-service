@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
     from .icon_score_trace import Trace
+    from ..deploy.icon_score_manager import IconScoreManager
 
 _thread_local_data = threading.local()
 
@@ -89,6 +90,7 @@ class IconScoreContext(object):
     """
     icx: 'IcxEngine' = None
     icon_score_mapper: 'IconScoreInfoMapper' = None
+    icon_score_manager: 'IconScoreManager' = None
 
     def __init__(self,
                  context_type: IconScoreContextType=IconScoreContextType.QUERY,
