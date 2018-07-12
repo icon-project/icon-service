@@ -351,6 +351,7 @@ SCORE 함수 실행 결과
 | blockHash | [T_HASH](#T_HASH) | transaction이 포함된 block의 hash |
 | cumulativeStepUsed | [T_INT](#T_INT) | 블록 내에서 해당 transaction을 수행하기까지 소비된 step의 누적량 |
 | stepUsed | [T_INT](#T_INT) | 해당 transaction을 수행하는데 소비된 step 양 |
+| stepPrice | [T_INT](#T_INT) | 해당 transaction을 수행하는데 소비된 step 가격 |
 | scoreAddress | [T_ADDR_SCORE](#T_ADDR_SCORE) | 해당 transaction이 SCORE을 생성했을 경우 해당 SCORE 주소 (optional) |
 | eventLogs | [T_ARRAY](#T_ARRAY) | 해당 transaction의 실행 중에 발생한 EventLog의 목록 |
 | logsBloom | [T_BIN_DATA](#T_BIN_DATA) | 발생한 EventLog의 Data중 인덱싱된 Data의 Bloom Filter 값 |
@@ -374,7 +375,7 @@ SCORE 함수 실행 결과
     "id": 1234,
     "result": {
         "status": "0x1",
-        "to": "cx0000000000000000000000000000000000000000",
+        "to": "cx4d6f646441a3f9c9b91019c9b98e3c342cceb114",
         "txHash": "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
         "txIndex": "0x1",
         "blockHeight": "0x1234",
@@ -385,8 +386,8 @@ SCORE 함수 실행 결과
         "scoreAddress": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
         "eventLogs":[
             {
-                "scoreAddress":"cx4d6f646441a3f9c9b91019c9b98e3c342cceb114",
-                "indexed":[
+                "scoreAddress": "cx4d6f646441a3f9c9b91019c9b98e3c342cceb114",
+                "indexed": [
                     "Transfer(Address,Address,int)",
                     "hx4873b94352c8c1f3b2f09aaeccea31ce9e90bd31",
                     "hx0000000000000000000000000000000000000000",
@@ -449,6 +450,7 @@ SCORE 함수 실행 결과
 | value | [T_INT](#T_INT) | optional | to 주소로 이체할 ICX 코인양, 생략할 경우 0으로 간주 |
 | stepLimit |[T_INT](#T_INT) | required | transaction을 수행하는데 소비되는 최대 step 허용치 |
 | timestamp | [T_INT](#T_INT) | required | transaction을 전송할 때의 timestamp (단위: microsecond) |
+| nid | [T_INT](#T_INT) | required | network ID |
 | nonce | [T_INT](#T_INT) | optional | transaction hash 출동 방지를 위한 임의의 정수 |
 | signature | [T_SIG](#T_SIG) | required | transaction의 전자 서명 데이터 |
 | dataType | [T_DATA_TYPE](#T_DATA_TYPE) | optional | data 항목의 종류를 알려주는 값 (call, deploy) |
@@ -480,6 +482,7 @@ SCORE 함수 실행 결과
         "value": "0xde0b6b3a7640000",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
+        "nid": "0x3fcb",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
     }
@@ -500,6 +503,7 @@ SCORE 함수 실행 결과
         "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
+        "nid": "0x3fcb",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "call",
@@ -528,6 +532,7 @@ SCORE 함수 실행 결과
         "to": "cx0000000000000000000000000000000000000000", // SCORE 주소가 0이면 SCORE install 의미
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
+        "nid": "0x3fcb",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "deploy",
@@ -558,6 +563,7 @@ SCORE 함수 실행 결과
         "to": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // 업데이트할 SCORE 주소
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
+        "nid": "0x3fcb",
         "nonce": "0x1",
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "deploy",
