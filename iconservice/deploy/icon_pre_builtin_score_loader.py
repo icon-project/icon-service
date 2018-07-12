@@ -47,3 +47,7 @@ class IconPreBuiltinScoreLoader(object):
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
         self._deploy_engine.write_total_deploy_info_for_prebuiltin(icon_score_address, ADMIN_SCORE_ADDRESS)
         self._deploy_engine.deploy_for_prebuiltin(context, icon_score_address, score_path)
+
+    @classmethod
+    def is_pre_builtin_score(cls, score_address: 'Address') -> bool:
+        return score_address in cls._PRE_BUILTIN_SCORE_ADDRESS_MAPPER

@@ -181,7 +181,7 @@ class IconServiceEngine(object):
             self._icx_storage, self._icon_score_mapper)
 
         icon_score_deploy_engine_flags = \
-            IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
+            IconScoreDeployEngine.Flag.NONE
         self._icon_score_deploy_engine.open(
             icon_score_root_path=icon_score_root_path,
             flags=icon_score_deploy_engine_flags,

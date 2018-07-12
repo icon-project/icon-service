@@ -130,7 +130,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
         data = {
             "contentType": "application/zip",
-            "content": bytes.hex(content)
+            "content": f'0x{bytes.hex(content)}'
         }
         self._engine.invoke(self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)
 
