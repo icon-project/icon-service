@@ -1,22 +1,23 @@
 Governance SCORE API
 ====================
 
-Governance SCORE가 제공하는 API를 설명한다.
+Describes APIs that Governance SCORE provides.
 
-| 일시 | 작성자 | 비고 |
-|:----|:-----:|:----|
-| 2018.07.09 | 남궁재창 | getStepPrice 추가 |
-| 2018.07.03 | 남궁재창 | Eventlog (Accepted, Rejected) 추가 |
-| 2018.06.22 | 조치원 | AddAuditor, RemoveAuditor 추가 |
-| 2018.06.21 | 조치원 | 초기 작성 |
+| Date | Author | Changes |
+|:---- |:-----: |:--------|
+| 2018.07.13 | Jaechang Namgoong | Added setStepPrice, StepPriceChanged |
+| 2018.07.09 | Jaechang Namgoong | Added getStepPrice |
+| 2018.07.03 | Jaechang Namgoong | Added Eventlog (Accepted, Rejected) |
+| 2018.06.22 | Chiwon Cho | Added AddAuditor, RemoveAuditor |
+| 2018.06.21 | Chiwon Cho | Initial version |
 
-# VALUE 형식
+# Value Type
 
-기본적으로 모든 JSON-RPC 메시지 내의 VALUE는 문자열 형식으로 되어 있다.<br>
+기본적으로 모든 JSON-RPC 메시지 내의 VALUE는 문자열 형식으로 되어 있다.
 많이 사용하는 "VALUE 형식"은 다음과 같다.
 
-| VALUE 형식 | 설명 | 예 |
-|:----------|:-----|:---|
+| Value Type | Description | Example |
+|:---------- |:------------|:--------|
 | <a id="T_ADDR_EOA">T_ADDR_EOA</a> | "hx" + 40 digit HEX 문자열 | hxbe258ceb872e08851f1f59694dac2558708ece11 |
 | <a id="T_ADDR_SCORE">T_ADDR_SCORE</a> | "cx" + 40 digit HEX 문자열 | cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32 |
 | <a id="T_HASH">T_HASH</a> | "0x" + 64 digit HEX 문자열 | 0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238 |
@@ -39,9 +40,11 @@ Governance SCORE가 제공하는 API를 설명한다.
     * [rejectScore](#rejectscore)
     * [addAuditor](#addauditor)
     * [removeAuditor](#removeauditor)
+    * [setStepPrice](#setstepprice)
 * Eventlog
     * [Accepted](#accepted)
     * [Rejected](#rejected)
+    * [StepPriceChanged](#steppricechanged)
 
 
 # Query Methods
@@ -284,10 +287,9 @@ None
 
 ### Examples
 
-### Request
+#### Request
 
 ```json
-// Request
 {
     "jsonrpc": "2.0",
     "id": 1234,
@@ -329,14 +331,13 @@ None
 #### Request
 
 ```json
-// Request
 {
     "jsonrpc": "2.0",
     "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
         "version": "0x3",
-        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genesis address
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
         "to": "cx0000000000000000000000000000000000000001",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
@@ -370,14 +371,13 @@ None
 #### Request
 
 ```json
-// Request
 {
     "jsonrpc": "2.0",
     "id": 1234,
     "method": "icx_sendTransaction",
     "params": {
         "version": "0x3",
-        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // genensis address
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
         "to": "cx0000000000000000000000000000000000000001",
         "stepLimit": "0x12345",
         "timestamp": "0x563a6cf330136",
@@ -394,25 +394,41 @@ None
 }
 ```
 
-#### Response
+## setStepPrice
+
+* Sets the current step price in loop.
+* Only the owner can call this function.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| stepPrice | [T_INT](#T_INT) | step price in loop (1 ICX == 10^18 loop) |
+
+### Examples
+
+#### Request
 
 ```json
-// Response: success
 {
     "jsonrpc": "2.0",
     "id": 1234,
-    "result": "0x4bf74e6aeeb43bde5dc8d5b62537a33ac8eb7605ebbdb51b015c1881b45b3aed" // txHash
-}
-```
-
-```json
-// Response: failure
-{
-    "jsonrpc": "2.0",
-    "id": 1234,
-    "error": {
-        "code": -32600,
-        "message": "Forbidden method"
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "setStepPrice",
+            "params": {
+                "stepPrice": "0xe8d4a51000" // 1000000000000
+            }
+        }
     }
 }
 ```
@@ -436,5 +452,15 @@ Must trigger on any successful rejectScore transaction.
 ```python
 @eventlog(indexed=1)
 def Rejected(self, tx_hash: str):
+    pass
+```
+
+## StepPriceChanged
+
+Must trigger on any successful setStepPrice transaction.
+
+```python
+@eventlog(indexed=1)
+def StepPriceChanged(self, step_price: int):
     pass
 ```
