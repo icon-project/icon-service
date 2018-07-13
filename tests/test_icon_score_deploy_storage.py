@@ -61,7 +61,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         tx_hash3 = create_tx_hash(b'txHash3')
         service_enable = False
 
-        info1 = IconScoreDeployInfo(score_address, service_enable, owner_address, tx_hash1, tx_hash2, tx_hash3)
+        info1 = IconScoreDeployInfo(score_address, service_enable, owner_address, tx_hash1, tx_hash2)
 
         data = IconScoreDeployInfo.to_bytes(info1)
         self.assertTrue(isinstance(data, bytes))
@@ -72,17 +72,15 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         self.assertEqual(info2.owner, owner_address)
         self.assertEqual(info2.current_tx_hash, tx_hash1)
         self.assertEqual(info2.next_tx_hash, tx_hash2)
-        self.assertEqual(info2.audit_tx_hash, tx_hash3)
 
     def test_deploy_info_from_bytes_to_bytes_none_check(self):
         score_address = create_address(AddressPrefix.CONTRACT, b'score')
         owner_address = create_address(AddressPrefix.EOA, b'owner')
         tx_hash1 = create_tx_hash(b'txHash1')
         tx_hash2 = None
-        tx_hash3 = None
         service_enable = False
 
-        info1 = IconScoreDeployInfo(score_address, service_enable, owner_address, tx_hash1, tx_hash2, tx_hash3)
+        info1 = IconScoreDeployInfo(score_address, service_enable, owner_address, tx_hash1, tx_hash2)
 
         data = IconScoreDeployInfo.to_bytes(info1)
         self.assertTrue(isinstance(data, bytes))
@@ -93,5 +91,4 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         self.assertEqual(info2.owner, owner_address)
         self.assertEqual(info2.current_tx_hash, tx_hash1)
         self.assertEqual(info2.next_tx_hash, tx_hash2)
-        self.assertEqual(info2.audit_tx_hash, tx_hash3)
 

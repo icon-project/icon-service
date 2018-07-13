@@ -16,8 +16,9 @@
 
 from typing import TypeVar
 from abc import ABC, ABCMeta
+from enum import IntEnum, unique
 
-from ..base.exception import *
+from ..base.exception import InterfaceException
 from ..base.address import Address
 
 T = TypeVar('T')

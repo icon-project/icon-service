@@ -145,21 +145,21 @@ class IconScoreInfoMapper(dict, ContextContainer):
         """
 
         icon_score_info = self.get(address)
-        is_deployed = self._icon_score_manager.is_deployed(context, address)
-        if is_deployed and icon_score_info is None:
+        is_active = self._icon_score_manager.is_active(context, address)
+        if is_active and icon_score_info is None:
             icon_score_info = self.__load_score(context, address)
 
         if icon_score_info is None:
-            if is_deployed:
+            if is_active:
                 raise InvalidParamsException(f'icon_score_info is None : {address}')
             else:
-                raise InvalidParamsException(f'icon_score is_deployed is False : {address}')
+                raise InvalidParamsException(f'icon_score is_active is False : {address}')
 
         icon_score = icon_score_info.icon_score
         return icon_score
 
     def __load_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreInfo']:
-        if not self._icon_score_manager.is_deployed(context, address):
+        if not self._icon_score_manager.is_active(context, address):
             return None
 
         score_wrapper = self._load_score_wrapper(address)

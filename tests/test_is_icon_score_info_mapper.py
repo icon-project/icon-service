@@ -67,7 +67,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
             shutil.rmtree(os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH))
 
     def load_proj(self, proj: str, addr_score: Address) -> IconScoreBase:
-        target_path = os.path.join(self._score_path, addr_score.body.hex())
+        target_path = os.path.join(self._score_path, addr_score.to_bytes().hex())
         os.makedirs(target_path, exist_ok=True)
         target_path = os.path.join(target_path, '0_0')
 

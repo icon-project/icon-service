@@ -62,5 +62,5 @@ class TestIconScoreLoader(unittest.TestCase):
         return True
 
     def test_install(self):
-        score = self._loader.load_score(self._address.body.hex())
+        score = self._loader.load_score(str(self._address))
         self.assertTrue(IconScoreBase in inspect.getmro(score))

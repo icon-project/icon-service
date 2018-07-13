@@ -15,13 +15,13 @@
 # limitations under the License.
 from typing import TYPE_CHECKING, List, Optional
 
-from iconservice.utils.bloom import BloomFilter
 from .icon_score_event_log import EventLog
+from ..utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
 
 if TYPE_CHECKING:
-    pass
+    from ..base.transaction import Transaction
 
 
 class TransactionResult(object):

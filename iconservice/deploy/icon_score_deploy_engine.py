@@ -19,7 +19,7 @@ from os import path, symlink, makedirs
 from typing import TYPE_CHECKING, Callable
 
 from . import DeployState
-from .icon_pre_builtin_score_loader import IconPreBuiltinScoreLoader
+from .icon_builtin_score_loader import IconBuiltinScoreLoader
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
@@ -103,7 +103,7 @@ class IconScoreDeployEngine(ContextContainer):
 
         try:
             self.write_total_deploy_info(context, deploy_state, icon_score_address, data)
-            is_prebuilt_score = IconPreBuiltinScoreLoader.is_pre_builtin_score(icon_score_address)
+            is_prebuilt_score = IconBuiltinScoreLoader.is_builtin_score(icon_score_address)
             if is_prebuilt_score or self._is_flag_on(IconScoreDeployEngine.Flag.NONE):
                 self.deploy(context, context.tx.hash, context.tx.hash)
         except BaseException as e:
@@ -126,8 +126,8 @@ class IconScoreDeployEngine(ContextContainer):
             raise InvalidParamsException(f'deploy_info is None : {score_address}')
         self._score_deploy(context, tx_params.deploy_state, score_address, tx_params.deploy_data)
 
-    def deploy_for_prebuiltin(self, context: 'IconScoreContext', score_address: 'Address', src_score_path: str):
-        self._score_deploy_for_prebuiltin(context, score_address, src_score_path)
+    def deploy_for_builtin(self, context: 'IconScoreContext', score_address: 'Address', src_score_path: str):
+        self._score_deploy_for_builtin(context, score_address, src_score_path)
 
     def _score_deploy(self,
                       context: 'IconScoreContext',
@@ -148,9 +148,9 @@ class IconScoreDeployEngine(ContextContainer):
 
         self._on_deploy(context, deploy_state, icon_score_address, data)
 
-    def _score_deploy_for_prebuiltin(self, context: 'IconScoreContext', icon_score_address: 'Address',
-                                     src_score_path: str):
-        self._on_deploy_for_prebuiltin(context, icon_score_address, src_score_path)
+    def _score_deploy_for_builtin(self, context: 'IconScoreContext', icon_score_address: 'Address',
+                                  src_score_path: str):
+        self._on_deploy_for_builtin(context, icon_score_address, src_score_path)
 
     def commit(self, context: 'IconScoreContext') -> None:
         pass
@@ -163,23 +163,23 @@ class IconScoreDeployEngine(ContextContainer):
         """Write score deploy info to context db
         """
 
-        self._icon_score_deploy_storage.put_total_deploy_info(context,
-                                                              icon_score_address,
-                                                              deploy_state,
-                                                              context.tx.origin,
-                                                              context.tx.hash,
-                                                              data)
+        self._icon_score_deploy_storage.put_deploy_info_and_tx_params(context,
+                                                                      icon_score_address,
+                                                                      deploy_state,
+                                                                      context.tx.origin,
+                                                                      context.tx.hash,
+                                                                      data)
 
-    def write_total_deploy_info_for_prebuiltin(self, icon_score_address: 'Address', owner_address: 'Address') -> None:
-        """Write score deploy info to context db for prebuiltin
+    def write_total_deploy_info_for_builtin(self, icon_score_address: 'Address', owner_address: 'Address') -> None:
+        """Write score deploy info to context db for builtin
         """
-        self._icon_score_deploy_storage.put_total_deploy_info_for_prebuiltin(icon_score_address, owner_address)
+        self._icon_score_deploy_storage.put_deploy_info_and_tx_params_for_builtin(icon_score_address, owner_address)
 
-    def _on_deploy_for_prebuiltin(self,
-                                  context: 'IconScoreContext',
-                                  icon_score_address: 'Address',
-                                  src_score_path: str) -> None:
-        """Install an icon score for prebuiltin
+    def _on_deploy_for_builtin(self,
+                               context: 'IconScoreContext',
+                               icon_score_address: 'Address',
+                               src_score_path: str) -> None:
+        """Install an icon score for builtin
         """
 
         self._icon_score_mapper.delete_icon_score(icon_score_address)
@@ -200,7 +200,7 @@ class IconScoreDeployEngine(ContextContainer):
             raise InvalidParamsException(f'score is None : {icon_score_address}')
 
         if not db_exist:
-            self._call_on_deploy_of_score(
+            self._initialize_score(
                 context=context,
                 on_deploy=score.on_install,
                 params={})
@@ -254,15 +254,15 @@ class IconScoreDeployEngine(ContextContainer):
             on_deploy = score.on_update
 
         if not db_exist:
-            self._call_on_deploy_of_score(
+            self._initialize_score(
                 context=context,
                 on_deploy=on_deploy,
                 params=params)
 
-    def _call_on_deploy_of_score(self,
-                                 context: 'IconScoreContext',
-                                 on_deploy: Callable[[dict], None],
-                                 params: dict) -> None:
+    def _initialize_score(self,
+                          context: 'IconScoreContext',
+                          on_deploy: Callable[[dict], None],
+                          params: dict) -> None:
         """on_install() or on_update() of score is called
         only once when installed or updated
 

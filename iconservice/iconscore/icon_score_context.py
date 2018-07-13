@@ -17,7 +17,7 @@
 import threading
 from enum import IntEnum, unique
 
-from iconservice.utils.bloom import BloomFilter
+from ..utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
 from ..base.message import Message

@@ -103,7 +103,7 @@ class IcxStorage(object):
             If the account indicated by address is not present,
             create a new account.
         """
-        key = address.body
+        key = address.to_bytes()
         value = self._db.get(context, key)
 
         if value:
@@ -124,7 +124,7 @@ class IcxStorage(object):
         :param address: account address
         :param account: account to save
         """
-        key = address.body
+        key = address.to_bytes()
         value = account.to_bytes()
         self._db.put(context, key, value)
 
@@ -136,7 +136,7 @@ class IcxStorage(object):
         :param context:
         :param address: account address
         """
-        key = address.body
+        key = address.to_bytes()
         self._db.delete(context, key)
 
     def is_address_present(self,
@@ -148,7 +148,7 @@ class IcxStorage(object):
         :param address: account address
         :return: True(present) False(not present)
         """
-        key = address.body
+        key = address.to_bytes()
         value = self._db.get(context, key)
 
         return bool(value)

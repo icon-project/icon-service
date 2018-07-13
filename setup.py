@@ -18,7 +18,7 @@ setup_options = {
     'packages': find_packages(exclude=['tests*', 'docs']),
     'package_data': {'iconservice': [
         'icon_service.json',
-        'prebuiltin_score/*/package.json'
+        'builtin_scores/*/package.json'
     ]},
     'license': "Apache License 2.0",
     'install_requires': requires,

@@ -21,10 +21,12 @@ import hashlib
 from enum import IntEnum
 
 from .exception import InvalidParamsException
-from ..utils import is_lowercase_hex_string
+from ..utils import is_lowercase_hex_string, int_to_bytes
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
+ICON_EOA_ADDRESS_BYTES_SIZE = 20
+ICON_CONTRACT_ADDRESS_BYTES_SIZE = 21
 
 
 def is_icon_address_valid(address: str) -> bool:
@@ -190,9 +192,13 @@ class Address(object):
         :param buf: (bytes) bytes data including Address information
         :return: (Address) Address object
         """
+        buf_size = len(buf)
 
-        prefix = AddressPrefix.EOA if buf[-1] == 0 else AddressPrefix.CONTRACT
-        return Address(prefix, buf[:-1])
+        prefix = AddressPrefix.EOA
+        if buf_size == ICON_CONTRACT_ADDRESS_BYTES_SIZE:
+            prefix = AddressPrefix.CONTRACT
+            buf = buf[:-1]
+        return Address(prefix, buf)
 
     def to_bytes(self) -> bytes:
         """Convert Address object to bytes
@@ -200,14 +206,23 @@ class Address(object):
         :return: data including information of Address object
         """
         byte_array = bytearray(self.body)
-        byte_array.append(self.prefix)
+        if self.prefix == AddressPrefix.CONTRACT:
+            byte_array.append(self.prefix)
         return bytes(byte_array)
 
 
+def create_address_from_int(prefix: AddressPrefix, num: int):
+    num_bytes = int_to_bytes(num)
+    zero_size = 20 - len(num_bytes)
+    if zero_size < 0:
+        raise InvalidParamsException(f'num_bytes is over 20 bytes num: {num}')
+    return Address(prefix, b'\x00' * zero_size + num_bytes)
+
+
 # cx0000000000000000000000000000000000000000
-ZERO_SCORE_ADDRESS = Address(AddressPrefix.CONTRACT, b'\x00' * 20)
+ZERO_SCORE_ADDRESS = create_address_from_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
-GOVERNANCE_SCORE_ADDRESS = Address(
-    AddressPrefix.CONTRACT, b'\x00' * 19 + b'\x01')
+GOVERNANCE_SCORE_ADDRESS = create_address_from_int(AddressPrefix.CONTRACT, 1)
+
 ADMIN_SCORE_ADDRESS = Address.from_data(AddressPrefix.EOA, b'ADMIN')
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')

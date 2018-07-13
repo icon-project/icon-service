@@ -527,8 +527,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def deploy(self, tx_hash: bytes):
         self._context.icon_score_manager.deploy(self._context, self.address, tx_hash, self.tx.hash)
 
-    def is_deployed(self, score_address: 'Address'):
-        self._context.icon_score_manager.is_deployed(self._context, score_address)
+    def is_active(self, score_address: 'Address'):
+        self._context.icon_score_manager.is_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         if score_address:

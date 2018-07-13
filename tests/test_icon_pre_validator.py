@@ -26,7 +26,7 @@ class MockDeployStorage(object):
     def __init__(self):
         self.score_installed = True
 
-    def is_deployed(self, context, icon_score_address: 'Address') -> bool:
+    def is_active(self, context, icon_score_address: 'Address') -> bool:
         return self.score_installed
 
 

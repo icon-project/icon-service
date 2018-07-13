@@ -52,9 +52,7 @@ class ContainerUtil(object):
         elif isinstance(key, str):
             bytes_key = key.encode('utf-8')
         elif isinstance(key, Address):
-            byte_array = bytearray(key.body)
-            byte_array.append(key.prefix)
-            bytes_key = bytes(byte_array)
+            bytes_key = key.to_bytes()
         elif isinstance(key, bytes):
             bytes_key = key
         else:

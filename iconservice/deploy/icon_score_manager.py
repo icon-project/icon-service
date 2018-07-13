@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Optional
 
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, ServerErrorException
+from ..base.exception import ServerErrorException
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -39,11 +39,11 @@ class IconScoreManager(object):
         else:
             raise ServerErrorException('Permission Error')
 
-    def is_deployed(self,
-                    context: Optional['IconScoreContext'],
-                    icon_score_address: 'Address') -> bool:
+    def is_active(self,
+                  context: Optional['IconScoreContext'],
+                  icon_score_address: 'Address') -> bool:
 
-        return self.__deploy_engine.icon_deploy_storage.is_score_deployed(context, icon_score_address)
+        return self.__deploy_engine.icon_deploy_storage.is_score_activa(context, icon_score_address)
 
     def get_owner(self,
                   context: Optional['IconScoreContext'],

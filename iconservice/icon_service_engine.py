@@ -32,7 +32,7 @@ from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import DatabaseFactory
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_manager import IconScoreManager
-from .deploy.icon_pre_builtin_score_loader import IconPreBuiltinScoreLoader
+from .deploy.icon_builtin_score_loader import IconbuiltinScoreLoader
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -54,27 +54,27 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
 
 
-def _generate_score_address_for_tbears(path: str) -> 'Address':
+def _generate_score_address_for_tbears(score_path: str) -> 'Address':
     """
 
     :param path: The path of a SCORE which is under development with tbears
     :return:
     """
-    project_name = path.split('/')[-1]
+    project_name = score_path.split('/')[-1]
     return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
 
 
-def _generate_score_address(from_: 'Address',
+def _generate_score_address(from_addr: 'Address',
                             timestamp: int,
                             nonce: int = None) -> 'Address':
     """Generates a SCORE address from the transaction information.
 
-    :param from_:
+    :param from_addr:
     :param timestamp:
     :param nonce:
     :return: score address
     """
-    data = from_.body + timestamp.to_bytes(32, 'big')
+    data = from_addr.body + timestamp.to_bytes(32, 'big')
     if nonce:
         data += nonce.to_bytes(32, 'big')
 
@@ -188,11 +188,11 @@ class IconServiceEngine(object):
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
-        self.builtin_score_load()
+        self.load_builtin_scores()
 
-    def builtin_score_load(self):
+    def load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
-        icon_builtin_score_loader = IconPreBuiltinScoreLoader(self._icon_score_deploy_engine)
+        icon_builtin_score_loader = IconbuiltinScoreLoader(self._icon_score_deploy_engine)
         icon_builtin_score_loader.load_builtin_scores(context)
 
     def close(self) -> None:

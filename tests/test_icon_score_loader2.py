@@ -75,13 +75,13 @@ class TestIconScoreLoader(unittest.TestCase):
             makedirs(dir_path)
 
     def load_proj(self, proj: str, addr_score: 'Address') -> callable:
-        target_path = path.join(self._score_path, addr_score.body.hex())
+        target_path = path.join(self._score_path, addr_score.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
         target_path = path.join(target_path, '0_0')
 
         ref_path = path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
         symlink(ref_path, target_path, target_is_directory=True)
-        return self._loader.load_score(addr_score.body.hex())
+        return self._loader.load_score(addr_score.to_bytes().hex())
 
     def test_install(self):
         self.__ensure_dir(self._score_path)
