@@ -15,11 +15,13 @@
 
 
 from collections import namedtuple
+from math import ceil
 from os import makedirs
 from typing import TYPE_CHECKING, Any, List, Optional
 from enum import IntFlag
 
 from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER
+from .utils import byte_length_of_int
 from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
@@ -64,17 +66,17 @@ def _generate_score_address_for_tbears(score_path: str) -> 'Address':
     return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
 
 
-def _generate_score_address(from_addr: 'Address',
+def _generate_score_address(from_: 'Address',
                             timestamp: int,
                             nonce: int = None) -> 'Address':
     """Generates a SCORE address from the transaction information.
 
-    :param from_addr:
+    :param from_:
     :param timestamp:
     :param nonce:
     :return: score address
     """
-    data = from_addr.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
+    data = from_.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
     if nonce:
         data += nonce.to_bytes(32, DATA_BYTE_ORDER)
 
@@ -161,13 +163,17 @@ class IconServiceEngine(object):
             self._db_factory, icon_score_manger, self._icon_score_loader)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter_factory.set_step_unit(StepType.TRANSACTION, 6000)
-        self._step_counter_factory.set_step_unit(StepType.STORAGE_SET, 200)
-        self._step_counter_factory.set_step_unit(StepType.STORAGE_REPLACE, 50)
-        self._step_counter_factory.set_step_unit(StepType.STORAGE_DELETE, -100)
-        self._step_counter_factory.set_step_unit(StepType.TRANSFER, 10000)
-        self._step_counter_factory.set_step_unit(StepType.CALL, 1000)
-        self._step_counter_factory.set_step_unit(StepType.EVENTLOG, 20)
+        self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
+        self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
+        self._step_counter_factory.set_step_cost(StepType.INSTALL, 20000)
+        self._step_counter_factory.set_step_cost(StepType.UPDATE, 8000)
+        self._step_counter_factory.set_step_cost(StepType.DESTRUCT, -7000)
+        self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
+        self._step_counter_factory.set_step_cost(StepType.STORAGE_SET, 20)
+        self._step_counter_factory.set_step_cost(StepType.STORAGE_REPLACE, 5)
+        self._step_counter_factory.set_step_cost(StepType.STORAGE_DELETE, -15)
+        self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
+        self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
 
         # TODO: Fix step_price
         self._icon_pre_validator = IconPreValidator(self._icx_engine, icon_score_manger)
@@ -500,6 +506,11 @@ class IconServiceEngine(object):
                 params,
                 step_price=self._get_step_price())
 
+            # Every send_transaction are calculated TRANSACTION STEP at first
+            context.step_counter.append_step(StepType.TRANSACTION, 1)
+            input_size = self._get_byte_length(params.get('data', None))
+
+            context.step_counter.append_step(StepType.INPUT, input_size)
             self._transfer_coin(context, params)
 
             if to.is_contract:
@@ -531,6 +542,33 @@ class IconServiceEngine(object):
             tx_result.traces = context.traces
 
         return tx_result
+
+    def _get_byte_length(self, data) -> int:
+        size = 0
+        if data:
+            if isinstance(data, dict):
+                for v in data.values():
+                    size += self._get_byte_length(v)
+            elif isinstance(data, list):
+                for v in data:
+                    size += self._get_byte_length(v)
+            elif isinstance(data, str):
+                # If the value is hexstring, it is calculated as bytes otherwise
+                # string
+                data_without_0x = data[2:] if data.startswith('0x') else data
+                if all(self._char_in_hexdigits(c) for c in data_without_0x):
+                    size += ceil(len(data_without_0x) / 2)
+                else:
+                    size += len(data.encode('utf-8'))
+            else:
+                # int and bool
+                if isinstance(data, int):
+                    size += byte_length_of_int(data)
+        return size
+
+    @staticmethod
+    def _char_in_hexdigits(c):
+        return ('0' <= c <= '9') or ('a' <= c <= 'f') or ('A' <= c <= 'F')
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
@@ -566,8 +604,6 @@ class IconServiceEngine(object):
         version: int = params.get('version', 2)
         from_: 'Address' = params['from']
 
-        min_step_used: int =\
-            context.step_counter.get_step_unit(StepType.TRANSACTION)
         step_price = self._get_step_price()
 
         if version < 3:
@@ -583,8 +619,6 @@ class IconServiceEngine(object):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
                 step_price = 10 ** 12
-        else:
-            step_used: int = max(step_used, min_step_used)
 
         # Charge a fee to from account
         fee: int = step_used * step_price
@@ -632,9 +666,14 @@ class IconServiceEngine(object):
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
+                context.step_counter.append_step(StepType.INSTALL, 1)
             else:
                 # SCORE update
                 score_address = to
+                context.step_counter.append_step(StepType.UPDATE, 1)
+
+            data_size = self._get_byte_length(data.get('content', None))
+            context.step_counter.append_step(StepType.CONTRACT_SET, data_size)
 
             self._icon_score_deploy_engine.invoke(
                 context=context,
@@ -643,8 +682,8 @@ class IconServiceEngine(object):
                 data=data)
             return score_address
         else:
-            self._icon_score_engine.invoke(
-                context, to, data_type, data)
+            context.step_counter.append_step(StepType.CALL, 1)
+            self._icon_score_engine.invoke(context, to, data_type, data)
             return None
 
     @staticmethod

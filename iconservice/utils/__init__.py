@@ -26,8 +26,12 @@ from typing import Any
 
 
 def int_to_bytes(n: int) -> bytes:
-    length = (n.bit_length() + 8) // 8
+    length = byte_length_of_int(n)
     return n.to_bytes(length, byteorder='big', signed=True)
+
+
+def byte_length_of_int(n: int):
+    return (n.bit_length() + 8) // 8
 
 
 def is_lowercase_hex_string(value: str) -> bool:

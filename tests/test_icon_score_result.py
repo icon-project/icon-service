@@ -53,7 +53,7 @@ class TestTransactionResult(unittest.TestCase):
             spec=IconScoreEngine)
 
         step_counter_factory = IconScoreStepCounterFactory()
-        step_counter_factory.get_step_unit = MagicMock(return_value=6000)
+        step_counter_factory.get_step_cost = MagicMock(return_value=6000)
         self._icon_service_engine._step_counter_factory = step_counter_factory
         self._icon_service_engine._icon_pre_validator = \
             Mock(spec=IconPreValidator)

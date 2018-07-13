@@ -34,7 +34,8 @@ class Icx(object):
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
         if amount > 0:
-            self._context.step_counter.increase_step(StepType.TRANSFER, 1)
+            # internal transfer is calculated as StepType.CALL
+            self._context.step_counter.append_step(StepType.CALL, 1)
         ret = self._context.transfer(self._address, addr_to, amount)
         trace = Trace(self._address, TraceType.TRANSFER, [addr_to, amount])
         self._context.traces.append(trace)
@@ -42,7 +43,8 @@ class Icx(object):
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
         if amount > 0:
-            self._context.step_counter.increase_step(StepType.TRANSFER, 1)
+            # internal transfer is calculated as StepType.CALL
+            self._context.step_counter.append_step(StepType.CALL, 1)
         ret = self._context.send(self._address, addr_to, amount)
         trace = Trace(self._address, TraceType.TRANSFER, [addr_to, amount])
         self._context.traces.append(trace)
