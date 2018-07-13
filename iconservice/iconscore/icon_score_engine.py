@@ -99,7 +99,7 @@ class IconScoreEngine(ContextContainer):
         :param data: data to call the method of score
         """
         method: str = data['method']
-        kw_params: dict = data['params']
+        kw_params: dict = data.get('params', {})
 
         icon_score = self._get_icon_score(context, icon_score_address)
 
