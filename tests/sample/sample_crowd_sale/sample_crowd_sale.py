@@ -26,8 +26,8 @@ class SampleCrowdSale(IconScoreBase):
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
-    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
 
         self.__addr_beneficiary = VarDB(self.__ADDR_BENEFICIARY, db, value_type=Address)
         self.__addr_token_score = VarDB(self.__ADDR_TOKEN_SCORE, db, value_type=Address)

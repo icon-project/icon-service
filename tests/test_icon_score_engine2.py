@@ -28,8 +28,10 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import DatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
@@ -39,7 +41,12 @@ from iconservice.icx.icx_account import Account, AccountType
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.utils.bloom import BloomFilter
-from tests import rmtree, create_address
+from iconservice.icon_config import DATA_BYTE_ORDER
+from tests import rmtree, create_address, create_tx_hash, create_block_hash
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -53,24 +60,29 @@ class TestIconScoreEngine2(unittest.TestCase):
         db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
 
+        self._tx_index = 0
+
         self.__ensure_dir(db_path)
         self._db_factory = DatabaseFactory(db_path)
         self._icx_db = self._db_factory.create_by_name('icon_dex')
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
+        self._score_deploy_engine = IconScoreDeployEngine()
+        self._deploy_storage = IconScoreDeployStorage(self._icx_db)
 
         self._icon_score_loader = IconScoreLoader(score_path)
+        self._icon_score_manager = IconScoreManager(self._score_deploy_engine)
         self._icon_score_mapper = IconScoreInfoMapper(
-            self._icx_storage, self._db_factory, self._icon_score_loader)
+            self._db_factory, self._icon_score_manager, self._icon_score_loader)
 
-        self.score_deploy_engine = IconScoreDeployEngine(
+        self._score_deploy_engine.open(
             icon_score_root_path=score_path,
             flags=IconScoreDeployEngine.Flag.NONE,
-            context_db=None,
-            icx_storage=self._icx_storage,
-            icon_score_mapper=self._icon_score_mapper)
+            icon_score_mapper=self._icon_score_mapper,
+            icon_deploy_storage=self._deploy_storage)
 
-        self.score_engine = IconScoreEngine(
+        self.score_engine = IconScoreEngine()
+        self.score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
@@ -83,10 +95,20 @@ class TestIconScoreEngine2(unittest.TestCase):
             AddressPrefix.CONTRACT, b'sample_crowd_sale')
 
         self._factory = IconScoreContextFactory(max_size=1)
+        IconScoreContext.icon_score_manager = self._icon_score_manager
+        self.make_context()
+
+        self._total_supply = 1000 * 10 ** 18
+        self._one_icx = 1 * 10 ** 18
+        self._one_icx_to_token = 1
+
+    def make_context(self):
+        self._tx_index += 1
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._addr1, 0)
-        self._context.tx = Transaction('test_01', origin=self._addr1)
-        self._context.block = Block(1, 'block_hash', 0, None)
+        self._context.tx = Transaction(
+            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, DATA_BYTE_ORDER)), origin=self._addr1)
+        self._context.block = Block(1, create_block_hash(b'block'), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()
@@ -98,18 +120,10 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
 
-        self._total_supply = 1000 * 10 ** 18
-        self._one_icx = 1 * 10 ** 18
-        self._one_icx_to_token = 1
-
     def tearDown(self):
         try:
-            self.score_engine = None
-            self._context = self._factory.create(IconScoreContextType.DIRECT)
-            info = self._icon_score_mapper.get(self._addr_token_score)
-            if info is not None and not self._context.readonly:
-                score = info.icon_score
-                score.db._context_db.close(self._context)
+            self._icon_score_mapper.close()
+            self._context.type = IconScoreContextType.DIRECT
             self._factory.destroy(self._context)
             self._icx_storage.close(self._context)
         finally:
@@ -124,17 +138,18 @@ class TestIconScoreEngine2(unittest.TestCase):
             os.makedirs(dir_path)
 
     def __request_install(self, project_name: str, score_address: 'Address'):
+        self.make_context()
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, f'tests/sample/{project_name}')
         install_data = {'contentType': 'application/tbears', 'content': path}
 
-        self.score_deploy_engine.invoke(
+        self._score_deploy_engine.invoke(
             context=self._context,
             to=ZERO_SCORE_ADDRESS,
             icon_score_address=score_address,
             data=install_data)
 
-        self.score_deploy_engine.commit(self._context)
+        self._score_deploy_engine.commit(self._context)
 
     def test_call_get_api(self):
         self.__request_install('sample_token', self._addr_token_score)
@@ -206,8 +221,8 @@ class TestIconScoreEngine2(unittest.TestCase):
         # addr1이 1ICX로 sample ICO참가
         join_icx = 1
         self._context.msg = Message(self._addr1, join_icx * self._one_icx)
-        self._context.tx = Transaction('test_01', origin=self._addr1)
-        self._context.block = Block(1, 'block_hash', 0, None)
+        self._context.tx = Transaction(create_tx_hash(), origin=self._addr1)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.type = IconScoreContextType.DIRECT
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, '', {})
@@ -215,8 +230,8 @@ class TestIconScoreEngine2(unittest.TestCase):
         # ICO score와 addr1의 토큰량 확인
         self._context.type = IconScoreContextType.QUERY
         self._context.msg = Message(self._addr1, 0)
-        self._context.tx = Transaction('test_01', origin=self._addr1)
-        self._context.block = Block(1, 'block_hash', 0, None)
+        self._context.tx = Transaction(create_tx_hash(), origin=self._addr1)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         call_data = {
             'method': 'balance_of',
             'params': {'addr_from': str(self._addr_crowd_sale_score)}
@@ -245,16 +260,16 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.type = IconScoreContextType.DIRECT
         join_icx = 100
         self._context.msg = Message(self._addr2, join_icx * self._one_icx)
-        self._context.tx = Transaction('test_01', origin=self._addr2)
-        self._context.block = Block(1, 'block_hash', 0, None)
+        self._context.tx = Transaction(create_tx_hash(), origin=self._addr2)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         self.score_engine.invoke(
             self._context, self._addr_crowd_sale_score, '', {})
 
         # ICO score와 addr2의 토큰량 확인
         self._context.type = IconScoreContextType.QUERY
         self._context.msg = Message(self._addr2, 0)
-        self._context.tx = Transaction('test_01', origin=self._addr2)
-        self._context.block = Block(1, 'block_hash', 0, None)
+        self._context.tx = Transaction(create_tx_hash(), origin=self._addr2)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         expected = expected - join_icx * self._one_icx_to_token
         call_data = {
             'method': 'balance_of',
@@ -281,12 +296,12 @@ class TestIconScoreEngine2(unittest.TestCase):
 
         # addr1이 ICO끝났는지 확인
         self._context.msg = Message(self._addr1, 0)
-        self._context.tx = Transaction('test_01', origin=self._addr2)
+        self._context.tx = Transaction(create_tx_hash(), origin=self._addr2)
         one_minute_to_sec = 1 * 60
         one_second_to_microsec = 1 * 10 ** 6
 
         self._context.block = Block(
-            2, 'block_hash', 1 * one_minute_to_sec * one_second_to_microsec, None)
+            2, create_block_hash(), 1 * one_minute_to_sec * one_second_to_microsec, None)
 
         self._context.type = IconScoreContextType.DIRECT
         call_data = {'method': 'check_goal_reached', 'params': {}}

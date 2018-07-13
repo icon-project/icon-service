@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..icx.icx_storage import IcxStorage
+from ..deploy.icon_score_manager import IconScoreManager
 from ..base.address import Address
-from ..base.exception import ExceptionCode, IconScoreException
+from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
+from .icon_score_context import ContextContainer
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -60,7 +61,7 @@ class IconScoreInfo(object):
         return self._icon_score.owner
 
 
-class IconScoreInfoMapper(dict):
+class IconScoreInfoMapper(dict, ContextContainer):
     """Icon score information mapping table
 
     This instance should be used as a singletone
@@ -68,13 +69,15 @@ class IconScoreInfoMapper(dict):
     key: icon_score_address
     value: IconScoreInfo
     """
-    def __init__(self, storage: 'IcxStorage', db_factory: 'DatabaseFactory',
+    def __init__(self,
+                 db_factory: 'DatabaseFactory',
+                 icon_score_manager: 'IconScoreManager',
                  icon_score_loader: 'IconScoreLoader') -> None:
         """Constructor
         """
         super().__init__()
-        self._icx_storage = storage
         self._db_factory = db_factory
+        self._icon_score_manager = icon_score_manager
         self._icon_score_loader = icon_score_loader
 
     def __getitem__(self, icon_score_address: 'Address') -> 'IconScoreInfo':
@@ -97,10 +100,9 @@ class IconScoreInfoMapper(dict):
         self._check_value_type(info)
         super().__setitem__(icon_score_address, info)
 
-    def close(self, context: 'IconScoreContext'):
-        for score_address in self:
-            db = self._create_icon_score_database(score_address)
-            db._context_db.close(context)
+    def close(self):
+        for score_address, info in self.items():
+            info.icon_score.db._context_db.close(None)
 
     @staticmethod
     def _check_key_type(address: 'Address') -> None:
@@ -109,20 +111,17 @@ class IconScoreInfoMapper(dict):
         :param address: icon score address
         """
         if not isinstance(address, Address):
-            raise IconScoreException(
-                f'{address} is an invalid address',
-                ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException(
+                f'{address} is an invalid address')
         if not address.is_contract:
-            raise IconScoreException(
-                f'{address} is not an icon score address.',
-                ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException(
+                f'{address} is not an icon score address.')
 
     @staticmethod
     def _check_value_type(info: IconScoreInfo) -> None:
         if not isinstance(info, IconScoreInfo):
-            raise IconScoreException(
-                f'{info} is not IconScoreInfo type.',
-                ExceptionCode.INVALID_PARAMS)
+            raise InvalidParamsException(
+                f'{info} is not IconScoreInfo type.')
 
     @property
     def score_root_path(self) -> str:
@@ -146,24 +145,32 @@ class IconScoreInfoMapper(dict):
         """
 
         icon_score_info = self.get(address)
-        if icon_score_info is None:
+        is_score_status_active = self._icon_score_manager.is_score_status_active(context, address)
+        if is_score_status_active and icon_score_info is None:
             icon_score_info = self.__load_score(context, address)
 
         if icon_score_info is None:
-            return None
+            if is_score_status_active:
+                raise InvalidParamsException(f'icon_score_info is None : {address}')
+            else:
+                raise InvalidParamsException(f'icon_score is_score_status_active is False : {address}')
 
         icon_score = icon_score_info.icon_score
         return icon_score
 
     def __load_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreInfo']:
-        owner = self._icx_storage.get_score_owner(context, address)
-        if owner is None:
+        if not self._icon_score_manager.is_score_status_active(context, address):
             return None
 
         score_wrapper = self._load_score_wrapper(address)
         score_db = self._create_icon_score_database(address)
 
-        icon_score = score_wrapper(score_db, owner)
+        try:
+            self._put_context(context)
+            icon_score = score_wrapper(score_db)
+        finally:
+            self._delete_context(context)
+
         return self._add_score_to_mapper(icon_score)
 
     def _create_icon_score_database(self, address: 'Address') -> 'IconScoreDatabase':
@@ -184,9 +191,9 @@ class IconScoreInfoMapper(dict):
         :return: IconScoreBase subclass (NOT instance)
         """
 
-        score_wrapper = self._icon_score_loader.load_score(address.body.hex())
+        score_wrapper = self._icon_score_loader.load_score(address.to_bytes().hex())
         if score_wrapper is None:
-            raise IconScoreException(f'score_wrapper load Fail {address}')
+            raise InvalidParamsException(f'score_wrapper load Fail {address}')
         return score_wrapper
 
     def _add_score_to_mapper(self, icon_score: 'IconScoreBase') -> 'IconScoreInfo':
@@ -196,4 +203,3 @@ class IconScoreInfoMapper(dict):
 
     def is_exist_db(self, address: 'Address') -> bool:
         return self._db_factory.is_exist(address)
-

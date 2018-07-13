@@ -22,7 +22,6 @@ Functions and classes in this module don't have any external dependencies.
 
 import re
 import hashlib
-from collections import Iterable
 from typing import Any
 
 
@@ -54,28 +53,6 @@ def sha3_256(data: bytes) -> bytes:
 def to_camel_case(snake_str: str) -> str:
     str_array = snake_str.split('_')
     return str_array[0] + ''.join(sub.title() for sub in str_array[1:])
-
-
-def integers_to_hex(res: Any) -> Iterable:
-    if isinstance(res, dict):
-        for k, v in res.items():
-            if isinstance(v, dict):
-                res[k] = integers_to_hex(v)
-            elif isinstance(v, list):
-                res[k] = integers_to_hex(v)
-            elif isinstance(v, int):
-                res[k] = hex(v)
-    elif isinstance(res, list):
-        for k, v in enumerate(res):
-            if isinstance(v, dict):
-                res[k] = integers_to_hex(v)
-            elif isinstance(v, list):
-                res[k] = integers_to_hex(v)
-            elif isinstance(v, int):
-                res[k] = hex(v)
-    elif isinstance(res, int):
-        res = hex(res)
-    return res
 
 
 def check_error_response(result: Any):

@@ -23,6 +23,7 @@ import hashlib
 import shutil
 import time
 
+from iconservice.icon_config import DATA_BYTE_ORDER
 from iconservice.base.address import Address, AddressPrefix
 
 
@@ -33,7 +34,7 @@ def create_address(prefix: AddressPrefix, data: bytes):
 
 def create_tx_hash(data: bytes=None):
     if data is None:
-        data = int(time.time()).to_bytes(8, 'big')
+        data = int(time.time()).to_bytes(8, DATA_BYTE_ORDER)
 
     return hashlib.sha3_256(data).digest()
 

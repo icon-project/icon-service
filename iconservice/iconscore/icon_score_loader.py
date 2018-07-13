@@ -65,7 +65,7 @@ class IconScoreLoader(object):
 
     @staticmethod
     def __get_last_version_path(score_root_path: str, address_body: str) -> str:
-        address_path = path.join(score_root_path, str(address_body))
+        address_path = path.join(score_root_path, address_body)
 
         tmp_dict = defaultdict(list)
         for dir_name in listdir(address_path):

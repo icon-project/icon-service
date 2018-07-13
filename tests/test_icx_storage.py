@@ -69,41 +69,6 @@ class TestIcxStorage(unittest.TestCase):
         ret = self.storage.is_address_present(context, self.address)
         self.assertFalse(ret)
 
-    def test_get_put_text(self):
-        context = self.context
-        text = 'hello world'
-        self.storage.put_text(context, 'text', text)
-        text2 = self.storage.get_text(context, 'text')
-
-        self.assertEqual(text, text2)
-
-    def test_owner(self):
-        context = self.context
-        icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
-        owner = create_address(AddressPrefix.EOA, b'owner')
-
-        self.storage.put_score_owner(context, icon_score_address, owner)
-
-        owner2 = self.storage.get_score_owner(context, icon_score_address)
-        self.assertTrue(isinstance(owner2, Address))
-        self.assertEqual(AddressPrefix.EOA, owner2.prefix)
-        self.assertEqual(owner, owner2)
-
-    def test_is_score_installed(self):
-        context = self.context
-        icon_score_address = create_address(AddressPrefix.CONTRACT, b'score')
-        owner = create_address(AddressPrefix.EOA, b'owner')
-
-        installed = self.storage.is_score_installed(context,
-                                                    icon_score_address)
-        self.assertFalse(installed)
-
-        self.storage.put_score_owner(context, icon_score_address, owner)
-
-        installed = self.storage.is_score_installed(context,
-                                                    icon_score_address)
-        self.assertTrue(installed)
-
     def tearDown(self):
         context = self.context
         self.storage.delete_account(context, self.address)

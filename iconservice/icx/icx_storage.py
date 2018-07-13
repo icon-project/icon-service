@@ -17,11 +17,9 @@
 from typing import TYPE_CHECKING, Optional
 
 from .icx_account import Account
-from ..base.address import Address, AddressPrefix
-from ..base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.block import Block
 from ..icon_config import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
-from ..utils import sha3_256
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
@@ -96,7 +94,7 @@ class IcxStorage(object):
 
     def get_account(self,
                     context: 'IconScoreContext',
-                    address: Address) -> 'Account':
+                    address: 'Address') -> 'Account':
         """Returns the account indicated by address.
 
         :param context:
@@ -105,7 +103,7 @@ class IcxStorage(object):
             If the account indicated by address is not present,
             create a new account.
         """
-        key = address.body
+        key = address.to_bytes()
         value = self._db.get(context, key)
 
         if value:
@@ -118,28 +116,42 @@ class IcxStorage(object):
 
     def put_account(self,
                     context: 'IconScoreContext',
-                    address: Address,
-                    account: Account) -> None:
+                    address: 'Address',
+                    account: 'Account') -> None:
         """Put account info to db.
 
         :param context:
         :param address: account address
         :param account: account to save
         """
-        key = address.body
+        key = address.to_bytes()
         value = account.to_bytes()
         self._db.put(context, key, value)
 
     def delete_account(self,
                        context: 'IconScoreContext',
-                       address: Address) -> None:
+                       address: 'Address') -> None:
         """Delete account info from db.
 
         :param context:
         :param address: account address
         """
-        key = address.body
+        key = address.to_bytes()
         self._db.delete(context, key)
+
+    def is_address_present(self,
+                           context: 'IconScoreContext',
+                           address: 'Address') -> bool:
+        """Check whether value indicated by address is present or not.
+
+        :param context:
+        :param address: account address
+        :return: True(present) False(not present)
+        """
+        key = address.to_bytes()
+        value = self._db.get(context, key)
+
+        return bool(value)
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply
@@ -166,75 +178,6 @@ class IcxStorage(object):
         key = b'total_supply'
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
         self._db.put(context, key, value)
-
-    def get_score_owner(self,
-                        context: 'IconScoreContext',
-                        icon_score_address: Address) -> Optional['Address']:
-        """Returns owner of IconScore
-
-        :param context:
-        :param icon_score_address:
-        :return owner: IconScore owner address
-        """
-        key = self._get_owner_key(icon_score_address)
-        value = self._db.get(context, key)
-        if value is None:
-            return None
-
-        return Address(AddressPrefix.EOA, value)
-
-    def put_score_owner(self,
-                        context: 'IconScoreContext',
-                        icon_score_address: Address,
-                        owner: Address) -> None:
-        """Records the owner of IconScore to icon_dex db.
-
-        :param context:
-        :param icon_score_address: IconScore address
-        :param owner: The owner of IconScore
-        """
-        key = self._get_owner_key(icon_score_address)
-        self._db.put(context, key, owner.body)
-
-    @staticmethod
-    def _get_owner_key(icon_score_address: Address) -> bytes:
-        return sha3_256(b'owner|' + icon_score_address.body)
-
-    def delete_score_owner(self,
-                           context: 'IconScoreContext',
-                           icon_score_address: Address) -> None:
-        key = self._get_owner_key(icon_score_address)
-        self._db.delete(context, key)
-
-    def is_score_installed(self,
-                           context: Optional['IconScoreContext'],
-                           icon_score_address: Address) -> bool:
-        """Returns whether IconScore is installed or not
-
-        :param context:
-        :param icon_score_address:
-        :return: True(installed) False(not installed)
-        """
-        # Predefined SCORE addresses
-        if icon_score_address.body in \
-                (ZERO_SCORE_ADDRESS.body, GOVERNANCE_SCORE_ADDRESS.body):
-            return True
-
-        return self.get_score_owner(context, icon_score_address) is not None
-
-    def is_address_present(self,
-                           context: 'IconScoreContext',
-                           address: Address) -> bool:
-        """Check whether value indicated by address is present or not.
-
-        :param context:
-        :param address: account address
-        :return: True(present) False(not present)
-        """
-        key = address.body
-        value = self._db.get(context, key)
-
-        return bool(value)
 
     def close(self,
               context: 'IconScoreContext') -> None:

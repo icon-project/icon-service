@@ -17,9 +17,13 @@
 from enum import IntEnum, unique
 from struct import Struct
 
-from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_config import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..base.address import Address
 
 ACCOUNT_DATA_STRUCTURE_VERSION = 0
 
@@ -68,11 +72,11 @@ class Account(object):
     # leveldb account value structure (bigendian, 36 bytes)
     # version(1) | type(1) | flags(1) | reserved(1) |
     # icx(DEFAULT_BYTE_SIZE)
-    _struct = Struct(f'>cccx{DEFAULT_BYTE_SIZE}s')
+    _struct = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self,
-                 account_type: AccountType=AccountType.GENERAL,
-                 address: Address=None,
+                 account_type: 'AccountType'=AccountType.GENERAL,
+                 address: 'Address'=None,
                  icx: int=0,
                  locked: bool=False,
                  c_rep: bool=False,
@@ -87,7 +91,7 @@ class Account(object):
         self._installed = installed
 
     @property
-    def address(self) -> Address:
+    def address(self) -> 'Address':
         """Address object
 
         :return: (Address)
@@ -95,7 +99,7 @@ class Account(object):
         return self._address
 
     @address.setter
-    def address(self, value: Address) -> None:
+    def address(self, value: 'Address') -> None:
         """address setter
 
         :param value: account address
@@ -103,7 +107,7 @@ class Account(object):
         self._address = value
 
     @property
-    def type(self) -> AccountType:
+    def type(self) -> 'AccountType':
         """AccountType getter
 
         :return: AccountType value
@@ -111,7 +115,7 @@ class Account(object):
         return self._type
 
     @type.setter
-    def type(self, value: AccountType) -> None:
+    def type(self, value: 'AccountType') -> None:
         """AccountType setter
 
         :param value: (AccountType)
@@ -223,15 +227,11 @@ class Account(object):
         :param buf: (bytes) bytes data including Account information
         :return: (Account) account object
         """
-        byteorder = DATA_BYTE_ORDER
 
         version, account_type, flags, amount = \
             Account._struct.unpack(buf)
 
-        # version = int.from_bytes(version, byteorder)
-        account_type = int.from_bytes(account_type, byteorder)
-        flags = int.from_bytes(flags, byteorder)
-        amount = int.from_bytes(amount, byteorder)
+        amount = int.from_bytes(amount, DATA_BYTE_ORDER)
 
         account = Account()
         account.type = AccountType.from_int(account_type)
@@ -246,7 +246,7 @@ class Account(object):
 
         :return: data including information of account object
         """
-        byteorder = DATA_BYTE_ORDER
+
         # for extendability
         version = ACCOUNT_DATA_STRUCTURE_VERSION
 
@@ -256,11 +256,7 @@ class Account(object):
         if self._c_rep:
             flags |= AccountFlag.C_REP
 
-        return Account._struct.pack(
-            version.to_bytes(1, byteorder),
-            self._type.to_bytes(1, byteorder),
-            flags.to_bytes(1, byteorder),
-            self._icx.to_bytes(DEFAULT_BYTE_SIZE, byteorder))
+        return Account._struct.pack(version, self._type, flags, self._icx.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
 
     def __bytes__(self) -> bytes:
         """operator bytes() overriding

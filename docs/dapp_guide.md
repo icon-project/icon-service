@@ -26,8 +26,8 @@ class SampleToken(IconScoreBase):
     @eventlog(indexed=3)
     def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
 
-    def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
-        super().__init__(db, addr_owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
         self.__total_supply = VarDB(self.__TOTAL_SUPPLY, db, value_type=int)
         self.__balances = DictDB(self.__BALANCES, db, value_type=int)
 
@@ -102,8 +102,8 @@ class SampleCrowdSale(IconScoreBase):
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
-    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
 
         self.__addr_beneficiary = VarDB(self.__ADDR_BENEFICIARY, db, value_type=Address)
         self.__addr_token_score = VarDB(self.__ADDR_TOKEN_SCORE, db, value_type=Address)

@@ -13,23 +13,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .icon_score_context import IconScoreContext
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
-from ..base.address import Address
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .icon_score_context import IconScoreContext
+    from ..base.address import Address
 
 
 class Icx(object):
     """Class for handling ICX coin transfer
     """
 
-    def __init__(self, context: IconScoreContext, address: Address) -> None:
+    def __init__(self, context: 'IconScoreContext', address: 'Address') -> None:
         """Constructor
         """
         self._context = context
         self._address = address
 
-    def transfer(self, addr_to: Address, amount: int) -> bool:
+    def transfer(self, addr_to: 'Address', amount: int) -> bool:
         if amount > 0:
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         ret = self._context.transfer(self._address, addr_to, amount)
@@ -37,7 +40,7 @@ class Icx(object):
         self._context.traces.append(trace)
         return ret
 
-    def send(self, addr_to: Address, amount: int) -> bool:
+    def send(self, addr_to: 'Address', amount: int) -> bool:
         if amount > 0:
             self._context.step_counter.increase_step(StepType.TRANSFER, 1)
         ret = self._context.send(self._address, addr_to, amount)

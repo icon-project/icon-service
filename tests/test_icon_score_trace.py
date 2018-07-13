@@ -63,7 +63,7 @@ class TestTrace(unittest.TestCase):
 
         ContextContainer._put_context(context)
 
-        self._score = TestScore(db, address)
+        self._score = TestScore(db)
 
     def tearDown(self):
         self._mock_icon_score = None
@@ -242,16 +242,13 @@ class TestInterfaceScore(InterfaceScore):
 
 class TestScore(IconScoreBase):
 
-    def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: 'IconScoreDatabase') -> None:
+        super().__init__(db)
 
     def on_install(self) -> None:
         pass
 
     def on_update(self) -> None:
-        pass
-
-    def on_selfdestruct(self, recipient: 'Address') -> None:
         pass
 
     @external

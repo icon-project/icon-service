@@ -21,10 +21,14 @@ import hashlib
 from enum import IntEnum
 
 from .exception import InvalidParamsException
-from ..utils import is_lowercase_hex_string
+from ..utils import is_lowercase_hex_string, int_to_bytes
+from ..icon_config import DATA_BYTE_ORDER
+
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
+ICON_EOA_ADDRESS_BYTES_SIZE = 20
+ICON_CONTRACT_ADDRESS_BYTES_SIZE = 21
 
 
 def is_icon_address_valid(address: str) -> bool:
@@ -151,7 +155,7 @@ class Address(object):
 
         :return: hash value
         """
-        return hash(self.__prefix.to_bytes(1, 'big') + self.__body)
+        return hash(self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body)
 
     @property
     def is_contract(self) -> bool:
@@ -183,10 +187,49 @@ class Address(object):
         hash_value = hashlib.sha3_256(data).digest()
         return Address(prefix, hash_value[-20:])
 
+    @staticmethod
+    def from_bytes(buf: bytes) -> 'Address':
+        """Create Address object from bytes data
+
+        :param buf: (bytes) bytes data including Address information
+        :return: (Address) Address object
+        """
+        buf_size = len(buf)
+
+        prefix = AddressPrefix.EOA
+        if buf_size != ICON_EOA_ADDRESS_BYTES_SIZE:
+            prefix_byte = buf[0:1]
+            prefix_int = int.from_bytes(prefix_byte, DATA_BYTE_ORDER)
+            prefix = AddressPrefix(prefix_int)
+            buf = buf[1:]
+        return Address(prefix, buf)
+
+    def to_bytes(self) -> bytes:
+        """Convert Address object to bytes
+
+        :return: data including information of Address object
+        """
+        body_bytes = self.body
+        if self.prefix != AddressPrefix.EOA:
+            prefix_byte = self.prefix.value.to_bytes(1, DATA_BYTE_ORDER)
+            address_bytes = prefix_byte + body_bytes
+        else:
+            address_bytes = body_bytes
+        return address_bytes
+
+
+def create_address_from_int(prefix: AddressPrefix, num: int):
+    num_bytes = int_to_bytes(num)
+    zero_size = 20 - len(num_bytes)
+    if zero_size < 0:
+        raise InvalidParamsException(f'num_bytes is over 20 bytes num: {num}')
+    return Address(prefix, b'\x00' * zero_size + num_bytes)
+
 
 # cx0000000000000000000000000000000000000000
-ZERO_SCORE_ADDRESS = Address(AddressPrefix.CONTRACT, b'\x00' * 20)
+ZERO_SCORE_ADDRESS = create_address_from_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
-GOVERNANCE_SCORE_ADDRESS = Address(
-    AddressPrefix.CONTRACT, b'\x00' * 19 + b'\x01')
+GOVERNANCE_SCORE_ADDRESS = create_address_from_int(AddressPrefix.CONTRACT, 1)
+
+ADMIN_SCORE_ADDRESS = Address.from_data(AddressPrefix.EOA, b'ADMIN')
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')

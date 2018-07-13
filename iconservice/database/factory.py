@@ -44,7 +44,6 @@ class DatabaseFactory(object):
     def create_by_name(self, name: str) -> ContextDatabase:
         """Create a state db with the given address.
 
-        :param address:
         :return: plyvel db object
         """
         path = os.path.join(self.__state_db_root_path, name)

@@ -44,9 +44,9 @@ class IconScoreDeployer(object):
         :param transaction_index:
         :return:
         """
-        str_address = address.body.hex()
+
         score_id = f'{block_height}_{transaction_index}'
-        score_root_path = os.path.join(self.icon_score_root_path, str_address)
+        score_root_path = os.path.join(self.icon_score_root_path, address.to_bytes().hex())
         install_path = os.path.join(score_root_path, score_id)
 
         try:

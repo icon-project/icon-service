@@ -29,7 +29,7 @@ class Block(object):
     # | timestamp(DEFAULT_BYTE_SIZE)
     # | prev_hash(DEFAULT_BYTE_SIZE)
 
-    _struct = Struct(f'>c{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s')
+    _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self, block_height: int, block_hash: bytes, timestamp: int, prev_hash: Optional[bytes]) -> None:
         """Constructor
@@ -86,10 +86,9 @@ class Block(object):
         """
         byteorder = DATA_BYTE_ORDER
 
-        version_bytes, block_height_bytes, block_hash_bytes, timestamp_bytes, block_prev_hash_bytes = \
+        version, block_height_bytes, block_hash_bytes, timestamp_bytes, block_prev_hash_bytes = \
             Block._struct.unpack(buf)
 
-        # version = int.from_bytes(version_bytes, byteorder)
         block_height = int.from_bytes(block_height_bytes, byteorder)
         block_hash = block_hash_bytes
         timestamp = int.from_bytes(timestamp_bytes, byteorder)
@@ -110,7 +109,6 @@ class Block(object):
 
         byteorder = DATA_BYTE_ORDER
         # for extendability
-        version_bytes = self._VERSION.to_bytes(1, byteorder)
         block_height_bytes = self._height.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
         block_hash_bytes = self._hash
         timestamp_bytes = self._timestamp.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
@@ -121,7 +119,7 @@ class Block(object):
         prev_block_hash_bytes = tmp_prev_hash
 
         return Block._struct.pack(
-            version_bytes,
+            self._VERSION,
             block_height_bytes,
             block_hash_bytes,
             timestamp_bytes,
