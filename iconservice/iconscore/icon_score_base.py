@@ -19,7 +19,7 @@ from inspect import isfunction, getmembers, signature, Parameter
 from abc import abstractmethod
 from functools import partial
 
-from iconservice.utils import int_to_bytes
+from iconservice.utils import int_to_bytes, byte_length_of_int
 from .icon_score_trace import Trace, TraceType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
@@ -375,7 +375,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param args: arguments
         :param kwargs: keyword arguments
         """
-        self._context.step_counter.increase_step(StepType.CALL, 1)
+        self._context.step_counter.append_step(StepType.CALL, 1)
         ret = self._context.call(
             self.address, to_, func_name, args, kwargs)
         arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
@@ -403,14 +403,16 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 f'declared indexed_args_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 
+        event_size = self.__get_byte_length(event_signature)
         self._context.logs_bloom.add(self.__get_bloom_data(0, event_signature))
         indexed: List[BaseType] = [event_signature]
         data: List[BaseType] = []
         for i, argument in enumerate(arguments):
             # Raises an exception if the types are not supported
             if not IconScoreBase.__is_base_type(argument):
-                raise EventLogException(
-                    f'Not supported type: {type(argument)}')
+                raise EventLogException(f'Not supported type: {type(argument)}')
+
+            event_size += self.__get_byte_length(argument)
 
             # Separates indexed type and base type with keeping order.
             if i < indexed_args_count:
@@ -420,23 +422,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             else:
                 data.append(argument)
 
+        self._context.step_counter.append_step(StepType.EVENT_LOG, event_size)
         event = EventLog(self.address, indexed, data)
         self._context.event_logs.append(event)
-
-    @staticmethod
-    def __get_bloom_data(index: int, data: BaseType) -> bytes:
-        raw = index.to_bytes(1, DATA_BYTE_ORDER)
-        if isinstance(data, int):
-            raw += int_to_bytes(data)
-        elif isinstance(data, str):
-            raw += data.encode('utf-8')
-        elif isinstance(data, Address):
-            raw += data.body
-        elif isinstance(data, bool):
-            raw += int_to_bytes(int(data))
-        elif isinstance(data, bytes):
-            raw += data
-        return raw
 
     @staticmethod
     def __is_base_type(value) -> bool:
@@ -444,6 +432,29 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             if isinstance(value, base_type):
                 return True
         return False
+
+    @staticmethod
+    def __get_byte_length(data: 'BaseType') -> int:
+        if isinstance(data, int):
+            return byte_length_of_int(data)
+        else:
+            return len(IconScoreBase.__base_type_to_bytes(data))
+
+    @staticmethod
+    def __base_type_to_bytes(data: 'BaseType') -> bytes:
+        if isinstance(data, str):
+            return data.encode('utf-8')
+        elif isinstance(data, Address):
+            return data.body
+        elif isinstance(data, bytes):
+            return data
+        elif isinstance(data, int):
+            return int_to_bytes(data)
+
+    @staticmethod
+    def __get_bloom_data(index: int, data: BaseType) -> bytes:
+        return index.to_bytes(1, DATA_BYTE_ORDER) + \
+               IconScoreBase.__base_type_to_bytes(data)
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -466,11 +477,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
-                context.step_counter.increase_step(
+                context.step_counter.append_step(
                     StepType.STORAGE_REPLACE, len(new_value))
             else:
                 # newly storing a value
-                context.step_counter.increase_step(
+                context.step_counter.append_step(
                     StepType.STORAGE_SET, len(new_value))
 
     # noinspection PyUnusedLocal
@@ -489,7 +500,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if old_value and context and \
                 context.type == IconScoreContextType.INVOKE:
-            context.step_counter.increase_step(
+            context.step_counter.append_step(
                 StepType.STORAGE_DELETE, len(old_value))
 
     @property
