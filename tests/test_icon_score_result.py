@@ -15,6 +15,7 @@
 # limitations under the License.
 import hashlib
 import unittest
+from typing import Optional
 from unittest.mock import Mock, MagicMock, NonCallableMagicMock, patch
 
 from iconservice import EventLog
@@ -238,45 +239,36 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['logsBloom'].startswith('0x'))
         self.assertTrue(converted_result['status'].startswith('0x'))
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.'
-           '_handle_score_invoke')
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    @patch('iconservice.icon_service_engine.'
+           'IconServiceEngine.load_builtin_scores')
     @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
-    @patch('iconservice.icx.icx_engine.IcxEngine.get_balance')
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def test_request(self,
-                     IcxEngine_open,
-                     IcxEngine_get_balance,
-                     DatabaseFactory_create_by_name,
-                     IconServiceEngine__handle_score_invoke):
+    def test_request(self, open, create_by_name, load_builtin_scores, invoke):
 
         inner_task = IconScoreInnerTask(".", ".")
-        IcxEngine_open.assert_called()
-        DatabaseFactory_create_by_name.assert_called()
+        open.assert_called()
+        create_by_name.assert_called()
+        load_builtin_scores.assert_called()
 
-        inner_task._icon_service_engine._icon_score_engine = \
-            Mock(spec=IconScoreEngine)
+        inner_task._icon_service_engine._icx_engine.get_balance = \
+            Mock(return_value=100e18)
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
 
-        def intercept_get_balance(*args, **kwargs):
-            return 100e18
-
-        IcxEngine_get_balance.side_effect = intercept_get_balance
-
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db), to_)
+            score = SampleScore(IconScoreDatabase(context_db))
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
 
-        IconServiceEngine__handle_score_invoke.side_effect = intercept_invoke
+        invoke.side_effect = intercept_invoke
 
         request = self.create_req(from_, to_)
         response = inner_task._invoke(request)
-        IcxEngine_get_balance.assert_called()
-        IconServiceEngine__handle_score_invoke.assert_called()
+        invoke.assert_called()
 
         step_total = 0
 
@@ -335,14 +327,18 @@ class TestTransactionResult(unittest.TestCase):
 
 class SampleScore(IconScoreBase):
 
-    def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: 'IconScoreDatabase') -> None:
+        super().__init__(db)
 
     def on_install(self) -> None:
         pass
 
     def on_update(self) -> None:
         pass
+
+    def get_owner(self,
+                  score_address: Optional['Address']) -> Optional['Address']:
+        return None
 
     @eventlog(indexed=2)
     def SampleEvent(self, i_data: bytes, address: Address, amount: int,

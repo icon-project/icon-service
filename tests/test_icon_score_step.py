@@ -15,7 +15,8 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import patch
+from typing import Optional
+from unittest.mock import patch, MagicMock, Mock
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.database.db import IconScoreDatabase
@@ -29,17 +30,21 @@ from tests import create_block_hash, create_tx_hash, create_address
 
 class TestIconScoreStepCounter(unittest.TestCase):
 
+    @patch('iconservice.icon_service_engine.'
+           'IconServiceEngine.load_builtin_scores')
     @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def setUp(self,
-              IcxEngine_open,
-              DatabaseFactory_create_by_name):
+    def setUp(self, open, create_by_name, load_builtin_scores):
         self._inner_task = IconScoreInnerTask(".", ".")
-        IcxEngine_open.assert_called()
-        DatabaseFactory_create_by_name.assert_called()
+        open.assert_called()
+        create_by_name.assert_called()
+        load_builtin_scores.assert_called()
+        self._inner_task._icon_service_engine._icx_engine.get_balance = \
+            Mock(return_value=100e18)
+        self._inner_task._icon_service_engine._icx_engine._transfer = Mock()
 
     def tearDown(self):
-        self.__step_counter_factory = None
+        self._inner_task = None
 
     @patch('iconservice.deploy.icon_score_deploy_engine.'
            'IconScoreDeployEngine.invoke')
@@ -74,16 +79,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
             get_step_cost(StepType.CONTRACT_SET) * 25,
             int(result['txResults'][tx_hash]['stepUsed'], 16))
 
-    @patch('iconservice.icx.icx_engine.IcxEngine.get_balance')
-    def test_transfer_step(self, get_balance):
+    def test_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         to_ = create_address(AddressPrefix.EOA, b'eoa')
         req = self.get_request(tx_hash, to_, None, None)
-
-        def intercept_get_balance(*args, **kwargs):
-            return 100e18
-
-        get_balance.side_effect = intercept_get_balance
 
         result = self._inner_task._invoke(req)
         self.assertEqual(
@@ -92,22 +91,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
             int(result['txResults'][tx_hash]['stepUsed'], 16))
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    @patch('iconservice.icx.icx_engine.IcxEngine.get_balance')
-    @patch('iconservice.icx.icx_engine.IcxEngine._transfer')
-    def test_internal_transfer_step(self, _transfer, get_balance, invoke):
+    def test_internal_transfer_step(self, invoke):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
         req = self.get_request(tx_hash, to_, 'call', {})
 
-        def intercept_get_balance(*args, **kwargs):
-            return 100e18
-
-        get_balance.side_effect = intercept_get_balance
-
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db), to_)
+            score = SampleScore(IconScoreDatabase(context_db))
             score.transfer()
 
         invoke.side_effect = intercept_invoke
@@ -123,21 +115,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
             int(result['txResults'][tx_hash]['stepUsed'], 16))
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    @patch('iconservice.icx.icx_engine.IcxEngine.get_balance')
-    def test_event_log_step(self, get_balance, invoke):
+    def test_event_log_step(self, invoke):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
         req = self.get_request(tx_hash, to_, 'call', {})
 
-        def intercept_get_balance(*args, **kwargs):
-            return 100e18
-
-        get_balance.side_effect = intercept_get_balance
-
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db), to_)
+            score = SampleScore(IconScoreDatabase(context_db))
             address = create_address(AddressPrefix.EOA, b'address')
             i_data_param = b'i_data'
             data_param = b'data'
@@ -191,14 +177,18 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
 class SampleScore(IconScoreBase):
 
-    def __init__(self, db: 'IconScoreDatabase', owner: 'Address') -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: 'IconScoreDatabase') -> None:
+        super().__init__(db)
 
     def on_install(self) -> None:
         pass
 
     def on_update(self) -> None:
         pass
+
+    def get_owner(self,
+                  score_address: Optional['Address']) -> Optional['Address']:
+        return None
 
     @eventlog(indexed=2)
     def SampleEvent(
@@ -208,3 +198,4 @@ class SampleScore(IconScoreBase):
     @external
     def transfer(self):
         self.icx.transfer(self.msg.sender, 10)
+
