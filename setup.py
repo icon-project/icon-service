@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+import os
+
 from setuptools import setup, find_packages
-from iconservice import __version__
 
 requires = [
     'plyvel',
@@ -9,9 +10,12 @@ requires = [
     'setproctitle'
 ]
 
+with open(os.path.join('.', 'VERSION')) as version_file:
+    version = version_file.read().strip()
+
 setup_options = {
-    'name': 'iconservice', 
-    'version': __version__,
+    'name': 'iconservice',
+    'version': version,
     'description': 'iconservice for python',
     'long_description': open('docs/class.md').read(),
     'author': 'ICON foundation',
