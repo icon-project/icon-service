@@ -49,18 +49,12 @@ class IconScoreManager(object):
                   icon_score_address: 'Address') -> Optional['Address']:
         return self.__deploy_engine.icon_deploy_storage.get_score_owner(context, icon_score_address)
 
-    def is_owner_deployed_score(self,
-                                context: 'IconScoreContext',
-                                score_address: 'Address',
-                                owner: 'Address') -> bool:
-        return self.__deploy_engine.icon_deploy_storage.is_owner_deployed_score(context, score_address, owner)
-
-    def get_tx_hash_using_score_address(self,
+    def get_tx_hash_by_score_address(self,
                                         context: 'IconScoreContext',
                                         score_address: 'Address') -> Optional[bytes]:
-        return self.__deploy_engine.icon_deploy_storage.get_tx_hash_using_score_address(context, score_address)
+        return self.__deploy_engine.icon_deploy_storage.get_tx_hash_by_score_address(context, score_address)
 
-    def get_score_address_using_tx_hash(self,
+    def get_score_address_by_tx_hash(self,
                                         context: 'IconScoreContext',
                                         tx_hash: bytes) -> Optional['Address']:
-        return self.__deploy_engine.icon_deploy_storage.get_score_address_using_tx_hash(context, tx_hash)
+        return self.__deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
