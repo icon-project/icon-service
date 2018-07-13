@@ -111,7 +111,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db))
+            score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
 
         score_engine_invoke = Mock(side_effect=intercept_invoke)
@@ -146,8 +146,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db))
             address = create_address(AddressPrefix.EOA, b'address')
+            score = SampleScore(IconScoreDatabase(address, context_db))
             i_data_param = b'i_data'
             data_param = b'data'
             text_param = 'text'

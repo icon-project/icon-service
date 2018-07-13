@@ -17,20 +17,21 @@
 """IconScoreEngine testcase
 """
 
-import shutil
-import unittest
-import time
 import asyncio
 import os
+import shutil
+import time
+import unittest
+from typing import TYPE_CHECKING
 
-from iconservice.icon_inner_service import IconScoreInnerTask
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
-from iconservice.icon_config import default_icon_config
 from iconcommons.icon_config import IconConfig
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, \
+    GOVERNANCE_SCORE_ADDRESS
+from iconservice.icon_config import default_icon_config
+from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
+from iconservice.icon_inner_service import IconScoreInnerTask
 from tests import create_block_hash, create_address, create_tx_hash
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from iconservice.base.address import Address
 

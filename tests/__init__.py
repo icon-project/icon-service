@@ -22,29 +22,37 @@
 import hashlib
 import shutil
 import time
+from typing import TYPE_CHECKING
 
+from iconservice.base.address import Address
 from iconservice.icon_constant import DATA_BYTE_ORDER
-from iconservice.base.address import Address, AddressPrefix
+
+if TYPE_CHECKING:
+    from iconservice.base.address import AddressPrefix
 
 
-def create_address(prefix: AddressPrefix, data: bytes):
+def create_address(prefix: 'AddressPrefix', data: bytes) -> 'Address':
     hash_value = hashlib.sha3_256(data).digest()
     return Address(prefix, hash_value[-20:])
 
 
-def create_tx_hash(data: bytes=None):
+def create_hash_256(data: bytes=None) -> bytes:
     if data is None:
         data = int(time.time()).to_bytes(8, DATA_BYTE_ORDER)
 
     return hashlib.sha3_256(data).digest()
 
 
-def create_block_hash(data: bytes=None):
+def create_tx_hash(data: bytes=None) -> bytes:
+    return create_hash_256(data)
+
+
+def create_block_hash(data: bytes=None) -> bytes:
     return create_tx_hash(data)
 
 
 def rmtree(path: str) -> None:
     try:
         shutil.rmtree(path)
-    except:
+    except Exception as e:
         pass

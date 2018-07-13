@@ -23,20 +23,19 @@ from unittest.mock import Mock
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
     external, IconScoreException, int_to_bytes
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from tests import create_address
-
-from iconservice.icon_constant import DATA_BYTE_ORDER
 
 
 class TestEventlog(unittest.TestCase):
     def setUp(self):
         db = Mock(spec=IconScoreDatabase)
         address = Mock(spec=Address)
+        db.attach_mock(address, 'address')
         context = Mock(spec=IconScoreContext)
         event_logs = Mock(spec=List['EventLog'])
         step_counter = Mock(spec=IconScoreStepCounter)
@@ -53,7 +52,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = create_address(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, b'address')
         age = 10
         phone_number = "000"
 
@@ -98,7 +97,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = create_address(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, b'address')
         age = 10
 
         # Call with ordered arguments
@@ -131,7 +130,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = create_address(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, b'address')
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
@@ -149,7 +148,7 @@ class TestEventlog(unittest.TestCase):
     def test_address_index_event(self):
         context = ContextContainer._get_context()
 
-        address = create_address(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, b'address')
 
         # Tests simple event emit
         self._mock_score.AddressIndexEvent(address)
@@ -233,7 +232,7 @@ class TestEventlog(unittest.TestCase):
     def test_to_dict_camel(self):
         context = ContextContainer._get_context()
 
-        address = create_address(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, b'address')
         age = 10
         data = b'0123456789abc'
 

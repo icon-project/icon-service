@@ -16,47 +16,54 @@
 
 
 import os
+from enum import IntEnum
 
 from .db import ContextDatabase
 from ..base.address import Address
 
 
-class DatabaseFactory(object):
-    """Create db accessor to manipulate a state db.
-    """
+class ContextDatabaseFactory(object):
 
-    def __init__(self, state_db_root_path: str):
-        """Constructor
-        """
-        self.__state_db_root_path = state_db_root_path
+    class Mode(IntEnum):
+        SINGLE_DB = 0
+        MULTIPLE_DB = 1
 
-    def create_by_address(self, address: Address) -> ContextDatabase:
-        """Create a state db with the given address.
+    _state_db_root_path: str = None
+    _mode: 'Mode' = Mode.SINGLE_DB
+    _shared_context_db: 'ContextDatabase' = None
 
-        :param address:
-        :return: plyvel db object
-        """
-        name = address.body.hex()
-        path = os.path.join(self.__state_db_root_path, name)
+    @classmethod
+    def open(cls, state_db_root_path: str, mode: 'Mode'):
+        cls.close()
 
-        return ContextDatabase.from_address_and_path(address, path)
+        cls._state_db_root_path = state_db_root_path
+        cls._mode = mode
 
-    def create_by_name(self, name: str) -> ContextDatabase:
-        """Create a state db with the given address.
+    @classmethod
+    def get_shared_db(cls) -> ContextDatabase:
+        if cls._shared_context_db is None:
+            path = os.path.join(cls._state_db_root_path, 'icon_dex')
+            cls._shared_context_db = ContextDatabase.from_path(path)
 
-        :return: plyvel db object
-        """
-        path = os.path.join(self.__state_db_root_path, name)
+        return cls._shared_context_db
 
-        return ContextDatabase.from_address_and_path(address=None, path=path)
+    @classmethod
+    def create_by_address(cls, address: 'Address') -> ContextDatabase:
+        if cls._mode == cls.Mode.SINGLE_DB:
+            return cls.get_shared_db()
+        else:
+            return cls.create_by_name(address.body.hex())
 
-    def is_exist(self, address: Address) -> bool:
-        """ Check DB exist
+    @classmethod
+    def create_by_name(cls, name: str) -> ContextDatabase:
+        if cls._mode == cls.Mode.SINGLE_DB:
+            return cls.get_shared_db()
+        else:
+            path = os.path.join(cls._state_db_root_path, name)
+            return ContextDatabase.from_path(path)
 
-        :param address:
-        :return:
-        """
-
-        name = address.body.hex()
-        path = os.path.join(self.__state_db_root_path, name)
-        return os.path.isdir(path)
+    @classmethod
+    def close(cls):
+        if cls._shared_context_db:
+            cls._shared_context_db.key_value_db.close()
+            cls._shared_context_db = None

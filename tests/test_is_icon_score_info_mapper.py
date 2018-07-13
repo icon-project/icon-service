@@ -13,13 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import shutil
 import unittest
 
 from iconservice import IconScoreBase, IconScoreContextType, InvalidParamsException
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
-from iconservice.database.factory import DatabaseFactory
+from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
@@ -39,14 +40,15 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
 
         self.__ensure_dir(db_path)
-        self._db_factory = DatabaseFactory(db_path)
-        self._icx_db = self._db_factory.create_by_name('test_mapper_dex')
+
+        path = os.path.join(db_path, 'test_mapper_dex')
+        self._icx_db = ContextDatabase.from_path(path, True)
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._deploy_engine = IconScoreDeployEngine()
 
         self._icon_score_loader = IconScoreLoader(score_path)
         self.mapper = IconScoreInfoMapper(
-            self._db_factory, IconScoreManager(self._deploy_engine), self._icon_score_loader)
+            IconScoreManager(self._deploy_engine), self._icon_score_loader)
         self.score_address = create_address(AddressPrefix.CONTRACT, b'score')
         self.address = create_address(AddressPrefix.EOA, b'addr')
 
