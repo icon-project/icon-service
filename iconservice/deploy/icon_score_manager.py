@@ -31,21 +31,36 @@ class IconScoreManager(object):
     def deploy(self,
                context: Optional['IconScoreContext'],
                from_score: 'Address',
-               tx_hash: bytes,
-               audit_tx_hash: bytes) -> None:
+               tx_hash: bytes) -> None:
 
         if from_score == GOVERNANCE_SCORE_ADDRESS:
-            self.__deploy_engine.deploy(context, tx_hash, audit_tx_hash)
+            self.__deploy_engine.deploy(context, tx_hash)
         else:
             raise ServerErrorException('Permission Error')
 
-    def is_active(self,
-                  context: Optional['IconScoreContext'],
-                  icon_score_address: 'Address') -> bool:
+    def is_score_status_active(self,
+                               context: Optional['IconScoreContext'],
+                               icon_score_address: 'Address') -> bool:
 
-        return self.__deploy_engine.icon_deploy_storage.is_score_activa(context, icon_score_address)
+        return self.__deploy_engine.icon_deploy_storage.is_score_status_active(context, icon_score_address)
 
     def get_owner(self,
                   context: Optional['IconScoreContext'],
                   icon_score_address: 'Address') -> Optional['Address']:
         return self.__deploy_engine.icon_deploy_storage.get_score_owner(context, icon_score_address)
+
+    def is_owner_deployed_score(self,
+                                context: 'IconScoreContext',
+                                score_address: 'Address',
+                                owner: 'Address') -> bool:
+        return self.__deploy_engine.icon_deploy_storage.is_owner_deployed_score(context, score_address, owner)
+
+    def get_tx_hash_using_score_address(self,
+                                        context: 'IconScoreContext',
+                                        score_address: 'Address') -> Optional[bytes]:
+        return self.__deploy_engine.icon_deploy_storage.get_tx_hash_using_score_address(context, score_address)
+
+    def get_score_address_using_tx_hash(self,
+                                        context: 'IconScoreContext',
+                                        tx_hash: bytes) -> Optional['Address']:
+        return self.__deploy_engine.icon_deploy_storage.get_score_address_using_tx_hash(context, tx_hash)

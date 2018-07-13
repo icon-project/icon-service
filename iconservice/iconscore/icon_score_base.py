@@ -31,6 +31,7 @@ from .icx import Icx
 from ..base.exception import *
 from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
+from ..icon_config import DATA_BYTE_ORDER
 
 from typing import TYPE_CHECKING, Callable, Any, List
 
@@ -424,7 +425,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     @staticmethod
     def __get_bloom_data(index: int, data: BaseType) -> bytes:
-        raw = index.to_bytes(1, 'big')
+        raw = index.to_bytes(1, DATA_BYTE_ORDER)
         if isinstance(data, int):
             raw += int_to_bytes(data)
         elif isinstance(data, str):
@@ -524,22 +525,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def now(self):
         return self.block.timestamp
 
-    def deploy(self, tx_hash: bytes):
-        self._context.icon_score_manager.deploy(self._context, self.address, tx_hash, self.tx.hash)
-
-    def is_active(self, score_address: 'Address'):
-        self._context.icon_score_manager.is_active(self._context, score_address)
-
-    def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
-        if score_address:
-            score_address = self.address
-        return self._context.icon_score_manager.get_owner(self._context, score_address)
-
-    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
-        if interface_cls is InterfaceScore:
-            raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
-        return interface_cls(addr_to, self.__call_interface_score)
-
     def call(self, addr_to: 'Address', func_name: str, kw_dict: dict):
 
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
@@ -556,3 +541,35 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         self._context.revert(message, code)
+
+    def deploy(self, tx_hash: bytes):
+        self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)
+
+    def is_score_status_active(self, score_address: 'Address'):
+        self._context.icon_score_manager.is_score_status_active(self._context, score_address)
+
+    def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
+        if score_address:
+            score_address = self.address
+        return self._context.icon_score_manager.get_owner(self._context, score_address)
+
+    def is_owner_deployed_score(self,
+                                context: 'IconScoreContext',
+                                score_address: 'Address',
+                                owner: 'Address') -> bool:
+        return self._context.icon_score_manager.is_owner_deployed_score(context, score_address, owner)
+
+    def get_tx_hash_using_score_address(self,
+                                        context: 'IconScoreContext',
+                                        score_address: 'Address') -> Optional[bytes]:
+        return self._context.icon_score_manager.get_tx_hash_using_score_address(context, score_address)
+
+    def get_score_address_using_tx_hash(self,
+                                        context: 'IconScoreContext',
+                                        tx_hash: bytes) -> Optional['Address']:
+        return self._context.icon_score_manager.get_score_address_using_tx_hash(context, tx_hash)
+
+    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
+        if interface_cls is InterfaceScore:
+            raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
+        return interface_cls(addr_to, self.__call_interface_score)

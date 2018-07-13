@@ -18,12 +18,14 @@ import shutil
 import unittest
 
 from iconservice import IconScoreBase, IconScoreContextType, InvalidParamsException
-from iconservice.base.address import Address, ICX_ENGINE_ADDRESS
+from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.database.factory import DatabaseFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.icon_score_manager import IconScoreManager
+from tests import create_address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -40,12 +42,13 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         self._db_factory = DatabaseFactory(db_path)
         self._icx_db = self._db_factory.create_by_name('test_mapper_dex')
         self._icx_db.address = ICX_ENGINE_ADDRESS
-        self._icx_storage = IcxStorage(self._icx_db)
+        self._deploy_engine = IconScoreDeployEngine()
 
         self._icon_score_loader = IconScoreLoader(score_path)
-        self.mapper = IconScoreInfoMapper(self._icx_storage, self._db_factory, self._icon_score_loader)
-        self.score_address = Address.from_string(f'cx{"0" * 40}')
-        self.address = Address.from_string(f'hx{"a" * 40}')
+        self.mapper = IconScoreInfoMapper(
+            self._db_factory, IconScoreManager(self._deploy_engine), self._icon_score_loader)
+        self.score_address = create_address(AddressPrefix.CONTRACT, b'score')
+        self.address = create_address(AddressPrefix.EOA, b'addr')
 
         self.mapper[self.score_address] = IconScoreInfo(icon_score=None)
 
@@ -66,14 +69,14 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         if os.path.exists(os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)):
             shutil.rmtree(os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH))
 
-    def load_proj(self, proj: str, addr_score: Address) -> IconScoreBase:
+    def load_proj(self, proj: str, addr_score: 'Address') -> IconScoreBase:
         target_path = os.path.join(self._score_path, addr_score.to_bytes().hex())
         os.makedirs(target_path, exist_ok=True)
         target_path = os.path.join(target_path, '0_0')
 
         ref_path = os.path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
         os.symlink(ref_path, target_path, target_is_directory=True)
-        return self._loader.load_score(addr_score.body.hex())
+        return self._loader.load_score(addr_score.to_bytes().hex())
 
     def test_setitem(self):
         info = IconScoreInfo(icon_score=None)
@@ -83,7 +86,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         with self.assertRaises(InvalidParamsException):
             self.mapper[self.score_address] = 1
 
-        score_address = Address.from_string(f'cx{"1" * 40}')
+        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
         self.mapper[score_address] = info
         self.assertEqual(2, len(self.mapper))
 
@@ -93,7 +96,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
 
         self.assertEqual(1, len(self.mapper))
 
-        score_address = Address.from_string(f'cx{"0" * 40}')
+        score_address = self.score_address
         score = self.load_proj('test_score01', score_address)
         score_info = IconScoreInfo(icon_score=score)
         self.mapper[score_address] = score_info
@@ -102,20 +105,17 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         self.assertTrue(isinstance(info, IconScoreInfo))
 
     def test_delitem(self):
-        score_address = Address.from_string(f'cx{"0" * 40}')
+        score_address = self.score_address
 
         self.assertEqual(1, len(self.mapper))
         del self.mapper[score_address]
         self.assertEqual(0, len(self.mapper))
 
     def test_contains(self):
-        score_address = Address.from_string(f'cx{"0" * 40}')
+        score_address = self.score_address
         self.assertTrue(score_address in self.mapper)
 
-        score_address = Address.from_string(f'cx{"1" * 40}')
-        self.assertFalse(score_address in self.mapper)
-
-        score_address = Address.from_string(f'hx{"0" * 40}')
+        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
         self.assertFalse(score_address in self.mapper)
 
 

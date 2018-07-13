@@ -18,8 +18,9 @@
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from collections import Iterator
 
-from iconservice.utils import int_to_bytes
+from ..utils import int_to_bytes
 
+from ..icon_config import DATA_BYTE_ORDER
 from ..base.address import Address
 from ..base.exception import ContainerDBException
 
@@ -88,7 +89,7 @@ class ContainerUtil(object):
         elif value_type == Address:
             obj_value = Address.from_bytes(value)
         if value_type == bool:
-            obj_value = bool(int(int.from_bytes(value, 'big', signed=True)))
+            obj_value = bool(int(int.from_bytes(value, DATA_BYTE_ORDER, signed=True)))
         elif value_type == bytes:
             obj_value = value
         return obj_value

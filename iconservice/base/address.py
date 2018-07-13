@@ -22,6 +22,8 @@ from enum import IntEnum
 
 from .exception import InvalidParamsException
 from ..utils import is_lowercase_hex_string, int_to_bytes
+from ..icon_config import DATA_BYTE_ORDER
+
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
@@ -153,7 +155,7 @@ class Address(object):
 
         :return: hash value
         """
-        return hash(self.__prefix.to_bytes(1, 'big') + self.__body)
+        return hash(self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body)
 
     @property
     def is_contract(self) -> bool:
@@ -195,9 +197,11 @@ class Address(object):
         buf_size = len(buf)
 
         prefix = AddressPrefix.EOA
-        if buf_size == ICON_CONTRACT_ADDRESS_BYTES_SIZE:
-            prefix = AddressPrefix.CONTRACT
-            buf = buf[:-1]
+        if buf_size != ICON_EOA_ADDRESS_BYTES_SIZE:
+            prefix_byte = buf[0:1]
+            prefix_int = int.from_bytes(prefix_byte, DATA_BYTE_ORDER)
+            prefix = AddressPrefix(prefix_int)
+            buf = buf[1:]
         return Address(prefix, buf)
 
     def to_bytes(self) -> bytes:
@@ -205,10 +209,13 @@ class Address(object):
 
         :return: data including information of Address object
         """
-        byte_array = bytearray(self.body)
-        if self.prefix == AddressPrefix.CONTRACT:
-            byte_array.append(self.prefix)
-        return bytes(byte_array)
+        body_bytes = self.body
+        if self.prefix != AddressPrefix.EOA:
+            prefix_byte = self.prefix.value.to_bytes(1, DATA_BYTE_ORDER)
+            address_bytes = prefix_byte + body_bytes
+        else:
+            address_bytes = body_bytes
+        return address_bytes
 
 
 def create_address_from_int(prefix: AddressPrefix, num: int):

@@ -36,6 +36,7 @@ from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
+from iconservice.icon_config import DATA_BYTE_ORDER
 from tests import create_address, create_block_hash, create_tx_hash
 
 
@@ -92,7 +93,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self.from_address, 0)
         self._context.tx = Transaction(
-            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, 'big')), origin=self.from_address)
+            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, DATA_BYTE_ORDER)), origin=self.from_address)
         self._context.block = Block(1, create_block_hash(b'block'), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
@@ -110,7 +111,7 @@ class TestIconZipDeploy(unittest.TestCase):
         IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
-        remove_path = os.path.join(TEST_ROOT_PATH, self.from_address.body.hex())
+        remove_path = os.path.join(TEST_ROOT_PATH, self.sample_token_address.to_bytes().hex())
         IconScoreDeployer.remove_existing_score(remove_path)
 
     @staticmethod
@@ -124,7 +125,7 @@ class TestIconZipDeploy(unittest.TestCase):
             byte_data = f.read()
             return byte_data
 
-    def test_install_on_commit(self):
+    def test_deploy(self):
         content: bytes = self.read_zipfile_as_byte(
             os.path.join(TEST_ROOT_PATH, 'sample_token.zip'))
 
@@ -135,4 +136,4 @@ class TestIconZipDeploy(unittest.TestCase):
         self._engine.invoke(self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)
 
         self.assertTrue(
-            os.path.join(TEST_ROOT_PATH, self.from_address.body.hex()))
+            os.path.join(TEST_ROOT_PATH, self.sample_token_address.to_bytes().hex()))

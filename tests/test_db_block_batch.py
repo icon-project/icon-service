@@ -21,6 +21,7 @@ from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.utils import sha3_256, int_to_bytes
+from iconservice.icon_config import DATA_BYTE_ORDER
 from tests import create_block_hash, create_address
 
 
@@ -50,7 +51,7 @@ class TestBlockBatch(unittest.TestCase):
 
     def test_get_item(self):
         self.assertEqual(
-            1, int.from_bytes(self.batch[self.score_address][self.addr1], 'big'))
+            1, int.from_bytes(self.batch[self.score_address][self.addr1], DATA_BYTE_ORDER))
 
     def test_put_tx_batch(self):
         tx_batch = TransactionBatch('')
@@ -66,13 +67,13 @@ class TestBlockBatch(unittest.TestCase):
 
         address = create_address(AddressPrefix.EOA, b'addr2')
         self.assertEqual(
-            2, int.from_bytes(self.batch[score_address][address], 'big'))
+            2, int.from_bytes(self.batch[score_address][address], DATA_BYTE_ORDER))
         address = create_address(AddressPrefix.EOA, b'addr3')
         self.assertEqual(
-            3, int.from_bytes(self.batch[score_address][address], 'big'))
+            3, int.from_bytes(self.batch[score_address][address], DATA_BYTE_ORDER))
 
         self.assertEqual(
-            1, int.from_bytes(self.batch[self.score_address][self.addr1], 'big'))
+            1, int.from_bytes(self.batch[self.score_address][self.addr1], DATA_BYTE_ORDER))
 
     def test_put(self):
         self.assertEqual(1, len(self.batch[self.score_address]))
@@ -81,7 +82,7 @@ class TestBlockBatch(unittest.TestCase):
         self.batch.put(self.score_address, address, int_to_bytes(2))
         self.assertEqual(1, len(self.batch))
         self.assertEqual(
-            2, int.from_bytes(self.batch[self.score_address][address], 'big'))
+            2, int.from_bytes(self.batch[self.score_address][address], DATA_BYTE_ORDER))
         self.assertEqual(2, len(self.batch[self.score_address]))
 
         score_address = create_address(AddressPrefix.CONTRACT, b'score2')
@@ -89,7 +90,7 @@ class TestBlockBatch(unittest.TestCase):
         self.batch.put(score_address, address, int_to_bytes(100))
         self.assertEqual(2, len(self.batch))
         self.assertEqual(
-            100, int.from_bytes(self.batch[score_address][address], 'big'))
+            100, int.from_bytes(self.batch[score_address][address], DATA_BYTE_ORDER))
 
     def test_digest(self):
         self.batch.clear()

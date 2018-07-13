@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-PRE_BUILTIN_SCORE_ROOT_PATH = os.path.join(ROOT_PATH, 'builtin_score')
+PRE_BUILTIN_SCORE_ROOT_PATH = os.path.join(ROOT_PATH, 'builtin_scores')
 
 
 class IconBuiltinScoreLoader(object):
@@ -41,11 +41,11 @@ class IconBuiltinScoreLoader(object):
             self._load_builtin_score(context, key, value)
 
     def _load_builtin_score(self, context: 'IconScoreContext', score_name: str, icon_score_address: 'Address'):
-        if self._deploy_engine.icon_deploy_storage.is_score_activa(context, icon_score_address):
+        if self._deploy_engine.icon_deploy_storage.is_score_status_active(context, icon_score_address):
             return
 
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
-        self._deploy_engine.write_total_deploy_info_for_builtin(icon_score_address, ADMIN_SCORE_ADDRESS)
+        self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, ADMIN_SCORE_ADDRESS)
         self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
 
     @classmethod

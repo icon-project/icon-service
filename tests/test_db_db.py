@@ -25,6 +25,7 @@ from iconservice.database.db import IconScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.icon_config import DATA_BYTE_ORDER
 from tests import create_address, rmtree
 
 
@@ -82,7 +83,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         value = 100
         score_db = factory.create_by_address(address)
-        score_db._db.put(address.body, value.to_bytes(32, 'big'))
+        score_db._db.put(address.body, value.to_bytes(32, DATA_BYTE_ORDER))
 
         self.db = score_db
         self.address = address
@@ -98,7 +99,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         context = self.context
         address = create_address(AddressPrefix.CONTRACT, b'0')
         value = self.db.get(context, address.body)
-        self.assertEqual(100, int.from_bytes(value, 'big'))
+        self.assertEqual(100, int.from_bytes(value, DATA_BYTE_ORDER))
 
     def test_put(self):
         """WritableDatabase supports put()
@@ -194,8 +195,8 @@ class TestIconScoreDatabase(unittest.TestCase):
 
         self.assertIsNone(db.get(key))
 
-        db.put(key, value.to_bytes(32, 'big'))
-        self.assertEqual(value.to_bytes(32, 'big'), db.get(key))
+        db.put(key, value.to_bytes(32, DATA_BYTE_ORDER))
+        self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(key))
 
 
 class TestIconScoreDatabase(unittest.TestCase):
@@ -234,5 +235,5 @@ class TestIconScoreDatabase(unittest.TestCase):
 
         self.assertIsNone(db.get(key))
 
-        db.put(key, value.to_bytes(32, 'big'))
-        self.assertEqual(value.to_bytes(32, 'big'), db.get(key))
+        db.put(key, value.to_bytes(32, DATA_BYTE_ORDER))
+        self.assertEqual(value.to_bytes(32, DATA_BYTE_ORDER), db.get(key))

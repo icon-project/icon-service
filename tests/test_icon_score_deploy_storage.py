@@ -17,7 +17,7 @@
 
 import unittest
 
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployTXParams, IconScoreDeployInfo, DeployState
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployTXParams, IconScoreDeployInfo, DeployType
 from tests import create_tx_hash, create_address, Address, AddressPrefix
 
 
@@ -31,7 +31,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
     def test_tx_params_from_bytes_to_bytes1(self):
         tx_hash1 = create_tx_hash(b'txHash1')
         score_address = create_address(AddressPrefix.CONTRACT, b'score')
-        deploy_state = DeployState.INSTALL
+        deploy_state = DeployType.INSTALL
         data_params = {
             "contentType": "application/zip",
             "content": "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e",
@@ -58,7 +58,6 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         owner_address = create_address(AddressPrefix.EOA, b'owner')
         tx_hash1 = create_tx_hash(b'txHash1')
         tx_hash2 = create_tx_hash(b'txHash2')
-        tx_hash3 = create_tx_hash(b'txHash3')
         service_enable = False
 
         info1 = IconScoreDeployInfo(score_address, service_enable, owner_address, tx_hash1, tx_hash2)
@@ -68,7 +67,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
 
         info2 = IconScoreDeployInfo.from_bytes(data)
         self.assertEqual(info2.score_address, score_address)
-        self.assertEqual(info2.service_enable, service_enable)
+        self.assertEqual(info2.status_active, service_enable)
         self.assertEqual(info2.owner, owner_address)
         self.assertEqual(info2.current_tx_hash, tx_hash1)
         self.assertEqual(info2.next_tx_hash, tx_hash2)
@@ -87,7 +86,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
 
         info2 = IconScoreDeployInfo.from_bytes(data)
         self.assertEqual(info2.score_address, score_address)
-        self.assertEqual(info2.service_enable, service_enable)
+        self.assertEqual(info2.status_active, service_enable)
         self.assertEqual(info2.owner, owner_address)
         self.assertEqual(info2.current_tx_hash, tx_hash1)
         self.assertEqual(info2.next_tx_hash, tx_hash2)

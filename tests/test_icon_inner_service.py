@@ -25,6 +25,7 @@ import os
 
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, ADMIN_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.icon_config import DATA_BYTE_ORDER
 from tests import create_block_hash, create_address, create_tx_hash
 
 from typing import TYPE_CHECKING
@@ -92,7 +93,7 @@ class TestIconServiceEngine(unittest.TestCase):
         make_request = {'transactions': [tx]}
         block_height: int = block_index
         block_timestamp_us = tx_timestamp_us
-        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, 'big'))
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
@@ -153,7 +154,7 @@ class TestIconServiceEngine(unittest.TestCase):
         make_request = {'transactions': [tx]}
         block_height: int = block_index
         block_timestamp_us = int(time.time() * 10 ** 6)
-        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, 'big'))
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
@@ -220,7 +221,7 @@ class TestIconServiceEngine(unittest.TestCase):
         make_request = {'transactions': [tx]}
         block_height: int = block_index
         block_timestamp_us = int(time.time() * 10 ** 6)
-        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, 'big'))
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
@@ -287,7 +288,7 @@ class TestIconServiceEngine(unittest.TestCase):
         make_request = {'transactions': [tx]}
         block_height: int = block_index
         block_timestamp_us = int(time.time() * 10 ** 6)
-        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, 'big'))
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
 
         make_request['block'] = {
             'blockHeight': hex(block_height),

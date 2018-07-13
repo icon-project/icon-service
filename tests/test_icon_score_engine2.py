@@ -41,6 +41,7 @@ from iconservice.icx.icx_account import Account, AccountType
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.utils.bloom import BloomFilter
+from iconservice.icon_config import DATA_BYTE_ORDER
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 from typing import TYPE_CHECKING
@@ -106,7 +107,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._addr1, 0)
         self._context.tx = Transaction(
-            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, 'big')), origin=self._addr1)
+            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, DATA_BYTE_ORDER)), origin=self._addr1)
         self._context.block = Block(1, create_block_hash(b'block'), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()

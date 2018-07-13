@@ -101,6 +101,12 @@ class TestAddress(unittest.TestCase):
         print("create_address_from_int(AddressPrefix.EOA, 10)", create_address_from_int(AddressPrefix.EOA, 10))
         print("create_address_from_int(AddressPrefix.EOA, 1024)", create_address_from_int(AddressPrefix.EOA, 1024))
 
+    def test_address_from_to(self):
+        addr1 = create_address_from_int(AddressPrefix.CONTRACT, 0)
+        buf = addr1.to_bytes()
+        addr2 = Address.from_bytes(buf)
+        self.assertEqual(addr1, addr2)
+
 
 if __name__ == '__main__':
     unittest.main()

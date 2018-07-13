@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional
 from ..icon_config import DEFAULT_BYTE_SIZE
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
-from . import DeployState
+from . import DeployType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -43,7 +43,7 @@ class IconScoreDeployTXParams(object):
 
     def __init__(self,
                  tx_hash: 'bytes',
-                 deploy_state: 'DeployState',
+                 deploy_state: 'DeployType',
                  score_address: 'Address',
                  deploy_data: 'dict'):
         # key
@@ -58,7 +58,7 @@ class IconScoreDeployTXParams(object):
         return self._tx_hash
 
     @property
-    def deploy_state(self) -> 'DeployState':
+    def deploy_state(self) -> 'DeployType':
         return self._deploy_state
 
     @property
@@ -114,7 +114,7 @@ class IconScoreDeployInfo(object):
     # leveldb IconScoreDeployInfo value structure
     # (bigendian, 1 + 1 + ICON_CONTRACT_ADDRESS_BYTES_SIZE + ICON_EOA_ADDRESS_BYTES_SIZE + 32 + 32 bytes)
     # version(1)
-    # | service_enable(1)
+    # | status_active(1)
     # | score_address(ICON_CONTRACT_ADDRESS_BYTES_SIZE)
     # | owner(ICON_EOA_ADDRESS_BYTES_SIZE)
     # | current_tx_hash(DEFAULT_BYTE_SIZE)
@@ -122,7 +122,7 @@ class IconScoreDeployInfo(object):
 
     def __init__(self,
                  score_address: 'Address',
-                 service_enable: bool,
+                 status_active: bool,
                  owner: 'Address',
                  current_tx_hash: Optional[bytes],
                  next_tx_hash: Optional[bytes]):
@@ -130,7 +130,7 @@ class IconScoreDeployInfo(object):
         self._score_address = score_address
 
         # value
-        self.service_enable = service_enable
+        self.status_active = status_active
         self.owner = owner
         self.current_tx_hash = current_tx_hash
         self.next_tx_hash = next_tx_hash
@@ -149,7 +149,7 @@ class IconScoreDeployInfo(object):
 
         bytes_params = unpack(IconScoreDeployInfo._STRUCT_FMT, buf)
         # version = bytes_params[0]
-        service_enable = bytes_params[1]
+        status_active = bytes_params[1]
         score_address_bytes = bytes_params[2]
         owner_address_bytes = bytes_params[3]
         current_tx_hash = bytes_params[4]
@@ -166,7 +166,7 @@ class IconScoreDeployInfo(object):
             next_tx_hash = None
         converted_next_tx_hash = next_tx_hash
 
-        info = IconScoreDeployInfo(score_addr, service_enable, owner_addr,
+        info = IconScoreDeployInfo(score_addr, status_active, owner_addr,
                                    converted_current_tx_hash, converted_next_tx_hash)
         return info
 
@@ -189,13 +189,17 @@ class IconScoreDeployInfo(object):
         converted_next_hash = next_hash
 
         bytes_var = pack(self._STRUCT_FMT,
-                         self._VERSION, self.service_enable,
+                         self._VERSION, self.status_active,
                          self._score_address.to_bytes(), self.owner.to_bytes(),
                          converted_current_hash, converted_next_hash)
         return bytes_var
 
 
 class IconScoreDeployStorage(object):
+    _DEPLOY_STORAGE_PREFIX = b'isds|'
+    _DEPLOY_STORAGE_DEPLOY_INFO_PREFIX = b'di|'
+    _DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX = b'dtp|'
+
     def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
 
@@ -207,7 +211,7 @@ class IconScoreDeployStorage(object):
     def put_deploy_info_and_tx_params(self,
                                       context: 'IconScoreContext',
                                       score_address: 'Address',
-                                      deploy_state: 'DeployState',
+                                      deploy_state: 'DeployType',
                                       owner: 'Address',
                                       tx_hash: bytes,
                                       deploy_data: 'dict') -> None:
@@ -215,31 +219,32 @@ class IconScoreDeployStorage(object):
         prev_tx_params = self.get_deploy_tx_params(context, tx_hash)
         if prev_tx_params is None:
             tx_params = IconScoreDeployTXParams(tx_hash, deploy_state, score_address, deploy_data)
-            self.put_deploy_tx_params(context, tx_params)
+            self._put_deploy_tx_params(context, tx_params)
         else:
             raise ServerErrorException(f'already put deploy_params')
 
-        service_enable = False
+        is_active = False
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info is None:
-            deploy_info = IconScoreDeployInfo(score_address, service_enable, owner, tx_hash, None)
-            self.put_deploy_info(context, deploy_info)
+            deploy_info = IconScoreDeployInfo(score_address, is_active, owner, tx_hash, None)
+            self._put_deploy_info(context, deploy_info)
         else:
+            if deploy_info.owner != owner:
+                raise ServerErrorException(f'deploy_info.owner[{deploy_info.owner}] != owner[{owner}]')
             if deploy_info.next_tx_hash is not None:
                 self._db.delete(context, deploy_info.next_tx_hash)
             deploy_info.next_tx_hash = tx_hash
-            self.put_deploy_info(context, deploy_info)
+            self._put_deploy_info(context, deploy_info)
 
     def put_deploy_info_and_tx_params_for_builtin(self, score_address: 'Address', owner: 'Address') -> None:
 
         deploy_info = IconScoreDeployInfo(score_address, True, owner, None, None)
-        self.put_deploy_info(None, deploy_info)
+        self._put_deploy_info(None, deploy_info)
 
     def update_score_info(self,
                           context: 'IconScoreContext',
                           score_address: 'Address',
-                          tx_hash: bytes,
-                          audit_tx_hash: bytes) -> None:
+                          tx_hash: bytes) -> None:
 
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info is None:
@@ -253,53 +258,54 @@ class IconScoreDeployStorage(object):
             else:
                 deploy_info.current_tx_hash = next_tx_hash
                 deploy_info.next_tx_hash = None
-                deploy_info.audit_tx_hash = audit_tx_hash
-                deploy_info.service_enable = True
-                self.put_deploy_info(context, deploy_info)
+                deploy_info.status_active = True
+                self._put_deploy_info(context, deploy_info)
 
-    def put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
+    def _put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
         """
 
         :param context:
         :param deploy_info:
         :return:
         """
-
-        key = b'di' + deploy_info.score_address.to_bytes()
+        prefix = self._DEPLOY_STORAGE_PREFIX + self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX
+        key = prefix + deploy_info.score_address.to_bytes()
         value = deploy_info.to_bytes()
         self._db.put(context, key, value)
 
     def get_deploy_info(self, context: 'IconScoreContext', score_addr: 'Address') -> Optional['IconScoreDeployInfo']:
-        key = score_addr.to_bytes()
+        prefix = self._DEPLOY_STORAGE_PREFIX + self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX
+        key = prefix + score_addr.to_bytes()
         bytes_value = self._db.get(context, key)
         if bytes_value:
             return IconScoreDeployInfo.from_bytes(bytes_value)
         else:
             return None
 
-    def put_deploy_tx_params(self, context: 'IconScoreContext', deploy_tx_params: 'IconScoreDeployTXParams') -> None:
+    def _put_deploy_tx_params(self, context: 'IconScoreContext', deploy_tx_params: 'IconScoreDeployTXParams') -> None:
         """
 
         :param context:
         :param deploy_tx_params:
         :return:
         """
-
-        key = deploy_tx_params.tx_hash
+        prefix = self._DEPLOY_STORAGE_PREFIX + self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX
+        key = prefix + deploy_tx_params.tx_hash
         value = deploy_tx_params.to_bytes()
         self._db.put(context, key, value)
 
     def get_deploy_tx_params(self, context: 'IconScoreContext', tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
-        key = tx_hash
+        prefix = self._DEPLOY_STORAGE_PREFIX + self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX
+        key = prefix + tx_hash
         bytes_value = self._db.get(context, key)
         if bytes_value:
             return IconScoreDeployTXParams.from_bytes(bytes_value)
         else:
             return None
 
-    def is_score_activa(self,
-                        context: 'IconScoreContext',
-                        icon_score_address: 'Address') -> bool:
+    def is_score_status_active(self,
+                               context: 'IconScoreContext',
+                               icon_score_address: 'Address') -> bool:
         """Returns whether IconScore is installed or not
 
         :param context:
@@ -310,7 +316,7 @@ class IconScoreDeployStorage(object):
         if deploy_info is None:
             return False
 
-        return deploy_info.service_enable
+        return deploy_info.status_active
 
     def get_score_owner(self,
                         context: 'IconScoreContext',
@@ -326,3 +332,30 @@ class IconScoreDeployStorage(object):
             return None
 
         return deploy_info.owner
+
+    def is_owner_deployed_score(self,
+                                context: 'IconScoreContext',
+                                score_address: 'Address',
+                                owner: 'Address') -> bool:
+        deploy_info = self.get_deploy_info(context, score_address)
+        if deploy_info is None:
+            return True
+        return deploy_info.owner == owner
+
+    def get_tx_hash_using_score_address(self,
+                                        context: 'IconScoreContext',
+                                        score_address: 'Address') -> Optional[bytes]:
+        deploy_info = self.get_deploy_info(context, score_address)
+        if deploy_info:
+            return deploy_info.current_tx_hash
+        else:
+            return None
+
+    def get_score_address_using_tx_hash(self,
+                                        context: 'IconScoreContext',
+                                        tx_hash: bytes) -> Optional['Address']:
+        tx_params = self.get_deploy_tx_params(context, tx_hash)
+        if tx_params:
+            return tx_params.score_address
+        else:
+            return None

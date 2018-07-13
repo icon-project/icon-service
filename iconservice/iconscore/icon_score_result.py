@@ -19,6 +19,7 @@ from .icon_score_event_log import EventLog
 from ..utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
+from ..icon_config import DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from ..base.transaction import Transaction
@@ -99,7 +100,7 @@ class TransactionResult(object):
                 new_dict[new_key] = [v.to_dict(casing) for v in value if
                                      isinstance(v, EventLog)]
             elif isinstance(value, BloomFilter):
-                new_dict[new_key] = int(value).to_bytes(256, byteorder='big')
+                new_dict[new_key] = int(value).to_bytes(256, byteorder=DATA_BYTE_ORDER)
             elif key == 'failure' and value:
                 if self.status == self.FAILURE:
                     new_dict[new_key] = {

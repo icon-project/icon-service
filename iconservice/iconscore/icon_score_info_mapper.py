@@ -145,21 +145,21 @@ class IconScoreInfoMapper(dict, ContextContainer):
         """
 
         icon_score_info = self.get(address)
-        is_active = self._icon_score_manager.is_active(context, address)
-        if is_active and icon_score_info is None:
+        is_score_status_active = self._icon_score_manager.is_score_status_active(context, address)
+        if is_score_status_active and icon_score_info is None:
             icon_score_info = self.__load_score(context, address)
 
         if icon_score_info is None:
-            if is_active:
+            if is_score_status_active:
                 raise InvalidParamsException(f'icon_score_info is None : {address}')
             else:
-                raise InvalidParamsException(f'icon_score is_active is False : {address}')
+                raise InvalidParamsException(f'icon_score is_score_status_active is False : {address}')
 
         icon_score = icon_score_info.icon_score
         return icon_score
 
     def __load_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreInfo']:
-        if not self._icon_score_manager.is_active(context, address):
+        if not self._icon_score_manager.is_score_status_active(context, address):
             return None
 
         score_wrapper = self._load_score_wrapper(address)
@@ -191,7 +191,7 @@ class IconScoreInfoMapper(dict, ContextContainer):
         :return: IconScoreBase subclass (NOT instance)
         """
 
-        score_wrapper = self._icon_score_loader.load_score(address.body.hex())
+        score_wrapper = self._icon_score_loader.load_score(address.to_bytes().hex())
         if score_wrapper is None:
             raise InvalidParamsException(f'score_wrapper load Fail {address}')
         return score_wrapper

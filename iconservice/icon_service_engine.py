@@ -19,7 +19,7 @@ from os import makedirs
 from typing import TYPE_CHECKING, Any, List, Optional
 from enum import IntFlag
 
-from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG
+from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER
 from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
@@ -32,7 +32,7 @@ from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import DatabaseFactory
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_manager import IconScoreManager
-from .deploy.icon_builtin_score_loader import IconbuiltinScoreLoader
+from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 def _generate_score_address_for_tbears(score_path: str) -> 'Address':
     """
 
-    :param path: The path of a SCORE which is under development with tbears
+    :param score_path: The path of a SCORE which is under development with tbears
     :return:
     """
     project_name = score_path.split('/')[-1]
@@ -74,9 +74,9 @@ def _generate_score_address(from_addr: 'Address',
     :param nonce:
     :return: score address
     """
-    data = from_addr.body + timestamp.to_bytes(32, 'big')
+    data = from_addr.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
     if nonce:
-        data += nonce.to_bytes(32, 'big')
+        data += nonce.to_bytes(32, DATA_BYTE_ORDER)
 
     return Address.from_data(AddressPrefix.CONTRACT, data)
 
@@ -180,8 +180,9 @@ class IconServiceEngine(object):
         self._icon_score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
-        icon_score_deploy_engine_flags = \
-            IconScoreDeployEngine.Flag.NONE
+        icon_score_deploy_engine_flags = IconScoreDeployEngine.Flag.NONE
+        if self._is_on(IconServiceEngine.Flag.ENABLE_AUDIT):
+            icon_score_deploy_engine_flags = IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
         self._icon_score_deploy_engine.open(
             icon_score_root_path=icon_score_root_path,
             flags=icon_score_deploy_engine_flags,
@@ -192,7 +193,7 @@ class IconServiceEngine(object):
 
     def load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
-        icon_builtin_score_loader = IconbuiltinScoreLoader(self._icon_score_deploy_engine)
+        icon_builtin_score_loader = IconBuiltinScoreLoader(self._icon_score_deploy_engine)
         icon_builtin_score_loader.load_builtin_scores(context)
 
     def close(self) -> None:

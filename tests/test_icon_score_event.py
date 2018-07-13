@@ -27,6 +27,7 @@ from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
+from iconservice.icon_config import DATA_BYTE_ORDER
 
 
 class TestEventlog(unittest.TestCase):
@@ -67,16 +68,16 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(2, len(event_log.data))
 
         zero_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
         self.assertIn(zero_event_bloom_data, context.logs_bloom)
 
         one_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'OneIndexEvent(str,Address,int)'.encode('utf-8')
         self.assertIn(one_event_bloom_data, context.logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
+        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
         self.assertIn(name_bloom_data, context.logs_bloom)
 
         # This event is declared 3 indexed_count,
@@ -114,11 +115,11 @@ class TestEventlog(unittest.TestCase):
                          event_log_keyword_args.data)
 
         one_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'OneIndexEvent(str,Address,int)'.encode('utf-8')
         self.assertIn(one_event_bloom_data, context.logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
+        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
         self.assertIn(name_bloom_data, context.logs_bloom)
 
     # def test_call_event_no_hint_exception(self):
@@ -140,11 +141,11 @@ class TestEventlog(unittest.TestCase):
                           name, address, age)
 
         one_event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'OneIndexEvent(str,Address,int)'.encode('utf-8')
         self.assertNotIn(one_event_bloom_data, context.logs_bloom)
 
-        name_bloom_data = int(1).to_bytes(1, 'big') + name.encode('utf-8')
+        name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
         self.assertNotIn(name_bloom_data, context.logs_bloom)
 
     # def test_call_event_unsupported_arg(self):
@@ -169,12 +170,12 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'AddressIndexEvent(Address)'.encode('utf-8')
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
-            int(1).to_bytes(1, 'big') + address.body
+            int(1).to_bytes(1, DATA_BYTE_ORDER) + address.body
         self.assertIn(indexed_bloom_data, context.logs_bloom)
 
     def test_bool_index_event(self):
@@ -190,12 +191,12 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'BoolIndexEvent(bool)'.encode('utf-8')
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
-            int(1).to_bytes(1, 'big') + int_to_bytes(yes_no)
+            int(1).to_bytes(1, DATA_BYTE_ORDER) + int_to_bytes(yes_no)
         self.assertIn(indexed_bloom_data, context.logs_bloom)
 
     def test_int_index_event(self):
@@ -211,12 +212,12 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'IntIndexEvent(int)'.encode('utf-8')
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
-            int(1).to_bytes(1, 'big') + int_to_bytes(amount)
+            int(1).to_bytes(1, DATA_BYTE_ORDER) + int_to_bytes(amount)
         self.assertIn(indexed_bloom_data, context.logs_bloom)
 
     def test_bytes_index_event(self):
@@ -232,12 +233,12 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         event_bloom_data = \
-            int(0).to_bytes(1, 'big') + \
+            int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'BytesIndexEvent(bytes)'.encode('utf-8')
         self.assertIn(event_bloom_data, context.logs_bloom)
 
         indexed_bloom_data = \
-            int(1).to_bytes(1, 'big') + data
+            int(1).to_bytes(1, DATA_BYTE_ORDER) + data
         self.assertIn(indexed_bloom_data, context.logs_bloom)
 
     def test_to_dict_camel(self):
