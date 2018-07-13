@@ -120,7 +120,12 @@ class TestIconServiceEngine(unittest.TestCase):
         else:
             return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
-    async def _send_icx_invoke(self, addr_from: 'Address', addr_to: 'Address', value: int, block_index: int, prev_block_hash: str):
+    async def _send_icx_invoke(self,
+                               addr_from: 'Address',
+                               addr_to: 'Address',
+                               value: int,
+                               block_index: int,
+                               prev_block_hash: str):
 
         version = 3
         step_limit = 1000

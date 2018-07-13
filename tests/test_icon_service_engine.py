@@ -16,11 +16,11 @@
 
 """IconScoreEngine testcase
 """
-
+import os
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
+from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
@@ -37,6 +37,7 @@ from iconservice.utils.bloom import BloomFilter
 from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
 context_factory = IconScoreContextFactory(max_size=1)
+TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
@@ -57,7 +58,7 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._icon_score_root_path)
         rmtree(self._state_db_root_path)
 
-        engine = IconServiceEngine(IconServiceEngine.Flag.NONE)
+        engine = IconServiceEngine()
         engine.open(icon_score_root_path=self._icon_score_root_path,
                     state_db_root_path=self._state_db_root_path)
         self._engine = engine
@@ -67,7 +68,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self._treasury_address = create_address(
             AddressPrefix.EOA, b'treasury')
 
-        self._tx_hash = create_tx_hash(b'tx')
         self._from = self._genesis_address
         self._to = create_address(AddressPrefix.EOA, b'to')
         self._icon_score_address = create_address(
@@ -89,7 +89,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         block = Block(0, create_block_hash(b'block'), 0, None)
         tx = {'method': '',
-              'params': {'txHash': self._tx_hash},
+              'params': {'txHash': create_tx_hash()},
               'genesisData': {'accounts': accounts}}
         tx_lists = [tx]
 
@@ -136,7 +136,7 @@ class TestIconServiceEngine(unittest.TestCase):
             'value': value,
             'fee': fee,
             'timestamp': 1234567890,
-            'txHash': self._tx_hash
+            'txHash': create_tx_hash()
         }
 
         context.tx = Transaction(tx_hash=params['txHash'],
@@ -166,7 +166,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block_height = 1
         block_hash = create_block_hash(b'block')
         block_timestamp = 0
-        tx_hash = create_tx_hash(b'txHash_v2')
+        tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
 
         tx_v2 = {
@@ -225,7 +225,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block_height = 1
         block_hash = create_block_hash(b'block')
         block_timestamp = 0
-        tx_hash = create_tx_hash(b'txHash_v3')
+        tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
 
         tx_v3 = {
@@ -283,14 +283,15 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(from_balance, self._total_supply - value - fee)
 
     def test_score_invoke_failure(self):
+        tx_hash = create_tx_hash()
         method = 'icx_sendTransaction'
         params = {
             'from': self._from,
             'to': self._icon_score_address,
-            'value': 1 * 10 ** 18,
+            'value': 0,
             'fee': 10 ** 16,
             'timestamp': 1234567890,
-            'txHash': self._tx_hash,
+            'txHash': tx_hash,
             'dataType': 'call',
             'data': {
                 'method': 'transfer',
@@ -320,7 +321,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertTrue(isinstance(tx_result, TransactionResult))
         self.assertEqual(TransactionResult.FAILURE, tx_result.status)
         self.assertEqual(self._icon_score_address, tx_result.to)
-        self.assertEqual(self._tx_hash, tx_result.tx_hash)
+        self.assertEqual(tx_hash, tx_result.tx_hash)
         self.assertIsNone(tx_result.score_address)
         context.traces.append.assert_called()
 
