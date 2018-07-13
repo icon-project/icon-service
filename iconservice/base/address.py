@@ -217,19 +217,19 @@ class Address(object):
             address_bytes = body_bytes
         return address_bytes
 
-
-def create_address_from_int(prefix: AddressPrefix, num: int):
-    num_bytes = int_to_bytes(num)
-    zero_size = 20 - len(num_bytes)
-    if zero_size < 0:
-        raise InvalidParamsException(f'num_bytes is over 20 bytes num: {num}')
-    return Address(prefix, b'\x00' * zero_size + num_bytes)
+    @staticmethod
+    def from_prefix_and_int(prefix: 'AddressPrefix', num: int):
+        num_bytes = int_to_bytes(num)
+        zero_size = 20 - len(num_bytes)
+        if zero_size < 0:
+            raise InvalidParamsException(f'num_bytes is over 20 bytes num: {num}')
+        return Address(prefix, b'\x00' * zero_size + num_bytes)
 
 
 # cx0000000000000000000000000000000000000000
-ZERO_SCORE_ADDRESS = create_address_from_int(AddressPrefix.CONTRACT, 0)
+ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
-GOVERNANCE_SCORE_ADDRESS = create_address_from_int(AddressPrefix.CONTRACT, 1)
+GOVERNANCE_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
 
 ADMIN_SCORE_ADDRESS = Address.from_data(AddressPrefix.EOA, b'ADMIN')
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')

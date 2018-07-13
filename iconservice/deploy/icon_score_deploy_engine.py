@@ -111,8 +111,7 @@ class IconScoreDeployEngine(ContextContainer):
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
         is_built_score = IconBuiltinScoreLoader.is_builtin_score(icon_score_address)
-        is_owner = self._icon_score_deploy_storage.is_owner_deployed_score(
-            context, icon_score_address, context.tx.origin)
+        is_owner = context.tx.origin == self._icon_score_deploy_storage.get_score_owner(context, icon_score_address)
         is_enable_audit = self._is_flag_on(IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT)
         return not is_enable_audit or all((is_built_score, is_owner))
 

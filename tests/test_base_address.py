@@ -17,7 +17,7 @@
 import unittest
 
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.base.address import create_address_from_int, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.address import is_icon_address_valid
 from iconservice.base.address import split_icon_address
 
@@ -95,14 +95,14 @@ class TestAddress(unittest.TestCase):
         table[a1] = 100
         self.assertEqual(table[a1], table[a2])
 
-    def test_create_address_from_int(self):
-        self.assertEqual(create_address_from_int(AddressPrefix.CONTRACT, 0), ZERO_SCORE_ADDRESS)
-        self.assertEqual(create_address_from_int(AddressPrefix.CONTRACT, 1), GOVERNANCE_SCORE_ADDRESS)
-        print("create_address_from_int(AddressPrefix.EOA, 10)", create_address_from_int(AddressPrefix.EOA, 10))
-        print("create_address_from_int(AddressPrefix.EOA, 1024)", create_address_from_int(AddressPrefix.EOA, 1024))
+    def test_prefix_and_int(self):
+        self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0), ZERO_SCORE_ADDRESS)
+        self.assertEqual(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1), GOVERNANCE_SCORE_ADDRESS)
+        print("from_prefix_and_int(AddressPrefix.EOA, 10)", Address.from_prefix_and_int(AddressPrefix.EOA, 10))
+        print("from_prefix_and_int(AddressPrefix.EOA, 1024)", Address.from_prefix_and_int(AddressPrefix.EOA, 1024))
 
     def test_address_from_to(self):
-        addr1 = create_address_from_int(AddressPrefix.CONTRACT, 0)
+        addr1 = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
         buf = addr1.to_bytes()
         addr2 = Address.from_bytes(buf)
         self.assertEqual(addr1, addr2)
