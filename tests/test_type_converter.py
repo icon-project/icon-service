@@ -43,6 +43,26 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(timestamp, ret_params['timestamp'])
         self.assertEqual(prev_block_hash, ret_params['prevBlockHash'])
 
+    def test_negative(self):
+        block_height = -1001
+        block_hash = create_block_hash(b'block1')
+        timestamp = -12345
+        prev_block_hash = create_block_hash(b'prevBlock1')
+
+        request_params = {
+            "blockHeight": hex(block_height),
+            "blockHash": bytes.hex(block_hash),
+            "timestamp": hex(timestamp),
+            "prevBlockHash": bytes.hex(prev_block_hash)
+        }
+
+        ret_params = TypeConverter.convert(request_params, ParamType.BLOCK)
+
+        self.assertEqual(block_height, ret_params['blockHeight'])
+        self.assertEqual(block_hash, ret_params['blockHash'])
+        self.assertEqual(timestamp, ret_params['timestamp'])
+        self.assertEqual(prev_block_hash, ret_params['prevBlockHash'])
+
     def test_account_convert(self):
         name = 'genesis'
         address = create_address(AddressPrefix.EOA, b'addr')
