@@ -104,8 +104,8 @@ class IconScoreDeployEngine(object):
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
         is_built_score = IconBuiltinScoreLoader.is_builtin_score(icon_score_address)
         is_owner = context.tx.origin == self._icon_score_deploy_storage.get_score_owner(context, icon_score_address)
-        is_enable_audit = self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_AUDIT)
-        return not is_enable_audit or all((is_built_score, is_owner))
+        is_audit_enabled = self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_AUDIT)
+        return not is_audit_enabled or all((is_built_score, is_owner))
 
     def deploy(self,
                context: 'IconScoreContext',

@@ -18,14 +18,14 @@ from .logger.logger import Logger
 
 
 class Configure:
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: str, args: dict= None):
         self._config_table = dict()
         try:
             self._init_default_table()
             with open(config_path) as f:
                 json_conf = json.load(f)
-                json_conf = json_conf['config']
                 self._load_json_config(json_conf)
+                self._set_args(args)
                 Logger.error(f"load json success {config_path}")
         except (OSError, IOError):
             Logger.error(f"load json fail {config_path}")
@@ -34,14 +34,27 @@ class Configure:
     def _init_default_table(self) -> None:
         self._config_table[ConfigKey.BIG_STOP_LIMIT] = 5000000
         self._config_table[ConfigKey.LOGGER_DEV] = True
-        self._config_table[ConfigKey.ADMIN_ADDRESS_STR] = None
+        self._config_table[ConfigKey.ADMIN_ADDRESS] = None
         self._config_table[ConfigKey.ENABLE_THREAD_FLAG] = 0
         self._config_table[ConfigKey.ICON_SERVICE_FLAG] = 0
 
     def _load_json_config(self, json_conf: dict) -> None:
         for key, value in json_conf.items():
-            if key in self._config_table:
-                self._config_table[key] = value
+            if key == 'log':
+                continue
+            self._config_table[key] = value
+
+    def _set_args(self, args: dict) -> None:
+        if args is None:
+            return
+
+        for key, value in args.items():
+            if value is None:
+                continue
+            self._config_table[key] = value
 
     def get_value(self, key: str):
         return self._config_table.get(key, None)
+
+    def make_dict(self):
+        return dict(self._config_table)

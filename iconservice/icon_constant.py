@@ -41,19 +41,19 @@ DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
                                             'amqp_target': '127.0.0.1'}
 
 ICON_SERVICE_PROCTITLE_FORMAT = "icon_service.{type}." \
-                                "{icon_score_root_path}." \
-                                "{icon_score_state_db_root_path}." \
-                                "{channel}.{amqp_key}." \
-                                "{amqp_target}." \
+                                "{iconScoreRootPath}." \
+                                "{iconScoreStateDbRootPath}." \
+                                "{channel}.{amqpKey}." \
+                                "{amqpTarget}." \
                                 "{config}"
 
 
 class ConfigKey:
-    BIG_STOP_LIMIT = 'ICON_SERVICE_BIG_STOP_LIMIT'
-    LOGGER_DEV = 'LOGGER_DEV'
-    ADMIN_ADDRESS_STR = 'ADMIN_ADDRESS_STR'
-    ENABLE_THREAD_FLAG = 'ENABLE_THREAD_FLAG'
-    ICON_SERVICE_FLAG = 'INNER_SERVICE_FLAG'
+    BIG_STOP_LIMIT = 'iconServiceBigStepLimit'
+    LOGGER_DEV = 'loggerDev'
+    ADMIN_ADDRESS = 'adminAddress'
+    ENABLE_THREAD_FLAG = 'enableThreadFlag'
+    ICON_SERVICE_FLAG = 'iconServiceFlag'
 
 
 class EnableThreadFlag(IntFlag):

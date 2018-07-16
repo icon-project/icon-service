@@ -203,7 +203,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             icon_builtin_score_loader = IconBuiltinScoreLoader(self._icon_score_deploy_engine)
-            icon_builtin_score_loader.load_builtin_scores(context)
+            icon_builtin_score_loader.load_builtin_scores(context, self._conf.get_value(ConfigKey.ADMIN_ADDRESS))
         finally:
             self._delete_context(context)
 

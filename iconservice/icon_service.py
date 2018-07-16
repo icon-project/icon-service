@@ -68,15 +68,15 @@ def main():
     parser.add_argument("-t", dest='type', type=str, default='user',
                         choices=['tbears', 'user'],
                         help="icon service type [tbears|user]")
-    parser.add_argument("-sc", dest='icon_score_root_path', type=str, default='.score',
+    parser.add_argument("-sc", dest='iconScoreRootPath', type=str, default=None,
                         help="icon score root path  example : .score")
-    parser.add_argument("-st", dest='icon_score_state_db_root_path', type=str, default='.db',
+    parser.add_argument("-st", dest='iconScoreStateDbRootPath', type=str, default=None,
                         help="icon score state db root path  example : .db")
-    parser.add_argument("-ch", dest='channel', type=str, default='loopchain_default',
+    parser.add_argument("-ch", dest='channel', type=str, default=None,
                         help="icon score channel")
-    parser.add_argument("-ak", dest='amqp_key', type=str, default='amqp_key',
+    parser.add_argument("-ak", dest='amqpKey', type=str, default=None,
                         help="icon score amqp_key : [amqp_key]")
-    parser.add_argument("-at", dest='amqp_target', type=str, default='127.0.0.1',
+    parser.add_argument("-at", dest='amqpTarget', type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
     parser.add_argument("-c", dest='config', type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
@@ -89,15 +89,21 @@ def main():
     del args_params['config']
 
     Logger(args.config)
-    conf = Configure(args.config)
-
+    conf = Configure(args.config, args_params)
+    args_params = conf.make_dict()
     args_params['config'] = conf
 
     icon_service = IconService()
     if args.type == "tbears":
+        DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT['config'] = conf
         icon_service.serve(**DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT)
     else:
-        icon_service.serve(**args_params)
+        icon_service.serve(icon_score_root_path=args_params.get('iconScoreRootPath'),
+                           icon_score_state_db_root_path=args_params.get('iconScoreStateDbRootPath'),
+                           channel=args_params.get('channel'),
+                           amqp_key=args_params.get('amqpKey'),
+                           amqp_target=args_params.get('amqpTarget'),
+                           config=args_params.get('config'))
     Logger.debug(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
 
 
