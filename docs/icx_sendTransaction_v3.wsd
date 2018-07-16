@@ -1,0 +1,46 @@
+@startuml icx_sendTransaction sequence diagram
+
+actor Client
+participant JsonRpcServer
+participant loopchain
+participant IconService
+participant Score
+database LevelDB
+
+group tx collection
+
+Client -> JsonRpcServer: [jsonrpc] icx_sendTransaction
+JsonRpcServer -> JsonRpcServer: Check syntax errors
+JsonRpcServer -> IconService: [mq] tx
+IconService -> IconService: Check semantic errors
+IconService -> JsonRpcServer: [mq] Error check Result
+JsonRpcServer -> loopchain: [mq] tx
+loopchain -> JsonRpcServer: [mq] txHash
+JsonRpcServer -> Client: [jsonrpc] txHash
+
+end
+
+group block invoke
+
+loopchain -> IconService: [mq] invoke(block)
+
+group tx invoke loop
+
+IconService -> Score: tx
+Score -> IconService: txResult
+
+end
+
+IconService -> loopchain: [mq] txResults
+
+end
+
+group after block confirmation
+
+loopchain -> IconService: [mq] write_precommit_state(block_hash, block_height)
+IconService -> LevelDB: put(key, value)
+IconService -> loopchain: [mq]: Result
+
+end
+
+@enduml

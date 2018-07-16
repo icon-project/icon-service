@@ -1,0 +1,21 @@
+@startuml icx_getBalance sequence diagram
+
+actor Client
+participant JsonRpcServer
+participant loopchain
+participant IconService
+participant Score
+database LevelDB
+
+Client -> JsonRpcServer: [jsonrpc] balance request
+JsonRpcServer -> loopchain: [mq] request
+loopchain -> IconService: [mq] request
+IconService -> Score: [call] query(params)
+Score -> LevelDB: [call] get(address)
+LevelDB -> Score: balance response
+Score -> IconService: response
+IconService -> loopchain: [mq] response
+loopchain -> JsonRpcServer: [mq] response
+JsonRpcServer -> Client: [jsonrpc] balance response
+
+@enduml
