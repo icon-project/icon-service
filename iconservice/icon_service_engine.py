@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from enum import IntFlag
 
 from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER
-from .utils import byte_length_of_int
+from .utils import byte_length_of_int, is_lowercase_hex_string
 from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
 from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
@@ -214,17 +214,17 @@ class IconServiceEngine(ContextContainer):
 
         step_price = governanece_score.getStepPrice()
 
-        self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
-        self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
-        self._step_counter_factory.set_step_cost(StepType.INSTALL, 20000)
-        self._step_counter_factory.set_step_cost(StepType.UPDATE, 8000)
-        self._step_counter_factory.set_step_cost(StepType.DESTRUCT, -7000)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
-        self._step_counter_factory.set_step_cost(StepType.STORAGE_SET, 20)
-        self._step_counter_factory.set_step_cost(StepType.STORAGE_REPLACE, 5)
-        self._step_counter_factory.set_step_cost(StepType.STORAGE_DELETE, -15)
-        self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
-        self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
+        # self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
+        # self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
+        # self._step_counter_factory.set_step_cost(StepType.INSTALL, 20000)
+        # self._step_counter_factory.set_step_cost(StepType.UPDATE, 8000)
+        # self._step_counter_factory.set_step_cost(StepType.DESTRUCT, -7000)
+        # self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
+        # self._step_counter_factory.set_step_cost(StepType.STORAGE_SET, 20)
+        # self._step_counter_factory.set_step_cost(StepType.STORAGE_REPLACE, 5)
+        # self._step_counter_factory.set_step_cost(StepType.STORAGE_DELETE, -15)
+        # self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
+        # self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -585,9 +585,9 @@ class IconServiceEngine(ContextContainer):
             elif isinstance(data, str):
                 # If the value is hexstring, it is calculated as bytes otherwise
                 # string
-                data_without_0x = data[2:] if data.startswith('0x') else data
-                if all(self._char_in_hexdigits(c) for c in data_without_0x):
-                    size += ceil(len(data_without_0x) / 2)
+                data_body = data[2:] if data.startswith('0x') else data
+                if is_lowercase_hex_string(data_body):
+                    size += ceil(len(data_body) / 2)
                 else:
                     size += len(data.encode('utf-8'))
             else:
@@ -595,10 +595,6 @@ class IconServiceEngine(ContextContainer):
                 if isinstance(data, int):
                     size += byte_length_of_int(data)
         return size
-
-    @staticmethod
-    def _char_in_hexdigits(c):
-        return ('0' <= c <= '9') or ('a' <= c <= 'f') or ('A' <= c <= 'F')
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
