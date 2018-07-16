@@ -263,7 +263,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # step_used MUST BE 10000 on protocol v2
         step_unit = self._engine._step_counter_factory.get_step_cost(
-            StepType.C)
+            StepType.DEFAULT)
 
         self.assertEqual(tx_result.step_used, step_unit)
 

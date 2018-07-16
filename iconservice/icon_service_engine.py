@@ -163,7 +163,7 @@ class IconServiceEngine(ContextContainer):
             self._db_factory, icon_score_manger, self._icon_score_loader)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter_factory.set_step_cost(StepType.C, 4000)
+        self._step_counter_factory.set_step_cost(StepType.DEFAULT, 4000)
         self._step_counter_factory.set_step_cost(StepType.CONTRACT_CALL, 1500)
         self._step_counter_factory.set_step_cost(StepType.CONTRACT_CREATE, 20000)
         self._step_counter_factory.set_step_cost(StepType.CONTRACT_UPDATE, 8000)
@@ -537,7 +537,7 @@ class IconServiceEngine(ContextContainer):
                 step_price=self._get_step_price())
 
             # Every send_transaction are calculated TRANSACTION STEP at first
-            context.step_counter.append_step(StepType.C, 1)
+            context.step_counter.append_step(StepType.DEFAULT, 1)
             input_size = self._get_byte_length(params.get('data', None))
 
             context.step_counter.append_step(StepType.INPUT, input_size)

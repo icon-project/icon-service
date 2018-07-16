@@ -272,7 +272,7 @@ None
     "jsonrpc": "2.0",
     "id": 1234,
     "result": {
-        "c": "0xfa0",
+        "default": "0xfa0",
         "contractCall": "0x5dc",
         "contractCreate": "0x4e20",
         "contractUpdate": "0x1f40",

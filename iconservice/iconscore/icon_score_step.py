@@ -27,7 +27,7 @@ class AutoValueEnum(Enum):
 
 
 class StepType(AutoValueEnum):
-    C = auto()
+    DEFAULT = auto()
     CONTRACT_CALL = auto()
     CONTRACT_CREATE = auto()
     CONTRACT_UPDATE = auto()
@@ -146,7 +146,7 @@ class IconScoreStepCounter(object):
         Returns used steps in the transaction
         :return: used steps in the transaction
         """
-        return max(self.__step_used, self.__step_cost_dict.get(StepType.C, 0))
+        return max(self.__step_used, self.__step_cost_dict.get(StepType.DEFAULT, 0))
 
     @property
     def step_limit(self) -> int:
