@@ -18,7 +18,6 @@ from ..deploy.icon_score_manager import IconScoreManager
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
-from .icon_score_context import ContextContainer
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -61,7 +60,7 @@ class IconScoreInfo(object):
         return self._icon_score.owner
 
 
-class IconScoreInfoMapper(dict, ContextContainer):
+class IconScoreInfoMapper(dict):
     """Icon score information mapping table
 
     This instance should be used as a singletone
@@ -164,13 +163,7 @@ class IconScoreInfoMapper(dict, ContextContainer):
 
         score_wrapper = self._load_score_wrapper(address)
         score_db = self._create_icon_score_database(address)
-
-        try:
-            self._put_context(context)
-            icon_score = score_wrapper(score_db)
-        finally:
-            self._delete_context(context)
-
+        icon_score = score_wrapper(score_db)
         return self._add_score_to_mapper(icon_score)
 
     def _create_icon_score_database(self, address: 'Address') -> 'IconScoreDatabase':

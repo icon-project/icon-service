@@ -26,7 +26,6 @@ from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
-from ..iconscore.icon_score_context import ContextContainer
 from ..logger import Logger
 
 if TYPE_CHECKING:
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
 
 
-class IconScoreDeployEngine(ContextContainer):
+class IconScoreDeployEngine(object):
     """It handles transactions to install, update and audit a SCORE
     """
 
@@ -278,12 +277,7 @@ class IconScoreDeployEngine(ContextContainer):
 
         annotations = TypeConverter.make_annotations_from_method(on_deploy)
         TypeConverter.convert_data_params(annotations, params)
-
-        try:
-            self._put_context(context)
-            on_deploy(**params)
-        finally:
-            self._delete_context(context)
+        on_deploy(**params)
 
     def rollback(self) -> None:
         """It is called when the previous block has been canceled

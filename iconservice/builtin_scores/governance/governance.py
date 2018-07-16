@@ -22,16 +22,6 @@ class Governance(IconScoreBase):
     _AUDITOR_LIST = 'auditor_list'
     _STEP_PRICE = 'step_price'
 
-    # TODO: replace with real func
-    _MAP_ADDRESS = {
-        'e0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27': 'cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32',
-        'e22222222222222250cd1e6d57549f67fe9718654cde15258922d0f88ff58b27': 'cx222222222f5b45bfaea8cff1d8232fbb6122ec32',
-    }
-    _MAP_TXHASH = {
-        'cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32': '0xe0f6dc6607aa9b5550cd1e6d57549f67fe9718654cde15258922d0f88ff58b27',
-        'cx222222222f5b45bfaea8cff1d8232fbb6122ec32': '0xe22222222222222250cd1e6d57549f67fe9718654cde15258922d0f88ff58b27',
-    }
-
     @eventlog(indexed=1)
     def Accepted(self, tx_hash: str):
         pass
@@ -97,11 +87,8 @@ class Governance(IconScoreBase):
     @external(readonly=True)
     def getScoreStatus(self, address: Address) -> dict:
         # check score address
-        # TODO: replace with real func
-        tx_hash: str = None
-        if str(address) in self._MAP_TXHASH:
-            tx_hash = self._MAP_TXHASH[str(address)]
-        else:
+        tx_hash = self.get_tx_hash_by_score_address(address)
+        if tx_hash is None:
             self.revert('SCORE not found')
         result = {}
         _current = self._get_current_status(address)
@@ -141,12 +128,8 @@ class Governance(IconScoreBase):
         if self.msg.sender not in self._auditor_list:
             self.revert('Invalid sender: no permission')
         # check txHash
-        # TODO: replace with real func
-        score_address: Address = None
-        hex_string = txHash.hex()
-        if hex_string in self._MAP_ADDRESS:
-            score_address = Address.from_string(self._MAP_ADDRESS[hex_string])
-        else:
+        score_address = self.get_score_address_by_tx_hash(txHash)
+        if score_address is None:
             self.revert('Invalid txHash')
         Logger.debug(f'acceptScore: score_address = "{score_address}"', TAG)
         # check next: it should be 'pending'
@@ -168,7 +151,8 @@ class Governance(IconScoreBase):
             AUDIT_TX_HASH: self.tx.hash
         }
         self._save_status(_current, status)
-        self.Accepted('0x' + hex_string)
+        self.deploy(txHash)
+        self.Accepted('0x' + txHash.hex())
 
     @external
     def rejectScore(self, txHash: bytes, reason: str):
@@ -177,12 +161,8 @@ class Governance(IconScoreBase):
         if self.msg.sender not in self._auditor_list:
             self.revert('Invalid sender: no permission')
         # check txHash
-        # TODO: replace with real func
-        score_address: Address = None
-        hex_string = txHash.hex()
-        if hex_string in self._MAP_ADDRESS:
-            score_address = Address.from_string(self._MAP_ADDRESS[hex_string])
-        else:
+        score_address = self.get_score_address_by_tx_hash(txHash)
+        if score_address is None:
             self.revert('Invalid txHash')
         Logger.debug(f'rejectScore: score_address = "{score_address}", reason = {reason}', TAG)
         # check next: it should be 'pending'
@@ -201,7 +181,7 @@ class Governance(IconScoreBase):
             AUDIT_TX_HASH: self.tx.hash
         }
         self._save_status(_next, status)
-        self.Rejected('0x' + hex_string)
+        self.Rejected('0x' + txHash.hex())
 
     @external
     def addAuditor(self, address: Address):

@@ -18,7 +18,6 @@
 
 from typing import TYPE_CHECKING
 
-from .icon_score_context import ContextContainer
 from .icon_score_context import IconScoreContext, call_method, call_fallback
 from .icon_score_info_mapper import IconScoreInfoMapper
 from ..base.address import Address
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
 
 
-class IconScoreEngine(ContextContainer):
+class IconScoreEngine(object):
     """Calls external functions provided by each IconScore
     """
 
@@ -108,12 +107,7 @@ class IconScoreEngine(ContextContainer):
         kw_params: dict = data.get('params', {})
 
         icon_score = self._get_icon_score(context, icon_score_address)
-
-        try:
-            self._put_context(context)
-            return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
-        finally:
-            self._delete_context(context)
+        return call_method(icon_score=icon_score, func_name=method, kw_params=kw_params)
 
     def _fallback(self,
                   context: 'IconScoreContext',
@@ -125,12 +119,7 @@ class IconScoreEngine(ContextContainer):
         """
 
         icon_score = self._get_icon_score(context, icon_score_address)
-
-        try:
-            self._put_context(context)
-            call_fallback(icon_score)
-        finally:
-            self._delete_context(context)
+        call_fallback(icon_score)
 
     def _get_icon_score(self, context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = self.__icon_score_info_mapper.get_icon_score(context, icon_score_address)
