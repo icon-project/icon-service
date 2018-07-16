@@ -21,7 +21,7 @@ from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..logger import Logger
-from ..icon_config import *
+from ..icon_constant import ICX_LOG_TAG
 
 from typing import TYPE_CHECKING, Optional
 

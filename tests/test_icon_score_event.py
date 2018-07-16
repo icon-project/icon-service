@@ -30,7 +30,7 @@ from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 from tests import create_address
 
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER
 
 
 class TestEventlog(unittest.TestCase):

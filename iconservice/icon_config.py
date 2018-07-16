@@ -12,58 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
-from enum import IntEnum
-
-ICON_SERVICE_LOG_TAG = 'IconService'
-ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
-ICON_DEPLOY_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Deploy'
-ICON_LOADER_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Loader'
-ICX_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Icx'
-ICON_DB_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_DB'
-ICON_INNER_LOG_TAG = f'IconInnerService'
-
-HOME_PATH = str(Path.home())
-
-ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
-DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
-                                            'icon_score_state_db_root_path': '.db',
-                                            'channel': 'tbears_channel',
-                                            'amqp_key': 'amqp_key',
-                                            'amqp_target': '127.0.0.1'}
-
-ICON_SERVICE_PROCTITLE_FORMAT = "icon_service.{type}." \
-                                "{icon_score_root_path}." \
-                                "{icon_score_state_db_root_path}." \
-                                "{channel}.{amqp_key}." \
-                                "{amqp_target}." \
-                                "{config}"
-
-ICON_SERVICE_BIG_STEP_LIMIT = 5000000
+import json
+from .icon_constant import ConfigKey
+from .logger.logger import Logger
 
 
-class EnableThreadFlag(IntEnum):
-    NonFlag = 0
-    Invoke = 1
-    Query = 2
-    Validate = 4
+class Configure:
+    def __init__(self, config_path: str):
+        self._config_table = dict()
+        try:
+            self._init_default_table()
+            with open(config_path) as f:
+                json_conf = json.load(f)
+                json_conf = json_conf['config']
+                self._load_json_config(json_conf)
+                Logger.error(f"load json success {config_path}")
+        except (OSError, IOError):
+            Logger.error(f"load json fail {config_path}")
+            self._init_default_table()
 
+    def _init_default_table(self) -> None:
+        self._config_table[ConfigKey.BIG_STOP_LIMIT] = 5000000
+        self._config_table[ConfigKey.LOGGER_DEV] = True
+        self._config_table[ConfigKey.ADMIN_ADDRESS_STR] = None
+        self._config_table[ConfigKey.ENABLE_THREAD_FLAG] = 0
+        self._config_table[ConfigKey.ICON_SERVICE_FLAG] = 0
 
-DEV = True
-ENABLE_RABBITMQ = True
+    def _load_json_config(self, json_conf: dict) -> None:
+        for key, value in json_conf.items():
+            if key in self._config_table:
+                self._config_table[key] = value
 
-if ENABLE_RABBITMQ:
-    ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
-else:
-    ENABLE_INNER_SERVICE_THREAD = EnableThreadFlag.NonFlag
-
-JSONRPC_VERSION = '2.0'
-CHARSET_ENCODING = 'utf-8'
-
-# 32bytes == 256bit
-DEFAULT_BYTE_SIZE = 32
-DATA_BYTE_ORDER = 'big'  # big endian
-# Fixed fee is 0.01 icx.
-FIXED_FEE = 10 ** 16
-
-ICON_DEX_DB_NAME = 'icon_dex'
+    def get_value(self, key: str):
+        return self._config_table.get(key, None)

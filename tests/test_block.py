@@ -18,7 +18,7 @@
 
 import unittest
 from iconservice.base.block import Block
-from iconservice.icon_config import DEFAULT_BYTE_SIZE
+from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from tests import create_block_hash
 
 

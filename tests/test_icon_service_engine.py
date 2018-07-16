@@ -20,13 +20,15 @@ import os
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
+from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.icon_constant import IconServiceFlag
+from iconservice.icon_config import Configure
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -59,7 +61,8 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
-        engine.open(icon_score_root_path=self._icon_score_root_path,
+        engine.open(Configure(""),
+                    icon_score_root_path=self._icon_score_root_path,
                     state_db_root_path=self._state_db_root_path)
         self._engine = engine
 
@@ -204,7 +207,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, 10000)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_on(self._engine.Flag.ENABLE_FEE):
+        if self._engine._is_flag_on(IconServiceFlag.ENABLE_FEE):
             # step_used MUST BE 10**12 on protocol v2
             self.assertEqual(step_price, 10 ** 12)
         else:
@@ -268,7 +271,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_on(self._engine.Flag.ENABLE_FEE):
+        if self._engine._is_flag_on(IconServiceFlag.ENABLE_FEE):
             # step_used MUST BE 10**12 on protocol v2
             self.assertEqual(step_price, 10 ** 12)
         else:

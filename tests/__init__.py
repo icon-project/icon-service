@@ -23,7 +23,7 @@ import hashlib
 import shutil
 import time
 
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.base.address import Address, AddressPrefix
 
 

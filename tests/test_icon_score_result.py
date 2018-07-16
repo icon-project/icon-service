@@ -16,7 +16,7 @@
 import hashlib
 import unittest
 from typing import Optional
-from unittest.mock import Mock, MagicMock, NonCallableMagicMock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 from iconservice import EventLog
 from iconservice.base.address import Address, AddressPrefix
@@ -39,12 +39,14 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
+from iconservice.icon_config import Configure
 from tests import create_block_hash, create_tx_hash, create_address
 
 
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):
         self._icon_service_engine = IconServiceEngine()
+        self._icon_service_engine._flag = 0
         self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
 
         self._icon_service_engine._icon_score_deploy_engine = \
@@ -246,7 +248,7 @@ class TestTransactionResult(unittest.TestCase):
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
     def test_request(self, open, create_by_name, load_builtin_scores, invoke):
 
-        inner_task = IconScoreInnerTask(".", ".")
+        inner_task = IconScoreInnerTask(Configure(""), ".", ".")
         open.assert_called()
         create_by_name.assert_called()
         load_builtin_scores.assert_called()

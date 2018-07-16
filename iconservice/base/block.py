@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from struct import Struct
-from ..icon_config import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
+from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
 from typing import Optional
 
 

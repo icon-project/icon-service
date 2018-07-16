@@ -15,7 +15,9 @@ import setproctitle
 
 from earlgrey import MessageQueueService
 from iconservice.icon_inner_service import IconScoreInnerService
-from iconservice.icon_config import *
+from iconservice.icon_config import Configure
+from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT,\
+    DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT
 from iconservice.logger import Logger
 from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, CONFIG_JSON_PATH
 
@@ -32,7 +34,7 @@ class IconService(object):
         self._inner_service = None
 
     def serve(self, icon_score_root_path: str, icon_score_state_db_root_path: str, channel: str, amqp_key: str,
-              amqp_target: str):
+              amqp_target: str, config: 'Configure'):
         async def _serve():
             await self._inner_service.connect(exclusive=True)
             Logger.info(f'Start IconService Service serve!', ICON_SERVICE_STANDALONE)
@@ -48,7 +50,8 @@ class IconService(object):
 
         self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name,
                                                     icon_score_root_path=icon_score_root_path,
-                                                    icon_score_state_db_root_path=icon_score_state_db_root_path)
+                                                    icon_score_state_db_root_path=icon_score_state_db_root_path,
+                                                    conf=config)
 
         loop = MessageQueueService.loop
         loop.create_task(_serve())
@@ -86,6 +89,9 @@ def main():
     del args_params['config']
 
     Logger(args.config)
+    conf = Configure(args.config)
+
+    args_params['config'] = conf
 
     icon_service = IconService()
     if args.type == "tbears":

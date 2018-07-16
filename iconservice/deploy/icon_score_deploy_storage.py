@@ -17,7 +17,7 @@ import json
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional
 
-from ..icon_config import DEFAULT_BYTE_SIZE
+from ..icon_constant import DEFAULT_BYTE_SIZE
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
 from . import DeployType

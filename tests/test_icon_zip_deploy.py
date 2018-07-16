@@ -36,7 +36,7 @@ from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.icx.icx_engine import IcxEngine
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER
 from tests import create_address, create_block_hash, create_tx_hash
 
 
@@ -78,7 +78,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self._engine.open(
             icon_score_root_path=score_path,
-            flags=IconScoreDeployEngine.Flag.NONE,
+            flag=0,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_deploy_storage)
 

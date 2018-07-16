@@ -21,7 +21,7 @@ import shutil
 from iconservice.base.address import Address
 from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
 from iconservice.logger import Logger
-from iconservice.icon_config import *
+from iconservice.icon_constant import ICON_DEPLOY_LOG_TAG
 
 
 class IconScoreDeployer(object):

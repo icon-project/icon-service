@@ -22,7 +22,7 @@ from enum import IntEnum
 
 from .exception import InvalidParamsException
 from ..utils import is_lowercase_hex_string, int_to_bytes
-from ..icon_config import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER
 
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
@@ -230,6 +230,4 @@ class Address(object):
 ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
 GOVERNANCE_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-
-ADMIN_SCORE_ADDRESS = Address.from_data(AddressPrefix.EOA, b'ADMIN')
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')

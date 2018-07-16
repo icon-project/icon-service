@@ -18,9 +18,9 @@ from collections import namedtuple
 from math import ceil
 from os import makedirs
 from typing import TYPE_CHECKING, Any, List, Optional
-from enum import IntFlag
 
-from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER,\
+    IconServiceFlag, IconDeployFlag, ConfigKey
 from .utils import byte_length_of_int
 from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
@@ -54,6 +54,7 @@ from .logger import Logger
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
     from .iconscore.icon_score_event_log import EventLog
+    from .icon_config import Configure
 
 
 def _generate_score_address_for_tbears(score_path: str) -> 'Address':
@@ -90,17 +91,13 @@ class IconServiceEngine(ContextContainer):
     It is contained in IconInnerService.
     """
 
-    class Flag(IntFlag):
-        NONE = 0,
-        ENABLE_FEE = 1,
-        ENABLE_AUDIT = 2
-
-    def __init__(self, flags: int=Flag.NONE) -> None:
+    def __init__(self) -> None:
         """Constructor
 
         TODO: default flags?
         """
-        self._flags = flags
+        self._conf = None
+        self._flag = None
         self._db_factory = None
         self._context_factory = None
         self._icon_score_loader = None
@@ -129,18 +126,22 @@ class IconServiceEngine(ContextContainer):
         self._PrecommitState = namedtuple(
             'PrecommitState', ['block_batch', 'block_result'])
 
-    def _is_on(self, flags: int) -> bool:
-        return (self._flags & flags) == flags
+    def _is_flag_on(self, flag: 'IconServiceFlag') -> bool:
+        return (self._flag & flag) == flag
 
     def open(self,
+             conf: 'Configure',
              icon_score_root_path: str,
              state_db_root_path: str) -> None:
         """Get necessary parameters and initialize diverse objects
 
+        :param conf:
         :param icon_score_root_path:
         :param state_db_root_path:
         """
 
+        self._conf = conf
+        self._flag = self._conf.get_value(ConfigKey.ICON_SERVICE_FLAG)
         makedirs(icon_score_root_path, exist_ok=True)
         makedirs(state_db_root_path, exist_ok=True)
 
@@ -186,12 +187,12 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
-        icon_score_deploy_engine_flags = IconScoreDeployEngine.Flag.NONE
-        if self._is_on(IconServiceEngine.Flag.ENABLE_AUDIT):
-            icon_score_deploy_engine_flags = IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
+        icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
+        if self._is_flag_on(IconServiceFlag.ENABLE_AUDIT):
+            icon_score_deploy_engine_flags = IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
         self._icon_score_deploy_engine.open(
             icon_score_root_path=icon_score_root_path,
-            flags=icon_score_deploy_engine_flags,
+            flag=icon_score_deploy_engine_flags,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
@@ -623,7 +624,7 @@ class IconServiceEngine(ContextContainer):
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
-            elif self._is_on(self.Flag.ENABLE_FEE):
+            elif self._is_flag_on(IconServiceFlag.ENABLE_FEE):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
                 step_price = 10 ** 12
@@ -642,7 +643,7 @@ class IconServiceEngine(ContextContainer):
         :return: step price in loop unit
         """
         # 1 icx == 10 ** 6 step
-        if self._is_on(self.Flag.ENABLE_FEE):
+        if self._is_flag_on(IconServiceFlag.ENABLE_FEE):
             return 10 ** 12
         else:
             return 0

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Optional
 from .icx_account import Account
 from ..base.address import Address
 from ..base.block import Block
-from ..icon_config import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase

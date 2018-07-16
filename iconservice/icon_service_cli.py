@@ -18,8 +18,7 @@ import subprocess
 from enum import IntEnum
 import asyncio
 
-import iconservice
-from .icon_config import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT
+from .icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT
 from .logger import Logger
 
 from typing import TYPE_CHECKING
@@ -168,6 +167,7 @@ def get_config(args_config: dict):
     try:
         with open(args_config['config'], mode='rb') as config_file:
             config = json.load(config_file)
+            config = config['input_cli']
         config_dict = {k: v for k, v in args_config.items() if k != "command"}
         params_dict = {}
 

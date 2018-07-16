@@ -41,7 +41,7 @@ from iconservice.icx.icx_account import Account, AccountType
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.utils.bloom import BloomFilter
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 from typing import TYPE_CHECKING
@@ -83,7 +83,7 @@ class TestIconScoreEngine2(unittest.TestCase):
 
         self._score_deploy_engine.open(
             icon_score_root_path=score_path,
-            flags=IconScoreDeployEngine.Flag.NONE,
+            flag=0,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)
 

@@ -31,7 +31,7 @@ from .icx import Icx
 from ..base.exception import *
 from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_config import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER
 
 from typing import TYPE_CHECKING, Callable, Any, List
 
