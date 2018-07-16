@@ -5,6 +5,7 @@ Describes APIs that Governance SCORE provides.
 
 | Date | Author | Changes |
 |:---- |:-----: |:--------|
+| 2018.07.16 | Yongwoo Lee | Added getStepCosts, setStepCost, StepCostChanged |
 | 2018.07.13 | Jaechang Namgoong | Added setStepPrice, StepPriceChanged |
 | 2018.07.09 | Jaechang Namgoong | Added getStepPrice |
 | 2018.07.03 | Jaechang Namgoong | Added Eventlog (Accepted, Rejected) |
@@ -35,16 +36,19 @@ Describes APIs that Governance SCORE provides.
 * Query methods
     * [getScoreStatus](#getscorestatus)
     * [getStepPrice](#getstepprice)
+    * [getStepCosts](#getstepcosts)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
     * [addAuditor](#addauditor)
     * [removeAuditor](#removeauditor)
     * [setStepPrice](#setstepprice)
+    * [setStepCost](#setstepcost)
 * Eventlog
     * [Accepted](#accepted)
     * [Rejected](#rejected)
     * [StepPriceChanged](#steppricechanged)
+    * [StepCostChanged](#stepcostchanged)
 
 
 # Query Methods
@@ -225,6 +229,61 @@ None
     "jsonrpc": "2.0",
     "id": 1234,
     "result": "0xe8d4a51000" // 1000000000000
+}
+```
+
+## getStepCosts
+
+* Returns a table of the step costs for the specific action in SOCRE
+
+### Parameters
+
+None
+
+### Returns
+
+`T_DICT` - a dict:  keys - camel-cased action strings, values - step costs in integer
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_call",
+    "params": {
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
+        "to": "cx0000000000000000000000000000000000000001",
+        "dataType": "call",
+        "data": {
+            "method": "getStepCosts",
+            "params": {}
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": {
+        "c": "0xfa0",
+        "contractCall": "0x5dc",
+        "contractCreate": "0x4e20",
+        "contractUpdate": "0x1f40",
+        "contractDestruct": "-0x1b58",
+        "contractSet": "0x3e8",
+        "set": "0x14",
+        "replace": "0x5",
+        "delete": "-0xf",
+        "input": "0x14",
+        "eventLog": "0xa"
+    }
 }
 ```
 
@@ -433,6 +492,47 @@ None
 }
 ```
 
+## setStepCost
+
+* Sets the step costs for the specific action in SOCRE.
+* Only the owner can call this function.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| stepType | [T_STRING](#T_STRING) | action type |
+| cost | [T_INT](#T_INT) | step cost for the type |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "setStepCost",
+            "params": {
+                "stepType": "contractDestruct",
+                "cost": "-0x1b58" // -7000
+            }
+        }
+    }
+}
+```
+
 # Eventlog
 
 ## Accepted
@@ -462,5 +562,15 @@ Must trigger on any successful setStepPrice transaction.
 ```python
 @eventlog(indexed=1)
 def StepPriceChanged(self, step_price: int):
+    pass
+```
+
+## StepCostChanged
+
+Must trigger on any successful setStepCost transaction.
+
+```python
+@eventlog(indexed=1)
+def StepPriceChanged(self, step_type: str, cost: int):
     pass
 ```
