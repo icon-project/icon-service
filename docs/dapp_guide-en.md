@@ -1,21 +1,24 @@
-Let's create a simple token.
+ICON DApp Guide
 ==================================
 
 Overview
 --------------
-```
-$ tbears init {project_name} {class_name}
-```
-Above command will create {project_name} folder,
-and generate \_\_init\_\_.py, {project_name}.py, package.json files in the folder.<br/>
-{project_name}.py has a main class declaration whose name is {class_name}.<br/>
-\_\_init\_\_.py has auto-generated statements for dynamic import.
-If folder structure changes, make sure you adjust the import statements.<br/>
 
+This document explains how to create a DApp program under the ICON Score framework.
+Let's start by creating a simple token contract.
 
-<br/>
-This exmaple generates 1,000 initial tokens, and 100% of tokens go to the contract owner.<br/>  
-Transfer function is given to transfer tokens to other account.<br/>
+```
+$ tbears init sample_token SampleToken
+```
+
+Above command will create `sample_token` folder,
+and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.
+`sample_token.py` has a main class declaration whose name is `SampleToken`.
+`__init__.py` has auto-generated statements for dynamic import.
+If folder structure changes, make sure you adjust the import statements.
+
+This exmaple generates 1,000 initial tokens, and 100% of tokens go to the contract owner.
+Transfer function is given to transfer tokens to other accounts.
 
 ```python
 class SampleToken(IconScoreBase):
@@ -26,8 +29,8 @@ class SampleToken(IconScoreBase):
     @eventlog(indexed=3)
     def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
 
-    def __init__(self, db: IconScoreDatabase, addr_owner: Address) -> None:
-        super().__init__(db, addr_owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
         self.__total_supply = VarDB(self.__TOTAL_SUPPLY, db, value_type=int)
         self.__balances = DictDB(self.__BALANCES, db, value_type=int)
 
@@ -70,13 +73,13 @@ class SampleToken(IconScoreBase):
 
 ```
 
-<br/>
-Now, we are going to write a crowd sale contract using above token.<br/>
-Exchange ratio to icx is 1:1, and the crowd sale duration is 1 minute.<br/>
-total_joiner_count function returns the number of contributors, and check_goal_reached function tests if the crowd sale target has been met.<br/>
-After the crowd sale finished, safe_withdrawal function transfers the fund 
-to the beneficiery, contract owner in this example, if the sales target has been met. 
-However, if sales target failed, this function refunds to the contributors.<br/>
+Now, we are going to write a crowd sale contract using above token.
+Exchange ratio to icx is 1:1, and the crowd sale duration is 1 minute.
+`total_joiner_count` function returns the number of contributors,
+and `check_goal_reached` function tests if the crowd sale target has been met.
+After the crowd sale finished, `safe_withdrawal` function transfers the fund to the beneficiery,
+contract owner in this example, if the sales target has been met.
+However, if sales target failed, this function refunds to the contributors.
 
 ```python
 class SampleTokenInterface(InterfaceScore):
@@ -104,8 +107,8 @@ class SampleCrowdSale(IconScoreBase):
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
-    def __init__(self, db: IconScoreDatabase, owner: Address) -> None:
-        super().__init__(db, owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
 
         self.__addr_beneficiary = VarDB(self.__ADDR_BENEFICIARY, db, value_type=Address)
         self.__addr_token_score = VarDB(self.__ADDR_TOKEN_SCORE, db, value_type=Address)
@@ -195,8 +198,7 @@ class SampleCrowdSale(IconScoreBase):
 
         if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
             if self.icx.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.FundTransfer(self.__addr_beneficiary.get(), self.__amount_raise.get(),
-                                  False)
+                self.FundTransfer(self.__addr_beneficiary.get(), self.__amount_raise.get(), False)
             else:
                 self.__funding_goal_reached.set(False)
 
@@ -205,9 +207,9 @@ class SampleCrowdSale(IconScoreBase):
 
 Syntax 
 --------------
-Type hinting is highly recommended for the input parameters and return value.<br/>
-When querying Score's APIs, API specification is generated based on its type hints.<br/>
-If type hints are not given, only function names will be return.<br/> 
+Type hinting is highly recommended for the input parameters and return value.
+When querying Score's APIs, API specification is generated based on its type hints.
+If type hints are not given, only function names will be returned.
 
 Example)
 ```python
@@ -217,57 +219,54 @@ def func1(arg1: int, arg2: str) -> object:
 ```
 
 #### Exception handling
+When you handle exceptions in your contract, it is recommended to inherit IconServiceBaseException.
 
-When you handle exceptions in your contract, 
-it is recommended to inherit IconServiceBaseException.<br/> 
-
-#### The highest parent class (IconScoreBase)
-Every DApp classes must inherit IconScoreBase. Contracts not derived from IconScoreBase can not be deployed.<br/>
+#### IconScoreBase (The highest parent class)
+Every DApp classes must inherit IconScoreBase. Contracts not derived from IconScoreBase can not be deployed.
 
 #### \_\_init\_\_
-This is a python init function. This function is called when the contract is loaded at each node.<br/>
-Member variables should be declared here.<br/>
-Also, parent's init function must be called as follows.<br/>   
+This is a python init function. This function is called when the contract is loaded at each node.
+Member variables should be declared here.
+Also, parent's init function must be called as follows.
 
 Example)
 ``` python
-super().__init__(db, owner)
+super().__init__(db)
 ```
 
-#### on_install
-This function is called once when the conract is deployed for the first time, and will not be called again on contract update or deletion afterward.<br/>
-This is the place where you initialize state DB.<br/> 
+#### on\_install
+This function is called once when the conract is deployed for the first time, and will not be called again on contract update or deletion afterward.
+This is the place where you initialize the state DB.
 
 #### VarDB, DictDB, ArrayDB
-VarDB, DictDB, ArrayDB are utility classes wrapping state DB.<br/> 
-A key can be number or characters, and value_type can be int, str, Address, and bytes. <br/>
-If the key does not exist, these classes return 0 when value_type is int, return "" when str, return None when the value_type is Address or bytes.<br/>
-VarDB can be used to store simple key-value state, whereas DictDB behaves more like python dict. <br/> 
-DictDB does not maintain order. 
-ArrayDB, which supports length and iterator, maintains order. <br/>
+VarDB, DictDB, ArrayDB are utility classes wrapping the state DB.
+A key can be a number or characters, and value\_type can be int, str, Address, and bytes.
+If the key does not exist, these classes return 0 when value\_type is int, return "" when str, return None when the value\_type is Address or bytes.
+VarDB can be used to store simple key-value state, and DictDB behaves more like python dict.
+DictDB does not maintain order, whereas ArrayDB, which supports length and iterator, maintains order.
 
-##### VarDB('key', 'target db', 'return type')<br/>
-Example) Setting 'theloop' for the key 'name' on the state DB:<br/>
+##### VarDB('key', 'target db', 'return type')
+Example) Setting 'theloop' for the key 'name' on the state DB:
 ```python
 VarDB('name', db, value_type=str).set('theloop')
 ```
-Getting value by the key 'name':<br/>
+Example) Getting value by the key 'name':
 ```python
 name = VarDB('name', db, value_type=str).get()
-print(name) ##'theloop'
+print(name) ## 'theloop'
 ```
 
-##### DictDB('key', 'target db', 'return type', 'dict depth (default is 1)')<br/>
-Example1) One-depth dict (test_dict1['key']): <br/>
+##### DictDB('key', 'target db', 'return type', 'dict depth (default is 1)')
+Example1) One-depth dict (test\_dict1['key']):
 ```python
 test_dict1 = DictDB('test_dict1', db, value_type=int)
 test_dict1['key'] = 1 ## set
 print(test_dict1['key']) ## get 1
 
-print(test_dict1['nonexistence_key']) # prins 0 (key does not exist and value_type=int)
+print(test_dict1['nonexistence_key']) # prints 0 (key does not exist and value_type=int)
 ```
 
-Example2) Two-depth dict (test_dict2['key1']['key2']):<br/>
+Example2) Two-depth dict (test\_dict2\['key1']\['key2']):
 ```python
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
@@ -276,61 +275,64 @@ print(test_dict2['key1']['key2']) ## get 'a'
 print(test_dict2['key1']['nonexistent_key']) # prints "" (key does not exist and value_type=str)
 ```
 
-If the depth is more than 2, dict[key] returns new DictDB.<br/>
+If the depth is more than 2, dict[key] returns new DictDB.
 Attempting to set a value to the wrong depth in the DictDB will raise an exception.    
 
-Example3)<br/>
+Example3)
 ```python
 test_dict3 = DictDB('test_dict3', db, value_type=int, depth=3)
-test_dict3['key1']['key2']['key3'] = 1  # ok
-test_dict3['key1']['key2'] = 1  # raise mismatch exception
+test_dict3['key1']['key2']['key3'] = 1 ## ok
+test_dict3['key1']['key2'] = 1 ## raise mismatch exception
 
 test_dict2 = test_dict3['key']['key2']
-test_dict2['key1'] = 1  # ok
+test_dict2['key1'] = 1 ## ok
 ```
 
-##### ArrayDB('key', 'target db', 'return type')<br/>
-ArrayDB supports one demensional array only.<br/>
-ArrayDB supports put, get, and pop. Does not support insert (adding elements in the middle of array).<br/>
+##### ArrayDB('key', 'target db', 'return type')
+ArrayDB supports one dimensional array only.
+ArrayDB supports put, get, and pop. Does not support insert (adding elements in the middle of array).
 
 ```python
 test_array = ArrayDB('test_array', db, value_type=int)
 test_array.put(0)
 test_array.put(1)
 test_array.put(2)
-test_array[0] = 0 # ok
-# test_array[100] = 1 # error
-len(test_array) # ok
-for e in test_array: # ok
+test_array.put(3)
+print(len(test_array)) ## prints 4
+print(test_array.pop()) ## prints 3
+test_array[0] = 0 ## ok
+# test_array[100] = 1 ## error
+for e in test_array: ## ok
     print(e)
-print(test_array[-1]) # ok
-print(test_array[-100]) # error
+print(test_array[-1]) ## ok
+# print(test_array[-100]) ## error
 ```
 
 #### external decorator (@external)
 
-Functions decorated with @external can be called from outside the contract. 
-These functions are registered on the exportable API list.<br/>
-Any attempt to call a non-external function from outside the contract will fail.<br/>
-If a function is decorated with readonly parameters, i.e., @external(readonly=True), 
-the function will have read-only access to the state DB. This is similar to view keyward in Solidity.<br/>
-If the read-only external function is also decorated with @payable, the function call will fail.<br/>
-Duplicate declaration of @external will raise IconScoreException on import time.<br/>
+Functions decorated with `@external` can be called from outside the contract.
+These functions are registered on the exportable API list.
+Any attempt to call a non-external function from outside the contract will fail.
+If a function is decorated with readonly parameters, i.e., `@external(readonly=True)`,
+the function will have read-only access to the state DB. This is similar to view keyward in Solidity.
+If the read-only external function is also decorated with `@payable`, the function call will fail.
+Duplicate declaration of `@external` will raise IconScoreException on import time.
 
 #### payable decorator (@payable)
-Only functions with @payable decorator are permitted to transfer icx coins.<br/>
+Only functions with `@payable` decorator are permitted to transfer icx coins.
 Transfering 0 icx is accceptable. 
-If msg.value (icx) is passed to non-payable function, the call will fail.<br/>
+If msg.value (icx) is passed to non-payable function, the call will fail.
 
 #### eventlog decorator (@eventlog)
-Functions with @eventlog decorator will include logs in its TxResult as 'eventlogs'. <br/>
+Functions with `@eventlog` decorator will include logs in its TxResult as 'eventlogs'.
 It is recommended to declare a function without implementation body. 
-Even if the function has a body, it does not execute. <br/>
-When declaring a function, type hinting is a must. Without type hinting, transaction will fail. <br/>
-If 'indexed' parameter is set in the decorator, designated number of parameters in the order of declaration will be indexed and included in the Bloom filter. At most 3 parameters can be indexed. 
-Indexed parameters and non-indexed parameters are separately stored in TxResult.<br/>
+Even if the function has a body, it does not be executed.
+When declaring a function, type hinting is a must. Without type hinting, transaction will fail.
+If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration
+will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed.
+Indexed parameters and non-indexed parameters are separately stored in TxResult.
 
-Example)<br/>
+Example)
 ```python
 # Declaration
 @eventlog
@@ -343,32 +345,32 @@ def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pa
 self.FundTransfer1(self.msg.sender, amount, True)
 self.FundTransfer2(self.msg.sender, amount, True)
 ```
-Possible data types for function parameters are primitive types (int, str, bytes, bool, Address). 
-Array type parameter is not supported.<br/>
+Possible data types for function parameters are primitive types (int, str, bytes, bool, Address).
+Array type parameter is not supported.
 
 #### fallback
-fallback function can not be decorated with @external. (i.e., fallback function is not allowed to be called by external contract or user.)<br/>
-This fallback function is executed whenever the contract receives plain icx coins without data.<br/>
-If the fallback function is not decorated with @payable, then the transaction will fail because it can not modify state DB.<br/>  
+fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
+This fallback function is executed whenever the contract receives plain icx coins without data.
+If the fallback function is not decorated with `@payable`, the icx coin transfers to the contract will fail.
 
 #### InterfaceScore
-InterfaceScore is an interface class used to invoke other Score's function. 
-This interface should be used instead of legacy 'call' function.<br/>
-Usage syntax is as follows.<br/>
+InterfaceScore is an interface class used to invoke other Score's function.
+This interface should be used instead of legacy 'call' function.
+Usage syntax is as follows.
 
 ```python
 class SampleTokenInterface(InterfaceScore):
     @interface
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 ```
-If other Score has the function that has the same signature as defined here with @interface decorator, 
-then that function can be invoked via InterfaceScore class object.<br/>
-Like @eventlog decorator, it is recommended to declare a function without implementation body. 
-If there is a function body, it will be simply ignored. <br/>   
+If other Score has the function that has the same signature as defined here with `@interface` decorator,
+then that function can be invoked via InterfaceScore class object.
+Like `@eventlog` decorator, it is recommended to declare a function without implementation body.
+If there is a function body, it will be simply ignored.
 
-Example)<br/>
-Getting InterfaceScore object using IconScoreBase's built-in function create_interface_score('score address', 'interface class'). <br/>
-Using the object, you can invoke other Score's external function as if it is a local function call.<br/> 
+Example)
+You need to get an InterfaceScore object by using IconScoreBase's built-in function `create_interface_score('score address', 'interface class')`.
+Using the object, you can invoke other Score's external function as if it is a local function call.
 
 ```python
 sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
@@ -377,15 +379,13 @@ sample_token_score.transfer(self.msg.sender, value)
 
 Built-in fucntions
 --------------
-#### create_interface_score(addr_to(address), interface_cls(interface class)) -> interface_cls instance
-This function returns an object, through which you have an access to the designated Score's (address_to) external functions.
-
-#### [legacy] call(addr_to(address), func_name, kw_dict(function params)) -> calling function's return value
-Legacy method used to call other Score's function. This has been relaced by InterfaceScore. 
+#### create\_interface\_score('score address', 'interface class') -> interface class instance
+This function returns an object, through which you have an access to the designated Score's external functions.
 
 #### revert(message: str) -> None
-Developer can force a revert exception.<br/>
-If the exception is thrown, all the changes in the state DB in current transaction will be rolled back.<br/>  
+Developer can force a revert exception.
+
+If the exception is thrown, all the changes in the state DB in current transaction will be rolled back.
 
 
 Built-in properties
@@ -393,10 +393,10 @@ Built-in properties
 
 #### msg : Holds information of the account who called the Score.
 * msg.sender :
-Address of the account who called this funciton. <br/>
-If other contact called this function, msg.sender points to the caller contract's address. <br/>  
+Address of the account who called this funciton.
+If other contact called this function, msg.sender points to the caller contract's address.
 * msg.value :
-Amount of icx that the sender attempts to transfer to the current Score.<br/>  
+Amount of icx that the sender attempts to transfer to the current Score.
 
 #### tx : Transaction info.
 * tx.origin : The account who created the transaction.
@@ -411,15 +411,15 @@ Amount of icx that the sender attempts to transfer to the current Score.<br/>
 * block.timestamp : Block creation time.
 
 #### icx : An object used to transfer icx coin.
-* icx.transfer(addr_to(address), amount(integer)) -> bool<br/>
-Transfers designated amount of icx coin to addr_to.<br/>
-If exception occurs during execution, the exception will be escalated.<br/>
-Returns True if coin transer succeeds.<br/>
+* icx.transfer(addr\_to(address), amount(integer)) -> bool
+Transfers designated amount of icx coin to addr\_to.
+If exception occurs during execution, the exception will be escalated.
+Returns True if coin transer succeeds.
 
-* icx.send(addr_to(address), amount(integer)) -> bool<br/>
-Sends designated amount of icx coin to addr_to.<br/>
-Basic behavior is same as transfer, the difference is that exception is caught inside the function.<br/>
-Returns True when coin transfer succeeded, False when failed.<br/>
+* icx.send(addr\_to(address), amount(integer)) -> bool
+Sends designated amount of icx coin to addr\_to.
+Basic behavior is same as transfer, the difference is that exception is caught inside the function.
+Returns True when coin transfer succeeded, False when failed.
 
 #### db : db instance used to access state DB.
 
