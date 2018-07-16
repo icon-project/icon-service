@@ -21,6 +21,8 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import re
+import os
+import signal
 import hashlib
 from typing import Any
 
@@ -61,3 +63,7 @@ def to_camel_case(snake_str: str) -> str:
 
 def check_error_response(result: Any):
     return isinstance(result, dict) and result.get('error')
+
+
+def exit_process():
+    os.killpg(0, signal.SIGKILL)
