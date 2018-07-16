@@ -13,23 +13,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import IntEnum, unique
+from enum import Enum, auto
+
+from iconservice.utils import to_camel_case
 from ..base.exception import IconServiceBaseException
 
 
-@unique
-class StepType(IntEnum):
-    TRANSACTION = 0
-    CALL = 1
-    INSTALL = 2
-    UPDATE = 3
-    DESTRUCT = 4
-    CONTRACT_SET = 5
-    STORAGE_SET = 6
-    STORAGE_REPLACE = 7
-    STORAGE_DELETE = 8
-    INPUT = 9
-    EVENT_LOG = 10
+class AutoValueEnum(Enum):
+    # noinspection PyMethodParameters
+    def _generate_next_value_(name, start, count, last_values):
+        # Generates value from the camel-cased name
+        return to_camel_case(name.lower())
+
+
+class StepType(AutoValueEnum):
+    C = auto()
+    CONTRACT_CALL = auto()
+    CONTRACT_CREATE = auto()
+    CONTRACT_UPDATE = auto()
+    CONTRACT_DESTRUCT = auto()
+    CONTRACT_SET = auto()
+    SET = auto()
+    REPLACE = auto()
+    DELETE = auto()
+    INPUT = auto()
+    EVENT_LOG = auto()
 
 
 class IconScoreStepCounterFactory(object):
@@ -138,8 +146,7 @@ class IconScoreStepCounter(object):
         Returns used steps in the transaction
         :return: used steps in the transaction
         """
-        return max(self.__step_used,
-                   self.__step_cost_dict.get(StepType.TRANSACTION, 0))
+        return max(self.__step_used, self.__step_cost_dict.get(StepType.C, 0))
 
     @property
     def step_limit(self) -> int:

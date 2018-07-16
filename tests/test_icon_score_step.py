@@ -63,9 +63,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         input_length = (len(content_type.encode('utf-8')) + 25)
         self.assertEqual(
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.TRANSACTION) +
+            get_step_cost(StepType.C) +
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.INSTALL) +
+            get_step_cost(StepType.CONTRACT_CREATE) +
             self._inner_task._icon_service_engine._step_counter_factory.
             get_step_cost(StepType.INPUT) * input_length +
             self._inner_task._icon_service_engine._step_counter_factory.
@@ -80,7 +80,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         self.assertEqual(
             self._inner_task._icon_service_engine._step_counter_factory.
-                get_step_cost(StepType.TRANSACTION),
+                get_step_cost(StepType.C),
             int(result['txResults'][tx_hash]['stepUsed'], 16))
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
@@ -100,11 +100,11 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         self.assertEqual(
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.TRANSACTION) +
+            get_step_cost(StepType.C) +
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CALL) +
+            get_step_cost(StepType.CONTRACT_CALL) +
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CALL),
+            get_step_cost(StepType.CONTRACT_CALL),
             int(result['txResults'][tx_hash]['stepUsed'], 16))
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
@@ -135,9 +135,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         self.assertEqual(
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.TRANSACTION) +
+            get_step_cost(StepType.C) +
             self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CALL) +
+            get_step_cost(StepType.CONTRACT_CALL) +
             self._inner_task._icon_service_engine._step_counter_factory.
             get_step_cost(StepType.EVENT_LOG) * event_log_data_size,
             int(result['txResults'][tx_hash]['stepUsed'], 16))
