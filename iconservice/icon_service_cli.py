@@ -167,7 +167,7 @@ def get_config(args_config: dict):
     try:
         with open(args_config['config'], mode='rb') as config_file:
             config = json.load(config_file)
-            config = config['input_cli']
+            config = config['icon_cli']
         config_dict = {k: v for k, v in args_config.items() if k != "command"}
         params_dict = {}
 
