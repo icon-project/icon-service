@@ -565,14 +565,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.icon_score_manager.get_owner(self._context, score_address)
 
     def get_tx_hash_by_score_address(self,
-                                        context: 'IconScoreContext',
-                                        score_address: 'Address') -> Optional[bytes]:
-        return self._context.icon_score_manager.get_tx_hash_by_score_address(context, score_address)
+                                     score_address: 'Address') -> Optional[bytes]:
+        return self._context.icon_score_manager.get_tx_hash_by_score_address(self._context, score_address)
 
     def get_score_address_by_tx_hash(self,
-                                        context: 'IconScoreContext',
-                                        tx_hash: bytes) -> Optional['Address']:
-        return self._context.icon_score_manager.get_score_address_by_tx_hash(context, tx_hash)
+                                     tx_hash: bytes) -> Optional['Address']:
+        return self._context.icon_score_manager.get_score_address_by_tx_hash(self._context, tx_hash)
 
     def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
         if interface_cls is InterfaceScore:

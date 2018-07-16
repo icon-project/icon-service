@@ -36,7 +36,7 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_manager import IconScoreManager
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .iconscore.icon_pre_validator import IconPreValidator
-from .iconscore.icon_score_context import IconScoreContext
+from .iconscore.icon_score_context import IconScoreContext, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
@@ -83,7 +83,7 @@ def _generate_score_address(from_: 'Address',
     return Address.from_data(AddressPrefix.CONTRACT, data)
 
 
-class IconServiceEngine(object):
+class IconServiceEngine(ContextContainer):
     """The entry of all icon service related components
 
     It MUST NOT have any loopchain dependencies.
@@ -199,8 +199,12 @@ class IconServiceEngine(object):
 
     def load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
-        icon_builtin_score_loader = IconBuiltinScoreLoader(self._icon_score_deploy_engine)
-        icon_builtin_score_loader.load_builtin_scores(context)
+        try:
+            self._put_context(context)
+            icon_builtin_score_loader = IconBuiltinScoreLoader(self._icon_score_deploy_engine)
+            icon_builtin_score_loader.load_builtin_scores(context)
+        finally:
+            self._delete_context(context)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -439,8 +443,12 @@ class IconServiceEngine(object):
             icx_getBalance, icx_getTotalSupply, icx_call:
                 (dict) result or error object in jsonrpc response
         """
+
+        self._put_context(context)
         handler = self._handlers[method]
-        return handler(context, params)
+        ret_val = handler(context, params)
+        self._delete_context(context)
+        return ret_val
 
     def _handle_icx_get_balance(self,
                                 context: 'IconScoreContext',
