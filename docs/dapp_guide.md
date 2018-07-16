@@ -229,7 +229,7 @@ IconServiceBaseException 예외를 상속받아서 구현하길 권장합니다.
 
 예시)
 ``` python
-super().__init__(db, owner)
+super().__init__(db)
 ```
 
 #### on_install
@@ -265,7 +265,7 @@ print(test_dict1['key']) ## get 1
 print(test_dict1['nonexistence_key']) # 0 출력(존재하지 않는 키에 접근, value_type=int)
 ```
 
-예시2) 이차원 배열 형식 (test_dict2['key1', 'key2']):<br/>
+예시2) 이차원 배열 형식 (test_dict2['key1']['key2']):<br/>
 ```python
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
