@@ -27,7 +27,7 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.icon_constant import IconServiceFlag
+from iconservice.icon_constant import IconServiceFlag, ConfigKey
 from iconservice.icon_config import Configure
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
@@ -61,7 +61,8 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
-        engine.open(Configure(""),
+        conf = Configure("", {ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'admin'))})
+        engine.open(conf,
                     icon_score_root_path=self._icon_score_root_path,
                     state_db_root_path=self._state_db_root_path)
         self._engine = engine

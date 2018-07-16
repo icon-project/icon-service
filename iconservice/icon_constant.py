@@ -54,6 +54,11 @@ class ConfigKey:
     ADMIN_ADDRESS = 'adminAddress'
     ENABLE_THREAD_FLAG = 'enableThreadFlag'
     ICON_SERVICE_FLAG = 'iconServiceFlag'
+    ICON_SCORE_ROOT = 'iconScoreRootPath'
+    ICON_SCORE_STATE_DB_ROOT_PATH = 'iconScoreStateDbRootPath'
+    CHANNEL = 'channel'
+    AMQP_KEY = 'amqpKey'
+    AMQP_TARGET = 'amqpTarget'
 
 
 class EnableThreadFlag(IntFlag):

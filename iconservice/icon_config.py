@@ -38,6 +38,11 @@ class Configure:
         self._config_table[ConfigKey.ADMIN_ADDRESS] = None
         self._config_table[ConfigKey.ENABLE_THREAD_FLAG] = 0
         self._config_table[ConfigKey.ICON_SERVICE_FLAG] = 0
+        self._config_table[ConfigKey.ICON_SCORE_ROOT] = '.score'
+        self._config_table[ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH] = '.db'
+        self._config_table[ConfigKey.CHANNEL] = 'loopchain_default'
+        self._config_table[ConfigKey.AMQP_KEY] = "7100"
+        self._config_table[ConfigKey.AMQP_TARGET] = "127.0.0.1"
 
     def _load_json_config(self, json_conf: dict) -> None:
         for key, value in json_conf.items():

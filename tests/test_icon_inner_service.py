@@ -25,7 +25,7 @@ import os
 
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag
+from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_config import Configure
 from tests import create_block_hash, create_address, create_tx_hash
 
@@ -45,10 +45,11 @@ class TestIconServiceEngine(unittest.TestCase):
         except:
             pass
 
-        self._inner_task = IconScoreInnerTask(Configure(""), self._state_db_root_path, self._icon_score_root_path)
+        self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
+        conf = Configure("", {ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
+        self._inner_task = IconScoreInnerTask(conf, self._icon_score_root_path, self._state_db_root_path)
         self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
-        self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
 
     def tearDown(self):
         async def _run():
@@ -189,14 +190,13 @@ class TestIconServiceEngine(unittest.TestCase):
         else:
             return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
-    async def _install_sample_token_invoke(self, block_index: int, prev_block_hash: str):
+    async def _install_sample_token_invoke(self, score_name: str, to_addr: 'Address', block_index: int, prev_block_hash: str):
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-        path = os.path.join(root_path, f'tests/sample/sample_token')
+        path = os.path.join(root_path, f'tests/sample/{score_name}')
         install_data = {'contentType': 'application/tbears', 'content': path}
 
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
-        to_addr = ZERO_SCORE_ADDRESS
         step_limit = 1000
         timestamp = 12345
         nonce = 1
@@ -216,7 +216,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         method = 'icx_sendTransaction'
         # Insert txHash into request params
-        tx_hash = create_tx_hash(b'txHash1')
+        tx_hash = create_tx_hash(block_index.to_bytes(1, 'big'))
         request_params['txHash'] = bytes.hex(tx_hash)
         tx = {
             'method': method,
@@ -228,7 +228,7 @@ class TestIconServiceEngine(unittest.TestCase):
         make_request = {'transactions': [tx]}
         block_height: int = block_index
         block_timestamp_us = int(time.time() * 10 ** 6)
-        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
+        block_hash = create_block_hash(block_index.to_bytes(1, 'big'))
 
         make_request['block'] = {
             'blockHeight': hex(block_height),
@@ -287,7 +287,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         method = 'icx_sendTransaction'
         # Insert txHash into request params
-        tx_hash = create_tx_hash(b'txHash1')
+        tx_hash = create_tx_hash()
         request_params['txHash'] = bytes.hex(tx_hash)
         tx = {
             'method': method,
@@ -355,7 +355,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         method = 'icx_sendTransaction'
         # Insert txHash into request params
-        tx_hash = create_tx_hash(b'txHash1')
+        tx_hash = create_tx_hash()
         request_params['txHash'] = bytes.hex(tx_hash)
         tx = {
             'method': method,
@@ -525,7 +525,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(tx_results[0]['status'], hex(1))
 
             prev_block_hash, is_commit, tx_result = \
-                await self._install_sample_token_invoke(1, prev_block_hash)
+                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -542,7 +542,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(tx_results[0]['status'], hex(1))
 
             prev_block_hash, is_commit, tx_result = \
-                await self._install_sample_token_invoke(1, prev_block_hash)
+                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -579,7 +579,7 @@ class TestIconServiceEngine(unittest.TestCase):
                 IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
             prev_block_hash, is_commit, tx_result = \
-                await self._install_sample_token_invoke(1, prev_block_hash)
+                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -619,13 +619,13 @@ class TestIconServiceEngine(unittest.TestCase):
                 IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
             prev_block_hash, is_commit, tx_result = \
-                await self._install_sample_token_invoke(1, prev_block_hash)
+                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
 
             version = 3
             token_addr = tx_result[0]['scoreAddress']
-            addr_from = create_address(AddressPrefix.EOA, b'addr1')
+            addr_from = self._admin_addr
 
             request = {
                 "version": hex(version),
@@ -676,6 +676,35 @@ class TestIconServiceEngine(unittest.TestCase):
             }
             response = await self._icx_call(request)
             self.assertEqual(response, "0x3635c9adc5dea00000")
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._install_sample_token_invoke('sample_token2', token_addr, 3, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+            tx_hash = tx_results[0]['txHash']
+
+            addr_from = self._admin_addr
+
+            request = {
+                "version": hex(version),
+                "from": str(addr_from),
+                "to": str(GOVERNANCE_SCORE_ADDRESS),
+                "dataType": "call",
+                "data": {
+                    "method": "getScoreStatus",
+                    "params": {
+                        "address": str(token_addr)
+                    }
+                }
+            }
+            response = await self._icx_call(request)
+            self.assertEqual('active', response['current']['status'])
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._accept_deploy_score(4, prev_block_hash, self._admin_addr, tx_hash)
+
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
 
         try:
             loop = asyncio.get_event_loop()
