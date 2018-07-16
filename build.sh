@@ -9,8 +9,8 @@ fi
 
 if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = "deploy") ]]; then
   pip install -r requirements.txt
-  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey-0.0.0-py3-none-any.whl"
-  pip install --force-reinstall earlgrey-0.0.0-py3-none-any.whl
+  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey-0.0.2-py3-none-any.whl"
+  pip install --force-reinstall earlgrey-0.0.2-py3-none-any.whl
   rm -rf earlgrey*
 
   if [[ "$2" != "--ignore-test" ]]; then

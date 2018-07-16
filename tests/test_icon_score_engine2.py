@@ -30,7 +30,7 @@ from iconservice.database.factory import DatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory, ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
@@ -49,6 +49,10 @@ if TYPE_CHECKING:
     from iconservice.base.address import Address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+
+
+class TestContextContainer(ContextContainer):
+    pass
 
 
 # have to score.zip unpack and proj_name = test_score
@@ -74,6 +78,8 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._icon_score_manager = IconScoreManager(self._score_deploy_engine)
         self._icon_score_mapper = IconScoreInfoMapper(
             self._db_factory, self._icon_score_manager, self._icon_score_loader)
+
+        self._context_container = TestContextContainer()
 
         self._score_deploy_engine.open(
             icon_score_root_path=score_path,
@@ -119,6 +125,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.event_logs = Mock(spec=list)
         self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
+        self._context_container._put_context(self._context)
 
     def tearDown(self):
         try:

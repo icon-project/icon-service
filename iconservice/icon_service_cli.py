@@ -19,9 +19,12 @@ from enum import IntEnum
 import asyncio
 
 import iconservice
-# from .icon_inner_service import IconScoreInnerStub
 from .icon_config import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT
 from .logger import Logger
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .icon_inner_service import IconScoreInnerStub
 
 ICON_SERVICE_STANDALONE = 'IconServiceStandAlone'
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -36,7 +39,7 @@ class ExitCode(IntEnum):
 def main():
     parser = argparse.ArgumentParser(prog='icon_service_cli.py', usage=f"""
     ==========================
-    iconservice version : {iconservice.__version__}
+    iconservice
     ==========================
     iconservice commands:
         start : icon_service start

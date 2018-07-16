@@ -26,7 +26,7 @@ from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import DatabaseFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory, ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
@@ -46,6 +46,10 @@ TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 class MockIconScoreManager(object):
     def get_owner(self, context, address):
         return None
+
+
+class TestContextContainer(ContextContainer):
+    pass
 
 
 class TestIconZipDeploy(unittest.TestCase):
@@ -70,6 +74,7 @@ class TestIconZipDeploy(unittest.TestCase):
             self._db_factory, IconScoreManager(self._engine), self._icon_score_loader)
 
         IconScoreContext.icon_score_manager = MockIconScoreManager()
+        self._context_container = TestContextContainer()
 
         self._engine.open(
             icon_score_root_path=score_path,
@@ -98,6 +103,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
+        self._context_container._put_context(self._context)
 
     def tearDown(self):
         self._engine = None

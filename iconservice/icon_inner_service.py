@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from concurrent.futures.thread import ThreadPoolExecutor
 from asyncio import get_event_loop
 
@@ -23,9 +23,12 @@ from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.logger.logger import Logger
 from iconservice.icon_config import *
-from iconservice.utils import check_error_response, to_camel_case
+from iconservice.utils import check_error_response, to_camel_case, exit_process
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
+
+if TYPE_CHECKING:
+    from earlgrey import RobustConnection
 
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'
@@ -55,13 +58,17 @@ class IconScoreInnerTask(object):
     async def hello(self):
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
 
-    @message_queue_task
-    async def close(self):
+    def _close(self):
         Logger.debug("icon_score_service close", ICON_INNER_LOG_TAG)
 
         if self._icon_service_engine:
             self._icon_service_engine.close()
+            self._icon_service_engine = None
         MessageQueueService.loop.stop()
+
+    @message_queue_task
+    async def close(self):
+        self._close()
 
     @message_queue_task
     async def invoke(self, request: dict):
@@ -305,6 +312,16 @@ class MakeResponse:
 class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
+    def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
+        Logger.error("MQ Connection lost.")
+        self._task._close()
+        exit_process()
+
 
 class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
+
+    def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
+        Logger.error("MQ Connection lost.")
+        self._task._close()
+        exit_process()
