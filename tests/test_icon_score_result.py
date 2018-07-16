@@ -252,7 +252,7 @@ class TestTransactionResult(unittest.TestCase):
         load_builtin_scores.assert_called()
 
         inner_task._icon_service_engine._icx_engine.get_balance = \
-            Mock(return_value=100e18)
+            Mock(return_value=100 * 10 ** 18)
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')

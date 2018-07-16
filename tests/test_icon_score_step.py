@@ -40,7 +40,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         create_by_name.assert_called()
         load_builtin_scores.assert_called()
         self._inner_task._icon_service_engine._icx_engine.get_balance = \
-            Mock(return_value=100e18)
+            Mock(return_value=100 * 10 ** 18)
         self._inner_task._icon_service_engine._icx_engine._transfer = Mock()
 
     def tearDown(self):
@@ -48,10 +48,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     @patch('iconservice.deploy.icon_score_deploy_engine.'
            'IconScoreDeployEngine.invoke')
-    @patch('iconservice.icx.icx_engine.IcxEngine.get_balance')
-    def test_install_step(self,
-                          get_balance,
-                          invoke):
+    def test_install_step(self, invoke):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         to_ = Address.from_string('cx0000000000000000000000000000000000000000')
         content_type = 'application/zip'
@@ -61,12 +58,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         }
         req = self.get_request(tx_hash, to_, 'deploy', data)
 
-        def intercept_get_balance(*args, **kwargs):
-            return 100e18
-
-        get_balance.side_effect = intercept_get_balance
-
         result = self._inner_task._invoke(req)
+        invoke.assert_called()
         input_length = (len(content_type.encode('utf-8')) + 25)
         self.assertEqual(
             self._inner_task._icon_service_engine._step_counter_factory.
