@@ -172,7 +172,7 @@ class TypeConverter:
     @staticmethod
     def _convert_value_int(value: str) -> int:
         if isinstance(value, str):
-            if value.startswith('0x'):
+            if value.startswith('0x') or value.startswith('-0x'):
                 return int(value, 16)
             else:
                 return int(value)
