@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidRequestException
-from ..icon_config import FIXED_FEE
+from ..icon_constant import FIXED_FEE
 
 if TYPE_CHECKING:
     from ..deploy.icon_score_manager import IconScoreManager

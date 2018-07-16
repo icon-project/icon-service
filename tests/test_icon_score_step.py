@@ -16,7 +16,7 @@
 
 import unittest
 from typing import Optional
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, Mock
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.database.db import IconScoreDatabase
@@ -25,6 +25,7 @@ from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_step import StepType
+from iconservice.icon_config import Configure
 from tests import create_block_hash, create_tx_hash, create_address
 
 
@@ -35,7 +36,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
     @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
     def setUp(self, open, create_by_name, load_builtin_scores):
-        self._inner_task = IconScoreInnerTask(".", ".")
+        self._inner_task = IconScoreInnerTask(Configure(""), ".", ".")
         open.assert_called()
         create_by_name.assert_called()
         load_builtin_scores.assert_called()

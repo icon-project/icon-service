@@ -18,7 +18,7 @@ from enum import IntEnum, unique
 from struct import Struct
 
 from ..base.exception import InvalidParamsException
-from ..icon_config import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 from typing import TYPE_CHECKING
 

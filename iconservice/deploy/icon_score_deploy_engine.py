@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from collections import namedtuple
-from enum import IntFlag
 from os import path, symlink, makedirs
 from typing import TYPE_CHECKING, Callable
 
@@ -26,6 +25,7 @@ from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
+from ..icon_constant import IconDeployFlag
 from ..logger import Logger
 
 if TYPE_CHECKING:
@@ -37,13 +37,6 @@ class IconScoreDeployEngine(object):
     """It handles transactions to install, update and audit a SCORE
     """
 
-    class Flag(IntFlag):
-        NONE = 0
-        # To complete to install or update a SCORE,
-        # some specified address owner like genesis address owner
-        # MUST approve install or update SCORE transactions.
-        ENABLE_DEPLOY_AUDIT = 1
-
     # This namedtuple should be used only in IconScoreDeployEngine.
     _Task = namedtuple(
         'Task',
@@ -52,7 +45,7 @@ class IconScoreDeployEngine(object):
     def __init__(self) -> None:
         """Constructor
         """
-        self._flags = None
+        self._flag = None
         self._icon_score_deploy_storage = None
         self._icon_score_mapper = None
         self._icon_score_deployer = None
@@ -61,17 +54,17 @@ class IconScoreDeployEngine(object):
 
     def open(self,
              icon_score_root_path: str,
-             flags: 'Flag',
+             flag: int,
              icon_score_mapper: 'IconScoreInfoMapper',
              icon_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
 
         :param icon_score_root_path:
-        :param flags: flags composed by IconScoreDeployEngine
+        :param flag: flags composed by IconScoreDeployEngine
         :param icon_score_mapper:
         :param icon_deploy_storage:
         """
-        self._flags = flags
+        self._flag = flag
         self._icon_score_deploy_storage = icon_deploy_storage
         self._icon_score_mapper = icon_score_mapper
         self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(icon_score_root_path)
@@ -80,8 +73,8 @@ class IconScoreDeployEngine(object):
     def icon_deploy_storage(self):
         return self._icon_score_deploy_storage
 
-    def _is_flag_on(self, flag: 'Flag') -> bool:
-        return (self._flags & flag) == flag
+    def _is_flag_on(self, flag: 'IconDeployFlag') -> bool:
+        return (self._flag & flag) == flag
 
     def invoke(self,
                context: 'IconScoreContext',
@@ -111,8 +104,8 @@ class IconScoreDeployEngine(object):
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
         is_built_score = IconBuiltinScoreLoader.is_builtin_score(icon_score_address)
         is_owner = context.tx.origin == self._icon_score_deploy_storage.get_score_owner(context, icon_score_address)
-        is_enable_audit = self._is_flag_on(IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT)
-        return not is_enable_audit or all((is_built_score, is_owner))
+        is_audit_enabled = self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_AUDIT)
+        return not is_audit_enabled or all((is_built_score, is_owner))
 
     def deploy(self,
                context: 'IconScoreContext',

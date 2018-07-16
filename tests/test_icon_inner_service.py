@@ -24,9 +24,9 @@ import asyncio
 import os
 
 from iconservice.icon_inner_service import IconScoreInnerTask
-from iconservice.icon_service_engine import IconScoreDeployEngine
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, ADMIN_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag
+from iconservice.icon_config import Configure
 from tests import create_block_hash, create_address, create_tx_hash
 
 from typing import TYPE_CHECKING
@@ -45,9 +45,10 @@ class TestIconServiceEngine(unittest.TestCase):
         except:
             pass
 
-        self._inner_task = IconScoreInnerTask(self._state_db_root_path, self._icon_score_root_path)
+        self._inner_task = IconScoreInnerTask(Configure(""), self._state_db_root_path, self._icon_score_root_path)
         self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
 
     def tearDown(self):
         async def _run():
@@ -333,7 +334,7 @@ class TestIconServiceEngine(unittest.TestCase):
         install_data = {'contentType': 'application/tbears', 'content': path}
 
         version = 3
-        from_addr = ADMIN_SCORE_ADDRESS
+        from_addr = self._admin_addr
         to_addr = GOVERNANCE_SCORE_ADDRESS
         step_limit = 1000
         timestamp = 12345
@@ -575,7 +576,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(tx_results[0]['status'], hex(1))
 
             self._inner_task._icon_service_engine._icon_score_deploy_engine._flags = \
-                IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
+                IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
             prev_block_hash, is_commit, tx_result = \
                 await self._install_sample_token_invoke(1, prev_block_hash)
@@ -615,7 +616,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(tx_results[0]['status'], hex(1))
 
             self._inner_task._icon_service_engine._icon_score_deploy_engine._flags = \
-                IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT
+                IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
             prev_block_hash, is_commit, tx_result = \
                 await self._install_sample_token_invoke(1, prev_block_hash)
@@ -643,7 +644,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual('pending', response['next']['status'])
             deploy_tx_hash = response['next']['deployTxHash']
             prev_block_hash, is_commit, tx_result = \
-                await self._accept_deploy_score(2, prev_block_hash, ADMIN_SCORE_ADDRESS, deploy_tx_hash)
+                await self._accept_deploy_score(2, prev_block_hash, self._admin_addr, deploy_tx_hash)
 
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))

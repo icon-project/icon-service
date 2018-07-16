@@ -25,7 +25,7 @@ from iconservice.database.db import IconScoreDatabase
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER
 from tests import create_address, rmtree
 
 

@@ -20,7 +20,7 @@ import shutil
 
 from iconservice.base.address import Address
 from iconservice.database.db import ContextDatabase
-from iconservice.icon_config import FIXED_FEE
+from iconservice.icon_constant import FIXED_FEE
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory

@@ -19,7 +19,7 @@ from .icon_score_event_log import EventLog
 from ..utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
-from ..icon_config import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from ..base.transaction import Transaction

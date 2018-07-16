@@ -18,8 +18,8 @@ import subprocess
 from enum import IntEnum
 import asyncio
 
-import iconservice
-from .icon_config import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT
+from .icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT
+from .icon_config import Configure
 from .logger import Logger
 
 from typing import TYPE_CHECKING
@@ -53,15 +53,15 @@ def main():
     parser.add_argument("-t", dest='type', type=str, default='user',
                         choices=['tbears', 'user'],
                         help="icon service type [tbears|user]")
-    parser.add_argument("-sc", dest='icon_score_root_path', type=str, default='.score',
+    parser.add_argument("-sc", dest='iconScoreRootPath', type=str, default=None,
                         help="icon score root path  example : .score")
-    parser.add_argument("-st", dest='icon_score_state_db_root_path', type=str, default='.db',
+    parser.add_argument("-st", dest='iconScoreStateDbRootPath', type=str, default=None,
                         help="icon score state db root path  example : .db")
-    parser.add_argument("-ch", dest='channel', type=str, default='loopchain_default',
+    parser.add_argument("-ch", dest='channel', type=str, default=None,
                         help="icon score channel")
-    parser.add_argument("-ak", dest='amqp_key', type=str, default='amqp_key',
+    parser.add_argument("-ak", dest='amqpKey', type=str, default=None,
                         help="icon score amqp_key : [amqp_key]")
-    parser.add_argument("-at", dest='amqp_target', type=str, default='127.0.0.1',
+    parser.add_argument("-at", dest='amqpTarget', type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
     parser.add_argument("-c", dest='config', type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
@@ -73,8 +73,8 @@ def main():
         sys.exit(ExitCode.COMMAND_IS_WRONG.value)
 
     Logger(args.config)
-
-    cli_config = get_config(vars(args))  # get config dict
+    conf = Configure(args.config, dict(vars(args)))
+    cli_config = conf.make_dict()
 
     command = args.command[0]
     if command == 'start' and len(args.command) == 1:
@@ -111,13 +111,15 @@ def start_process(params: dict):
     python_module_string = 'iconservice.icon_service'
 
     converted_params = {'-t': params['type'],
-                        '-sc': params['icon_score_root_path'],
-                        '-st': params['icon_score_state_db_root_path'],
-                        '-ch': params['channel'], '-ak': params['amqp_key'],
-                        '-at': params['amqp_target'], '-c': params['config']}
+                        '-sc': params['iconScoreRootPath'],
+                        '-st': params['iconScoreStateDbRootPath'],
+                        '-ch': params['channel'], '-ak': params['amqpKey'],
+                        '-at': params['amqpTarget'], '-c': params['config']}
 
     custom_argv = []
     for k, v in converted_params.items():
+        if v is None:
+            continue
         custom_argv.append(k)
         custom_argv.append(v)
 
@@ -126,8 +128,8 @@ def start_process(params: dict):
 
 
 async def stop_process(params: dict):
-    icon_score_queue_name = _make_icon_score_queue_name(params['channel'], params['amqp_key'])
-    stub = await _create_icon_score_stub(params['amqp_target'], icon_score_queue_name)
+    icon_score_queue_name = _make_icon_score_queue_name(params['channel'], params['amqpKey'])
+    stub = await _create_icon_score_stub(params['amqpTarget'], icon_score_queue_name)
     await stub.async_task().close()
     Logger.info(f'stop_process_icon_service!', ICON_SERVICE_STANDALONE)
 
@@ -162,22 +164,3 @@ async def _create_icon_score_stub(
     stub = IconScoreInnerStub(amqp_target, icon_score_queue_name)
     await stub.connect()
     return stub
-
-
-def get_config(args_config: dict):
-    try:
-        with open(args_config['config'], mode='rb') as config_file:
-            config = json.load(config_file)
-        config_dict = {k: v for k, v in args_config.items() if k != "command"}
-        params_dict = {}
-
-        for k in config_dict:
-            if k in config:
-                config_dict[k] = config[k]
-            params_dict[f'{k}'] = config_dict[k]
-
-    except:
-        Logger.error('check your config file!')
-        sys.exit(ExitCode.COMMAND_IS_WRONG)
-    else:
-        return params_dict

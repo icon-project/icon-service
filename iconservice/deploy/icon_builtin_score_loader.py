@@ -16,11 +16,11 @@
 import os
 from typing import TYPE_CHECKING
 
-from ..base.address import GOVERNANCE_SCORE_ADDRESS, ADMIN_SCORE_ADDRESS
+from ..base.address import Address, AddressPrefix
+from ..base.address import GOVERNANCE_SCORE_ADDRESS
 
 if TYPE_CHECKING:
     from .icon_score_deploy_engine import IconScoreDeployEngine
-    from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
 
 ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -36,16 +36,20 @@ class IconBuiltinScoreLoader(object):
 
         self._deploy_engine = deploy_engine
 
-    def load_builtin_scores(self, context: 'IconScoreContext'):
+    def load_builtin_scores(self, context: 'IconScoreContext', admin_addr_str: str):
+        admin_owner = Address.from_string(admin_addr_str)
         for key, value in self._BUILTIN_SCORE_ADDRESS_MAPPER.items():
-            self._load_builtin_score(context, key, value)
+            self._load_builtin_score(context, key, value, admin_owner)
 
-    def _load_builtin_score(self, context: 'IconScoreContext', score_name: str, icon_score_address: 'Address'):
+    def _load_builtin_score(self, context: 'IconScoreContext',
+                            score_name: str,
+                            icon_score_address: 'Address',
+                            admin_addr: 'Address'):
         if self._deploy_engine.icon_deploy_storage.is_score_status_active(context, icon_score_address):
             return
 
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
-        self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, ADMIN_SCORE_ADDRESS)
+        self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, admin_addr)
         self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
 
     @classmethod

@@ -20,7 +20,7 @@ from collections import Iterator
 
 from ..utils import int_to_bytes
 
-from ..icon_config import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER
 from ..base.address import Address
 from ..base.exception import ContainerDBException
 

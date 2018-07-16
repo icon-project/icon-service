@@ -21,7 +21,7 @@ from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.utils import sha3_256, int_to_bytes
-from iconservice.icon_config import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER
 from tests import create_block_hash, create_address
 
 
