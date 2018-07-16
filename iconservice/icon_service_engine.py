@@ -24,7 +24,7 @@ from .icon_config import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER
 from .utils import byte_length_of_int
 from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
-from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
+from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, RevertException
 from .base.exception import IconServiceBaseException, ServerErrorException
@@ -195,9 +195,9 @@ class IconServiceEngine(ContextContainer):
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
-        self.load_builtin_scores()
+        self._load_builtin_scores()
 
-    def load_builtin_scores(self):
+    def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         try:
             self._put_context(context)
@@ -205,6 +205,26 @@ class IconServiceEngine(ContextContainer):
             icon_builtin_score_loader.load_builtin_scores(context)
         finally:
             self._delete_context(context)
+
+    def _init_global_value_by_governance_score(self):
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        governanece_score = self._icon_score_mapper.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        if governanece_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        step_price = governanece_score.getStepPrice()
+
+        self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
+        self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
+        self._step_counter_factory.set_step_cost(StepType.INSTALL, 20000)
+        self._step_counter_factory.set_step_cost(StepType.UPDATE, 8000)
+        self._step_counter_factory.set_step_cost(StepType.DESTRUCT, -7000)
+        self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
+        self._step_counter_factory.set_step_cost(StepType.STORAGE_SET, 20)
+        self._step_counter_factory.set_step_cost(StepType.STORAGE_REPLACE, 5)
+        self._step_counter_factory.set_step_cost(StepType.STORAGE_DELETE, -15)
+        self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
+        self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -223,6 +243,8 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
+        self._init_global_value_by_governance_score()
+
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
