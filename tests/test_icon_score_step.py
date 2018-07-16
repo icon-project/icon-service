@@ -31,17 +31,23 @@ from tests import create_block_hash, create_tx_hash, create_address
 class TestIconScoreStepCounter(unittest.TestCase):
 
     @patch('iconservice.icon_service_engine.'
-           'IconServiceEngine.load_builtin_scores')
+           'IconServiceEngine._init_global_value_by_governance_score')
+    @patch('iconservice.icon_service_engine.'
+           'IconServiceEngine._load_builtin_scores')
     @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def setUp(self, open, create_by_name, load_builtin_scores):
+    def setUp(self, open, create_by_name, _load_builtin_scores,
+              _init_global_value_by_governance_score):
         self._inner_task = IconScoreInnerTask(".", ".")
         open.assert_called()
         create_by_name.assert_called()
-        load_builtin_scores.assert_called()
+        _load_builtin_scores.assert_called()
         self._inner_task._icon_service_engine._icx_engine.get_balance = \
             Mock(return_value=100 * 10 ** 18)
         self._inner_task._icon_service_engine._icx_engine._transfer = Mock()
+        self._inner_task._icon_service_engine.\
+            _init_global_value_by_governance_score = \
+            _init_global_value_by_governance_score
 
     def tearDown(self):
         self._inner_task = None

@@ -67,8 +67,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.traces = []
         self._mock_context.attach_mock(Mock(spec=int), "cumulative_step_used")
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
-        self._mock_context.attach_mock(
-            Mock(spec=IconScoreStepCounter), "step_counter")
+        self._mock_context.step_counter = step_counter_factory.create(5000000)
         self._mock_context.attach_mock(Mock(spec=Address), "current_address")
 
     def tearDown(self):
@@ -241,15 +240,18 @@ class TestTransactionResult(unittest.TestCase):
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     @patch('iconservice.icon_service_engine.'
-           'IconServiceEngine.load_builtin_scores')
+           'IconServiceEngine._init_global_value_by_governance_score')
+    @patch('iconservice.icon_service_engine.'
+           'IconServiceEngine._load_builtin_scores')
     @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
     @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def test_request(self, open, create_by_name, load_builtin_scores, invoke):
+    def test_request(self, open, create_by_name, _load_builtin_scores,
+                     _init_global_value_by_governance_score, invoke):
 
         inner_task = IconScoreInnerTask(".", ".")
         open.assert_called()
         create_by_name.assert_called()
-        load_builtin_scores.assert_called()
+        _load_builtin_scores.assert_called()
 
         inner_task._icon_service_engine._icx_engine.get_balance = \
             Mock(return_value=100 * 10 ** 18)

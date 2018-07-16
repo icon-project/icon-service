@@ -163,19 +163,6 @@ class IconServiceEngine(ContextContainer):
             self._db_factory, icon_score_manger, self._icon_score_loader)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter_factory.set_step_cost(StepType.DEFAULT, 4000)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_CALL, 1500)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_CREATE, 20000)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_UPDATE, 8000)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_DESTRUCT, -7000)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
-        self._step_counter_factory.set_step_cost(StepType.SET, 20)
-        self._step_counter_factory.set_step_cost(StepType.REPLACE, 5)
-        self._step_counter_factory.set_step_cost(StepType.DELETE, -15)
-        self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
-        self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
-
-        # TODO: Fix step_price
         self._icon_pre_validator = IconPreValidator(self._icx_engine, icon_score_manger)
 
         IconScoreContext.icx = self._icx_engine
@@ -196,23 +183,36 @@ class IconServiceEngine(ContextContainer):
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
+        self._init_global_value_by_governance_score()
 
     def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         try:
             self._put_context(context)
-            icon_builtin_score_loader = IconBuiltinScoreLoader(self._icon_score_deploy_engine)
+            icon_builtin_score_loader = IconBuiltinScoreLoader(
+                self._icon_score_deploy_engine)
             icon_builtin_score_loader.load_builtin_scores(context)
         finally:
             self._delete_context(context)
 
     def _init_global_value_by_governance_score(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
-        governanece_score = self._icon_score_mapper.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-        if governanece_score is None:
+        governance_score = self._icon_score_mapper.get_icon_score(
+            context, GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
-        step_price = governanece_score.getStepPrice()
+        if self._is_on(self.Flag.ENABLE_FEE):
+            step_price = governance_score.getStepPrice()
+        else:
+            step_price = 0
+
+        self._step_counter_factory.set_step_price(step_price)
+
+        step_costs = governance_score.getStepCosts()
+
+        for key, value in step_costs.items():
+            self._step_counter_factory.set_step_cost(StepType(key), value)
 
         # self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
         # self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
@@ -371,15 +371,9 @@ class IconServiceEngine(ContextContainer):
         method = request['method']
         params = request['params']
 
-        version: int = params.get('version', 2)
         from_ = params['from']
         to = params['to']
-
         step_limit = params.get('stepLimit', 0)
-        if version < 3:
-            step_price = 0
-        else:
-            step_price = self._get_step_price()
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -393,7 +387,7 @@ class IconServiceEngine(ContextContainer):
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit, step_price)
+            self._step_counter_factory.create(step_limit)
         context.clear_msg_stack()
 
         return self._call(context, method, params)
@@ -534,7 +528,7 @@ class IconServiceEngine(ContextContainer):
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
                 params,
-                step_price=self._get_step_price())
+                step_price=context.step_counter.step_price)
 
             # Every send_transaction are calculated TRANSACTION STEP at first
             context.step_counter.append_step(StepType.DEFAULT, 1)
@@ -630,7 +624,7 @@ class IconServiceEngine(ContextContainer):
         version: int = params.get('version', 2)
         from_: 'Address' = params['from']
 
-        step_price = self._get_step_price()
+        step_price = context.step_counter.step_price
 
         if version < 3:
             # Support coin transfer based on protocol v2
@@ -654,16 +648,11 @@ class IconServiceEngine(ContextContainer):
         return step_used, step_price
 
     def _get_step_price(self):
-        """TODO: How to get step price?
-        from governance SCORE?
-
+        """
+        Gets the step price
         :return: step price in loop unit
         """
-        # 1 icx == 10 ** 6 step
-        if self._is_on(self.Flag.ENABLE_FEE):
-            return 10 ** 12
-        else:
-            return 0
+        return self._step_counter_factory.get_step_price()
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',

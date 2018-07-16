@@ -103,8 +103,8 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter: IconScoreStepCounter =\
-            self.__step_counter_factory.create(100, step_price=0)
+        self._step_counter: IconScoreStepCounter = \
+            self.__step_counter_factory.create(100)
         self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
         self._context.event_logs = Mock(spec=list)
