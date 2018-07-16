@@ -30,6 +30,7 @@ class Configure:
         except (OSError, IOError):
             Logger.error(f"load json fail {config_path}")
             self._init_default_table()
+            self._set_args(args)
 
     def _init_default_table(self) -> None:
         self._config_table[ConfigKey.BIG_STOP_LIMIT] = 5000000
