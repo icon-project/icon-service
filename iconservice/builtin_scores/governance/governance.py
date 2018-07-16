@@ -40,6 +40,10 @@ class Governance(IconScoreBase):
     def Rejected(self, tx_hash: str):
         pass
 
+    @eventlog(indexed=1)
+    def StepPriceChanged(self, step_price: int):
+        pass
+
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
         self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
@@ -120,6 +124,15 @@ class Governance(IconScoreBase):
     @external(readonly=True)
     def getStepPrice(self) -> int:
         return self._step_price.get()
+
+    @external
+    def setStepPrice(self, stepPrice: int):
+        # only owner can set new step price
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+        if stepPrice > 0:
+            self._step_price.set(stepPrice)
+            self.StepPriceChanged(stepPrice)
 
     @external
     def acceptScore(self, txHash: bytes):
