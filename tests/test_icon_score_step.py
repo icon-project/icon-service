@@ -19,12 +19,21 @@ from typing import Optional
 from unittest.mock import patch, MagicMock, Mock
 
 from iconservice.base.address import AddressPrefix, Address
+from iconservice.builtin_scores.governance.governance import STEP_TYPE_DEFAULT, \
+    STEP_TYPE_CONTRACT_CALL, STEP_TYPE_CONTRACT_CREATE, \
+    STEP_TYPE_CONTRACT_UPDATE, STEP_TYPE_CONTRACT_DESTRUCT, \
+    STEP_TYPE_CONTRACT_SET, STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, \
+    STEP_TYPE_INPUT, STEP_TYPE_EVENT_LOG
 from iconservice.database.db import IconScoreDatabase
 from iconservice.icon_inner_service import IconScoreInnerTask
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
-from iconservice.iconscore.icon_score_context import ContextContainer
-from iconservice.iconscore.icon_score_step import StepType
+from iconservice.iconscore.icon_score_context import ContextContainer, \
+    IconScoreContextFactory
+from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_step import StepType, \
+    IconScoreStepCounter, IconScoreStepCounterFactory
 from tests import create_block_hash, create_tx_hash, create_address
 
 
@@ -49,6 +58,13 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _init_global_value_by_governance_score = \
             _init_global_value_by_governance_score
 
+        factory = self._inner_task._icon_service_engine._step_counter_factory
+        self.step_counter = Mock(spec=IconScoreStepCounter)
+        factory.create = Mock(return_value=self.step_counter)
+        self.step_counter.step_used = 0
+        self.step_counter.step_price = 0
+        self.step_counter.step_limit = 5000000
+
     def tearDown(self):
         self._inner_task = None
 
@@ -67,16 +83,18 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         invoke.assert_called()
         input_length = (len(content_type.encode('utf-8')) + 25)
-        self.assertEqual(
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.DEFAULT) +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CONTRACT_CREATE) +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.INPUT) * input_length +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CONTRACT_SET) * 25,
-            int(result['txResults'][tx_hash]['stepUsed'], 16))
+
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+
+        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+                         (StepType.DEFAULT, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+                         (StepType.INPUT, input_length))
+        self.assertEqual(self.step_counter.append_step.call_args_list[2][0],
+                         (StepType.CONTRACT_CREATE, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[3][0],
+                         (StepType.CONTRACT_SET, 25))
+        self.assertEqual(len(self.step_counter.append_step.call_args_list), 4)
 
     def test_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
@@ -84,10 +102,13 @@ class TestIconScoreStepCounter(unittest.TestCase):
         req = self.get_request(tx_hash, to_, None, None)
 
         result = self._inner_task._invoke(req)
-        self.assertEqual(
-            self._inner_task._icon_service_engine._step_counter_factory.
-                get_step_cost(StepType.DEFAULT),
-            int(result['txResults'][tx_hash]['stepUsed'], 16))
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+
+        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+                         (StepType.DEFAULT, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+                         (StepType.INPUT, 0))
+        self.assertEqual(len(self.step_counter.append_step.call_args_list), 2)
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_internal_transfer_step(self, invoke):
@@ -104,14 +125,17 @@ class TestIconScoreStepCounter(unittest.TestCase):
         invoke.side_effect = intercept_invoke
 
         result = self._inner_task._invoke(req)
-        self.assertEqual(
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.DEFAULT) +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CONTRACT_CALL) +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CONTRACT_CALL),
-            int(result['txResults'][tx_hash]['stepUsed'], 16))
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+
+        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+                         (StepType.DEFAULT, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+                         (StepType.INPUT, 0))
+        self.assertEqual(self.step_counter.append_step.call_args_list[2][0],
+                         (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[3][0],
+                         (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(len(self.step_counter.append_step.call_args_list), 4)
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_event_log_step(self, invoke):
@@ -139,14 +163,17 @@ class TestIconScoreStepCounter(unittest.TestCase):
         invoke.side_effect = intercept_invoke
 
         result = self._inner_task._invoke(req)
-        self.assertEqual(
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.DEFAULT) +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.CONTRACT_CALL) +
-            self._inner_task._icon_service_engine._step_counter_factory.
-            get_step_cost(StepType.EVENT_LOG) * event_log_data_size,
-            int(result['txResults'][tx_hash]['stepUsed'], 16))
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+
+        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+                         (StepType.DEFAULT, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+                         (StepType.INPUT, 0))
+        self.assertEqual(self.step_counter.append_step.call_args_list[2][0],
+                         (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(self.step_counter.append_step.call_args_list[3][0],
+                         (StepType.EVENT_LOG, event_log_data_size))
+        self.assertEqual(len(self.step_counter.append_step.call_args_list), 4)
 
     @staticmethod
     def get_request(tx_hash, to_, data_type, data):
@@ -172,6 +199,51 @@ class TestIconScoreStepCounter(unittest.TestCase):
             }]
         }
         return req
+
+    def test_set_step_costs(self):
+        governance_score = Mock()
+        governance_score.getStepCosts = Mock(return_value={
+            STEP_TYPE_DEFAULT: 4000,
+            STEP_TYPE_CONTRACT_CALL: 1500,
+            STEP_TYPE_CONTRACT_CREATE: 20000,
+            STEP_TYPE_CONTRACT_UPDATE: 8000,
+            STEP_TYPE_CONTRACT_DESTRUCT: -7000,
+            STEP_TYPE_CONTRACT_SET: 1000,
+            STEP_TYPE_SET: 20,
+            STEP_TYPE_REPLACE: 5,
+            STEP_TYPE_DELETE: -15,
+            STEP_TYPE_INPUT: 20,
+            STEP_TYPE_EVENT_LOG: 10
+        })
+
+        step_counter_factory = IconScoreStepCounterFactory()
+        step_costs = governance_score.getStepCosts()
+
+        for key, value in step_costs.items():
+            step_counter_factory.set_step_cost(StepType(key), value)
+
+        self.assertEqual(
+            4000, step_counter_factory.get_step_cost(StepType.DEFAULT))
+        self.assertEqual(
+            1500, step_counter_factory.get_step_cost(StepType.CONTRACT_CALL))
+        self.assertEqual(
+            20000, step_counter_factory.get_step_cost(StepType.CONTRACT_CREATE))
+        self.assertEqual(
+            8000, step_counter_factory.get_step_cost(StepType.CONTRACT_UPDATE))
+        self.assertEqual(
+            -7000, step_counter_factory.get_step_cost(StepType.CONTRACT_DESTRUCT))
+        self.assertEqual(
+            1000, step_counter_factory.get_step_cost(StepType.CONTRACT_SET))
+        self.assertEqual(
+            20, step_counter_factory.get_step_cost(StepType.SET))
+        self.assertEqual(
+            5, step_counter_factory.get_step_cost(StepType.REPLACE))
+        self.assertEqual(
+            -15, step_counter_factory.get_step_cost(StepType.DELETE))
+        self.assertEqual(
+            20, step_counter_factory.get_step_cost(StepType.INPUT))
+        self.assertEqual(
+            10, step_counter_factory.get_step_cost(StepType.EVENT_LOG))
 
 
 class SampleScore(IconScoreBase):
