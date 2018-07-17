@@ -243,13 +243,14 @@ class IconServiceEngine(ContextContainer):
             # Assume that there is only one tx in genesis_block
             tx_result = self._invoke_genesis(context, tx_requests[0], 0)
             block_result.append(tx_result)
+            context.block_batch.put_tx_batch(context.tx_batch)
+            context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
                 tx_result = self._invoke_request(context, tx_request, index)
                 block_result.append(tx_result)
-
-        context.block_batch.put_tx_batch(context.tx_batch)
-        context.tx_batch.clear()
+                context.block_batch.put_tx_batch(context.tx_batch)
+                context.tx_batch.clear()
 
         # precommit_state will be written to levelDB on commit()
         self._precommit_state = self._PrecommitState(
