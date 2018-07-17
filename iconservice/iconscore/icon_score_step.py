@@ -16,7 +16,7 @@
 from enum import Enum, auto
 
 from iconservice.utils import to_camel_case
-from ..base.exception import IconServiceBaseException
+from ..base.exception import IconServiceBaseException, ExceptionCode
 
 
 class AutoValueEnum(Enum):
@@ -101,6 +101,10 @@ class OutOfStepException(IconServiceBaseException):
         self.__step_limit: int = step_limit
         self.__step_used = step_used
         self.__requested_step = requested_step
+
+    @property
+    def code(self) -> int:
+        return ExceptionCode.SCORE_ERROR
 
     @property
     def message(self) -> str:
