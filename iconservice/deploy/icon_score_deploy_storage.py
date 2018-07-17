@@ -15,7 +15,7 @@
 
 import json
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from ..icon_constant import DEFAULT_BYTE_SIZE
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
@@ -331,14 +331,14 @@ class IconScoreDeployStorage(object):
 
         return deploy_info.owner
 
-    def get_tx_hash_by_score_address(self,
-                                     context: 'IconScoreContext',
-                                     score_address: 'Address') -> Optional[bytes]:
+    def get_tx_hashes_by_score_address(self,
+                                       context: 'IconScoreContext',
+                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info:
-            return deploy_info.current_tx_hash
+            return deploy_info.current_tx_hash, deploy_info.next_tx_hash
         else:
-            return None
+            return None, None
 
     def get_score_address_by_tx_hash(self,
                                      context: 'IconScoreContext',

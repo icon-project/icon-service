@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
@@ -49,10 +49,10 @@ class IconScoreManager(object):
                   icon_score_address: 'Address') -> Optional['Address']:
         return self.__deploy_engine.icon_deploy_storage.get_score_owner(context, icon_score_address)
 
-    def get_tx_hash_by_score_address(self,
-                                     context: 'IconScoreContext',
-                                     score_address: 'Address') -> Optional[bytes]:
-        return self.__deploy_engine.icon_deploy_storage.get_tx_hash_by_score_address(context, score_address)
+    def get_tx_hashes_by_score_address(self,
+                                       context: 'IconScoreContext',
+                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        return self.__deploy_engine.icon_deploy_storage.get_tx_hashes_by_score_address(context, score_address)
 
     def get_score_address_by_tx_hash(self,
                                      context: 'IconScoreContext',

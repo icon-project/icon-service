@@ -33,7 +33,7 @@ from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import DATA_BYTE_ORDER
 
-from typing import TYPE_CHECKING, Callable, Any, List
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -564,9 +564,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             score_address = self.address
         return self._context.icon_score_manager.get_owner(self._context, score_address)
 
-    def get_tx_hash_by_score_address(self,
-                                     score_address: 'Address') -> Optional[bytes]:
-        return self._context.icon_score_manager.get_tx_hash_by_score_address(self._context, score_address)
+    def get_tx_hashes_by_score_address(self,
+                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        return self._context.icon_score_manager.get_tx_hashes_by_score_address(self._context, score_address)
 
     def get_score_address_by_tx_hash(self,
                                      tx_hash: bytes) -> Optional['Address']:

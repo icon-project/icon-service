@@ -87,8 +87,8 @@ class Governance(IconScoreBase):
     @external(readonly=True)
     def getScoreStatus(self, address: Address) -> dict:
         # check score address
-        tx_hash = self.get_tx_hash_by_score_address(address)
-        if tx_hash is None:
+        current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
+        if current_tx_hash is None:
             self.revert('SCORE not found')
         result = {}
         _current = self._get_current_status(address)
@@ -103,7 +103,7 @@ class Governance(IconScoreBase):
             # there is no status information, build initial status
             status = {
                 STATUS: STATUS_PENDING,
-                DEPLOY_TX_HASH: tx_hash
+                DEPLOY_TX_HASH: current_tx_hash
             }
             result[NEXT] = status
         return result
