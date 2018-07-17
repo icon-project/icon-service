@@ -223,10 +223,9 @@ class IconScoreDeployStorage(object):
         else:
             raise ServerErrorException(f'already put deploy_params')
 
-        is_active = False
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info is None:
-            deploy_info = IconScoreDeployInfo(score_address, is_active, owner, tx_hash, None)
+            deploy_info = IconScoreDeployInfo(score_address, False, owner, None, tx_hash)
             self._put_deploy_info(context, deploy_info)
         else:
             if deploy_info.owner != owner:
