@@ -28,7 +28,8 @@ class Configure:
                 self._set_args(args)
                 Logger.debug(f"load json success {config_path}")
         except (OSError, IOError):
-            Logger.error(f"load json fail {config_path}")
+            if config_path is not None:
+                Logger.error(f"load json fail {config_path}")
             self._init_default_table()
             self._set_args(args)
 
