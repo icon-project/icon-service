@@ -1,5 +1,19 @@
 # ChangeLog
 
+## 0.9.4 - 2018-07-17
+
+### iconservice
+
+* 설정 파일 구현
+* Governance SCORE 통합
+* SCORE update 기능 추가
+* SCORE audit 기능 추가 (미완성)
+* 매개 변수를 가지지 않는 SCORE 함수 호출 시 params 데이터가 없어도 호출 가능하도록 수정
+
+### 기타
+
+* SCORE DB 통합 작업 진행 중
+
 ## 0.9.3 - 2018-07-10
 
 ### iconservice

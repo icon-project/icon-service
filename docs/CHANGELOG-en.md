@@ -1,5 +1,21 @@
 # ChangeLog
 
+## 0.9.4 - 2018-07-17
+
+### iconservice
+
+* Implement configuration file
+* Add governance SCORE
+* Implement SCORE update feature
+* Implement SCORE audit feature (incomplete)
+* Fix a bug on calling SCORE function which needs no parameters
+
+### etc
+
+* To unify SCORE DBs is under development
+
+### iconservice
+
 ## 0.9.3 - 2018-07-10
 
 ### iconservice
