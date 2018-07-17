@@ -617,7 +617,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
             version = 3
             token_addr = tx_result[0]['scoreAddress']
-            addr_from = self._admin_addr
+            addr_from = create_address(AddressPrefix.EOA, b'addr1')
 
             request = {
                 "version": hex(version),
@@ -666,8 +666,10 @@ class TestIconServiceEngine(unittest.TestCase):
                     "params": {}
                 }
             }
-            # response = await self._icx_call(request)
-            # self.assertEqual(response, "0x3635c9adc5dea00000")
+
+            self.assertEqual(str(addr_from), "hx22e518ccd16760355023affd8c29f80bf7b8a0bd")
+            response = await self._icx_call(request)
+            self.assertEqual(response, "0x3635c9adc5dea00000")
             #
             # prev_block_hash, is_commit, tx_result = \
             #     await self._install_sample_token_invoke('sample_token2', token_addr, 3, prev_block_hash)

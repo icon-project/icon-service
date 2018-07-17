@@ -34,7 +34,15 @@ class IconScoreManager(object):
                tx_hash: bytes) -> None:
 
         if from_score == GOVERNANCE_SCORE_ADDRESS:
-            self.__deploy_engine.deploy(context, tx_hash)
+            # switch
+            score_addr = self.get_score_address_by_tx_hash(context, tx_hash)
+            owner = self.get_owner(context, score_addr)
+            tmp_sender = context.msg.sender
+            context.msg.sender = owner
+            try:
+                self.__deploy_engine.deploy(context, tx_hash)
+            finally:
+                context.msg = tmp_sender
         else:
             raise ServerErrorException('Permission Error')
 
