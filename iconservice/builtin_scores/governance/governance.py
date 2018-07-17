@@ -92,7 +92,7 @@ class Governance(IconScoreBase):
                 if key == STATUS:
                     status[key] = value.decode()
                 else:
-                    status[key] = '0x' + value.hex()
+                    status[key] = value
                 count += 1
         return count, status
 
@@ -114,22 +114,38 @@ class Governance(IconScoreBase):
     def getScoreStatus(self, address: Address) -> dict:
         # check score address
         current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
-        if current_tx_hash is None:
+        if current_tx_hash is None and next_tx_hash is None:
             self.revert('SCORE not found')
         result = {}
+        build_initial_status = False
+        # get current status
         _current = self._get_current_status(address)
         count1, status = self._fill_status_with_str(_current)
         if count1 > 0:
+            if current_tx_hash is None:
+                self.revert('current_tx_hash is None')
+            if current_tx_hash != status[DEPLOY_TX_HASH]:
+                self.revert('Current deploy tx mismatch')
+            # audit has been performed (accepted)
             result[CURRENT] = status
+        # get next status
         _next = self._get_next_status(address)
         count2, status = self._fill_status_with_str(_next)
         if count2 > 0:
-            result[NEXT] = status
-        if count1 + count2 == 0:
-            # there is no status information, build initial status
+            # check if another pending tx has been arrived
+            if next_tx_hash is not None and \
+                    next_tx_hash != status[DEPLOY_TX_HASH]:
+                build_initial_status = True
+            else:
+                # audit has been performed (rejected)
+                result[NEXT] = status
+        # there is no information, build initial status
+        if count1 + count2 == 0 or build_initial_status:
+            if next_tx_hash is None:
+                self.revert('next_tx_hash is None')
             status = {
                 STATUS: STATUS_PENDING,
-                DEPLOY_TX_HASH: current_tx_hash
+                DEPLOY_TX_HASH: next_tx_hash
             }
             result[NEXT] = status
         return result
