@@ -230,13 +230,11 @@ class IconScoreDeployEngine(object):
             except FileExistsError:
                 pass
         else:
-            pass
-
-        self._icon_score_deployer.deploy(
-            address=icon_score_address,
-            data=content,
-            block_height=context.block.height,
-            transaction_index=context.tx.index)
+            self._icon_score_deployer.deploy(
+                address=icon_score_address,
+                data=content,
+                block_height=context.block.height,
+                transaction_index=context.tx.index)
 
         db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
 
