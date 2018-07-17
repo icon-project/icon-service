@@ -21,10 +21,10 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, DATA_BYTE_ORDER,\
     IconServiceFlag, IconDeployFlag, ConfigKey
-from .utils import byte_length_of_int
+from .utils import byte_length_of_int, is_lowercase_hex_string
 from .utils.bloom import BloomFilter
 from .base.address import Address, AddressPrefix
-from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS
+from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, RevertException
 from .base.exception import IconServiceBaseException, ServerErrorException
@@ -164,19 +164,6 @@ class IconServiceEngine(ContextContainer):
             self._db_factory, icon_score_manger, self._icon_score_loader)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
-        self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
-        self._step_counter_factory.set_step_cost(StepType.INSTALL, 20000)
-        self._step_counter_factory.set_step_cost(StepType.UPDATE, 8000)
-        self._step_counter_factory.set_step_cost(StepType.DESTRUCT, -7000)
-        self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
-        self._step_counter_factory.set_step_cost(StepType.STORAGE_SET, 20)
-        self._step_counter_factory.set_step_cost(StepType.STORAGE_REPLACE, 5)
-        self._step_counter_factory.set_step_cost(StepType.STORAGE_DELETE, -15)
-        self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
-        self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
-
-        # TODO: Fix step_price
         self._icon_pre_validator = IconPreValidator(self._icx_engine, icon_score_manger)
 
         IconScoreContext.icx = self._icx_engine
@@ -196,9 +183,10 @@ class IconServiceEngine(ContextContainer):
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
-        self.load_builtin_scores()
+        self._load_builtin_scores()
+        self._init_global_value_by_governance_score()
 
-    def load_builtin_scores(self):
+    def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         try:
             self._put_context(context)
@@ -206,6 +194,25 @@ class IconServiceEngine(ContextContainer):
             icon_builtin_score_loader.load_builtin_scores(context, self._conf.get_value(ConfigKey.ADMIN_ADDRESS))
         finally:
             self._delete_context(context)
+
+    def _init_global_value_by_governance_score(self):
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        governance_score = self._icon_score_mapper.get_icon_score(
+            context, GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if self._is_flag_on(IconServiceFlag.ENABLE_FEE):
+            step_price = governance_score.getStepPrice()
+        else:
+            step_price = 0
+
+        self._step_counter_factory.set_step_price(step_price)
+
+        step_costs = governance_score.getStepCosts()
+
+        for key, value in step_costs.items():
+            self._step_counter_factory.set_step_cost(StepType(key), value)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -224,6 +231,8 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
+        self._init_global_value_by_governance_score()
+
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
@@ -350,15 +359,9 @@ class IconServiceEngine(ContextContainer):
         method = request['method']
         params = request['params']
 
-        version: int = params.get('version', 2)
         from_ = params['from']
         to = params['to']
-
         step_limit = params.get('stepLimit', 0)
-        if version < 3:
-            step_price = 0
-        else:
-            step_price = self._get_step_price()
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -372,7 +375,7 @@ class IconServiceEngine(ContextContainer):
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit, step_price)
+            self._step_counter_factory.create(step_limit)
         context.clear_msg_stack()
 
         return self._call(context, method, params)
@@ -513,13 +516,13 @@ class IconServiceEngine(ContextContainer):
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
                 params,
-                step_price=self._get_step_price())
+                step_price=context.step_counter.step_price)
 
-            # Every send_transaction are calculated TRANSACTION STEP at first
-            context.step_counter.append_step(StepType.TRANSACTION, 1)
+            # Every send_transaction are calculated DEFAULT STEP at first
+            context.step_counter.apply_step(StepType.DEFAULT, 1)
             input_size = self._get_byte_length(params.get('data', None))
 
-            context.step_counter.append_step(StepType.INPUT, input_size)
+            context.step_counter.apply_step(StepType.INPUT, input_size)
             self._transfer_coin(context, params)
 
             if to.is_contract:
@@ -564,9 +567,9 @@ class IconServiceEngine(ContextContainer):
             elif isinstance(data, str):
                 # If the value is hexstring, it is calculated as bytes otherwise
                 # string
-                data_without_0x = data[2:] if data.startswith('0x') else data
-                if all(self._char_in_hexdigits(c) for c in data_without_0x):
-                    size += ceil(len(data_without_0x) / 2)
+                data_body = data[2:] if data.startswith('0x') else data
+                if is_lowercase_hex_string(data_body):
+                    size += ceil(len(data_body) / 2)
                 else:
                     size += len(data.encode('utf-8'))
             else:
@@ -574,10 +577,6 @@ class IconServiceEngine(ContextContainer):
                 if isinstance(data, int):
                     size += byte_length_of_int(data)
         return size
-
-    @staticmethod
-    def _char_in_hexdigits(c):
-        return ('0' <= c <= '9') or ('a' <= c <= 'f') or ('A' <= c <= 'F')
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
@@ -613,7 +612,7 @@ class IconServiceEngine(ContextContainer):
         version: int = params.get('version', 2)
         from_: 'Address' = params['from']
 
-        step_price = self._get_step_price()
+        step_price = context.step_counter.step_price
 
         if version < 3:
             # Support coin transfer based on protocol v2
@@ -637,16 +636,11 @@ class IconServiceEngine(ContextContainer):
         return step_used, step_price
 
     def _get_step_price(self):
-        """TODO: How to get step price?
-        from governance SCORE?
-
+        """
+        Gets the step price
         :return: step price in loop unit
         """
-        # 1 icx == 10 ** 6 step
-        if self._is_flag_on(IconServiceFlag.ENABLE_FEE):
-            return 10 ** 12
-        else:
-            return 0
+        return self._step_counter_factory.get_step_price()
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',
@@ -675,14 +669,14 @@ class IconServiceEngine(ContextContainer):
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
-                context.step_counter.append_step(StepType.INSTALL, 1)
+                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             else:
                 # SCORE update
                 score_address = to
-                context.step_counter.append_step(StepType.UPDATE, 1)
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
             data_size = self._get_byte_length(data.get('content', None))
-            context.step_counter.append_step(StepType.CONTRACT_SET, data_size)
+            context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
 
             self._icon_score_deploy_engine.invoke(
                 context=context,
@@ -691,7 +685,7 @@ class IconServiceEngine(ContextContainer):
                 data=data)
             return score_address
         else:
-            context.step_counter.append_step(StepType.CALL, 1)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             self._icon_score_engine.invoke(context, to, data_type, data)
             return None
 
