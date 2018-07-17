@@ -127,13 +127,6 @@ class TestEventlog(unittest.TestCase):
         name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
         self.assertIn(name_bloom_data, context.logs_bloom)
 
-    # def test_call_event_no_hint_exception(self):
-    #     name = "name"
-    #     address = Mock(spec=Address)
-    #     age = 10
-    #     self.assertRaises(IconScoreException, self._mock_score.HintlessEvent,
-    #                       name, address, age)
-
     def test_call_event_mismatch_arg(self):
         context = ContextContainer._get_context()
 
@@ -152,15 +145,6 @@ class TestEventlog(unittest.TestCase):
 
         name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
         self.assertNotIn(name_bloom_data, context.logs_bloom)
-
-    # def test_call_event_unsupported_arg(self):
-    #     context = ContextContainer._get_context()
-    #
-    #     name = "name"
-    #     address = [create_address(AddressPrefix.CONTRACT, b'empty')]
-    #
-    #     self.assertRaises(EventLogException, self._mock_score.ArrayEvent,
-    #                       name, address)
 
     def test_address_index_event(self):
         context = ContextContainer._get_context()
@@ -319,14 +303,6 @@ class EventlogScore(IconScoreBase):
     def MixedEvent(self, i_data: bytes, address: Address, amount: int,
                    data: bytes, text: str):
         pass
-
-    # @eventlog
-    # def HintlessEvent(self, name, address, age):
-    #     pass
-
-    # @eventlog
-    # def ArrayEvent(self, name: str, address: List[Address], ):
-    #     pass
 
     @external
     def empty(self):
