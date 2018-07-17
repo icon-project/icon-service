@@ -102,6 +102,8 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._engine.close()
+        rmtree(self._icon_score_root_path)
+        rmtree(self._state_db_root_path)
 
     def test_query(self):
         method = 'icx_getBalance'

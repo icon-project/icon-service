@@ -53,6 +53,8 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._inner_task._close()
+        shutil.rmtree(self._icon_score_root_path)
+        shutil.rmtree(self._state_db_root_path)
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
@@ -598,7 +600,7 @@ class TestIconServiceEngine(unittest.TestCase):
             loop.run_until_complete(_run())
         except RuntimeError:
             pass
-
+    #
     # def test_governance_score2(self):
     #     async def _run():
     #         prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
@@ -701,7 +703,7 @@ class TestIconServiceEngine(unittest.TestCase):
     #         loop.run_until_complete(_run())
     #     except RuntimeError:
     #         pass
-    #
+
     # def test_update_governance(self):
     #     async def _run():
     #         prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
