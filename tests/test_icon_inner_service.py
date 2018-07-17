@@ -52,17 +52,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
 
     def tearDown(self):
-        async def _run():
-            await asyncio.sleep(1)
-            await self._inner_task.close()
-            shutil.rmtree(self._icon_score_root_path)
-            shutil.rmtree(self._state_db_root_path)
-
-        try:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(_run())
-        except RuntimeError:
-            pass
+        self._inner_task._close()
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
@@ -609,125 +599,125 @@ class TestIconServiceEngine(unittest.TestCase):
         except RuntimeError:
             pass
 
-    def test_governance_score2(self):
-        async def _run():
-            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-
-            self._inner_task._icon_service_engine._icon_score_deploy_engine._flags = \
-                IconDeployFlag.ENABLE_DEPLOY_AUDIT
-
-            prev_block_hash, is_commit, tx_result = \
-                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-
-            version = 3
-            token_addr = tx_result[0]['scoreAddress']
-            addr_from = self._admin_addr
-
-            request = {
-                "version": hex(version),
-                "from": str(addr_from),
-                "to": str(GOVERNANCE_SCORE_ADDRESS),
-                "dataType": "call",
-                "data": {
-                    "method": "getScoreStatus",
-                    "params": {
-                        "address": str(token_addr)
-                    }
-                }
-            }
-
-            response = await self._icx_call(request)
-            self.assertEqual('pending', response['next']['status'])
-            deploy_tx_hash = response['next']['deployTxHash']
-            prev_block_hash, is_commit, tx_result = \
-                await self._accept_deploy_score(2, prev_block_hash, self._admin_addr, deploy_tx_hash)
-
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-
-            request = {
-                "version": hex(version),
-                "from": str(addr_from),
-                "to": str(GOVERNANCE_SCORE_ADDRESS),
-                "dataType": "call",
-                "data": {
-                    "method": "getScoreStatus",
-                    "params": {
-                        "address": str(token_addr)
-                    }
-                }
-            }
-            response = await self._icx_call(request)
-            self.assertEqual('active', response['current']['status'])
-
-            request = {
-                "version": hex(version),
-                "from": str(addr_from),
-                "to": token_addr,
-                "dataType": "call",
-                "data": {
-                    "method": "total_supply",
-                    "params": {}
-                }
-            }
-            response = await self._icx_call(request)
-            self.assertEqual(response, "0x3635c9adc5dea00000")
-
-            prev_block_hash, is_commit, tx_result = \
-                await self._install_sample_token_invoke('sample_token2', token_addr, 3, prev_block_hash)
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-            tx_hash = tx_results[0]['txHash']
-
-            addr_from = self._admin_addr
-
-            request = {
-                "version": hex(version),
-                "from": str(addr_from),
-                "to": str(GOVERNANCE_SCORE_ADDRESS),
-                "dataType": "call",
-                "data": {
-                    "method": "getScoreStatus",
-                    "params": {
-                        "address": str(token_addr)
-                    }
-                }
-            }
-            response = await self._icx_call(request)
-            self.assertEqual('active', response['current']['status'])
-
-            prev_block_hash, is_commit, tx_result = \
-                await self._accept_deploy_score(4, prev_block_hash, self._admin_addr, tx_hash)
-
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-
-        try:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(_run())
-        except RuntimeError:
-            pass
-
-    def test_update_governance(self):
-        async def _run():
-            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-
-            prev_block_hash, is_commit, tx_result = \
-                await self._update_governance_invoke(1, prev_block_hash)
-            self.assertEqual(is_commit, True)
-            self.assertEqual(tx_results[0]['status'], hex(1))
-
-        try:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(_run())
-        except RuntimeError:
-            pass
+    # def test_governance_score2(self):
+    #     async def _run():
+    #         prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #
+    #         self._inner_task._icon_service_engine._icon_score_deploy_engine._flags = \
+    #             IconDeployFlag.ENABLE_DEPLOY_AUDIT
+    #
+    #         prev_block_hash, is_commit, tx_result = \
+    #             await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #
+    #         version = 3
+    #         token_addr = tx_result[0]['scoreAddress']
+    #         addr_from = self._admin_addr
+    #
+    #         request = {
+    #             "version": hex(version),
+    #             "from": str(addr_from),
+    #             "to": str(GOVERNANCE_SCORE_ADDRESS),
+    #             "dataType": "call",
+    #             "data": {
+    #                 "method": "getScoreStatus",
+    #                 "params": {
+    #                     "address": str(token_addr)
+    #                 }
+    #             }
+    #         }
+    #
+    #         response = await self._icx_call(request)
+    #         self.assertEqual('pending', response['next']['status'])
+    #         deploy_tx_hash = response['next']['deployTxHash']
+    #         prev_block_hash, is_commit, tx_result = \
+    #             await self._accept_deploy_score(2, prev_block_hash, self._admin_addr, deploy_tx_hash)
+    #
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #
+    #         request = {
+    #             "version": hex(version),
+    #             "from": str(addr_from),
+    #             "to": str(GOVERNANCE_SCORE_ADDRESS),
+    #             "dataType": "call",
+    #             "data": {
+    #                 "method": "getScoreStatus",
+    #                 "params": {
+    #                     "address": token_addr
+    #                 }
+    #             }
+    #         }
+    #         response = await self._icx_call(request)
+    #         self.assertEqual('active', response['current']['status'])
+    #
+    #         request = {
+    #             "version": hex(version),
+    #             "from": str(addr_from),
+    #             "to": token_addr,
+    #             "dataType": "call",
+    #             "data": {
+    #                 "method": "total_supply",
+    #                 "params": {}
+    #             }
+    #         }
+    #         response = await self._icx_call(request)
+    #         self.assertEqual(response, "0x3635c9adc5dea00000")
+    #
+    #         prev_block_hash, is_commit, tx_result = \
+    #             await self._install_sample_token_invoke('sample_token2', token_addr, 3, prev_block_hash)
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #         tx_hash = tx_results[0]['txHash']
+    #
+    #         addr_from = self._admin_addr
+    #
+    #         request = {
+    #             "version": hex(version),
+    #             "from": str(addr_from),
+    #             "to": str(GOVERNANCE_SCORE_ADDRESS),
+    #             "dataType": "call",
+    #             "data": {
+    #                 "method": "getScoreStatus",
+    #                 "params": {
+    #                     "address": token_addr
+    #                 }
+    #             }
+    #         }
+    #         response = await self._icx_call(request)
+    #         self.assertEqual('active', response['current']['status'])
+    #
+    #         prev_block_hash, is_commit, tx_result = \
+    #             await self._accept_deploy_score(4, prev_block_hash, self._admin_addr, tx_hash)
+    #
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #
+    #     try:
+    #         loop = asyncio.get_event_loop()
+    #         loop.run_until_complete(_run())
+    #     except RuntimeError:
+    #         pass
+    #
+    # def test_update_governance(self):
+    #     async def _run():
+    #         prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #
+    #         prev_block_hash, is_commit, tx_result = \
+    #             await self._update_governance_invoke(1, prev_block_hash)
+    #         self.assertEqual(is_commit, True)
+    #         self.assertEqual(tx_results[0]['status'], hex(1))
+    #
+    #     try:
+    #         loop = asyncio.get_event_loop()
+    #         loop.run_until_complete(_run())
+    #     except RuntimeError:
+    #         pass
 
 
 if __name__ == '__main__':

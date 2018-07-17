@@ -26,7 +26,7 @@ class Configure:
                 json_conf = json.load(f)
                 self._load_json_config(json_conf)
                 self._set_args(args)
-                Logger.error(f"load json success {config_path}")
+                Logger.debug(f"load json success {config_path}")
         except (OSError, IOError):
             Logger.error(f"load json fail {config_path}")
             self._init_default_table()

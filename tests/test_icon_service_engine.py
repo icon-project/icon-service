@@ -61,10 +61,10 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
-        conf = Configure("", {ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'admin'))})
+        conf = Configure("", {ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN'))})
         engine.open(conf,
-                    icon_score_root_path=self._icon_score_root_path,
-                    state_db_root_path=self._state_db_root_path)
+                    self._icon_score_root_path,
+                    self._state_db_root_path)
         self._engine = engine
 
         self._genesis_address = create_address(
@@ -102,8 +102,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._engine.close()
-        rmtree(self._icon_score_root_path)
-        rmtree(self._state_db_root_path)
 
     def test_query(self):
         method = 'icx_getBalance'
