@@ -8,7 +8,14 @@
 * Governance SCORE 통합
 * SCORE update 기능 추가
 * SCORE audit 기능 추가 (미완성)
-* 매개 변수를 가지지 않는 SCORE 함수 호출 시 params 데이터가 없어도 호출 가능하도록 수정
+* 새로운 transaction dataType 값 추가 (message)
+* 수수료 계산 시 새로운 step 규칙 적용
+
+### SCORE
+
+* __init__() 메소드 매개 변수 변경
+    * __init__(self, db: IconScoreDatabase)
+    * 기존 SCORE 수정 필요
 
 ### 기타
 

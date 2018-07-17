@@ -30,9 +30,10 @@
 * 코인 관리와 SCORE 관리는 모두 이 클래스 내에서 수행된다.
 * 통신 방법을 포함하여 loopchain과의 어떠한 의존성도 존재해서는 안된다.
 
-#### IconScoreInnerService class
+#### IconInnerService class
 
 * loopchain과의 통신 처리 (MQ 방식)
+* 메시지 내 데이터 타입 변환
 * 통신 방법이 변경되더라도 이 부분만 변경되어야 한다.
 
 ### Base package
@@ -40,10 +41,6 @@
 * 패키지 내에서 공통적으로 사용되는 기반 클래스들 제공
 * address, block, exception, message, transaction 등등
 
-### Database package
-
-* LevelDB Wrapper
-* DB에 기록 전 Cache 관리
 
 ### Icx package
 
@@ -93,12 +90,6 @@ IconScore 내에서 사용 가능한 정보나 함수 지원
     - tx.timestamp
     - tx.nonce
 
-#### IconScoreDeployer
-
-* SCORE 설치 패키지를 지정된 파일 경로에 설치
-    * $SCORE_ROOT/<address_without_prefix>/<blockHeight_txIndex>
-* contentType에 따라 다양한 설치자 존재 가능 (zip, url 등)
-
 #### IconScoreLoader
 
 * 파일 시스템에 저장되어 있는 SCORE를 메모리에 로딩
@@ -117,7 +108,18 @@ IconScore 내에서 사용 가능한 정보나 함수 지원
 
 * 각 항목별 STEP 소비량 계산
 
-### database
+### Deploy package
+
+* IconScore 배포(설치, 업데이트)
+* IconScore 배포 정보 관리
+
+#### IconScoreDeployer
+
+* SCORE 설치 패키지를 지정된 파일 경로에 설치
+    * $SCORE_ROOT/<address_without_prefix>/<blockHeight_txIndex>
+* contentType에 따라 다양한 설치자 존재 가능 (zip, gzip 등)
+
+### Database package
 
 * IconScore의 상태를 저장하기 위해 Key:Value 기반의 Database가 사용된다.
 * 확정되기 전 블록에 저장되어 있는 tx에 의해 변경된 상태는 메모리에 저장된다. (Batch)
