@@ -706,6 +706,49 @@ class TestIconServiceEngine(unittest.TestCase):
         except RuntimeError:
             pass
 
+    def test_governance_score2(self):
+        async def _run():
+            prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            self._inner_task._icon_service_engine._icon_score_deploy_engine._flags = \
+                IconDeployFlag.NONE
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+
+            version = 3
+            token_addr = tx_result[0]['scoreAddress']
+
+            prev_block_hash, is_commit, tx_result = \
+                await self._install_sample_token_invoke('sample_token2', token_addr, 2, prev_block_hash)
+            self.assertEqual(is_commit, True)
+            self.assertEqual(tx_results[0]['status'], hex(1))
+            tx_hash = tx_results[0]['txHash']
+
+            request = {
+                "version": hex(version),
+                "from": str(self._admin_addr),
+                "to": token_addr,
+                "dataType": "call",
+                "data": {
+                    "method": "total_supply",
+                    "params": {}
+                }
+            }
+
+            response = await self._icx_call(request)
+            self.assertEqual(response, "0x0")
+
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(_run())
+        except RuntimeError:
+            pass
+
     def test_update_governance(self):
         async def _run():
             prev_block_hash, is_commit, tx_results = await self._genesis_invoke(0)
