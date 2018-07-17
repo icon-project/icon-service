@@ -61,7 +61,7 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
-        conf = Configure("", {ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN'))})
+        conf = Configure(args={ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN'))})
         engine.open(conf,
                     self._icon_score_root_path,
                     self._state_db_root_path)

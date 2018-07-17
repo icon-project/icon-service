@@ -108,7 +108,7 @@ class IconScoreDeployEngine(object):
         return not is_audit_enabled or all((is_built_score, is_owner))
 
     def deploy(self,
-               context: 'IconScoreContext',
+               context: 'IconScoreContext', # audit
                tx_hash: bytes) -> None:
 
         tx_params = self._icon_score_deploy_storage.get_deploy_tx_params(context, tx_hash)

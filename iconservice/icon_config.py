@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import json
+from typing import Optional
 from .icon_constant import ConfigKey
 from .logger.logger import Logger
 
 
 class Configure:
-    def __init__(self, config_path: str, args: dict= None):
+    def __init__(self, config_path: str = str(), args: dict= None):
         self._config_table = dict()
         try:
             self._init_default_table()
@@ -28,7 +29,7 @@ class Configure:
                 self._set_args(args)
                 Logger.debug(f"load json success {config_path}")
         except (OSError, IOError):
-            if config_path is not None:
+            if config_path is not str():
                 Logger.error(f"load json fail {config_path}")
             self._init_default_table()
             self._set_args(args)

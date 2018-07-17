@@ -46,7 +46,7 @@ class TestIconServiceEngine(unittest.TestCase):
             pass
 
         self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
-        conf = Configure("", {ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
+        conf = Configure(args={ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
         self._inner_task = IconScoreInnerTask(conf, self._icon_score_root_path, self._state_db_root_path)
         self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
