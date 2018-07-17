@@ -16,48 +16,24 @@
 
 import unittest
 from typing import Optional
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
-from iconservice.builtin_scores.governance.governance import STEP_TYPE_DEFAULT, \
-    STEP_TYPE_CONTRACT_CALL, STEP_TYPE_CONTRACT_CREATE, \
-    STEP_TYPE_CONTRACT_UPDATE, STEP_TYPE_CONTRACT_DESTRUCT, \
-    STEP_TYPE_CONTRACT_SET, STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, \
-    STEP_TYPE_INPUT, STEP_TYPE_EVENT_LOG
+from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
-from iconservice.icon_inner_service import IconScoreInnerTask
-from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
-    external
-from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContextFactory
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
-from iconservice.iconscore.icon_score_step import StepType, \
-    IconScoreStepCounter, IconScoreStepCounterFactory
-from iconservice.icon_config import Configure
-from tests import create_block_hash, create_tx_hash, create_address
+from iconservice.iconscore.icon_score_base import \
+    IconScoreBase, eventlog, external
+from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.icon_score_step import \
+    StepType, IconScoreStepCounter, IconScoreStepCounterFactory
+from tests import create_tx_hash, create_address
+from tests.mock_generator import generate_inner_task, create_request, ReqData
 
 
 class TestIconScoreStepCounter(unittest.TestCase):
 
-    @patch('iconservice.icon_service_engine.'
-           'IconServiceEngine._init_global_value_by_governance_score')
-    @patch('iconservice.icon_service_engine.'
-           'IconServiceEngine._load_builtin_scores')
-    @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
-    @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def setUp(self, open, create_by_name, _load_builtin_scores,
-              _init_global_value_by_governance_score):
-        self._inner_task = IconScoreInnerTask(Configure(""), ".", ".")
-        open.assert_called()
-        create_by_name.assert_called()
-        _load_builtin_scores.assert_called()
-        self._inner_task._icon_service_engine._icx_engine.get_balance = \
-            Mock(return_value=100 * 10 ** 18)
-        self._inner_task._icon_service_engine._icx_engine._transfer = Mock()
-        self._inner_task._icon_service_engine.\
-            _init_global_value_by_governance_score = \
-            _init_global_value_by_governance_score
+    def setUp(self):
+        self._inner_task = generate_inner_task()
 
         factory = self._inner_task._icon_service_engine._step_counter_factory
         self.step_counter = Mock(spec=IconScoreStepCounter)
@@ -69,20 +45,27 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def tearDown(self):
         self._inner_task = None
 
-    @patch('iconservice.deploy.icon_score_deploy_engine.'
-           'IconScoreDeployEngine.invoke')
-    def test_install_step(self, invoke):
+    def test_install_step(self):
+        # Ignores deploy
+        deploy_engine_invoke = Mock()
+        self._inner_task._icon_service_engine. \
+            _icon_score_deploy_engine.invoke = deploy_engine_invoke
+
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
+        from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = Address.from_string('cx0000000000000000000000000000000000000000')
         content_type = 'application/zip'
         data = {
             'contentType': content_type,
             'content': '0x1867291283973610982301923812873419826abcdef9182731',
         }
-        req = self.get_request(tx_hash, to_, 'deploy', data)
 
-        result = self._inner_task._invoke(req)
-        invoke.assert_called()
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 'deploy', data),
+        ])
+
+        result = self._inner_task._invoke(request)
+        deploy_engine_invoke.assert_called()
         input_length = (len(content_type.encode('utf-8')) + 25)
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -99,10 +82,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     def test_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
+        from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.EOA, b'eoa')
-        req = self.get_request(tx_hash, to_, None, None)
 
-        result = self._inner_task._invoke(req)
+        request = create_request([
+            ReqData(tx_hash, from_, to_, None, None),
+        ])
+
+        result = self._inner_task._invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
         self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
@@ -111,21 +98,29 @@ class TestIconScoreStepCounter(unittest.TestCase):
                          (StepType.INPUT, 0))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
 
-    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    def test_internal_transfer_step(self, invoke):
+    def test_internal_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
+        from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
-        req = self.get_request(tx_hash, to_, 'call', {})
 
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 'call', {})
+        ])
+
+        # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(context_db))
             score.transfer()
 
-        invoke.side_effect = intercept_invoke
+        score_engine_invoke = Mock(side_effect=intercept_invoke)
+        self._inner_task._icon_service_engine. \
+            _icon_score_engine.invoke = score_engine_invoke
 
-        result = self._inner_task._invoke(req)
+        result = self._inner_task._invoke(request)
+        score_engine_invoke.assert_called()
+
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
         self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
@@ -138,12 +133,16 @@ class TestIconScoreStepCounter(unittest.TestCase):
                          (StepType.CONTRACT_CALL, 1))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
-    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    def test_event_log_step(self, invoke):
+    def test_event_log_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
+        from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
-        req = self.get_request(tx_hash, to_, 'call', {})
 
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 'call', {})
+        ])
+
+        # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
@@ -154,16 +153,20 @@ class TestIconScoreStepCounter(unittest.TestCase):
             text_param = 'text'
             score.SampleEvent(i_data_param, address, data_param, text_param)
             global event_log_data_size
-            event_log_data_size = len(
-                "SampleEvent(bytes,Address,bytes,str)".encode('utf-8')) + \
-                                  len(i_data_param) + \
-                                  len(address.body) + \
-                                  len(data_param) + \
-                                  len(text_param.encode('utf-8'))
+            event_log_data_size = \
+                len("SampleEvent(bytes,Address,bytes,str)".encode('utf-8')) + \
+                len(i_data_param) + \
+                len(address.body) + \
+                len(data_param) + \
+                len(text_param.encode('utf-8'))
 
-        invoke.side_effect = intercept_invoke
+        score_engine_invoke = Mock(side_effect=intercept_invoke)
+        self._inner_task._icon_service_engine. \
+            _icon_score_engine.invoke = score_engine_invoke
 
-        result = self._inner_task._invoke(req)
+        result = self._inner_task._invoke(request)
+        score_engine_invoke.assert_called()
+
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
         self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
@@ -176,45 +179,20 @@ class TestIconScoreStepCounter(unittest.TestCase):
                          (StepType.EVENT_LOG, event_log_data_size))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
-    @staticmethod
-    def get_request(tx_hash, to_, data_type, data):
-        req = {
-            'block': {
-                'blockHash': bytes.hex(create_block_hash(b'block')),
-                'blockHeight': hex(100),
-                'timestamp': hex(1234),
-                'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
-            },
-            'transactions': [{
-                'method': 'icx_sendTransaction',
-                'params': {
-                    'txHash': tx_hash,
-                    'version': hex(3),
-                    'from': str(create_address(AddressPrefix.EOA, b'from')),
-                    'to': str(to_),
-                    'stepLimit': hex(5000000),
-                    'timestamp': hex(123456),
-                    'dataType': data_type,
-                    'data': data,
-                }
-            }]
-        }
-        return req
-
     def test_set_step_costs(self):
         governance_score = Mock()
         governance_score.getStepCosts = Mock(return_value={
-            STEP_TYPE_DEFAULT: 4000,
-            STEP_TYPE_CONTRACT_CALL: 1500,
-            STEP_TYPE_CONTRACT_CREATE: 20000,
-            STEP_TYPE_CONTRACT_UPDATE: 8000,
-            STEP_TYPE_CONTRACT_DESTRUCT: -7000,
-            STEP_TYPE_CONTRACT_SET: 1000,
-            STEP_TYPE_SET: 20,
-            STEP_TYPE_REPLACE: 5,
-            STEP_TYPE_DELETE: -15,
-            STEP_TYPE_INPUT: 20,
-            STEP_TYPE_EVENT_LOG: 10
+            governance.STEP_TYPE_DEFAULT: 4000,
+            governance.STEP_TYPE_CONTRACT_CALL: 1500,
+            governance.STEP_TYPE_CONTRACT_CREATE: 20000,
+            governance.STEP_TYPE_CONTRACT_UPDATE: 8000,
+            governance.STEP_TYPE_CONTRACT_DESTRUCT: -7000,
+            governance.STEP_TYPE_CONTRACT_SET: 1000,
+            governance.STEP_TYPE_SET: 20,
+            governance.STEP_TYPE_REPLACE: 5,
+            governance.STEP_TYPE_DELETE: -15,
+            governance.STEP_TYPE_INPUT: 20,
+            governance.STEP_TYPE_EVENT_LOG: 10
         })
 
         step_counter_factory = IconScoreStepCounterFactory()
@@ -232,7 +210,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(
             8000, step_counter_factory.get_step_cost(StepType.CONTRACT_UPDATE))
         self.assertEqual(
-            -7000, step_counter_factory.get_step_cost(StepType.CONTRACT_DESTRUCT))
+            -7000,
+            step_counter_factory.get_step_cost(StepType.CONTRACT_DESTRUCT))
         self.assertEqual(
             1000, step_counter_factory.get_step_cost(StepType.CONTRACT_SET))
         self.assertEqual(
@@ -247,6 +226,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             10, step_counter_factory.get_step_cost(StepType.EVENT_LOG))
 
 
+# noinspection PyPep8Naming
 class SampleScore(IconScoreBase):
 
     def __init__(self, db: 'IconScoreDatabase') -> None:
@@ -270,4 +250,3 @@ class SampleScore(IconScoreBase):
     @external
     def transfer(self):
         self.icx.transfer(self.msg.sender, 10)
-
