@@ -86,15 +86,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
-        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
                          (StepType.DEFAULT, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
                          (StepType.INPUT, input_length))
-        self.assertEqual(self.step_counter.append_step.call_args_list[2][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[2][0],
                          (StepType.CONTRACT_CREATE, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[3][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[3][0],
                          (StepType.CONTRACT_SET, 25))
-        self.assertEqual(len(self.step_counter.append_step.call_args_list), 4)
+        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     def test_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
@@ -104,11 +104,11 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
-        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
                          (StepType.DEFAULT, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
                          (StepType.INPUT, 0))
-        self.assertEqual(len(self.step_counter.append_step.call_args_list), 2)
+        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_internal_transfer_step(self, invoke):
@@ -127,15 +127,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
-        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
                          (StepType.DEFAULT, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
                          (StepType.INPUT, 0))
-        self.assertEqual(self.step_counter.append_step.call_args_list[2][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[2][0],
                          (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[3][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[3][0],
                          (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(len(self.step_counter.append_step.call_args_list), 4)
+        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_event_log_step(self, invoke):
@@ -165,15 +165,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
         result = self._inner_task._invoke(req)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
-        self.assertEqual(self.step_counter.append_step.call_args_list[0][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
                          (StepType.DEFAULT, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[1][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
                          (StepType.INPUT, 0))
-        self.assertEqual(self.step_counter.append_step.call_args_list[2][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[2][0],
                          (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(self.step_counter.append_step.call_args_list[3][0],
+        self.assertEqual(self.step_counter.apply_step.call_args_list[3][0],
                          (StepType.EVENT_LOG, event_log_data_size))
-        self.assertEqual(len(self.step_counter.append_step.call_args_list), 4)
+        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     @staticmethod
     def get_request(tx_hash, to_, data_type, data):

@@ -375,7 +375,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param args: arguments
         :param kwargs: keyword arguments
         """
-        self._context.step_counter.append_step(StepType.CONTRACT_CALL, 1)
+        self._context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
         ret = self._context.call(
             self.address, to_, func_name, args, kwargs)
         arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
@@ -422,7 +422,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             else:
                 data.append(argument)
 
-        self._context.step_counter.append_step(StepType.EVENT_LOG, event_size)
+        self._context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
         event = EventLog(self.address, indexed, data)
         self._context.event_logs.append(event)
 
@@ -477,11 +477,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                 context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
-                context.step_counter.append_step(
+                context.step_counter.apply_step(
                     StepType.REPLACE, len(new_value))
             else:
                 # newly storing a value
-                context.step_counter.append_step(
+                context.step_counter.apply_step(
                     StepType.SET, len(new_value))
 
     # noinspection PyUnusedLocal
@@ -500,7 +500,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         if old_value and context and \
                 context.type == IconScoreContextType.INVOKE:
-            context.step_counter.append_step(
+            context.step_counter.apply_step(
                 StepType.DELETE, len(old_value))
 
     @property

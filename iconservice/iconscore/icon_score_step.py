@@ -183,22 +183,22 @@ class IconScoreStepCounter(object):
         """
         return self._step_price
 
-    def append_step(self, step_type: StepType, count: int) -> int:
+    def apply_step(self, step_type: StepType, count: int) -> int:
         """ Increases steps for given step cost
         """
-        step_to_append = self._step_cost_dict.get(step_type, 0) * count
-        return self.__append_step(step_to_append)
+        step_to_apply = self._step_cost_dict.get(step_type, 0) * count
+        return self.__apply_step(step_to_apply)
 
-    def __append_step(self, step_to_append) -> int:
+    def __apply_step(self, step_to_apply) -> int:
         """ Increases step
         """
         # If step_price is 0, do not raise OutOfStepException
         if self.step_price > 0:
-            if step_to_append + self._step_used > self._step_limit:
+            if step_to_apply + self._step_used > self._step_limit:
                 self._step_used = self._step_limit
                 raise OutOfStepException(
-                    self._step_limit, self.step_used, step_to_append)
+                    self._step_limit, self.step_used, step_to_apply)
 
-        self._step_used += step_to_append
+        self._step_used += step_to_apply
 
         return self.step_used

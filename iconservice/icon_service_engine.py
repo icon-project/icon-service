@@ -214,18 +214,6 @@ class IconServiceEngine(ContextContainer):
         for key, value in step_costs.items():
             self._step_counter_factory.set_step_cost(StepType(key), value)
 
-        # self._step_counter_factory.set_step_cost(StepType.TRANSACTION, 4000)
-        # self._step_counter_factory.set_step_cost(StepType.CALL, 1500)
-        # self._step_counter_factory.set_step_cost(StepType.INSTALL, 20000)
-        # self._step_counter_factory.set_step_cost(StepType.UPDATE, 8000)
-        # self._step_counter_factory.set_step_cost(StepType.DESTRUCT, -7000)
-        # self._step_counter_factory.set_step_cost(StepType.CONTRACT_SET, 1000)
-        # self._step_counter_factory.set_step_cost(StepType.STORAGE_SET, 20)
-        # self._step_counter_factory.set_step_cost(StepType.STORAGE_REPLACE, 5)
-        # self._step_counter_factory.set_step_cost(StepType.STORAGE_DELETE, -15)
-        # self._step_counter_factory.set_step_cost(StepType.INPUT, 20)
-        # self._step_counter_factory.set_step_cost(StepType.EVENT_LOG, 10)
-
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
@@ -531,10 +519,10 @@ class IconServiceEngine(ContextContainer):
                 step_price=context.step_counter.step_price)
 
             # Every send_transaction are calculated TRANSACTION STEP at first
-            context.step_counter.append_step(StepType.DEFAULT, 1)
+            context.step_counter.apply_step(StepType.DEFAULT, 1)
             input_size = self._get_byte_length(params.get('data', None))
 
-            context.step_counter.append_step(StepType.INPUT, input_size)
+            context.step_counter.apply_step(StepType.INPUT, input_size)
             self._transfer_coin(context, params)
 
             if to.is_contract:
@@ -681,14 +669,14 @@ class IconServiceEngine(ContextContainer):
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
-                context.step_counter.append_step(StepType.CONTRACT_CREATE, 1)
+                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             else:
                 # SCORE update
                 score_address = to
-                context.step_counter.append_step(StepType.CONTRACT_UPDATE, 1)
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
             data_size = self._get_byte_length(data.get('content', None))
-            context.step_counter.append_step(StepType.CONTRACT_SET, data_size)
+            context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
 
             self._icon_score_deploy_engine.invoke(
                 context=context,
@@ -697,7 +685,7 @@ class IconServiceEngine(ContextContainer):
                 data=data)
             return score_address
         else:
-            context.step_counter.append_step(StepType.CONTRACT_CALL, 1)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             self._icon_score_engine.invoke(context, to, data_type, data)
             return None
 
