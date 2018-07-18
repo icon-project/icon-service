@@ -139,10 +139,11 @@ class Governance(IconScoreBase):
             else:
                 # audit has been performed (rejected)
                 result[NEXT] = status
+        else:
+            if next_tx_hash is not None:
+                build_initial_status = True
         # there is no information, build initial status
-        if count1 + count2 == 0 or build_initial_status:
-            if next_tx_hash is None:
-                self.revert('next_tx_hash is None')
+        if build_initial_status:
             status = {
                 STATUS: STATUS_PENDING,
                 DEPLOY_TX_HASH: next_tx_hash
