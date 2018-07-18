@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.icon_config import default_icon_config
-from icon_common.icon_config import IconConfig
+from iconcommons.icon_config import IconConfig
 from tests import create_block_hash
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'

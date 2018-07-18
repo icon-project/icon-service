@@ -22,7 +22,7 @@ from iconservice.icon_constant import ICON_DB_LOG_TAG
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.utils import sha3_256
-from icon_common.logger import Logger
+from iconcommons.logger import Logger
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:

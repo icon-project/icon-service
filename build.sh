@@ -12,9 +12,9 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
   wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey-0.0.2-py3-none-any.whl"
   pip install --force-reinstall earlgrey-0.0.2-py3-none-any.whl
   rm -rf earlgrey*
-  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/iconCommon-0.9.4-py3-none-any.whl"
-  pip install --force-reinstall iconCommon-0.9.4-py3-none-any.whl
-  rm -rf iconCommon*
+  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/iconcommons-0.9.4-1-py3-none-any.whl"
+  pip install --force-reinstall iconcommons-0.9.4-1-py3-none-any.whl
+  rm -rf iconcommons*
 
 
   if [[ "$2" != "--ignore-test" ]]; then

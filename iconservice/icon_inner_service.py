@@ -24,12 +24,12 @@ from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, EnableThreadFlag, ConfigKey
 from iconservice.utils import check_error_response, to_camel_case, exit_process
 
-from icon_common.logger import Logger
+from iconcommons.logger import Logger
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
 if TYPE_CHECKING:
     from earlgrey import RobustConnection
-    from icon_common.icon_config import IconConfig
+    from iconcommons.icon_config import IconConfig
 
 THREAD_INVOKE = 'invoke'
 THREAD_QUERY = 'query'

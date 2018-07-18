@@ -19,8 +19,8 @@ import asyncio
 
 from .icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
 from .icon_config import default_icon_config
-from icon_common.icon_config import IconConfig
-from icon_common.logger import Logger
+from iconcommons.icon_config import IconConfig
+from iconcommons.logger import Logger
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

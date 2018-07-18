@@ -36,7 +36,7 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils.bloom import BloomFilter
 from iconservice.icon_config import default_icon_config
-from icon_common.icon_config import IconConfig
+from iconcommons.icon_config import IconConfig
 from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
 context_factory = IconScoreContextFactory(max_size=1)

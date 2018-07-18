@@ -19,8 +19,8 @@ from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_
 
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, CONFIG_JSON_PATH
-from icon_common.logger import Logger
-from icon_common.icon_config import IconConfig
+from iconcommons.logger import Logger
+from iconcommons.icon_config import IconConfig
 
 
 class IconService(object):

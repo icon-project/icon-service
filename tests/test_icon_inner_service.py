@@ -27,7 +27,7 @@ from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_config import default_icon_config
-from icon_common.icon_config import IconConfig
+from iconcommons.icon_config import IconConfig
 from tests import create_block_hash, create_address, create_tx_hash
 
 from typing import TYPE_CHECKING

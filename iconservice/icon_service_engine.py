@@ -49,12 +49,12 @@ from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
-from icon_common.logger import Logger
+from iconcommons.logger import Logger
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
     from .iconscore.icon_score_event_log import EventLog
-    from icon_common.icon_config import IconConfig
+    from iconcommons.icon_config import IconConfig
 
 
 def _generate_score_address_for_tbears(score_path: str) -> 'Address':

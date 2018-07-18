@@ -18,7 +18,7 @@ from enum import IntEnum, unique
 from functools import wraps
 
 from ..icon_constant import ICON_EXCEPTION_LOG_TAG
-from icon_common.logger import Logger
+from iconcommons.logger import Logger
 
 from typing import Optional, Union
 
