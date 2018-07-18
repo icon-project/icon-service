@@ -4,7 +4,7 @@ ICON Smart Contract - SCORE
 SCORE (Smart Contract on Reliable Environment) is a smart contract running on ICON network. A contract is a software that resides at a specific address on the blockchain and executed on ICON nodes. They are building blocks for DApp (Decentralized App). SCORE defines and exports interfaces, so that other SCORE can invoke its functions. The code is written in python, and to be uploaded as compressed binary data on the blockchain.
 
 - Deployed SCORE can be updated. SCORE address remains the same after update. 
-- SCORE code size is limited to 1MB after compression. (i.e., transaction size)
+- SCORE code size is limited to about 64 KB (actually bounded by the maximum stepLimit value during its deploy transaction) after compression.
 - SCORE must follow sandbox policy - file system access or network API calls are prohibited.
 
 Simple Token & Crowd Sale
@@ -19,7 +19,7 @@ $ tbears init sample_token SampleToken
 
 Above command will create `sample_token` folder, and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.  `sample_token.py` has a main class declaration whose name is `SampleToken`.  `__init__.py` has auto-generated statements for dynamic import. If folder structure changes, make sure you adjust the import statements.
 
-When you deploy the contract, you can pass the amount of initial tokens to be issue to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
+When you deploy the contract, you can pass the amount of initial tokens to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
 
 ```python
 TAG = 'SampleToken'
@@ -261,9 +261,9 @@ Type hinting is highly recommended for the input parameters and return value. Wh
 
 Example)
 ```python
-@external
-def func1(arg1: int, arg2: str) -> object:
-    pass
+@external(readonly=True)
+def func1(arg1: int, arg2: str) -> int:
+    return 100
 ```
 
 #### Exception handling
@@ -305,7 +305,7 @@ print(name) ## 'theloop'
 ```
 
 ##### DictDB('key', 'target db', 'return type', 'dict depth (default is 1)')
-Example1) One-depth dict (test\_dict1['key']):
+Example 1) One-depth dict (test\_dict1['key']):
 ```python
 test_dict1 = DictDB('test_dict1', db, value_type=int)
 test_dict1['key'] = 1 ## set
@@ -314,7 +314,7 @@ print(test_dict1['key']) ## get 1
 print(test_dict1['nonexistence_key']) # prints 0 (key does not exist and value_type=int)
 ```
 
-Example2) Two-depth dict (test\_dict2\['key1']\['key2']):
+Example 2) Two-depth dict (test\_dict2\['key1']\['key2']):
 ```python
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
@@ -326,7 +326,7 @@ print(test_dict2['key1']['nonexistent_key']) # prints "" (key does not exist and
 If the depth is more than 2, dict[key] returns new DictDB.
 Attempting to set a value to the wrong depth in the DictDB will raise an exception.    
 
-Example3)
+Example 3)
 ```python
 test_dict3 = DictDB('test_dict3', db, value_type=int, depth=3)
 test_dict3['key1']['key2']['key3'] = 1 ## ok
@@ -361,14 +361,14 @@ print(test_array[-1]) ## ok
 Functions decorated with `@external` can be called from outside the contract.
 These functions are registered on the exportable API list.
 Any attempt to call a non-external function from outside the contract will fail.
-If a function is decorated with readonly parameters, i.e., `@external(readonly=True)`,
-the function will have read-only access to the state DB. This is similar to view keyward in Solidity.
+If a function is decorated with 'readonly' parameters, i.e., `@external(readonly=True)`,
+the function will have read-only access to the state DB. This is similar to view keyword in Solidity.
 If the read-only external function is also decorated with `@payable`, the function call will fail.
 Duplicate declaration of `@external` will raise IconScoreException on import time.
 
 #### payable decorator (@payable)
 Only functions with `@payable` decorator are permitted to transfer icx coins.
-Transfering 0 icx is accceptable. 
+Transferring 0 icx is acceptable.
 If msg.value (icx) is passed to non-payable function, the call will fail.
 
 #### eventlog decorator (@eventlog)
@@ -425,7 +425,7 @@ sample_token_score = self.create_interface_score(self.__addr_token_score.get(), 
 sample_token_score.transfer(self.msg.sender, value)
 ```
 
-Built-in fucntions
+Built-in functions
 --------------
 #### create\_interface\_score('score address', 'interface class') -> interface class instance
 This function returns an object, through which you have an access to the designated Score's external functions.
@@ -441,7 +441,7 @@ Built-in properties
 
 #### msg : Holds information of the account who called the Score.
 * msg.sender :
-Address of the account who called this funciton.
+Address of the account who called this function.
 If other contact called this function, msg.sender points to the caller contract's address.
 * msg.value :
 Amount of icx that the sender attempts to transfer to the current Score.
@@ -462,7 +462,7 @@ Amount of icx that the sender attempts to transfer to the current Score.
 * icx.transfer(addr\_to(address), amount(integer)) -> bool
 Transfers designated amount of icx coin to `addr_to`.
 If exception occurs during execution, the exception will be escalated.
-Returns True if coin transer succeeds.
+Returns True if coin transfer succeeds.
 
 * icx.send(addr\_to(address), amount(integer)) -> bool
 Sends designated amount of icx coin to `addr_to`.
