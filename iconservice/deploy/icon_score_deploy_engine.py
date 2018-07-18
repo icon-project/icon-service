@@ -26,7 +26,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconDeployFlag
-from ..logger import Logger
+from icon_common import Logger
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -198,7 +198,6 @@ class IconScoreDeployEngine(object):
 
         if not is_exist_db:
             self._initialize_score(
-                context=context,
                 on_deploy=score.on_install,
                 params={})
 
@@ -250,18 +249,15 @@ class IconScoreDeployEngine(object):
 
         if not db_exist:
             self._initialize_score(
-                context=context,
                 on_deploy=on_deploy,
                 params=params)
 
-    def _initialize_score(self,
-                          context: 'IconScoreContext',
-                          on_deploy: Callable[[dict], None],
+    @staticmethod
+    def _initialize_score(on_deploy: Callable[[dict], None],
                           params: dict) -> None:
         """on_install() or on_update() of score is called
         only once when installed or updated
 
-        :param context:
         :param on_deploy: score.on_install() or score.on_update()
         :param params: paramters passed to on_install or on_update()
         """

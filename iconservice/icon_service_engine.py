@@ -49,12 +49,12 @@ from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
-from .logger import Logger
+from icon_common.logger import Logger
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
     from .iconscore.icon_score_event_log import EventLog
-    from .icon_config import Configure
+    from icon_common.icon_config import IconConfig
 
 
 def _generate_score_address_for_tbears(score_path: str) -> 'Address':
@@ -129,19 +129,17 @@ class IconServiceEngine(ContextContainer):
     def _is_flag_on(self, flag: 'IconServiceFlag') -> bool:
         return (self._flag & flag) == flag
 
-    def open(self,
-             conf: 'Configure',
-             icon_score_root_path: str,
-             state_db_root_path: str) -> None:
+    def open(self, conf: 'IconConfig') -> None:
         """Get necessary parameters and initialize diverse objects
 
         :param conf:
-        :param icon_score_root_path:
-        :param state_db_root_path:
         """
 
         self._conf = conf
-        self._flag = self._conf.get_value(ConfigKey.ICON_SERVICE_FLAG)
+        self._flag = self._conf[ConfigKey.ICON_SERVICE_FLAG]
+        icon_score_root_path = self._conf[ConfigKey.ICON_SCORE_ROOT]
+        state_db_root_path = self._conf[ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH]
+
         makedirs(icon_score_root_path, exist_ok=True)
         makedirs(state_db_root_path, exist_ok=True)
 
@@ -191,7 +189,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             icon_builtin_score_loader = IconBuiltinScoreLoader(self._icon_score_deploy_engine)
-            icon_builtin_score_loader.load_builtin_scores(context, self._conf.get_value(ConfigKey.ADMIN_ADDRESS))
+            icon_builtin_score_loader.load_builtin_scores(context, self._conf[ConfigKey.ADMIN_ADDRESS])
         finally:
             self._delete_context(context)
 

@@ -28,7 +28,6 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.icon_constant import IconServiceFlag, ConfigKey
-from iconservice.icon_config import Configure
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -36,6 +35,8 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils.bloom import BloomFilter
+from iconservice.icon_config import default_icon_config
+from icon_common.icon_config import IconConfig
 from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
 context_factory = IconScoreContextFactory(max_size=1)
@@ -61,10 +62,11 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
-        conf = Configure(args={ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN'))})
-        engine.open(conf,
-                    self._icon_score_root_path,
-                    self._state_db_root_path)
+        conf = IconConfig("", default_icon_config)
+        conf.load({ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN')),
+                   ConfigKey.ICON_SCORE_ROOT: self._icon_score_root_path,
+                   ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH: self._state_db_root_path})
+        engine.open(conf)
         self._engine = engine
 
         self._genesis_address = create_address(
