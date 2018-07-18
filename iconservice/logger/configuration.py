@@ -24,7 +24,7 @@ class LogHandlerType(IntEnum):
     NONE = 0
     CONSOLE = 1
     FILE = 2
-    DAILY_ROTATION = 4
+    DAILY = 4
 
 
 class LogConfiguration:
@@ -83,7 +83,7 @@ class LogConfiguration:
             handlers.append(
                 logging.FileHandler(self.__log_file_path, 'w', 'utf-8'))
 
-        if self.__handler_type & LogHandlerType.DAILY_ROTATION:
+        if self.__handler_type & LogHandlerType.DAILY:
             handlers.append(
                 TimedRotatingFileHandler(self.__log_file_path, when='D'))
 
