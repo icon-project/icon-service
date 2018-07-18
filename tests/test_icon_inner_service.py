@@ -614,7 +614,7 @@ class TestIconServiceEngine(unittest.TestCase):
                 await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
-            tx_hash = tx_results[0]['txHash']
+            next_tx_hash = tx_results[0]['txHash']
 
             version = 3
             token_addr = tx_results[0]['scoreAddress']
@@ -635,11 +635,13 @@ class TestIconServiceEngine(unittest.TestCase):
 
             response = await self._icx_call(request)
             self.assertEqual('pending', response['next']['status'])
+            self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
             prev_block_hash, is_commit, tx_results = \
-                await self._accept_deploy_score(2, prev_block_hash, self._admin_addr, tx_hash)
+                await self._accept_deploy_score(2, prev_block_hash, self._admin_addr, next_tx_hash)
 
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
+            audit_tx_hash = tx_results[0]['txHash']
 
             request = {
                 "version": hex(version),
@@ -655,6 +657,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
             response = await self._icx_call(request)
             self.assertEqual('active', response['current']['status'])
+            self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
 
             request = {
                 "version": hex(version),
@@ -667,7 +670,6 @@ class TestIconServiceEngine(unittest.TestCase):
                 }
             }
 
-            self.assertEqual(str(addr_from), "hx22e518ccd16760355023affd8c29f80bf7b8a0bd")
             response = await self._icx_call(request)
             self.assertEqual(response, "0x3635c9adc5dea00000")
 
@@ -675,7 +677,8 @@ class TestIconServiceEngine(unittest.TestCase):
                 await self._install_sample_token_invoke('sample_token2', token_addr, 3, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
-            tx_hash = tx_results[0]['txHash']
+            current_tx_hash = next_tx_hash
+            next_tx_hash = tx_results[0]['txHash']
 
             request = {
                 "version": hex(version),
@@ -691,13 +694,50 @@ class TestIconServiceEngine(unittest.TestCase):
             }
             response = await self._icx_call(request)
             self.assertEqual('active', response['current']['status'])
+            self.assertEqual(current_tx_hash, response['current']['deployTxHash'][2:])
+            self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
             self.assertEqual('pending', response['next']['status'])
+            self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
             prev_block_hash, is_commit, tx_results = \
-                await self._accept_deploy_score(4, prev_block_hash, self._admin_addr, tx_hash)
+                await self._accept_deploy_score(4, prev_block_hash, self._admin_addr, next_tx_hash)
 
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
+            audit_tx_hash = tx_results[0]['txHash']
+
+            request = {
+                "version": hex(version),
+                "from": str(addr_from),
+                "to": str(GOVERNANCE_SCORE_ADDRESS),
+                "dataType": "call",
+                "data": {
+                    "method": "getScoreStatus",
+                    "params": {
+                        "address": token_addr
+                    }
+                }
+            }
+
+            response = await self._icx_call(request)
+            current_tx_hash = next_tx_hash
+            self.assertEqual('active', response['current']['status'])
+            self.assertEqual(current_tx_hash, response['current']['deployTxHash'][2:])
+            self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
+
+            request = {
+                "version": hex(version),
+                "from": str(addr_from),
+                "to": token_addr,
+                "dataType": "call",
+                "data": {
+                    "method": "total_supply",
+                    "params": {}
+                }
+            }
+
+            response = await self._icx_call(request)
+            self.assertEqual(response, "0x0")
 
         try:
             loop = asyncio.get_event_loop()
