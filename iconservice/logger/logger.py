@@ -62,7 +62,7 @@ class Logger:
     @staticmethod
     def import_dict(conf: dict):
         log_format = conf.get("format", DEFAULT_LOG_FORMAT)
-        log_level = LogLevel[conf.get("level", 'DEBUG').upper()]
+        log_level = LogLevel[conf.get("level", 'debug').upper()]
         log_color = conf.get("colorLog", False)
         log_output = conf.get('filePath', DEFAULT_LOG_FILE_PATH)
 
@@ -87,7 +87,7 @@ class Logger:
         preset.log_level = LogLevel.DEBUG
         preset.log_color = False
         preset.log_file_path = DEFAULT_LOG_FILE_PATH
-        preset.set_handler(LogHandlerType.CONSOLE|LogHandlerType.FILE)
+        preset.set_handler(LogHandlerType.CONSOLE | LogHandlerType.FILE)
         return preset
 
     def update_other_logger_level(self, logger_name: str):
