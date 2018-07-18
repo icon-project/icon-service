@@ -26,7 +26,8 @@ import os
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
-from iconservice.icon_config import Configure
+from iconservice.icon_config import default_icon_config
+from iconcommons.icon_config import IconConfig
 from tests import create_block_hash, create_address, create_tx_hash
 
 from typing import TYPE_CHECKING
@@ -46,8 +47,9 @@ class TestIconServiceEngine(unittest.TestCase):
             pass
 
         self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
-        conf = Configure(args={ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
-        self._inner_task = IconScoreInnerTask(conf, self._icon_score_root_path, self._state_db_root_path)
+        conf = IconConfig("", default_icon_config)
+        conf.load({ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
+        self._inner_task = IconScoreInnerTask(conf)
         self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
 

@@ -20,8 +20,8 @@ from sys import path as sys_path
 from os import path, listdir
 from os.path import dirname
 from collections import defaultdict
-from ..logger import Logger
-from ..icon_config import *
+from iconcommons.logger import Logger
+from iconservice.icon_constant import ICON_LOADER_LOG_TAG
 
 
 class IconScoreLoader(object):

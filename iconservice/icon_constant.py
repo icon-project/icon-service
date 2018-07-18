@@ -34,18 +34,11 @@ FIXED_FEE = 10 ** 16
 ICON_DEX_DB_NAME = 'icon_dex'
 
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
-DEFAULT_ICON_SERVICE_FOR_TBEARS_ARGUMENT = {'icon_score_root_path': '.score',
-                                            'icon_score_state_db_root_path': '.db',
-                                            'channel': 'tbears_channel',
-                                            'amqp_key': 'amqp_key',
-                                            'amqp_target': '127.0.0.1'}
-
-ICON_SERVICE_PROCTITLE_FORMAT = "icon_service.{type}." \
+ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{iconScoreRootPath}." \
                                 "{iconScoreStateDbRootPath}." \
                                 "{channel}.{amqpKey}." \
-                                "{amqpTarget}." \
-                                "{config}"
+                                "{amqpTarget}"
 
 
 class ConfigKey:

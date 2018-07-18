@@ -18,7 +18,7 @@ from .base.exception import *
 from .icon_service_cli import main
 from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
 from .iconscore.icon_score_base import *
-from .logger import Logger
+from iconcommons.logger import Logger
 
 if __name__ == '__main__':
     main()

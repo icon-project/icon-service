@@ -18,11 +18,11 @@ import plyvel
 
 from iconservice.base.address import Address
 from iconservice.base.exception import DatabaseException
+from iconservice.icon_constant import ICON_DB_LOG_TAG
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.utils import sha3_256
-from iconservice.logger.logger import Logger
-from iconservice.icon_config import *
+from iconcommons.logger import Logger
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
@@ -192,6 +192,7 @@ class ContextDatabase(PlyvelDatabase):
         2. BlockBatch
         3. StateDB
 
+        :param context:
         :param key:
 
         :return: a value for a given key

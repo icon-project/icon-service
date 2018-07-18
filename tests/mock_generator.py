@@ -17,9 +17,10 @@ from collections import namedtuple
 from typing import List
 from unittest.mock import Mock, patch
 
-from iconservice.icon_config import Configure
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.icon_config import default_icon_config
+from iconcommons.icon_config import IconConfig
 from tests import create_block_hash
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
@@ -39,7 +40,7 @@ def generate_inner_task(
         icx_engine_open,
         service_engine_load_builtin_scores,
         service_engine_init_global_value_by_governance_score):
-    inner_task = IconScoreInnerTask(Configure(""), ".", ".")
+    inner_task = IconScoreInnerTask(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
     db_factory_create_by_name.assert_called()
@@ -76,7 +77,7 @@ def generate_service_engine(
     # to ignore initializing governance SCORE
     service_engine._init_global_value_by_governance_score = Mock()
 
-    service_engine.open(Configure(""), ".", ".")
+    service_engine.open(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
     db_factory_create_by_name.assert_called()
