@@ -22,7 +22,14 @@ Above command will create `sample_token` folder, and generate `__init__.py`, `sa
 When you deploy the contract, you can pass the amount of initial tokens to be issue to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
 
 ```python
-class SampleToken(IconScoreBase, TokenStandard):
+TAG = 'SampleToken'
+
+class CrowdSaleInterface(InterfaceScore):
+    @interface
+    def tokenFallback(self, _from: Address, _value: int, _data: bytes):
+        pass
+
+class SampleToken(IconScoreBase):
 
     _BALANCES = 'balances'
     _TOTAL_SUPPLY = 'total_supply'
@@ -31,8 +38,8 @@ class SampleToken(IconScoreBase, TokenStandard):
     def Transfer(self, _from: Address, _to: Address, _value: int, _data: bytes):
         pass
 
-    def __init__(self, db: IconScoreDatabase, _owner: Address) -> None:
-        super().__init__(db, _owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)
 
@@ -128,8 +135,8 @@ class SampleCrowdSale(IconScoreBase):
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
-    def __init__(self, db: IconScoreDatabase, _owner: Address) -> None:
-        super().__init__(db, _owner)
+    def __init__(self, db: IconScoreDatabase) -> None:
+        super().__init__(db)
 
         self._addr_beneficiary = VarDB(self._ADDR_BENEFICIARY, db, value_type=Address)
         self._addr_token_score = VarDB(self._ADDR_TOKEN_SCORE, db, value_type=Address)
