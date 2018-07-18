@@ -1,103 +1,124 @@
-ICON DApp Guide
+ICON Smart Contract - SCORE
 ==================================
 
-Overview
+SCORE (Smart Contract on Reliable Environment) is a smart contract running on ICON network. A contract is a software that resides at a specific address on the blockchain and executed on ICON nodes. They are building blocks for DApp (Decentralized App). SCORE defines and exports interfaces, so that other SCORE can invoke its functions. The code is written in python, and to be uploaded as compressed binary data on the blockchain.
+
+- Deployed SCORE can be updated. SCORE address remains the same after update. 
+- SCORE code size is limited to 1MB after compression. (i.e., transaction size)
+- SCORE must follow sandbox policy - file system access or network API calls are prohibited.
+
+Simple Token & Crowd Sale
 --------------
 
-This document explains how to create a DApp program under the ICON Score framework.
+This document will explain how to write SCOREs with tbears framework.
 Let's start by creating a simple token contract.
 
 ```
 $ tbears init sample_token SampleToken
 ```
 
-Above command will create `sample_token` folder,
-and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.
-`sample_token.py` has a main class declaration whose name is `SampleToken`.
-`__init__.py` has auto-generated statements for dynamic import.
-If folder structure changes, make sure you adjust the import statements.
+Above command will create `sample_token` folder, and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.  `sample_token.py` has a main class declaration whose name is `SampleToken`.  `__init__.py` has auto-generated statements for dynamic import. If folder structure changes, make sure you adjust the import statements.
 
-This exmaple generates 1,000 initial tokens, and 100% of tokens go to the contract owner.
-Transfer function is given to transfer tokens to other accounts.
+When you deploy the contract, you can pass the amount of initial tokens to be issue to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
 
 ```python
-class SampleToken(IconScoreBase):
+class SampleToken(IconScoreBase, TokenStandard):
 
-    __BALANCES = 'balances'
-    __TOTAL_SUPPLY = 'total_supply'
+    _BALANCES = 'balances'
+    _TOTAL_SUPPLY = 'total_supply'
 
     @eventlog(indexed=3)
-    def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
+    def Transfer(self, _from: Address, _to: Address, _value: int, _data: bytes):
+        pass
 
-    def __init__(self, db: IconScoreDatabase) -> None:
-        super().__init__(db)
-        self.__total_supply = VarDB(self.__TOTAL_SUPPLY, db, value_type=int)
-        self.__balances = DictDB(self.__BALANCES, db, value_type=int)
+    def __init__(self, db: IconScoreDatabase, _owner: Address) -> None:
+        super().__init__(db, _owner)
+        self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
 
-    def on_install(self, init_supply: int = 1000, decimal: int = 18) -> None:
+    def on_install(self, initialSupply: int, decimals: int) -> None:
         super().on_install()
 
-        total_supply = init_supply * 10 ** decimal
+        total_supply = initialSupply * 10 ** decimals
+        Logger.debug(f'on_install: total_supply={total_supply}', TAG)
 
-        self.__total_supply.set(total_supply)
-        self.__balances[self.msg.sender] = total_supply
+        self._total_supply.set(total_supply)
+        self._balances[self.msg.sender] = total_supply
 
     def on_update(self) -> None:
         super().on_update()
 
     @external(readonly=True)
-    def total_supply(self) -> int:
-        return self.__total_supply.get()
+    def name(self) -> str:
+        return "SampleToken"
 
     @external(readonly=True)
-    def balance_of(self, addr_from: Address) -> int:
-        return self.__balances[addr_from]
+    def symbol(self) -> str:
+        return "MST"
 
-    def __transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
+    @external(readonly=True)
+    def decimals(self) -> int:
+        return 18
 
-        if self.balance_of(_addr_from) < _value:
-            self.revert(f"{_addr_from}'s balance < {_value}")
+    @external(readonly=True)
+    def totalSupply(self) -> int:
+        return self._total_supply.get()
 
-        self.__balances[_addr_from] = self.__balances[_addr_from] - _value
-        self.__balances[_addr_to] = self.__balances[_addr_to] + _value
-
-        self.Transfer(_addr_from, _addr_to, _value)
-        return True
+    @external(readonly=True)
+    def balanceOf(self, _owner: Address) -> int:
+        return self._balances[_owner]
 
     @external
-    def transfer(self, addr_to: Address, value: int) -> bool:
-        return self.__transfer(self.msg.sender, addr_to, value)
+    def transfer(self, _to: Address, _value: int, _data: bytes=None):
+        if _data is None:
+            _data = b'None'
+        self._transfer(self.msg.sender, _to, _value, _data)
 
-    def fallback(self) -> None:
-        pass
+    def _transfer(self, _from: Address, _to: Address, _value: int, _data: bytes):
+        if self._balances[_from] < _value:
+            self.revert("Out of balance")
+
+        self._balances[_from] = self._balances[_from] - _value
+        self._balances[_to] = self._balances[_to] + _value
+        if _to.is_contract:
+            crowdsale_score = self.create_interface_score(_to, CrowdSaleInterface)
+            crowdsale_score.tokenFallback(_from, _value, _data)
+        self.Transfer(_from, _to, _value, _data)
+        Logger.debug(f'Transfer({_from}, {_to}, {_value}, {_data})', TAG)
 
 ```
 
-Now, we are going to write a crowd sale contract using above token.
-Exchange ratio to icx is 1:1, and the crowd sale duration is 1 minute.
-`total_joiner_count` function returns the number of contributors,
-and `check_goal_reached` function tests if the crowd sale target has been met.
-After the crowd sale finished, `safe_withdrawal` function transfers the fund to the beneficiery,
-contract owner in this example, if the sales target has been met.
-However, if sales target failed, this function refunds to the contributors.
+Now, we are going to write a crowd sale contract using above token. Let's create a new project for the crowd sale contract. 
+
+```
+$ tbears init sample_crowdsale SampleCrowdSale
+```
+
+Exchange ratio to ICX is 1:1. Crowdsale target and its duration are set when the contract is first deployed.
+
+`total_joiner_count` function returns the number of contributors, and `check_goal_reached` function tests if the crowdsale target has been met.
+
+After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiery, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdrow their contributions back.
 
 ```python
-class SampleTokenInterface(InterfaceScore):
-    @interface
-    def transfer(self, addr_to: Address, value: int) -> bool: pass
+TAG = 'SampleCrowdSale'
 
+class TokenInterface(InterfaceScore):
+    @interface
+    def transfer(self, _to: Address, _value: int, _data: bytes=None):
+        pass
 
 class SampleCrowdSale(IconScoreBase):
-    __ADDR_BENEFICIARY = 'addr_beneficiary'
-    __FUNDING_GOAL = 'funding_goal'
-    __AMOUNT_RAISE = 'amount_raise'
-    __DEAD_LINE = 'dead_line'
-    __PRICE = 'price'
-    __BALANCES = 'balances'
-    __ADDR_TOKEN_SCORE = 'addr_token_score'
-    __FUNDING_GOAL_REACHED = 'funding_goal_reached'
-    __CROWD_SALE_CLOSED = 'crowd_sale_closed'
-    __JOINER_LIST = 'joiner_list'
+    _ADDR_BENEFICIARY = 'addr_beneficiary'
+    _ADDR_TOKEN_SCORE = 'addr_token_score'
+    _FUNDING_GOAL = 'funding_goal'
+    _AMOUNT_RAISED = 'amount_raised'
+    _DEAD_LINE = 'dead_line'
+    _PRICE = 'price'
+    _BALANCES = 'balances'
+    _JOINER_LIST = 'joiner_list'
+    _FUNDING_GOAL_REACHED = 'funding_goal_reached'
+    _CROWDSALE_CLOSED = 'crowdsale_closed'
 
     @eventlog(indexed=3)
     def FundTransfer(self, backer: Address, amount: int, is_contribution: bool):
@@ -107,109 +128,129 @@ class SampleCrowdSale(IconScoreBase):
     def GoalReached(self, recipient: Address, total_amount_raised: int):
         pass
 
-    def __init__(self, db: IconScoreDatabase) -> None:
-        super().__init__(db)
+    def __init__(self, db: IconScoreDatabase, _owner: Address) -> None:
+        super().__init__(db, _owner)
 
-        self.__addr_beneficiary = VarDB(self.__ADDR_BENEFICIARY, db, value_type=Address)
-        self.__addr_token_score = VarDB(self.__ADDR_TOKEN_SCORE, db, value_type=Address)
-        self.__funding_goal = VarDB(self.__FUNDING_GOAL, db, value_type=int)
-        self.__amount_raise = VarDB(self.__AMOUNT_RAISE, db, value_type=int)
-        self.__dead_line = VarDB(self.__DEAD_LINE, db, value_type=int)
-        self.__price = VarDB(self.__PRICE, db, value_type=int)
-        self.__balances = DictDB(self.__BALANCES, db, value_type=int)
-        self.__joiner_list = ArrayDB(self.__JOINER_LIST, db, value_type=Address)
-        self.__funding_goal_reached = VarDB(self.__FUNDING_GOAL_REACHED, db, value_type=bool)
-        self.__crowd_sale_closed = VarDB(self.__CROWD_SALE_CLOSED, db, value_type=bool)
+        self._addr_beneficiary = VarDB(self._ADDR_BENEFICIARY, db, value_type=Address)
+        self._addr_token_score = VarDB(self._ADDR_TOKEN_SCORE, db, value_type=Address)
+        self._funding_goal = VarDB(self._FUNDING_GOAL, db, value_type=int)
+        self._amount_raised = VarDB(self._AMOUNT_RAISED, db, value_type=int)
+        self._dead_line = VarDB(self._DEAD_LINE, db, value_type=int)
+        self._price = VarDB(self._PRICE, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
+        self._joiner_list = ArrayDB(self._JOINER_LIST, db, value_type=Address)
+        self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
+        self._crowdsale_closed = VarDB(self._CROWDSALE_CLOSED, db, value_type=bool)
 
-        self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
-
-    def on_install(self, funding_goal_in_icx: int = 100, duration_in_minutes: int = 1,
-                   icx_cost_of_each_token: int = 1) -> None:
+    def on_install(self, fundingGoalInIcx: int, tokenScore: Address, durationInSeconds: int) -> None:
         super().on_install()
 
-        one_icx = 1 * 10 ** 18
-        one_minute_to_sec = 1 * 60
-        one_second_to_microsec = 1 * 10 ** 6
+        Logger.debug(f'on_install: fundingGoalInIcx={fundingGoalInIcx}', TAG)
+        Logger.debug(f'on_install: tokenScore={tokenScore}', TAG)
+        Logger.debug(f'on_install: durationInSeconds={durationInSeconds}', TAG)
+
+        one_second_in_microseconds = 1 * 10 ** 6
         now_seconds = self.now()
+        icx_cost_of_each_token = 1
 
-        # genesis params
-        if_successful_send_to = self.msg.sender
-        addr_token_score = Address.from_string('cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf')
+        self._addr_beneficiary.set(self.msg.sender)
+        self._addr_token_score.set(tokenScore)
+        self._funding_goal.set(fundingGoalInIcx)
+        self._dead_line.set(now_seconds + durationInSeconds * one_second_in_microseconds)
+        price = int(icx_cost_of_each_token)
+        self._price.set(price)
 
-        self.__addr_beneficiary.set(if_successful_send_to)
-        self.__addr_token_score.set(addr_token_score)
-        self.__funding_goal.set(funding_goal_in_icx * one_icx)
-        self.__dead_line.set(now_seconds + duration_in_minutes * one_minute_to_sec * one_second_to_microsec)
-        price = int(icx_cost_of_each_token * one_icx)
-        self.__price.set(price)
-
-        self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
+        self._funding_goal_reached.set(False)
+        self._crowdsale_closed.set(True)  # CrowdSale closed by default
 
     def on_update(self) -> None:
         super().on_update()
 
-    @external(readonly=True)
-    def total_joiner_count(self):
-        return len(self.__joiner_list)
+    @external
+    def tokenFallback(self, _from: Address, _value: int, _data: bytes):
+        if self.msg.sender == self._addr_token_score.get() \
+                and _from == self.owner:
+            # token supply to CrowdSale
+            Logger.debug(f'tokenFallback: token supply = "{_value}"', TAG)
+            if _value >= 0:
+                self._crowdsale_closed.set(False)  # start CrowdSale hereafter
+        else:
+            # reject if this is an unrecognized token transfer
+            Logger.debug(f'tokenFallback: REJECT transfer', TAG)
+            self.revert('Unexpected token owner!')
 
     @payable
-    def fallback(self) -> None:
-        if self.__crowd_sale_closed.get():
-            self.revert('crowd sale is closed')
+    def fallback(self):
+        if self._crowdsale_closed.get():
+            self.revert('CrowdSale is closed.')
 
         amount = self.msg.value
-        self.__balances[self.msg.sender] = self.__balances[self.msg.sender] + amount
-        self.__amount_raise.set(self.__amount_raise.get() + amount)
-        value = int(amount / self.__price.get())
+        self._balances[self.msg.sender] = self._balances[self.msg.sender] + amount
+        self._amount_raised.set(self._amount_raised.get() + amount)
+        value = int(amount / self._price.get())
+        data = b'called from CrowdSale'
+        token_score = self.create_interface_score(self._addr_token_score.get(), TokenInterface)
+        token_score.transfer(self.msg.sender, value, data)
 
-        self.__sample_token_score.transfer(self.msg.sender, value)
-
-        if self.msg.sender not in self.__joiner_list:
-            self.__joiner_list.put(self.msg.sender)
+        if self.msg.sender not in self._joiner_list:
+            self._joiner_list.put(self.msg.sender)
 
         self.FundTransfer(self.msg.sender, amount, True)
+        Logger.debug(f'FundTransfer({self.msg.sender}, {amount}, True)', TAG)
+
+    @external(readonly=True)
+    def total_joiner_count(self) -> int:
+        return len(self._joiner_list)
+
+    def _after_dead_line(self) -> bool:
+        Logger.debug(f'after_dead_line: now()       = {self.now()}', TAG)
+        Logger.debug(f'after_dead_line: dead_line() = {self._dead_line.get()}', TAG)
+        return self.now() >= self._dead_line.get()
 
     @external
     def check_goal_reached(self):
-        if not self.__after_dead_line():
-            self.revert('before deadline')
-
-        if self.__amount_raise.get() >= self.__funding_goal.get():
-            self.__funding_goal_reached.set(True)
-            self.GoalReached(self.__addr_beneficiary.get(), self.__amount_raise.get())
-        self.__crowd_sale_closed.set(True)
-
-    def __after_dead_line(self):
-        return self.now() >= self.__dead_line.get()
+        if self._after_dead_line():
+            if self._amount_raised.get() >= self._funding_goal.get():
+                self._funding_goal_reached.set(True)
+                self.GoalReached(self._addr_beneficiary.get(), self._amount_raised.get())
+                Logger.debug(f'Goal reached!', TAG)
+            self._crowdsale_closed.set(True)
 
     @external
     def safe_withdrawal(self):
-        if not self.__after_dead_line():
-            self.revert('before deadline')
+        if self._after_dead_line():
+            # each contributor can withdraw the amount they contributed 
+            # if the goal was not reached
+            if not self._funding_goal_reached.get():
+                amount = self._balances[self.msg.sender]
+                self._balances[self.msg.sender] = 0
+                if amount > 0:
+                    if self.icx.send(self.msg.sender, amount):
+                        self.FundTransfer(self.msg.sender, amount, False)
+                        Logger.debug(f'FundTransfer({self.msg.sender}, {amount}, False)', TAG)
+                    else:
+                        self._balances[self.msg.sender] = amount
 
-        if not self.__funding_goal_reached.get():
-            amount = self.__balances[self.msg.sender]
-            self.__balances[self.msg.sender] = 0
-            if amount > 0:
-                if self.icx.send(self.msg.sender, amount):
-                    self.FundTransfer(self.msg.sender, amount, False)
+            if self._funding_goal_reached.get() and self._addr_beneficiary.get() == self.msg.sender:
+                if self.icx.send(self._addr_beneficiary.get(), self._amount_raised.get()):
+                    self.FundTransfer(self._addr_beneficiary.get(), self._amount_raised.get(), False)
+                    Logger.debug(f'FundTransfer({self._addr_beneficiary.get()},'
+                                 f'{self._amount_raised.get()}, False)', TAG)
                 else:
-                    self.__balances[self.msg.sender] = amount
-
-        if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
-            if self.icx.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.FundTransfer(self.__addr_beneficiary.get(), self.__amount_raise.get(), False)
-            else:
-                self.__funding_goal_reached.set(False)
+                    # if the transfer to beneficiary fails, unlock contributors balance
+                    Logger.debug(f'Failed to send to beneficiary!', TAG)
+                    self._funding_goal_reached.set(False)
 
 ```
 
 
+
 Syntax 
 --------------
-Type hinting is highly recommended for the input parameters and return value.
-When querying Score's APIs, API specification is generated based on its type hints.
-If type hints are not given, only function names will be returned.
+
+#### Type hints
+
+Type hinting is highly recommended for the input parameters and return value. When querying Score's APIs, API specification is generated based on its type hints. If type hints are not given, only function names will return.
 
 Example)
 ```python
@@ -219,14 +260,14 @@ def func1(arg1: int, arg2: str) -> object:
 ```
 
 #### Exception handling
-When you handle exceptions in your contract, it is recommended to inherit IconServiceBaseException.
+When you handle exceptions in your contract, it is recommended to inherit `IconServiceBaseException`.
 
 #### IconScoreBase (The highest parent class)
-Every DApp classes must inherit IconScoreBase. Contracts not derived from IconScoreBase can not be deployed.
+Every classes must inherit `IconScoreBase`. Contracts not derived from `IconScoreBase` can not be deployed.
 
 #### \_\_init\_\_
-This is a python init function. This function is called when the contract is loaded at each node.
-Member variables should be declared here.
+This is a python init function. This function is called when the contract is loaded at each node. Member variables should be declared here. 
+
 Also, parent's init function must be called as follows.
 
 Example)
@@ -235,22 +276,22 @@ super().__init__(db)
 ```
 
 #### on\_install
-This function is called once when the conract is deployed for the first time, and will not be called again on contract update or deletion afterward.
+This function is called when the contract is deployed for the first time, and will not be called again on contract update or deletion afterward.
 This is the place where you initialize the state DB.
 
 #### VarDB, DictDB, ArrayDB
 VarDB, DictDB, ArrayDB are utility classes wrapping the state DB.
-A key can be a number or characters, and value\_type can be int, str, Address, and bytes.
-If the key does not exist, these classes return 0 when value\_type is int, return "" when str, return None when the value\_type is Address or bytes.
+A `key` can be a number or characters, and `value_type` can be `int`, `str`, `Address`, and `bytes`.
+If the `key` does not exist, these classes return 0 when `value_type` is `int`, return "" when `str`, return None when the `value_type` is `Address` or `bytes`.
 VarDB can be used to store simple key-value state, and DictDB behaves more like python dict.
 DictDB does not maintain order, whereas ArrayDB, which supports length and iterator, maintains order.
 
 ##### VarDB('key', 'target db', 'return type')
-Example) Setting 'theloop' for the key 'name' on the state DB:
+Example) Setting `theloop` for the key `name` on the state DB:
 ```python
 VarDB('name', db, value_type=str).set('theloop')
 ```
-Example) Getting value by the key 'name':
+Example) Getting value by the key `name`:
 ```python
 name = VarDB('name', db, value_type=str).get()
 print(name) ## 'theloop'
@@ -363,7 +404,7 @@ class SampleTokenInterface(InterfaceScore):
     @interface
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 ```
-If other Score has the function that has the same signature as defined here with `@interface` decorator,
+If other SCORE has the function that has the same signature as defined here with `@interface` decorator,
 then that function can be invoked via InterfaceScore class object.
 Like `@eventlog` decorator, it is recommended to declare a function without implementation body.
 If there is a function body, it will be simply ignored.
@@ -412,12 +453,12 @@ Amount of icx that the sender attempts to transfer to the current Score.
 
 #### icx : An object used to transfer icx coin.
 * icx.transfer(addr\_to(address), amount(integer)) -> bool
-Transfers designated amount of icx coin to addr\_to.
+Transfers designated amount of icx coin to `addr_to`.
 If exception occurs during execution, the exception will be escalated.
 Returns True if coin transer succeeds.
 
 * icx.send(addr\_to(address), amount(integer)) -> bool
-Sends designated amount of icx coin to addr\_to.
+Sends designated amount of icx coin to `addr_to`.
 Basic behavior is same as transfer, the difference is that exception is caught inside the function.
 Returns True when coin transfer succeeded, False when failed.
 
