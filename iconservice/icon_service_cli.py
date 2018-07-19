@@ -137,11 +137,11 @@ async def stop_process(conf: 'IconConfig'):
     Logger.info(f'stop_process_icon_service!', ICON_SERVICE_STANDALONE)
 
 
-def is_serve_icon_service(conf: dict) -> bool:
+def is_serve_icon_service(conf: 'IconConfig') -> bool:
     return _check_serve(conf)
 
 
-def _check_serve(conf: dict) -> bool:
+def _check_serve(conf: 'IconConfig') -> bool:
     Logger.info(f'check_serve_icon_service!', ICON_SERVICE_STANDALONE)
     proc_title = ICON_SERVICE_PROCTITLE_FORMAT.format(**
         {ConfigKey.ICON_SCORE_ROOT: conf[ConfigKey.ICON_SCORE_ROOT],
