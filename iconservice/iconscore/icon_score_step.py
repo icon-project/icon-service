@@ -73,17 +73,21 @@ class IconScoreStepCounterFactory(object):
         """
         self._step_price = step_price
 
-    def create(self, step_limit: int) -> 'IconScoreStepCounter':
+    def create(self, step_limit: int, exception_on_exceeded=True) \
+            -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
         :param step_limit: step limit of the transaction
-        :param step_price:
+        :param exception_on_exceeded:
         :return: step counter
         """
         # Copying a `dict` so as not to change step costs when processing a
         # transaction.
         return IconScoreStepCounter(
-            self._step_cost_dict.copy(), step_limit, self._step_price)
+            self._step_cost_dict.copy(),
+            step_limit,
+            exception_on_exceeded,
+            self._step_price)
 
 
 class OutOfStepException(IconServiceBaseException):
@@ -147,15 +151,18 @@ class IconScoreStepCounter(object):
     def __init__(self,
                  step_cost_dict: dict,
                  step_limit: int,
+                 exception_on_exceeded: bool,
                  step_price: int) -> None:
         """Constructor
 
         :param step_cost_dict: a dict of base step costs
         :param step_limit: step limit for the transaction
+        :param exception_on_exceeded:
         :param step_price: step price
         """
         self._step_cost_dict: dict = step_cost_dict
         self._step_limit: int = step_limit
+        self._exception_on_exceeded: int = exception_on_exceeded
         self._step_price = step_price
         self._step_used: int = 0
 
@@ -165,7 +172,8 @@ class IconScoreStepCounter(object):
         Returns used steps in the transaction
         :return: used steps in the transaction
         """
-        return max(self._step_used, self._step_cost_dict.get(StepType.DEFAULT, 0))
+        return max(self._step_used,
+                   self._step_cost_dict.get(StepType.DEFAULT, 0))
 
     @property
     def step_limit(self) -> int:
@@ -193,11 +201,12 @@ class IconScoreStepCounter(object):
         """ Increases step
         """
         # If step_price is 0, do not raise OutOfStepException
-        if self.step_price > 0:
+        if self._exception_on_exceeded:
             if step_to_apply + self._step_used > self._step_limit:
+                step_used = self._step_used
                 self._step_used = self._step_limit
                 raise OutOfStepException(
-                    self._step_limit, self.step_used, step_to_apply)
+                    self._step_limit, step_used, step_to_apply)
 
         self._step_used += step_to_apply
 

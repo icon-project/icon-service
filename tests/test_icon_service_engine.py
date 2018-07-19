@@ -145,6 +145,9 @@ class TestIconServiceEngine(unittest.TestCase):
             'txHash': create_tx_hash()
         }
 
+        step_limit: int = params.get('stepLimit', 0)
+        version: int = params.get('version', 2)
+
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
                                  origin=from_,
@@ -155,7 +158,7 @@ class TestIconServiceEngine(unittest.TestCase):
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter: IconScoreStepCounter = \
-            self._engine._step_counter_factory.create(params.get('stepLimit', 0))
+            self._engine._step_counter_factory.create(step_limit, version >= 3)
         self._engine._call(context, method, params)
 
         tx_batch = context.tx_batch

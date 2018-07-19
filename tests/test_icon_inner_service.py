@@ -125,7 +125,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                prev_block_hash: str):
 
         version = 3
-        step_limit = 1000
+        step_limit = 5000000
         timestamp = 12345
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
@@ -191,7 +191,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
-        step_limit = 1000
+        step_limit = 5000000
         timestamp = 12345
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
@@ -256,7 +256,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                    addr_from: 'Address',
                                    accept_tx_hash: str):
         version = 3
-        step_limit = 1000
+        step_limit = 5000000
         timestamp = 12345
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
@@ -330,7 +330,7 @@ class TestIconServiceEngine(unittest.TestCase):
         version = 3
         from_addr = self._admin_addr
         to_addr = GOVERNANCE_SCORE_ADDRESS
-        step_limit = 1000
+        step_limit = 5000000
         timestamp = 12345
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
