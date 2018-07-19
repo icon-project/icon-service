@@ -78,7 +78,9 @@ class BlockBatch(Batch):
     value: IconScoreBatch
     """
     def __init__(self, block: Optional['Block'] = None):
-        """
+        """Constructor
+
+        :param block: block info
         """
         super().__init__()
         self.block = block

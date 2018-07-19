@@ -287,7 +287,7 @@ class IconScoreDatabase(ContextGetter):
     def __init__(self,
                  address: 'Address',
                  context_db: 'ContextDatabase',
-                 prefix: bytes=b'') -> None:
+                 prefix: bytes=None) -> None:
         """Constructor
 
         :param address: the address of SCORE which this db is assigned to
@@ -311,11 +311,19 @@ class IconScoreDatabase(ContextGetter):
         self._context_db.put(self._context, key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
+        if prefix is None:
+            raise DatabaseException(
+                'Invalid params: '
+                'prefix is None in IconScoreDatabase.get_sub_db()')
+
+        if self._prefix is not None:
+            prefix = b'|'.join([self._prefix, prefix])
+
         icon_score_database = IconScoreDatabase(
-            self.address,
-            self._context_db,
-            self._prefix + prefix)
+            self.address, self._context_db, prefix)
+
         icon_score_database.set_observer(self._observer)
+
         return icon_score_database
 
     def delete(self, key: bytes):
@@ -332,6 +340,14 @@ class IconScoreDatabase(ContextGetter):
         self._observer = observer
 
     def _hash_key(self, key: bytes):
-        """All key is hashed and stored to StateDB
+        """All key is hashed and stored
+        to StateDB to avoid key conflicts among SCOREs
+
+        :params key: key passed by SCORE
         """
-        return sha3_256(self._prefix + key)
+        data = [self.address.to_bytes()]
+        if self._prefix is not None:
+            data.append(self._prefix)
+        data.append(key)
+
+        return sha3_256(b'|'.join(data))
