@@ -19,7 +19,6 @@
 
 import asyncio
 import os
-import shutil
 import time
 import unittest
 from typing import TYPE_CHECKING
@@ -30,7 +29,7 @@ from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, \
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash
+from tests import create_block_hash, create_address, create_tx_hash, rmtree
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -41,23 +40,23 @@ class TestIconServiceEngine(unittest.TestCase):
         self._state_db_root_path = '.db'
         self._icon_score_root_path = '.score'
 
-        try:
-            shutil.rmtree(self._icon_score_root_path)
-            shutil.rmtree(self._state_db_root_path)
-        except:
-            pass
+        rmtree(self._icon_score_root_path)
+        rmtree(self._state_db_root_path)
 
         self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
         conf = IconConfig("", default_icon_config)
         conf.load({ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
+
         self._inner_task = IconScoreInnerTask(conf)
+        self._inner_task._open()
+
         self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
 
     def tearDown(self):
         self._inner_task._close()
-        shutil.rmtree(self._icon_score_root_path)
-        shutil.rmtree(self._state_db_root_path)
+        rmtree(self._icon_score_root_path)
+        rmtree(self._state_db_root_path)
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
@@ -621,7 +620,8 @@ class TestIconServiceEngine(unittest.TestCase):
                 IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
             prev_block_hash, is_commit, tx_results = \
-                await self._install_sample_token_invoke('sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
+                await self._install_sample_token_invoke(
+                    'sample_token', ZERO_SCORE_ADDRESS, 1, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
             next_tx_hash = tx_results[0]['txHash']
@@ -647,7 +647,8 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual('pending', response['next']['status'])
             self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
             prev_block_hash, is_commit, tx_results = \
-                await self._accept_deploy_score(2, prev_block_hash, self._admin_addr, next_tx_hash)
+                await self._accept_deploy_score(
+                    2, prev_block_hash, self._admin_addr, next_tx_hash)
 
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
@@ -773,7 +774,8 @@ class TestIconServiceEngine(unittest.TestCase):
             token_addr = tx_results[0]['scoreAddress']
 
             prev_block_hash, is_commit, tx_results = \
-                await self._install_sample_token_invoke('sample_token2', token_addr, 2, prev_block_hash)
+                await self._install_sample_token_invoke(
+                    'sample_token2', token_addr, 2, prev_block_hash)
             self.assertEqual(is_commit, True)
             self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -820,7 +822,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
 
             response = await self._icx_get_score_api(request)
-            self.assertEqual(response, "0x0")
+            self.assertTrue(isinstance(response, list))
 
         try:
             loop = asyncio.get_event_loop()

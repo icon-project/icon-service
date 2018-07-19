@@ -102,7 +102,6 @@ class IconServiceEngine(ContextContainer):
         """
         self._conf = None
         self._flag = None
-        self._db_factory = None
         self._context_factory = None
         self._icon_score_loader = None
         self._icx_context_db = None
@@ -162,7 +161,7 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db =\
             ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
-        self._icx_context_db.address = ICX_ENGINE_ADDRESS
+        # self._icx_context_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_context_db)
         self._icon_score_deploy_storage = IconScoreDeployStorage(
             self._icx_context_db)
@@ -235,6 +234,8 @@ class IconServiceEngine(ContextContainer):
                 self._step_counter_factory.set_step_cost(StepType(key), value)
         finally:
             self._delete_context(context)
+
+        self._context_factory.destroy(context)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
