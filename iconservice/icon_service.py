@@ -96,7 +96,7 @@ def main():
     Logger.debug(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
 
 
-def foreground_run(conf: 'IconConfig'):
+def run_in_foreground(conf: 'IconConfig'):
     icon_service = IconService()
     icon_service.serve(config=conf)
 

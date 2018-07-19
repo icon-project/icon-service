@@ -87,8 +87,8 @@ def main():
 
 
 def start(conf: 'IconConfig') -> int:
-    if not is_serve_icon_service(conf):
-        start_process(conf)
+    if not _is_running_icon_service(conf):
+        _start_process(conf)
     Logger.info(f'start_command done!', ICON_SERVICE_STANDALONE)
     return ExitCode.SUCCEEDED
 
@@ -97,7 +97,7 @@ def stop(conf: 'IconConfig') -> int:
     async def _stop():
         await stop_process(conf)
 
-    if is_serve_icon_service(conf):
+    if _is_running_icon_service(conf):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(_stop())
 
@@ -105,7 +105,7 @@ def stop(conf: 'IconConfig') -> int:
     return ExitCode.SUCCEEDED
 
 
-def start_process(conf: 'IconConfig'):
+def _start_process(conf: 'IconConfig'):
     Logger.debug('start_server() start')
     python_module_string = 'iconservice.icon_service'
 
@@ -122,9 +122,9 @@ def start_process(conf: 'IconConfig'):
         custom_argv.append(v)
 
     if conf['foreground']:
-        from iconservice.icon_service import foreground_run
+        from iconservice.icon_service import run_in_foreground
         del conf['foreground']
-        foreground_run(conf)
+        run_in_foreground(conf)
     else:
         subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
     Logger.debug('start_process() end')
@@ -137,11 +137,11 @@ async def stop_process(conf: 'IconConfig'):
     Logger.info(f'stop_process_icon_service!', ICON_SERVICE_STANDALONE)
 
 
-def is_serve_icon_service(conf: 'IconConfig') -> bool:
-    return _check_serve(conf)
+def _is_running_icon_service(conf: 'IconConfig') -> bool:
+    return _check_service_running(conf)
 
 
-def _check_serve(conf: 'IconConfig') -> bool:
+def _check_service_running(conf: 'IconConfig') -> bool:
     Logger.info(f'check_serve_icon_service!', ICON_SERVICE_STANDALONE)
     proc_title = ICON_SERVICE_PROCTITLE_FORMAT.format(**
         {ConfigKey.ICON_SCORE_ROOT: conf[ConfigKey.ICON_SCORE_ROOT],
