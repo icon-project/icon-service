@@ -119,7 +119,7 @@ def _start_process(conf: 'IconConfig'):
         if v is None:
             continue
         custom_argv.append(k)
-        custom_argv.append(v)
+        custom_argv.append(str(v))
 
     is_foreground = conf.get('foreground', False)
     if is_foreground:
