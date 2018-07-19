@@ -69,17 +69,17 @@ class IconService(object):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-sc", dest='iconScoreRootPath', type=str, default=None,
+    parser.add_argument("-sc", dest=ConfigKey.ICON_SCORE_ROOT, type=str, default=None,
                         help="icon score root path  example : .score")
-    parser.add_argument("-st", dest='iconScoreStateDbRootPath', type=str, default=None,
+    parser.add_argument("-st", dest=ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH, type=str, default=None,
                         help="icon score state db root path  example : .db")
-    parser.add_argument("-ch", dest='channel', type=str, default=None,
+    parser.add_argument("-ch", dest=ConfigKey.CHANNEL, type=str, default=None,
                         help="icon score channel")
-    parser.add_argument("-ak", dest='amqpKey', type=str, default=None,
+    parser.add_argument("-ak", dest=ConfigKey.AMQP_KEY, type=str, default=None,
                         help="icon score amqp_key : [amqp_key]")
-    parser.add_argument("-at", dest='amqpTarget', type=str, default=None,
+    parser.add_argument("-at", dest=ConfigKey.AMQP_TARGET, type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("-c", dest='config', type=str, default=CONFIG_JSON_PATH,
+    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
     args = parser.parse_args()
 
