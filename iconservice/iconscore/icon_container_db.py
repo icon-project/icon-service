@@ -15,14 +15,13 @@
 # limitations under the License.
 
 
-from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from collections import Iterator
+from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
-from ..utils import int_to_bytes
-
-from ..icon_constant import DATA_BYTE_ORDER
 from ..base.address import Address
 from ..base.exception import ContainerDBException
+from ..icon_constant import DATA_BYTE_ORDER
+from ..utils import int_to_bytes
 
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase

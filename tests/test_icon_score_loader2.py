@@ -15,21 +15,21 @@
 # limitations under the License.
 
 
-import unittest
 import inspect
-
+import unittest
 from os import path, makedirs, symlink
+from typing import TYPE_CHECKING
+
+from iconservice.base.address import AddressPrefix
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.iconscore.icon_score_base import IconScoreBase
-from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContextFactory, IconScoreContextType
+from iconservice.iconscore.icon_score_context import ContextContainer, \
+    IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.base.address import AddressPrefix
-
 from tests import create_address
 from tests.mock_db import create_mock_icon_score_db
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from iconservice.base.address import Address
 

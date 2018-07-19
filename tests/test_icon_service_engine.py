@@ -20,14 +20,16 @@ import os
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
+from iconcommons.icon_config import IconConfig
+from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
-from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import IconServiceFlag, ConfigKey
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -35,8 +37,6 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils.bloom import BloomFilter
-from iconservice.icon_config import default_icon_config
-from iconcommons.icon_config import IconConfig
 from tests import create_block_hash, create_address, rmtree, create_tx_hash
 
 context_factory = IconScoreContextFactory(max_size=1)
@@ -63,9 +63,12 @@ class TestIconServiceEngine(unittest.TestCase):
 
         engine = IconServiceEngine()
         conf = IconConfig("", default_icon_config)
-        conf.load({ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN')),
-                   ConfigKey.ICON_SCORE_ROOT: self._icon_score_root_path,
-                   ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH: self._state_db_root_path})
+        conf.load({
+            ConfigKey.ADMIN_ADDRESS:
+                str(create_address(AddressPrefix.EOA, b'ADMIN')),
+            ConfigKey.ICON_SCORE_ROOT: self._icon_score_root_path,
+            ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH: self._state_db_root_path
+        })
         engine.open(conf)
         self._engine = engine
 
@@ -74,7 +77,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._treasury_address = create_address(
             AddressPrefix.EOA, b'treasury')
 
-        self._from = self._genesis_address
+        self.from_ = self._genesis_address
         self._to = create_address(AddressPrefix.EOA, b'to')
         self._icon_score_address = create_address(
             AddressPrefix.CONTRACT, b'score')
@@ -104,22 +107,23 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._engine.close()
+
         rmtree(self._icon_score_root_path)
         rmtree(self._state_db_root_path)
 
     def test_query(self):
         method = 'icx_getBalance'
-        params = {'address': self._from}
+        params = {'address': self.from_}
 
         balance = self._engine.query(method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
 
-    def test_call_in_query(self):
+    def test_call_on_query(self):
         context = context_factory.create(IconScoreContextType.QUERY)
 
         method = 'icx_getBalance'
-        params = {'address': self._from}
+        params = {'address': self.from_}
 
         balance = self._engine._call(context, method, params)
         self.assertTrue(isinstance(balance, int))
@@ -127,7 +131,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         context_factory.destroy(context)
 
-    def test_call_in_invoke(self):
+    def test_call_on_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
 
         from_ = self._genesis_address
@@ -161,14 +165,10 @@ class TestIconServiceEngine(unittest.TestCase):
             self._engine._step_counter_factory.create(step_limit, version >= 3)
         self._engine._call(context, method, params)
 
-        tx_batch = context.tx_batch
-        self.assertEqual(1, len(tx_batch))
-        self.assertTrue(ICX_ENGINE_ADDRESS in tx_batch)
-
         # from(genesis), to
         # no transfer to fee_treasury because fee charging is disabled
-        icon_score_batch = tx_batch[ICX_ENGINE_ADDRESS]
-        self.assertEqual(2, len(icon_score_batch))
+        tx_batch = context.tx_batch
+        self.assertEqual(2, len(tx_batch))
 
         context_factory.destroy(context)
 
@@ -182,7 +182,7 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_v2 = {
             'method': 'icx_sendTransaction',
             'params': {
-                'from': self._from,
+                'from': self.from_,
                 'to': self._to,
                 'value': value,
                 'fee': 10 ** 16,
@@ -226,7 +226,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # Check whether fee charging works well
         from_balance: int = self._engine._icx_engine.get_balance(
-            None, self._from)
+            None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -288,7 +288,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.commit()
 
         # Check whether fee charging works well
-        from_balance: int = self._engine._icx_engine.get_balance(None, self._from)
+        from_balance: int =\
+            self._engine._icx_engine.get_balance(None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -297,7 +298,7 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_hash = create_tx_hash()
         method = 'icx_sendTransaction'
         params = {
-            'from': self._from,
+            'from': self.from_,
             'to': self._icon_score_address,
             'value': 0,
             'fee': 10 ** 16,

@@ -223,7 +223,10 @@ class TestTransactionResult(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db))
+
+            score_address = create_address(AddressPrefix.CONTRACT, b'address')
+            score = SampleScore(IconScoreDatabase(score_address, context_db))
+
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
 

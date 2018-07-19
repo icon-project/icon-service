@@ -14,19 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import plyvel
+from typing import TYPE_CHECKING, Optional
 
-from iconservice.base.address import Address
+import plyvel
+from iconcommons.logger import Logger
+
 from iconservice.base.exception import DatabaseException
 from iconservice.icon_constant import ICON_DB_LOG_TAG
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.utils import sha3_256
-from iconcommons.logger import Logger
 
-from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContext
+    from iconservice.base.address import Address
 
 
 def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
@@ -36,19 +37,23 @@ def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
         return context.type
 
 
-class PlyvelDatabase(object):
-    """Plyvel database wrapper
-    """
-
+class KeyValueDatabase(object):
     @staticmethod
-    def make_db(path: str, create_if_missing: bool=True) -> plyvel.DB:
-        Logger.debug(f'make_db path : {path}')
-        return plyvel.DB(path, create_if_missing=create_if_missing)
+    def from_path(path: str,
+                  create_if_missing: bool=True) -> 'KeyValueDatabase':
+        """
+
+        :param path: db path
+        :param create_if_missing:
+        :return: KeyValueDatabase instance
+        """
+        db = plyvel.DB(path, create_if_missing=create_if_missing)
+        return KeyValueDatabase(db)
 
     def __init__(self, db: plyvel.DB) -> None:
         """Constructor
 
-        :param path: db directory path
+        :param db: plyvel db instance
         """
         self._db = db
 
@@ -87,8 +92,7 @@ class PlyvelDatabase(object):
 
         :param key: (bytes): prefixed_db key
         """
-
-        return PlyvelDatabase(self._db.prefixed_db(key))
+        return KeyValueDatabase(self._db.prefixed_db(key))
 
     def iterator(self) -> iter:
         return self._db.iterator()
@@ -150,25 +154,23 @@ class DatabaseObserver(object):
         self.__delete_func(context, key, old_value)
 
 
-class ContextDatabase(PlyvelDatabase):
+class ContextDatabase(object):
     """Database for an IconScore only used in the inside of iconservice.
 
     IconScore can't access this database directly.
     Cache + LevelDB
     """
 
-    def __init__(self,
-                 db: plyvel.DB,
-                 address: Address) -> None:
+    def __init__(self, db: 'KeyValueDatabase', is_shared: bool=False) -> None:
         """Constructor
 
-        :param plyvel_db:
-        :param address: the address of IconScore 
+        :param db: KeyValueDatabase instance
         """
-        super().__init__(db)
-        self.address = address
+        self.key_value_db = db
+        # True: this db is shared with all SCOREs
+        self._is_shared = is_shared
 
-    def get(self, context: 'IconScoreContext', key: bytes) -> bytes:
+    def get(self, context: Optional['IconScoreContext'], key: bytes) -> bytes:
         """Returns value indicated by key from batch or StateDB
 
         :param context:
@@ -180,7 +182,7 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.INVOKE:
             return self.get_from_batch(context, key)
         else:
-            return super().get(key)
+            return self.key_value_db.get(key)
 
     def get_from_batch(self,
                        context: 'IconScoreContext',
@@ -201,26 +203,20 @@ class ContextDatabase(PlyvelDatabase):
         tx_batch = context.tx_batch
 
         # get value from tx_batch
-        icon_score_batch = tx_batch[self.address]
-        if icon_score_batch:
-            value = icon_score_batch.get(key, None)
-            if value:
-                return value
+        if key in tx_batch:
+            return tx_batch[key]
 
         # get value from block_batch
-        icon_score_batch = block_batch[self.address]
-        if icon_score_batch:
-            value = icon_score_batch.get(key, None)
-            if value:
-                return value
+        if key in block_batch:
+            return block_batch[key]
 
         # get value from state_db
-        return super().get(key)
+        return self.key_value_db.get(key)
 
     def put(self,
-            context: 'IconScoreContext',
+            context: Optional['IconScoreContext'],
             key: bytes,
-            value: bytes) -> None:
+            value: Optional[bytes]) -> None:
         """put value to StateDB or catch according to contex type
 
         :param context:
@@ -232,14 +228,11 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.QUERY:
             raise DatabaseException('put is not allowed')
         elif context_type == IconScoreContextType.INVOKE:
-            self.put_to_batch(context, key, value)
+            context.tx_batch[key] = value
         else:
-            super().put(key, value)
+            self.key_value_db.put(key, value)
 
-    def put_to_batch(self, context: 'IconScoreContext', key: bytes, value: bytes):
-        context.tx_batch.put(self.address, key, value)
-
-    def delete(self, context: 'IconScoreContext', key: bytes):
+    def delete(self, context: Optional['IconScoreContext'], key: bytes):
         """Delete key from db
 
         :param context:
@@ -250,9 +243,9 @@ class ContextDatabase(PlyvelDatabase):
         if context_type == IconScoreContextType.QUERY:
             raise DatabaseException('delete is not allowed')
         elif context_type == IconScoreContextType.INVOKE:
-            self.put_to_batch(context, key, None)
+            context.tx_batch[key] = None
         else:
-            super().delete(key)
+            self.key_value_db.delete(key)
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db
@@ -265,7 +258,8 @@ class ContextDatabase(PlyvelDatabase):
             raise DatabaseException(
                 'close is not allowed on readonly context')
 
-        return super().close()
+        if not self._is_shared:
+            return self.key_value_db.close()
 
     def write_batch(self,
                     context: 'IconScoreContext',
@@ -276,16 +270,13 @@ class ContextDatabase(PlyvelDatabase):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
-        return super().write_batch(states)
+        return self.key_value_db.write_batch(states)
 
     @staticmethod
-    def from_address_and_path(
-            address: Optional['Address'],
-            path: str,
-            create_if_missing=True) -> 'ContextDatabase':
-        return ContextDatabase(
-            PlyvelDatabase.make_db(path, create_if_missing),
-            address)
+    def from_path(path: str,
+                  create_if_missing: bool=True) -> 'ContextDatabase':
+        db = KeyValueDatabase.from_path(path, create_if_missing)
+        return ContextDatabase(db)
 
 
 class IconScoreDatabase(ContextGetter):
@@ -293,48 +284,70 @@ class IconScoreDatabase(ContextGetter):
 
     IconScore can access its states only through IconScoreDatabase
     """
-    def __init__(self, context_db: 'ContextDatabase', prefix: bytes=b'') -> None:
+    def __init__(self,
+                 address: 'Address',
+                 context_db: 'ContextDatabase',
+                 prefix: bytes=None) -> None:
         """Constructor
 
+        :param address: the address of SCORE which this db is assigned to
         :param context_db: ContextDatabase
         :param prefix:
         """
-        self.__prefix = prefix
+        self.address = address
+        self._prefix = prefix
         self._context_db = context_db
-        self.__observer: DatabaseObserver = None
-
-    @property
-    def address(self):
-        return self._context_db.address
+        self._observer: DatabaseObserver = None
 
     def get(self, key: bytes) -> bytes:
-        key = self.__hash_key(key)
+        key = self._hash_key(key)
         return self._context_db.get(self._context, key)
 
     def put(self, key: bytes, value: bytes):
-        key = self.__hash_key(key)
-        if self.__observer:
+        key = self._hash_key(key)
+        if self._observer:
             old_value = self._context_db.get(self._context, key)
-            self.__observer.on_put(self._context, key, old_value, value)
+            self._observer.on_put(self._context, key, old_value, value)
         self._context_db.put(self._context, key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
+        if prefix is None:
+            raise DatabaseException(
+                'Invalid params: '
+                'prefix is None in IconScoreDatabase.get_sub_db()')
+
+        if self._prefix is not None:
+            prefix = b'|'.join([self._prefix, prefix])
+
         icon_score_database = IconScoreDatabase(
-            self._context_db, self.__prefix + prefix)
-        icon_score_database.set_observer(self.__observer)
+            self.address, self._context_db, prefix)
+
+        icon_score_database.set_observer(self._observer)
+
         return icon_score_database
 
     def delete(self, key: bytes):
-        key = self.__hash_key(key)
-        if self.__observer:
+        key = self._hash_key(key)
+        if self._observer:
             old_value = self._context_db.get(self._context, key)
-            self.__observer.on_delete(self._context, key, old_value)
+            self._observer.on_delete(self._context, key, old_value)
         self._context_db.delete(self._context, key)
 
-    def set_observer(self, observer: 'DatabaseObserver'):
-        self.__observer = observer
+    def close(self):
+        self._context_db.close(self._context)
 
-    def __hash_key(self, key: bytes):
-        """All key is hashed and stored to StateDB
+    def set_observer(self, observer: 'DatabaseObserver'):
+        self._observer = observer
+
+    def _hash_key(self, key: bytes):
+        """All key is hashed and stored
+        to StateDB to avoid key conflicts among SCOREs
+
+        :params key: key passed by SCORE
         """
-        return sha3_256(self.__prefix + key)
+        data = [self.address.to_bytes()]
+        if self._prefix is not None:
+            data.append(self._prefix)
+        data.append(key)
+
+        return sha3_256(b'|'.join(data))

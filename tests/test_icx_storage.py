@@ -16,16 +16,16 @@
 # limitations under the License.
 
 
-import unittest
 import shutil
+import unittest
 
-from iconservice.base.address import Address, AddressPrefix
-from iconservice.database.db import ContextDatabase
+from iconservice.base.address import AddressPrefix
 from iconservice.database.batch import BlockBatch, TransactionBatch
+from iconservice.database.db import ContextDatabase
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from tests import create_address
 
 
@@ -33,7 +33,7 @@ class TestIcxStorage(unittest.TestCase):
     def setUp(self):
         self.db_name = 'icx.db'
         self.address = create_address(AddressPrefix.EOA, b'addr1')
-        db = ContextDatabase.from_address_and_path(self.address, self.db_name)
+        db = ContextDatabase.from_path(self.db_name)
         self.assertIsNotNone(db)
 
         self.storage = IcxStorage(db)
@@ -43,6 +43,13 @@ class TestIcxStorage(unittest.TestCase):
         context.tx_batch = TransactionBatch()
         context.block_batch = BlockBatch()
         self.context = context
+
+    def tearDown(self):
+        context = self.context
+        self.storage.delete_account(context, self.address)
+        self.storage.close(context)
+
+        shutil.rmtree(self.db_name)
 
     def test_get_put_account(self):
         context = self.context
@@ -68,13 +75,6 @@ class TestIcxStorage(unittest.TestCase):
 
         ret = self.storage.is_address_present(context, self.address)
         self.assertFalse(ret)
-
-    def tearDown(self):
-        context = self.context
-        self.storage.delete_account(context, self.address)
-        self.storage.close(context)
-
-        shutil.rmtree(self.db_name)
 
 
 if __name__ == '__main__':

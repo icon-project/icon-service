@@ -42,8 +42,8 @@ def main():
     iconservice
     ==========================
     iconservice commands:
-        start : icon_service startpip 
-        stop : icon_service stop
+        start : iconservice start
+        stop : iconservice stop
     """)
 
     parser.add_argument('command', type=str,

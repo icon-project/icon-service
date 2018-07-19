@@ -45,7 +45,7 @@ class TestTrace(unittest.TestCase):
 
     def setUp(self):
         db = Mock(spec=IconScoreDatabase)
-        address = Mock(spec=Address)
+        db.address = Mock(spec=Address)
         context = Mock(spec=IconScoreContext)
         traces = Mock(spec=List[Trace])
 

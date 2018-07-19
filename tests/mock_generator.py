@@ -25,7 +25,7 @@ from tests import create_block_hash
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
 ICX_ENGINE_PATH = 'iconservice.icx.icx_engine.IcxEngine'
-DB_FACTORY_PATH = 'iconservice.database.factory.DatabaseFactory'
+DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
 
