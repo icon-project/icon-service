@@ -196,23 +196,29 @@ class IconServiceEngine(ContextContainer):
             self._delete_context(context)
 
     def _init_global_value_by_governance_score(self):
-        context = self._context_factory.create(IconScoreContextType.DIRECT)
-        governance_score = self._icon_score_mapper.get_icon_score(
-            context, GOVERNANCE_SCORE_ADDRESS)
-        if governance_score is None:
-            raise ServerErrorException(f'governance_score is None')
+        context = self._context_factory.create(IconScoreContextType.QUERY)
 
-        if self._is_flag_on(IconServiceFlag.ENABLE_FEE):
-            step_price = governance_score.getStepPrice()
-        else:
-            step_price = 0
+        try:
+            self._put_context(context)
 
-        self._step_counter_factory.set_step_price(step_price)
+            governance_score = self._icon_score_mapper.get_icon_score(
+                context, GOVERNANCE_SCORE_ADDRESS)
+            if governance_score is None:
+                raise ServerErrorException(f'governance_score is None')
 
-        step_costs = governance_score.getStepCosts()
+            if self._is_flag_on(IconServiceFlag.ENABLE_FEE):
+                step_price = governance_score.getStepPrice()
+            else:
+                step_price = 0
 
-        for key, value in step_costs.items():
-            self._step_counter_factory.set_step_cost(StepType(key), value)
+            self._step_counter_factory.set_step_price(step_price)
+
+            step_costs = governance_score.getStepCosts()
+
+            for key, value in step_costs.items():
+                self._step_counter_factory.set_step_cost(StepType(key), value)
+        finally:
+            self._delete_context(context)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine

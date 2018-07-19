@@ -531,6 +531,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def icx(self) -> 'Icx':
         if self.__icx is None:
             self.__icx = Icx(self._context, self.__address)
+        else:
+            self.__icx._context = self._context
+
         return self.__icx
 
     def now(self):
