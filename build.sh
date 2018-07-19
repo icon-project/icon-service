@@ -14,8 +14,8 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
   pip install --force-reinstall "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey/earlgrey-$EARL_VER-py3-none-any.whl"
   rm -rf earlgrey*
 
-  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/iconcommons-0.9.4-1-py3-none-any.whl"
-  pip install --force-reinstall iconcommons-0.9.4-1-py3-none-any.whl
+  wget "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/iconcommons-0.9.4-4-py3-none-any.whl"
+  pip install --force-reinstall iconcommons-0.9.4-4-py3-none-any.whl
   rm -rf iconcommons*
 
   if [[ "$2" != "--ignore-test" ]]; then
