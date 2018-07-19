@@ -52,6 +52,7 @@ class ConfigKey:
     CHANNEL = 'channel'
     AMQP_KEY = 'amqpKey'
     AMQP_TARGET = 'amqpTarget'
+    CONFIG = 'config'
 
 
 class EnableThreadFlag(IntFlag):

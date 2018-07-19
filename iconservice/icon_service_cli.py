@@ -60,7 +60,7 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("-at", dest=ConfigKey.AMQP_TARGET, type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("-c", dest='config', type=str, default=CONFIG_JSON_PATH,
+    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
     parser.add_argument("-f", dest='foreground', action='store_true',
                         help="icon score service run foreground")
@@ -87,8 +87,8 @@ def main():
 
 
 def start(conf: 'IconConfig') -> int:
-    if not is_serve_icon_service(conf):
-        start_process(conf)
+    if not _is_running_icon_service(conf):
+        _start_process(conf)
     Logger.info(f'start_command done!', ICON_SERVICE_STANDALONE)
     return ExitCode.SUCCEEDED
 
@@ -97,7 +97,7 @@ def stop(conf: 'IconConfig') -> int:
     async def _stop():
         await stop_process(conf)
 
-    if is_serve_icon_service(conf):
+    if _is_running_icon_service(conf):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(_stop())
 
@@ -105,14 +105,14 @@ def stop(conf: 'IconConfig') -> int:
     return ExitCode.SUCCEEDED
 
 
-def start_process(conf: 'IconConfig'):
+def _start_process(conf: 'IconConfig'):
     Logger.debug('start_server() start')
     python_module_string = 'iconservice.icon_service'
 
     converted_params = {'-sc': conf[ConfigKey.ICON_SCORE_ROOT],
                         '-st': conf[ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH],
                         '-ch': conf[ConfigKey.CHANNEL], '-ak': conf[ConfigKey.AMQP_KEY],
-                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf['config']}
+                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf[ConfigKey.CONFIG]}
 
     custom_argv = []
     for k, v in converted_params.items():
@@ -121,9 +121,12 @@ def start_process(conf: 'IconConfig'):
         custom_argv.append(k)
         custom_argv.append(v)
 
-    p = subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
     if conf['foreground']:
-        p.wait()
+        from iconservice.icon_service import run_in_foreground
+        del conf['foreground']
+        run_in_foreground(conf)
+    else:
+        subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
     Logger.debug('start_process() end')
 
 
@@ -134,11 +137,11 @@ async def stop_process(conf: 'IconConfig'):
     Logger.info(f'stop_process_icon_service!', ICON_SERVICE_STANDALONE)
 
 
-def is_serve_icon_service(conf: dict) -> bool:
-    return _check_serve(conf)
+def _is_running_icon_service(conf: 'IconConfig') -> bool:
+    return _check_service_running(conf)
 
 
-def _check_serve(conf: dict) -> bool:
+def _check_service_running(conf: 'IconConfig') -> bool:
     Logger.info(f'check_serve_icon_service!', ICON_SERVICE_STANDALONE)
     proc_title = ICON_SERVICE_PROCTITLE_FORMAT.format(**
         {ConfigKey.ICON_SCORE_ROOT: conf[ConfigKey.ICON_SCORE_ROOT],
