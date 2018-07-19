@@ -121,7 +121,8 @@ def _start_process(conf: 'IconConfig'):
         custom_argv.append(k)
         custom_argv.append(v)
 
-    if conf['foreground']:
+    is_foreground = conf.get('foreground', False)
+    if is_foreground:
         from iconservice.icon_service import run_in_foreground
         del conf['foreground']
         run_in_foreground(conf)
