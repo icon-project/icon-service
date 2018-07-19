@@ -17,7 +17,9 @@ default_icon_config = {
         "colorLog": True,
         "level": "debug",
         "filePath": "./log/icon_service1.log",
-        "outputType": "console|file|daily"
+        "outputType": "console|file",
+        "rotateType": "D",
+        "rotateInterval": 1
     },
     "iconScoreRootPath": ".score",
     "iconScoreStateDbRootPath": ".db",
