@@ -60,7 +60,7 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("-at", dest=ConfigKey.AMQP_TARGET, type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("-c", dest='config', type=str, default=CONFIG_JSON_PATH,
+    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
     parser.add_argument("-f", dest='foreground', action='store_true',
                         help="icon score service run foreground")
@@ -112,7 +112,7 @@ def start_process(conf: 'IconConfig'):
     converted_params = {'-sc': conf[ConfigKey.ICON_SCORE_ROOT],
                         '-st': conf[ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH],
                         '-ch': conf[ConfigKey.CHANNEL], '-ak': conf[ConfigKey.AMQP_KEY],
-                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf['config']}
+                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf[ConfigKey.CONFIG]}
 
     custom_argv = []
     for k, v in converted_params.items():
@@ -121,9 +121,12 @@ def start_process(conf: 'IconConfig'):
         custom_argv.append(k)
         custom_argv.append(v)
 
-    p = subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
     if conf['foreground']:
-        p.wait()
+        from iconservice.icon_service import foreground_run
+        del conf['foreground']
+        foreground_run(conf)
+    else:
+        subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
     Logger.debug('start_process() end')
 
 

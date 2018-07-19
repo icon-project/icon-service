@@ -96,5 +96,10 @@ def main():
     Logger.debug(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
 
 
+def foreground_run(conf: 'IconConfig'):
+    icon_service = IconService()
+    icon_service.serve(config=conf)
+
+
 if __name__ == '__main__':
     main()
