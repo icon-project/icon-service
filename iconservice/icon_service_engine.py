@@ -194,7 +194,13 @@ class IconServiceEngine(ContextContainer):
             self._delete_context(context)
 
     def _init_global_value_by_governance_score(self):
-        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        """Initialize step_counter_factory with parameters
+        managed by governance SCORE
+
+        :return:
+        """
+        context = self._context_factory.create(IconScoreContextType.QUERY)
+
         try:
             self._put_context(context)
             governance_score = self._icon_score_mapper.get_icon_score(
