@@ -30,16 +30,46 @@ K = TypeVar('K', int, str, Address, bytes)
 V = TypeVar('V', int, str, Address, bytes, bool)
 
 
+ARRAY_DB_ID = b'\x00'
+DICT_DB_ID = b'\x01'
+VAR_DB_ID = b'\x02'
+
+
 class ContainerUtil(object):
 
     @staticmethod
+    def create_db_prefix(cls, var_key: K) -> bytes:
+        """Create a prefix used
+        as a parameter of IconScoreDatabase.get_sub_db()
+
+        :param cls: ArrayDB, DictDB, VarDB
+        :param var_key:
+        :return:
+        """
+        if var_key is None:
+            raise ContainerDBException('key is None')
+
+        if cls == ArrayDB:
+            container_id = ARRAY_DB_ID
+        elif cls == DictDB:
+            container_id = DICT_DB_ID
+        else:
+            raise ContainerDBException(f'Unsupported container class: {cls}')
+
+        encoded_key: bytes = ContainerUtil.__encode_key(var_key)
+        return b'|'.join([container_id, encoded_key])
+
+    @staticmethod
     def encode_key(key: K) -> bytes:
+        """Create a key passed to IconScoreDatabase
+
+        :param key:
+        :return:
+        """
         if key is None:
             raise ContainerDBException('key is None')
-        prefix = b'|'
 
-        key_bytes = ContainerUtil.__encode_key(key)
-        return key_bytes + prefix
+        return ContainerUtil.__encode_key(key)
 
     @staticmethod
     def encode_value(value: V) -> bytes:
@@ -138,7 +168,10 @@ class ContainerUtil(object):
 class DictDB(object):
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type, depth: int=1) -> None:
-        self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
+
+        prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
+        self._db = db.get_sub_db(prefix)
+
         self.__value_type = value_type
         self.__depth = depth
 
@@ -148,14 +181,17 @@ class DictDB(object):
     def __setitem__(self, key: K, value: V) -> None:
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
-        byte_value = ContainerUtil.encode_value(value)
-        self.__db.put(ContainerUtil.encode_key(key), byte_value)
+
+        encoded_key: bytes = ContainerUtil.encode_key(key)
+        encoded_value: bytes = ContainerUtil.encode_value(value)
+
+        self._db.put(encoded_key, encoded_value)
 
     def __getitem__(self, key: K) -> Any:
         if self.__depth == 1:
-            return ContainerUtil.decode_object(self.__db.get(ContainerUtil.encode_key(key)), self.__value_type)
+            return ContainerUtil.decode_object(self._db.get(ContainerUtil.encode_key(key)), self.__value_type)
         else:
-            return DictDB(key, self.__db, self.__value_type, self.__depth-1)
+            return DictDB(key, self._db, self.__value_type, self.__depth - 1)
 
     def __delitem__(self, key):
         self.__remove(key)
@@ -163,7 +199,7 @@ class DictDB(object):
     def __remove(self, key: K) -> None:
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
-        self.__db.delete(ContainerUtil.encode_key(key))
+        self._db.delete(ContainerUtil.encode_key(key))
 
 
 class ArrayDB(Iterator):
@@ -171,14 +207,16 @@ class ArrayDB(Iterator):
     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
-        self.__db = db.get_sub_db(ContainerUtil.encode_key(var_key))
+        prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
+        self._db = db.get_sub_db(prefix)
+
         self.__size = self.__get_size()
         self.__index = 0
         self.__value_type = value_type
 
     def put(self, value: V) -> None:
         byte_value = ContainerUtil.encode_value(value)
-        self.__db.put(ContainerUtil.encode_key(self.__size), byte_value)
+        self._db.put(ContainerUtil.encode_key(self.__size), byte_value)
         self.__size += 1
         self.__set_size()
 
@@ -188,7 +226,7 @@ class ArrayDB(Iterator):
 
         index = self.__size - 1
         last_val = self[index]
-        self.__db.delete(ContainerUtil.encode_key(index))
+        self._db.delete(ContainerUtil.encode_key(index))
         self.__size -= 1
         self.__set_size()
         return last_val
@@ -212,17 +250,17 @@ class ArrayDB(Iterator):
         return self.__size
 
     def __get_size(self) -> int:
-        return ContainerUtil.decode_object(self.__db.get(ArrayDB.__SIZE_BYTE_KEY), int)
+        return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
 
     def __set_size(self) -> None:
-        sub_db = self.__db
+        sub_db = self._db
         byte_value = ContainerUtil.encode_value(self.__size)
         sub_db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
     def __setitem__(self, index: int, value: V) -> None:
         if index >= self.__size:
             raise ContainerDBException(f'ArrayDB out of range')
-        sub_db = self.__db
+        sub_db = self._db
         byte_value = ContainerUtil.encode_value(value)
         sub_db.put(ContainerUtil.encode_key(index), byte_value)
 
@@ -232,7 +270,7 @@ class ArrayDB(Iterator):
                 index += len(self)
             if index < 0 or index >= len(self):
                 raise ContainerDBException(f'ArrayDB out of range, {index}')
-            sub_db = self.__db
+            sub_db = self._db
             index_byte_key = ContainerUtil.encode_key(index)
             return ContainerUtil.decode_object(sub_db.get(index_byte_key), self.__value_type)
 
@@ -246,19 +284,21 @@ class ArrayDB(Iterator):
 class VarDB(object):
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
-        self.__db = db
+        # Use var_key as a db prefix in the case of VarDB
+        self._db = db.get_sub_db(VAR_DB_ID)
+
         self.__var_byte_key = ContainerUtil.encode_key(var_key)
         self.__value_type = value_type
 
     def set(self, value: V) -> None:
         byte_value = ContainerUtil.encode_value(value)
-        self.__db.put(self.__var_byte_key, byte_value)
+        self._db.put(self.__var_byte_key, byte_value)
 
     def get(self) -> Optional[V]:
-        return ContainerUtil.decode_object(self.__db.get(self.__var_byte_key), self.__value_type)
+        return ContainerUtil.decode_object(self._db.get(self.__var_byte_key), self.__value_type)
 
     def remove(self) -> None:
-        self.__db.delete(self.__var_byte_key)
+        self._db.delete(self.__var_byte_key)
 
 
 def get_default_value(value_type: type) -> Any:

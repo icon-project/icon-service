@@ -93,14 +93,24 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 1, value_type=int), 0)
 
     def test_success_dict_depth1(self):
-        test_dict = DictDB('test_dict', self.db, value_type=int)
+        name = 'test_dict'
+        test_dict = DictDB(name, self.db, value_type=int)
+
+        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
+        self.assertEqual(b'\x01|' + name.encode(), prefix)
+
         test_dict['a'] = 1
         test_dict['b'] = 2
 
         self.assertEqual(test_dict['a'], 1)
 
     def test_success_dict_depth2(self):
-        test_dict = DictDB('test_dict', self.db, depth=3, value_type=int)
+        name = 'test_dict'
+        test_dict = DictDB(name, self.db, depth=3, value_type=int)
+
+        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
+        self.assertEqual(b'\x01|' + name.encode(), prefix)
+
         test_dict['a']['b']['c'] = 1
         test_dict['a']['b']['d'] = 2
         test_dict['a']['b']['e'] = 3
@@ -133,6 +143,9 @@ class TestIconContainerDB(unittest.TestCase):
 
     def test_success_variable(self):
         test_var = VarDB('test_var', self.db, value_type=int)
+        self.assertNotEqual(test_var._db, self.db)
+        self.assertEqual(test_var._db._prefix, b'\x02')
+
         test_var.set(10**19+1)
 
         self.assertEqual(test_var.get(), 10**19+1)
@@ -178,7 +191,13 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(test_var4.get(), None)
 
     def test_array_db(self):
-        testarray = ArrayDB("TEST", self.db, value_type=int)
+        name = "TEST"
+        testarray = ArrayDB(name, self.db, value_type=int)
+        self.assertNotEqual(testarray._db, self.db)
+        self.assertEqual(
+            testarray._db._prefix,
+            ContainerUtil.create_db_prefix(ArrayDB, name))
+
         testarray.put(1)
         testarray.put(3)
         testarray.put(5)
@@ -187,3 +206,13 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(7, testarray.pop())
         self.assertEqual(5, testarray.pop())
         self.assertEqual(2, len(testarray))
+
+    def test_container_util(self):
+        prefix: bytes = ContainerUtil.create_db_prefix(ArrayDB, 'a')
+        self.assertEqual(b'\x00|a', prefix)
+
+        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, 'dictdb')
+        self.assertEqual(b'\x01|dictdb', prefix)
+
+        with self.assertRaises(ContainerDBException):
+            prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
