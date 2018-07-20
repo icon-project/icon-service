@@ -212,9 +212,10 @@ class ScoreApiGenerator:
             if isinstance(sub_tree, tuple):
                 # Generic declaration with sub type. `Generic[T1,...]`
                 main_type = sub_tree[0]
-                if main_type is Union and len(sub_tree) == 3:
-                    # Retrieve base type in Optional
-                    main_type = sub_tree[1]
+                # In Optional type case sub_tree[0] is Union,
+                # and there are three items in sub_tree.
+                # We can know the main type as considering sub_tree[1],
+                # but currently, Optional type is not supported.
             else:
                 # Generic declaration only
                 main_type = sub_tree
