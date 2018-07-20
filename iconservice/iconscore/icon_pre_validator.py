@@ -17,7 +17,7 @@
 from typing import TYPE_CHECKING
 
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidRequestException
+from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..icon_constant import FIXED_FEE
 
 if TYPE_CHECKING:
@@ -49,6 +49,10 @@ class IconPreValidator:
         :param params: params of icx_sendTransaction JSON-RPC request
         :param step_price:
         """
+        value: int = params.get('value', 0)
+        if value < 0:
+            raise InvalidParamsException("value < 0")
+
         version: int = params.get('version', 2)
         if version < 3:
             self._validate_transaction_v2(params)
