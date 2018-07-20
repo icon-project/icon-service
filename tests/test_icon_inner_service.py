@@ -37,15 +37,15 @@ if TYPE_CHECKING:
 
 class TestIconServiceEngine(unittest.TestCase):
     def setUp(self):
-        self._state_db_root_path = '.db'
-        self._icon_score_root_path = '.score'
+        self._state_db_root_path = '.statedb'
+        self._score_root_path = '.score'
 
-        rmtree(self._icon_score_root_path)
+        rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 
         self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
         conf = IconConfig("", default_icon_config)
-        conf.load({ConfigKey.ADMIN_ADDRESS: str(self._admin_addr)})
+        conf.load({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr)})
 
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()
@@ -55,7 +55,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._inner_task._close()
-        rmtree(self._icon_score_root_path)
+        rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:

@@ -56,18 +56,18 @@ def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
 class TestIconServiceEngine(unittest.TestCase):
     def setUp(self):
         self._state_db_root_path = '.db'
-        self._icon_score_root_path = '.score'
+        self._score_root_path = '.score'
 
-        rmtree(self._icon_score_root_path)
+        rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
         conf = IconConfig("", default_icon_config)
         conf.load({
-            ConfigKey.ADMIN_ADDRESS:
+            ConfigKey.BUILTIN_SCORE_OWNER:
                 str(create_address(AddressPrefix.EOA, b'ADMIN')),
-            ConfigKey.ICON_SCORE_ROOT: self._icon_score_root_path,
-            ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH: self._state_db_root_path
+            ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
+            ConfigKey.SCORE_STATE_DB_ROOT_PATH: self._state_db_root_path
         })
         engine.open(conf)
         self._engine = engine
@@ -108,8 +108,13 @@ class TestIconServiceEngine(unittest.TestCase):
     def tearDown(self):
         self._engine.close()
 
-        rmtree(self._icon_score_root_path)
+        rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
+
+    def test_make_flag(self):
+        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False}
+        flag = self._engine._make_service_flag(table)
+        self.assertEqual(flag, IconServiceFlag.fee)
 
     def test_query(self):
         method = 'icx_getBalance'
@@ -214,7 +219,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, 10000)
 
         step_price = self._engine._get_step_price()
-        # if self._engine._is_flag_on(IconServiceFlag.ENABLE_FEE):
+        # if self._engine._is_flag_on(IconServiceFlag.fee):
         #     # step_used MUST BE 10**12 on protocol v2
         #     self.assertEqual(step_price, 10 ** 12)
         # else:
@@ -278,7 +283,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_flag_on(IconServiceFlag.ENABLE_FEE):
+        if self._engine._is_flag_on(IconServiceFlag.fee):
             # step_used MUST BE 10**12 on protocol v2
             self.assertEqual(step_price, 10 ** 12)
         else:

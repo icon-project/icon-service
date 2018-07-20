@@ -53,13 +53,13 @@ class IconScoreDeployEngine(object):
         self._icon_score_manager = None
 
     def open(self,
-             icon_score_root_path: str,
+             score_root_path: str,
              flag: int,
              icon_score_mapper: 'IconScoreInfoMapper',
              icon_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
 
-        :param icon_score_root_path:
+        :param score_root_path:
         :param flag: flags composed by IconScoreDeployEngine
         :param icon_score_mapper:
         :param icon_deploy_storage:
@@ -67,7 +67,7 @@ class IconScoreDeployEngine(object):
         self._flag = flag
         self._icon_score_deploy_storage = icon_deploy_storage
         self._icon_score_mapper = icon_score_mapper
-        self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(icon_score_root_path)
+        self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(score_root_path)
 
     @property
     def icon_deploy_storage(self):

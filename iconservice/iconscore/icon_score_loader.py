@@ -28,8 +28,8 @@ class IconScoreLoader(object):
     __PACKAGE_PATH = 'package.json'
     __SCORE_ENTERANCE_FILE_PATH = '__init__.py'
 
-    def __init__(self, icon_score_root_path: str):
-        self.__score_root_path = icon_score_root_path
+    def __init__(self, score_root_path: str):
+        self.__score_root_path = score_root_path
 
     @property
     def score_root_path(self):

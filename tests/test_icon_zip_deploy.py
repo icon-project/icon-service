@@ -89,7 +89,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context_container = TestContextContainer()
 
         self._engine.open(
-            icon_score_root_path=score_path,
+            score_root_path=score_path,
             flag=0,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_deploy_storage)

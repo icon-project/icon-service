@@ -139,11 +139,11 @@ class IconServiceEngine(ContextContainer):
         """
 
         self._conf = conf
-        self._flag = self._conf[ConfigKey.ICON_SERVICE_FLAG]
-        icon_score_root_path = self._conf[ConfigKey.ICON_SCORE_ROOT]
-        state_db_root_path = self._conf[ConfigKey.ICON_SCORE_STATE_DB_ROOT_PATH]
+        self._flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
+        score_root_path = self._conf[ConfigKey.SCORE_ROOT_PATH]
+        state_db_root_path = self._conf[ConfigKey.SCORE_STATE_DB_ROOT_PATH]
 
-        makedirs(icon_score_root_path, exist_ok=True)
+        makedirs(score_root_path, exist_ok=True)
         makedirs(state_db_root_path, exist_ok=True)
 
         # Share one context db with all SCOREs
@@ -151,7 +151,7 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._context_factory = IconScoreContextFactory(max_size=5)
-        self._icon_score_loader = IconScoreLoader(icon_score_root_path)
+        self._icon_score_loader = IconScoreLoader(score_root_path)
 
         self._icx_engine = IcxEngine()
         self._icon_score_engine = IconScoreEngine()
@@ -182,18 +182,27 @@ class IconServiceEngine(ContextContainer):
             self._icx_storage, self._icon_score_mapper)
 
         icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
-        if self._is_flag_on(IconServiceFlag.ENABLE_AUDIT):
+        if self._is_flag_on(IconServiceFlag.audit):
             icon_score_deploy_engine_flags =\
                 IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
 
         self._icon_score_deploy_engine.open(
-            icon_score_root_path=icon_score_root_path,
+            score_root_path=score_root_path,
             flag=icon_score_deploy_engine_flags,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
+
+    def _make_service_flag(self, flag_table: dict) -> int:
+        key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT]
+        flag = 0
+        for key in key_table:
+            is_enable = flag_table[key]
+            if is_enable:
+                flag |= IconServiceFlag[key]
+        return flag
 
     def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
@@ -202,7 +211,7 @@ class IconServiceEngine(ContextContainer):
             icon_builtin_score_loader =\
                 IconBuiltinScoreLoader(self._icon_score_deploy_engine)
             icon_builtin_score_loader.load_builtin_scores(
-                context, self._conf[ConfigKey.ADMIN_ADDRESS])
+                context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
         finally:
             self._delete_context(context)
 
@@ -221,7 +230,7 @@ class IconServiceEngine(ContextContainer):
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
-            if self._is_flag_on(IconServiceFlag.ENABLE_FEE):
+            if self._is_flag_on(IconServiceFlag.fee):
                 step_price = governance_score.getStepPrice()
             else:
                 step_price = 0
@@ -650,7 +659,7 @@ class IconServiceEngine(ContextContainer):
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
-            elif self._is_flag_on(IconServiceFlag.ENABLE_FEE):
+            elif self._is_flag_on(IconServiceFlag.fee):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
                 step_price = 10 ** 12

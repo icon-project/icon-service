@@ -44,12 +44,12 @@ class IconBuiltinScoreLoader(object):
     def _load_builtin_score(self, context: 'IconScoreContext',
                             score_name: str,
                             icon_score_address: 'Address',
-                            admin_addr: 'Address'):
+                            builtin_score_owner: 'Address'):
         if self._deploy_engine.icon_deploy_storage.is_score_status_active(context, icon_score_address):
             return
 
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
-        self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, admin_addr)
+        self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, builtin_score_owner)
         self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
 
     @classmethod
