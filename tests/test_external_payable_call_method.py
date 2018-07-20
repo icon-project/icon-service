@@ -55,7 +55,7 @@ class CallClass1(IconScoreBase):
         super().__init__(db)
 
     @external(readonly=True)
-    def func1(self):
+    def func1(self) -> int:
         pass
 
     @external
@@ -95,7 +95,7 @@ class CallClass2(CallClass1):
     def __init__(self, db: IconScoreDatabase):
         super().__init__(db)
 
-    def func1(self):
+    def func1(self) -> int:
         pass
 
     @payable

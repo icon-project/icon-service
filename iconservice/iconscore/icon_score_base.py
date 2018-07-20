@@ -93,8 +93,8 @@ def eventlog(func=None, *, indexed=0):
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
         try:
             arguments = __resolve_arguments(func_name, parameters, args, kwargs)
-        except TypeError as e:
-            raise EventLogException(str(e))
+        except IconTypeError as e:
+            raise EventLogException(e.message)
 
         call_method = getattr(calling_obj, '_IconScoreBase__put_event_log')
         return call_method(event_signature, arguments, indexed)
@@ -135,19 +135,19 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             # the argument is in the ordered args
             value = args[i]
             if name in kwargs:
-                raise TypeError(
+                raise IconTypeError(
                     f"Duplicated argument value for '{function_name}': {name}")
         else:
             # If arg is over, the argument should be searched on kwargs
             try:
                 value = kwargs[name]
             except KeyError:
-                raise TypeError(
+                raise IconTypeError(
                     f"Missing argument value for '{function_name}': {name}")
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if annotation is Parameter.empty:
-            raise TypeError(
+            raise IconTypeError(
                 f"Missing argument hint for '{function_name}': '{name}'")
         if hasattr(annotation, '_subs_tree'):
             # Generic type has a '_subs_tree'
@@ -161,7 +161,7 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
         else:
             main_type = annotation
         if not isinstance(value, main_type):
-            raise TypeError(f"Mismatch type type of '{name}': "
+            raise IconTypeError(f"Mismatch type type of '{name}': "
                             f"{type(value)}, expected: {main_type}")
         arguments.append(value)
     return arguments

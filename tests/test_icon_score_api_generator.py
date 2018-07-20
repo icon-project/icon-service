@@ -70,13 +70,9 @@ class TestScoreApiGenerator(unittest.TestCase):
         function_name = 'str_param_optional_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        api = ScoreApiGenerator.generate(functions)[0]
-        self.assertEqual('function', api['type'])
-        self.assertEqual(function_name, api['name'])
-        self.assertEqual(1, len(api['inputs']))
-        self.assertEqual('str', api['inputs'][0]['type'])
-        self.assertEqual(1, len(api['outputs']))
-        self.assertEqual('str', api['outputs'][0]['type'])
+
+        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+                          functions)
 
     def test_function_str_param_list_return(self):
         function_name = 'str_param_list_return'
@@ -156,6 +152,23 @@ class TestScoreApiGenerator(unittest.TestCase):
         self.assertEqual(function_name, api['name'])
         self.assertEqual(3, len(api['inputs']))
 
+    def test_readonly_empty_return(self):
+        function_name = 'readonly_empty_return'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+                          functions)
+
+    def test_writable_unsupported_typ_return(self):
+        function_name = 'writable_unsupported_type_return'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual(function_name, api['name'])
+        self.assertEqual(0, len(api['inputs']))
+        self.assertEqual(0, len(api['outputs']))
+
     def tearDown(self):
         self._members = None
 
@@ -177,7 +190,7 @@ class TestScore:
     def empty_param_empty_return(self):
         pass
 
-    @external
+    @external(readonly=True)
     def empty_param_str_return(self) -> str:
         pass
 
@@ -189,15 +202,15 @@ class TestScore:
     def inherited_str_param_empty_return(self, name: String):
         pass
 
-    @external
+    @external(readonly=True)
     def str_param_optional_return(self, name: String) -> Optional[String]:
         pass
 
-    @external
+    @external(readonly=True)
     def str_param_list_return(self, name: String) -> List[str]:
         pass
 
-    @external
+    @external(readonly=True)
     def str_param_dict_return(self, name: String) -> Dict[str, int]:
         pass
 
@@ -209,16 +222,24 @@ class TestScore:
     def unsupported_param_empty_return(self, name: Decimal):
         pass
 
-    @external
+    @external(readonly=True)
     def str_param_unsupported_return(self, name: str) -> Decimal:
         pass
 
-    @external
+    @external(readonly=True)
     def empty_param_unsupported_optional_return(self) -> Optional[Decimal]:
         pass
 
-    @external
+    @external(readonly=True)
     def empty_param_bool_return(self) -> bool:
+        pass
+
+    @external(readonly=True)
+    def readonly_empty_return(self):
+        pass
+
+    @external
+    def writable_unsupported_type_return(self) -> Decimal:
         pass
 
     def fallback(self, name: str):

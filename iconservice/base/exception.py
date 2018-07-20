@@ -69,6 +69,11 @@ class IconServiceBaseException(BaseException):
         return f'{self.message} ({self.code})'
 
 
+class IconTypeError(IconServiceBaseException):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class InvalidParamsException(IconServiceBaseException):
     def __init__(self, message: Optional[str]):
         super().__init__(message, ExceptionCode.INVALID_PARAMS)
