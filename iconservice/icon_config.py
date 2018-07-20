@@ -23,7 +23,7 @@ default_icon_config = {
     },
     ConfigKey.CONFIG: './conf/iconservice_config.json',
     ConfigKey.SCORE_ROOT_PATH: ".score",
-    ConfigKey.SCORE_STATE_DB_ROOT_PATH: ".statedb",
+    ConfigKey.STATE_DB_ROOT_PATH: ".statedb",
     ConfigKey.CHANNEL: "loopchain_default",
     ConfigKey.AMQP_KEY: "7100",
     ConfigKey.AMQP_TARGET: "127.0.0.1",
