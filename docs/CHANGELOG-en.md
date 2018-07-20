@@ -4,17 +4,28 @@
 
 ### iconservice
 
-* Implement configuration file
-* Add governance SCORE
-* Implement SCORE update feature
-* Implement SCORE audit feature (incomplete)
-* Fix a bug on calling SCORE function which needs no parameters
+* Configurable parameters are separated from code, defined in file.
+* Implemented blockchain governance, enforced by SCORE.
+* SCORE update is now supported.
+* Partial implementation of SCORE audit process.
+* Fixed an issue arose when calling SCORE function without parameters.
+* Added new transaction dataType, “message”.
+* Fee and incentive structure (step rule) updated.
 
-### etc
+### SCORE
 
-* To unify SCORE DBs is under development
+* init() parameters changed.
+  - init(self, db: IconScoreDatabase)
+  - Previous SCORE implementation must be updated.
 
-### iconservice
+### tbears
+
+* Signing method changed.
+* tbears command and configuration file format changed. (See tbears_tutorial.md)
+
+### Miscellaneous
+
+* Undergoing transition from multiple SCORE DBs into a single DB.
 
 ## 0.9.3 - 2018-07-10
 
