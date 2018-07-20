@@ -15,8 +15,8 @@
 # limitations under the License.
 
 from inspect import signature, Signature, Parameter, isclass
-from typing import Any, Optional, Union
-from ..base.exception import IconScoreException
+from typing import Any, Optional
+from ..base.exception import IconScoreException, IconTypeError
 from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
     CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
 
@@ -62,8 +62,8 @@ class ScoreApiGenerator:
                 elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
                     src.append(ScoreApiGenerator.__generate_fallback_function(
                             func.__name__, is_payable, signature(func)))
-            except TypeError as e:
-                raise IconScoreException(f"{e} at {func.__name__}")
+            except IconTypeError as e:
+                raise IconScoreException(f"{e.message} at {func.__name__}")
 
             # elif func.__name__ == ScoreApiGenerator.__API_TYPE_ON_INSTALL:
             #     src.append(ScoreApiGenerator.__generate_on_install_function(func.__name__, signature(func)))
@@ -149,7 +149,7 @@ class ScoreApiGenerator:
             return info_list
 
         if params_type is Signature.empty:
-            raise TypeError(
+            raise IconTypeError(
                 f"'Returning type should be declared in read-only functions")
 
         main_type = ScoreApiGenerator.__get_main_type(params_type)
@@ -161,7 +161,7 @@ class ScoreApiGenerator:
         if api_type is None:
             api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
-            raise TypeError(f"'Unsupported type for '{params_type}'")
+            raise IconTypeError(f"'Unsupported type for '{params_type}'")
 
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
@@ -185,12 +185,12 @@ class ScoreApiGenerator:
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if param.annotation is Parameter.empty:
-            raise TypeError(f"Missing argument hint for '{param.name}'")
+            raise IconTypeError(f"Missing argument hint for '{param.name}'")
 
         main_type = ScoreApiGenerator.__get_main_type(param.annotation)
         api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
-            raise TypeError(
+            raise IconTypeError(
                 f"'Unsupported type for '{param.name}: {param.annotation}'")
         info = dict()
         info[ScoreApiGenerator.__API_NAME] = param.name
