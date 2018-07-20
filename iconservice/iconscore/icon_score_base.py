@@ -300,7 +300,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__icx = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
-            raise ExternalException('empty abi!', '__init__', str(type(self)))
+            raise ExternalException('this score has no external functions', '__init__', str(type(self)))
 
         self.__db.set_observer(self.__create_db_observer())
 
