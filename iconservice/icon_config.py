@@ -11,24 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from .icon_constant import ConfigKey
+
 
 default_icon_config = {
     "log": {
         "colorLog": True,
-        "level": "debug",
-        "filePath": "./log/icon_service1.log",
-        "outputType": "console|file",
-        "rotateType": "D",
-        "rotateInterval": 1
+        "level": "info",
+        "filePath": "./log/iconservice.log",
+        "outputType": "console|file"
     },
-    "iconScoreRootPath": ".score",
-    "iconScoreStateDbRootPath": ".db",
-    "channel": "loopchain_default",
-    "amqpKey": "7100",
-    "amqpTarget": "127.0.0.1",
-    "iconServiceBigStopLimit": 5000000,
-    "loggerDev": True,
-    "adminAddress": "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
-    "enableThreadFlag": 0,
-    "iconServiceFlag": 0
+    ConfigKey.CONFIG: './conf/iconservice_config.json',
+    ConfigKey.SCORE_ROOT_PATH: ".score",
+    ConfigKey.SCORE_STATE_DB_ROOT_PATH: ".statedb",
+    ConfigKey.CHANNEL: "loopchain_default",
+    ConfigKey.AMQP_KEY: "7100",
+    ConfigKey.AMQP_TARGET: "127.0.0.1",
+    ConfigKey.BUILTIN_SCORE_OWNER: "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
+    ConfigKey.SERVICE: {
+        ConfigKey.SERVICE_FEE: False,
+        ConfigKey.SERVICE_AUDIT: False
+    }
 }

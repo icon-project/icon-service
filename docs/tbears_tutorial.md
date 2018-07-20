@@ -115,7 +115,7 @@ tbears의 작업 디렉토리 내 tbears.json 파일을 로딩한다.
         "from": "hxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "port": 9000,
         "scoreRoot": "./.score",
-        "dbRoot": "./.db",
+        "dbRoot": "./.statedb",
         "genesisData": {
             "accounts": [
                 {

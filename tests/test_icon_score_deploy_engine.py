@@ -83,7 +83,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
         self._score_deploy_engine.open(
-            icon_score_root_path=score_path,
+            score_root_path=score_path,
             flags=IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)

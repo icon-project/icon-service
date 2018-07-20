@@ -31,7 +31,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.archive_path = os.path.join(DIRECTORY_PATH, 'test.zip')
         self.archive_path2 = os.path.join(DIRECTORY_PATH, "test_bad.zip")
         self.archive_path3 = os.path.join(DIRECTORY_PATH, "test_uncovered.zip")
-        self.score_root_path = os.path.join(self.deployer.icon_score_root_path, str(self.address.to_bytes().hex()))
+        self.score_root_path = os.path.join(self.deployer.score_root_path, str(self.address.to_bytes().hex()))
         self.deployer2 = IconScoreDeployer('/')
 
     @staticmethod

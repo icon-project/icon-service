@@ -1,0 +1,18 @@
+{
+	"log": {
+		"colorLog": true,
+		"level": "info",
+		"filePath": "./log/icon_service.log",
+		"outputType": "console|file"
+	},
+	"scoreRootPath": ".score",
+	"scoreStateDbRootPath": ".statedb",
+	"channel": "loopchain_default",
+	"amqpKey": "7100",
+	"amqpTarget": "127.0.0.1",
+	"builtinScoreOwner": "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
+	"service": {
+        "fee": false,
+        "audit": false
+    }
+}

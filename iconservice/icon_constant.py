@@ -35,20 +35,19 @@ ICON_DEX_DB_NAME = 'icon_dex'
 
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
 ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
-                                "{iconScoreRootPath}." \
-                                "{iconScoreStateDbRootPath}." \
+                                "{scoreRootPath}." \
+                                "{scoreStateDbRootPath}." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
 
 
 class ConfigKey:
-    BIG_STOP_LIMIT = 'iconServiceBigStepLimit'
-    LOGGER_DEV = 'loggerDev'
-    ADMIN_ADDRESS = 'adminAddress'
-    ENABLE_THREAD_FLAG = 'enableThreadFlag'
-    ICON_SERVICE_FLAG = 'iconServiceFlag'
-    ICON_SCORE_ROOT = 'iconScoreRootPath'
-    ICON_SCORE_STATE_DB_ROOT_PATH = 'iconScoreStateDbRootPath'
+    BUILTIN_SCORE_OWNER = 'builtinScoreOwner'
+    SERVICE = 'service'
+    SERVICE_FEE = 'fee'
+    SERVICE_AUDIT = 'audit'
+    SCORE_ROOT_PATH = 'scoreRootPath'
+    SCORE_STATE_DB_ROOT_PATH = 'scoreStateDbRootPath'
     CHANNEL = 'channel'
     AMQP_KEY = 'amqpKey'
     AMQP_TARGET = 'amqpTarget'
@@ -63,9 +62,9 @@ class EnableThreadFlag(IntFlag):
 
 
 class IconServiceFlag(IntFlag):
-    NONE = 0
-    ENABLE_FEE = 1
-    ENABLE_AUDIT = 2
+    none = 0
+    fee = 1
+    audit = 2
 
 
 class IconDeployFlag(IntFlag):
@@ -74,3 +73,6 @@ class IconDeployFlag(IntFlag):
     # some specified address owner like genesis address owner
     # MUST approve install or update SCORE transactions.
     ENABLE_DEPLOY_AUDIT = 1
+
+
+ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

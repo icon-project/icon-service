@@ -84,7 +84,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context_container = TestContextContainer()
 
         self._score_deploy_engine.open(
-            icon_score_root_path=score_path,
+            score_root_path=score_path,
             flag=0,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)
