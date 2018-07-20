@@ -116,8 +116,8 @@ class OutOfStepException(IconServiceBaseException):
         Returns the exception message
         :return: the exception message
         """
-        return f'\'Requested steps\': {self.requested_step}, ' \
-               f'\'Remaining steps\': {self.step_limit - self.step_used} '
+        return f'Out of step: {self.requested_step} steps requested, but ' \
+               f'{self.step_limit - self.step_used} steps remained'
 
     @property
     def step_limit(self) -> int:
