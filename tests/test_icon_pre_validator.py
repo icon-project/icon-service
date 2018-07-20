@@ -84,7 +84,7 @@ class TestTransactionValidator(unittest.TestCase):
             self.validator.execute(params, step_price)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
-        self.assertEqual('balance is negative', cm.exception.message)
+        self.assertEqual('value < 0', cm.exception.message)
 
     def test_check_balance(self):
         step_price = 0
