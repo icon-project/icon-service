@@ -158,6 +158,9 @@ class IconPreValidator:
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)
 
+        if value < 0:
+            raise InvalidRequestException("balance is negative")
+
         if balance < value + fee:
             raise InvalidRequestException('Out of balance')
 

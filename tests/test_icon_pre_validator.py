@@ -64,6 +64,28 @@ class TestTransactionValidator(unittest.TestCase):
         self.icx_engine.balance = 100
         self.validator.execute(params, step_price=1)
 
+    def test_negative_balance(self):
+        step_price = 0
+        self.icx_engine.balance = 0
+
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': create_address(AddressPrefix.CONTRACT, b'to'),
+            'value': -10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
+        }
+
+        # too small balance
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator.execute(params, step_price)
+
+        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+        self.assertEqual('balance is negative', cm.exception.message)
+
     def test_check_balance(self):
         step_price = 0
         self.icx_engine.balance = 0
