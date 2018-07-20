@@ -20,16 +20,16 @@ import shutil
 
 from iconservice.base.address import Address
 from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
-from iconservice.logger import Logger
 from iconservice.icon_constant import ICON_DEPLOY_LOG_TAG
+from iconcommons.logger import Logger
 
 
 class IconScoreDeployer(object):
     """Score installer.
     """
 
-    def __init__(self, icon_score_root_path: str) -> None:
-        self.icon_score_root_path = icon_score_root_path
+    def __init__(self, score_root_path: str) -> None:
+        self.score_root_path = score_root_path
 
     def deploy(self,
                address: 'Address',
@@ -46,7 +46,7 @@ class IconScoreDeployer(object):
         """
 
         score_id = f'{block_height}_{transaction_index}'
-        score_root_path = os.path.join(self.icon_score_root_path, address.to_bytes().hex())
+        score_root_path = os.path.join(self.score_root_path, address.to_bytes().hex())
         install_path = os.path.join(score_root_path, score_id)
 
         try:

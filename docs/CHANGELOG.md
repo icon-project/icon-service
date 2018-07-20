@@ -17,6 +17,11 @@
     * __init__(self, db: IconScoreDatabase)
     * 기존 SCORE 수정 필요
 
+### tbears
+
+* 전자 서명 방식 변경
+* tbears command 및 설정 파일 형식 변경 (tbears_tutorial.md 참고)
+
 ### 기타
 
 * SCORE DB 통합 작업 진행 중
@@ -74,7 +79,7 @@
     - property, func 내용 추가
     
 ### 주의 사항    
-    
+
 * 이후 버전에서 LevelDB에 저장되는 데이터 형식이 변경될 수 있음
 * LevelDB에 저장되는 데이터 형식 변경 시 이전 데이터와의 호환성이 깨질 수 있음
 

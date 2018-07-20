@@ -93,8 +93,8 @@ def eventlog(func=None, *, indexed=0):
                 FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(IconScoreBase.__name__))
         try:
             arguments = __resolve_arguments(func_name, parameters, args, kwargs)
-        except TypeError as e:
-            raise EventLogException(str(e))
+        except IconTypeError as e:
+            raise EventLogException(e.message)
 
         call_method = getattr(calling_obj, '_IconScoreBase__put_event_log')
         return call_method(event_signature, arguments, indexed)
@@ -135,19 +135,19 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             # the argument is in the ordered args
             value = args[i]
             if name in kwargs:
-                raise TypeError(
+                raise IconTypeError(
                     f"Duplicated argument value for '{function_name}': {name}")
         else:
             # If arg is over, the argument should be searched on kwargs
             try:
                 value = kwargs[name]
             except KeyError:
-                raise TypeError(
+                raise IconTypeError(
                     f"Missing argument value for '{function_name}': {name}")
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if annotation is Parameter.empty:
-            raise TypeError(
+            raise IconTypeError(
                 f"Missing argument hint for '{function_name}': '{name}'")
         if hasattr(annotation, '_subs_tree'):
             # Generic type has a '_subs_tree'
@@ -161,7 +161,7 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
         else:
             main_type = annotation
         if not isinstance(value, main_type):
-            raise TypeError(f"Mismatch type type of '{name}': "
+            raise IconTypeError(f"Mismatch type type of '{name}': "
                             f"{type(value)}, expected: {main_type}")
         arguments.append(value)
     return arguments
@@ -300,7 +300,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__icx = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
-            raise ExternalException('empty abi!', '__init__', str(type(self)))
+            raise ExternalException('this score has no external functions', '__init__', str(type(self)))
 
         self.__db.set_observer(self.__create_db_observer())
 
@@ -531,6 +531,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def icx(self) -> 'Icx':
         if self.__icx is None:
             self.__icx = Icx(self._context, self.__address)
+        else:
+            # Should update a new context in icx for every tx
+            self.__icx._context = self._context
+
         return self.__icx
 
     def now(self):

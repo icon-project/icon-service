@@ -6,7 +6,6 @@ from setuptools import setup, find_packages
 requires = [
     'plyvel',
     'jsonpickle',
-    'coloredlogs',
     'setproctitle'
 ]
 

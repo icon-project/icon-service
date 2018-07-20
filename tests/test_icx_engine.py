@@ -32,7 +32,7 @@ from iconservice.icx.icx_storage import IcxStorage
 class TestIcxEngine(unittest.TestCase, ContextContainer):
     def setUp(self):
         self.db_name = 'engine.db'
-        db = ContextDatabase.from_address_and_path(None, self.db_name)
+        db = ContextDatabase.from_path(self.db_name)
         self.engine = IcxEngine()
         self._from = Address.from_string('hx' + 'a' * 40)
         self.to = Address.from_string('hx' + 'b' * 40)

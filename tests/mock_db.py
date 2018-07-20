@@ -1,11 +1,11 @@
-from iconservice.database.db import PlyvelDatabase
+from iconservice.database.db import KeyValueDatabase
 from iconservice.database.db import ContextDatabase, IconScoreDatabase
 from iconservice.base.address import AddressPrefix
 from typing import Optional
 from tests import create_address
 
 
-class MockPlyvelDatabase(PlyvelDatabase):
+class MockPlyvelDatabase(KeyValueDatabase):
     """Plyvel database wrapper
     """
 
@@ -41,5 +41,6 @@ class MockPlyvelDatabase(PlyvelDatabase):
 
 def create_mock_icon_score_db():
     mock_db = MockPlyvelDatabase(MockPlyvelDatabase.make_db())
-    context_db = ContextDatabase(mock_db, create_address(AddressPrefix.EOA, b'test_db'))
-    return IconScoreDatabase(context_db)
+    address = create_address(AddressPrefix.EOA, b'test_db')
+    context_db = ContextDatabase(mock_db)
+    return IconScoreDatabase(address, context_db)

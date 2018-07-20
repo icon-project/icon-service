@@ -15,7 +15,7 @@ class CallClass2(CallClass1):
         super().__init__(db)
         pass
 
-    def func1(self):
+    def func1(self) -> int:
         pass
 
     def print_test(self):

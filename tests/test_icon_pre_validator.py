@@ -17,7 +17,7 @@
 import unittest
 
 from iconservice.base.address import AddressPrefix
-from iconservice.base.exception import ExceptionCode, InvalidRequestException
+from iconservice.base.exception import ExceptionCode, InvalidRequestException, InvalidParamsException
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from tests import create_tx_hash, create_address
 
@@ -63,6 +63,28 @@ class TestTransactionValidator(unittest.TestCase):
 
         self.icx_engine.balance = 100
         self.validator.execute(params, step_price=1)
+
+    def test_negative_balance(self):
+        step_price = 0
+        self.icx_engine.balance = 0
+
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': create_address(AddressPrefix.EOA, b'from'),
+            'to': create_address(AddressPrefix.CONTRACT, b'to'),
+            'value': -10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
+        }
+
+        # too small balance
+        with self.assertRaises(InvalidParamsException) as cm:
+            self.validator.execute(params, step_price)
+
+        self.assertEqual(ExceptionCode.INVALID_PARAMS, cm.exception.code)
+        self.assertEqual('value < 0', cm.exception.message)
 
     def test_check_balance(self):
         step_price = 0

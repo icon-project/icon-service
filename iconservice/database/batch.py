@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 theloop Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,37 +19,40 @@ import hashlib
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional
 
-from ..base.address import Address
-
 if TYPE_CHECKING:
     from ..base.block import Block
 
 
-class IconScoreBatch(OrderedDict):
-    """Contains precommit states for an icon score
-
-    key: state key
-    value: state value
-    """
-    def __init__(self, address: 'Address') -> None:
-        """Constructor
-
-        :param address: icon_score_address
-        """
+class Batch(OrderedDict):
+    def __init__(self):
         super().__init__()
-        self._address = address
 
-    @property
-    def address(self) -> 'Address':
-        """icon_score_address
+    def digest(self) -> bytes:
+        """Create sha3_256 hash value with included updated states
+
+        How to create a hash value:
+        hash_value = sha3_256(b'key0|value0|key1|value1|...)
+
+        case1: value1 is None,
+            hash_value = sha3_256(b'key0|value0|key1|key2|value2|...)
+
+        case2: value1 = b''
+            hash_value = sha3_256(b'key0|value0|key1||value2|...)
+
+        :return: sha3_256 hash value
         """
-        return self._address
+        # items in data MUST be byte-like objects
+        data = []
 
-    def hash(self) -> bytes:
-        pass
+        for key, value in self.items():
+            data.append(key)
+            if value is not None:
+                data.append(value)
+
+        return hashlib.sha3_256(b'|'.join(data)).digest()
 
 
-class TransactionBatch(OrderedDict):
+class TransactionBatch(Batch):
     """Contains the states changed by a transaction.
 
     key: Score Address
@@ -63,127 +66,25 @@ class TransactionBatch(OrderedDict):
         super().__init__()
         self.hash = tx_hash
 
-    def put(self, address: 'Address', key: bytes, value: bytes) -> None:
-        """
-        :param address: icon_score_address
-        :param key: a key of state
-        :param value: a value of state
-        """
-
-        if address in self:
-            icon_score_batch = self[address]
-        else:
-            icon_score_batch = IconScoreBatch(address)
-            self[address] = icon_score_batch
-
-        icon_score_batch[key] = value
-
-    def __getitem__(self, key: 'Address') -> Optional['IconScoreBatch']:
-        """Get IconScoreBatch instance indicated by address
-
-        :param key: icon_score_address
-        """
-        if key in self:
-            return super().__getitem__(key)
-        else:
-            return None
-
-    def __setitem__(self,
-                    key: 'Address',
-                    value: 'IconScoreBatch') -> None:
-        """operator[] overriding
-
-        :param key: icon_score_address
-        :param value: IconScoreBatch object
-        """
-        if not isinstance(key, Address):
-            raise ValueError('key is not Address type')
-        if not isinstance(value, IconScoreBatch):
-            raise ValueError('value is not IconScoreBatch type')
-
-        super().__setitem__(key, value)
-
     def clear(self):
         self.hash = None
         super().clear()
 
 
-class BlockBatch(OrderedDict):
+class BlockBatch(Batch):
     """Contains the states changed by a block
 
     key: Address
     value: IconScoreBatch
     """
     def __init__(self, block: Optional['Block'] = None):
-        """
+        """Constructor
+
+        :param block: block info
         """
         super().__init__()
         self.block = block
 
-    def put(self, address: 'Address', key: bytes, value: bytes) -> None:
-        """
-        :param address: icon_score_address
-        :param key: a key of state
-        :param value: a value of state
-        """
-
-        if address in self:
-            icon_score_batch = self[address]
-        else:
-            icon_score_batch = IconScoreBatch(address)
-            self[address] = icon_score_batch
-
-        icon_score_batch[key] = value
-
-    def put_tx_batch(self, tx_batch: 'TransactionBatch') -> None:
-        """Put the states of tx_batch
-
-        :param tx_batch:
-        """
-        for icon_score_address in tx_batch:
-            assert(isinstance(icon_score_address, Address))
-            icon_score_batch = tx_batch[icon_score_address]
-
-            for key in icon_score_batch:
-                value = icon_score_batch[key]
-                self.put(icon_score_address, key, value)
-
-    def __getitem__(self, key: 'Address') -> Optional['IconScoreBatch']:
-        """Get IconScoreBatch object indicated by address
-
-        :param key: icon_score_address
-        """
-        if key in self:
-            return super().__getitem__(key)
-        else:
-            return None
-
     def clear(self) -> None:
         self.block = None
         super().clear()
-
-    def digest(self) -> bytes:
-        """Create sha3_256 hash value with included updated states
-
-        How to create a hash value:
-        sha3_256(
-            b'score_address(20)|key|value|key|value|...|
-            score_address(20)|key|value|...')
-
-        :return: sha3_256 hash value
-        """
-        separater = b'|'
-
-        # items in data MUST be byte-like objects
-        data = []
-        for address, icon_score_batch in self.items():
-            data.append(address.body)
-
-            for key, value in icon_score_batch.items():
-                if value is None:
-                    value = b''
-
-                data.append(key)
-                data.append(value)
-
-        return hashlib.sha3_256(separater.join(data)).digest()

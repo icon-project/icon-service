@@ -20,15 +20,16 @@ import os
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
+from iconcommons.icon_config import IconConfig
+from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
-from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import IconServiceFlag, ConfigKey
-from iconservice.icon_config import Configure
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -55,16 +56,20 @@ def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
 class TestIconServiceEngine(unittest.TestCase):
     def setUp(self):
         self._state_db_root_path = '.db'
-        self._icon_score_root_path = '.score'
+        self._score_root_path = '.score'
 
-        rmtree(self._icon_score_root_path)
+        rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 
         engine = IconServiceEngine()
-        conf = Configure(args={ConfigKey.ADMIN_ADDRESS: str(create_address(AddressPrefix.EOA, b'ADMIN'))})
-        engine.open(conf,
-                    self._icon_score_root_path,
-                    self._state_db_root_path)
+        conf = IconConfig("", default_icon_config)
+        conf.load({
+            ConfigKey.BUILTIN_SCORE_OWNER:
+                str(create_address(AddressPrefix.EOA, b'ADMIN')),
+            ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
+            ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
+        })
+        engine.open(conf)
         self._engine = engine
 
         self._genesis_address = create_address(
@@ -72,7 +77,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._treasury_address = create_address(
             AddressPrefix.EOA, b'treasury')
 
-        self._from = self._genesis_address
+        self.from_ = self._genesis_address
         self._to = create_address(AddressPrefix.EOA, b'to')
         self._icon_score_address = create_address(
             AddressPrefix.CONTRACT, b'score')
@@ -102,22 +107,28 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def tearDown(self):
         self._engine.close()
-        rmtree(self._icon_score_root_path)
+
+        rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
+
+    def test_make_flag(self):
+        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False}
+        flag = self._engine._make_service_flag(table)
+        self.assertEqual(flag, IconServiceFlag.fee)
 
     def test_query(self):
         method = 'icx_getBalance'
-        params = {'address': self._from}
+        params = {'address': self.from_}
 
         balance = self._engine.query(method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
 
-    def test_call_in_query(self):
+    def test_call_on_query(self):
         context = context_factory.create(IconScoreContextType.QUERY)
 
         method = 'icx_getBalance'
-        params = {'address': self._from}
+        params = {'address': self.from_}
 
         balance = self._engine._call(context, method, params)
         self.assertTrue(isinstance(balance, int))
@@ -125,7 +136,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         context_factory.destroy(context)
 
-    def test_call_in_invoke(self):
+    def test_call_on_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
 
         from_ = self._genesis_address
@@ -143,6 +154,11 @@ class TestIconServiceEngine(unittest.TestCase):
             'txHash': create_tx_hash()
         }
 
+        step_limit: int = params.get('stepLimit', 0)
+        allow_step_overflow = \
+            not self._engine._is_flag_on(IconServiceFlag.fee) \
+            or params.get('version', 2) < 3
+
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
                                  origin=from_,
@@ -152,18 +168,14 @@ class TestIconServiceEngine(unittest.TestCase):
         context.block = Mock(spec=Block)
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.step_counter: IconScoreStepCounter = \
-            self._engine._step_counter_factory.create(params.get('stepLimit', 0))
+        context.step_counter: IconScoreStepCounter = self._engine.\
+            _step_counter_factory.create(step_limit, allow_step_overflow)
         self._engine._call(context, method, params)
-
-        tx_batch = context.tx_batch
-        self.assertEqual(1, len(tx_batch))
-        self.assertTrue(ICX_ENGINE_ADDRESS in tx_batch)
 
         # from(genesis), to
         # no transfer to fee_treasury because fee charging is disabled
-        icon_score_batch = tx_batch[ICX_ENGINE_ADDRESS]
-        self.assertEqual(2, len(icon_score_batch))
+        tx_batch = context.tx_batch
+        self.assertEqual(2, len(tx_batch))
 
         context_factory.destroy(context)
 
@@ -177,7 +189,7 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_v2 = {
             'method': 'icx_sendTransaction',
             'params': {
-                'from': self._from,
+                'from': self.from_,
                 'to': self._to,
                 'value': value,
                 'fee': 10 ** 16,
@@ -209,7 +221,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, 10000)
 
         step_price = self._engine._get_step_price()
-        # if self._engine._is_flag_on(IconServiceFlag.ENABLE_FEE):
+        # if self._engine._is_flag_on(IconServiceFlag.fee):
         #     # step_used MUST BE 10**12 on protocol v2
         #     self.assertEqual(step_price, 10 ** 12)
         # else:
@@ -221,7 +233,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # Check whether fee charging works well
         from_balance: int = self._engine._icx_engine.get_balance(
-            None, self._from)
+            None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -273,7 +285,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_flag_on(IconServiceFlag.ENABLE_FEE):
+        if self._engine._is_flag_on(IconServiceFlag.fee):
             # step_used MUST BE 10**12 on protocol v2
             self.assertEqual(step_price, 10 ** 12)
         else:
@@ -283,7 +295,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.commit()
 
         # Check whether fee charging works well
-        from_balance: int = self._engine._icx_engine.get_balance(None, self._from)
+        from_balance: int =\
+            self._engine._icx_engine.get_balance(None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -292,7 +305,7 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_hash = create_tx_hash()
         method = 'icx_sendTransaction'
         params = {
-            'from': self._from,
+            'from': self.from_,
             'to': self._icon_score_address,
             'value': 0,
             'fee': 10 ** 16,

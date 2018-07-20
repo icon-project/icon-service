@@ -231,7 +231,7 @@ score/score/
 build/
 dist/
 
-.db
+.statedb
 .score
 
 .DS_Store

@@ -16,7 +16,7 @@
 import hashlib
 import unittest
 from typing import Optional
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 
 from iconservice import EventLog
 from iconservice.base.address import Address, AddressPrefix
@@ -26,8 +26,7 @@ from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.icon_inner_service import MakeResponse, IconScoreInnerTask
-from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.icon_inner_service import MakeResponse
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -35,50 +34,49 @@ from iconservice.iconscore.icon_score_context import IconScoreContext, \
     ContextContainer
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
-from iconservice.iconscore.icon_score_step import IconScoreStepCounter
-from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from iconservice.icon_config import Configure
-from tests import create_block_hash, create_tx_hash, create_address
+from tests import create_tx_hash, create_address
+from tests.mock_generator import generate_service_engine, generate_inner_task, \
+    create_request, ReqData
 
 
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):
-        self._icon_service_engine = IconServiceEngine()
-        self._icon_service_engine._flag = 0
-        self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
+        self._icon_service_engine = generate_service_engine()
 
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
 
-        self._icon_service_engine._icon_score_engine = Mock(
-            spec=IconScoreEngine)
+        self._icon_service_engine._icon_score_engine = \
+            Mock(spec=IconScoreEngine)
+
+        self._icon_service_engine._charge_transaction_fee = \
+            Mock(return_value=(0, 0))
 
         step_counter_factory = IconScoreStepCounterFactory()
-        step_counter_factory.get_step_cost = MagicMock(return_value=6000)
+        step_counter_factory.get_step_cost = Mock(return_value=6000)
         self._icon_service_engine._step_counter_factory = step_counter_factory
         self._icon_service_engine._icon_pre_validator = \
             Mock(spec=IconPreValidator)
 
         self._mock_context = Mock(spec=IconScoreContext)
-        self._mock_context.attach_mock(Mock(spec=Transaction), "tx")
-        self._mock_context.attach_mock(Mock(spec=Block), "block")
+        self._mock_context.tx = Mock(spec=Transaction)
+        self._mock_context.block = Mock(spec=Block)
+        self._mock_context.readonly = False
         self._mock_context.event_logs = []
         self._mock_context.logs_bloom = BloomFilter()
         self._mock_context.traces = []
-        self._mock_context.attach_mock(Mock(spec=int), "cumulative_step_used")
+        self._mock_context.cumulative_step_used = Mock(spec=int)
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
         self._mock_context.step_counter = step_counter_factory.create(5000000)
-        self._mock_context.attach_mock(Mock(spec=Address), "current_address")
+        self._mock_context.current_address = Mock(spec=Address)
 
     def tearDown(self):
         self._icon_service_engine = None
         self._mock_context = None
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.'
-           '_charge_transaction_fee')
-    def test_tx_success(self, IconServiceEngine_charge_transaction_fee):
+    def test_tx_success(self):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
         tx_index = Mock(spec=int)
@@ -95,16 +93,10 @@ class TestTransactionResult(unittest.TestCase):
             'nonce': 1
         }
 
-        def intercept_charge_transaction_fee(*args, **kwargs):
-            return Mock(spec=int), Mock(spec=int)
-
-        IconServiceEngine_charge_transaction_fee.side_effect = \
-            intercept_charge_transaction_fee
-
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, params)
 
-        IconServiceEngine_charge_transaction_fee.assert_called()
+        self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(1, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(to_, tx_result.to)
@@ -113,9 +105,7 @@ class TestTransactionResult(unittest.TestCase):
         self.assertNotIn('failure', camel_dict)
         self.assertNotIn('scoreAddress', camel_dict)
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.'
-           '_charge_transaction_fee')
-    def test_tx_failure(self, IconServiceEngine_charge_transaction_fee):
+    def test_tx_failure(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
@@ -128,25 +118,17 @@ class TestTransactionResult(unittest.TestCase):
         tx_index = Mock(spec=int)
         self._mock_context.tx.attach_mock(tx_index, "index")
 
-        def intercept_charge_transaction_fee(*args, **kwargs):
-            return Mock(spec=int), Mock(spec=int)
-
-        IconServiceEngine_charge_transaction_fee.side_effect = \
-            intercept_charge_transaction_fee
-
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
 
-        IconServiceEngine_charge_transaction_fee.assert_called()
+        self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(0, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertIsNone(tx_result.score_address)
         camel_dict = tx_result.to_dict(to_camel_case)
         self.assertNotIn('scoreAddress', camel_dict)
 
-    @patch('iconservice.icon_service_engine.IconServiceEngine.'
-           '_charge_transaction_fee')
-    def test_install_result(self, IconServiceEngine_charge_transaction_fee):
+    def test_install_result(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=True), 'is_data_type_supported')
 
@@ -156,12 +138,6 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.tx.timestamp = 0
         self._mock_context.tx.origin = from_
         self._mock_context.tx.nonce = None
-
-        def intercept_charge_transaction_fee(*args, **kwargs):
-            return Mock(spec=int), Mock(spec=int)
-
-        IconServiceEngine_charge_transaction_fee.side_effect = \
-            intercept_charge_transaction_fee
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context,
@@ -178,7 +154,7 @@ class TestTransactionResult(unittest.TestCase):
             }
         )
 
-        IconServiceEngine_charge_transaction_fee.assert_called()
+        self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(1, tx_result.status)
         self.assertEqual(tx_index, tx_result.tx_index)
         self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
@@ -240,39 +216,31 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['logsBloom'].startswith('0x'))
         self.assertTrue(converted_result['status'].startswith('0x'))
 
-    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
-    @patch('iconservice.icon_service_engine.'
-           'IconServiceEngine._init_global_value_by_governance_score')
-    @patch('iconservice.icon_service_engine.'
-           'IconServiceEngine._load_builtin_scores')
-    @patch('iconservice.database.factory.DatabaseFactory.create_by_name')
-    @patch('iconservice.icx.icx_engine.IcxEngine.open')
-    def test_request(self, open, create_by_name, _load_builtin_scores,
-                     _init_global_value_by_governance_score, invoke):
+    def test_request(self):
+        inner_task = generate_inner_task()
 
-        inner_task = IconScoreInnerTask(Configure(""), ".", ".")
-        open.assert_called()
-        create_by_name.assert_called()
-        _load_builtin_scores.assert_called()
+        # noinspection PyUnusedLocal
+        def intercept_invoke(*args, **kwargs):
+            ContextContainer._put_context(args[0])
+            context_db = inner_task._icon_service_engine._icx_context_db
 
-        inner_task._icon_service_engine._icx_engine.get_balance = \
-            Mock(return_value=100 * 10 ** 18)
+            score_address = create_address(AddressPrefix.CONTRACT, b'address')
+            score = SampleScore(IconScoreDatabase(score_address, context_db))
+
+            address = create_address(AddressPrefix.EOA, b'address')
+            score.SampleEvent(b'i_data', address, 10, b'data', 'text')
+
+        inner_task._icon_service_engine._icon_score_engine.invoke = \
+            Mock(side_effect=intercept_invoke)
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
 
-        def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
-            context_db = inner_task._icon_service_engine._icx_context_db
-            score = SampleScore(IconScoreDatabase(context_db))
-            address = create_address(AddressPrefix.EOA, b'address')
-            score.SampleEvent(b'i_data', address, 10, b'data', 'text')
-
-        invoke.side_effect = intercept_invoke
-
-        request = self.create_req(from_, to_)
+        request = create_request([
+            ReqData(bytes.hex(create_tx_hash(b'tx1')), from_, to_, 'call', {}),
+            ReqData(bytes.hex(create_tx_hash(b'tx2')), from_, to_, 'call', {})
+        ])
         response = inner_task._invoke(request)
-        invoke.assert_called()
 
         step_total = 0
 
@@ -289,46 +257,8 @@ class TestTransactionResult(unittest.TestCase):
             self.assertEqual(1, len(result['eventLogs']))
             self.assertEqual(step_total, int(result['cumulativeStepUsed'], 16))
 
-    @staticmethod
-    def create_req(from_, to_):
-        req = {
-            'block': {
-                'blockHash': bytes.hex(create_block_hash(b'block')),
-                'blockHeight': hex(100),
-                'timestamp': hex(1234),
-                'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
-            },
-            'transactions': [
-                {
-                    'method': 'icx_sendTransaction',
-                    'params': {
-                        'txHash': bytes.hex(create_tx_hash(b'tx1')),
-                        'version': hex(3),
-                        'from': str(from_),
-                        'to': str(to_),
-                        'stepLimit': hex(12345),
-                        'timestamp': hex(123456),
-                        'dataType': 'call',
-                        'data': {},
-                    }
-                },
-                {
-                    'method': 'icx_sendTransaction',
-                    'params': {
-                        'txHash': bytes.hex(create_tx_hash(b'tx2')),
-                        'version': hex(3),
-                        'from': str(from_),
-                        'to': str(to_),
-                        'stepLimit': hex(12345),
-                        'timestamp': hex(123456),
-                        'dataType': 'call',
-                        'data': {},
-                    }
-                }]
-        }
-        return req
 
-
+# noinspection PyPep8Naming
 class SampleScore(IconScoreBase):
 
     def __init__(self, db: 'IconScoreDatabase') -> None:
@@ -346,7 +276,7 @@ class SampleScore(IconScoreBase):
 
     @eventlog(indexed=2)
     def SampleEvent(self, i_data: bytes, address: Address, amount: int,
-                   data: bytes, text: str):
+                    data: bytes, text: str):
         pass
 
     @external

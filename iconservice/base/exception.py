@@ -18,7 +18,7 @@ from enum import IntEnum, unique
 from functools import wraps
 
 from ..icon_constant import ICON_EXCEPTION_LOG_TAG
-from ..logger import Logger
+from iconcommons.logger import Logger
 
 from typing import Optional, Union
 
@@ -67,6 +67,11 @@ class IconServiceBaseException(BaseException):
 
     def __str__(self):
         return f'{self.message} ({self.code})'
+
+
+class IconTypeError(IconServiceBaseException):
+    def __init__(self, message: str):
+        super().__init__(message)
 
 
 class InvalidParamsException(IconServiceBaseException):

@@ -26,7 +26,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconDeployFlag
-from ..logger import Logger
+from iconcommons import Logger
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -53,13 +53,13 @@ class IconScoreDeployEngine(object):
         self._icon_score_manager = None
 
     def open(self,
-             icon_score_root_path: str,
+             score_root_path: str,
              flag: int,
              icon_score_mapper: 'IconScoreInfoMapper',
              icon_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
 
-        :param icon_score_root_path:
+        :param score_root_path:
         :param flag: flags composed by IconScoreDeployEngine
         :param icon_score_mapper:
         :param icon_deploy_storage:
@@ -67,7 +67,7 @@ class IconScoreDeployEngine(object):
         self._flag = flag
         self._icon_score_deploy_storage = icon_deploy_storage
         self._icon_score_mapper = icon_score_mapper
-        self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(icon_score_root_path)
+        self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(score_root_path)
 
     @property
     def icon_deploy_storage(self):
@@ -198,7 +198,6 @@ class IconScoreDeployEngine(object):
 
         if not is_exist_db:
             self._initialize_score(
-                context=context,
                 on_deploy=score.on_install,
                 params={})
 
@@ -250,18 +249,15 @@ class IconScoreDeployEngine(object):
 
         if not db_exist:
             self._initialize_score(
-                context=context,
                 on_deploy=on_deploy,
                 params=params)
 
-    def _initialize_score(self,
-                          context: 'IconScoreContext',
-                          on_deploy: Callable[[dict], None],
+    @staticmethod
+    def _initialize_score(on_deploy: Callable[[dict], None],
                           params: dict) -> None:
         """on_install() or on_update() of score is called
         only once when installed or updated
 
-        :param context:
         :param on_deploy: score.on_install() or score.on_update()
         :param params: paramters passed to on_install or on_update()
         """

@@ -15,21 +15,24 @@
 # limitations under the License.
 
 import unittest
+from functools import wraps
 from unittest.mock import Mock
 
-from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
-from iconservice.iconscore.icon_score_context import Message, ContextContainer, IconScoreContext
-from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
+from iconservice.base.exception import ExternalException, PayableException, \
+    IconScoreException
 from iconservice.base.transaction import Transaction
-from iconservice.base.exception import ExternalException, PayableException, IconScoreException
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
-from tests.mock_db import create_mock_icon_score_db
-from functools import wraps
+from iconservice.iconscore.icon_score_base import IconScoreBase, external, \
+    payable
+from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import Message, ContextContainer, \
+    IconScoreContext
 from tests import create_address
+from tests.mock_db import create_mock_icon_score_db
 
 
 def decorator(func):
@@ -52,7 +55,7 @@ class CallClass1(IconScoreBase):
         super().__init__(db)
 
     @external(readonly=True)
-    def func1(self):
+    def func1(self) -> int:
         pass
 
     @external
@@ -92,7 +95,7 @@ class CallClass2(CallClass1):
     def __init__(self, db: IconScoreDatabase):
         super().__init__(db)
 
-    def func1(self):
+    def func1(self) -> int:
         pass
 
     @payable

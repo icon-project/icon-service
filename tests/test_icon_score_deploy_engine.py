@@ -22,7 +22,7 @@ from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
-from iconservice.database.factory import DatabaseFactory
+from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
@@ -53,6 +53,16 @@ class TestScoreDeployEngine(unittest.TestCase):
     _ROOT_SCORE_PATH = 'tests/score'
     _TEST_DB_PATH = 'tests/test_db'
 
+    @classmethod
+    def setUpClass(cls):
+        db_path = os.path.join(TEST_ROOT_PATH, cls._TEST_DB_PATH)
+        ContextDatabaseFactory.open(
+            db_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+
+    @classmethod
+    def tearDownClass(cls):
+        ContextDatabaseFactory.close()
+
     def setUp(self):
         db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
@@ -60,8 +70,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._tx_index = 0
 
         self.__ensure_dir(db_path)
-        self._db_factory = DatabaseFactory(db_path)
-        self._icx_db = self._db_factory.create_by_name('icon_dex')
+        self._icx_db = ContextDatabaseFactory.create_by_name('icon_dex')
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
         self._score_deploy_engine = IconScoreDeployEngine()
@@ -70,11 +79,11 @@ class TestScoreDeployEngine(unittest.TestCase):
         icon_score_manager = IconScoreManager(self._score_deploy_engine)
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_mapper = IconScoreInfoMapper(
-            self._db_factory, icon_score_manager, self._icon_score_loader)
+            icon_score_manager, self._icon_score_loader)
 
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
         self._score_deploy_engine.open(
-            icon_score_root_path=score_path,
+            score_root_path=score_path,
             flags=IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT,
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)
@@ -97,8 +106,9 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._tx_index += 1
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._addr1, 0)
+
         self._context.tx = Transaction(
-            create_tx_hash(b'txHash' + self._tx_index.to_bytes(10, DATA_BYTE_ORDER)), origin=self._addr1)
+            create_tx_hash(b'txHash'), origin=self._addr1)
         self._context.block = Block(1, create_block_hash(b'block'), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()

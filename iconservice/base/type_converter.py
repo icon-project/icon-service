@@ -235,6 +235,8 @@ class TypeConverter:
     def _convert_data_value(annotation_type: type, param: Any) -> Any:
         if annotation_type == int:
             param = TypeConverter._convert_value_int(param)
+        elif annotation_type == str:
+            param = TypeConverter._convert_value_string(param)
         elif annotation_type == bool:
             param = TypeConverter._convert_value_bool(param)
         elif annotation_type == Address:

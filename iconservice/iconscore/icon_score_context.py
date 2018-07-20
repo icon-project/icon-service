@@ -268,7 +268,8 @@ class IconScoreContextFactory(object):
         self._queue = []
         self._max_size = max_size
 
-    def create(self, context_type: 'IconScoreContextType') -> 'IconScoreContext':
+    def create(self,
+               context_type: 'IconScoreContextType') -> 'IconScoreContext':
         with self._lock:
             if len(self._queue) > 0:
                 context = self._queue.pop()

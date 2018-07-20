@@ -13,7 +13,7 @@ class CallClass1(IconScoreBase):
         pass
 
     @external(readonly=True)
-    def func1(self):
+    def func1(self) -> int:
         pass
 
     @external
