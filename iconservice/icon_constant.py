@@ -36,7 +36,7 @@ ICON_DEX_DB_NAME = 'icon_dex'
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
 ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{scoreRootPath}." \
-                                "{scoreStateDbRootPath}." \
+                                "{stateDbRootPath}." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
 
@@ -47,7 +47,7 @@ class ConfigKey:
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
     SCORE_ROOT_PATH = 'scoreRootPath'
-    SCORE_STATE_DB_ROOT_PATH = 'scoreStateDbRootPath'
+    STATE_DB_ROOT_PATH = 'stateDbRootPath'
     CHANNEL = 'channel'
     AMQP_KEY = 'amqpKey'
     AMQP_TARGET = 'amqpTarget'

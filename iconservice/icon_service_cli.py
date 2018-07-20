@@ -52,7 +52,7 @@ def main():
                         help='iconservice type [start|stop]')
     parser.add_argument("-sc", dest=ConfigKey.SCORE_ROOT_PATH, type=str, default=None,
                         help="icon score root path  example : .score")
-    parser.add_argument("-st", dest=ConfigKey.SCORE_STATE_DB_ROOT_PATH, type=str, default=None,
+    parser.add_argument("-st", dest=ConfigKey.STATE_DB_ROOT_PATH, type=str, default=None,
                         help="icon score state db root path  example : .db")
     parser.add_argument("-ch", dest=ConfigKey.CHANNEL, type=str, default=None,
                         help="icon score channel")
@@ -110,7 +110,7 @@ def _start_process(conf: 'IconConfig'):
     python_module_string = 'iconservice.icon_service'
 
     converted_params = {'-sc': conf[ConfigKey.SCORE_ROOT_PATH],
-                        '-st': conf[ConfigKey.SCORE_STATE_DB_ROOT_PATH],
+                        '-st': conf[ConfigKey.STATE_DB_ROOT_PATH],
                         '-ch': conf[ConfigKey.CHANNEL], '-ak': conf[ConfigKey.AMQP_KEY],
                         '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf[ConfigKey.CONFIG]}
 
@@ -146,7 +146,7 @@ def _check_service_running(conf: 'IconConfig') -> bool:
     Logger.info(f'check_serve_icon_service!', ICON_SERVICE_STANDALONE)
     proc_title = ICON_SERVICE_PROCTITLE_FORMAT.format(**
         {ConfigKey.SCORE_ROOT_PATH: conf[ConfigKey.SCORE_ROOT_PATH],
-         ConfigKey.SCORE_STATE_DB_ROOT_PATH: conf[ConfigKey.SCORE_STATE_DB_ROOT_PATH],
+         ConfigKey.STATE_DB_ROOT_PATH: conf[ConfigKey.STATE_DB_ROOT_PATH],
          ConfigKey.CHANNEL: conf[ConfigKey.CHANNEL],
          ConfigKey.AMQP_KEY: conf[ConfigKey.AMQP_KEY],
          ConfigKey.AMQP_TARGET: conf[ConfigKey.AMQP_TARGET]})

@@ -43,7 +43,7 @@ class IconService(object):
         amqp_key = config[ConfigKey.AMQP_KEY]
         amqp_target = config[ConfigKey.AMQP_TARGET]
         score_root_path = config[ConfigKey.SCORE_ROOT_PATH]
-        db_root_patn = config[ConfigKey.SCORE_STATE_DB_ROOT_PATH]
+        db_root_patn = config[ConfigKey.STATE_DB_ROOT_PATH]
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
@@ -71,7 +71,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-sc", dest=ConfigKey.SCORE_ROOT_PATH, type=str, default=None,
                         help="icon score root path  example : .score")
-    parser.add_argument("-st", dest=ConfigKey.SCORE_STATE_DB_ROOT_PATH, type=str, default=None,
+    parser.add_argument("-st", dest=ConfigKey.STATE_DB_ROOT_PATH, type=str, default=None,
                         help="icon score state db root path  example : .statedb")
     parser.add_argument("-ch", dest=ConfigKey.CHANNEL, type=str, default=None,
                         help="icon score channel")
