@@ -155,7 +155,9 @@ class TestIconServiceEngine(unittest.TestCase):
         }
 
         step_limit: int = params.get('stepLimit', 0)
-        version: int = params.get('version', 2)
+        allow_step_overflow = \
+            not self._engine._is_flag_on(IconServiceFlag.fee) \
+            or params.get('version', 2) < 3
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
@@ -166,8 +168,8 @@ class TestIconServiceEngine(unittest.TestCase):
         context.block = Mock(spec=Block)
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.step_counter: IconScoreStepCounter = \
-            self._engine._step_counter_factory.create(step_limit, version >= 3)
+        context.step_counter: IconScoreStepCounter = self._engine.\
+            _step_counter_factory.create(step_limit, allow_step_overflow)
         self._engine._call(context, method, params)
 
         # from(genesis), to

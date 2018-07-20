@@ -396,7 +396,9 @@ class IconServiceEngine(ContextContainer):
         from_ = params['from']
         to = params['to']
         step_limit = params.get('stepLimit', 0)
-        version: int = params.get('version', 2)
+        allow_step_overflow = \
+            not self._is_flag_on(IconServiceFlag.fee) \
+            or params.get('version', 2) < 3
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -410,7 +412,7 @@ class IconServiceEngine(ContextContainer):
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit, version >= 3)
+            self._step_counter_factory.create(step_limit, allow_step_overflow)
         context.clear_msg_stack()
 
         return self._call(context, method, params)
