@@ -73,12 +73,12 @@ class IconScoreStepCounterFactory(object):
         """
         self._step_price = step_price
 
-    def create(self, step_limit: int, exception_on_exceeded=True) \
+    def create(self, step_limit: int, allow_step_overflow=False) \
             -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
         :param step_limit: step limit of the transaction
-        :param exception_on_exceeded:
+        :param allow_step_overflow:
         :return: step counter
         """
         # Copying a `dict` so as not to change step costs when processing a
@@ -86,7 +86,7 @@ class IconScoreStepCounterFactory(object):
         return IconScoreStepCounter(
             self._step_cost_dict.copy(),
             step_limit,
-            exception_on_exceeded,
+            allow_step_overflow,
             self._step_price)
 
 
@@ -151,18 +151,18 @@ class IconScoreStepCounter(object):
     def __init__(self,
                  step_cost_dict: dict,
                  step_limit: int,
-                 exception_on_exceeded: bool,
+                 allow_step_overflow: bool,
                  step_price: int) -> None:
         """Constructor
 
         :param step_cost_dict: a dict of base step costs
         :param step_limit: step limit for the transaction
-        :param exception_on_exceeded:
+        :param allow_step_overflow:
         :param step_price: step price
         """
         self._step_cost_dict: dict = step_cost_dict
         self._step_limit: int = step_limit
-        self._exception_on_exceeded: int = exception_on_exceeded
+        self._allow_step_overflow: int = allow_step_overflow
         self._step_price = step_price
         self._step_used: int = 0
 
@@ -200,8 +200,8 @@ class IconScoreStepCounter(object):
     def __apply_step(self, step_to_apply) -> int:
         """ Increases step
         """
-        # If step_price is 0, do not raise OutOfStepException
-        if self._exception_on_exceeded:
+        # If allow_step_overflow is True, do not raise OutOfStepException
+        if not self._allow_step_overflow:
             if step_to_apply + self._step_used > self._step_limit:
                 step_used = self._step_used
                 self._step_used = self._step_limit
