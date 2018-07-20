@@ -49,6 +49,9 @@ class IconPreValidator:
         :param params: params of icx_sendTransaction JSON-RPC request
         :param step_price:
         """
+        value: int = params.get('value', 0)
+        if value < 0:
+            raise InvalidRequestException("balance is negative")
         version: int = params.get('version', 2)
         if version < 3:
             self._validate_transaction_v2(params)
@@ -157,9 +160,6 @@ class IconPreValidator:
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)
-
-        if value < 0:
-            raise InvalidRequestException("balance is negative")
 
         if balance < value + fee:
             raise InvalidRequestException('Out of balance')
