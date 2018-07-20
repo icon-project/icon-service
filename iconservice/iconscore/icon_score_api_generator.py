@@ -55,12 +55,16 @@ class ScoreApiGenerator:
             is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
             is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
 
-            if const_bit_flag & ConstBitFlag.External and func.__name__ != STR_FALLBACK:
-                src.append(ScoreApiGenerator.__generate_normal_function(
-                    func.__name__, is_readonly, is_payable, signature(func)))
-            elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
-                src.append(ScoreApiGenerator.__generate_fallback_function(
-                        func.__name__, is_payable, signature(func)))
+            try:
+                if const_bit_flag & ConstBitFlag.External and func.__name__ != STR_FALLBACK:
+                    src.append(ScoreApiGenerator.__generate_normal_function(
+                        func.__name__, is_readonly, is_payable, signature(func)))
+                elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
+                    src.append(ScoreApiGenerator.__generate_fallback_function(
+                            func.__name__, is_payable, signature(func)))
+            except TypeError as e:
+                raise IconScoreException(f"{e} at {func.__name__}")
+
             # elif func.__name__ == ScoreApiGenerator.__API_TYPE_ON_INSTALL:
             #     src.append(ScoreApiGenerator.__generate_on_install_function(func.__name__, signature(func)))
             # elif func.__name__ == ScoreApiGenerator.__API_TYPE_ON_UPDATE:
@@ -70,10 +74,14 @@ class ScoreApiGenerator:
     def __generate_normal_function(func_name: str, is_readonly: bool, is_payable: bool, sig_info: 'Signature') -> dict:
         info = dict()
 
-        info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_FUNCTION
+        info[ScoreApiGenerator.__API_TYPE] = \
+            ScoreApiGenerator.__API_TYPE_FUNCTION
         info[ScoreApiGenerator.__API_NAME] = func_name
-        info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
-        info[ScoreApiGenerator.__API_OUTPUTS] = ScoreApiGenerator.__generate_output(sig_info.return_annotation)
+        info[ScoreApiGenerator.__API_INPUTS] = \
+            ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
+        info[ScoreApiGenerator.__API_OUTPUTS] = \
+            ScoreApiGenerator.__generate_output(
+                sig_info.return_annotation, is_readonly)
 
         if is_readonly:
             info[ScoreApiGenerator.__API_READONLY] = is_readonly
@@ -134,11 +142,15 @@ class ScoreApiGenerator:
         return info
 
     @staticmethod
-    def __generate_output(params_type: Any) -> list:
+    def __generate_output(params_type: Any, is_readonly: bool) -> list:
         info_list = []
 
-        if params_type is Signature.empty:
+        if not is_readonly:
             return info_list
+
+        if params_type is Signature.empty:
+            raise TypeError(
+                f"'Returning type should be declared in read-only functions")
 
         main_type = ScoreApiGenerator.__get_main_type(params_type)
         # At first, finds if the type is a 'list' or a 'dict'
@@ -149,8 +161,7 @@ class ScoreApiGenerator:
         if api_type is None:
             api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
-            raise IconScoreException(
-                f"'Unsupported type for '{params_type}'")
+            raise TypeError(f"'Unsupported type for '{params_type}'")
 
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
@@ -174,15 +185,13 @@ class ScoreApiGenerator:
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if param.annotation is Parameter.empty:
-            raise IconScoreException(
-                f"Missing argument hint for '{param.name}'")
+            raise TypeError(f"Missing argument hint for '{param.name}'")
 
         main_type = ScoreApiGenerator.__get_main_type(param.annotation)
         api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
-            raise IconScoreException(
-                f"'Unsupported type for "
-                f"'{param.name}: {param.annotation}'")
+            raise TypeError(
+                f"'Unsupported type for '{param.name}: {param.annotation}'")
         info = dict()
         info[ScoreApiGenerator.__API_NAME] = param.name
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
