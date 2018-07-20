@@ -1,10 +1,11 @@
-Governance SCORE API
-====================
+Governance SCORE APIs
+=====================
 
-Describes APIs that Governance SCORE provides.
+This document describes APIs that Governance SCORE provides.
 
 | Date | Author | Changes |
 |:---- |:-----: |:--------|
+| 2018.07.20 | Jaechang Namgoong | Added getMaxStepLimit |
 | 2018.07.16 | Yongwoo Lee | Added getStepCosts, setStepCost, StepCostChanged |
 | 2018.07.13 | Jaechang Namgoong | Added setStepPrice, StepPriceChanged |
 | 2018.07.09 | Jaechang Namgoong | Added getStepPrice |
@@ -37,6 +38,7 @@ Describes APIs that Governance SCORE provides.
     * [getScoreStatus](#getscorestatus)
     * [getStepPrice](#getstepprice)
     * [getStepCosts](#getstepcosts)
+    * [getMaxStepLimit](#getmaxsteplimit)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -215,8 +217,7 @@ None
         "to": "cx0000000000000000000000000000000000000001",
         "dataType": "call",
         "data": {
-            "method": "getStepPrice",
-            "params": {}
+            "method": "getStepPrice"
         }
     }
 }
@@ -258,8 +259,7 @@ None
         "to": "cx0000000000000000000000000000000000000001",
         "dataType": "call",
         "data": {
-            "method": "getStepCosts",
-            "params": {}
+            "method": "getStepCosts"
         }
     }
 }
@@ -287,6 +287,47 @@ None
 }
 ```
 
+## getMaxStepLimit
+
+* Returns the maximum step limit value that any SCORE execution should be bounded by.
+
+### Parameters
+
+None
+
+### Returns
+
+`T_INT` - integer of the maximum step limit
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_call",
+    "params": {
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
+        "to": "cx0000000000000000000000000000000000000001",
+        "dataType": "call",
+        "data": {
+            "method": "getMaxStepLimit"
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": "0x4000000"
+}
+```
 
 # Invoke Methods
 
