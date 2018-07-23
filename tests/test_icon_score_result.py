@@ -24,6 +24,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
+from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_inner_service import MakeResponse
@@ -117,6 +118,7 @@ class TestTransactionResult(unittest.TestCase):
         to_ = Mock(spec=Address)
         tx_index = Mock(spec=int)
         self._mock_context.tx.attach_mock(tx_index, "index")
+        self._mock_context.tx_batch = TransactionBatch()
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
