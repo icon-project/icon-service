@@ -330,6 +330,9 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_timestamp,
                       create_block_hash(b'prev'))
 
+        before_from_balance: int = \
+            self._engine._icx_engine.get_balance(None, self.from_)
+
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -337,7 +340,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(len(tx_results), 1)
 
         tx_result: 'TransactionResult' = tx_results[0]
-        print(tx_result)
         self.assertIsNone(tx_result.failure)
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
@@ -355,7 +357,8 @@ class TestIconServiceEngine(unittest.TestCase):
         step_price = self._engine._get_step_price()
         if self._engine._is_flag_on(IconServiceFlag.fee):
             # step_used MUST BE 10**12 on protocol v2
-            self.assertEqual(step_price, 10 ** 12)
+            self.assertEqual(
+                step_price, self._engine._step_counter_factory.get_step_price())
         else:
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
@@ -363,11 +366,11 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.commit()
 
         # Check whether fee charging works well
-        from_balance: int = \
+        after_from_balance: int = \
             self._engine._icx_engine.get_balance(None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
-        self.assertEqual(fee, step_price * tx_result.step_used)
-        self.assertEqual(from_balance, self._total_supply - value - fee)
+        value = value if tx_result.status == TransactionResult.SUCCESS else 0
+        self.assertEqual(after_from_balance, before_from_balance - value - fee)
 
     def test_score_invoke_failure(self):
         tx_hash = create_tx_hash()
