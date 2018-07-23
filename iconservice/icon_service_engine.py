@@ -586,6 +586,7 @@ class IconServiceEngine(ContextContainer):
             # Finalize tx_result
             context.cumulative_step_used += final_step_used
             tx_result.step_used = final_step_used
+            tx_result.step_price = final_step_price
             tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = context.logs_bloom
