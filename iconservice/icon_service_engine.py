@@ -571,6 +571,7 @@ class IconServiceEngine(ContextContainer):
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
             trace = self._get_trace_from_exception(context.current_address, e)
+            context.tx_batch.clear()
             context.traces.append(trace)
             context.event_logs.clear()
             context.logs_bloom.value = 0

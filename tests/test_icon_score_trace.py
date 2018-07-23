@@ -24,6 +24,7 @@ from unittest.mock import Mock, patch
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.transaction import Transaction
+from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_service_engine import IconServiceEngine
@@ -137,6 +138,7 @@ class TestTrace(unittest.TestCase):
             spec=IconScoreEngine)
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
+        context.tx_batch = TransactionBatch()
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
@@ -185,6 +187,7 @@ class TestTrace(unittest.TestCase):
             spec=IconScoreEngine)
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
+        context.tx_batch = TransactionBatch()
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
