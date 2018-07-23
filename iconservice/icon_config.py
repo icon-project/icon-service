@@ -16,7 +16,10 @@ from .icon_constant import ConfigKey
 
 default_icon_config = {
     "log": {
-        "logger": "iconservice"
+        "colorLog": True,
+        "level": "info",
+        "filePath": "./log/iconservice.log",
+        "outputType": "console|file"
     },
     ConfigKey.CONFIG: './conf/iconservice_config.json',
     ConfigKey.SCORE_ROOT_PATH: ".score",
