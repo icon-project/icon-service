@@ -180,6 +180,90 @@ class TestIconServiceEngine(unittest.TestCase):
 
         context_factory.destroy(context)
 
+    def test_invoke(self):
+        block_height = 1
+        block_hash = create_block_hash(b'block')
+        block_timestamp = 0
+        tx_hash = create_tx_hash()
+        value = 1 * 10 ** 18
+
+        step_limit = 200000000
+        tx_v3 = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'version': 3,
+                'from': self._genesis_address,
+                'to': self._to,
+                'value': value,
+                'stepLimit': step_limit,
+                'timestamp': 1234567890,
+                'txHash': tx_hash
+            }
+        }
+
+        block = Block(block_height,
+                      block_hash,
+                      block_timestamp,
+                      create_block_hash(b'prev'))
+
+        original_invoke_request = self._engine._invoke_request
+
+        # noinspection PyUnusedLocal
+        def intercept_invoke_req(*args, **kwargs):
+            context: 'IconScoreContext' = args[0]
+            request: dict = args[1]
+            index: int = args[2]
+            ret = original_invoke_request(context, request, index)
+
+            # Requesting the very big number of step limit,
+            # but there's a max step limit,
+            # asserts max step limit is applied to step counting.
+            self.assertNotEqual(step_limit, context.step_counter.step_limit)
+            self.assertEqual(
+                self._engine._step_counter_factory.get_max_step_limit(),
+                context.step_counter.step_limit)
+            return ret
+
+        self._engine._invoke_request = Mock(side_effect=intercept_invoke_req)
+
+        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self.assertIsInstance(state_root_hash, bytes)
+        self.assertEqual(len(state_root_hash), 32)
+
+        self.assertEqual(len(tx_results), 1)
+
+        tx_result: 'TransactionResult' = tx_results[0]
+        self.assertIsNone(tx_result.failure)
+        self.assertIsNone(tx_result.score_address)
+        self.assertEqual(tx_result.status, 1)
+        self.assertEqual(tx_result.block_height, block_height)
+        self.assertEqual(tx_result.block_hash, block_hash)
+        self.assertEqual(tx_result.tx_index, 0)
+        self.assertEqual(tx_result.tx_hash, tx_hash)
+
+        # step_used MUST BE 10000 on protocol v2
+        step_unit = self._engine._step_counter_factory.get_step_cost(
+            StepType.DEFAULT)
+
+        self.assertEqual(tx_result.step_used, step_unit)
+
+        step_price = self._engine._get_step_price()
+        if self._engine._is_flag_on(IconServiceFlag.fee):
+            # step_used MUST BE 10**12 on protocol v2
+            self.assertEqual(step_price, 10 ** 12)
+        else:
+            self.assertEqual(step_price, 0)
+        self.assertEqual(tx_result.step_price, step_price)
+
+        self._engine.commit()
+
+        # Check whether fee charging works well
+        from_balance: int = \
+            self._engine._icx_engine.get_balance(None, self.from_)
+        fee = tx_result.step_price * tx_result.step_used
+        self.assertEqual(fee, 0)
+        self.assertEqual(from_balance, self._total_supply - value - fee)
+
     def test_invoke_v2_without_fee(self):
         block_height = 1
         block_hash = create_block_hash(b'block')
