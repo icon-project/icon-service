@@ -245,6 +245,34 @@ class TypeConverter:
             param = TypeConverter._convert_value_bytes(param)
         return param
 
+    @staticmethod
+    def convert_type_reverse(value: Any):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                if isinstance(v, bytes):
+                    is_hash = k in ('blockHash', 'txHash')
+                    value[k] = TypeConverter._convert_bytes_reverse(v, is_hash)
+                else:
+                    value[k] = TypeConverter.convert_type_reverse(v)
+        elif isinstance(value, list):
+            for i, v in enumerate(value):
+                value[i] = TypeConverter.convert_type_reverse(v)
+        elif isinstance(value, int):
+            value = hex(value)
+        elif isinstance(value, Address):
+            value = str(value)
+        elif isinstance(value, bytes):
+            value = TypeConverter._convert_bytes_reverse(value)
+        return value
+
+    @staticmethod
+    def _convert_bytes_reverse(value: bytes, is_hash: bool = False):
+        if is_hash:
+            # if the value is of 'txHash' or 'blockHash', excludes '0x' prefix
+            return bytes.hex(value)
+        else:
+            return f'0x{bytes.hex(value)}'
+
 
 type_convert_templates[ParamType.BLOCK] = {
     "blockHeight": ValueType.INT,

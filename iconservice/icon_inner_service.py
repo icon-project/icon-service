@@ -245,35 +245,7 @@ class MakeResponse:
         if check_error_response(response):
             return response
         else:
-            return MakeResponse.convert_type(response)
-
-    @staticmethod
-    def convert_type(value: Any):
-        if isinstance(value, dict):
-            for k, v in value.items():
-                if isinstance(v, bytes):
-                    is_hash = k in ('blockHash', 'txHash')
-                    value[k] = MakeResponse.convert_bytes(v, is_hash)
-                else:
-                    value[k] = MakeResponse.convert_type(v)
-        elif isinstance(value, list):
-            for i, v in enumerate(value):
-                value[i] = MakeResponse.convert_type(v)
-        elif isinstance(value, int):
-            value = hex(value)
-        elif isinstance(value, Address):
-            value = str(value)
-        elif isinstance(value, bytes):
-            value = MakeResponse.convert_bytes(value)
-        return value
-
-    @staticmethod
-    def convert_bytes(value: bytes, is_hash: bool = False):
-        if is_hash:
-            # if the value is of 'txHash' or 'blockHash', excludes '0x' prefix
-            return bytes.hex(value)
-        else:
-            return f'0x{bytes.hex(value)}'
+            return TypeConverter.convert_type_reverse(response)
 
     @staticmethod
     def make_error_response(code: Any, message: str):
