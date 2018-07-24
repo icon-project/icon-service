@@ -47,6 +47,7 @@ class IconScoreStepCounterFactory(object):
     def __init__(self) -> None:
         self._step_cost_dict = {}
         self._step_price = 0
+        self._max_step_limit = 0
 
     def get_step_cost(self, step_type: 'StepType') -> int:
         return self._step_cost_dict.get(step_type, 0)
@@ -73,19 +74,35 @@ class IconScoreStepCounterFactory(object):
         """
         self._step_price = step_price
 
+    def get_max_step_limit(self):
+        """Returns the max step limit
+
+        :return: the max step limit
+        """
+        return self._max_step_limit
+
+    def set_max_step_limit(self, max_step_limit: int):
+        """Sets the max step limit
+
+        :param max_step_limit: the max step limit
+        """
+        self._max_step_limit = max_step_limit
+
     def create(self, step_limit: int, allow_step_overflow=False) \
             -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
-        :param step_limit: step limit of the transaction
+        :param step_limit: step limit of the transaction. if the input is
+        greater than the max step limit, the max step limit is applied
         :param allow_step_overflow:
         :return: step counter
         """
+
         # Copying a `dict` so as not to change step costs when processing a
         # transaction.
         return IconScoreStepCounter(
             self._step_cost_dict.copy(),
-            step_limit,
+            min(step_limit, self._max_step_limit),
             allow_step_overflow,
             self._step_price)
 

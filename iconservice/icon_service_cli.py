@@ -44,6 +44,14 @@ def main():
     iconservice commands:
         start : iconservice start
         stop : iconservice stop
+        
+        -c : json configure file path
+        -sc : icon score root path ex).score
+        -st : icon score state db root path ex).state
+        -at : amqp target info [IP]:[PORT]
+        -ak : key sharing peer group using queue name. use it if one more peers connect one MQ
+        -ch : loopchain channel ex) loopchain_default
+        -fg : foreground process
     """)
 
     parser.add_argument('command', type=str,
@@ -53,7 +61,7 @@ def main():
     parser.add_argument("-sc", dest=ConfigKey.SCORE_ROOT_PATH, type=str, default=None,
                         help="icon score root path  example : .score")
     parser.add_argument("-st", dest=ConfigKey.STATE_DB_ROOT_PATH, type=str, default=None,
-                        help="icon score state db root path  example : .db")
+                        help="icon score state db root path  example : .statedb")
     parser.add_argument("-ch", dest=ConfigKey.CHANNEL, type=str, default=None,
                         help="icon score channel")
     parser.add_argument("-ak", dest=ConfigKey.AMQP_KEY, type=str, default=None,
@@ -62,7 +70,7 @@ def main():
                         help="icon score amqp_target : [127.0.0.1]")
     parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=CONFIG_JSON_PATH,
                         help="icon score config")
-    parser.add_argument("-f", dest='foreground', action='store_true',
+    parser.add_argument("-fg", dest='foreground', action='store_true',
                         help="icon score service run foreground")
 
     args = parser.parse_args()

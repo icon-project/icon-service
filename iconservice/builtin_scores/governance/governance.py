@@ -39,6 +39,7 @@ class Governance(IconScoreBase):
     _AUDITOR_LIST = 'auditor_list'
     _STEP_PRICE = 'step_price'
     _STEP_COSTS = 'step_costs'
+    _MAX_STEP_LIMIT = 'max_step_limit'
 
     @eventlog(indexed=1)
     def Accepted(self, tx_hash: str):
@@ -62,8 +63,9 @@ class Governance(IconScoreBase):
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
         self._step_price = VarDB(self._STEP_PRICE, db, value_type=int)
         self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
+        self._max_step_limit = VarDB(self._MAX_STEP_LIMIT, db, value_type=int)
 
-    def on_install(self, stepPrice: int = 10 ** 12) -> None:
+    def on_install(self, stepPrice: int = 10 ** 12, maxStepLimit: int = 0x4000000) -> None:
         super().on_install()
         # add owner into initial auditor list
         Logger.debug(f'on_install: owner = "{self.owner}"', TAG)
@@ -72,6 +74,8 @@ class Governance(IconScoreBase):
         self._step_price.set(stepPrice)
         # set initial step costs
         self._set_initial_step_costs()
+        # set initial max step limit
+        self._max_step_limit.set(maxStepLimit)
 
     def on_update(self) -> None:
         super().on_update()
@@ -296,3 +300,7 @@ class Governance(IconScoreBase):
                 self.revert(f'Invalid step cost: {stepType}, {cost}')
         self._step_costs[stepType] = cost
         self.StepCostChanged(stepType, cost)
+
+    @external(readonly=True)
+    def getMaxStepLimit(self) -> int:
+        return self._max_step_limit.get()

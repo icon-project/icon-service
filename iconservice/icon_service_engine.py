@@ -225,11 +225,14 @@ class IconServiceEngine(ContextContainer):
 
         try:
             self._put_context(context)
+            # Gets the governance SCORE
             governance_score = self._icon_score_mapper.get_icon_score(
                 context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
+            # Gets the step price if the fee flag is on
+            # and set to the counter factory
             if self._is_flag_on(IconServiceFlag.fee):
                 step_price = governance_score.getStepPrice()
             else:
@@ -237,10 +240,16 @@ class IconServiceEngine(ContextContainer):
 
             self._step_counter_factory.set_step_price(step_price)
 
+            # Gets the step costs and set to the counter factory
             step_costs = governance_score.getStepCosts()
 
             for key, value in step_costs.items():
                 self._step_counter_factory.set_step_cost(StepType(key), value)
+
+            # Gets the max step limit and keep into the counter factory
+            max_step_limit = governance_score.getMaxStepLimit()
+            self._step_counter_factory.set_max_step_limit(max_step_limit)
+
         finally:
             self._delete_context(context)
 
@@ -571,6 +580,7 @@ class IconServiceEngine(ContextContainer):
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
             trace = self._get_trace_from_exception(context.current_address, e)
+            context.tx_batch.clear()
             context.traces.append(trace)
             context.event_logs.clear()
             context.logs_bloom.value = 0
@@ -586,6 +596,7 @@ class IconServiceEngine(ContextContainer):
             # Finalize tx_result
             context.cumulative_step_used += final_step_used
             tx_result.step_used = final_step_used
+            tx_result.step_price = final_step_price
             tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = context.logs_bloom
