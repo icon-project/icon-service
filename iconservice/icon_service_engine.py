@@ -71,17 +71,19 @@ def _generate_score_address_for_tbears(score_path: str) -> 'Address':
     return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
 
 
-def _generate_score_address(from_: 'Address',
+def _generate_score_address(tx_hash: bytes,
+                            from_: 'Address',
                             timestamp: int,
                             nonce: int = None) -> 'Address':
     """Generates a SCORE address from the transaction information.
 
+    :param tx_hash:
     :param from_:
     :param timestamp:
     :param nonce:
     :return: score address
     """
-    data = from_.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
+    data = tx_hash + from_.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
     if nonce:
         data += nonce.to_bytes(32, DATA_BYTE_ORDER)
 
@@ -715,6 +717,7 @@ class IconServiceEngine(ContextContainer):
                     score_address = _generate_score_address_for_tbears(path)
                 else:
                     score_address = _generate_score_address(
+                        context.tx.hash,
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)

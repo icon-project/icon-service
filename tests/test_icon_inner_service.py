@@ -30,6 +30,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
 from tests import create_block_hash, create_address, create_tx_hash, rmtree
+from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -208,6 +209,77 @@ class TestInnerServiceEngine(unittest.TestCase):
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
         path = os.path.join(root_path, f'tests/sample/{score_name}')
         install_data = {'contentType': 'application/tbears', 'content': path}
+
+        version = 3
+        from_addr = create_address(AddressPrefix.EOA, b'addr1')
+        step_limit = 5000000
+        timestamp = 12345
+        nonce = 1
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
+        request_params = {
+            "version": hex(version),
+            "from": str(from_addr),
+            "to": str(to_addr),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(timestamp),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "deploy",
+            "data": install_data
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        tx_hash = create_tx_hash(block_index.to_bytes(1, 'big'))
+        request_params['txHash'] = bytes.hex(tx_hash)
+        tx = {
+            'method': method,
+            'params': request_params
+        }
+
+        response = await self._inner_task.validate_transaction(tx)
+
+        make_request = {'transactions': [tx]}
+        block_height: int = block_index
+        block_timestamp_us = int(time.time() * 10 ** 6)
+        block_hash = create_block_hash(block_index.to_bytes(1, 'big'))
+
+        make_request['block'] = {
+            'blockHeight': hex(block_height),
+            'blockHash': bytes.hex(block_hash),
+            'timestamp': hex(block_timestamp_us),
+            'prevBlockHash': prev_block_hash
+        }
+
+        precommit_request = {'blockHeight': hex(block_height),
+                             'blockHash': bytes.hex(block_hash)}
+
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
+        is_commit = False
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
+            is_commit = True
+            await self._inner_task.write_precommit_state(precommit_request)
+        else:
+            await self._inner_task.remove_precommit_state(precommit_request)
+
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
+
+    async def _install_sample_token_invoke_zip(self, zip_name: str, to_addr: 'Address', block_index: int,
+                                           prev_block_hash: str):
+        root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+        path = os.path.join(root_path, f'tests/sample/{zip_name}')
+        mz = InMemoryZip()
+        mz.zip_in_memory(path)
+        data = f'0x{mz.data.hex()}'
+
+        install_data = {'contentType': 'application/zip', 'content': data}
 
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
@@ -730,6 +802,32 @@ class TestInnerServiceEngine(unittest.TestCase):
             _run_async(self._update_governance_invoke(1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
+
+    def test_duplicate_score_install(self):
+        prev_block_hash, is_commit, tx_results = \
+            _run_async(self._install_sample_token_invoke_zip(
+                'install1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        prev_block_hash, is_commit, tx_results = \
+            _run_async(self._install_sample_token_invoke_zip(
+                'install2', ZERO_SCORE_ADDRESS, 2, prev_block_hash))
+
+        version = 3
+        token_addr = tx_results[0]['scoreAddress']
+        addr_from = create_address(AddressPrefix.EOA, b'addr1')
+
+        request = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": token_addr,
+            "dataType": "call",
+            "data": {
+                "method": "total_supply",
+                "params": {}
+            }
+        }
+
+        response = _run_async(self._icx_call(request))
+        print(response)
 
 
 if __name__ == '__main__':
