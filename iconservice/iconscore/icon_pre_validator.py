@@ -16,13 +16,14 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.address import Address, ZERO_SCORE_ADDRESS
+from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..icon_constant import FIXED_FEE
 
 if TYPE_CHECKING:
     from ..deploy.icon_score_manager import IconScoreManager
     from ..icx.icx_engine import IcxEngine
+    from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
 
 
 class IconPreValidator:
@@ -31,13 +32,16 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx_engine: 'IcxEngine', score_manager: 'IconScoreManager') -> None:
+    def __init__(self, icx_engine: 'IcxEngine',
+                 score_manager: 'IconScoreManager',
+                 score_mapper: 'IconScoreInfoMapper') -> None:
         """Constructor
 
         :param icx_engine: icx engine
         """
         self._icx = icx_engine
         self._score_manager = score_manager
+        self._score_mapper = score_mapper
 
     def execute(self, params: dict, step_price: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -158,6 +162,26 @@ class IconPreValidator:
 
         if 'content' not in data:
             raise InvalidRequestException(f'content not found')
+
+        self._validate_generate_score_address(params)
+
+    def _validate_generate_score_address(self, params):
+        data_type: str = params['dataType']
+        data: dict = params['data']
+        to: 'Address' = params['to']
+        from_: 'Address' = params['from']
+        timestamp: int = params['timestamp']
+        nonce: int = params.get('nonce')
+
+        if data_type == 'deploy':
+            if to == ZERO_SCORE_ADDRESS:
+                # SCORE install
+                content_type = data.get('contentType')
+                if content_type != 'application/tbears':
+                    score_address = generate_score_address(from_, timestamp, nonce)
+                    if score_address in self._score_mapper:
+                        raise InvalidRequestException(f'duplicated address')
+
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)

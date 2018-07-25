@@ -146,7 +146,7 @@ class TestInnerServiceEngine(unittest.TestCase):
 
         version = 3
         step_limit = 5000000
-        timestamp = 12345
+        tx_timestamp_us = int(time.time() * 10 ** 6)
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
@@ -156,7 +156,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             "to": str(addr_to),
             "value": hex(value),
             "stepLimit": hex(step_limit),
-            "timestamp": hex(timestamp),
+            "timestamp": hex(tx_timestamp_us),
             "nonce": hex(nonce),
             "signature": signature
         }
@@ -213,7 +213,7 @@ class TestInnerServiceEngine(unittest.TestCase):
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
         step_limit = 5000000
-        timestamp = 12345
+        tx_timestamp_us = int(time.time() * 10 ** 6)
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
@@ -222,7 +222,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             "from": str(from_addr),
             "to": str(to_addr),
             "stepLimit": hex(step_limit),
-            "timestamp": hex(timestamp),
+            "timestamp": hex(tx_timestamp_us),
             "nonce": hex(nonce),
             "signature": signature,
             "dataType": "deploy",
@@ -242,7 +242,7 @@ class TestInnerServiceEngine(unittest.TestCase):
 
         make_request = {'transactions': [tx]}
         block_height: int = block_index
-        block_timestamp_us = int(time.time() * 10 ** 6)
+        block_timestamp_us = tx_timestamp_us
         block_hash = create_block_hash(block_index.to_bytes(1, 'big'))
 
         make_request['block'] = {
@@ -284,7 +284,7 @@ class TestInnerServiceEngine(unittest.TestCase):
         version = 3
         from_addr = create_address(AddressPrefix.EOA, b'addr1')
         step_limit = 5000000
-        timestamp = 12345
+        tx_timestamp_us = int(time.time() * 10 ** 6)
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
@@ -293,7 +293,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             "from": str(from_addr),
             "to": str(to_addr),
             "stepLimit": hex(step_limit),
-            "timestamp": hex(timestamp),
+            "timestamp": hex(tx_timestamp_us),
             "nonce": hex(nonce),
             "signature": signature,
             "dataType": "deploy",
@@ -827,7 +827,7 @@ class TestInnerServiceEngine(unittest.TestCase):
         }
 
         response = _run_async(self._icx_call(request))
-        print(response)
+        self.assertEqual(response, "0x0")
 
 
 if __name__ == '__main__':
