@@ -19,6 +19,7 @@ from typing import Any, Optional
 from ..base.exception import IconScoreException, IconTypeError
 from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
     CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
+from ..base.type_converter import TypeConverter
 
 
 class ScoreApiGenerator:
@@ -30,6 +31,7 @@ class ScoreApiGenerator:
     __API_PAYABLE = 'payable'
     __API_READONLY = 'readonly'
     __API_INPUTS_INDEXED = 'indexed'
+    __API_INPUTS_DEFAULT = 'default'
     __API_PARAMS_ADDRESS = 'Address'
     __API_PARAMS_INDEXED = 'Indexed'
     __API_TYPE_FUNCTION = 'function'
@@ -197,6 +199,8 @@ class ScoreApiGenerator:
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
         if is_indexed:
             info[ScoreApiGenerator.__API_INPUTS_INDEXED] = is_indexed
+        if param.default is not Parameter.empty:
+            info[ScoreApiGenerator.__API_INPUTS_DEFAULT] = TypeConverter.convert_type_reverse(param.default)
         src.append(info)
 
     @staticmethod

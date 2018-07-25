@@ -16,6 +16,7 @@ import sys
 import subprocess
 from enum import IntEnum
 import asyncio
+import signal
 
 from .icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
 from .icon_config import default_icon_config
@@ -23,17 +24,30 @@ from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
 
 ICON_SERVICE_STANDALONE = 'IconServiceStandAlone'
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
 CONFIG_JSON_PATH = os.path.join(DIRECTORY_PATH, "icon_service.json")
+cache_conf = None
 
 
 class ExitCode(IntEnum):
     SUCCEEDED = 0
     COMMAND_IS_WRONG = 1
+
+
+def signal_handler(signum, frame):
+    global cache_conf
+    if cache_conf:
+        Logger.info(f'signal_handler conf: {cache_conf}')
+        _stop(cache_conf)
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def main():
@@ -83,31 +97,34 @@ def main():
     conf.load(dict(vars(args)))
     Logger.load_config(conf)
 
+    global cache_conf
+    cache_conf = conf
+
     command = args.command[0]
     if command == 'start' and len(args.command) == 1:
-        result = start(conf)
+        result = _start(conf)
     elif command == 'stop' and len(args.command) == 1:
-        result = stop(conf)
+        result = _stop(conf)
     else:
         parser.print_help()
         result = ExitCode.COMMAND_IS_WRONG.value
     sys.exit(result)
 
 
-def start(conf: 'IconConfig') -> int:
+def _start(conf: 'IconConfig') -> int:
     if not _is_running_icon_service(conf):
         _start_process(conf)
     Logger.info(f'start_command done!', ICON_SERVICE_STANDALONE)
     return ExitCode.SUCCEEDED
 
 
-def stop(conf: 'IconConfig') -> int:
-    async def _stop():
+def _stop(conf: 'IconConfig') -> int:
+    async def __stop():
         await stop_process(conf)
 
     if _is_running_icon_service(conf):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(_stop())
+        loop.run_until_complete(__stop())
 
     Logger.info(f'stop_command done!', ICON_SERVICE_STANDALONE)
     return ExitCode.SUCCEEDED
@@ -153,11 +170,11 @@ def _is_running_icon_service(conf: 'IconConfig') -> bool:
 def _check_service_running(conf: 'IconConfig') -> bool:
     Logger.info(f'check_serve_icon_service!', ICON_SERVICE_STANDALONE)
     proc_title = ICON_SERVICE_PROCTITLE_FORMAT.format(**
-        {ConfigKey.SCORE_ROOT_PATH: conf[ConfigKey.SCORE_ROOT_PATH],
-         ConfigKey.STATE_DB_ROOT_PATH: conf[ConfigKey.STATE_DB_ROOT_PATH],
-         ConfigKey.CHANNEL: conf[ConfigKey.CHANNEL],
-         ConfigKey.AMQP_KEY: conf[ConfigKey.AMQP_KEY],
-         ConfigKey.AMQP_TARGET: conf[ConfigKey.AMQP_TARGET]})
+                                                      {ConfigKey.SCORE_ROOT_PATH: conf[ConfigKey.SCORE_ROOT_PATH],
+                                                       ConfigKey.STATE_DB_ROOT_PATH: conf[ConfigKey.STATE_DB_ROOT_PATH],
+                                                       ConfigKey.CHANNEL: conf[ConfigKey.CHANNEL],
+                                                       ConfigKey.AMQP_KEY: conf[ConfigKey.AMQP_KEY],
+                                                       ConfigKey.AMQP_TARGET: conf[ConfigKey.AMQP_TARGET]})
     return find_procs_by_params(proc_title)
 
 
@@ -174,8 +191,7 @@ def _make_icon_score_queue_name(channel: str, amqp_key: str) -> str:
     return ICON_SCORE_QUEUE_NAME_FORMAT.format(channel_name=channel, amqp_key=amqp_key)
 
 
-async def _create_icon_score_stub(
-        amqp_target: str, icon_score_queue_name: str) -> 'IconScoreInnerStub':
+async def _create_icon_score_stub(amqp_target: str, icon_score_queue_name: str) -> 'IconScoreInnerStub':
     from .icon_inner_service import IconScoreInnerStub
 
     stub = IconScoreInnerStub(amqp_target, icon_score_queue_name)

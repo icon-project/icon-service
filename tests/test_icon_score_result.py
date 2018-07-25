@@ -18,7 +18,7 @@ import unittest
 from typing import Optional
 from unittest.mock import Mock
 
-from iconservice import EventLog
+from iconservice import EventLog, TypeConverter
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
@@ -27,7 +27,6 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.icon_inner_service import MakeResponse
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -208,7 +207,7 @@ class TestTransactionResult(unittest.TestCase):
         self.assertIn('data', camel_dict['eventLogs'][0])
         self.assertEqual(256, len(camel_dict['logsBloom']))
 
-        converted_result = MakeResponse.convert_type(camel_dict)
+        converted_result = TypeConverter.convert_type_reverse(camel_dict)
         self.assertFalse(converted_result['txHash'].startswith('0x'))
         self.assertTrue(converted_result['blockHeight'].startswith('0x'))
         self.assertTrue(converted_result['txIndex'].startswith('0x'))
