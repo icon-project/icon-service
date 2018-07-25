@@ -54,9 +54,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
 
     def tearDown(self):
-        self._inner_task._close()
-        rmtree(self._score_root_path)
-        rmtree(self._state_db_root_path)
+        async def _run():
+            await asyncio.sleep(1)
+            await self._inner_task.close()
+            rmtree(self._score_root_path)
+            rmtree(self._state_db_root_path)
+
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(_run())
+        except RuntimeError:
+            pass
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
