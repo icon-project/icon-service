@@ -73,7 +73,6 @@ class TestInnerServiceEngine(unittest.TestCase):
     def _run_async(cls, asnyc_func):
         loop = asyncio.new_event_loop()
         cls.asnyc_loop_array.append(loop)
-        asyncio.get_event_loop().is_closed()
         return loop.run_until_complete(asnyc_func)
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
