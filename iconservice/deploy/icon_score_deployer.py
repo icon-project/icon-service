@@ -18,6 +18,7 @@ import os
 import zipfile
 import shutil
 
+from . import make_score_id
 from iconservice.base.address import Address
 from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
 from iconservice.icon_constant import ICON_DEPLOY_LOG_TAG
@@ -45,7 +46,7 @@ class IconScoreDeployer(object):
         :return:
         """
 
-        score_id = f'{block_height}_{transaction_index}'
+        score_id = make_score_id(block_height, transaction_index)
         score_root_path = os.path.join(self.score_root_path, address.to_bytes().hex())
         install_path = os.path.join(score_root_path, score_id)
 

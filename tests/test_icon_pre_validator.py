@@ -121,7 +121,7 @@ class TestTransactionValidator(unittest.TestCase):
 
     def test_transfer_to_invalid_score_address(self):
         self.icx_engine.get_balance = Mock(return_value=1000)
-        self.score_manager.is_score_status_active = Mock(return_value=False)
+        self.score_manager.is_score_active = Mock(return_value=False)
         to = create_address(AddressPrefix.CONTRACT, b'to')
 
         params = {
@@ -172,7 +172,7 @@ class TestTransactionValidator(unittest.TestCase):
         step_limit = 20000
 
         self.icx_engine.get_balance = Mock(return_value=0)
-        self.score_manager.is_score_status_active = Mock(return_value=False)
+        self.score_manager.is_score_active = Mock(return_value=False)
 
         to = create_address(AddressPrefix.EOA, b'to')
 
@@ -257,7 +257,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
 
     def test_out_of_balance(self):
         self.icx_engine.get_balance = Mock(return_value=0)
-        self.score_manager.is_score_status_active = Mock(return_value=False)
+        self.score_manager.is_score_active = Mock(return_value=False)
 
         to = create_address(AddressPrefix.EOA, b'to')
 
@@ -294,7 +294,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
     def test_execute_to_check_out_of_balance(self):
         step_price = 10 ** 12
         self.icx_engine.get_balance = Mock(return_value=0)
-        self.score_manager.is_score_status_active = Mock(return_value=False)
+        self.score_manager.is_score_active = Mock(return_value=False)
 
         to = create_address(AddressPrefix.EOA, b'to')
 

@@ -17,9 +17,9 @@ from collections import namedtuple
 from os import path, symlink, makedirs
 from typing import TYPE_CHECKING, Callable
 
-from . import DeployType
+from . import DeployType, make_score_id
 from .icon_builtin_score_loader import IconBuiltinScoreLoader
-from .icon_score_deploy_storage import IconScoreDeployStorage
+from .icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployTXParams
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
@@ -115,22 +115,22 @@ class IconScoreDeployEngine(object):
         if tx_params is None:
             raise InvalidParamsException(f'tx_params is None : {tx_hash}')
         score_address = tx_params.score_address
+        self._score_deploy(context, tx_params)
+
         self._icon_score_deploy_storage.update_score_info(
             context, score_address, tx_hash)
         deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
         if deploy_info is None:
             raise InvalidParamsException(f'deploy_info is None : {score_address}')
-        self._score_deploy(context, tx_params.deploy_state, score_address, tx_params.deploy_data)
 
-    def deploy_for_builtin(self, context: 'IconScoreContext', score_address: 'Address', src_score_path: str):
-        self._score_deploy_for_builtin(context, score_address, src_score_path)
+    def deploy_for_builtin(self, score_address: 'Address', src_score_path: str):
+        self._score_deploy_for_builtin(score_address, src_score_path)
 
     def _score_deploy(self,
                       context: 'IconScoreContext',
-                      deploy_state: 'DeployType',
-                      icon_score_address: 'Address',
-                      data: dict):
+                      tx_params: 'IconScoreDeployTXParams'):
 
+        data = tx_params.deploy_data
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
@@ -142,18 +142,18 @@ class IconScoreDeployEngine(object):
             raise InvalidParamsException(
                 f'Invalid contentType: {content_type}')
 
-        self._on_deploy(context, deploy_state, icon_score_address, data)
+        self._on_deploy(context, tx_params)
 
-    def _score_deploy_for_builtin(self, context: 'IconScoreContext', icon_score_address: 'Address',
+    def _score_deploy_for_builtin(self, icon_score_address: 'Address',
                                   src_score_path: str):
-        self._on_deploy_for_builtin(context, icon_score_address, src_score_path)
+        self._on_deploy_for_builtin(icon_score_address, src_score_path)
 
     def commit(self, context: 'IconScoreContext') -> None:
         pass
 
     def write_deploy_info_and_tx_params(self,
                                         context: 'IconScoreContext',
-                                        deploy_state: 'DeployType',
+                                        deploy_type: 'DeployType',
                                         icon_score_address: 'Address',
                                         data: dict) -> None:
         """Write score deploy info to context db
@@ -161,7 +161,7 @@ class IconScoreDeployEngine(object):
 
         self._icon_score_deploy_storage.put_deploy_info_and_tx_params(context,
                                                                       icon_score_address,
-                                                                      deploy_state,
+                                                                      deploy_type,
                                                                       context.tx.origin,
                                                                       context.tx.hash,
                                                                       data)
@@ -174,7 +174,6 @@ class IconScoreDeployEngine(object):
         self._icon_score_deploy_storage.put_deploy_info_and_tx_params_for_builtin(icon_score_address, owner_address)
 
     def _on_deploy_for_builtin(self,
-                               context: 'IconScoreContext',
                                icon_score_address: 'Address',
                                src_score_path: str) -> None:
         """Install an icon score for builtin
@@ -184,73 +183,70 @@ class IconScoreDeployEngine(object):
         target_path = path.join(score_root_path,
                                 icon_score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
+        score_id = make_score_id(0, 0)
         target_path = path.join(
-            target_path, f'{0}_{0}')
+            target_path, score_id)
         try:
             symlink(src_score_path, target_path, target_is_directory=True)
         except FileExistsError:
             pass
 
-        is_exist_db = self._icon_score_mapper.is_exist_db(icon_score_address)
-        score = self._icon_score_mapper.get_icon_score(context, icon_score_address)
+        score = self._icon_score_mapper.load_wait_icon_score(icon_score_address, score_id)
         if score is None:
             raise InvalidParamsException(f'score is None : {icon_score_address}')
 
-        if not is_exist_db:
-            self._initialize_score(
-                on_deploy=score.on_install,
-                params={})
+        self._initialize_score(
+            on_deploy=score.on_install,
+            params={})
 
     def _on_deploy(self,
                    context: 'IconScoreContext',
-                   deploy_state: 'DeployType',
-                   icon_score_address: 'Address',
-                   data: dict) -> None:
+                   tx_params: 'IconScoreDeployTXParams') -> None:
         """Install an icon score on commit
 
                 Owner check has already been done in IconServiceEngine
                 - Install IconScore package file to file system
 
                 """
+        data = tx_params.deploy_data
+        score_address = tx_params.score_address
         content_type: str = data.get('contentType')
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
 
-        self._icon_score_mapper.delete_icon_score(icon_score_address)
         if content_type == 'application/tbears':
             score_root_path = self._icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
-                                    icon_score_address.to_bytes().hex())
+                                    score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
-            target_path = path.join(
-                target_path, f'{context.block.height}_{context.tx.index}')
+            score_id = tx_params.score_id
+            target_path = path.join(target_path, score_id)
             try:
                 symlink(content, target_path, target_is_directory=True)
             except FileExistsError:
                 pass
         else:
             self._icon_score_deployer.deploy(
-                address=icon_score_address,
+                address=score_address,
                 data=content,
                 block_height=context.block.height,
                 transaction_index=context.tx.index)
 
-        db_exist = self._icon_score_mapper.is_exist_db(icon_score_address)
-
-        score = self._icon_score_mapper.get_icon_score(context, icon_score_address)
+        score_id = tx_params.score_id
+        score = self._icon_score_mapper.load_wait_icon_score(score_address, score_id)
         if score is None:
-            raise InvalidParamsException(f'score is None : {icon_score_address}')
+            raise InvalidParamsException(f'score is None : {score_address}')
 
+        deploy_type = tx_params.deploy_type
         on_deploy = None
-        if deploy_state == DeployType.INSTALL:
+        if deploy_type == DeployType.INSTALL:
             on_deploy = score.on_install
-        elif deploy_state == DeployType.UPDATE:
+        elif deploy_type == DeployType.UPDATE:
             on_deploy = score.on_update
 
-        if not db_exist:
-            self._initialize_score(
-                on_deploy=on_deploy,
-                params=params)
+        self._initialize_score(
+            on_deploy=on_deploy,
+            params=params)
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],

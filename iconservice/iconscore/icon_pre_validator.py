@@ -93,7 +93,7 @@ class IconPreValidator:
 
         # Check 'to' is not a SCORE address
         to: 'Address' = params['to']
-        if self._score_manager.is_score_status_active(
+        if self._score_manager.is_score_active(
                 context=None, icon_score_address=to):
             raise InvalidRequestException(
                 'It is not allowed to transfer coin to SCORE on protocol v2')
@@ -211,6 +211,6 @@ class IconPreValidator:
     def _is_score_address(self, address: 'Address') -> bool:
         is_contract = address.is_contract
         is_zero_score_address = address == ZERO_SCORE_ADDRESS
-        is_score_status_active = self._score_manager.is_score_status_active(context=None, icon_score_address=address)
-        is_score_address = is_contract and not is_zero_score_address and not is_score_status_active
+        is_score_active = self._score_manager.is_score_active(context=None, icon_score_address=address)
+        is_score_address = is_contract and not is_zero_score_address and not is_score_active
         return not is_score_address
