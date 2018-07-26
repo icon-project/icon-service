@@ -36,18 +36,9 @@ if TYPE_CHECKING:
     from iconservice.base.address import Address
 
 
-asnyc_loop_array = []
-
-
-def _run_async(coro):
-    global asnyc_loop_array
-    loop = asyncio.new_event_loop()
-    asnyc_loop_array.append(loop)
-    asyncio.get_event_loop().is_closed()
-    return loop.run_until_complete(coro)
-
-
 class TestInnerServiceEngine(unittest.TestCase):
+    asnyc_loop_array = []
+
     def setUp(self):
         self._state_db_root_path = '.statedb'
         self._score_root_path = '.score'
@@ -65,7 +56,7 @@ class TestInnerServiceEngine(unittest.TestCase):
         self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
 
-        self._genesis_block_hash, is_commit, tx_results = _run_async(self._genesis_invoke(0))
+        self._genesis_block_hash, is_commit, tx_results = self._run_async(self._genesis_invoke(0))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -74,9 +65,16 @@ class TestInnerServiceEngine(unittest.TestCase):
         rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 
-        for loop in asnyc_loop_array:
+        for loop in self.asnyc_loop_array:
             loop.close()
-        asnyc_loop_array.clear()
+        self.asnyc_loop_array.clear()
+
+    @classmethod
+    def _run_async(cls, asnyc_func):
+        loop = asyncio.new_event_loop()
+        cls.asnyc_loop_array.append(loop)
+        asyncio.get_event_loop().is_closed()
+        return loop.run_until_complete(asnyc_func)
 
     async def _genesis_invoke(self, block_index: int = 0) -> tuple:
         tx_hash = create_tx_hash(b'genesis')
@@ -497,64 +495,64 @@ class TestInnerServiceEngine(unittest.TestCase):
 
     def test_invoke_success(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, prev_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, prev_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_invoke_fail1(self):
         prev_block_hash, is_commit, response = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, self._genesis_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
 
     def test_invoke_fail2(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
         prev_block_hash, is_commit, response = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 3, prev_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 3, prev_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
 
     def test_invoke_fail3(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
         prev_block_hash, is_commit, response = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, prev_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, prev_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
 
     def test_invoke_fail4(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
         prev_block_hash, is_commit, response = \
-            _run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, ""))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, ""))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
 
     def test_install_sample_token(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
+            self._run_async(self._install_sample_token_invoke(
                 'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_query_method_sample_token(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
+            self._run_async(self._install_sample_token_invoke(
                 'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -573,7 +571,7 @@ class TestInnerServiceEngine(unittest.TestCase):
                 "params": {}
             }
         }
-        response = _run_async(self._icx_call(request))
+        response = self._run_async(self._icx_call(request))
         self.assertEqual(response, "0x3635c9adc5dea00000")
 
     def test_governance_score1(self):
@@ -581,7 +579,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
+            self._run_async(self._install_sample_token_invoke(
                 'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -603,7 +601,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             }
         }
 
-        response = _run_async(self._icx_call(request))
+        response = self._run_async(self._icx_call(request))
         self.assertEqual('pending', response['next']['status'])
 
     def test_governance_score2(self):
@@ -611,8 +609,8 @@ class TestInnerServiceEngine(unittest.TestCase):
             IconDeployFlag.ENABLE_DEPLOY_AUDIT
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
-                'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+            self._run_async(self._install_sample_token_invoke(
+                'install1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -635,11 +633,11 @@ class TestInnerServiceEngine(unittest.TestCase):
             }
         }
 
-        response = _run_async(self._icx_call(request))
+        response = self._run_async(self._icx_call(request))
         self.assertEqual('pending', response['next']['status'])
         self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
-        prev_block_hash, is_commit, tx_results = _run_async(self._accept_deploy_score(
+        prev_block_hash, is_commit, tx_results = self._run_async(self._accept_deploy_score(
             2, prev_block_hash, self._admin_addr, next_tx_hash))
 
         self.assertEqual(is_commit, True)
@@ -658,7 +656,7 @@ class TestInnerServiceEngine(unittest.TestCase):
                 }
             }
         }
-        response = _run_async(self._icx_call(request))
+        response = self._run_async(self._icx_call(request))
         self.assertEqual('active', response['current']['status'])
         self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
 
@@ -668,16 +666,16 @@ class TestInnerServiceEngine(unittest.TestCase):
             "to": token_addr,
             "dataType": "call",
             "data": {
-                "method": "total_supply",
+                "method": "hello",
                 "params": {}
             }
         }
 
-        response = _run_async(self._icx_call(request))
-        self.assertEqual(response, "0x3635c9adc5dea00000")
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello")
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke('sample_token2', token_addr, 3, prev_block_hash))
+            self._run_async(self._install_sample_token_invoke('install2', token_addr, 3, prev_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
         current_tx_hash = next_tx_hash
@@ -696,7 +694,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             }
         }
 
-        response = _run_async(self._icx_call(request))
+        response = self._run_async(self._icx_call(request))
         self.assertEqual('active', response['current']['status'])
         self.assertEqual(current_tx_hash, response['current']['deployTxHash'][2:])
         self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
@@ -704,7 +702,7 @@ class TestInnerServiceEngine(unittest.TestCase):
         self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._accept_deploy_score(4, prev_block_hash, self._admin_addr, next_tx_hash))
+            self._run_async(self._accept_deploy_score(4, prev_block_hash, self._admin_addr, next_tx_hash))
 
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -723,7 +721,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             }
         }
 
-        response = _run_async(self._icx_call(request))
+        response = self._run_async(self._icx_call(request))
         current_tx_hash = next_tx_hash
         self.assertEqual('active', response['current']['status'])
         self.assertEqual(current_tx_hash, response['current']['deployTxHash'][2:])
@@ -735,21 +733,21 @@ class TestInnerServiceEngine(unittest.TestCase):
             "to": token_addr,
             "dataType": "call",
             "data": {
-                "method": "total_supply",
+                "method": "hello",
                 "params": {}
             }
         }
 
-        response = _run_async(self._icx_call(request))
-        self.assertEqual(response, "0x0")
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello2")
 
     def test_update_score(self):
         self._inner_task._icon_service_engine._icon_score_deploy_engine._flag = \
             IconDeployFlag.NONE
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
-                'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+            self._run_async(self._install_sample_token_invoke(
+                'install1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -757,8 +755,8 @@ class TestInnerServiceEngine(unittest.TestCase):
         token_addr = tx_results[0]['scoreAddress']
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
-                'sample_token2', token_addr, 2, prev_block_hash))
+            self._run_async(self._install_sample_token_invoke(
+                'install2', token_addr, 2, prev_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
@@ -768,20 +766,20 @@ class TestInnerServiceEngine(unittest.TestCase):
             "to": token_addr,
             "dataType": "call",
             "data": {
-                "method": "total_supply",
+                "method": "hello",
                 "params": {}
             }
         }
 
-        response = _run_async(self._icx_call(request))
-        self.assertEqual(response, "0x0")
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello2")
 
     def test_get_score_api(self):
         self._inner_task._icon_service_engine._icon_score_deploy_engine._flag = \
             IconDeployFlag.NONE
 
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke(
+            self._run_async(self._install_sample_token_invoke(
                 'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -794,21 +792,21 @@ class TestInnerServiceEngine(unittest.TestCase):
             "address": token_addr
         }
 
-        response = _run_async(self._icx_get_score_api(request))
+        response = self._run_async(self._icx_get_score_api(request))
         self.assertTrue(isinstance(response, list))
 
     def test_update_governance(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._update_governance_invoke(1, self._genesis_block_hash))
+            self._run_async(self._update_governance_invoke(1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_duplicate_score_install(self):
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke_zip(
+            self._run_async(self._install_sample_token_invoke_zip(
                 'install1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         prev_block_hash, is_commit, tx_results = \
-            _run_async(self._install_sample_token_invoke_zip(
+            self._run_async(self._install_sample_token_invoke_zip(
                 'install2', ZERO_SCORE_ADDRESS, 2, prev_block_hash))
 
         version = 3
@@ -821,13 +819,13 @@ class TestInnerServiceEngine(unittest.TestCase):
             "to": token_addr,
             "dataType": "call",
             "data": {
-                "method": "total_supply",
+                "method": "hello",
                 "params": {}
             }
         }
 
-        response = _run_async(self._icx_call(request))
-        self.assertEqual(response, "0x0")
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello2")
 
 
 if __name__ == '__main__':

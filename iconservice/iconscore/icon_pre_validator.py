@@ -166,22 +166,25 @@ class IconPreValidator:
         self._validate_generate_score_address(params)
 
     def _validate_generate_score_address(self, params):
-        data_type: str = params['dataType']
-        data: dict = params['data']
-        to: 'Address' = params['to']
-        from_: 'Address' = params['from']
-        timestamp: int = params['timestamp']
-        nonce: int = params.get('nonce')
-
-        if data_type == 'deploy':
-            if to == ZERO_SCORE_ADDRESS:
+        try:
+            data_type: str = params['dataType']
+            if data_type == 'deploy':
+                to: 'Address' = params['to']
                 # SCORE install
-                content_type = data.get('contentType')
-                if content_type != 'application/tbears':
-                    score_address = generate_score_address(from_, timestamp, nonce)
-                    if score_address in self._score_mapper:
-                        raise InvalidRequestException(f'duplicated address')
+                if to == ZERO_SCORE_ADDRESS:
+                    data: dict = params['data']
+                    content_type = data['contentType']
+                    if content_type != 'application/tbears':
 
+                        from_: 'Address' = params['from']
+                        timestamp: int = params['timestamp']
+                        nonce: int = params.get('nonce')
+
+                        score_address = generate_score_address(from_, timestamp, nonce)
+                        if score_address in self._score_mapper:
+                            raise InvalidRequestException(f'duplicated address')
+        except Exception as e:
+            raise InvalidParamsException(f'invalid_generate_score_address {e}')
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)
