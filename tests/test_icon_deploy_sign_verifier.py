@@ -52,7 +52,7 @@ class TestIconDeploySignVerifier(unittest.TestCase):
         self.verifier = IconScoreDeploySignVerifier(self.tmp_signer.public_key)
 
     def test_verify(self):
-        testzip_bytes = read_zipfile_as_byte(os.path.join(TEST_DIR, "test.zip"))
+        testzip_bytes = read_zipfile_as_byte(os.path.join(TEST_DIR, 'sample', 'valid.zip'))
         zip_hash = hashlib.sha3_256(testzip_bytes).digest()
         sig = self.tmp_signer.sign(zip_hash)
 
