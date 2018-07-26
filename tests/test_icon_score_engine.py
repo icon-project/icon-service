@@ -53,7 +53,7 @@ class TestIconScoreEngine(unittest.TestCase):
         rmtree(self._ROOT_SCORE_PATH)
         rmtree(self._TEST_DB_PATH)
 
-        archive_path = 'tests/score.zip'
+        archive_path = 'tests/sample/valid.zip'
         archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
         zip_bytes = self.read_zipfile_as_byte(archive_path)
         install_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)

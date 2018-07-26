@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING, Optional
+from threading import Lock
 
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
@@ -61,7 +62,7 @@ class IconScoreInfo(object):
         return self._icon_score.owner
 
 
-class IconScoreInfoMapper(dict):
+class IconScoreInfoMapper(object):
     """Icon score information mapping table
 
     This instance should be used as a singletone
@@ -76,6 +77,9 @@ class IconScoreInfoMapper(dict):
         """
         super().__init__()
 
+        self._lock = Lock()
+        # key: 'Address', value: 'IconScoreInfo'
+        self._score_map = {}
         self._icon_score_manager = icon_score_manager
         self._icon_score_loader = icon_score_loader
 
@@ -86,7 +90,9 @@ class IconScoreInfoMapper(dict):
         :return: IconScoreInfo instance
         """
         self._check_key_type(icon_score_address)
-        return super().__getitem__(icon_score_address)
+
+        with self._lock:
+            return self._score_map[icon_score_address]
 
     def __setitem__(self,
                     icon_score_address: 'Address',
@@ -97,10 +103,34 @@ class IconScoreInfoMapper(dict):
         """
         self._check_key_type(icon_score_address)
         self._check_value_type(info)
-        super().__setitem__(icon_score_address, info)
+
+        with self._lock:
+            self._score_map[icon_score_address] = info
+
+    def __contains__(self, key: 'Address'):
+        """Check if self._score_map contains a given key
+
+        :return: bool
+        """
+        with self._lock:
+            return key in self._score_map
+
+    def __delitem__(self, key: 'Address'):
+        with self._lock:
+            del self._score_map[key]
+
+    def __len__(self):
+        with self._lock:
+            return len(self._score_map)
+
+    def get(self,
+            key: 'Address',
+            value: 'IconScoreInfo'=None) -> 'IconScoreInfo':
+        with self._lock:
+            return self._score_map.get(key, value)
 
     def close(self):
-        for score_address, info in self.items():
+        for score_address, info in self._score_map.items():
             info.icon_score.db.close()
 
     @staticmethod
@@ -143,12 +173,13 @@ class IconScoreInfoMapper(dict):
         :param address:
         :return: IconScoreBase object
         """
-
-        icon_score_info = self.get(address)
         is_score_status_active =\
             self._icon_score_manager.is_score_status_active(context, address)
-        if is_score_status_active and icon_score_info is None:
-            icon_score_info = self.__load_score(context, address)
+
+        with self._lock:
+            icon_score_info = self._score_map.get(address)
+            if is_score_status_active and icon_score_info is None:
+                    icon_score_info = self._load_score(context, address)
 
         if icon_score_info is None:
             if is_score_status_active:
@@ -161,9 +192,9 @@ class IconScoreInfoMapper(dict):
         icon_score = icon_score_info.icon_score
         return icon_score
 
-    def __load_score(self,
-                     context: 'IconScoreContext',
-                     address: 'Address') -> Optional['IconScoreInfo']:
+    def _load_score(self,
+                    context: 'IconScoreContext',
+                    address: 'Address') -> Optional['IconScoreInfo']:
         if not self._icon_score_manager.is_score_status_active(
                 context, address):
             return None
@@ -201,7 +232,7 @@ class IconScoreInfoMapper(dict):
     def _add_score_to_mapper(
             self, icon_score: 'IconScoreBase') -> 'IconScoreInfo':
         info = IconScoreInfo(icon_score)
-        self[icon_score.address] = info
+        self._score_map[icon_score.address] = info
         return info
 
     @staticmethod
