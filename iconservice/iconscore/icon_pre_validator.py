@@ -142,10 +142,10 @@ class IconPreValidator:
 
         data = params.get('data', None)
         if not isinstance(data, dict):
-            raise InvalidRequestException(f'data not found')
+            raise InvalidRequestException(f'Data not found')
 
         if 'method' not in data:
-            raise InvalidRequestException(f'method not found')
+            raise InvalidRequestException(f'Method not found')
 
     def _validate_deploy_transaction(self, params: dict):
         to: 'Address' = params['to']
@@ -155,36 +155,52 @@ class IconPreValidator:
 
         data = params.get('data', None)
         if not isinstance(data, dict):
-            raise InvalidRequestException(f'data not found')
+            raise InvalidRequestException(f'Data not found')
 
         if 'contentType' not in data:
-            raise InvalidRequestException(f'contentType not found')
+            raise InvalidRequestException(f'ContentType not found')
 
         if 'content' not in data:
-            raise InvalidRequestException(f'content not found')
+            raise InvalidRequestException(f'Content not found')
 
-        self._validate_generate_score_address(params)
+        self._validate_new_score_address_on_deploy_transaction(params)
 
-    def _validate_generate_score_address(self, params):
+    def _validate_new_score_address_on_deploy_transaction(self, params):
+        """Check if a newly generated score address is available
+        Assume that data_type is 'deploy'
+
+        :param params:
+        :return:
+        """
+        assert params['dataType'] == 'deploy'
+        assert 'to' in params
+        assert 'from' in params
+
+        to: 'Address' = params['to']
+        if to != ZERO_SCORE_ADDRESS:
+            return
+
         try:
-            data_type: str = params['dataType']
-            if data_type == 'deploy':
-                to: 'Address' = params['to']
-                # SCORE install
-                if to == ZERO_SCORE_ADDRESS:
-                    data: dict = params['data']
-                    content_type = data['contentType']
-                    if content_type != 'application/tbears':
+            data: dict = params['data']
+            content_type: str = data['contentType']
 
-                        from_: 'Address' = params['from']
-                        timestamp: int = params['timestamp']
-                        nonce: int = params.get('nonce')
+            if content_type != 'application/tbears':
 
-                        score_address = generate_score_address(from_, timestamp, nonce)
-                        if score_address in self._score_mapper:
-                            raise InvalidRequestException(f'duplicated address')
+                from_: 'Address' = params['from']
+                timestamp: int = params['timestamp']
+                nonce: int = params.get('nonce')
+
+                score_address: 'Address' =\
+                    generate_score_address(from_, timestamp, nonce)
+
+                if score_address in self._score_mapper:
+                    # This exception is not catched
+                    # at the 'except' statement below
+                    raise InvalidRequestException(
+                        f'SCORE address already in use: {score_address}')
+
         except Exception as e:
-            raise InvalidParamsException(f'invalid_generate_score_address {e}')
+            raise InvalidParamsException(f'Invalid params: {e}')
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)

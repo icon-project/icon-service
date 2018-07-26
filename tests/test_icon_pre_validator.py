@@ -15,24 +15,32 @@
 # limitations under the License.
 
 import unittest
-
-from iconservice.base.address import AddressPrefix
-from iconservice.base.exception import ExceptionCode, InvalidRequestException, InvalidParamsException
-from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from tests import create_tx_hash, create_address
 from unittest.mock import Mock
 
-from iconservice.icx.icx_engine import IcxEngine
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.base.address import Address, AddressPrefix, ZERO_SCORE_ADDRESS, generate_score_address
+from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
+    InvalidParamsException
 from iconservice.deploy.icon_score_manager import IconScoreManager
+from iconservice.iconscore.icon_pre_validator import IconPreValidator
+from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.icx.icx_engine import IcxEngine
+from tests import create_tx_hash, create_address
+
+
+def f(key):
+    return False
 
 
 class TestTransactionValidator(unittest.TestCase):
     def setUp(self):
         self.icx_engine = Mock(spec=IcxEngine)
         self.score_manager = Mock(spec=IconScoreManager)
-        self.score_mapper = Mock(spec=IconScoreInfoMapper)
-        self.validator = IconPreValidator(self.icx_engine, self.score_manager, self.score_mapper)
+
+        # self.score_mapper = Mock(spec=IconScoreInfoMapper)
+        self.score_mapper = {}
+
+        self.validator = IconPreValidator(
+            self.icx_engine, self.score_manager, self.score_mapper)
 
     def tearDown(self):
         self.icx_engine = None
@@ -197,6 +205,41 @@ class TestTransactionValidator(unittest.TestCase):
         # balance is enough to pay coin and fee
         self.icx_engine.get_balance = Mock(return_value=value + step_limit * step_price)
         self.validator.execute_to_check_out_of_balance(params, step_price)
+
+    def test_validate_generated_score_address(self):
+
+        from_ = Address.from_data(AddressPrefix.EOA, b'from')
+        timestamp = 1234567890
+        nonce = None
+
+        params = {
+            'from': from_,
+            'to': ZERO_SCORE_ADDRESS,
+            'timestamp': timestamp,
+            'nonce': nonce,
+            'dataType': 'deploy',
+            'data': {
+                'contentType': 'application/zip',
+                'content': '0x1234'
+            }
+        }
+
+        self.validator._validate_new_score_address_on_deploy_transaction(params)
+
+        score_address: 'Address' =\
+            generate_score_address(from_, timestamp, nonce)
+        self.score_mapper[score_address] = None
+
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator._validate_new_score_address_on_deploy_transaction(
+                params)
+
+        self.assertEqual(
+            cm.exception.message,
+            f'SCORE address already in use: {score_address}')
+
+        params['to'] = score_address
+        self.validator._validate_new_score_address_on_deploy_transaction(params)
 
 
 class TestTransactionValidatorV2(unittest.TestCase):
