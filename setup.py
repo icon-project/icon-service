@@ -27,7 +27,7 @@ setup_options = {
     'install_requires': requires,
     'entry_points': {
         'console_scripts': [
-            'iconservice=iconservice:main'
+            'iconservice=iconservice.icon_service_cli:main'
         ],
     },
     'setup_requires': ['pytest-runner'],

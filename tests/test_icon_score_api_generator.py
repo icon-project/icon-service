@@ -66,6 +66,18 @@ class TestScoreApiGenerator(unittest.TestCase):
         self.assertEqual(1, len(api['inputs']))
         self.assertEqual('str', api['inputs'][0]['type'])
 
+    def test_function_str_param_has_default(self):
+        function_name = 'str_param_has_default'
+        functions = [value for key, value in self._members
+                     if key == function_name]
+        api = ScoreApiGenerator.generate(functions)[0]
+        self.assertEqual('function', api['type'])
+        self.assertEqual(function_name, api['name'])
+        self.assertEqual(0, len(api['outputs']))
+        self.assertEqual(1, len(api['inputs']))
+        self.assertEqual('str', api['inputs'][0]['type'])
+        self.assertEqual('my_name', api['inputs'][0]['default'])
+
     def test_function_str_param_optional_return(self):
         function_name = 'str_param_optional_return'
         functions = [value for key, value in self._members
@@ -196,6 +208,10 @@ class TestScore:
 
     @external
     def str_param_empty_return(self, name: str):
+        pass
+
+    @external
+    def str_param_has_default(self, name: str = 'my_name'):
         pass
 
     @external

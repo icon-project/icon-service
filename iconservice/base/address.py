@@ -24,7 +24,6 @@ from .exception import InvalidParamsException
 from ..utils import is_lowercase_hex_string, int_to_bytes
 from ..icon_constant import DATA_BYTE_ORDER
 
-
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
 ICON_EOA_ADDRESS_BYTES_SIZE = 20
@@ -231,3 +230,31 @@ ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
 GOVERNANCE_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')
+
+
+def generate_score_address_for_tbears(score_path: str) -> 'Address':
+    """
+
+    :param score_path:
+        The path of a SCORE which is under development with tbears
+    :return:
+    """
+    project_name = score_path.split('/')[-1]
+    return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
+
+
+def generate_score_address(from_: 'Address',
+                           timestamp: int,
+                           nonce: int = None) -> 'Address':
+    """Generates a SCORE address from the transaction information.
+
+    :param from_:
+    :param timestamp:
+    :param nonce:
+    :return: score address
+    """
+    data = from_.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
+    if nonce:
+        data += nonce.to_bytes(32, DATA_BYTE_ORDER)
+
+    return Address.from_data(AddressPrefix.CONTRACT, data)

@@ -216,8 +216,8 @@ class IconScoreDeployEngine(object):
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
 
+        self._icon_score_mapper.delete_icon_score(icon_score_address)
         if content_type == 'application/tbears':
-            self._icon_score_mapper.delete_icon_score(icon_score_address)
             score_root_path = self._icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
                                     icon_score_address.to_bytes().hex())

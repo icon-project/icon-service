@@ -16,13 +16,14 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.address import Address, ZERO_SCORE_ADDRESS
+from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..icon_constant import FIXED_FEE
 
 if TYPE_CHECKING:
     from ..deploy.icon_score_manager import IconScoreManager
     from ..icx.icx_engine import IcxEngine
+    from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
 
 
 class IconPreValidator:
@@ -31,13 +32,16 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx_engine: 'IcxEngine', score_manager: 'IconScoreManager') -> None:
+    def __init__(self, icx_engine: 'IcxEngine',
+                 score_manager: 'IconScoreManager',
+                 score_mapper: 'IconScoreInfoMapper') -> None:
         """Constructor
 
         :param icx_engine: icx engine
         """
         self._icx = icx_engine
         self._score_manager = score_manager
+        self._score_mapper = score_mapper
 
     def execute(self, params: dict, step_price: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -138,10 +142,10 @@ class IconPreValidator:
 
         data = params.get('data', None)
         if not isinstance(data, dict):
-            raise InvalidRequestException(f'data not found')
+            raise InvalidRequestException(f'Data not found')
 
         if 'method' not in data:
-            raise InvalidRequestException(f'method not found')
+            raise InvalidRequestException(f'Method not found')
 
     def _validate_deploy_transaction(self, params: dict):
         to: 'Address' = params['to']
@@ -151,13 +155,52 @@ class IconPreValidator:
 
         data = params.get('data', None)
         if not isinstance(data, dict):
-            raise InvalidRequestException(f'data not found')
+            raise InvalidRequestException(f'Data not found')
 
         if 'contentType' not in data:
-            raise InvalidRequestException(f'contentType not found')
+            raise InvalidRequestException(f'ContentType not found')
 
         if 'content' not in data:
-            raise InvalidRequestException(f'content not found')
+            raise InvalidRequestException(f'Content not found')
+
+        self._validate_new_score_address_on_deploy_transaction(params)
+
+    def _validate_new_score_address_on_deploy_transaction(self, params):
+        """Check if a newly generated score address is available
+        Assume that data_type is 'deploy'
+
+        :param params:
+        :return:
+        """
+        assert params['dataType'] == 'deploy'
+        assert 'to' in params
+        assert 'from' in params
+
+        to: 'Address' = params['to']
+        if to != ZERO_SCORE_ADDRESS:
+            return
+
+        try:
+            data: dict = params['data']
+            content_type: str = data['contentType']
+
+            if content_type != 'application/tbears':
+
+                from_: 'Address' = params['from']
+                timestamp: int = params['timestamp']
+                nonce: int = params.get('nonce')
+
+                score_address: 'Address' =\
+                    generate_score_address(from_, timestamp, nonce)
+
+                if score_address in self._score_mapper:
+                    # This exception is not catched
+                    # at the 'except' statement below
+                    raise InvalidRequestException(
+                        f'SCORE address already in use: {score_address}')
+
+        except Exception as e:
+            raise InvalidParamsException(f'Invalid params: {e}')
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(context=None, address=from_)

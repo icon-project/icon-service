@@ -18,15 +18,17 @@ import os
 import shutil
 import unittest
 
-from iconservice import IconScoreBase, IconScoreContextType, InvalidParamsException
+from iconservice.base.address import Address, AddressPrefix
+from iconservice import IconScoreBase, IconScoreContextType, \
+    InvalidParamsException
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.database.db import ContextDatabase
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, IconScoreInfo
-from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_manager import IconScoreManager
-from tests import create_address
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, \
+    IconScoreInfo
+from iconservice.iconscore.icon_score_loader import IconScoreLoader
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -49,8 +51,8 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         self._icon_score_loader = IconScoreLoader(score_path)
         self.mapper = IconScoreInfoMapper(
             IconScoreManager(self._deploy_engine), self._icon_score_loader)
-        self.score_address = create_address(AddressPrefix.CONTRACT, b'score')
-        self.address = create_address(AddressPrefix.EOA, b'addr')
+        self.score_address = Address.from_data(AddressPrefix.CONTRACT, b'score')
+        self.address = Address.from_data(AddressPrefix.EOA, b'addr')
 
         self.mapper[self.score_address] = IconScoreInfo(icon_score=None)
 
@@ -88,7 +90,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         with self.assertRaises(InvalidParamsException):
             self.mapper[self.score_address] = 1
 
-        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
+        score_address = Address.from_data(AddressPrefix.CONTRACT, b'score1')
         self.mapper[score_address] = info
         self.assertEqual(2, len(self.mapper))
 
@@ -106,6 +108,14 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         info = self.mapper[score_address]
         self.assertTrue(isinstance(info, IconScoreInfo))
 
+        address = Address.from_data(AddressPrefix.CONTRACT, b'no_score')
+        with self.assertRaises(KeyError):
+            score = self.mapper[address]
+            self.assertFalse(True)
+
+        score = self.mapper.get(address)
+        self.assertIsNone(score)
+
     def test_delitem(self):
         score_address = self.score_address
 
@@ -117,7 +127,7 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         score_address = self.score_address
         self.assertTrue(score_address in self.mapper)
 
-        score_address = create_address(AddressPrefix.CONTRACT, b'score1')
+        score_address = Address.from_data(AddressPrefix.CONTRACT, b'score1')
         self.assertFalse(score_address in self.mapper)
 
 

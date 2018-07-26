@@ -20,8 +20,8 @@ from os import makedirs
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from .base.address import Address, AddressPrefix
-from .base.address import ICX_ENGINE_ADDRESS, ZERO_SCORE_ADDRESS, \
+from .base.address import Address, generate_score_address, generate_score_address_for_tbears
+from .base.address import ZERO_SCORE_ADDRESS, \
     GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, RevertException
@@ -34,9 +34,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .deploy.icon_score_manager import IconScoreManager
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
-    DATA_BYTE_ORDER, \
-    IconServiceFlag, IconDeployFlag, ConfigKey
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, IconDeployFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -58,34 +56,6 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
     from .iconscore.icon_score_event_log import EventLog
     from iconcommons.icon_config import IconConfig
-
-
-def _generate_score_address_for_tbears(score_path: str) -> 'Address':
-    """
-
-    :param score_path:
-        The path of a SCORE which is under development with tbears
-    :return:
-    """
-    project_name = score_path.split('/')[-1]
-    return Address.from_data(AddressPrefix.CONTRACT, project_name.encode())
-
-
-def _generate_score_address(from_: 'Address',
-                            timestamp: int,
-                            nonce: int = None) -> 'Address':
-    """Generates a SCORE address from the transaction information.
-
-    :param from_:
-    :param timestamp:
-    :param nonce:
-    :return: score address
-    """
-    data = from_.body + timestamp.to_bytes(32, DATA_BYTE_ORDER)
-    if nonce:
-        data += nonce.to_bytes(32, DATA_BYTE_ORDER)
-
-    return Address.from_data(AddressPrefix.CONTRACT, data)
 
 
 class IconServiceEngine(ContextContainer):
@@ -171,7 +141,7 @@ class IconServiceEngine(ContextContainer):
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._icon_pre_validator =\
-            IconPreValidator(self._icx_engine, icon_score_manger)
+            IconPreValidator(self._icx_engine, icon_score_manger, self._icon_score_mapper)
 
         IconScoreContext.icx = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -712,12 +682,14 @@ class IconServiceEngine(ContextContainer):
 
                 if content_type == 'application/tbears':
                     path: str = data.get('content')
-                    score_address = _generate_score_address_for_tbears(path)
+                    score_address = generate_score_address_for_tbears(path)
                 else:
-                    score_address = _generate_score_address(
+                    score_address = generate_score_address(
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
+                    if score_address in self._icon_score_mapper:
+                        raise ServerErrorException(f'duplicated address')
                 context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             else:
                 # SCORE update
