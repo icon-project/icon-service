@@ -16,7 +16,9 @@ from .icon_constant import ConfigKey
 
 default_icon_config = {
     "log": {
-        "logger": "iconservice"
+        "logger": "iconservice",
+        "level": "info",
+        "outputType": "console"
     },
     ConfigKey.SCORE_ROOT_PATH: ".score",
     ConfigKey.STATE_DB_ROOT_PATH: ".statedb",
