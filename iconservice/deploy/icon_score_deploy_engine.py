@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Callable
 
 from . import DeployType, make_score_id
 from .icon_builtin_score_loader import IconBuiltinScoreLoader
-from .icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployTXParams
+from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
@@ -31,6 +31,7 @@ from iconcommons import Logger
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
+    from .icon_score_deploy_storage import IconScoreDeployTXParams
 
 
 class IconScoreDeployEngine(object):
@@ -108,14 +109,20 @@ class IconScoreDeployEngine(object):
         return not is_audit_enabled or all((is_built_score, is_owner))
 
     def deploy(self,
-               context: 'IconScoreContext', # audit
+               context: 'IconScoreContext',
                tx_hash: bytes) -> None:
+        """
+        included audit deploy
+        :param context:
+        :param tx_hash:
+        :return:
+        """
 
         tx_params = self._icon_score_deploy_storage.get_deploy_tx_params(context, tx_hash)
         if tx_params is None:
             raise InvalidParamsException(f'tx_params is None : {tx_hash}')
         score_address = tx_params.score_address
-        self._score_deploy(context, tx_params)
+        self._score_deploy(tx_params)
 
         self._icon_score_deploy_storage.update_score_info(
             context, score_address, tx_hash)
@@ -127,8 +134,13 @@ class IconScoreDeployEngine(object):
         self._score_deploy_for_builtin(score_address, src_score_path)
 
     def _score_deploy(self,
-                      context: 'IconScoreContext',
                       tx_params: 'IconScoreDeployTXParams'):
+
+        """
+
+        :param tx_params: use deploy_data from IconScoreDeployTxParams info
+        :return:
+        """
 
         data = tx_params.deploy_data
         content_type = data.get('contentType')
@@ -147,9 +159,6 @@ class IconScoreDeployEngine(object):
     def _score_deploy_for_builtin(self, icon_score_address: 'Address',
                                   src_score_path: str):
         self._on_deploy_for_builtin(icon_score_address, src_score_path)
-
-    def commit(self, context: 'IconScoreContext') -> None:
-        pass
 
     def write_deploy_info_and_tx_params(self,
                                         context: 'IconScoreContext',
@@ -201,12 +210,15 @@ class IconScoreDeployEngine(object):
 
     def _on_deploy(self,
                    tx_params: 'IconScoreDeployTXParams') -> None:
-        """Install an icon score on commit
+        """
+        load score on memory
+        write file system
+        call on_deploy(install, update)
 
-                Owner check has already been done in IconServiceEngine
-                - Install IconScore package file to file system
+        :param tx_params: use deploy_data, score_address, score_id, deploy_type from IconScoreDeployTxParams
+        :return:
+        """
 
-                """
         data = tx_params.deploy_data
         score_address = tx_params.score_address
         content_type: str = data.get('contentType')
@@ -258,6 +270,9 @@ class IconScoreDeployEngine(object):
         annotations = TypeConverter.make_annotations_from_method(on_deploy)
         TypeConverter.convert_data_params(annotations, params)
         on_deploy(**params)
+
+    def commit(self, context: 'IconScoreContext') -> None:
+        pass
 
     def rollback(self) -> None:
         """It is called when the previous block has been canceled
