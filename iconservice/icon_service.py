@@ -47,13 +47,13 @@ class IconService(object):
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
-        Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'score_root_path : {score_root_path}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'icon_score_state_db_root_path  : {db_root_patn}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'amqp_target  : {amqp_target}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'amqp_key  :  {amqp_key}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE_STANDALONE)
-        Logger.debug(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
+        Logger.info(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
+        Logger.info(f'score_root_path : {score_root_path}', ICON_SERVICE_STANDALONE)
+        Logger.info(f'icon_score_state_db_root_path  : {db_root_patn}', ICON_SERVICE_STANDALONE)
+        Logger.info(f'amqp_target  : {amqp_target}', ICON_SERVICE_STANDALONE)
+        Logger.info(f'amqp_key  :  {amqp_key}', ICON_SERVICE_STANDALONE)
+        Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE_STANDALONE)
+        Logger.info(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
 
         self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
 
@@ -93,7 +93,7 @@ def main():
 
     icon_service = IconService()
     icon_service.serve(config=conf)
-    Logger.debug(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
+    Logger.info(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
 
 
 def run_in_foreground(conf: 'IconConfig'):

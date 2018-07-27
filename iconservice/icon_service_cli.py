@@ -129,7 +129,7 @@ def _stop(conf: 'IconConfig') -> int:
 
 
 def _start_process(conf: 'IconConfig'):
-    Logger.debug('start_server() start')
+    Logger.info('start_server() start')
     python_module_string = 'iconservice.icon_service'
 
     converted_params = {'-sc': conf[ConfigKey.SCORE_ROOT_PATH],
@@ -151,7 +151,7 @@ def _start_process(conf: 'IconConfig'):
         run_in_foreground(conf)
     else:
         subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
-    Logger.debug('start_process() end')
+    Logger.info('start_process() end')
 
 
 async def stop_process(conf: 'IconConfig'):
