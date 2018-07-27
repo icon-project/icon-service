@@ -15,14 +15,14 @@
 # limitations under the License.
 
 import json
+from typing import TYPE_CHECKING, Optional
 
+from iconcommons.logger import Logger
 from .icx_account import Account, AccountType
 from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..icon_constant import ICX_LOG_TAG
-from iconcommons.logger import Logger
-from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext

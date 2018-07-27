@@ -43,7 +43,7 @@ class IconPreValidator:
         self._score_manager = score_manager
         self._score_mapper = score_mapper
 
-    def execute(self, params: dict, step_price: int) -> None:
+    def execute(self, params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
         If failed to validate a tx, raise an exception
 
@@ -52,6 +52,7 @@ class IconPreValidator:
 
         :param params: params of icx_sendTransaction JSON-RPC request
         :param step_price:
+        :param minimum_step: minimum step
         """
         value: int = params.get('value', 0)
         if value < 0:
@@ -61,7 +62,7 @@ class IconPreValidator:
         if version < 3:
             self._validate_transaction_v2(params)
         else:
-            self._validate_transaction_v3(params, step_price)
+            self._validate_transaction_v3(params, step_price, minimum_step)
 
     def execute_to_check_out_of_balance(
             self, params: dict, step_price: int) -> None:
@@ -98,12 +99,15 @@ class IconPreValidator:
             raise InvalidRequestException(
                 'It is not allowed to transfer coin to SCORE on protocol v2')
 
-    def _validate_transaction_v3(self, params: dict, step_price: int):
-        """Validate transfer transaction based on protocol v2
+    def _validate_transaction_v3(
+            self, params: dict, step_price: int, minimum_step: int):
+        """Validate transfer transaction based on protocol v3
 
         :param params:
         :return:
         """
+        self._check_minimum_step(params, minimum_step)
+
         self._check_from_can_charge_fee_v3(params, step_price)
 
         # Check if "to" address is valid
@@ -118,6 +122,11 @@ class IconPreValidator:
             self._validate_call_transaction(params)
         elif data_type == 'deploy':
             self._validate_deploy_transaction(params)
+
+    def _check_minimum_step(self, params: dict, minimum_step: int):
+        step_limit = params.get('stepLimit', 0)
+        if step_limit < minimum_step:
+            raise InvalidRequestException('Step limit too low')
 
     def _check_from_can_charge_fee_v3(self, params: dict, step_price: int):
         from_: 'Address' = params['from']
