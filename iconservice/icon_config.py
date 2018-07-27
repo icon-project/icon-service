@@ -18,7 +18,8 @@ default_icon_config = {
     "log": {
         "logger": "iconservice",
         "level": "info",
-        "outputType": "console"
+        "outputType": "console",
+        "colorLog": False,
     },
     ConfigKey.SCORE_ROOT_PATH: ".score",
     ConfigKey.STATE_DB_ROOT_PATH: ".statedb",
