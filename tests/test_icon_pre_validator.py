@@ -90,11 +90,12 @@ class TestTransactionValidator(unittest.TestCase):
         }
 
         # too small balance
-        with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(params, step_price, 4000)
+        if step_price > 0:
+            with self.assertRaises(InvalidRequestException) as cm:
+                self.validator.execute(params, step_price, 4000)
 
-        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
-        self.assertEqual('Step limit too low', cm.exception.message)
+            self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+            self.assertEqual('Step limit too low', cm.exception.message)
 
     def test_negative_balance(self):
         step_price = 0
