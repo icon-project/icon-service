@@ -137,7 +137,7 @@ def _start_process(conf: 'IconConfig'):
     converted_params = {'-sc': conf[ConfigKey.SCORE_ROOT_PATH],
                         '-st': conf[ConfigKey.STATE_DB_ROOT_PATH],
                         '-ch': conf[ConfigKey.CHANNEL], '-ak': conf[ConfigKey.AMQP_KEY],
-                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf[ConfigKey.CONFIG]}
+                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf.get(ConfigKey.CONFIG)}
 
     custom_argv = []
     for k, v in converted_params.items():
