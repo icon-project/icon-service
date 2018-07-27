@@ -156,7 +156,7 @@ class TestTransactionValidator(unittest.TestCase):
     def test_transfer_to_invalid_score_address(self):
         self.icx_engine.get_balance = Mock(return_value=1000)
         self.score_manager.is_score_active = Mock(return_value=False)
-        to = create_address(AddressPrefix.CONTRACT, b'to')
+        to = Address.from_data(AddressPrefix.CONTRACT, b'to')
 
         params = {
             'version': 3,
