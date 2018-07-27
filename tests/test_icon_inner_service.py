@@ -553,8 +553,8 @@ class TestInnerServiceEngine(unittest.TestCase):
         prev_block_hash, is_commit, tx_results = \
             self._run_async(self._install_sample_token_invoke(
                 'invalid', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
-        self.assertEqual(is_commit, True)
-        self.assertEqual(tx_results[0]['status'], hex(1))
+        self.assertEqual(is_commit, False)
+        self.assertEqual(tx_results[0]['status'], hex(0))
 
     def test_query_method_sample_token(self):
         prev_block_hash, is_commit, tx_results = \
