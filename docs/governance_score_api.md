@@ -592,7 +592,7 @@ Must trigger on any successful rejectScore transaction.
 
 ```python
 @eventlog(indexed=1)
-def Rejected(self, tx_hash: str):
+def Rejected(self, tx_hash: str, reason: str):
     pass
 ```
 
@@ -612,6 +612,6 @@ Must trigger on any successful setStepCost transaction.
 
 ```python
 @eventlog(indexed=1)
-def StepPriceChanged(self, step_type: str, cost: int):
+def StepCostChanged(self, step_type: str, cost: int):
     pass
 ```
