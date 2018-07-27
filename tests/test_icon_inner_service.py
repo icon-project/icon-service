@@ -19,13 +19,13 @@
 
 import asyncio
 import os
-import time
 import unittest
 from typing import TYPE_CHECKING
 
+import time
+
 from iconcommons.icon_config import IconConfig
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, \
-    GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
@@ -546,6 +546,13 @@ class TestInnerServiceEngine(unittest.TestCase):
         prev_block_hash, is_commit, tx_results = \
             self._run_async(self._install_sample_token_invoke(
                 'sample_token', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+    def test_install_invalid_sample_token(self):
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._install_sample_token_invoke(
+                'invalid', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 

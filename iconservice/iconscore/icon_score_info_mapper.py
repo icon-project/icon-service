@@ -18,12 +18,13 @@ from shutil import rmtree
 from threading import Lock
 from typing import TYPE_CHECKING, Optional
 
+from iconcommons.logger import Logger
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
+from ..deploy import DeployState
 from ..deploy.icon_score_deploy_engine import IconScoreDeployStorage
-from ..deploy import DeployState, make_score_id
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -132,6 +133,7 @@ class IconScoreInfoMapper(object):
         self._lock = Lock()
         self._wait_score_mapper = IconScoreMapperObject()
         self._score_mapper = IconScoreMapperObject()
+        self._wait_score_remove_table = dict()
 
     def __contains__(self, item):
         with self._lock:
@@ -171,18 +173,21 @@ class IconScoreInfoMapper(object):
             self._score_mapper[address] = info
             self._deploy_storage.put_deploy_state_info(None, address, DeployState.ACTIVE, info.score_id)
         self._wait_score_mapper.clear()
+        self._wait_score_remove_table.clear()
 
     def rollback(self):
-        for address, info in self._wait_score_mapper.items():
-            self._remove_score_dir(address, info)
+        for info in list(self._wait_score_remove_table.values()):
+            address, score_id = info
+            self._remove_score_dir(address, score_id)
         self._wait_score_mapper.clear()
+        self._wait_score_remove_table.clear()
 
-    def _remove_score_dir(self, address: 'Address', info: 'IconScoreInfo'):
-        target_path = os.path.join(self.score_root_path, address.to_bytes().hex(), info.score_id)
+    def _remove_score_dir(self, address: 'Address', score_id: str):
+        target_path = os.path.join(self.score_root_path, address.to_bytes().hex(), score_id)
         try:
             rmtree(target_path)
-        except:
-            pass
+        except Exception as e:
+            Logger.warning(e)
 
     @property
     def score_root_path(self) -> str:
@@ -225,6 +230,7 @@ class IconScoreInfoMapper(object):
         return icon_score
 
     def _load_score(self, address: 'Address', score_id) -> Optional['IconScoreInfo']:
+        self._wait_score_remove_table[address] = (address, score_id)
         score_wrapper = self._load_score_wrapper(address, score_id)
         score_db = self._create_icon_score_database(address)
         icon_score = score_wrapper(score_db)
