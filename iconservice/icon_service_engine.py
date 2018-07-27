@@ -441,7 +441,9 @@ class IconServiceEngine(ContextContainer):
 
         params: dict = request['params']
         step_price: int = self._get_step_price()
-        self._icon_pre_validator.execute(params, step_price)
+        minimum_step = \
+            self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+        self._icon_pre_validator.execute(params, step_price, minimum_step)
 
     def _call(self,
               context: 'IconScoreContext',

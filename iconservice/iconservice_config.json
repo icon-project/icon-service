@@ -1,9 +1,17 @@
 {
 	"log": {
+		"logger": "iconservice",
 		"colorLog": true,
 		"level": "info",
-		"filePath": "./log/icon_service.log",
-		"outputType": "console|file"
+		"filePath": "./log/iconservice.log",
+		"outputType": "console|file",
+		"rotate": {
+			"type": "period|bytes",
+			"period": "daily",
+			"interval": 1,
+			"backupCount": 10,
+			"maxBytes": 10485760
+		}
 	},
 	"scoreRootPath": ".score",
 	"stateDbRootPath": ".statedb",
@@ -12,7 +20,7 @@
 	"amqpTarget": "127.0.0.1",
 	"builtinScoreOwner": "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
 	"service": {
-        "fee": false,
-        "audit": false
-    }
+		"fee": false,
+		"audit": false
+	}
 }

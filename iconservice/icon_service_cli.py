@@ -82,7 +82,7 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("-at", dest=ConfigKey.AMQP_TARGET, type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=CONFIG_JSON_PATH,
+    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=None,
                         help="icon score config")
     parser.add_argument("-fg", dest='foreground', action='store_true',
                         help="icon score service run foreground")

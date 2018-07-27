@@ -17,18 +17,15 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import Address, AddressPrefix, ZERO_SCORE_ADDRESS, generate_score_address
+from iconservice.base.address import Address, AddressPrefix, ZERO_SCORE_ADDRESS, \
+    generate_score_address
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.icx.icx_engine import IcxEngine
-from tests import create_tx_hash, create_address
-
-
-def f(key):
-    return False
+from tests import create_tx_hash
 
 
 class TestTransactionValidator(unittest.TestCase):
@@ -52,8 +49,8 @@ class TestTransactionValidator(unittest.TestCase):
         params = {
             'version': 3,
             'txHash': create_tx_hash(b'tx'),
-            'from': create_address(AddressPrefix.EOA, b'from'),
-            'to': create_address(AddressPrefix.CONTRACT, b'to'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
+            'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 0,
             'stepLimit': 100,
             'timestamp': 123456,
@@ -61,39 +58,31 @@ class TestTransactionValidator(unittest.TestCase):
         }
 
         self.icx_engine.get_balance = Mock(return_value=100)
-        self.validator.execute(params, step_price=1)
+        self.validator.execute(params, step_price=1, minimum_step=100)
 
-    def test_negative_balance(self):
+    def test_minimum_step(self):
         step_price = 0
         self.icx_engine.get_balance = Mock(return_value=0)
 
         params = {
             'version': 3,
             'txHash': create_tx_hash(b'tx'),
-            'from': create_address(AddressPrefix.EOA, b'from'),
-            'to': create_address(AddressPrefix.CONTRACT, b'to'),
-            'value': -10,
-            'stepLimit': 100,
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
+            'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
+            'value': 1,
+            'stepLimit': 5000,
             'timestamp': 123456,
             'nonce': 1
         }
 
-        # too small balance
-        with self.assertRaises(InvalidParamsException) as cm:
-            self.validator.execute(params, step_price)
-
-        self.assertEqual(ExceptionCode.INVALID_PARAMS, cm.exception.code)
-        self.assertEqual('value < 0', cm.exception.message)
-
-    def test_check_balance(self):
-        step_price = 0
-        self.icx_engine.get_balance = Mock(return_value=0)
+        self.icx_engine.get_balance = Mock(return_value=100)
+        self.validator.execute(params, step_price, 4000)
 
         params = {
             'version': 3,
             'txHash': create_tx_hash(b'tx'),
-            'from': create_address(AddressPrefix.EOA, b'from'),
-            'to': create_address(AddressPrefix.CONTRACT, b'to'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
+            'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 10,
             'stepLimit': 100,
             'timestamp': 123456,
@@ -102,19 +91,64 @@ class TestTransactionValidator(unittest.TestCase):
 
         # too small balance
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(params, step_price)
+            self.validator.execute(params, step_price, 4000)
+
+        self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
+        self.assertEqual('Step limit too low', cm.exception.message)
+
+    def test_negative_balance(self):
+        step_price = 0
+        self.icx_engine.get_balance = Mock(return_value=0)
+
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
+            'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
+            'value': -10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
+        }
+
+        # too small balance
+        with self.assertRaises(InvalidParamsException) as cm:
+            self.validator.execute(params, step_price, 100)
+
+        self.assertEqual(ExceptionCode.INVALID_PARAMS, cm.exception.code)
+        self.assertEqual('value < 0', cm.exception.message)
+
+    def test_check_balance(self):
+        min_step = 100
+        step_price = 0
+        self.icx_engine.get_balance = Mock(return_value=0)
+
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(b'tx'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
+            'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
+            'value': 10,
+            'stepLimit': 100,
+            'timestamp': 123456,
+            'nonce': 1
+        }
+
+        # too small balance
+        with self.assertRaises(InvalidRequestException) as cm:
+            self.validator.execute(params, step_price, min_step)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
 
         # balance is enough
         self.icx_engine.get_balance = Mock(return_value=100)
-        self.validator.execute(params, step_price)
+        self.validator.execute(params, step_price, min_step)
 
         # too expensive fee
         step_price = 1
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(params, step_price)
+            self.validator.execute(params, step_price, min_step)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
@@ -127,7 +161,7 @@ class TestTransactionValidator(unittest.TestCase):
         params = {
             'version': 3,
             'txHash': create_tx_hash(b'tx'),
-            'from': create_address(AddressPrefix.EOA, b'from'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
             'to': to,
             'value': 10,
             'stepLimit': 100,
@@ -138,7 +172,7 @@ class TestTransactionValidator(unittest.TestCase):
         # The SCORE indicated by to is not installed
         # Invalid SCORE address
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(params, step_price=1)
+            self.validator.execute(params, step_price=1, minimum_step=100)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual(f'Invalid address: {to}', cm.exception.message)
@@ -148,12 +182,12 @@ class TestTransactionValidator(unittest.TestCase):
     #     self.icx_engine.balance = 1000
     #     self.deploy_storage.score_installed = True
     #
-    #     to = create_address(AddressPrefix.EOA, b'to')
+    #     to = Address.from_data(AddressPrefix.EOA, b'to')
     #
     #     params = {
     #         'version': 3,
     #         'txHash': create_tx_hash(b'tx'),
-    #         'from': create_address(AddressPrefix.EOA, b'from'),
+    #         'from': Address.from_data(AddressPrefix.EOA, b'from'),
     #         'to': to,
     #         'value': 10,
     #         'stepLimit': 100,
@@ -174,11 +208,11 @@ class TestTransactionValidator(unittest.TestCase):
         self.icx_engine.get_balance = Mock(return_value=0)
         self.score_manager.is_score_active = Mock(return_value=False)
 
-        to = create_address(AddressPrefix.EOA, b'to')
+        to = Address.from_data(AddressPrefix.EOA, b'to')
 
         params = {
             'version': 3,
-            'from': create_address(AddressPrefix.EOA, b'from'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
             'to': to,
             'value': value,
             'stepLimit': step_limit,
@@ -247,7 +281,8 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.icx_engine = Mock(spec=IcxEngine)
         self.score_manager = Mock(spec=IconScoreManager)
         self.score_mapper = Mock(spec=IconScoreInfoMapper)
-        self.validator = IconPreValidator(self.icx_engine, self.score_manager, self.score_mapper)
+        self.validator = IconPreValidator(
+            self.icx_engine, self.score_manager, self.score_mapper)
 
     def tearDown(self):
         self.icx_engine = None
@@ -259,11 +294,11 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.icx_engine.get_balance = Mock(return_value=0)
         self.score_manager.is_score_active = Mock(return_value=False)
 
-        to = create_address(AddressPrefix.EOA, b'to')
+        to = Address.from_data(AddressPrefix.EOA, b'to')
 
         tx = {
             'txHash': create_tx_hash(b'tx'),
-            'from': create_address(AddressPrefix.EOA, b'from'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
             'to': to,
             'value': 10 * 10 ** 18,
             'fee': 10 ** 16,
@@ -273,7 +308,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
 
         # too small balance
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx, step_price=0)
+            self.validator.execute(tx, step_price=0, minimum_step=100)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
@@ -282,25 +317,26 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.icx_engine.get_balance = Mock(return_value=10 * 10 ** 18)
 
         with self.assertRaises(InvalidRequestException) as cm:
-            self.validator.execute(tx, step_price=0)
+            self.validator.execute(tx, step_price=0, minimum_step=100)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
         self.assertEqual('Out of balance', cm.exception.message)
 
         # balance is enough to pay coin and fee
-        self.icx_engine.get_balance = Mock(return_value=10 * 10 ** 18 + 10 ** 16)
-        self.validator.execute(tx, step_price=0)
+        self.icx_engine.get_balance =\
+            Mock(return_value=10 * 10 ** 18 + 10 ** 16)
+        self.validator.execute(tx, step_price=0, minimum_step=100)
 
     def test_execute_to_check_out_of_balance(self):
         step_price = 10 ** 12
         self.icx_engine.get_balance = Mock(return_value=0)
         self.score_manager.is_score_active = Mock(return_value=False)
 
-        to = create_address(AddressPrefix.EOA, b'to')
+        to = Address.from_data(AddressPrefix.EOA, b'to')
 
         tx = {
             'txHash': create_tx_hash(b'tx'),
-            'from': create_address(AddressPrefix.EOA, b'from'),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
             'to': to,
             'value': 10 * 10 ** 18,
             'fee': 10 ** 16,

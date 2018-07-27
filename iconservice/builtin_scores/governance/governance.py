@@ -46,7 +46,7 @@ class Governance(IconScoreBase):
         pass
 
     @eventlog(indexed=1)
-    def Rejected(self, tx_hash: str):
+    def Rejected(self, tx_hash: str, reason: str):
         pass
 
     @eventlog(indexed=1)
@@ -228,7 +228,7 @@ class Governance(IconScoreBase):
             AUDIT_TX_HASH: self.tx.hash
         }
         self._save_status(_next, status)
-        self.Rejected('0x' + txHash.hex())
+        self.Rejected('0x' + txHash.hex(), reason)
 
     @external
     def addAuditor(self, address: Address):
