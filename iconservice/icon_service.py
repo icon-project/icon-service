@@ -18,7 +18,7 @@ from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
 
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, CONFIG_JSON_PATH
+from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE
 from iconcommons.logger import Logger
 from iconcommons.icon_config import IconConfig
 

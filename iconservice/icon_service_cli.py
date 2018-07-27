@@ -29,8 +29,6 @@ if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
 
 ICON_SERVICE_STANDALONE = 'IconServiceStandAlone'
-DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
-CONFIG_JSON_PATH = os.path.join(DIRECTORY_PATH, "icon_service.json")
 cache_conf = None
 
 
