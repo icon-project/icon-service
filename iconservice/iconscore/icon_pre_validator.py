@@ -106,7 +106,8 @@ class IconPreValidator:
         :param params:
         :return:
         """
-        self._check_minimum_step(params, minimum_step)
+        if step_price > 0:
+            self._check_minimum_step(params, minimum_step)
 
         self._check_from_can_charge_fee_v3(params, step_price)
 
