@@ -30,7 +30,8 @@ PRE_BUILTIN_SCORE_ROOT_PATH = os.path.join(ROOT_PATH, 'builtin_scores')
 class IconBuiltinScoreLoader(object):
     _BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': GOVERNANCE_SCORE_ADDRESS}
 
-    def __init__(self, deploy_engine: 'IconScoreDeployEngine') -> None:
+    def __init__(self,
+                 deploy_engine: 'IconScoreDeployEngine') -> None:
         """Constructor
         """
 
@@ -45,12 +46,12 @@ class IconBuiltinScoreLoader(object):
                             score_name: str,
                             icon_score_address: 'Address',
                             builtin_score_owner: 'Address'):
-        if self._deploy_engine.icon_deploy_storage.is_score_status_active(context, icon_score_address):
+        if self._deploy_engine.icon_deploy_storage.is_score_active(context, icon_score_address):
             return
 
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
         self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, builtin_score_owner)
-        self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
+        self._deploy_engine.deploy_for_builtin(icon_score_address, score_path)
 
     @classmethod
     def is_builtin_score(cls, score_address: 'Address') -> bool:

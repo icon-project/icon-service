@@ -18,13 +18,16 @@ import os
 import shutil
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix
+from unittest.mock import Mock
+
+from iconservice.base.address import Address
 from iconservice import IconScoreBase, IconScoreContextType, \
     InvalidParamsException
 from iconservice.base.address import AddressPrefix, ICX_ENGINE_ADDRESS
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.deploy.icon_score_manager import IconScoreManager
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy import make_score_id
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper, \
     IconScoreInfo
@@ -46,15 +49,15 @@ class TestIconScoreInfoMapper(unittest.TestCase):
         path = os.path.join(db_path, 'test_mapper_dex')
         self._icx_db = ContextDatabase.from_path(path, True)
         self._icx_db.address = ICX_ENGINE_ADDRESS
-        self._deploy_engine = IconScoreDeployEngine()
+        self._deploy_storage = Mock(spec=IconScoreDeployStorage)
 
         self._icon_score_loader = IconScoreLoader(score_path)
-        self.mapper = IconScoreInfoMapper(
-            IconScoreManager(self._deploy_engine), self._icon_score_loader)
+        self.mapper = IconScoreInfoMapper(self._icon_score_loader, self._deploy_storage)
         self.score_address = Address.from_data(AddressPrefix.CONTRACT, b'score')
         self.address = Address.from_data(AddressPrefix.EOA, b'addr')
 
-        self.mapper[self.score_address] = IconScoreInfo(icon_score=None)
+        score_id = make_score_id(0, 0)
+        self.mapper[self.score_address] = IconScoreInfo(None, score_id)
 
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.DIRECT)
@@ -76,14 +79,16 @@ class TestIconScoreInfoMapper(unittest.TestCase):
     def load_proj(self, proj: str, addr_score: 'Address') -> IconScoreBase:
         target_path = os.path.join(self._score_path, addr_score.to_bytes().hex())
         os.makedirs(target_path, exist_ok=True)
-        target_path = os.path.join(target_path, '0_0')
+        score_id = make_score_id(0, 0)
+        target_path = os.path.join(target_path, score_id)
 
         ref_path = os.path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
         os.symlink(ref_path, target_path, target_is_directory=True)
-        return self._loader.load_score(addr_score.to_bytes().hex())
+        return self._loader.load_score(addr_score.to_bytes().hex(), score_id)
 
     def test_setitem(self):
-        info = IconScoreInfo(icon_score=None)
+        score_id = make_score_id(0, 0)
+        info = IconScoreInfo(None, score_id)
 
         with self.assertRaises(InvalidParamsException):
             self.mapper[self.address] = None
@@ -99,10 +104,10 @@ class TestIconScoreInfoMapper(unittest.TestCase):
     def test_getitem(self):
 
         self.assertEqual(1, len(self.mapper))
-
+        score_id = make_score_id(0, 0)
         score_address = self.score_address
         score = self.load_proj('test_score01', score_address)
-        score_info = IconScoreInfo(icon_score=score)
+        score_info = IconScoreInfo(score, score_id)
         self.mapper[score_address] = score_info
 
         info = self.mapper[score_address]

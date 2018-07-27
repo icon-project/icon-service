@@ -19,3 +19,13 @@ from enum import IntEnum
 class DeployType(IntEnum):
     INSTALL = 0
     UPDATE = 1
+
+
+class DeployState(IntEnum):
+    INACTIVE = 0
+    WAIT_TO_DEPLOY = 1
+    ACTIVE = 2
+
+
+def make_score_id(block_height: int, tx_index: int):
+    return f'{block_height}_{tx_index}'

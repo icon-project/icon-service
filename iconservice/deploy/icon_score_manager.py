@@ -46,11 +46,11 @@ class IconScoreManager(object):
         else:
             raise ServerErrorException('Permission Error')
 
-    def is_score_status_active(self,
-                               context: Optional['IconScoreContext'],
-                               icon_score_address: 'Address') -> bool:
+    def is_score_active(self,
+                        context: Optional['IconScoreContext'],
+                        icon_score_address: 'Address') -> bool:
 
-        return self.__deploy_engine.icon_deploy_storage.is_score_status_active(context, icon_score_address)
+        return self.__deploy_engine.icon_deploy_storage.is_score_active(context, icon_score_address)
 
     def get_owner(self,
                   context: Optional['IconScoreContext'],

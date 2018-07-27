@@ -35,7 +35,6 @@ from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
@@ -68,15 +67,9 @@ class TestIconScoreEngine(unittest.TestCase):
         icx_db = ContextDatabaseFactory.create_by_name('icx_db')
         self._icx_storage = IcxStorage(icx_db)
         self._deploy_storage = IconScoreDeployStorage(self._icx_storage.db)
-        self._deploy_engine = IconScoreDeployEngine()
 
         self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
-        self._icon_score_mapper = IconScoreInfoMapper(
-            IconScoreManager(self._deploy_engine), self._icon_score_loader)
-
-        self._deploy_engine.open(
-            self._ROOT_SCORE_PATH, None,
-            self._icon_score_mapper, self._deploy_storage)
+        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader, self._deploy_storage)
 
         self._engine = IconScoreEngine()
         self._engine.open(

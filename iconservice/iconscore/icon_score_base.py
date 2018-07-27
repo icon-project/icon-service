@@ -162,7 +162,7 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             main_type = annotation
         if not isinstance(value, main_type):
             raise IconTypeError(f"Mismatch type type of '{name}': "
-                            f"{type(value)}, expected: {main_type}")
+                                f"{type(value)}, expected: {main_type}")
         arguments.append(value)
     return arguments
 
@@ -560,8 +560,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def deploy(self, tx_hash: bytes):
         self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)
 
-    def is_score_status_active(self, score_address: 'Address'):
-        self._context.icon_score_manager.is_score_status_active(self._context, score_address)
+    def is_score_active(self, score_address: 'Address'):
+        self._context.icon_score_manager.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         if score_address:

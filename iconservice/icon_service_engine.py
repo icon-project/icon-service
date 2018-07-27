@@ -136,8 +136,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_storage = IconScoreDeployStorage(
             self._icx_context_db)
 
-        self._icon_score_mapper = IconScoreInfoMapper(
-            icon_score_manger, self._icon_score_loader)
+        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader, self._icon_score_deploy_storage)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._icon_pre_validator =\
@@ -165,7 +164,8 @@ class IconServiceEngine(ContextContainer):
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
 
-    def _make_service_flag(self, flag_table: dict) -> int:
+    @staticmethod
+    def _make_service_flag(flag_table: dict) -> int:
         key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT]
         flag = 0
         for key in key_table:
@@ -182,6 +182,7 @@ class IconServiceEngine(ContextContainer):
                 IconBuiltinScoreLoader(self._icon_score_deploy_engine)
             icon_builtin_score_loader.load_builtin_scores(
                 context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
+            self._icon_score_mapper.commit()
         finally:
             self._delete_context(context)
 
@@ -781,6 +782,7 @@ class IconServiceEngine(ContextContainer):
         self._precommit_state = None
 
         self._icx_storage.put_block_info(context, block_batch.block)
+        self._icon_score_mapper.commit()
         self._context_factory.destroy(context)
 
     def validate_precommit(self, precommit_block: 'Block') -> None:
@@ -803,3 +805,4 @@ class IconServiceEngine(ContextContainer):
         self._precommit_state = None
         self._icon_score_engine.rollback()
         self._icon_score_deploy_engine.rollback()
+        self._icon_score_mapper.rollback()

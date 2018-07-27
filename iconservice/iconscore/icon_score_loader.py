@@ -17,11 +17,10 @@
 import json
 import importlib.machinery
 from sys import path as sys_path
-from os import path, listdir
+from os import path
 from os.path import dirname
-from collections import defaultdict
 from iconcommons.logger import Logger
-from iconservice.icon_constant import ICON_LOADER_LOG_TAG
+from ..icon_constant import ICON_LOADER_LOG_TAG
 
 
 class IconScoreLoader(object):
@@ -64,22 +63,12 @@ class IconScoreLoader(object):
         return getattr(module, score_package_info[__MAIN_SCORE])
 
     @staticmethod
-    def __get_last_version_path(score_root_path: str, address_body: str) -> str:
+    def __get_score_path_by_score_id(score_root_path: str, address_body: str, score_id: str) -> str:
         address_path = path.join(score_root_path, address_body)
+        return path.join(address_path, score_id)
 
-        tmp_dict = defaultdict(list)
-        for dir_name in listdir(address_path):
-            block_height, tx_index = dir_name.split('_')
-            tmp_dict[block_height].append(tx_index)
-
-        last_block_height = sorted(tmp_dict.keys(), key=int)[-1]
-        last_tx_index = sorted(tmp_dict[last_block_height], key=int)[-1]
-
-        last_version = '{}_{}'.format(last_block_height, last_tx_index)
-        return path.join(address_path, last_version)
-
-    def load_score(self, address_body: str) -> callable:
-        last_version_path = self.__get_last_version_path(self.__score_root_path, address_body)
+    def load_score(self, address_body: str, score_id: str) -> callable:
+        last_version_path = self.__get_score_path_by_score_id(self.__score_root_path, address_body, score_id)
 
         score_package_info = self.__load_json(last_version_path)
         score_package_init_file_path = path.join(last_version_path, IconScoreLoader.__SCORE_ENTERANCE_FILE_PATH)
