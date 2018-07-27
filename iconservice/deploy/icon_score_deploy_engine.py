@@ -142,7 +142,7 @@ class IconScoreDeployEngine(object):
             raise InvalidParamsException(
                 f'Invalid contentType: {content_type}')
 
-        self._on_deploy(context, tx_params)
+        self._on_deploy(tx_params)
 
     def _score_deploy_for_builtin(self, icon_score_address: 'Address',
                                   src_score_path: str):
@@ -200,7 +200,6 @@ class IconScoreDeployEngine(object):
             params={})
 
     def _on_deploy(self,
-                   context: 'IconScoreContext',
                    tx_params: 'IconScoreDeployTXParams') -> None:
         """Install an icon score on commit
 
@@ -214,12 +213,12 @@ class IconScoreDeployEngine(object):
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
 
+        score_id = tx_params.score_id
         if content_type == 'application/tbears':
             score_root_path = self._icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
                                     score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
-            score_id = tx_params.score_id
             target_path = path.join(target_path, score_id)
             try:
                 symlink(content, target_path, target_is_directory=True)
@@ -229,10 +228,8 @@ class IconScoreDeployEngine(object):
             self._icon_score_deployer.deploy(
                 address=score_address,
                 data=content,
-                block_height=context.block.height,
-                transaction_index=context.tx.index)
+                score_id=score_id)
 
-        score_id = tx_params.score_id
         score = self._icon_score_mapper.load_wait_icon_score(score_address, score_id)
         if score is None:
             raise InvalidParamsException(f'score is None : {score_address}')
