@@ -45,7 +45,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
             }
         }
 
-        score_id = make_score_id(-1, -1)
+        score_id = make_score_id(1, 1)
         tx_params1 = IconScoreDeployTXParams(tx_hash1, deploy_state, score_address, data_params, score_id)
 
         data = IconScoreDeployTXParams.to_bytes(tx_params1)
@@ -72,7 +72,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
             }
         }
 
-        score_id = None
+        score_id = make_score_id(0, 0)
         tx_params1 = IconScoreDeployTXParams(tx_hash1, deploy_state, score_address, data_params, score_id)
 
         data = IconScoreDeployTXParams.to_bytes(tx_params1)
@@ -83,7 +83,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         self.assertEqual(tx_params2.deploy_type, deploy_state)
         self.assertEqual(tx_params2._score_address, score_address)
         self.assertEqual(tx_params2.deploy_data, data_params)
-
+        self.assertEqual(tx_params2.score_id, score_id)
 
     def test_deploy_info_from_bytes_to_bytes(self):
         score_address = Address.from_data(AddressPrefix.CONTRACT, b'score')
@@ -121,7 +121,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
 
     def test_deploy_state_info_from_bytes_to_bytes(self):
         deploy_state = DeployState.ACTIVE
-        score_id = make_score_id(-1, -2)
+        score_id = make_score_id(1, 2)
         info1 = IconScoreDeployStateInfo(deploy_state, score_id)
 
         data = IconScoreDeployStateInfo.to_bytes(info1)
@@ -133,7 +133,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
 
     def test_deploy_state_info_from_bytes_to_bytes_none_check(self):
         deploy_state = DeployState.ACTIVE
-        score_id = None
+        score_id = make_score_id(0, 0)
         info1 = IconScoreDeployStateInfo(deploy_state, score_id)
 
         data = IconScoreDeployStateInfo.to_bytes(info1)

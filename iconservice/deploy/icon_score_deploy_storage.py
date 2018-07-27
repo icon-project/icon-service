@@ -17,7 +17,7 @@ import json
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from ..icon_constant import DEFAULT_BYTE_SIZE
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
 from . import DeployType, DeployState, make_score_id
@@ -29,26 +29,25 @@ if TYPE_CHECKING:
 
 class IconScoreDeployTXParams(object):
     _VERSION = 0
-    _STRUCT_FMT = f'>BBII{ICON_CONTRACT_ADDRESS_BYTES_SIZE}s{DEFAULT_BYTE_SIZE}s'
-    _PIVOT_SIZE = 1 + 1 + 4 + 4 + ICON_CONTRACT_ADDRESS_BYTES_SIZE + 32
+    _STRUCT_FMT = f'>BBI{ICON_CONTRACT_ADDRESS_BYTES_SIZE}s{DEFAULT_BYTE_SIZE}s{16}s'
+    _PIVOT_SIZE = 1 + 1 + 4 + ICON_CONTRACT_ADDRESS_BYTES_SIZE + 32 + 16
 
     # leveldb IconScoreDeployTXParams value structure
-    # (bigendian, 1 + 1 + 4 + 4+ ICON_CONTRACT_ADDRESS_BYTES_SIZE + 32 + data_bytes)
+    # (bigendian, 1 + 1 + 4+ ICON_CONTRACT_ADDRESS_BYTES_SIZE + 32 + 16 + data_bytes)
     # version(1)
     # | deploy_type(1)
     # | deploy_data_length(4)
-    # | score_id_length(4)
     # | score_address(21)
     # | tx_hash(DEFAULT_BYTE_SIZE)
+    # | score_id(16)
     # | deploy_data_value(deploy_data_length)
-    # | score_id(score_id_length)
 
     def __init__(self,
                  tx_hash: bytes,
                  deploy_type: 'DeployType',
                  score_address: 'Address',
                  deploy_data: dict,
-                 score_id: Optional[str]):
+                 score_id: str):
         # key
         self._tx_hash = tx_hash
         # value
@@ -74,7 +73,7 @@ class IconScoreDeployTXParams(object):
         return self._deploy_data
 
     @property
-    def score_id(self) -> Optional[str]:
+    def score_id(self) -> str:
         return self._score_id
 
     @staticmethod
@@ -85,25 +84,25 @@ class IconScoreDeployTXParams(object):
         :return: (IconScoreDeployTXParams) IconScoreDeployTXParams object
         """
 
-        version, deploy_type, deploy_data_length, score_id_length, score_addr_bytes, hash_bytes = unpack(
+        version, deploy_type, deploy_data_length, score_addr_bytes, hash_bytes, score_id_bytes = unpack(
             IconScoreDeployTXParams._STRUCT_FMT, buf[:IconScoreDeployTXParams._PIVOT_SIZE])
 
-        start_index = IconScoreDeployTXParams._PIVOT_SIZE
-        end_index = IconScoreDeployTXParams._PIVOT_SIZE + deploy_data_length
         json_str_deploy_data_bytes = unpack(
-            f'{deploy_data_length}s', buf[start_index:end_index])[0]
-
-        start_index = end_index
-        score_id_data_bytes = unpack(
-            f'{score_id_length}s', buf[start_index:])[0]
+            f'{deploy_data_length}s', buf[IconScoreDeployTXParams._PIVOT_SIZE:])[0]
 
         score_address = Address.from_bytes(score_addr_bytes)
         deploy_data = json.loads(json_str_deploy_data_bytes.decode())
 
-        if score_id_data_bytes is bytes():
-            score_id = None
+        block_height_bytes = score_id_bytes[:8]
+        tx_index_bytes = score_id_bytes[8:]
+
+        block_height = int.from_bytes(block_height_bytes, DATA_BYTE_ORDER)
+        tx_index = int.from_bytes(tx_index_bytes, DATA_BYTE_ORDER)
+        is_not_zero = block_height + tx_index
+        if is_not_zero:
+            score_id = make_score_id(block_height, tx_index)
         else:
-            score_id = score_id_data_bytes.decode()
+            score_id = make_score_id(0, 0)
 
         tx_params = IconScoreDeployTXParams(hash_bytes, DeployType(deploy_type), score_address, deploy_data, score_id)
         return tx_params
@@ -119,20 +118,20 @@ class IconScoreDeployTXParams(object):
         deploy_data_length = len(json_str_deploy_data.encode())
 
         score_id = self._score_id
-        if score_id is None:
-            score_id_bytes = bytes()
-        else:
-            score_id_bytes = score_id.encode()
-        score_id_length = len(score_id_bytes)
+        tmp = score_id.split('_')
+        block_height = int(tmp[0])
+        tx_index = int(tmp[1])
+        bytes1 = block_height.to_bytes(8, DATA_BYTE_ORDER)
+        bytes2 = tx_index.to_bytes(8, DATA_BYTE_ORDER)
+        score_id_bytes = bytes1 + bytes2
 
         bytes_var1 = pack(
             IconScoreDeployTXParams._STRUCT_FMT,
-            self._VERSION, self._deploy_type.value, deploy_data_length, score_id_length,
-            self._score_address.to_bytes(), self._tx_hash)
+            self._VERSION, self._deploy_type.value, deploy_data_length,
+            self._score_address.to_bytes(), self._tx_hash, score_id_bytes)
         bytes_var2 = pack(f'>{deploy_data_length}s', json_str_deploy_data.encode())
-        bytes_var3 = pack(f'>{score_id_length}s', score_id_bytes)
 
-        return bytes_var1 + bytes_var2 + bytes_var3
+        return bytes_var1 + bytes_var2
 
 
 class IconScoreDeployInfo(object):
@@ -144,7 +143,6 @@ class IconScoreDeployInfo(object):
     # leveldb IconScoreDeployInfo value structure
     # (bigendian, 1 + ICON_CONTRACT_ADDRESS_BYTES_SIZE + ICON_EOA_ADDRESS_BYTES_SIZE + 32 + 32 bytes)
     # version(1)
-    # | score_id(SCORE_ID_BYTES_SIZE)
     # | score_address(ICON_CONTRACT_ADDRESS_BYTES_SIZE)
     # | owner(ICON_EOA_ADDRESS_BYTES_SIZE)
     # | current_tx_hash(DEFAULT_BYTE_SIZE)
@@ -224,28 +222,28 @@ class IconScoreDeployInfo(object):
 
 class IconScoreDeployStateInfo(object):
     _VERSION = 0
-    _STRUCT_FMT = f'>BBI'
-    _PIVOT_SIZE = 1 + 1 + 4
+    _STRUCT_FMT = f'>BB{16}s'
+    _PIVOT_SIZE = 1 + 1 + 16
 
     # leveldb IconScoreDeployInfo value structure
-    # (bigendian, 1 + 1 + data_bytes
+    # (bigendian, 1 + 1 + 16
     # version(1)
     # deploystate(1)
-    # score_id(data_bytes)
+    # score_id(16)
 
     def __init__(self,
                  deploy_state: 'DeployState',
-                 score_id: Optional[str]):
+                 score_id: str):
 
         self._deploy_state = deploy_state
         self._score_id = score_id
 
     @property
-    def deploy_state(self):
+    def deploy_state(self) -> 'DeployState':
         return self._deploy_state
 
     @property
-    def score_id(self):
+    def score_id(self) -> str:
         return self._score_id
 
     @staticmethod
@@ -259,15 +257,19 @@ class IconScoreDeployStateInfo(object):
         bytes_params = unpack(IconScoreDeployStateInfo._STRUCT_FMT, buf[: IconScoreDeployStateInfo._PIVOT_SIZE])
         # version = bytes_params[0]
         deploy_state = bytes_params[1]
-        score_id_length = bytes_params[2]
+        score_id_bytes = bytes_params[2]
 
-        score_id_bytes = unpack(
-            f'{score_id_length}s', buf[IconScoreDeployStateInfo._PIVOT_SIZE:])[0]
+        block_height_bytes = score_id_bytes[:8]
+        tx_index_bytes = score_id_bytes[8:]
 
-        if score_id_bytes is bytes():
-            score_id = None
+        block_height = int.from_bytes(block_height_bytes, DATA_BYTE_ORDER)
+        tx_index = int.from_bytes(tx_index_bytes, DATA_BYTE_ORDER)
+        is_not_zero = block_height + tx_index
+        if is_not_zero:
+            score_id = make_score_id(block_height, tx_index)
         else:
-            score_id = score_id_bytes.decode()
+            score_id = make_score_id(0, 0)
+
         info = IconScoreDeployStateInfo(DeployState(deploy_state), score_id)
         return info
 
@@ -277,21 +279,18 @@ class IconScoreDeployStateInfo(object):
         :return: data including information of IconScoreDeployInfo object
         """
         score_id = self._score_id
-        if score_id is None:
-            score_id = bytes()
-        else:
-            score_id = score_id.encode()
-        score_id_length = len(score_id)
+        tmp = score_id.split('_')
+        block_height = int(tmp[0])
+        tx_index = int(tmp[1])
+        bytes1 = block_height.to_bytes(8, DATA_BYTE_ORDER)
+        bytes2 = tx_index.to_bytes(8, DATA_BYTE_ORDER)
+        score_id_bytes = bytes1 + bytes2
 
-        converted_score_id = score_id
-
-        bytes_var1 = pack(self._STRUCT_FMT,
-                          self._VERSION,
-                          self._deploy_state.value,
-                          score_id_length)
-
-        bytes_var2 = pack(f'>{score_id_length}s', converted_score_id)
-        return bytes_var1 + bytes_var2
+        bytes_var = pack(self._STRUCT_FMT,
+                         self._VERSION,
+                         self._deploy_state.value,
+                         score_id_bytes)
+        return bytes_var
 
 
 class IconScoreDeployStorage(object):
@@ -320,7 +319,7 @@ class IconScoreDeployStorage(object):
             if context:
                 score_id = make_score_id(context.block.height, context.tx.index)
             else:
-                score_id = None
+                score_id = make_score_id(0, 0)
             tx_params = IconScoreDeployTXParams(tx_hash, deploy_state, score_address, deploy_data, score_id)
             self._put_deploy_tx_params(context, tx_params)
         else:
@@ -370,7 +369,7 @@ class IconScoreDeployStorage(object):
     def put_deploy_state_info(self, context: Optional['IconScoreContext'],
                               score_address: 'Address',
                               deploy_state: 'DeployState',
-                              score_id: Optional[str]) -> None:
+                              score_id: str) -> None:
 
         state_info = IconScoreDeployStateInfo(deploy_state, score_id)
         value = state_info.to_bytes()
@@ -445,13 +444,13 @@ class IconScoreDeployStorage(object):
 
     def get_score_id(self,
                      context: 'IconScoreContext',
-                     icon_score_address: 'Address') -> Optional[str]:
+                     icon_score_address: 'Address') -> str:
         """
         """
 
         deploy_state_info = self._get_deploy_state_info(context, icon_score_address)
         if deploy_state_info is None:
-            return None
+            return make_score_id(0, 0)
         else:
             return deploy_state_info.score_id
 
