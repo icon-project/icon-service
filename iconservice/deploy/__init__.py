@@ -22,9 +22,9 @@ class DeployType(IntEnum):
 
 
 class DeployState(IntEnum):
-    INACTIVATE = 0
-    DEPLOYED = 1
-    ACTIVATE = 2
+    INACTIVE = 0
+    WAIT_TO_DEPLOY = 1
+    ACTIVE = 2
 
 
 def make_score_id(block_height: int, tx_index: int):

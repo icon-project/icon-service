@@ -120,7 +120,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         self.assertEqual(info2.next_tx_hash, tx_hash2)
 
     def test_deploy_state_info_from_bytes_to_bytes(self):
-        deploy_state = DeployState.ACTIVATE
+        deploy_state = DeployState.ACTIVE
         score_id = make_score_id(-1, -2)
         info1 = IconScoreDeployStateInfo(deploy_state, score_id)
 
@@ -132,7 +132,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         self.assertEqual(info2.score_id, score_id)
 
     def test_deploy_state_info_from_bytes_to_bytes_none_check(self):
-        deploy_state = DeployState.ACTIVATE
+        deploy_state = DeployState.ACTIVE
         score_id = None
         info1 = IconScoreDeployStateInfo(deploy_state, score_id)
 

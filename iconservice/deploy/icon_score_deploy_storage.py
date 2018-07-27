@@ -343,7 +343,7 @@ class IconScoreDeployStorage(object):
         deploy_info = IconScoreDeployInfo(score_address, owner, None, None)
         self._put_deploy_info(None, deploy_info)
         score_id = make_score_id(0, 0)
-        self.put_deploy_state_info(None, score_address, DeployState.DEPLOYED, score_id)
+        self.put_deploy_state_info(None, score_address, DeployState.WAIT_TO_DEPLOY, score_id)
 
     def update_score_info(self,
                           context: 'IconScoreContext',
@@ -365,7 +365,7 @@ class IconScoreDeployStorage(object):
                 self._put_deploy_info(context, deploy_info)
                 score_id = self.get_score_id(context, score_address)
 
-                self.put_deploy_state_info(context, score_address, DeployState.DEPLOYED, score_id)
+                self.put_deploy_state_info(context, score_address, DeployState.WAIT_TO_DEPLOY, score_id)
 
     def put_deploy_state_info(self, context: Optional['IconScoreContext'],
                               score_address: 'Address',
@@ -441,7 +441,7 @@ class IconScoreDeployStorage(object):
         if deploy_state_info is None:
             return False
         else:
-            return deploy_state_info.deploy_state == DeployState.ACTIVATE
+            return deploy_state_info.deploy_state == DeployState.ACTIVE
 
     def get_score_id(self,
                      context: 'IconScoreContext',

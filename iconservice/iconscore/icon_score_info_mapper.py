@@ -169,7 +169,7 @@ class IconScoreInfoMapper(object):
     def commit(self):
         for address, info in self._wait_score_mapper.items():
             self._score_mapper[address] = info
-            self._deploy_storage.put_deploy_state_info(None, address, DeployState.ACTIVATE, info.score_id)
+            self._deploy_storage.put_deploy_state_info(None, address, DeployState.ACTIVE, info.score_id)
         self._wait_score_mapper.clear()
 
     def rollback(self):
