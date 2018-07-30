@@ -1,1 +1,1 @@
-from .sample_token import SampleToken
+from .sample_token import SampleToken2

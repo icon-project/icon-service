@@ -6,10 +6,13 @@ class TestInterface(InterfaceScore):
     def writable_func(self, value: int) -> None: pass
 
     @interface
-    def readonly_func(self) -> int: pass
+    def readonly_func1(self) -> int: pass
+
+    @interface
+    def readonly_func2(self) -> int: pass
 
 
-class SampleToken(IconScoreBase):
+class SampleToken3(IconScoreBase):
     _TEST = 'test'
     _SCORE_ADDR = 'score_addr'
 
@@ -32,14 +35,11 @@ class SampleToken(IconScoreBase):
     def writable_func(self, value: int) -> None:
         test_interface = self.create_interface_score(self._addr_score.get(), TestInterface)
         test_interface.writable_func(value)
-        test_interface.readonly_func()
+        test_interface.readonly_func2()
 
     @external(readonly=True)
     def readonly_func(self) -> int:
         test_interface = self.create_interface_score(self._addr_score.get(), TestInterface)
-        try:
-            test_interface.writable_func(50)
-        except BaseException as e:
-            print(e)
-        ret = test_interface.readonly_func()
+        test_interface.writable_func(100)
+        ret = test_interface.readonly_func1()
         return ret

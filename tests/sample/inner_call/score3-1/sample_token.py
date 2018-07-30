@@ -1,7 +1,7 @@
 from iconservice import *
 
 
-class SampleToken(IconScoreBase):
+class SampleToken1(IconScoreBase):
     _TEST = 'test'
 
     def __init__(self, db: IconScoreDatabase) -> None:

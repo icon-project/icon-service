@@ -348,7 +348,7 @@ class TestInnerServiceEngine(unittest.TestCase):
                                  params: dict):
         version = 3
         step_limit = 5000000
-        timestamp = 12345
+        tx_timestamp_us = int(time.time() * 10 ** 6)
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
@@ -358,7 +358,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             "to": addr_to,
             "value": hex(0),
             "stepLimit": hex(step_limit),
-            "timestamp": hex(timestamp),
+            "timestamp": hex(tx_timestamp_us),
             "nonce": hex(nonce),
             "signature": signature,
             "dataType": "call",
@@ -401,6 +401,104 @@ class TestInnerServiceEngine(unittest.TestCase):
         if not isinstance(tx_results, dict):
             await self._inner_task.remove_precommit_state(precommit_request)
         elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
+            is_commit = True
+            await self._inner_task.write_precommit_state(precommit_request)
+        else:
+            await self._inner_task.remove_precommit_state(precommit_request)
+
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
+
+    async def _call_method_scor2(self,
+                                 block_index: int,
+                                 prev_block_hash: str,
+                                 addr_from: 'Address',
+                                 addr_to: str,
+                                 method1: str,
+                                 params1: dict,
+                                 method2: str,
+                                 params2: dict):
+        version = 3
+        step_limit = 5000000
+        tx_timestamp_us = int(time.time() * 10 ** 6)
+        nonce = 1
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
+        request_params1 = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": addr_to,
+            "value": hex(0),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(tx_timestamp_us),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "call",
+            "data": {
+                "method": method1,
+                "params": params1
+            }
+        }
+
+        request_params2 = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": addr_to,
+            "value": hex(0),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(tx_timestamp_us),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "call",
+            "data": {
+                "method": method1,
+                "params": params1
+            }
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        tx_hash1 = create_tx_hash()
+        request_params1['txHash'] = bytes.hex(tx_hash1)
+        tx1 = {
+            'method': method,
+            'params': request_params1
+        }
+        response = await self._inner_task.validate_transaction(tx1)
+        self.assertEqual(response, hex(0))
+
+        tx_hash2 = create_tx_hash()
+        request_params2['txHash'] = bytes.hex(tx_hash2)
+        tx2 = {
+            'method': method,
+            'params': request_params1
+        }
+        response = await self._inner_task.validate_transaction(tx2)
+        self.assertEqual(response, hex(0))
+
+        make_request = {'transactions': [tx1, tx2]}
+        block_height: int = block_index
+        block_timestamp_us = int(time.time() * 10 ** 6)
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
+
+        make_request['block'] = {
+            'blockHeight': hex(block_height),
+            'blockHash': bytes.hex(block_hash),
+            'timestamp': hex(block_timestamp_us),
+            'prevBlockHash': prev_block_hash
+        }
+
+        precommit_request = {'blockHeight': hex(block_height),
+                             'blockHash': bytes.hex(block_hash)}
+
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
+        is_commit = False
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash2)]['status'] == hex(1):
             is_commit = True
             await self._inner_task.write_precommit_state(precommit_request)
         else:
@@ -1114,6 +1212,20 @@ class TestInnerServiceEngine(unittest.TestCase):
             "version": hex(version),
             "from": str(self._admin_addr),
             "to": token_addr2,
+            "dataType": "call",
+            "data": {
+                "method": "readonly_func",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        #self.assertEqual(response, hex(100))
+
+        request = {
+            "version": hex(version),
+            "from": str(self._admin_addr),
+            "to": token_addr1,
             "dataType": "call",
             "data": {
                 "method": "readonly_func",
