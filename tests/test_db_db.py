@@ -19,6 +19,7 @@ import os
 import unittest
 
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
 from iconservice.database.db import IconScoreDatabase
@@ -26,6 +27,7 @@ from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreFuncType
 from tests import rmtree
 
 
@@ -89,6 +91,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.context = context
 
     def tearDown(self):
+        self.context.func_type = IconScoreFuncType.WRITABLE
         self.context_db.close(self.context)
         self.context_factory.destroy(self.context)
         rmtree(self.state_db_root_path)
@@ -116,6 +119,20 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         batch = self.context.tx_batch
         self.assertEqual(b'value0', batch[b'key0'])
 
+        self.context_db.put(context, b'key0', b'value1')
+        self.context_db.put(context, b'key1', b'value1')
+
+        self.assertEqual(len(batch), 2)
+        self.assertEqual(batch[b'key0'], b'value1')
+        self.assertEqual(batch[b'key1'], b'value1')
+
+    def test_put_on_readonly_exception(self):
+        context = self.context
+        context.func_type = IconScoreFuncType.READONLY
+
+        with self.assertRaises(DatabaseException):
+            self.context_db.put(context, b'key1', b'value1')
+
     def test_write_batch(self):
         context = self.context
         data = {
@@ -127,6 +144,18 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
 
         self.assertEqual(b'value1', db.get(context, b'key1'))
         self.assertEqual(b'value0', db.get(context, b'key0'))
+
+    def test_write_batch_on_readonly_exception(self):
+        db = self.context_db
+        context = self.context
+        context.func_type = IconScoreFuncType.READONLY
+
+        with self.assertRaises(DatabaseException):
+            data = {
+                b'key0': b'value0',
+                b'key1': b'value1'
+            }
+            db.write_batch(context, data)
 
     def test_none_context(self):
         context = None
@@ -161,6 +190,22 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         self.assertEqual(0, len(tx_batch))
         self.assertIsNone(db.get(context, b'key0'))
 
+    def test_delete_on_readonly_exception(self):
+        context = self.context
+        db = self.context_db
+        tx_batch = context.tx_batch
+
+        db.put(context, b'key0', b'value0')
+        self.assertEqual(b'value0', db.get(context, b'key0'))
+        self.assertEqual(b'value0', tx_batch[b'key0'])
+
+        context.func_type = IconScoreFuncType.READONLY
+        with self.assertRaises(DatabaseException):
+            db.delete(context, b'key0')
+
+        context.func_type = IconScoreFuncType.WRITABLE
+        db.delete(context, b'key0')
+        self.assertIsNone(tx_batch[b'key0'])
 
 class TestIconScoreDatabase(unittest.TestCase):
     def setUp(self):

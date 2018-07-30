@@ -204,7 +204,7 @@ class IconPreValidator:
                     generate_score_address(from_, timestamp, nonce)
 
                 if score_address in self._score_mapper:
-                    # This exception is not catched
+                    # This exception is not caught
                     # at the 'except' statement below
                     raise InvalidRequestException(
                         f'SCORE address already in use: {score_address}')

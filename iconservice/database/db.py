@@ -17,12 +17,13 @@
 from typing import TYPE_CHECKING, Optional
 
 import plyvel
-from iconcommons.logger import Logger
 
+from iconcommons.logger import Logger
 from iconservice.base.exception import DatabaseException
 from iconservice.icon_constant import ICON_DB_LOG_TAG
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreFuncType
 from iconservice.utils import sha3_256
 
 if TYPE_CHECKING:
@@ -35,6 +36,23 @@ def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
         return IconScoreContextType.DIRECT
     else:
         return context.type
+
+
+def _is_db_wriable_on_context(context: 'IconScoreContext'):
+    """Check if db is writable on a given context
+
+    :param context:
+    :return:
+    """
+    if context is None:
+        context_type = IconScoreContextType.DIRECT
+        func_type = IconScoreFuncType.WRITABLE
+    else:
+        context_type = context.type
+        func_type = context.func_type
+
+    return context_type != IconScoreContextType.QUERY and \
+        func_type != IconScoreFuncType.READONLY
 
 
 class KeyValueDatabase(object):
@@ -223,11 +241,12 @@ class ContextDatabase(object):
         :param key:
         :param value:
         """
+        if not _is_db_wriable_on_context(context):
+            raise DatabaseException('put is not allowed')
+
         context_type = _get_context_type(context)
 
-        if context_type == IconScoreContextType.QUERY:
-            raise DatabaseException('put is not allowed')
-        elif context_type == IconScoreContextType.INVOKE:
+        if context_type == IconScoreContextType.INVOKE:
             context.tx_batch[key] = value
         else:
             self.key_value_db.put(key, value)
@@ -238,11 +257,12 @@ class ContextDatabase(object):
         :param context:
         :param key: key to delete from db
         """
+        if not _is_db_wriable_on_context(context):
+            raise DatabaseException('delete is not allowed')
+
         context_type = _get_context_type(context)
 
-        if context_type == IconScoreContextType.QUERY:
-            raise DatabaseException('delete is not allowed')
-        elif context_type == IconScoreContextType.INVOKE:
+        if context_type == IconScoreContextType.INVOKE:
             context.tx_batch[key] = None
         else:
             self.key_value_db.delete(key)
@@ -252,9 +272,7 @@ class ContextDatabase(object):
 
         :param context:
         """
-        context_type = _get_context_type(context)
-
-        if context_type == IconScoreContextType.QUERY:
+        if not _is_db_wriable_on_context(context):
             raise DatabaseException(
                 'close is not allowed on readonly context')
 
@@ -264,9 +282,8 @@ class ContextDatabase(object):
     def write_batch(self,
                     context: 'IconScoreContext',
                     states: dict):
-        context_type = _get_context_type(context)
 
-        if context_type == IconScoreContextType.QUERY:
+        if not _is_db_wriable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
