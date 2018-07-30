@@ -25,7 +25,7 @@ from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContext
+    IconScoreContext, IconScoreContextType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
@@ -41,6 +41,7 @@ class TestEventlog(unittest.TestCase):
         step_counter = Mock(spec=IconScoreStepCounter)
         logs_bloom = BloomFilter()
 
+        context.type = IconScoreContextType.INVOKE
         context.attach_mock(event_logs, 'event_logs')
         context.attach_mock(logs_bloom, 'logs_bloom')
         context.attach_mock(step_counter, 'step_counter')

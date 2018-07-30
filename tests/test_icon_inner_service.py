@@ -269,7 +269,7 @@ class TestInnerServiceEngine(unittest.TestCase):
             return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
     async def _install_sample_token_invoke_zip(self, zip_name: str, to_addr: 'Address', block_index: int,
-                                           prev_block_hash: str):
+                                               prev_block_hash: str):
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
         path = os.path.join(root_path, f'tests/sample/{zip_name}')
         mz = InMemoryZip()
@@ -339,32 +339,32 @@ class TestInnerServiceEngine(unittest.TestCase):
         else:
             return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
-    async def _accept_deploy_score(self,
-                                   block_index: int,
-                                   prev_block_hash: str,
-                                   addr_from: 'Address',
-                                   accept_tx_hash: str):
+    async def _call_method_score(self,
+                                 block_index: int,
+                                 prev_block_hash: str,
+                                 addr_from: 'Address',
+                                 addr_to: str,
+                                 method: str,
+                                 params: dict):
         version = 3
         step_limit = 5000000
-        timestamp = 12345
+        tx_timestamp_us = int(time.time() * 10 ** 6)
         nonce = 1
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
         request_params = {
             "version": hex(version),
             "from": str(addr_from),
-            "to": str(GOVERNANCE_SCORE_ADDRESS),
+            "to": addr_to,
             "value": hex(0),
             "stepLimit": hex(step_limit),
-            "timestamp": hex(timestamp),
+            "timestamp": hex(tx_timestamp_us),
             "nonce": hex(nonce),
             "signature": signature,
             "dataType": "call",
             "data": {
-                "method": "acceptScore",
-                "params": {
-                    "txHash": accept_tx_hash
-                }
+                "method": method,
+                "params": params
             }
         }
 
@@ -401,6 +401,104 @@ class TestInnerServiceEngine(unittest.TestCase):
         if not isinstance(tx_results, dict):
             await self._inner_task.remove_precommit_state(precommit_request)
         elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
+            is_commit = True
+            await self._inner_task.write_precommit_state(precommit_request)
+        else:
+            await self._inner_task.remove_precommit_state(precommit_request)
+
+        if tx_results is None:
+            return bytes.hex(block_hash), is_commit, invoke_response
+        else:
+            return bytes.hex(block_hash), is_commit, list(tx_results.values())
+
+    async def _call_method_scor2(self,
+                                 block_index: int,
+                                 prev_block_hash: str,
+                                 addr_from: 'Address',
+                                 addr_to: str,
+                                 method1: str,
+                                 params1: dict,
+                                 method2: str,
+                                 params2: dict):
+        version = 3
+        step_limit = 5000000
+        tx_timestamp_us = int(time.time() * 10 ** 6)
+        nonce = 1
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
+        request_params1 = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": addr_to,
+            "value": hex(0),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(tx_timestamp_us),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "call",
+            "data": {
+                "method": method1,
+                "params": params1
+            }
+        }
+
+        request_params2 = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": addr_to,
+            "value": hex(0),
+            "stepLimit": hex(step_limit),
+            "timestamp": hex(tx_timestamp_us),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "call",
+            "data": {
+                "method": method1,
+                "params": params1
+            }
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        tx_hash1 = create_tx_hash()
+        request_params1['txHash'] = bytes.hex(tx_hash1)
+        tx1 = {
+            'method': method,
+            'params': request_params1
+        }
+        response = await self._inner_task.validate_transaction(tx1)
+        self.assertEqual(response, hex(0))
+
+        tx_hash2 = create_tx_hash()
+        request_params2['txHash'] = bytes.hex(tx_hash2)
+        tx2 = {
+            'method': method,
+            'params': request_params1
+        }
+        response = await self._inner_task.validate_transaction(tx2)
+        self.assertEqual(response, hex(0))
+
+        make_request = {'transactions': [tx1, tx2]}
+        block_height: int = block_index
+        block_timestamp_us = int(time.time() * 10 ** 6)
+        block_hash = create_block_hash(block_timestamp_us.to_bytes(8, DATA_BYTE_ORDER))
+
+        make_request['block'] = {
+            'blockHeight': hex(block_height),
+            'blockHash': bytes.hex(block_hash),
+            'timestamp': hex(block_timestamp_us),
+            'prevBlockHash': prev_block_hash
+        }
+
+        precommit_request = {'blockHeight': hex(block_height),
+                             'blockHash': bytes.hex(block_hash)}
+
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
+        is_commit = False
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash2)]['status'] == hex(1):
             is_commit = True
             await self._inner_task.write_precommit_state(precommit_request)
         else:
@@ -643,8 +741,8 @@ class TestInnerServiceEngine(unittest.TestCase):
         self.assertEqual('pending', response['next']['status'])
         self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
-        prev_block_hash, is_commit, tx_results = self._run_async(self._accept_deploy_score(
-            2, prev_block_hash, self._admin_addr, next_tx_hash))
+        prev_block_hash, is_commit, tx_results = self._run_async(self._call_method_score(
+            2, prev_block_hash, self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": next_tx_hash}))
 
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -707,8 +805,8 @@ class TestInnerServiceEngine(unittest.TestCase):
         self.assertEqual('pending', response['next']['status'])
         self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
-        prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._accept_deploy_score(4, prev_block_hash, self._admin_addr, next_tx_hash))
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(4, prev_block_hash, self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": next_tx_hash}))
 
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -780,8 +878,9 @@ class TestInnerServiceEngine(unittest.TestCase):
         self.assertEqual('pending', response['next']['status'])
         self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
-        prev_block_hash, is_commit, tx_results = self._run_async(self._accept_deploy_score(
-            2, prev_block_hash, self._admin_addr, next_tx_hash))
+        prev_block_hash, is_commit, tx_results = self._run_async(self._call_method_score(
+            2, prev_block_hash, self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore',
+            {"txHash": next_tx_hash}))
 
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
@@ -844,8 +943,9 @@ class TestInnerServiceEngine(unittest.TestCase):
         self.assertEqual('pending', response['next']['status'])
         self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
 
-        prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._accept_deploy_score(4, prev_block_hash, self._admin_addr, next_tx_hash))
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(4, prev_block_hash, self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore',
+                                    {"txHash": next_tx_hash}))
 
         self.assertEqual(is_commit, False)
         self.assertEqual(tx_results[0]['status'], hex(0))
@@ -982,6 +1082,159 @@ class TestInnerServiceEngine(unittest.TestCase):
 
         response = self._run_async(self._icx_call(request))
         self.assertEqual(response, "Hello2")
+
+    def test_inner_call_score(self):
+        prev_block_hash, is_commit, tx_results = self._run_async(self._install_sample_token_invoke_zip(
+            'inner_call/score1-1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        version = 3
+        token_addr = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(2, prev_block_hash, self._admin_addr, token_addr,
+                                    'add_score_func', {"score_addr": token_addr}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(3, prev_block_hash, self._admin_addr, token_addr,
+                                    'writable_func', {"value": hex(100)}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        request = {
+            "version": hex(version),
+            "from": str(self._admin_addr),
+            "to": token_addr,
+            "dataType": "call",
+            "data": {
+                "method": "readonly_func",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, hex(100))
+
+    def test_inner_call_score1(self):
+        prev_block_hash, is_commit, tx_results = self._run_async(self._install_sample_token_invoke_zip(
+            'inner_call/score2-1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        version = 3
+        token_addr1 = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = self._run_async(self._install_sample_token_invoke_zip(
+            'inner_call/score2-2', ZERO_SCORE_ADDRESS, 2, prev_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        token_addr2 = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(3, prev_block_hash, self._admin_addr, token_addr2,
+                                    'add_score_func', {"score_addr": token_addr1}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(4, prev_block_hash, self._admin_addr, token_addr2,
+                                    'writable_func', {"value": hex(100)}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        request = {
+            "version": hex(version),
+            "from": str(self._admin_addr),
+            "to": token_addr2,
+            "dataType": "call",
+            "data": {
+                "method": "readonly_func",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, hex(100))
+
+    def test_inner_call_score2(self):
+        prev_block_hash, is_commit, tx_results = self._run_async(self._install_sample_token_invoke_zip(
+            'inner_call/score3-1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        version = 3
+        token_addr1 = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = self._run_async(self._install_sample_token_invoke_zip(
+            'inner_call/score3-2', ZERO_SCORE_ADDRESS, 2, prev_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        token_addr2 = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(3, prev_block_hash, self._admin_addr, token_addr2,
+                                    'add_score_func', {"score_addr": token_addr1}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        prev_block_hash, is_commit, tx_results = self._run_async(self._install_sample_token_invoke_zip(
+            'inner_call/score3-3', ZERO_SCORE_ADDRESS, 4, prev_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        token_addr3 = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(5, prev_block_hash, self._admin_addr, token_addr3,
+                                    'add_score_func', {"score_addr": token_addr2}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        prev_block_hash, is_commit, tx_results = self._run_async(
+            self._call_method_score(6, prev_block_hash, self._admin_addr, token_addr3,
+                                    'writable_func', {"value": hex(100)}))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        request = {
+            "version": hex(version),
+            "from": str(self._admin_addr),
+            "to": token_addr2,
+            "dataType": "call",
+            "data": {
+                "method": "readonly_func",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        #self.assertEqual(response, hex(100))
+
+        request = {
+            "version": hex(version),
+            "from": str(self._admin_addr),
+            "to": token_addr1,
+            "dataType": "call",
+            "data": {
+                "method": "readonly_func",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, hex(100))
 
 
 if __name__ == '__main__':

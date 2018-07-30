@@ -25,7 +25,7 @@ from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import *
 from .icon_score_step import StepType
-from .icon_score_context import IconScoreContextType
+from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_context import ContextGetter
 from .icx import Icx
 from ..base.exception import *
@@ -327,14 +327,18 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             raise ExternalException(f"Cannot call external method", func_name, type(self).__name__,
                                     ExceptionCode.METHOD_NOT_FOUND)
 
-        self.__check_readonly(func_name)
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
+
+        prev_func_type = self._context.func_type
+        self.__set_func_type(func_name)
 
         score_func = getattr(self, func_name)
 
         annotation_params = TypeConverter.make_annotations_from_method(score_func)
         TypeConverter.convert_data_params(annotation_params, kw_params)
-        return score_func(*arg_params, **kw_params)
+        ret = score_func(*arg_params, **kw_params)
+        self._context.func_type = prev_func_type
+        return ret
 
     def __call_fallback(self):
         func_name = STR_FALLBACK
@@ -349,11 +353,16 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             if self.msg.value > 0:
                 raise PayableException(f"This is not payable", func_name, type(self).__name__)
 
-    def __check_readonly(self, func_name: str):
+    def __set_func_type(self, func_name: str):
+        readonly = self.__is_func_readonly(func_name)
+        if readonly:
+            self._context.func_type = IconScoreFuncType.READONLY
+        else:
+            self._context.func_type = IconScoreFuncType.WRITABLE
+
+    def __is_func_readonly(self, func_name: str) -> bool:
         func = getattr(self, func_name)
-        readonly = bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
-        if readonly != self._context.readonly:
-            raise IconScoreException(f'Context type mismatch, func: {func_name}, cls: {type(self).__name__}')
+        return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
 
     def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
         """Call external function provided by other IconScore with arguments without fallback
@@ -376,10 +385,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param kwargs: keyword arguments
         """
         self._context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-
         arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
-        trace = Trace(
-            self.__address, TraceType.CALL, [to_, func_name, arg_data])
+        trace = Trace(self.__address, TraceType.CALL, [to_, func_name, arg_data])
         self._context.traces.append(trace)
 
         return self._context.call(
