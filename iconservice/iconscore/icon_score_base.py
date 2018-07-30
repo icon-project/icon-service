@@ -394,6 +394,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param event_signature: signature of eventlog
         :param arguments: arguments of eventlog call
         """
+        if self._context.type == IconScoreContextType.QUERY:
+            raise EventLogException(
+                'The event log can not be called in the query call')
+
         if indexed_args_count > INDEXED_ARGS_LIMIT:
             raise EventLogException(
                 f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
