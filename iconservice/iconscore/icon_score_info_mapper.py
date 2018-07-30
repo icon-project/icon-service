@@ -203,6 +203,9 @@ class IconScoreInfoMapper(object):
         icon_score_info = self.get(address)
         is_score_active = self._deploy_storage.is_score_active(context, address)
         score_id = self._deploy_storage.get_score_id(context, address)
+        if score_id is None:
+            raise InvalidParamsException(f'score_id is None {address}')
+
         if is_score_active and icon_score_info is None:
             icon_score_info = self._load_score(address, score_id)
 
