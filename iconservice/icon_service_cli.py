@@ -91,7 +91,15 @@ def main():
         parser.print_help()
         sys.exit(ExitCode.COMMAND_IS_WRONG.value)
 
-    conf = IconConfig(args.config, default_icon_config)
+    conf_path = args.config
+
+    if conf_path is not None:
+        if not IconConfig.valid_conf_path(conf_path):
+            raise Exception(f'invalid config path {conf_path}')
+    if conf_path is None:
+        conf_path = str()
+
+    conf = IconConfig(conf_path, default_icon_config)
     conf.load(dict(vars(args)))
     Logger.load_config(conf)
 
