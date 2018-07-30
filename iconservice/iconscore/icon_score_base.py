@@ -376,13 +376,14 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param kwargs: keyword arguments
         """
         self._context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        ret = self._context.call(
-            self.address, to_, func_name, args, kwargs)
+
         arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
         trace = Trace(
             self.__address, TraceType.CALL, [to_, func_name, arg_data])
         self._context.traces.append(trace)
-        return ret
+
+        return self._context.call(
+            self.address, to_, func_name, args, kwargs)
 
     def __put_event_log(self,
                         event_signature: str,
