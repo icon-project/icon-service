@@ -330,7 +330,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
         prev_func_type = self._context.func_type
-        self.__set_func_type(func_name, prev_func_type)
+        self.__set_func_type(func_name)
 
         score_func = getattr(self, func_name)
 
@@ -353,11 +353,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             if self.msg.value > 0:
                 raise PayableException(f"This is not payable", func_name, type(self).__name__)
 
-    def __set_func_type(self, func_name: str, prev_func_type: 'IconScoreFuncType'):
+    def __set_func_type(self, func_name: str):
         readonly = self.__is_func_readonly(func_name)
-        if prev_func_type == IconScoreFuncType.READONLY and not readonly:
-            raise InvalidParamsException(f'readonly method can not call writable method')
-
         if readonly:
             self._context.func_type = IconScoreFuncType.READONLY
         else:
