@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-S3_HOST="http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com"
+HOST="tbears.icon.foundation"
+S3_HOST="http://${HOST}.s3-website.ap-northeast-2.amazonaws.com"
 
 function clear_build () {
   rm -rf build dist *.egg-info
@@ -44,11 +45,13 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
         exit 1
       fi
 
+      BRANCH=$(git rev-parse --abbrev-ref HEAD)
+      S3_URL="s3://${HOST}/iconservice/${BRANCH}/"
+      echo "$S3_URL"
+
       pip install awscli
-      aws s3 cp VERSION s3://tbears.icon.foundation/iconservice/ --acl public-read
-      aws s3 cp dist/*$VER*.whl s3://tbears.icon.foundation/iconservice/ --acl public-read
-      aws s3 cp docs/CHANGELOG.md s3://tbears.icon.foundation/docs/ --acl public-read
-      aws s3 cp docs/dapp_guide.md s3://tbears.icon.foundation/docs/ --acl public-read
+      aws s3 cp VERSION "$S3_URL" --acl public-read
+      aws s3 cp dist/*$VER*.whl "$S3_URL" --acl public-read
 
     fi
   fi
