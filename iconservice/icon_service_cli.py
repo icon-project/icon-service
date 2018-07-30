@@ -11,19 +11,17 @@
 # limitations under the License.
 
 import argparse
-import os
-import sys
-import subprocess
-from enum import IntEnum
 import asyncio
 import signal
+import subprocess
+import sys
+from enum import IntEnum
+from typing import TYPE_CHECKING
 
-from .icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
-from .icon_config import default_icon_config
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
-
-from typing import TYPE_CHECKING
+from iconservice.icon_config import default_icon_config
+from iconservice.icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
 
 if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
