@@ -19,13 +19,13 @@
 
 import asyncio
 import os
-import time
 import unittest
 from typing import TYPE_CHECKING
 
+import time
+
 from iconcommons.icon_config import IconConfig
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, \
-    GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
@@ -549,6 +549,13 @@ class TestInnerServiceEngine(unittest.TestCase):
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
+    def test_install_invalid_sample_token(self):
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._install_sample_token_invoke(
+                'invalid', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, False)
+        self.assertEqual(tx_results[0]['status'], hex(0))
+
     def test_query_method_sample_token(self):
         prev_block_hash, is_commit, tx_results = \
             self._run_async(self._install_sample_token_invoke(
@@ -740,6 +747,123 @@ class TestInnerServiceEngine(unittest.TestCase):
         response = self._run_async(self._icx_call(request))
         self.assertEqual(response, "Hello2")
 
+    def test_governance_score2_fail(self):
+        self._inner_task._icon_service_engine._icon_score_deploy_engine._flag = \
+            IconDeployFlag.ENABLE_DEPLOY_AUDIT
+
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._install_sample_token_invoke(
+                'install1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        next_tx_hash = tx_results[0]['txHash']
+
+        version = 3
+        token_addr = tx_results[0]['scoreAddress']
+        addr_from = create_address(AddressPrefix.EOA, b'addr1')
+
+        request = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": str(GOVERNANCE_SCORE_ADDRESS),
+            "dataType": "call",
+            "data": {
+                "method": "getScoreStatus",
+                "params": {
+                    "address": str(token_addr)
+                }
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual('pending', response['next']['status'])
+        self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
+
+        prev_block_hash, is_commit, tx_results = self._run_async(self._accept_deploy_score(
+            2, prev_block_hash, self._admin_addr, next_tx_hash))
+
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+        audit_tx_hash = tx_results[0]['txHash']
+
+        request = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": str(GOVERNANCE_SCORE_ADDRESS),
+            "dataType": "call",
+            "data": {
+                "method": "getScoreStatus",
+                "params": {
+                    "address": token_addr
+                }
+            }
+        }
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual('active', response['current']['status'])
+        self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
+
+        request = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": token_addr,
+            "dataType": "call",
+            "data": {
+                "method": "hello",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello")
+
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._install_sample_token_invoke('invalid', token_addr, 3, prev_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+        current_tx_hash = next_tx_hash
+        next_tx_hash = tx_results[0]['txHash']
+
+        request = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": str(GOVERNANCE_SCORE_ADDRESS),
+            "dataType": "call",
+            "data": {
+                "method": "getScoreStatus",
+                "params": {
+                    "address": token_addr
+                }
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual('active', response['current']['status'])
+        self.assertEqual(current_tx_hash, response['current']['deployTxHash'][2:])
+        self.assertEqual(audit_tx_hash, response['current']['auditTxHash'][2:])
+        self.assertEqual('pending', response['next']['status'])
+        self.assertEqual(next_tx_hash, response['next']['deployTxHash'][2:])
+
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._accept_deploy_score(4, prev_block_hash, self._admin_addr, next_tx_hash))
+
+        self.assertEqual(is_commit, False)
+        self.assertEqual(tx_results[0]['status'], hex(0))
+
+        request = {
+            "version": hex(version),
+            "from": str(addr_from),
+            "to": token_addr,
+            "dataType": "call",
+            "data": {
+                "method": "hello",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello")
+
     def test_update_score(self):
         self._inner_task._icon_service_engine._icon_score_deploy_engine._flag = \
             IconDeployFlag.NONE
@@ -772,6 +896,39 @@ class TestInnerServiceEngine(unittest.TestCase):
 
         response = self._run_async(self._icx_call(request))
         self.assertEqual(response, "Hello2")
+
+    def test_update_score_fail1(self):
+        self._inner_task._icon_service_engine._icon_score_deploy_engine._flag = \
+            IconDeployFlag.NONE
+
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._install_sample_token_invoke(
+                'install1', ZERO_SCORE_ADDRESS, 1, self._genesis_block_hash))
+        self.assertEqual(is_commit, True)
+        self.assertEqual(tx_results[0]['status'], hex(1))
+
+        version = 3
+        token_addr = tx_results[0]['scoreAddress']
+
+        prev_block_hash, is_commit, tx_results = \
+            self._run_async(self._install_sample_token_invoke(
+                'invalid', token_addr, 2, prev_block_hash))
+        self.assertEqual(is_commit, False)
+        self.assertEqual(tx_results[0]['status'], hex(0))
+
+        request = {
+            "version": hex(version),
+            "from": str(self._admin_addr),
+            "to": token_addr,
+            "dataType": "call",
+            "data": {
+                "method": "hello",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._icx_call(request))
+        self.assertEqual(response, "Hello")
 
     def test_get_score_api(self):
         self._inner_task._icon_service_engine._icon_score_deploy_engine._flag = \

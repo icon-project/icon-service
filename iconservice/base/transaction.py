@@ -26,7 +26,7 @@ class Transaction(object):
 
     def __init__(self,
                  tx_hash: Optional[bytes] = None,
-                 index: int = -1,
+                 index: int = 0,
                  origin: Optional['Address'] = None,
                  timestamp: int = None,
                  nonce: int = None) -> None:

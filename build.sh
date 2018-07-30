@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+S3_HOST="http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com"
+
 function clear_build () {
   rm -rf build dist *.egg-info
 }
@@ -19,11 +21,11 @@ fi
 if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = "deploy") ]]; then
   pip install -r requirements.txt
 
-  WGET_VER=$(curl http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey/VERSION)
-  pip install --force-reinstall "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/earlgrey/earlgrey-${WGET_VER}-py3-none-any.whl"
+  WGET_VER=$(curl "${S3_HOST}/earlgrey/VERSION")
+  pip install --force-reinstall "${S3_HOST}/earlgrey/earlgrey-${WGET_VER}-py3-none-any.whl"
 
-  WGET_VER=$(curl http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/iconcommons/VERSION)
-  pip install --force-reinstall "http://tbears.icon.foundation.s3-website.ap-northeast-2.amazonaws.com/iconcommons/iconcommons-${WGET_VER}-py3-none-any.whl"
+  WGET_VER=$(curl "${S3_HOST}/iconcommons/VERSION")
+  pip install --force-reinstall "${S3_HOST}/iconcommons/iconcommons-${WGET_VER}-py3-none-any.whl"
 
   if [[ "$2" != "--ignore-test" ]]; then
     python -m unittest
@@ -35,21 +37,19 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
     python setup.py bdist_wheel
 
     if [ "$1" = "deploy" ]; then
-      VER=$(ls dist | sed -nE 's/[^-]+-([0-9\.]+)-.*/\1/p')
-
-      mkdir -p $VER
-      cp VERSION dist/*$VER*.whl docs/CHANGELOG.md docs/dapp_guide.md $VER
+      VER=$(cat VERSION)
 
       if [[ -z "${AWS_ACCESS_KEY_ID}" || -z "${AWS_SECRET_ACCESS_KEY}" ]]; then
         echo "Error: AWS keys should be in your environment"
-        rm -rf $VER
         exit 1
       fi
 
       pip install awscli
-      aws s3 cp $VER s3://tbears.icon.foundation/$VER --recursive --acl public-read
+      aws s3 cp VERSION s3://tbears.icon.foundation/iconservice/ --acl public-read
+      aws s3 cp dist/*$VER*.whl s3://tbears.icon.foundation/iconservice/ --acl public-read
+      aws s3 cp docs/CHANGELOG.md s3://tbears.icon.foundation/docs/ --acl public-read
+      aws s3 cp docs/dapp_guide.md s3://tbears.icon.foundation/docs/ --acl public-read
 
-      rm -rf $VER
     fi
   fi
 

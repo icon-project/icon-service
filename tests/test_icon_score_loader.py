@@ -20,7 +20,8 @@ import os
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.deploy import make_score_id
+from iconservice.base.address import AddressPrefix
 import inspect
 from tests import create_address
 
@@ -63,5 +64,6 @@ class TestIconScoreLoader(unittest.TestCase):
         return True
 
     def test_install(self):
-        score = self._loader.load_score(self._address.to_bytes().hex())
+        score_id = make_score_id(0, 0)
+        score = self._loader.load_score(self._address.to_bytes().hex(), score_id)
         self.assertTrue(IconScoreBase in inspect.getmro(score))

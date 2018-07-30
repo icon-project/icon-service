@@ -29,8 +29,6 @@ if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
 
 ICON_SERVICE_STANDALONE = 'IconServiceStandAlone'
-DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
-CONFIG_JSON_PATH = os.path.join(DIRECTORY_PATH, "icon_service.json")
 cache_conf = None
 
 
@@ -82,7 +80,7 @@ def main():
                         help="icon score amqp_key : [amqp_key]")
     parser.add_argument("-at", dest=ConfigKey.AMQP_TARGET, type=str, default=None,
                         help="icon score amqp_target : [127.0.0.1]")
-    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=CONFIG_JSON_PATH,
+    parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=None,
                         help="icon score config")
     parser.add_argument("-fg", dest='foreground', action='store_true',
                         help="icon score service run foreground")
@@ -131,13 +129,13 @@ def _stop(conf: 'IconConfig') -> int:
 
 
 def _start_process(conf: 'IconConfig'):
-    Logger.debug('start_server() start')
+    Logger.info('start_server() start')
     python_module_string = 'iconservice.icon_service'
 
     converted_params = {'-sc': conf[ConfigKey.SCORE_ROOT_PATH],
                         '-st': conf[ConfigKey.STATE_DB_ROOT_PATH],
                         '-ch': conf[ConfigKey.CHANNEL], '-ak': conf[ConfigKey.AMQP_KEY],
-                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf[ConfigKey.CONFIG]}
+                        '-at': conf[ConfigKey.AMQP_TARGET], '-c': conf.get(ConfigKey.CONFIG)}
 
     custom_argv = []
     for k, v in converted_params.items():
@@ -153,7 +151,7 @@ def _start_process(conf: 'IconConfig'):
         run_in_foreground(conf)
     else:
         subprocess.Popen([sys.executable, '-m', python_module_string, *custom_argv], close_fds=True)
-    Logger.debug('start_process() end')
+    Logger.info('start_process() end')
 
 
 async def stop_process(conf: 'IconConfig'):

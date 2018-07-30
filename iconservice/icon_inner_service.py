@@ -49,7 +49,7 @@ class IconScoreInnerTask(object):
                              THREAD_VALIDATE: ThreadPoolExecutor(1)}
 
     def _open(self):
-        Logger.debug("icon_score_service open", ICON_INNER_LOG_TAG)
+        Logger.info("icon_score_service open", ICON_INNER_LOG_TAG)
         self._icon_service_engine.open(self._conf)
 
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
@@ -60,7 +60,7 @@ class IconScoreInnerTask(object):
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
 
     def _close(self):
-        Logger.debug("icon_score_service close", ICON_INNER_LOG_TAG)
+        Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
 
         if self._icon_service_engine:
             self._icon_service_engine.close()
@@ -73,7 +73,7 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def invoke(self, request: dict):
-        Logger.debug(f'invoke request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.Invoke):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -107,12 +107,12 @@ class IconScoreInnerTask(object):
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
-            Logger.debug(f'invoke response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
             return response
 
     @message_queue_task
     async def query(self, request: dict):
-        Logger.debug(f'query request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(f'query request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.Query):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
@@ -139,12 +139,12 @@ class IconScoreInnerTask(object):
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
-            Logger.debug(f'query response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
             return response
 
     @message_queue_task
     async def write_precommit_state(self, request: dict):
-        Logger.debug(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.Invoke):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -168,12 +168,12 @@ class IconScoreInnerTask(object):
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
-            Logger.debug(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
             return response
 
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
-        Logger.debug(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.Invoke):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
@@ -197,12 +197,12 @@ class IconScoreInnerTask(object):
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
-            Logger.debug(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
             return response
 
     @message_queue_task
     async def validate_transaction(self, request: dict):
-        Logger.debug(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
+        Logger.info(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.Validate):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
@@ -225,7 +225,7 @@ class IconScoreInnerTask(object):
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
-            Logger.debug(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
             return response
 
     def _validate_jsonschema(self, request: dict):

@@ -21,6 +21,8 @@
 import os
 import unittest
 
+from unittest.mock import Mock
+
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
@@ -31,6 +33,7 @@ from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_manager import IconScoreManager
+from iconservice.deploy import make_score_id
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -43,12 +46,6 @@ from iconservice.icx.icx_storage import IcxStorage
 from tests import create_address, create_block_hash, create_tx_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
-
-
-class MockIconScoreManager(object):
-    def get_owner(self, context, address):
-        return None
-
 
 class TestContextContainer(ContextContainer):
     pass
@@ -79,13 +76,13 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
         self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
+        self._icon_deploy_storage.is_score_deployed = Mock(return_value=True)
 
         self._engine = IconScoreDeployEngine()
         self._icon_score_loader = IconScoreLoader(score_path)
-        self._icon_score_mapper = IconScoreInfoMapper(
-            IconScoreManager(self._engine), self._icon_score_loader)
+        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader, self._icon_deploy_storage)
 
-        IconScoreContext.icon_score_manager = MockIconScoreManager()
+        IconScoreContext.icon_score_manager = Mock(spec=IconScoreManager)
         self._context_container = TestContextContainer()
 
         self._engine.open(
@@ -121,10 +118,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
     def tearDown(self):
         self._engine = None
-        info = self._icon_score_mapper.get(self.sample_token_address)
-        if info is not None and not self._context.readonly:
-            score = info.icon_score
-            score.db._context_db.close(self._context)
+        self._icon_score_mapper.close()
         self._factory.destroy(self._context)
 
         remove_path = os.path.join(TEST_ROOT_PATH, 'tests')
@@ -154,6 +148,9 @@ class TestIconZipDeploy(unittest.TestCase):
             "contentType": "application/zip",
             "content": f'0x{bytes.hex(content)}'
         }
+        score_id = make_score_id(self._context.block.height, self._context.tx.index)
+        self._icon_deploy_storage.get_score_id = Mock(return_value=score_id)
+
         self._engine.invoke(
             self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)
 
