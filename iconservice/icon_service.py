@@ -87,9 +87,17 @@ def main():
     del args_params['config']
     setproctitle.setproctitle(ICON_SERVICE_PROCTITLE_FORMAT.format(**args_params))
 
-    conf = IconConfig(args.config, default_icon_config)
-    conf.load(args_params)
+    conf_path = args.config
+    if conf_path is not None:
+        if not IconConfig.valid_conf_path(conf_path):
+            raise Exception(f'invalid config path {conf_path}')
+    if conf_path is None:
+        conf_path = str()
+
+    conf = IconConfig(conf_path, default_icon_config)
+    conf.load(dict(vars(args)))
     Logger.load_config(conf)
+    Logger.print_config(conf, ICON_SERVICE_STANDALONE)
 
     icon_service = IconService()
     icon_service.serve(config=conf)
