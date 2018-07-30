@@ -387,17 +387,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param args: arguments
         :param kwargs: keyword arguments
         """
-        if self.__is_query_context():
-            ret = self._context.call(
-                self.address, to_, func_name, args, kwargs)
-        else:
-            self._context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-            ret = self._context.call(
-                self.address, to_, func_name, args, kwargs)
-            arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
-            trace = Trace(
-                self.__address, TraceType.CALL, [to_, func_name, arg_data])
-            self._context.traces.append(trace)
+        self._context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+        ret = self._context.call(self.address, to_, func_name, args, kwargs)
+        arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
+        trace = Trace(self.__address, TraceType.CALL, [to_, func_name, arg_data])
+        self._context.traces.append(trace)
         return ret
 
     def __put_event_log(self,
@@ -441,9 +435,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self._context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
         event = EventLog(self.address, indexed, data)
         self._context.event_logs.append(event)
-
-    def __is_query_context(self) -> bool:
-        return self._context.type == IconScoreContextType.QUERY
 
     @staticmethod
     def __is_base_type(value) -> bool:
