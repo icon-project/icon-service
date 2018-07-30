@@ -3,6 +3,8 @@ set -e
 
 HOST="tbears.icon.foundation"
 S3_HOST="http://${HOST}.s3-website.ap-northeast-2.amazonaws.com"
+PRODUCT="iconservice"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 function clear_build () {
   rm -rf build dist *.egg-info
@@ -45,8 +47,7 @@ if [[ ("$1" = "test" && "$2" != "--ignore-test") || ("$1" = "build") || ("$1" = 
         exit 1
       fi
 
-      BRANCH=$(git rev-parse --abbrev-ref HEAD)
-      S3_URL="s3://${HOST}/iconservice/${BRANCH}/"
+      S3_URL="s3://${HOST}/${BRANCH}/${PRODUCT}/"
       echo "$S3_URL"
 
       pip install awscli
@@ -66,4 +67,3 @@ else
   echo "  deploy --ignore-test: run build and deploy to s3"
   exit 1
 fi
-
