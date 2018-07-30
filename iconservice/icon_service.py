@@ -91,7 +91,7 @@ def main():
     conf_path = args.config
     if conf_path is not None:
         if not IconConfig.valid_conf_path(conf_path):
-            Logger.error(f'invalid config path {conf_path}')
+            print(f'invalid config file : {conf_path}')
             sys.exit(ExitCode.COMMAND_IS_WRONG.value)
     if conf_path is None:
         conf_path = str()
