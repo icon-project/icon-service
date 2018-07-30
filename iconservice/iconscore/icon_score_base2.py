@@ -68,6 +68,6 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
             raise InterfaceException('self.__call_func is None')
 
         if callable(self.__call_func):
-            self.__call_func(self.__addr_to, func_name, arg_list, kw_dict)
+            return self.__call_func(self.__addr_to, func_name, arg_list, kw_dict)
         else:
             raise InterfaceException(STR_IS_NOT_CALLABLE)
