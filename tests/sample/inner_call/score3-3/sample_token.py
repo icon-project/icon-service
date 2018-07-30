@@ -43,3 +43,14 @@ class SampleToken3(IconScoreBase):
         test_interface.writable_func(100)
         ret = test_interface.readonly_func1()
         return ret
+
+    @external(readonly=False)
+    def write_1(self, value: int) -> None:
+        test_interface = self.create_interface_score(self._addr_score.get(), TestInterface)
+        var = test_interface.readonly_func2()
+        test_interface.writable_func(var + value)
+
+    @external(readonly=True)
+    def read_1(self) -> int:
+        test_interface = self.create_interface_score(self._addr_score.get(), TestInterface)
+        return test_interface.readonly_func2()
