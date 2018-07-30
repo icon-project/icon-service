@@ -412,10 +412,16 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
         context.block = self._icx_storage.last_block
+        step_limit = self._step_counter_factory.get_max_step_limit()
 
         if params:
             from_ = params.get('from', None)
             context.msg = Message(sender=from_)
+            step_limit = params.get('stepLimit', step_limit)
+
+        context.traces: List['Trace'] = []
+        context.step_counter: IconScoreStepCounter = \
+            self._step_counter_factory.create(step_limit)
 
         ret = self._call(context, method, params)
 
