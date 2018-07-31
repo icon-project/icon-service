@@ -16,18 +16,17 @@
 
 import threading
 from enum import IntEnum, unique
+from typing import TYPE_CHECKING, Optional, Union, List
 
-from ..utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
-from ..base.message import Message
-from ..base.transaction import Transaction
 from ..base.exception import IconScoreException, ExceptionCode
 from ..base.exception import RevertException
-from ..icx.icx_engine import IcxEngine
+from ..base.message import Message
+from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-
-from typing import TYPE_CHECKING, Optional, Union, List
+from ..icx.icx_engine import IcxEngine
+from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -85,6 +84,14 @@ class IconScoreContextType(IntEnum):
     QUERY = 2
 
 
+@unique
+class IconScoreFuncType(IntEnum):
+    # ReadOnly function
+    READONLY = 0
+    # Writable function
+    WRITABLE = 1
+
+
 class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
@@ -94,6 +101,7 @@ class IconScoreContext(object):
 
     def __init__(self,
                  context_type: IconScoreContextType=IconScoreContextType.QUERY,
+                 func_type: IconScoreFuncType=IconScoreFuncType.WRITABLE,
                  block: 'Block' = None,
                  tx: 'Transaction' = None,
                  msg: 'Message' = None,
@@ -102,6 +110,7 @@ class IconScoreContext(object):
         """Constructor
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
+        :param func_type: IconScoreFuncType (READONLY, WRITABLE)
         :param block:
         :param tx: initial transaction info
         :param msg: message call info
@@ -109,6 +118,8 @@ class IconScoreContext(object):
         :param tx_batch:
         """
         self.type: IconScoreContextType = context_type
+        # The type of external function which is called latest
+        self.func_type: IconScoreFuncType = func_type
         self.block = block
         self.tx = tx
         self.msg = msg

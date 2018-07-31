@@ -356,14 +356,18 @@ class IconScoreDeployStorage(object):
             next_tx_hash = deploy_info.next_tx_hash
             if next_tx_hash is None:
                 next_tx_hash = tx_hash
+
             if tx_hash is not None and tx_hash != next_tx_hash:
                 raise ServerErrorException(f'tx_hash: {tx_hash} != next_tx_hash: {next_tx_hash}')
             else:
                 deploy_info.current_tx_hash = next_tx_hash
                 deploy_info.next_tx_hash = None
                 self._put_deploy_info(context, deploy_info)
-                score_id = self.get_score_id(context, score_address)
 
+                tx_params = self.get_deploy_tx_params(context, deploy_info.current_tx_hash)
+                if tx_params is None:
+                    raise ServerErrorException(f'tx_params is None {deploy_info.current_tx_hash}')
+                score_id = tx_params.score_id
                 self.put_deploy_state_info(context, score_address, DeployState.WAIT_TO_DEPLOY, score_id)
 
     def put_deploy_state_info(self, context: Optional['IconScoreContext'],
@@ -444,13 +448,13 @@ class IconScoreDeployStorage(object):
 
     def get_score_id(self,
                      context: 'IconScoreContext',
-                     icon_score_address: 'Address') -> str:
+                     icon_score_address: 'Address') -> Optional[str]:
         """
         """
 
         deploy_state_info = self._get_deploy_state_info(context, icon_score_address)
         if deploy_state_info is None:
-            return make_score_id(0, 0)
+            return None
         else:
             return deploy_state_info.score_id
 

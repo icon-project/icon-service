@@ -10,6 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import argparse
 import setproctitle
 
@@ -18,7 +19,7 @@ from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
 
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE
+from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, ExitCode
 from iconcommons.logger import Logger
 from iconcommons.icon_config import IconConfig
 
@@ -87,9 +88,19 @@ def main():
     del args_params['config']
     setproctitle.setproctitle(ICON_SERVICE_PROCTITLE_FORMAT.format(**args_params))
 
-    conf = IconConfig(args.config, default_icon_config)
-    conf.load(args_params)
+    conf_path = args.config
+    if conf_path is not None:
+        if not IconConfig.valid_conf_path(conf_path):
+            print(f'invalid config file : {conf_path}')
+            sys.exit(ExitCode.COMMAND_IS_WRONG.value)
+    if conf_path is None:
+        conf_path = str()
+
+    conf = IconConfig(conf_path, default_icon_config)
+    conf.load()
+    conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
+    Logger.print_config(conf, ICON_SERVICE_STANDALONE)
 
     icon_service = IconService()
     icon_service.serve(config=conf)

@@ -64,12 +64,15 @@ class TestIconServiceEngine(unittest.TestCase):
 
         engine = IconServiceEngine()
         conf = IconConfig("", default_icon_config)
-        conf.load({
+        conf.load()
+        conf.update_conf(
+            {
             ConfigKey.BUILTIN_SCORE_OWNER:
                 str(create_address(AddressPrefix.EOA, b'ADMIN')),
             ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
             ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
-        })
+            }
+        )
         engine.open(conf)
         self._engine = engine
 

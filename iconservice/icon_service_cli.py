@@ -11,19 +11,17 @@
 # limitations under the License.
 
 import argparse
-import os
-import sys
-import subprocess
-from enum import IntEnum
 import asyncio
 import signal
+import subprocess
+import sys
+from enum import IntEnum
+from typing import TYPE_CHECKING
 
-from .icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
-from .icon_config import default_icon_config
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
-
-from typing import TYPE_CHECKING
+from iconservice.icon_config import default_icon_config
+from iconservice.icon_constant import ICON_SCORE_QUEUE_NAME_FORMAT, ICON_SERVICE_PROCTITLE_FORMAT, ConfigKey
 
 if TYPE_CHECKING:
     from .icon_inner_service import IconScoreInnerStub
@@ -91,8 +89,18 @@ def main():
         parser.print_help()
         sys.exit(ExitCode.COMMAND_IS_WRONG.value)
 
-    conf = IconConfig(args.config, default_icon_config)
-    conf.load(dict(vars(args)))
+    conf_path = args.config
+
+    if conf_path is not None:
+        if not IconConfig.valid_conf_path(conf_path):
+            print(f'invalid config file : {conf_path}')
+            sys.exit(ExitCode.COMMAND_IS_WRONG.value)
+    if conf_path is None:
+        conf_path = str()
+
+    conf = IconConfig(conf_path, default_icon_config)
+    conf.load()
+    conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
 
     global cache_conf
