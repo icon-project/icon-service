@@ -267,3 +267,9 @@ class IconScoreInfoMapper(object):
         info = IconScoreInfo(icon_score, score_id)
         self._wait_score_mapper[icon_score.address] = info
         return info
+
+    def delete_wait_score_mapper(self, score_address: 'Address'):
+        if score_address in self._wait_score_remove_table:
+            del self._wait_score_remove_table[score_address]
+        if score_address in self._wait_score_mapper:
+            del self._wait_score_mapper[score_address]
