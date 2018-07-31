@@ -97,7 +97,8 @@ def main():
         conf_path = str()
 
     conf = IconConfig(conf_path, default_icon_config)
-    conf.load(dict(vars(args)))
+    conf.load()
+    conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
     Logger.print_config(conf, ICON_SERVICE_STANDALONE)
 

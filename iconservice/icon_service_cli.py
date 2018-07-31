@@ -99,7 +99,8 @@ def main():
         conf_path = str()
 
     conf = IconConfig(conf_path, default_icon_config)
-    conf.load(dict(vars(args)))
+    conf.load()
+    conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
 
     global cache_conf
