@@ -25,7 +25,7 @@ from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconDeployFlag
+from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG
 from iconcommons import Logger
 
 if TYPE_CHECKING:
@@ -99,7 +99,7 @@ class IconScoreDeployEngine(object):
             if self._check_audit_ignore(context, icon_score_address):
                 self.deploy(context, context.tx.hash)
         except BaseException as e:
-            Logger.exception(e)
+            Logger.warning('write deploy info and tx params fail!!', ICON_DEPLOY_LOG_TAG)
             raise e
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
@@ -200,13 +200,19 @@ class IconScoreDeployEngine(object):
         except FileExistsError:
             pass
 
-        score = self._icon_score_mapper.load_wait_icon_score(icon_score_address, score_id)
-        if score is None:
-            raise InvalidParamsException(f'score is None : {icon_score_address}')
+        try:
+            score = self._icon_score_mapper.load_wait_icon_score(icon_score_address, score_id)
+            if score is None:
+                raise InvalidParamsException(f'score is None : {icon_score_address}')
 
-        self._initialize_score(
-            on_deploy=score.on_install,
-            params={})
+            self._initialize_score(
+                on_deploy=score.on_install,
+                params={})
+        except BaseException as e:
+            Logger.warning(f'load wait icon score fail!! address: {icon_score_address}', ICON_DEPLOY_LOG_TAG)
+            Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
+            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address)
+            raise e
 
     def _on_deploy(self,
                    tx_params: 'IconScoreDeployTXParams') -> None:
@@ -242,20 +248,26 @@ class IconScoreDeployEngine(object):
                 data=content,
                 score_id=score_id)
 
-        score = self._icon_score_mapper.load_wait_icon_score(score_address, score_id)
-        if score is None:
-            raise InvalidParamsException(f'score is None : {score_address}')
+        try:
+            score = self._icon_score_mapper.load_wait_icon_score(score_address, score_id)
+            if score is None:
+                raise InvalidParamsException(f'score is None : {score_address}')
 
-        deploy_type = tx_params.deploy_type
-        on_deploy = None
-        if deploy_type == DeployType.INSTALL:
-            on_deploy = score.on_install
-        elif deploy_type == DeployType.UPDATE:
-            on_deploy = score.on_update
+            deploy_type = tx_params.deploy_type
+            on_deploy = None
+            if deploy_type == DeployType.INSTALL:
+                on_deploy = score.on_install
+            elif deploy_type == DeployType.UPDATE:
+                on_deploy = score.on_update
 
-        self._initialize_score(
-            on_deploy=on_deploy,
-            params=params)
+            self._initialize_score(
+                on_deploy=on_deploy,
+                params=params)
+        except BaseException as e:
+            Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
+            Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
+            self._icon_score_mapper.delete_wait_score_mapper(score_address)
+            raise e
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],

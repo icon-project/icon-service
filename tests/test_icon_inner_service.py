@@ -48,7 +48,8 @@ class TestInnerServiceEngine(unittest.TestCase):
 
         self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
         conf = IconConfig("", default_icon_config)
-        conf.load({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr)})
+        conf.load()
+        conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr)})
 
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()
