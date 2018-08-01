@@ -15,8 +15,10 @@
 
 from collections import namedtuple
 from os import path, symlink, makedirs
+from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
+from iconcommons import Logger
 from . import DeployType, make_score_id
 from .icon_builtin_score_loader import IconBuiltinScoreLoader
 from .icon_score_deploy_storage import IconScoreDeployStorage
@@ -26,7 +28,6 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG
-from iconcommons import Logger
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -194,8 +195,13 @@ class IconScoreDeployEngine(object):
         score_id = make_score_id(0, 0)
         target_path = path.join(
             target_path, score_id)
+
+        filecopy = False
         try:
-            symlink(src_score_path, target_path, target_is_directory=True)
+            if filecopy:
+                copytree(src_score_path, target_path)
+            else:
+                symlink(src_score_path, target_path, target_is_directory=True)
         except FileExistsError:
             pass
 
