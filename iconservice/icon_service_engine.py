@@ -155,8 +155,8 @@ class IconServiceEngine(ContextContainer):
         icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
         if self._is_flag_on(IconServiceFlag.audit):
             icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.whiteListDeploy):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_WHITELIST_DEPLOY.value
+        if self._is_flag_on(IconServiceFlag.deployWhiteList):
+            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
 
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
@@ -169,7 +169,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
-        key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_WHITELIST_DEPLOY]
+        key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOY_WHITELIST]
         flag = 0
         for key in key_table:
             is_enable = flag_table[key]
@@ -229,24 +229,18 @@ class IconServiceEngine(ContextContainer):
 
         self._context_factory.destroy(context)
 
-    def _validate_whitelist_deploy(self, context: 'IconScoreContext', params: dict):
+    def _validate_deploy_whitelist(self, context: 'IconScoreContext', params: dict):
         version: int = params.get('version', 2)
         if version == 2:
             return
 
         data_type = params.get('dataType', None)
-        if data_type == 'call':
+        if data_type != 'deploy':
             return
 
-        assert params['dataType'] == 'deploy'
-        assert 'to' in params
-        assert 'from' in params
-
-        to: 'Address' = params['to']
-        if to != ZERO_SCORE_ADDRESS:
+        _from: 'Address' = params.get('from')
+        if _from is None:
             return
-
-        _from: 'Address' = params['from']
 
         try:
             self._put_context(context)
@@ -257,7 +251,7 @@ class IconServiceEngine(ContextContainer):
                 raise ServerErrorException(f'governance_score is None')
 
             if not governance_score.is_deployer(_from):
-                raise ServerErrorException(f'Invalid deployer: no permission (address: {to})')
+                raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
         finally:
             self._delete_context(context)
 
@@ -430,8 +424,8 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.create(step_limit, allow_step_overflow)
         context.clear_msg_stack()
 
-        if self._is_flag_on(IconServiceFlag.whiteListDeploy):
-            self._validate_whitelist_deploy(context, params)
+        if self._is_flag_on(IconServiceFlag.deployWhiteList):
+            self._validate_deploy_whitelist(context, params)
 
         return self._call(context, method, params)
 
@@ -489,9 +483,9 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.get_step_cost(StepType.DEFAULT)
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
-        if self._is_flag_on(IconServiceFlag.whiteListDeploy):
+        if self._is_flag_on(IconServiceFlag.deployWhiteList):
             context = self._context_factory.create(IconScoreContextType.QUERY)
-            self._validate_whitelist_deploy(context, params)
+            self._validate_deploy_whitelist(context, params)
             self._context_factory.destroy(context)
 
     def _call(self,

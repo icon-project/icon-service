@@ -180,7 +180,6 @@ class IconScoreContext(object):
             self.icx.transfer(self, addr_from, addr_to, amount)
             return True
         except:
-            fall
             pass
 
         return False

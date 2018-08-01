@@ -58,7 +58,7 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr),
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: False,
                                               ConfigKey.SERVICE_AUDIT: True,
-                                              ConfigKey.SERVICE_WHITELIST_DEPLOY: False}})
+                                              ConfigKey.SERVICE_DEPLOY_WHITELIST: False}})
 
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()

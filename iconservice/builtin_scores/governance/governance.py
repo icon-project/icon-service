@@ -37,10 +37,11 @@ class Governance(IconScoreBase):
 
     _SCORE_STATUS = 'score_status'
     _AUDITOR_LIST = 'auditor_list'
+    _DEPLOYER_LIST = 'deployer_list'
     _STEP_PRICE = 'step_price'
     _STEP_COSTS = 'step_costs'
     _MAX_STEP_LIMIT = 'max_step_limit'
-    _DEPLOY_WHITELIST = 'deploy_whitelist'
+
 
     @eventlog(indexed=1)
     def Accepted(self, tx_hash: str):
@@ -62,7 +63,7 @@ class Governance(IconScoreBase):
         super().__init__(db)
         self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
-        self._deploy_whitelist = ArrayDB(self._DEPLOY_WHITELIST, db, value_type=Address)
+        self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
         self._step_price = VarDB(self._STEP_PRICE, db, value_type=int)
         self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
         self._max_step_limit = VarDB(self._MAX_STEP_LIMIT, db, value_type=int)
@@ -73,7 +74,7 @@ class Governance(IconScoreBase):
         Logger.debug(f'on_install: owner = "{self.owner}"', TAG)
         self._auditor_list.put(self.owner)
         # add owner into initial auditor list
-        self._deploy_whitelist.put(self.owner)
+        self._deployer_list.put(self.owner)
         # set initial step price
         self._step_price.set(stepPrice)
         # set initial step costs
@@ -261,46 +262,46 @@ class Governance(IconScoreBase):
         if DEBUG is True:
             self._print_auditor_list('removeAuditor')
 
-    @external
-    def addDeployer(self, address: Address):
-        # check message sender, only owner can add new deployer
-        if self.msg.sender != self.owner:
-            self.revert('Invalid sender: not owner')
-        if address not in self._deploy_whitelist:
-            self._deploy_whitelist.put(address)
-        if DEBUG is True:
-            self._print_auditor_list('addDeployer')
-
     def _print_auditor_list(self, header: str):
         Logger.debug(f'{header}: list len = {len(self._auditor_list)}', TAG)
         for auditor in self._auditor_list:
             Logger.debug(f' --- {auditor}', TAG)
 
     @external
+    def addDeployer(self, address: Address):
+        # check message sender, only owner can add new deployer
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+        if address not in self._deployer_list:
+            self._deployer_list.put(address)
+        if DEBUG is True:
+            self._print_deployer_list('addDeployer')
+
+    @external
     def removeDeployer(self, address: Address):
-        if address not in self._deploy_whitelist:
+        if address not in self._deployer_list:
             self.revert('Invalid address: not in list')
         # check message sender
         if self.msg.sender != self.owner:
             if self.msg.sender != address:
                 self.revert('Invalid sender: not yourself')
         # get the topmost value
-        top = self._deploy_whitelist.pop()
+        top = self._deployer_list.pop()
         if top != address:
-            for i in range(len(self._deploy_whitelist)):
-                if self._deploy_whitelist[i] == address:
-                    self._deploy_whitelist[i] = top
+            for i in range(len(self._deployer_list)):
+                if self._deployer_list[i] == address:
+                    self._deployer_list[i] = top
         if DEBUG is True:
             self._print_deployer_list('removeDeployer')
 
     @external
     def is_deployer(self, address: Address):
         Logger.debug(f'is_deployer address: {address}', TAG)
-        return address in self._deploy_whitelist
+        return address in self._deployer_list
 
     def _print_deployer_list(self, header: str):
-        Logger.debug(f'{header}: list len = {len(self._deploy_whitelist)}', TAG)
-        for deployer in self._deploy_whitelist:
+        Logger.debug(f'{header}: list len = {len(self._deployer_list)}', TAG)
+        for deployer in self._deployer_list:
             Logger.debug(f' --- {deployer}', TAG)
 
     def _set_initial_step_costs(self):
