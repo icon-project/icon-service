@@ -401,7 +401,8 @@ class IconScoreDeployStorage(object):
         self._db.put(context, self._create_db_key(
             self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, deploy_info.score_address.to_bytes()), value)
 
-    def get_deploy_info(self, context: 'IconScoreContext', score_addr: 'Address') -> Optional['IconScoreDeployInfo']:
+    def get_deploy_info(self, context: Optional['IconScoreContext'], score_addr: 'Address') \
+            -> Optional['IconScoreDeployInfo']:
         bytes_value = self._db.get(context, self._create_db_key(
             self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_addr.to_bytes()))
         if bytes_value:

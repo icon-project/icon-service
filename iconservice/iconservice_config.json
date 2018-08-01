@@ -21,6 +21,7 @@
 	"builtinScoreOwner": "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
 	"service": {
 		"fee": false,
-		"audit": false
+		"audit": false,
+		"deployerWhiteList": false
 	}
 }

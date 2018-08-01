@@ -124,8 +124,7 @@ class IconScoreDeployEngine(object):
         score_address = tx_params.score_address
         self._score_deploy(tx_params)
 
-        self._icon_score_deploy_storage.update_score_info(
-            context, score_address, tx_hash)
+        self._icon_score_deploy_storage.update_score_info(context, score_address, tx_hash)
         deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
         if deploy_info is None:
             raise InvalidParamsException(f'deploy_info is None : {score_address}')
@@ -211,7 +210,7 @@ class IconScoreDeployEngine(object):
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {icon_score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address)
+            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address, score_id)
             raise e
 
     def _on_deploy(self,
@@ -266,7 +265,7 @@ class IconScoreDeployEngine(object):
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(score_address)
+            self._icon_score_mapper.delete_wait_score_mapper(score_address, score_id)
             raise e
 
     @staticmethod

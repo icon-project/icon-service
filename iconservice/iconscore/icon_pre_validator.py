@@ -20,8 +20,10 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..icon_constant import FIXED_FEE
 
+
 if TYPE_CHECKING:
     from ..deploy.icon_score_manager import IconScoreManager
+    from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
     from ..icx.icx_engine import IcxEngine
     from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
 
@@ -34,7 +36,8 @@ class IconPreValidator:
 
     def __init__(self, icx_engine: 'IcxEngine',
                  score_manager: 'IconScoreManager',
-                 score_mapper: 'IconScoreInfoMapper') -> None:
+                 score_mapper: 'IconScoreInfoMapper',
+                 deploy_storage: 'IconScoreDeployStorage') -> None:
         """Constructor
 
         :param icx_engine: icx engine
@@ -42,6 +45,7 @@ class IconPreValidator:
         self._icx = icx_engine
         self._score_manager = score_manager
         self._score_mapper = score_mapper
+        self._deploy_storage = deploy_storage
 
     def execute(self, params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -200,14 +204,11 @@ class IconPreValidator:
                 timestamp: int = params['timestamp']
                 nonce: int = params.get('nonce')
 
-                score_address: 'Address' =\
-                    generate_score_address(from_, timestamp, nonce)
+                score_address: 'Address' = generate_score_address(from_, timestamp, nonce)
 
-                if score_address in self._score_mapper:
-                    # This exception is not caught
-                    # at the 'except' statement below
-                    raise InvalidRequestException(
-                        f'SCORE address already in use: {score_address}')
+                deploy_info = self._deploy_storage.get_deploy_info(None, score_address)
+                if deploy_info is not None:
+                    raise InvalidRequestException(f'SCORE address already in use: {score_address}')
 
         except Exception as e:
             raise InvalidParamsException(f'Invalid params: {e}')
