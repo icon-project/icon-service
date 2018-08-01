@@ -46,7 +46,7 @@ class ConfigKey:
     SERVICE = 'service'
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
-    SERVICE_DEPLOY_WHITELIST = 'deployWhiteList'
+    SERVICE_DEPLOYER_WHITELIST = 'deployerWhiteList'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
     CHANNEL = 'channel'
@@ -66,7 +66,7 @@ class IconServiceFlag(IntFlag):
     none = 0
     fee = 1
     audit = 2
-    deployWhiteList = 4
+    deployerWhiteList = 4
 
 
 class IconDeployFlag(IntFlag):

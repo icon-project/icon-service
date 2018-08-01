@@ -29,7 +29,8 @@ from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNAN
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash, rmtree
+from tests import create_block_hash, create_address, create_tx_hash, rmtree, raise_exception_start_tag, \
+    raise_exception_end_tag
 from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -214,15 +215,15 @@ class TestIntegrateSimpleInvoke(unittest.TestCase):
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_invoke_fail1(self):
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         prev_block_hash, is_commit, response = \
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, self._genesis_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
 
     def test_invoke_fail2(self):
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         prev_block_hash, is_commit, tx_results = \
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
@@ -232,10 +233,10 @@ class TestIntegrateSimpleInvoke(unittest.TestCase):
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 3, prev_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
 
     def test_invoke_fail3(self):
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         prev_block_hash, is_commit, tx_results = \
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
@@ -245,10 +246,10 @@ class TestIntegrateSimpleInvoke(unittest.TestCase):
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, prev_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
 
     def test_invoke_fail4(self):
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         prev_block_hash, is_commit, tx_results = \
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
@@ -258,7 +259,7 @@ class TestIntegrateSimpleInvoke(unittest.TestCase):
             self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, ""))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
 
 
 if __name__ == '__main__':

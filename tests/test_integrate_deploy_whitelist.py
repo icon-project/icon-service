@@ -30,7 +30,8 @@ from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNAN
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash, rmtree
+from tests import create_block_hash, create_address, create_tx_hash, rmtree, raise_exception_start_tag, \
+    raise_exception_end_tag
 from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ class TestIntegrateDeployInstall(unittest.TestCase):
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr),
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: False,
                                               ConfigKey.SERVICE_AUDIT: False,
-                                              ConfigKey.SERVICE_DEPLOY_WHITELIST: True}})
+                                              ConfigKey.SERVICE_DEPLOYER_WHITELIST: True}})
 
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()
@@ -499,10 +500,10 @@ class TestIntegrateDeployInstall(unittest.TestCase):
         addr1 = create_address(AddressPrefix.EOA, b'addr1')
         value = 500
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('install/test_score', ZERO_SCORE_ADDRESS, addr1, {'value': hex(value)}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
         is_commit, tx_results = self._run_async(

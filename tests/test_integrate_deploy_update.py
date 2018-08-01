@@ -30,7 +30,8 @@ from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash, rmtree
+from tests import create_block_hash, create_address, create_tx_hash, rmtree, raise_exception_start_tag, \
+    raise_exception_end_tag
 from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr),
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: False,
                                               ConfigKey.SERVICE_AUDIT: False,
-                                              ConfigKey.SERVICE_DEPLOY_WHITELIST: False}})
+                                              ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}})
 
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()
@@ -509,10 +510,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
 
         value2 = 300
         addr1 = create_address(AddressPrefix.EOA, b'addr1')
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('update/test_score', score_addr_array[0], addr1, {'value': hex(value2)}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
         self.assertEqual(tx_results[0]['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
 
@@ -548,10 +549,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip("", score_addr_array[0], self._admin_addr, data=b'nonono'))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
         request = {
@@ -576,10 +577,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('install/test_score_no_scorebase', score_addr_array[0], self._admin_addr))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
         request = {
@@ -604,10 +605,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('update/test_score_on_update_error', score_addr_array[0], self._admin_addr))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
         request = {
@@ -632,10 +633,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('install/test_score_no_external_func', score_addr_array[0], self._admin_addr))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
 
         request = {
             "version": hex(self._version),
@@ -660,10 +661,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('install/test_score_with_korean_comments', score_addr_array[0], self._admin_addr))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
         request = {
@@ -688,10 +689,10 @@ class TestIntegrateDeployUpdate(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('install/test_score_no_python', score_addr_array[0], self._admin_addr))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
         request = {

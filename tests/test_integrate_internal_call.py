@@ -30,7 +30,8 @@ from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash, rmtree
+from tests import create_block_hash, create_address, create_tx_hash, rmtree, raise_exception_start_tag, \
+    raise_exception_end_tag
 from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -452,9 +453,9 @@ class TestIntegrateInternalCall(unittest.TestCase):
             }
         }
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         response = self._run_async(self._icx_call(request))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(response['error']['code'], ExceptionCode.SERVER_ERROR)
         self.assertEqual(response['error']['message'], 'put is not allowed')
 
@@ -498,9 +499,9 @@ class TestIntegrateInternalCall(unittest.TestCase):
             }
         }
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         response = self._run_async(self._icx_call(request))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(response['error']['code'], ExceptionCode.SERVER_ERROR)
         self.assertEqual(response['error']['message'], 'maximum recursion depth exceeded while calling a Python object')
 

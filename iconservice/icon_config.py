@@ -27,6 +27,6 @@ default_icon_config = {
     ConfigKey.SERVICE: {
         ConfigKey.SERVICE_FEE: False,
         ConfigKey.SERVICE_AUDIT: False,
-        ConfigKey.SERVICE_DEPLOY_WHITELIST: False
+        ConfigKey.SERVICE_DEPLOYER_WHITELIST: False
     }
 }

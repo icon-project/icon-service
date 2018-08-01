@@ -30,7 +30,8 @@ from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNAN
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash, rmtree
+from tests import create_block_hash, create_address, create_tx_hash, rmtree, \
+    raise_exception_start_tag, raise_exception_end_tag
 from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr),
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: False,
                                               ConfigKey.SERVICE_AUDIT: True,
-                                              ConfigKey.SERVICE_DEPLOY_WHITELIST: False}})
+                                              ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}})
 
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()
@@ -521,11 +522,11 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         score_addr_array.append(tx_results[0]['scoreAddress'])
         tx_hashes.append(tx_results[0]['txHash'])
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip('install/test_score', ZERO_SCORE_ADDRESS, self._admin_addr,
                              {'value': hex(value)}, timestamp))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
         self.assertEqual(tx_results[0]['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
 
@@ -576,10 +577,10 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         self.assertEqual(response, get_score_api)
 
     def test_score_no_zip(self):
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._deploy_zip("", ZERO_SCORE_ADDRESS, self._admin_addr, data=b'nonono'))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
     def test_score_no_scorebase(self):
@@ -588,11 +589,11 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         self.assertEqual(is_commit, True)
         tx_hash = tx_results[0]['txHash']
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._call_method_score(
                 self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": tx_hash}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
     def test_score_on_install_error(self):
@@ -601,11 +602,11 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         self.assertEqual(is_commit, True)
         tx_hash = tx_results[0]['txHash']
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._call_method_score(
                 self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": tx_hash}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
     def test_score_no_external_func(self):
@@ -614,11 +615,11 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         self.assertEqual(is_commit, True)
         tx_hash = tx_results[0]['txHash']
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._call_method_score(
                 self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": tx_hash}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
     def test_score_with_korean_comments(self):
@@ -627,11 +628,11 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         self.assertEqual(is_commit, True)
         tx_hash = tx_results[0]['txHash']
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._call_method_score(
                 self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": tx_hash}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
     def test_score_no_python(self):
@@ -640,11 +641,11 @@ class TestIntegrateDeployAuditInstall(unittest.TestCase):
         self.assertEqual(is_commit, True)
         tx_hash = tx_results[0]['txHash']
 
-        print('=' * 20, 'raise exception start', '=' * 20)
+        raise_exception_start_tag()
         is_commit, tx_results = self._run_async(
             self._call_method_score(
                 self._admin_addr, str(GOVERNANCE_SCORE_ADDRESS), 'acceptScore', {"txHash": tx_hash}))
-        print('=' * 20, 'raise exception end', '=' * 20)
+        raise_exception_end_tag()
         self.assertEqual(is_commit, False)
 
 

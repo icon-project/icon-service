@@ -26,7 +26,6 @@ This document describes APIs that Governance SCORE provides.
 | <a id="T_INT">T_INT</a> | "0x" + lowercase HEX 문자열 | 0xa |
 | <a id="T_BIN_DATA">T_BIN_DATA</a> | "0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다 | 0x34b2 |
 | <a id="T_SIG">T_SIG</a> | base64 encoded 문자열 | VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA= |
-
 # Overview
 
 * 블록 체인 망을 운영하는데 필요한 각종 항목을 관리하는 Built-in SCORE를 의미한다.
@@ -39,6 +38,7 @@ This document describes APIs that Governance SCORE provides.
     * [getStepPrice](#getstepprice)
     * [getStepCosts](#getstepcosts)
     * [getMaxStepLimit](#getmaxsteplimit)
+    * [isDeployer](#isdeployer)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -46,6 +46,8 @@ This document describes APIs that Governance SCORE provides.
     * [removeAuditor](#removeauditor)
     * [setStepPrice](#setstepprice)
     * [setStepCost](#setstepcost)
+    * [addDeployer](#adddeployer)
+    * [removeDeployer](#removedeployer)
 * Eventlog
     * [Accepted](#accepted)
     * [Rejected](#rejected)
@@ -329,6 +331,55 @@ None
 }
 ```
 
+## isDeployer
+
+* Returns True or False if the account can deploy score.
+
+### Parameters
+
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|-----|
+| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE deploy 권한이 있는 EOA 주소 |
+
+### Returns
+
+`T_INT` - deploy_list에 포함되면 "0x1", 아니면 "0x0"
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_call",
+    "params": {
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
+        "to": "cx0000000000000000000000000000000000000001",
+        "dataType": "call",
+        "data": {
+            "method": "isDeployer",
+            "params": {
+                "address": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": "0x1"
+}
+```
+
+
+
 # Invoke Methods
 
 상태를 변경하는 Method
@@ -462,7 +513,7 @@ None
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
+| Key | Value Type | Description |
 |:----|:-----------|-----|
 | address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 있는 EOA 주소 |
 
@@ -573,6 +624,87 @@ None
     }
 }
 ```
+
+## addDeployer
+
+* SCORE 등록 권한을 가진 주소 목록에 새로운 주소를 추가한다.
+* 해당 목록에 등록된 주소만이 SCORE를 등록할 수 있다.
+* SCORE Owner만 호출할 수 있다.
+
+### Parameters
+
+| KEY | VALUE 형식 | 설명 |
+|:----|:-----------|-----|
+| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 추가한 새로운 EOA 주소 |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "addDeployer",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
+## removeDeployer
+
+* SCORE 등록 권한을 가진 주소 목록에서 기존 주소를 제거한다.
+* 해당 목록에서 제거된 주소는 더이상 SCORE 등록을 할 수 없다.
+* SCORE Owner 혹은 목록에 있는 Auditor 본인이 자신을 제거할 수 있다.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 있는 EOA 주소 |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "removeDeployer",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
 
 # Eventlog
 

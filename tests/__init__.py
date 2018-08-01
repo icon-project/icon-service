@@ -23,12 +23,12 @@ import hashlib
 import shutil
 import sys
 
-import time
 import random
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import Address
 from iconservice.icon_constant import DATA_BYTE_ORDER
+from iconcommons.logger import Logger
 
 if TYPE_CHECKING:
     from iconservice.base.address import AddressPrefix
@@ -61,3 +61,13 @@ def rmtree(path: str) -> None:
         shutil.rmtree(path)
     except Exception as e:
         pass
+
+
+def raise_exception_start_tag():
+    emblem_str = '=' * 20
+    Logger.error(f'{emblem_str} raise exception start {emblem_str}')
+
+
+def raise_exception_end_tag():
+    emblem_str = '=' * 20
+    Logger.error(f'{emblem_str} raise exception end {emblem_str}')

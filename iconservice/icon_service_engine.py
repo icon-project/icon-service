@@ -155,7 +155,7 @@ class IconServiceEngine(ContextContainer):
         icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
         if self._is_flag_on(IconServiceFlag.audit):
             icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.deployWhiteList):
+        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
 
         self._icon_score_deploy_engine.open(
@@ -169,7 +169,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
-        key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOY_WHITELIST]
+        key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOYER_WHITELIST]
         flag = 0
         for key in key_table:
             is_enable = flag_table[key]
@@ -424,7 +424,7 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.create(step_limit, allow_step_overflow)
         context.clear_msg_stack()
 
-        if self._is_flag_on(IconServiceFlag.deployWhiteList):
+        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             self._validate_deploy_whitelist(context, params)
 
         return self._call(context, method, params)
@@ -483,7 +483,7 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.get_step_cost(StepType.DEFAULT)
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
-        if self._is_flag_on(IconServiceFlag.deployWhiteList):
+        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             context = self._context_factory.create(IconScoreContextType.QUERY)
             self._validate_deploy_whitelist(context, params)
             self._context_factory.destroy(context)

@@ -22,6 +22,6 @@
 	"service": {
 		"fee": false,
 		"audit": false,
-		"deployWhiteList": false
+		"deployerWhiteList": false
 	}
 }
