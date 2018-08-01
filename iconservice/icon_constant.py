@@ -46,6 +46,7 @@ class ConfigKey:
     SERVICE = 'service'
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
+    SERVICE_WHITELIST_DEPLOY = 'whiteListDeploy'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
     CHANNEL = 'channel'
@@ -65,6 +66,7 @@ class IconServiceFlag(IntFlag):
     none = 0
     fee = 1
     audit = 2
+    whiteListDeploy = 4
 
 
 class IconDeployFlag(IntFlag):
@@ -73,6 +75,7 @@ class IconDeployFlag(IntFlag):
     # some specified address owner like genesis address owner
     # MUST approve install or update SCORE transactions.
     ENABLE_DEPLOY_AUDIT = 1
+    ENABLE_WHITELIST_DEPLOY = 2
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

@@ -15,6 +15,8 @@
 # limitations under the License.
 
 import unittest
+import time
+
 from unittest.mock import Mock
 
 from iconservice.base.address import Address, AddressPrefix, ZERO_SCORE_ADDRESS, \
@@ -22,6 +24,7 @@ from iconservice.base.address import Address, AddressPrefix, ZERO_SCORE_ADDRESS,
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException
 from iconservice.deploy.icon_score_manager import IconScoreManager
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
 from iconservice.icx.icx_engine import IcxEngine
@@ -32,12 +35,13 @@ class TestTransactionValidator(unittest.TestCase):
     def setUp(self):
         self.icx_engine = Mock(spec=IcxEngine)
         self.score_manager = Mock(spec=IconScoreManager)
+        self.deploy_storage = Mock(spec=IconScoreDeployStorage)
 
         # self.score_mapper = Mock(spec=IconScoreInfoMapper)
         self.score_mapper = {}
 
         self.validator = IconPreValidator(
-            self.icx_engine, self.score_manager, self.score_mapper)
+            self.icx_engine, self.score_manager, self.score_mapper, self.deploy_storage)
 
     def tearDown(self):
         self.icx_engine = None
@@ -53,7 +57,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 0,
             'stepLimit': 100,
-            'timestamp': 123456,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -71,7 +75,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 1,
             'stepLimit': 5000,
-            'timestamp': 123456,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -85,7 +89,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 10,
             'stepLimit': 100,
-            'timestamp': 123456,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -108,7 +112,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': -10,
             'stepLimit': 100,
-            'timestamp': 123456,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -131,7 +135,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 10,
             'stepLimit': 100,
-            'timestamp': 123456,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -166,7 +170,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': to,
             'value': 10,
             'stepLimit': 100,
-            'timestamp': 123456,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -217,7 +221,7 @@ class TestTransactionValidator(unittest.TestCase):
             'to': to,
             'value': value,
             'stepLimit': step_limit,
-            'timestamp': 1234567890,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -244,8 +248,8 @@ class TestTransactionValidator(unittest.TestCase):
     def test_validate_generated_score_address(self):
 
         from_ = Address.from_data(AddressPrefix.EOA, b'from')
-        timestamp = 1234567890
-        nonce = None
+        timestamp = int(time.time() * 10 ** 6)
+        nonce = 2
 
         params = {
             'from': from_,
@@ -259,11 +263,11 @@ class TestTransactionValidator(unittest.TestCase):
             }
         }
 
+        self.deploy_storage.get_deploy_info = Mock(return_value=None)
         self.validator._validate_new_score_address_on_deploy_transaction(params)
 
-        score_address: 'Address' =\
-            generate_score_address(from_, timestamp, nonce)
-        self.score_mapper[score_address] = None
+        score_address: 'Address' = generate_score_address(from_, timestamp, nonce)
+        self.deploy_storage.get_deploy_info = Mock(return_value=b'deploy')
 
         with self.assertRaises(InvalidRequestException) as cm:
             self.validator._validate_new_score_address_on_deploy_transaction(
@@ -282,8 +286,9 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.icx_engine = Mock(spec=IcxEngine)
         self.score_manager = Mock(spec=IconScoreManager)
         self.score_mapper = Mock(spec=IconScoreInfoMapper)
+        self.deploy_storage = Mock(spec=IconScoreDeployStorage)
         self.validator = IconPreValidator(
-            self.icx_engine, self.score_manager, self.score_mapper)
+            self.icx_engine, self.score_manager, self.score_mapper, self.deploy_storage)
 
     def tearDown(self):
         self.icx_engine = None
@@ -303,7 +308,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
             'to': to,
             'value': 10 * 10 ** 18,
             'fee': 10 ** 16,
-            'timestamp': 1234567890,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 
@@ -341,7 +346,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
             'to': to,
             'value': 10 * 10 ** 18,
             'fee': 10 ** 16,
-            'timestamp': 1234567890,
+            'timestamp': int(time.time() * 10 ** 6),
             'nonce': 1
         }
 

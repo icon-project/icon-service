@@ -48,8 +48,11 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def test_install_step(self):
         # Ignores deploy
         deploy_engine_invoke = Mock()
+        deploy_storage_get_deploy_info = Mock(return_value=None)
         self._inner_task._icon_service_engine. \
             _icon_score_deploy_engine.invoke = deploy_engine_invoke
+        self._inner_task._icon_service_engine.\
+            _icon_score_deploy_storage.get_deploy_info = deploy_storage_get_deploy_info
 
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         from_ = create_address(AddressPrefix.EOA, b'from')

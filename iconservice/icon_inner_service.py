@@ -123,7 +123,6 @@ class IconScoreInnerTask(object):
     def _query(self, request: dict):
         response = None
         try:
-            self._validate_jsonschema(request)
             converted_request = TypeConverter.convert(request, ParamType.QUERY)
 
             value = self._icon_service_engine.query(method=converted_request['method'],

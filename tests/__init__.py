@@ -21,7 +21,10 @@
 
 import hashlib
 import shutil
+import sys
+
 import time
+import random
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import Address
@@ -38,7 +41,9 @@ def create_address(prefix: 'AddressPrefix', data: bytes) -> 'Address':
 
 def create_hash_256(data: bytes=None) -> bytes:
     if data is None:
-        data = int(time.time()).to_bytes(8, DATA_BYTE_ORDER)
+        max_int = sys.maxsize
+        length = (max_int.bit_length() + 7) // 8
+        data = int(random.randint(0, max_int)).to_bytes(length, DATA_BYTE_ORDER)
 
     return hashlib.sha3_256(data).digest()
 

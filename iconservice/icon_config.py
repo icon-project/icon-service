@@ -26,6 +26,7 @@ default_icon_config = {
     ConfigKey.BUILTIN_SCORE_OWNER: "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
     ConfigKey.SERVICE: {
         ConfigKey.SERVICE_FEE: False,
-        ConfigKey.SERVICE_AUDIT: False
+        ConfigKey.SERVICE_AUDIT: False,
+        ConfigKey.SERVICE_WHITELIST_DEPLOY: False
     }
 }

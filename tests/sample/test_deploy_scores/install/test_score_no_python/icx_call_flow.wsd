@@ -1,0 +1,20 @@
+@startuml icx_call sequence diagram
+
+actor Client
+participant RestServer
+participant PeerOuterService
+participant IconScoreService
+participant IconScore
+database LevelDB
+
+Client -> RestServer: [jsonrpc] icx_call(score_address, data)
+RestServer -> PeerOuterService: [grpc] Request(icx_call(score_address, data))
+PeerOuterService -> IconScoreService: [grpc] Request(icx_call(score_address, data))
+IconScoreService -> IconScore: [call] IconScores[score_address].balanceOf(address)
+IconScore -> LevelDB: [call] get(address)
+LevelDB -> IconScore: response of get(address)
+IconScoreService -> PeerOuterService: [grpc] Response()
+PeerOuterService -> RestServer: [grpc] Response()
+RestServer -> Client: [jsonrpc] response of icx_call(score_address, data)
+
+@enduml
