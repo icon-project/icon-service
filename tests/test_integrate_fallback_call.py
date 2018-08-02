@@ -467,6 +467,97 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_getBalance'))
         self.assertEqual(response, hex(value))
 
+        request = {
+            "address": score_addr_array[0]
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
+
+    def test_db_returns(self):
+        score_addr_array = []
+
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(is_commit, True)
+        score_addr_array.append(tx_results[0]['scoreAddress'])
+
+        value = 1 * 10 ** 18
+        is_commit, tx_results = self._run_async(
+            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
+        )
+        self.assertEqual(is_commit, True)
+
+        request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr_array[0],
+            "dataType": "call",
+            "data": {
+                "method": "get_value1",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, hex(0))
+
+        request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr_array[0],
+            "dataType": "call",
+            "data": {
+                "method": "get_value2",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, "")
+
+        request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr_array[0],
+            "dataType": "call",
+            "data": {
+                "method": "get_value3",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, "0x")
+
+        request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr_array[0],
+            "dataType": "call",
+            "data": {
+                "method": "get_value4",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, None)
+
+        request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr_array[0],
+            "dataType": "call",
+            "data": {
+                "method": "get_value5",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, None)
+
     def test_score_revert(self):
         score_addr_array = []
 
