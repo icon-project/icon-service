@@ -502,6 +502,15 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_call'))
         self.assertEqual(response, hex(0))
 
+        value = 1
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value1',
+                                    {"value": hex(value)}))
+        self.assertEqual(is_commit, True)
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, hex(value))
+
         request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
@@ -516,6 +525,15 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_call'))
         self.assertEqual(response, "")
 
+        value = "a"
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value2',
+                                    {"value": value}))
+        self.assertEqual(is_commit, True)
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, value)
+
         request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
@@ -528,7 +546,16 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         }
 
         response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, "0x")
+        self.assertEqual(response, None)
+
+        value = self._prev_block_hash
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value3',
+                                    {"value": value}))
+        self.assertEqual(is_commit, True)
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, f"0x{value}")
 
         request = {
             "version": hex(self._version),
@@ -544,6 +571,15 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_call'))
         self.assertEqual(response, None)
 
+        value = str(self._admin_addr)
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value4',
+                                    {"value": str(self._admin_addr)}))
+        self.assertEqual(is_commit, True)
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, value)
+
         request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
@@ -557,6 +593,15 @@ class TestIntegrateFallbackCall(unittest.TestCase):
 
         response = self._run_async(self._query(request, 'icx_call'))
         self.assertEqual(response, None)
+
+        value = True
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value5',
+                                    {"value": hex(value)}))
+        self.assertEqual(is_commit, True)
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, hex(value))
 
     def test_score_revert(self):
         score_addr_array = []
