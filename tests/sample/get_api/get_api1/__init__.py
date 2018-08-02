@@ -1,1 +1,1 @@
-from .test_score_pass import TestScorePass
+from .get_api import GetApi

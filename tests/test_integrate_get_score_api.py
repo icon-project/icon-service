@@ -20,6 +20,7 @@
 import asyncio
 import os
 import unittest
+from pprint import pprint
 from typing import TYPE_CHECKING
 
 import time
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
     from iconservice.base.address import Address
 
 
-class TestIntegrateFallbackCall(unittest.TestCase):
+class TestIntegrateGetScoreApi(unittest.TestCase):
     asnyc_loop_array = []
 
     def setUp(self):
@@ -147,7 +148,7 @@ class TestIntegrateFallbackCall(unittest.TestCase):
             params = {}
 
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-        path = os.path.join(root_path, f'tests/sample/test_fallback_call_scores/{zip_name}')
+        path = os.path.join(root_path, f'tests/sample/get_api/{zip_name}')
         mz = InMemoryZip()
         mz.zip_in_memory(path)
         data = f'0x{mz.data.hex()}'
@@ -449,427 +450,46 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = await self._inner_task.query(make_request)
         return response
 
-    def test_score_pass(self):
+    def test_get_score_api(self):
         score_addr_array = []
+        get_api_array = []
 
         is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr))
+            self._deploy_zip('get_api1', ZERO_SCORE_ADDRESS, self._admin_addr))
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        value = 1 * 10 ** 18
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
-        )
-        self.assertEqual(is_commit, True)
 
         request = {
             "address": score_addr_array[0]
         }
+        response = self._run_async(self._query(request, 'icx_getScoreApi'))
+        get_api_array.append(response)
 
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(value))
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('get_api2', ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(is_commit, True)
+        score_addr_array.append(tx_results[0]['scoreAddress'])
+
+        request = {
+            "address": score_addr_array[1]
+        }
+        response = self._run_async(self._query(request, 'icx_getScoreApi'))
+        get_api_array.append(response)
 
         request = {
             "address": score_addr_array[0]
         }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(value))
-
-    def test_db_returns(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_pass1', ZERO_SCORE_ADDRESS, self._admin_addr,
-                             {'value': str(self._admin_addr), "value1": str(self._admin_addr)}))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        value = 1 * 10 ** 18
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
-        )
-        self.assertEqual(is_commit, True)
+        response = self._run_async(self._query(request, 'icx_getScoreApi'))
+        get_api_array.append(response)
 
         request = {
-            "version": hex(self._version),
-            "from": str(self._admin_addr),
-            "to": score_addr_array[0],
-            "dataType": "call",
-            "data": {
-                "method": "get_value1",
-                "params": {}
-            }
+            "address": score_addr_array[1]
         }
+        response = self._run_async(self._query(request, 'icx_getScoreApi'))
+        get_api_array.append(response)
 
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, hex(0))
+        self.assertEqual(get_api_array[0], get_api_array[2])
+        self.assertEqual(get_api_array[1], get_api_array[3])
+        pprint(f"get_api1: {get_api_array[0]}")
+        pprint(f"get_api2: {get_api_array[1]}")
 
-        value = 1
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value1',
-                                    {"value": hex(value)}))
-        self.assertEqual(is_commit, True)
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, hex(value))
-
-        request = {
-            "version": hex(self._version),
-            "from": str(self._admin_addr),
-            "to": score_addr_array[0],
-            "dataType": "call",
-            "data": {
-                "method": "get_value2",
-                "params": {}
-            }
-        }
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, "")
-
-        value = "a"
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value2',
-                                    {"value": value}))
-        self.assertEqual(is_commit, True)
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, value)
-
-        request = {
-            "version": hex(self._version),
-            "from": str(self._admin_addr),
-            "to": score_addr_array[0],
-            "dataType": "call",
-            "data": {
-                "method": "get_value3",
-                "params": {}
-            }
-        }
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, None)
-
-        value = self._prev_block_hash
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value3',
-                                    {"value": value}))
-        self.assertEqual(is_commit, True)
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, f"0x{value}")
-
-        request = {
-            "version": hex(self._version),
-            "from": str(self._admin_addr),
-            "to": score_addr_array[0],
-            "dataType": "call",
-            "data": {
-                "method": "get_value4",
-                "params": {}
-            }
-        }
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, str(self._admin_addr))
-
-        value = str(self._genesis_addr)
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value4',
-                                    {"value": value}))
-        self.assertEqual(is_commit, True)
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, value)
-
-        request = {
-            "version": hex(self._version),
-            "from": str(self._admin_addr),
-            "to": score_addr_array[0],
-            "dataType": "call",
-            "data": {
-                "method": "get_value5",
-                "params": {}
-            }
-        }
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, None)
-
-        value = True
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value5',
-                                    {"value": hex(value)}))
-        self.assertEqual(is_commit, True)
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, hex(value))
-
-        request = {
-            "version": hex(self._version),
-            "from": str(self._admin_addr),
-            "to": score_addr_array[0],
-            "dataType": "call",
-            "data": {
-                "method": "get_value6",
-                "params": {}
-            }
-        }
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, str(self._admin_addr))
-
-        value = str(self._genesis_addr)
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value6',
-                                    {"value": value}))
-        self.assertEqual(is_commit, True)
-
-        response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, value)
-
-    def test_score_revert(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_revert', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        value = 1 * 10 ** 18
-        raise_exception_start_tag()
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
-        )
-        raise_exception_end_tag()
-        self.assertEqual(is_commit, False)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(0))
-
-    def test_score_no_payable(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_no_payable', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        value = 1 * 10 ** 18
-        raise_exception_start_tag()
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
-        )
-        raise_exception_end_tag()
-        self.assertEqual(is_commit, False)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(0))
-
-    def test_score_pass_link_transfer(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_transfer', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
-
-        value = 1 * 10 ** 18
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[1], value)
-        )
-        self.assertEqual(is_commit, True)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(value))
-
-    def test_score_pass_link_send(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_send', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
-
-        value = 1 * 10 ** 18
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[1], value)
-        )
-        self.assertEqual(is_commit, True)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(value))
-
-    def test_score_no_payable_link_transfer(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_no_payable', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_transfer', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
-
-        value = 1 * 10 ** 18
-        raise_exception_start_tag()
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[1], value)
-        )
-        raise_exception_end_tag()
-        self.assertEqual(is_commit, False)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(0))
-
-    def test_score_no_payable_link_send(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_no_payable', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_send', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
-
-        value = 1 * 10 ** 18
-        raise_exception_start_tag()
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[1], value)
-        )
-        raise_exception_end_tag()
-        self.assertEqual(is_commit, False)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(0))
-
-    def test_score_revert_link_transfer(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_revert', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_transfer', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
-
-        value = 1 * 10 ** 18
-        raise_exception_start_tag()
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[1], value)
-        )
-        raise_exception_end_tag()
-        self.assertEqual(is_commit, False)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(0))
-
-    def test_score_revert_link_send(self):
-        score_addr_array = []
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_revert', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_send', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
-
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
-
-        value = 1 * 10 ** 18
-        raise_exception_start_tag()
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[1], value)
-        )
-        raise_exception_end_tag()
-        self.assertEqual(is_commit, False)
-
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(0))
-
-
-if __name__ == '__main__':
-    unittest.main()

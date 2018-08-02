@@ -1,1 +1,1 @@
-from .get_api1 import GetApi1
+from .get_api import GetApi
