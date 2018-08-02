@@ -171,13 +171,13 @@ class TestIconContainerDB(unittest.TestCase):
         # dict_db
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'b', value_type=int), 0)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=str), "")
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=bytes), b"")
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=bytes), None)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'c', value_type=Address), None)
 
         # list_db
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=str), '')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=int), 0)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=bytes), b'')
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=bytes), None)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 3, value_type=Address), None)
 
         # var_db
@@ -186,7 +186,7 @@ class TestIconContainerDB(unittest.TestCase):
         test_var2 = VarDB('test_var2', self.db, value_type=str)
         self.assertEqual(test_var2.get(), "")
         test_var3 = VarDB('test_var3', self.db, value_type=bytes)
-        self.assertEqual(test_var3.get(), b'')
+        self.assertEqual(test_var3.get(), None)
         test_var4 = VarDB('test_var4', self.db, value_type=Address)
         self.assertEqual(test_var4.get(), None)
 

@@ -144,7 +144,7 @@ class IconServiceEngine(ContextContainer):
                                                     self._icon_score_mapper,
                                                     self._icon_score_deploy_storage)
 
-        IconScoreContext.icx = self._icx_engine
+        IconScoreContext.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
         IconScoreContext.icon_score_manager = icon_score_manger
 

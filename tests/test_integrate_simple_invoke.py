@@ -18,20 +18,18 @@
 """
 
 import asyncio
-import os
 import unittest
 from typing import TYPE_CHECKING
 
 import time
 
 from iconcommons.icon_config import IconConfig
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.address import AddressPrefix
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import DATA_BYTE_ORDER, IconDeployFlag, ConfigKey
+from iconservice.icon_constant import DATA_BYTE_ORDER, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
 from tests import create_block_hash, create_address, create_tx_hash, rmtree, raise_exception_start_tag, \
     raise_exception_end_tag
-from tests.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -203,63 +201,138 @@ class TestIntegrateSimpleInvoke(unittest.TestCase):
         else:
             return bytes.hex(block_hash), is_commit, list(tx_results.values())
 
+    async def _query(self, request: dict, method: str='icx_call'):
+        make_request = {'method': method, 'params': request}
+
+        response = await self._inner_task.query(make_request)
+        return response
+
     def test_invoke_success(self):
+        value1 = 1
         prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value1, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value1))
+
+        value2 = 2
         prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, prev_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value2, 2, prev_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
+
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value1 + value2))
 
     def test_invoke_fail1(self):
+        value = 1
         raise_exception_start_tag()
         prev_block_hash, is_commit, response = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 0, self._genesis_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
         raise_exception_end_tag()
+
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(0))
 
     def test_invoke_fail2(self):
+        value = 1
         raise_exception_start_tag()
         prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
+
         prev_block_hash, is_commit, response = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 3, prev_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 3, prev_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
         raise_exception_end_tag()
+
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
 
     def test_invoke_fail3(self):
+        value = 1
         raise_exception_start_tag()
         prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
+
         prev_block_hash, is_commit, response = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 0, prev_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 0, prev_block_hash))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
         raise_exception_end_tag()
+
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
 
     def test_invoke_fail4(self):
+        value = 1
         raise_exception_start_tag()
         prev_block_hash, is_commit, tx_results = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 1, self._genesis_block_hash))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 1, self._genesis_block_hash))
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
+
         prev_block_hash, is_commit, response = \
-            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, 1, 2, ""))
+            self._run_async(self._send_icx_invoke(self._genesis_addr, self._addr1, value, 2, ""))
         self.assertEqual(is_commit, False)
         self.assertEqual(response['error']['code'], 32000)
         raise_exception_end_tag()
+
+        request = {
+            "address": str(self._addr1)
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
 
 
 if __name__ == '__main__':

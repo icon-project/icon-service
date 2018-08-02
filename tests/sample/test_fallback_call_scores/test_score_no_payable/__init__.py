@@ -1,0 +1,1 @@
+from .test_score_no_payable import TestScoreNoPayable
