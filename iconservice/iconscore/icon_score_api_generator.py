@@ -202,6 +202,7 @@ class ScoreApiGenerator:
             raise IconTypeError(f"Missing argument hint for '{param.name}'")
 
         main_type = ScoreApiGenerator.__get_main_type(param.annotation)
+        main_type = ScoreApiGenerator.__convert_str_to_type(main_type)
         api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
             raise IconTypeError(

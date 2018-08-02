@@ -53,7 +53,7 @@ class TestScorePass(IconScoreBase):
         return self._value4.get()
 
     @external(readonly=False)
-    def set_value4(self, value: Address) -> None:
+    def set_value4(self, value: 'Address') -> None:
         self._value4.set(value)
 
     @external(readonly=True)
