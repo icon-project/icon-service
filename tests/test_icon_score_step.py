@@ -117,9 +117,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
 
+        deploy_storage_get_deploy_info = Mock(return_value=None)
         score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine. \
             _icon_score_engine.invoke = score_engine_invoke
+        self._inner_task._icon_service_engine. \
+            _icon_score_deploy_storage.get_deploy_info = deploy_storage_get_deploy_info
 
         result = self._inner_task._invoke(request)
         score_engine_invoke.assert_called()

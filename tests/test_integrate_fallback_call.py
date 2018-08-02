@@ -481,7 +481,7 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         score_addr_array = []
 
         is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr,
+            self._deploy_zip('test_score_pass1', ZERO_SCORE_ADDRESS, self._admin_addr,
                              {'value': str(self._admin_addr), "value1": str(self._admin_addr)}))
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
