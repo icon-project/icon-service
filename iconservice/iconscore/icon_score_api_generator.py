@@ -16,6 +16,7 @@
 
 from inspect import signature, Signature, Parameter, isclass
 from typing import Any, Optional
+from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError
 from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
     CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
@@ -154,6 +155,7 @@ class ScoreApiGenerator:
             raise IconTypeError(
                 f"'Returning type should be declared in read-only functions")
 
+        params_type = ScoreApiGenerator.__convert_str_to_type(params_type)
         main_type = ScoreApiGenerator.__get_main_type(params_type)
         # At first, finds if the type is a 'list' or a 'dict'
         # if not, finds a base type
@@ -169,6 +171,16 @@ class ScoreApiGenerator:
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
         info_list.append(info)
         return info_list
+
+    @staticmethod
+    def __convert_str_to_type(params_type: Any) -> Any:
+        if not isinstance(params_type, str):
+            return params_type
+
+        if params_type == 'Address':
+            return Address
+        else:
+            return params_type
 
     @staticmethod
     def __generate_inputs(params: dict, index_args_count: int = 0) -> list:

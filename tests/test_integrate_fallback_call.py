@@ -142,14 +142,17 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         else:
             return is_commit, list(tx_results.values())
 
-    async def _deploy_zip(self, zip_name: str, to_addr: 'Address', from_addr: 'Address'):
+    async def _deploy_zip(self, zip_name: str, to_addr: 'Address', from_addr: 'Address', params=None):
+        if params is None:
+            params = {}
+
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
         path = os.path.join(root_path, f'tests/sample/test_fallback_call_scores/{zip_name}')
         mz = InMemoryZip()
         mz.zip_in_memory(path)
         data = f'0x{mz.data.hex()}'
 
-        install_data = {'contentType': 'application/zip', 'content': data}
+        install_data = {'contentType': 'application/zip', 'content': data, 'params': params}
 
         timestamp_us = int(time.time() * 10 ** 6)
         nonce = 0
@@ -478,7 +481,8 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         score_addr_array = []
 
         is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr))
+            self._deploy_zip('test_score_pass', ZERO_SCORE_ADDRESS, self._admin_addr,
+                             {'value': str(self._admin_addr), "value1": str(self._admin_addr)}))
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
@@ -569,12 +573,12 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         }
 
         response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, None)
+        self.assertEqual(response, str(self._admin_addr))
 
-        value = str(self._admin_addr)
+        value = str(self._genesis_addr)
         is_commit, tx_results = self._run_async(
             self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value4',
-                                    {"value": str(self._admin_addr)}))
+                                    {"value": value}))
         self.assertEqual(is_commit, True)
 
         response = self._run_async(self._query(request, 'icx_call'))
@@ -602,6 +606,29 @@ class TestIntegrateFallbackCall(unittest.TestCase):
 
         response = self._run_async(self._query(request, 'icx_call'))
         self.assertEqual(response, hex(value))
+
+        request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr_array[0],
+            "dataType": "call",
+            "data": {
+                "method": "get_value6",
+                "params": {}
+            }
+        }
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, str(self._admin_addr))
+
+        value = str(self._genesis_addr)
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_value6',
+                                    {"value": value}))
+        self.assertEqual(is_commit, True)
+
+        response = self._run_async(self._query(request, 'icx_call'))
+        self.assertEqual(response, value)
 
     def test_score_revert(self):
         score_addr_array = []
