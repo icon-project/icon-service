@@ -95,7 +95,7 @@ class IconScoreFuncType(IntEnum):
 class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
-    icx: 'IcxEngine' = None
+    icx_engine: 'IcxEngine' = None
     icon_score_mapper: 'IconScoreInfoMapper' = None
     icon_score_manager: 'IconScoreManager' = None
 
@@ -154,7 +154,7 @@ class IconScoreContext(object):
 
         :return: the icx amount of balance
         """
-        return self.icx.get_balance(self, address)
+        return self.icx_engine.get_balance(self, address)
 
     def transfer(
             self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
@@ -166,7 +166,10 @@ class IconScoreContext(object):
         :param addr_to:
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self.icx.transfer(self, addr_from, addr_to, amount)
+        ret = self.icx_engine.transfer(self, addr_from, addr_to, amount)
+        icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
+        call_fallback(icon_score)
+        return ret
 
     def send(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
         """Send the amount of icx to the account indicated by 'to'.
@@ -177,7 +180,9 @@ class IconScoreContext(object):
         :return: True(success), False(failure)
         """
         try:
-            self.icx.transfer(self, addr_from, addr_to, amount)
+            self.icx_engine.transfer(self, addr_from, addr_to, amount)
+            icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
+            call_fallback(icon_score)
             return True
         except:
             pass

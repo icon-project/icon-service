@@ -1,0 +1,1 @@
+from .test_link_score_transfer import TestLinkScoreTransfer
