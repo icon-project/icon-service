@@ -470,6 +470,34 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_getBalance'))
         self.assertEqual(response, hex(value))
 
+    def test_score_send_to_eoa(self):
+        score_addr_array = []
+
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('test_score_to_eoa', ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(is_commit, True)
+        score_addr_array.append(tx_results[0]['scoreAddress'])
+
+        tmp_addr = str(create_address(AddressPrefix.EOA))
+
+        is_commit, tx_results = self._run_async(
+            self._call_method_score(self._admin_addr, score_addr_array[0], 'set_addr_func',
+                                    {"addr": tmp_addr}))
+        self.assertEqual(is_commit, True)
+
+        value = 1 * 10 ** 18
+        is_commit, tx_results = self._run_async(
+            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
+        )
+        self.assertEqual(is_commit, True)
+
+        request = {
+            "address": tmp_addr
+        }
+
+        response = self._run_async(self._query(request, 'icx_getBalance'))
+        self.assertEqual(response, hex(value))
+
     def test_db_returns(self):
         score_addr_array = []
 
