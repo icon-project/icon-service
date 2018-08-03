@@ -38,7 +38,8 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils.bloom import BloomFilter
-from tests import create_block_hash, create_address, rmtree, create_tx_hash
+from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
+    raise_exception_start_tag, raise_exception_end_tag
 
 context_factory = IconScoreContextFactory(max_size=1)
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -496,7 +497,9 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine._handle_score_invoke = \
             Mock(return_value=None, side_effect=RevertException("force revert"))
 
+        raise_exception_start_tag()
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        raise_exception_end_tag()
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -570,7 +573,9 @@ class TestIconServiceEngine(unittest.TestCase):
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = Mock(spec=list)
 
+        raise_exception_start_tag()
         tx_result = self._engine._call(context, method, params)
+        raise_exception_end_tag()
         self.assertTrue(isinstance(tx_result, TransactionResult))
         self.assertEqual(TransactionResult.FAILURE, tx_result.status)
         self.assertEqual(self._icon_score_address, tx_result.to)

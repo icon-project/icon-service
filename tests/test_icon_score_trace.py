@@ -40,6 +40,7 @@ from iconservice.iconscore.icon_score_trace import Trace, TraceType
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
+from tests import raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestTrace(unittest.TestCase):
@@ -160,8 +161,10 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_score_engine.attach_mock(
             mock_revert, "invoke")
 
+        raise_exception_start_tag()
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             context, {'version': 3, 'from': from_, 'to': to_})
+        raise_exception_end_tag()
         self.assertEqual(0, tx_result.status)
 
         IconServiceEngine_charge_transaction_fee.assert_called()
@@ -209,8 +212,10 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_score_engine.attach_mock(
             mock_exception, "invoke")
 
+        raise_exception_start_tag()
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             context, {'version': 3, 'from': from_, 'to': to_})
+        raise_exception_end_tag()
         self.assertEqual(0, tx_result.status)
 
         IconServiceEngine_charge_transaction_fee.assert_called()
