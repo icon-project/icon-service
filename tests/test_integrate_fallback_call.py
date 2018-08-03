@@ -470,13 +470,6 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_getBalance'))
         self.assertEqual(response, hex(value))
 
-        request = {
-            "address": score_addr_array[0]
-        }
-
-        response = self._run_async(self._query(request, 'icx_getBalance'))
-        self.assertEqual(response, hex(value))
-
     def test_db_returns(self):
         score_addr_array = []
 
