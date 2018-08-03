@@ -20,4 +20,6 @@ do
 	pip install --force-reinstall "$URL/$FILE"
 done
 
+pip3 install -r requirements.txt
+
 python -m unittest

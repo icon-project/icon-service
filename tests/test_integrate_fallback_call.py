@@ -479,12 +479,6 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        value = 1 * 10 ** 18
-        is_commit, tx_results = self._run_async(
-            self._send_icx_invoke(self._genesis_addr, score_addr_array[0], value)
-        )
-        self.assertEqual(is_commit, True)
-
         request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
