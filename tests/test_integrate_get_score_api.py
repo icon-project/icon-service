@@ -444,7 +444,7 @@ class TestIntegrateGetScoreApi(unittest.TestCase):
         else:
             return is_commit, list(tx_results.values())
 
-    async def _query(self, request: dict, method: str='icx_call'):
+    async def _query(self, request: dict, method: str = 'icx_call'):
         make_request = {'method': method, 'params': request}
 
         response = await self._inner_task.query(make_request)
@@ -459,22 +459,161 @@ class TestIntegrateGetScoreApi(unittest.TestCase):
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
-        request = {
-            "address": score_addr_array[0]
-        }
-        response = self._run_async(self._query(request, 'icx_getScoreApi'))
-        get_api_array.append(response)
-
         is_commit, tx_results = self._run_async(
             self._deploy_zip('get_api2', ZERO_SCORE_ADDRESS, self._admin_addr))
         self.assertEqual(is_commit, True)
         score_addr_array.append(tx_results[0]['scoreAddress'])
 
         request = {
+            "address": score_addr_array[0]
+        }
+        response = self._run_async(self._query(request, 'icx_getScoreApi'))
+        get_api_array.append(response)
+
+        request = {
             "address": score_addr_array[1]
         }
         response = self._run_async(self._query(request, 'icx_getScoreApi'))
         get_api_array.append(response)
+
+        expect_value1 = [
+            {
+                'type': 'function',
+                'name': 'base_value',
+                'inputs': [
+                    {
+                        'name': 'base_value',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'fallback',
+                'name': 'fallback',
+                'inputs': [],
+                'payable': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value',
+                'inputs': [
+                    {
+                        'name': 'value1',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': '0x1'
+                    }
+                ]
+            }
+        ]
+        self.assertEqual(get_api_array[0], expect_value1)
+
+        expect_value2 = [
+            {
+                'type': 'function',
+                'name': 'base_value',
+                'inputs': [
+                    {
+                        'name': 'base_value',
+                        'type': 'str'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'str'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'fallback',
+                'name': 'fallback',
+                'inputs': [],
+                'payable': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value',
+                'inputs': [
+                    {
+                        'name': 'value2',
+                        'type': 'str'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'str'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value1',
+                'inputs': [],
+                'outputs': [
+                    {
+                        'type': 'str'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': '0x1'
+                    }
+                ]
+            }
+        ]
+        self.assertEqual(get_api_array[1], expect_value2)
+
+    def test_get_score_api_update(self):
+        score_addr_array = []
+        get_api_array = []
+
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('get_api1', ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(is_commit, True)
+        score_addr_array.append(tx_results[0]['scoreAddress'])
+
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('get_api1_update', score_addr_array[0], self._admin_addr))
+        self.assertEqual(is_commit, True)
+
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('get_api2', ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(is_commit, True)
+        score_addr_array.append(tx_results[0]['scoreAddress'])
+
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip('get_api2_update', score_addr_array[1], self._admin_addr))
+        self.assertEqual(is_commit, True)
 
         request = {
             "address": score_addr_array[0]
@@ -488,8 +627,151 @@ class TestIntegrateGetScoreApi(unittest.TestCase):
         response = self._run_async(self._query(request, 'icx_getScoreApi'))
         get_api_array.append(response)
 
-        self.assertEqual(get_api_array[0], get_api_array[2])
-        self.assertEqual(get_api_array[1], get_api_array[3])
-        pprint(f"get_api1: {get_api_array[0]}")
-        pprint(f"get_api2: {get_api_array[1]}")
+        expect_value1 = [
+            {
+                'type': 'function',
+                'name': 'base_value1',
+                'inputs': [
+                    {
+                        'name': 'value1',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'base_value2',
+                'inputs': [
+                    {
+                        'name': 'value2',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'fallback',
+                'name': 'fallback',
+                'inputs': [],
+                'payable': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value1',
+                'inputs': [
+                    {
+                        'name': 'value1',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value2',
+                'inputs': [
+                    {
+                        'name': 'value2',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': '0x1'
+                    }
+                ]
+            }
+        ]
+        self.assertEqual(get_api_array[0], expect_value1)
 
+        expect_value2 = [
+            {
+                'type': 'function',
+                'name': 'base_value1',
+                'inputs': [
+                    {
+                        'name': 'value1',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'fallback',
+                'name': 'fallback',
+                'inputs': [],
+                'payable': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value',
+                'inputs': [
+                    {
+                        'name': 'value2',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'function',
+                'name': 'get_value1',
+                'inputs': [],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': '0x1'
+            },
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': '0x1'
+                    }
+                ]
+            }
+        ]
+        self.assertEqual(get_api_array[1], expect_value2)

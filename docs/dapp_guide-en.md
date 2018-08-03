@@ -17,7 +17,7 @@ Let's start by creating a simple token contract.
 $ tbears init sample_token SampleToken
 ```
 
-Above command will create `sample_token` folder, and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.  `sample_token.py` has a main class declaration whose name is `SampleToken`.  `__init__.py` has auto-generated statements for dynamic import. If folder structure changes, make sure you adjust the import statements.
+Above command will create `sample_token` folder, and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.  `sample_token.py` has a main class declaration whose name is `SampleToken`.
 
 When you deploy the contract, you can pass the amount of initial tokens to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
 
