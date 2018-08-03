@@ -10,9 +10,10 @@ fi
 
 if [ $# -eq 1 ]
 then
-    export VERSION=$1
+    echo $1 > ./VERSION
 fi
 
+VERSION=$(cat ./VERSION)
 pip install wheel
 rm -rf build dist *.egg-info
 python setup.py bdist_wheel
