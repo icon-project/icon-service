@@ -1,15 +1,6 @@
 Event Log의 Indexing과 Bloom Filter
 ==
 
-## 문서 이력
-
-| 일시 | 버전 | 작성자 | 비고 |
-|:-----|:----|:-----:|:-----|
-| 2018.08.03 | 0.0.4 | 이용우 | Transaction Result에 포함되는 형식 추가 |
-| 2018.07.05 | 0.0.3 | 이용우 | None값의 indexing rule |
-| 2018.07.03 | 0.0.2 | 이용우 | indexed 필드, str타입 indexing rule |
-| 2018.07.02 | 0.0.1 | 이용우 | 신규 |
-
 ## Overview
 Score에서 Event Log의 적용 방법 및 Indexing Rule, TransactionResult에 포함되는 형식, Bloom Filter의 Filter search 방법에 대한 기술이다
 
@@ -88,6 +79,14 @@ def Transfer(self, from_: Address, to_: Address, amount: int):
 @eventlog(indexed=2)
 def Transfer(self, from_: Address, to_: Address, amount: int):
     pass
+
+...
+
+
+self.Transfer(
+    'hx4873b94352c8c1f3b2f09aaeccea31ce9e90bd31', 
+    'hx0000000000000000000000000000000000000000', 
+    10000000000000000000)
 ```
 
 다음과 같은 결과를 볼 수 있다
@@ -117,6 +116,12 @@ def Transfer(self, from_: Address, to_: Address, amount: int):
 }
 ```
 
+|  | indexed |   data  |
+| :------ | :--- | :--- |
+| 0 | **signature**: Transfer(Address,Address,int) | **amount**: 0x8ac7230489e80000 |
+| 1 | **from_**: hx4873b94352c8c1f3b2f09aaeccea31ce9e90bd31 |      |
+| 2 | **to_**: hx0000000000000000000000000000000000000000 |      |
+
 
 
 ## Bloom 
@@ -130,8 +135,8 @@ def Transfer(self, from_: Address, to_: Address, amount: int):
 ### Filter Search
 - 검색하려는 이벤트 값을  [Indexing Rule](#indexing) 에 따라 bloom-data를 생성
 
-- Bloom 값에 포함되는지 판단
-  예) 
+- Bloom 값에 포함되는지 판단<br />
+  예) <br />
   검색하려는 이벤트의 bloom-data = 0x10101010 , logsBloom = 0x30303030 
 
   then, 0x10101010 ⊂ 0x30303030
