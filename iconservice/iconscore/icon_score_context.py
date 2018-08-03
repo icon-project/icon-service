@@ -180,16 +180,17 @@ class IconScoreContext(object):
         :param amount: icx amount in loop (1 icx == 1e18 loop)
         :return: True(success), False(failure)
         """
+        ret = False
         try:
-            self.icx_engine.transfer(self, addr_from, addr_to, amount)
-            if addr_to.is_contract:
-                icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
-                call_fallback(icon_score)
-                return True
+            ret = self.icx_engine.transfer(self, addr_from, addr_to, amount)
         except:
             pass
 
-        return False
+        if ret and addr_to.is_contract:
+            icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
+            call_fallback(icon_score)
+
+        return ret
 
     def call(self, addr_from: Address,
              addr_to: 'Address', func_name: str, arg_params: list, kw_params: dict) -> object:
