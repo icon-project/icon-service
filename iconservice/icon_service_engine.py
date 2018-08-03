@@ -250,7 +250,7 @@ class IconServiceEngine(ContextContainer):
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
-            if not governance_score.is_deployer(_from):
+            if not governance_score.isDeployer(_from):
                 raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
         finally:
             self._delete_context(context)
