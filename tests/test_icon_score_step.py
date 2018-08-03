@@ -117,7 +117,6 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
-            call_fallback.assert_called()
 
         score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine. \
