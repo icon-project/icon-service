@@ -289,6 +289,103 @@ class TestIntegrateDeployInstall(unittest.TestCase):
         else:
             return is_commit, list(tx_results.values())
 
+    async def _deploy_zip_duplicated(self, zip_name: str, to_addr: 'Address', from_addr: 'Address',
+                                     deploy_params: dict = None, timestamp_us: int = None, data: bytes = None):
+        if deploy_params is None:
+            deploy_params = {}
+
+        if data is None:
+            root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+            path = os.path.join(root_path, f'tests/sample/test_deploy_scores/{zip_name}')
+            mz = InMemoryZip()
+            mz.zip_in_memory(path)
+            data = f'0x{mz.data.hex()}'
+
+        deploy_data = {'contentType': 'application/zip', 'content': data, 'params': deploy_params}
+
+        if timestamp_us is None:
+            timestamp_us = int(time.time() * 10 ** 6)
+        nonce = 0
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+
+        request_params1 = {
+            "version": hex(self._version),
+            "from": str(from_addr),
+            "to": str(to_addr),
+            "stepLimit": hex(self._step_limit),
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "deploy",
+            "data": deploy_data
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        tx_hash1 = create_tx_hash()
+        request_params1['txHash'] = bytes.hex(tx_hash1)
+        tx1 = {
+            'method': method,
+            'params': request_params1
+        }
+
+        response = await self._inner_task.validate_transaction(tx1)
+
+        request_params2 = {
+            "version": hex(self._version),
+            "from": str(from_addr),
+            "to": str(to_addr),
+            "stepLimit": hex(self._step_limit),
+            "timestamp": hex(timestamp_us),
+            "nonce": hex(nonce),
+            "signature": signature,
+            "dataType": "deploy",
+            "data": deploy_data
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        tx_hash2 = create_tx_hash()
+        request_params2['txHash'] = bytes.hex(tx_hash2)
+        tx2 = {
+            'method': method,
+            'params': request_params2
+        }
+
+        response = await self._inner_task.validate_transaction(tx2)
+
+        make_request = {'transactions': [tx1, tx2]}
+        block_height: int = self._block_height
+        block_hash = create_block_hash()
+
+        make_request['block'] = {
+            'blockHeight': hex(block_height),
+            'blockHash': bytes.hex(block_hash),
+            'timestamp': hex(timestamp_us),
+            'prevBlockHash': self._prev_block_hash
+        }
+
+        precommit_request = {'blockHeight': hex(block_height),
+                             'blockHash': bytes.hex(block_hash)}
+
+        invoke_response = await self._inner_task.invoke(make_request)
+        tx_results = invoke_response.get('txResults')
+        is_commit = False
+        if not isinstance(tx_results, dict):
+            await self._inner_task.remove_precommit_state(precommit_request)
+        elif tx_results[bytes.hex(tx_hash1)]['status'] == hex(1):
+            is_commit = True
+            await self._inner_task.write_precommit_state(precommit_request)
+            self._block_height += 1
+            self._prev_block_hash = bytes.hex(block_hash)
+        else:
+            await self._inner_task.remove_precommit_state(precommit_request)
+
+        if tx_results is None:
+            return is_commit, invoke_response
+        else:
+            return is_commit, list(tx_results.values())
+
     async def _call_method_score(self,
                                  addr_from: 'Address',
                                  addr_to: str,
@@ -535,6 +632,20 @@ class TestIntegrateDeployInstall(unittest.TestCase):
 
         response = self._run_async(self._icx_call(request))
         self.assertEqual(response, hex(value))
+
+    def test_score_address_already_in_use2(self):
+        score_addr_array = []
+
+        value = 500
+        timestamp = 1
+        raise_exception_start_tag()
+        is_commit, tx_results = self._run_async(
+            self._deploy_zip_duplicated('install/test_score', ZERO_SCORE_ADDRESS, self._admin_addr,
+                                        {'value': hex(value)}, timestamp))
+        raise_exception_end_tag()
+        self.assertEqual(is_commit, True)
+        score_addr_array.append(tx_results[0]['scoreAddress'])
+        self.assertEqual(tx_results[1]['status'], hex(False))
 
     def test_get_score_api(self):
         score_addr_array = []
