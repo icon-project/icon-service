@@ -18,12 +18,12 @@ class GetApi(BaseScore):
         super().on_update()
 
     @external(readonly=True)
-    def get_value(self, value2: str) -> str:
+    def get_value(self, value2: int) -> int:
         return value2
 
     @external(readonly=True)
-    def get_value1(self) -> str:
-        return "hello"
+    def get_value1(self) -> int:
+        return 1
 
     @payable
     def fallback(self) -> None:

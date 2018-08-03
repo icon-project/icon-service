@@ -12,5 +12,9 @@ class BaseScore(IconScoreBase):
         super().on_update()
 
     @external(readonly=True)
-    def base_value(self, base_value: int) -> int:
-        return base_value
+    def base_value1(self, value1: int) -> int:
+        return value1
+
+    @external(readonly=True)
+    def base_value2(self, value2: int) -> int:
+        return value2
