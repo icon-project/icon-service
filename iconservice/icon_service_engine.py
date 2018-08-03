@@ -734,7 +734,7 @@ class IconServiceEngine(ContextContainer):
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
-                    deploy_info = self._icon_score_deploy_storage.get_deploy_info(None, score_address)
+                    deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
                     if deploy_info is not None:
                         raise ServerErrorException(f'SCORE address already in use: {score_address}')
                 context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)

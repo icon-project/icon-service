@@ -34,7 +34,9 @@ if TYPE_CHECKING:
     from iconservice.base.address import AddressPrefix
 
 
-def create_address(prefix: 'AddressPrefix', data: bytes) -> 'Address':
+def create_address(prefix: 'AddressPrefix', data: bytes=None) -> 'Address':
+    if data is None:
+        data = create_tx_hash()
     hash_value = hashlib.sha3_256(data).digest()
     return Address(prefix, hash_value[-20:])
 

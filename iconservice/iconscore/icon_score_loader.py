@@ -45,10 +45,15 @@ class IconScoreLoader(object):
         tmp_str = f"{self._score_root_path}/"
         import_path: str = last_version_path.split(tmp_str)[1]
         import_path = import_path.replace('/', '.')
-        import_path = f"{import_path}"
 
-        package_module = importlib.import_module(f".{score_package_info[__MAIN_FILE]}", package=import_path)
-        return getattr(package_module, score_package_info[__MAIN_SCORE])
+        if False:
+            package_module = importlib.import_module(f".{score_package_info[__MAIN_FILE]}", package=import_path)
+            return getattr(package_module, score_package_info[__MAIN_SCORE])
+
+        spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", import_path)
+        mod = importlib.util.module_from_spec(spec)
+        mod = mod.__loader__.load_module()
+        return getattr(mod, score_package_info[__MAIN_SCORE])
 
     @staticmethod
     def _get_score_path_by_score_id(score_root_path: str, address_body: str, score_id: str) -> str:

@@ -47,6 +47,7 @@ from tests import create_address, create_block_hash, create_tx_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
+
 class TestContextContainer(ContextContainer):
     pass
 
@@ -76,7 +77,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
         self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
-        self._icon_deploy_storage.is_score_deployed = Mock(return_value=True)
 
         self._engine = IconScoreDeployEngine()
         self._icon_score_loader = IconScoreLoader(score_path)
@@ -91,10 +91,9 @@ class TestIconZipDeploy(unittest.TestCase):
             icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_deploy_storage)
 
-        self.from_address = create_address(AddressPrefix.EOA, b'from')
+        self.from_address = create_address(AddressPrefix.EOA)
 
-        self.sample_token_address = create_address(
-            AddressPrefix.CONTRACT, b'sample_token')
+        self.sample_token_address = create_address(AddressPrefix.CONTRACT)
 
         self._factory = IconScoreContextFactory(max_size=1)
         self.make_context()
@@ -110,7 +109,7 @@ class TestIconZipDeploy(unittest.TestCase):
         tx_hash = create_tx_hash(
             b'txHash' + self._tx_index.to_bytes(10, DATA_BYTE_ORDER))
         self._context.tx = Transaction(tx_hash, origin=self.from_address)
-        self._context.block = Block(1, create_block_hash(b'block'), 0, None)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
