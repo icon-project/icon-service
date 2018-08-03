@@ -16,61 +16,48 @@
 
 import json
 import importlib.machinery
+import importlib.util
 from sys import path as sys_path
 from os import path
-from os.path import dirname
-from iconcommons.logger import Logger
-from ..icon_constant import ICON_LOADER_LOG_TAG
 
 
 class IconScoreLoader(object):
-    __PACKAGE_PATH = 'package.json'
-    __SCORE_ENTERANCE_FILE_PATH = '__init__.py'
+    _PACKAGE_PATH = 'package.json'
 
     def __init__(self, score_root_path: str):
-        self.__score_root_path = score_root_path
+        self._score_root_path = score_root_path
+        sys_path.append(score_root_path)
 
     @property
     def score_root_path(self):
-        return self.__score_root_path
+        return self._score_root_path
 
     @staticmethod
-    def __load_json(root_path: str) -> dict:
-        root_path = path.join(root_path, IconScoreLoader.__PACKAGE_PATH)
+    def _load_json(root_path: str) -> dict:
+        root_path = path.join(root_path, IconScoreLoader._PACKAGE_PATH)
         with open(root_path, 'r') as f:
             return json.load(f)
 
-    @staticmethod
-    def __load_user_score_module(file_path: str, score_package_info: dict) -> callable:
+    def _load_user_score_module(self, last_version_path: str, score_package_info: dict) -> callable:
         __MAIN_SCORE = 'main_score'
         __MAIN_FILE = 'main_file'
 
-        dir_path = dirname(file_path)
+        tmp_str = f"{self._score_root_path}/"
+        import_path: str = last_version_path.split(tmp_str)[1]
+        import_path = import_path.replace('/', '.')
+        import_path = f"{import_path}"
 
-        if dir_path in sys_path:
-            Logger.error(f"sys.path has the score path: {dir_path}", ICON_LOADER_LOG_TAG)
-        else:
-            sys_path.append(dir_path)
-
-        try:
-            package_module = importlib.machinery.SourceFileLoader(
-                score_package_info[__MAIN_SCORE], file_path).load_module()
-            module = getattr(package_module, score_package_info[__MAIN_FILE])
-            importlib.reload(module)
-        finally:
-            sys_path.remove(dir_path)
-
-        return getattr(module, score_package_info[__MAIN_SCORE])
+        package_module = importlib.import_module(f".{score_package_info[__MAIN_FILE]}", package=import_path)
+        return getattr(package_module, score_package_info[__MAIN_SCORE])
 
     @staticmethod
-    def __get_score_path_by_score_id(score_root_path: str, address_body: str, score_id: str) -> str:
+    def _get_score_path_by_score_id(score_root_path: str, address_body: str, score_id: str) -> str:
         address_path = path.join(score_root_path, address_body)
         return path.join(address_path, score_id)
 
     def load_score(self, address_body: str, score_id: str) -> callable:
-        last_version_path = self.__get_score_path_by_score_id(self.__score_root_path, address_body, score_id)
+        last_version_path = self._get_score_path_by_score_id(self._score_root_path, address_body, score_id)
 
-        score_package_info = self.__load_json(last_version_path)
-        score_package_init_file_path = path.join(last_version_path, IconScoreLoader.__SCORE_ENTERANCE_FILE_PATH)
-        score = self.__load_user_score_module(score_package_init_file_path, score_package_info)
+        score_package_info = self._load_json(last_version_path)
+        score = self._load_user_score_module(last_version_path, score_package_info)
         return score
