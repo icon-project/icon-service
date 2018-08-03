@@ -306,4 +306,6 @@ def get_default_value(value_type: type) -> Any:
         return 0
     elif value_type == str:
         return ""
+    elif value_type == bool:
+        return False
     return None

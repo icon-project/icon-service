@@ -611,7 +611,7 @@ class TestIntegrateFallbackCall(unittest.TestCase):
         }
 
         response = self._run_async(self._query(request, 'icx_call'))
-        self.assertEqual(response, None)
+        self.assertEqual(response, hex(False))
 
         value = True
         is_commit, tx_results = self._run_async(
