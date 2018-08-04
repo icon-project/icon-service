@@ -335,7 +335,7 @@ None
 
 ## isDeployer
 
-* Returns True if the account can deploy score.
+* Returns True if the given address can deploy SCORE.
 
 ### Parameters
 

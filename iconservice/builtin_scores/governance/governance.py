@@ -42,7 +42,6 @@ class Governance(IconScoreBase):
     _STEP_COSTS = 'step_costs'
     _MAX_STEP_LIMIT = 'max_step_limit'
 
-
     @eventlog(indexed=1)
     def Accepted(self, tx_hash: str):
         pass
@@ -73,7 +72,7 @@ class Governance(IconScoreBase):
         # add owner into initial auditor list
         Logger.debug(f'on_install: owner = "{self.owner}"', TAG)
         self._auditor_list.put(self.owner)
-        # add owner into initial auditor list
+        # add owner into initial deployer list
         self._deployer_list.put(self.owner)
         # set initial step price
         self._step_price.set(stepPrice)
@@ -294,9 +293,9 @@ class Governance(IconScoreBase):
         if DEBUG is True:
             self._print_deployer_list('removeDeployer')
 
-    @external
-    def is_deployer(self, address: Address):
-        Logger.debug(f'is_deployer address: {address}', TAG)
+    @external(readonly=True)
+    def isDeployer(self, address: Address) -> bool:
+        Logger.debug(f'isDeployer address: {address}', TAG)
         return address in self._deployer_list
 
     def _print_deployer_list(self, header: str):

@@ -459,7 +459,7 @@ class TestIntegrateGovernanceScoreCall(unittest.TestCase):
             "to": str(GOVERNANCE_SCORE_ADDRESS),
             "dataType": "call",
             "data": {
-                "method": "is_deployer",
+                "method": "isDeployer",
                 "params": {
                     "address": str(self._admin_addr)
                 }
@@ -476,7 +476,7 @@ class TestIntegrateGovernanceScoreCall(unittest.TestCase):
             "to": str(GOVERNANCE_SCORE_ADDRESS),
             "dataType": "call",
             "data": {
-                "method": "is_deployer",
+                "method": "isDeployer",
                 "params": {
                     "address": str(self._admin_addr)
                 }
@@ -494,7 +494,7 @@ class TestIntegrateGovernanceScoreCall(unittest.TestCase):
             "to": str(GOVERNANCE_SCORE_ADDRESS),
             "dataType": "call",
             "data": {
-                "method": "is_deployer",
+                "method": "isDeployer",
                 "params": {
                     "address": str(addr1)
                 }
@@ -515,7 +515,7 @@ class TestIntegrateGovernanceScoreCall(unittest.TestCase):
             "to": str(GOVERNANCE_SCORE_ADDRESS),
             "dataType": "call",
             "data": {
-                "method": "is_deployer",
+                "method": "isDeployer",
                 "params": {
                     "address": str(addr1)
                 }
