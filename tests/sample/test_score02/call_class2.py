@@ -1,7 +1,7 @@
 from iconservice import *
 from .call_class1 import CallClass1
-from print_func.print_func import func_test
-from test_func.test_func import test1_func
+from .print_func import func_test
+from .test_func import test1_func
 
 
 class CallClass2(CallClass1):

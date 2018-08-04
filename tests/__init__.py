@@ -21,24 +21,31 @@
 
 import hashlib
 import shutil
-import time
+import sys
+
+import random
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import Address
 from iconservice.icon_constant import DATA_BYTE_ORDER
+from iconcommons.logger import Logger
 
 if TYPE_CHECKING:
     from iconservice.base.address import AddressPrefix
 
 
-def create_address(prefix: 'AddressPrefix', data: bytes) -> 'Address':
+def create_address(prefix: 'AddressPrefix', data: bytes=None) -> 'Address':
+    if data is None:
+        data = create_tx_hash()
     hash_value = hashlib.sha3_256(data).digest()
     return Address(prefix, hash_value[-20:])
 
 
 def create_hash_256(data: bytes=None) -> bytes:
     if data is None:
-        data = int(time.time()).to_bytes(8, DATA_BYTE_ORDER)
+        max_int = sys.maxsize
+        length = (max_int.bit_length() + 7) // 8
+        data = int(random.randint(0, max_int)).to_bytes(length, DATA_BYTE_ORDER)
 
     return hashlib.sha3_256(data).digest()
 
@@ -56,3 +63,13 @@ def rmtree(path: str) -> None:
         shutil.rmtree(path)
     except Exception as e:
         pass
+
+
+def raise_exception_start_tag():
+    emblem_str = '=' * 20
+    Logger.error(f'{emblem_str} raise exception start {emblem_str}')
+
+
+def raise_exception_end_tag():
+    emblem_str = '=' * 20
+    Logger.error(f'{emblem_str} raise exception end {emblem_str}')

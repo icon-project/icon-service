@@ -5,6 +5,7 @@ This document describes APIs that Governance SCORE provides.
 
 | Date | Author | Changes |
 |:---- |:-----: |:--------|
+| 2018.08.01 | Heonseung Lee | Added addDeployer, removeDeployer |
 | 2018.07.20 | Jaechang Namgoong | Added getMaxStepLimit |
 | 2018.07.16 | Yongwoo Lee | Added getStepCosts, setStepCost, StepCostChanged |
 | 2018.07.13 | Jaechang Namgoong | Added setStepPrice, StepPriceChanged |
@@ -13,24 +14,24 @@ This document describes APIs that Governance SCORE provides.
 | 2018.06.22 | Chiwon Cho | Added AddAuditor, RemoveAuditor |
 | 2018.06.21 | Chiwon Cho | Initial version |
 
-# Value Type
+# Overview
 
-기본적으로 모든 JSON-RPC 메시지 내의 VALUE는 문자열 형식으로 되어 있다.
-많이 사용하는 "VALUE 형식"은 다음과 같다.
+* Governance SCORE means a built-in SCORE that manages many adjustable parameters required by the operation of ICON network.
+* Address: cx0000000000000000000000000000000000000001
+
+# Value Types
+
+By default, Values in all JSON-RPC messages are in string form.
+The most commonly used Value types are as follows.
 
 | Value Type | Description | Example |
 |:---------- |:------------|:--------|
-| <a id="T_ADDR_EOA">T_ADDR_EOA</a> | "hx" + 40 digit HEX 문자열 | hxbe258ceb872e08851f1f59694dac2558708ece11 |
-| <a id="T_ADDR_SCORE">T_ADDR_SCORE</a> | "cx" + 40 digit HEX 문자열 | cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32 |
-| <a id="T_HASH">T_HASH</a> | "0x" + 64 digit HEX 문자열 | 0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238 |
-| <a id="T_INT">T_INT</a> | "0x" + lowercase HEX 문자열 | 0xa |
-| <a id="T_BIN_DATA">T_BIN_DATA</a> | "0x" + lowercase HEX 문자열<br>문자열의 길이가 짝수여야 한다 | 0x34b2 |
-| <a id="T_SIG">T_SIG</a> | base64 encoded 문자열 | VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA= |
-
-# Overview
-
-* 블록 체인 망을 운영하는데 필요한 각종 항목을 관리하는 Built-in SCORE를 의미한다.
-* 주소: cx0000000000000000000000000000000000000001
+| <a id="T_ADDR_EOA">T\_ADDR\_EOA</a> | "hx" + 40 digits HEX string | hxbe258ceb872e08851f1f59694dac2558708ece11 |
+| <a id="T_ADDR_SCORE">T\_ADDR\_SCORE</a> | "cx" + 40 digits HEX string | cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32 |
+| <a id="T_HASH">T\_HASH</a> | "0x" + 64 digits HEX string | 0xc71303ef8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238 |
+| <a id="T_INT">T\_INT</a> | "0x" + lowercase HEX string | 0xa |
+| <a id="T_BIN_DATA">T\_BIN\_DATA</a> | "0x" + lowercase HEX string (the length of string should be even) | 0x34b2 |
+| <a id="T_SIG">T\_SIG</a> | base64 encoded string | VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA= |
 
 # Methods List
 
@@ -39,6 +40,7 @@ This document describes APIs that Governance SCORE provides.
     * [getStepPrice](#getstepprice)
     * [getStepCosts](#getstepcosts)
     * [getMaxStepLimit](#getmaxsteplimit)
+    * [isDeployer](#isdeployer)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -46,6 +48,8 @@ This document describes APIs that Governance SCORE provides.
     * [removeAuditor](#removeauditor)
     * [setStepPrice](#setstepprice)
     * [setStepCost](#setstepcost)
+    * [addDeployer](#adddeployer)
+    * [removeDeployer](#removedeployer)
 * Eventlog
     * [Accepted](#accepted)
     * [Rejected](#rejected)
@@ -55,18 +59,18 @@ This document describes APIs that Governance SCORE provides.
 
 # Query Methods
 
-상태 변경 없이 조회만 가능한 Method
+Query methods that do not change states
 
 ## getScoreStatus
 
-* SCORE의 상태를 조회한다.
-* 현재 SCORE의 동작 상태와 차기 SCORE의 심사 상태를 알 수 있다.
+* Queries the current status of the given SCORE.
+* This tells the current status of SCORE and the audit status of the next SCORE.
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
+| Key | Value Type | Description |
 |:----|:-----------|-----|
-| address | [T_ADDR_SCORE](#T_ADDR_SCORE) | 조회할 SCORE 주소 |
+| address | [T\_ADDR\_SCORE](#T_ADDR_SCORE) | SCORE address to query |
 
 ### Examples
 
@@ -94,7 +98,7 @@ This document describes APIs that Governance SCORE provides.
 #### Response: SCORE install case
 
 ```json
-// Response - 설치 요청, 심사 중
+// Response - install requested: under auditing
 {
     "jsonrpc": "2.0",
     "id": 1234,
@@ -108,7 +112,7 @@ This document describes APIs that Governance SCORE provides.
 ```
 
 ```json
-// Response - 심사 완료: accepted
+// Response - audit completed: accepted
 {
     "jsonrpc": "2.0",
     "id": 1234,
@@ -123,7 +127,7 @@ This document describes APIs that Governance SCORE provides.
 ```
 
 ```json
-// Response - 심사 완료: rejected
+// Response - audit completed: rejected
 {
     "jsonrpc": "2.0",
     "id": 1234,
@@ -140,7 +144,7 @@ This document describes APIs that Governance SCORE provides.
 #### Response: SCORE update case
 
 ```json
-// Response - update 요청, 심사 중
+// Response - update requested: under auditing
 {
     "jsonrpc": "2.0",
     "id": 1234,
@@ -159,7 +163,7 @@ This document describes APIs that Governance SCORE provides.
 ```
 
 ```json
-// Response - update 요청, 심사 완료: rejected
+// Response - update requested, audit completed: rejected
 {
     "jsonrpc": "2.0",
     "id": 1234,
@@ -235,7 +239,7 @@ None
 
 ## getStepCosts
 
-* Returns a table of the step costs for the specific action in SOCRE
+* Returns a table of the step costs for the specific action in SCORE
 
 ### Parameters
 
@@ -329,21 +333,68 @@ None
 }
 ```
 
-# Invoke Methods
+## isDeployer
 
-상태를 변경하는 Method
-
-## acceptScore
-
-* SCORE 등록 요청을 수락한다.
-* SCORE 등록을 심사할 수 있는 권한을 가진 주소들만이 호출 가능하다.
-* SCORE는 승인이 완료된 블록의 다음 블록부터 사용이 가능하다.
+* Returns True if the account can deploy score.
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
+| Key | Value Type | Description |
 |:----|:-----------|-----|
-| txHash | [T_HASH](#T_HASH) | SCORE 설치 혹은 업데이트를 요청한 transaction의 hash 값 |
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address to query |
+
+### Returns
+
+`T_INT` - "0x1" if the address is in the deployer list, otherwise "0x0"
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_call",
+    "params": {
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
+        "to": "cx0000000000000000000000000000000000000001",
+        "dataType": "call",
+        "data": {
+            "method": "isDeployer",
+            "params": {
+                "address": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": "0x1"
+}
+```
+
+# Invoke Methods
+
+Methods that could change states
+
+## acceptScore
+
+* Accepts SCORE deployment requests
+* This could be invoked only by addresses that are in the auditor list.
+* The accepted SCORE will be able to use since the next block.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| txHash | [T\_HASH](#T_HASH) | Transaction hash when the SCORE deployment was requested |
 
 ### Examples
 
@@ -375,15 +426,15 @@ None
 
 ## rejectScore
 
-* SCORE 등록 요청을 거절한다.
-* SCORE 등록을 심사할 수 있는 권한을 가진 주소들만이 호출 가능하다.
+* Rejects SCORE deployment requests
+* This could be invoked only by addresses that are in the auditor list.
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
+| Key | Value Type | Description |
 |:----|:-----------|-----|
-| txHash | [T_HASH](#T_HASH) | SCORE 설치 혹은 업데이트를 요청한 transaction의 hash 값 |
-| reason | T_TEXT | SCORE 등록을 거절한 이유 |
+| txHash | [T\_HASH](#T_HASH) | Transaction hash when the SCORE deployment was requested |
+| reason | T\_TEXT | Reason for rejecting |
 
 ### Examples
 
@@ -416,15 +467,15 @@ None
 
 ## addAuditor
 
-* SCORE 등록 심사 권한을 가진 주소 목록에 새로운 주소를 추가한다.
-* 해당 목록에 등록된 주소만이 acceptScore와 rejectScore를 호출할 수 있다.
-* SCORE Owner만 호출할 수 있다.
+* Adds a new address to the auditor list that has the authority to review auditing.
+* Only addresses registered in the auditor list can call acceptScore and rejectScore.
+* Only the owner can call this function.
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
+| Key | Value Type | Description |
 |:----|:-----------|-----|
-| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 추가한 새로운 EOA 주소 |
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | New EOA address that will be added to the auditor list |
 
 ### Examples
 
@@ -456,15 +507,15 @@ None
 
 ## removeAuditor
 
-* SCORE 등록 심사 권한을 가진 주소 목록에서 기존 주소를 제거한다.
-* 해당 목록에서 제거된 주소는 더이상 SCORE 등록 심사를 할 수 없다.
-* SCORE Owner 혹은 목록에 있는 Auditor 본인이 자신을 제거할 수 있다.
+* Removes an address from the auditor list that has the authority to review auditing.
+* The address removed from the auditor list cannot do auditing afterward.
+* This function can be invoked only by either Governance SCORE owner or auditor himself.
 
 ### Parameters
 
-| KEY | VALUE 형식 | 설명 |
+| Key | Value Type | Description |
 |:----|:-----------|-----|
-| address | [T_ADDR_EOA](#T_ADDR_EOA) | SCORE 등록 심사 권한을 가진 주소 목록에 있는 EOA 주소 |
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address that is in the auditor list |
 
 ### Examples
 
@@ -503,7 +554,7 @@ None
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| stepPrice | [T_INT](#T_INT) | step price in loop (1 ICX == 10^18 loop) |
+| stepPrice | [T\_INT](#T_INT) | step price in loop (1 ICX == 10^18 loop) |
 
 ### Examples
 
@@ -535,15 +586,15 @@ None
 
 ## setStepCost
 
-* Sets the step costs for the specific action in SOCRE.
+* Sets the step costs for the specific action in SCORE.
 * Only the owner can call this function.
 
 ### Parameters
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| stepType | [T_STRING](#T_STRING) | action type |
-| cost | [T_INT](#T_INT) | step cost for the type |
+| stepType | [T\_STRING](#T_STRING) | action type |
+| cost | [T\_INT](#T_INT) | step cost for the type |
 
 ### Examples
 
@@ -573,6 +624,86 @@ None
     }
 }
 ```
+
+## addDeployer
+
+* Adds a new address to the deployer list that has the authority to register any SCORE.
+* Only the owner can call this function.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | New EOA address that will be added to the deployer list |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "addDeployer",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
+## removeDeployer
+
+* Removes an address from the deployer list that has the authority to register any SCORE.
+* The address removed from the deployer list cannot do registering afterward.
+* This function can be invoked only by either Governance SCORE owner or deployer himself.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address that is in the deployer list |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "removeDeployer",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
 
 # Eventlog
 

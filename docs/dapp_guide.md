@@ -9,8 +9,6 @@ $ tbears init {project_name} {class_name}
 위의 명령을 수행하면 {project_name} 폴더가 생기며,
 해당 폴더 안에 \_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.<br/>
 {project_name}.py 파일에는 {class_name}으로 메인 클래스가 선언되어 있습니다.<br/>
-\_\_init\_\_.py 에는 동적 import를 위한 구문이 자동으로 생성되어 있습니다.<br/>
-만약 폴더 구조가 변경되면 위의 내용을 반드시 확인 부탁드립니다.<br/>
 
 
 <br/>

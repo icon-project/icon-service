@@ -67,10 +67,9 @@ class TestIconServiceEngine(unittest.TestCase):
         conf.load()
         conf.update_conf(
             {
-            ConfigKey.BUILTIN_SCORE_OWNER:
-                str(create_address(AddressPrefix.EOA, b'ADMIN')),
-            ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
-            ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
+                ConfigKey.BUILTIN_SCORE_OWNER: str(create_address(AddressPrefix.EOA, b'ADMIN')),
+                ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
+                ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
             }
         )
         engine.open(conf)
@@ -116,7 +115,7 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
     def test_make_flag(self):
-        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False}
+        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False, ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}
         flag = self._engine._make_service_flag(table)
         self.assertEqual(flag, IconServiceFlag.fee)
 
@@ -172,7 +171,7 @@ class TestIconServiceEngine(unittest.TestCase):
         context.block = Mock(spec=Block)
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.step_counter: IconScoreStepCounter = self._engine.\
+        context.step_counter: IconScoreStepCounter = self._engine. \
             _step_counter_factory.create(step_limit, allow_step_overflow)
         self._engine._call(context, method, params)
 
@@ -383,7 +382,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.commit()
 
         # Check whether fee charging works well
-        from_balance: int =\
+        from_balance: int = \
             self._engine._icx_engine.get_balance(None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
@@ -391,7 +390,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_v3_with_fee(self):
 
-        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False}
+        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False, ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
@@ -462,7 +461,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_score_invoke_with_revert(self):
 
-        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False}
+        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False, ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
@@ -591,7 +590,7 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_rollback(self):
         self._engine.rollback()
         self.assertIsNone(self._engine._precommit_state)
-        
+
 
 if __name__ == '__main__':
     unittest.main()

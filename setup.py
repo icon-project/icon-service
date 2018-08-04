@@ -9,8 +9,11 @@ requires = [
     'setproctitle'
 ]
 
-with open(os.path.join('.', 'VERSION')) as version_file:
-    version = version_file.read().strip()
+version = os.environ.get('VERSION')
+
+if version is None:
+    with open(os.path.join('.', 'VERSION')) as version_file:
+        version = version_file.read().strip()
 
 setup_options = {
     'name': 'iconservice',

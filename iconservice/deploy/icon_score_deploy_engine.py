@@ -15,8 +15,10 @@
 
 from collections import namedtuple
 from os import path, symlink, makedirs
+from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
+from iconcommons import Logger
 from . import DeployType, make_score_id
 from .icon_builtin_score_loader import IconBuiltinScoreLoader
 from .icon_score_deploy_storage import IconScoreDeployStorage
@@ -26,7 +28,6 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG
-from iconcommons import Logger
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -124,8 +125,7 @@ class IconScoreDeployEngine(object):
         score_address = tx_params.score_address
         self._score_deploy(tx_params)
 
-        self._icon_score_deploy_storage.update_score_info(
-            context, score_address, tx_hash)
+        self._icon_score_deploy_storage.update_score_info(context, score_address, tx_hash)
         deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
         if deploy_info is None:
             raise InvalidParamsException(f'deploy_info is None : {score_address}')
@@ -195,8 +195,13 @@ class IconScoreDeployEngine(object):
         score_id = make_score_id(0, 0)
         target_path = path.join(
             target_path, score_id)
+
+        filecopy = False
         try:
-            symlink(src_score_path, target_path, target_is_directory=True)
+            if filecopy:
+                copytree(src_score_path, target_path)
+            else:
+                symlink(src_score_path, target_path, target_is_directory=True)
         except FileExistsError:
             pass
 
@@ -211,7 +216,7 @@ class IconScoreDeployEngine(object):
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {icon_score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address)
+            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address, score_id)
             raise e
 
     def _on_deploy(self,
@@ -266,7 +271,7 @@ class IconScoreDeployEngine(object):
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(score_address)
+            self._icon_score_mapper.delete_wait_score_mapper(score_address, score_id)
             raise e
 
     @staticmethod

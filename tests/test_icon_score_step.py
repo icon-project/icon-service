@@ -16,7 +16,7 @@
 
 import unittest
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
@@ -48,8 +48,11 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def test_install_step(self):
         # Ignores deploy
         deploy_engine_invoke = Mock()
+        deploy_storage_get_deploy_info = Mock(return_value=None)
         self._inner_task._icon_service_engine. \
             _icon_score_deploy_engine.invoke = deploy_engine_invoke
+        self._inner_task._icon_service_engine.\
+            _icon_score_deploy_storage.get_deploy_info = deploy_storage_get_deploy_info
 
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         from_ = create_address(AddressPrefix.EOA, b'from')
@@ -98,7 +101,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
                          (StepType.INPUT, 0))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
 
-    def test_internal_transfer_step(self):
+    @patch(f'iconservice.iconscore.icon_score_context.call_fallback')
+    def test_internal_transfer_step(self, call_fallback):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
@@ -118,6 +122,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine. \
             _icon_score_engine.invoke = score_engine_invoke
 
+        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task._invoke(request)
         score_engine_invoke.assert_called()
 
