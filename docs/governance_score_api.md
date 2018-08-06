@@ -41,6 +41,7 @@ The most commonly used Value types are as follows.
     * [getStepCosts](#getstepcosts)
     * [getMaxStepLimit](#getmaxsteplimit)
     * [isDeployer](#isdeployer)
+    * [isInBlackList](#isinblocklist)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -50,6 +51,8 @@ The most commonly used Value types are as follows.
     * [setStepCost](#setstepcost)
     * [addDeployer](#adddeployer)
     * [removeDeployer](#removedeployer)
+    * [addScoreToBlackList](#addscoretoblacklist)
+    * [removeScoreFromBlackList](#removescorefromblacklist)
 * Eventlog
     * [Accepted](#accepted)
     * [Rejected](#rejected)
@@ -362,6 +365,53 @@ None
         "dataType": "call",
         "data": {
             "method": "isDeployer",
+            "params": {
+                "address": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+            }
+        }
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "result": "0x1"
+}
+```
+
+## isInBlackList
+
+* Returns True if score in black list.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address to query |
+
+### Returns
+
+`T_INT` - "0x1" if the address is in the black list, otherwise "0x0"
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_call",
+    "params": {
+        "from": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32", // optional
+        "to": "cx0000000000000000000000000000000000000001",
+        "dataType": "call",
+        "data": {
+            "method": "isInBlackList",
             "params": {
                 "address": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
             }
@@ -696,6 +746,83 @@ Methods that could change states
         "dataType": "call",
         "data": {
             "method": "removeDeployer",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
+## addScoreToBlackList
+
+* Adds a new address to the black list for SCORES that cause fatal problems.
+* Only the owner can call this function.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | New EOA address that will be added to the SCORE black list |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "addScoreToBlackList",
+            "params": {
+                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+            }
+        }
+    }
+}
+```
+
+## removeScoreFromBlackList
+
+* Removes an address from the black list.
+
+### Parameters
+
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address that is in the SCORE black list |
+
+### Examples
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234,
+    "method": "icx_sendTransaction",
+    "params": {
+        "version": "0x3",
+        "from": "hxbe258ceb872e08851f1f59694dac2558708ece11", // owner address
+        "to": "cx0000000000000000000000000000000000000001",
+        "stepLimit": "0x12345",
+        "timestamp": "0x563a6cf330136",
+        "nonce": "0x1",
+        "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
+        "dataType": "call",
+        "data": {
+            "method": "removeScoreFromBlackList",
             "params": {
                 "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
             }
