@@ -244,6 +244,7 @@ class TypeConverter:
                         pass
                     else:
                         main_type = t
+                        break
             else:
                 # Generic declaration only
                 main_type = sub_tree
