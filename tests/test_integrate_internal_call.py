@@ -17,43 +17,23 @@
 """IconScoreEngine testcase
 """
 
-import asyncio
-import os
 import unittest
-from typing import TYPE_CHECKING
-
-import time
 
 from iconcommons.icon_config import IconConfig
 from iconservice import ExceptionCode
-from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_block_hash, create_address, create_tx_hash, rmtree, raise_exception_start_tag, \
-    raise_exception_end_tag
-from tests.in_memory_zip import InMemoryZip
-
-if TYPE_CHECKING:
-    from iconservice.base.address import Address
+from tests import raise_exception_start_tag, raise_exception_end_tag
+from tests.test_integrate_base import TestIntegrateBase
 
 
-class TestIntegrateInternalCall(unittest.TestCase):
-    asnyc_loop_array = []
-
+class TestIntegrateInternalCall(TestIntegrateBase):
     def setUp(self):
-        self._state_db_root_path = '.statedb'
-        self._score_root_path = '.score'
+        super().setUp()
+        self.sample_root = "test_internal_call_scores"
 
-        rmtree(self._score_root_path)
-        rmtree(self._state_db_root_path)
-
-        self._block_height = 0
-        self._prev_block_hash = None
-        self._version = 3
-        self._step_limit = 4 * 10 ** 6
-
-        self._admin_addr = create_address(AddressPrefix.EOA, b'ADMIN')
         conf = IconConfig("", default_icon_config)
         conf.load()
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr)})
@@ -61,350 +41,47 @@ class TestIntegrateInternalCall(unittest.TestCase):
         self._inner_task = IconScoreInnerTask(conf)
         self._inner_task._open()
 
-        self._genesis_addr = create_address(AddressPrefix.EOA, b'genesis')
-
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def tearDown(self):
-        self._inner_task._close()
-        rmtree(self._score_root_path)
-        rmtree(self._state_db_root_path)
-
-        for loop in self.asnyc_loop_array:
-            loop.close()
-        self.asnyc_loop_array.clear()
-
-    @classmethod
-    def _run_async(cls, asnyc_func):
-        loop = asyncio.new_event_loop()
-        cls.asnyc_loop_array.append(loop)
-        return loop.run_until_complete(asnyc_func)
-
-    async def _genesis_invoke(self) -> tuple:
-        tx_hash = create_tx_hash(b'genesis')
-        timestamp_us = int(time.time() * 10 ** 6)
-        version = 3
-        request_params = {
-            'txHash': bytes.hex(tx_hash),
-            'version': hex(version),
-            'timestamp': hex(timestamp_us)
-        }
-
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': request_params,
-            'genesisData': {
-                "accounts": [
-                    {
-                        "name": "genesis",
-                        "address": str(self._genesis_addr),
-                        "balance": hex(100 * 10 ** 18)
-                    },
-                    {
-                        "name": "fee_treasury",
-                        "address": "hx1000000000000000000000000000000000000000",
-                        "balance": hex(0)
-                    }
-                ]
-            },
-        }
-
-        make_request = {'transactions': [tx]}
-        block_height: int = 0
-        block_hash = create_block_hash()
-
-        make_request['block'] = {
-            'blockHeight': hex(block_height),
-            'blockHash': bytes.hex(block_hash),
-            'timestamp': hex(timestamp_us)
-        }
-
-        precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': bytes.hex(block_hash)}
-
-        invoke_response = await self._inner_task.invoke(make_request)
-        tx_results = invoke_response.get('txResults')
-        is_commit = False
-        if not isinstance(tx_results, dict):
-            await self._inner_task.remove_precommit_state(precommit_request)
-        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
-            is_commit = True
-            await self._inner_task.write_precommit_state(precommit_request)
-            self._block_height += 1
-            self._prev_block_hash = bytes.hex(block_hash)
-        else:
-            await self._inner_task.remove_precommit_state(precommit_request)
-
-        if tx_results is None:
-            return is_commit, invoke_response
-        else:
-            return is_commit, list(tx_results.values())
-
-    async def _deploy_zip(self, zip_name: str, to_addr: 'Address', from_addr: 'Address'):
-        root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
-        path = os.path.join(root_path, f'tests/sample/test_internal_call_scores/{zip_name}')
-        mz = InMemoryZip()
-        mz.zip_in_memory(path)
-        data = f'0x{mz.data.hex()}'
-
-        install_data = {'contentType': 'application/zip', 'content': data}
-
-        timestamp_us = int(time.time() * 10 ** 6)
-        nonce = 0
-        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
-
-        request_params = {
-            "version": hex(self._version),
-            "from": str(from_addr),
-            "to": str(to_addr),
-            "stepLimit": hex(self._step_limit),
-            "timestamp": hex(timestamp_us),
-            "nonce": hex(nonce),
-            "signature": signature,
-            "dataType": "deploy",
-            "data": install_data
-        }
-
-        method = 'icx_sendTransaction'
-        # Insert txHash into request params
-        tx_hash = create_tx_hash()
-        request_params['txHash'] = bytes.hex(tx_hash)
-        tx = {
-            'method': method,
-            'params': request_params
-        }
-
-        response = await self._inner_task.validate_transaction(tx)
-
-        make_request = {'transactions': [tx]}
-        block_height: int = self._block_height
-        block_hash = create_block_hash()
-
-        make_request['block'] = {
-            'blockHeight': hex(block_height),
-            'blockHash': bytes.hex(block_hash),
-            'timestamp': hex(timestamp_us),
-            'prevBlockHash': self._prev_block_hash
-        }
-
-        precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': bytes.hex(block_hash)}
-
-        invoke_response = await self._inner_task.invoke(make_request)
-        tx_results = invoke_response.get('txResults')
-        is_commit = False
-        if not isinstance(tx_results, dict):
-            await self._inner_task.remove_precommit_state(precommit_request)
-        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
-            is_commit = True
-            await self._inner_task.write_precommit_state(precommit_request)
-            self._block_height += 1
-            self._prev_block_hash = bytes.hex(block_hash)
-        else:
-            await self._inner_task.remove_precommit_state(precommit_request)
-
-        if tx_results is None:
-            return is_commit, invoke_response
-        else:
-            return is_commit, list(tx_results.values())
-
-    async def _call_method_score(self,
-                                 addr_from: 'Address',
-                                 addr_to: str,
-                                 method: str,
-                                 params: dict):
-
-        timestamp_us = int(time.time() * 10 ** 6)
-        nonce = 0
-        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
-
-        request_params = {
-            "version": hex(self._version),
-            "from": str(addr_from),
-            "to": addr_to,
-            "value": hex(0),
-            "stepLimit": hex(self._step_limit),
-            "timestamp": hex(timestamp_us),
-            "nonce": hex(nonce),
-            "signature": signature,
-            "dataType": "call",
-            "data": {
-                "method": method,
-                "params": params
-            }
-        }
-
-        method = 'icx_sendTransaction'
-        # Insert txHash into request params
-        tx_hash = create_tx_hash()
-        request_params['txHash'] = bytes.hex(tx_hash)
-        tx = {
-            'method': method,
-            'params': request_params
-        }
-
-        response = await self._inner_task.validate_transaction(tx)
-        self.assertEqual(response, hex(0))
-
-        make_request = {'transactions': [tx]}
-        block_height: int = self._block_height
-        block_hash = create_block_hash()
-
-        make_request['block'] = {
-            'blockHeight': hex(block_height),
-            'blockHash': bytes.hex(block_hash),
-            'timestamp': hex(timestamp_us),
-            'prevBlockHash': self._prev_block_hash
-        }
-
-        precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': bytes.hex(block_hash)}
-
-        invoke_response = await self._inner_task.invoke(make_request)
-        tx_results = invoke_response.get('txResults')
-        is_commit = False
-        if not isinstance(tx_results, dict):
-            await self._inner_task.remove_precommit_state(precommit_request)
-        elif tx_results[bytes.hex(tx_hash)]['status'] == hex(1):
-            is_commit = True
-            await self._inner_task.write_precommit_state(precommit_request)
-            self._block_height += 1
-            self._prev_block_hash = bytes.hex(block_hash)
-        else:
-            await self._inner_task.remove_precommit_state(precommit_request)
-
-        if tx_results is None:
-            return is_commit, invoke_response
-        else:
-            return is_commit, list(tx_results.values())
-
-    async def _call_method_score2(self,
-                                  addr_from: 'Address',
-                                  addr_to: str,
-                                  method1: str,
-                                  params1: dict,
-                                  method2: str,
-                                  params2: dict):
-
-        timestamp_us = int(time.time() * 10 ** 6)
-        nonce = 0
-        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
-
-        request_params1 = {
-            "version": hex(self._version),
-            "from": str(addr_from),
-            "to": addr_to,
-            "value": hex(0),
-            "stepLimit": hex(self._step_limit),
-            "timestamp": hex(timestamp_us),
-            "nonce": hex(nonce),
-            "signature": signature,
-            "dataType": "call",
-            "data": {
-                "method": method1,
-                "params": params1
-            }
-        }
-
-        request_params2 = {
-            "version": hex(self._version),
-            "from": str(addr_from),
-            "to": addr_to,
-            "value": hex(0),
-            "stepLimit": hex(self._step_limit),
-            "timestamp": hex(timestamp_us),
-            "nonce": hex(nonce),
-            "signature": signature,
-            "dataType": "call",
-            "data": {
-                "method": method2,
-                "params": params2
-            }
-        }
-
-        method = 'icx_sendTransaction'
-        # Insert txHash into request params
-        tx_hash1 = create_tx_hash()
-        request_params1['txHash'] = bytes.hex(tx_hash1)
-        tx1 = {
-            'method': method,
-            'params': request_params1
-        }
-        response = await self._inner_task.validate_transaction(tx1)
-        self.assertEqual(response, hex(0))
-
-        tx_hash2 = create_tx_hash()
-        request_params2['txHash'] = bytes.hex(tx_hash2)
-        tx2 = {
-            'method': method,
-            'params': request_params2
-        }
-        response = await self._inner_task.validate_transaction(tx2)
-        self.assertEqual(response, hex(0))
-
-        make_request = {'transactions': [tx1, tx2]}
-        block_height: int = self._block_height
-        block_hash = create_block_hash()
-
-        make_request['block'] = {
-            'blockHeight': hex(block_height),
-            'blockHash': bytes.hex(block_hash),
-            'timestamp': hex(timestamp_us),
-            'prevBlockHash': self._prev_block_hash
-        }
-
-        precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': bytes.hex(block_hash)}
-
-        invoke_response = await self._inner_task.invoke(make_request)
-        tx_results = invoke_response.get('txResults')
-        is_commit = False
-        if not isinstance(tx_results, dict):
-            await self._inner_task.remove_precommit_state(precommit_request)
-        elif tx_results[bytes.hex(tx_hash2)]['status'] == hex(1):
-            is_commit = True
-            await self._inner_task.write_precommit_state(precommit_request)
-            self._block_height += 1
-            self._prev_block_hash = bytes.hex(block_hash)
-        else:
-            await self._inner_task.remove_precommit_state(precommit_request)
-
-        if tx_results is None:
-            return is_commit, invoke_response
-        else:
-            return is_commit, list(tx_results.values())
-
-    async def _icx_call(self, request: dict):
-        method = 'icx_call'
-        make_request = {'method': method, 'params': request}
-
-        response = await self._inner_task.query(make_request)
-        return response
+        super().tearDown()
 
     def test_link_score(self):
-        score_addr_array = []
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_score", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+        validate_tx_response2, tx2 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_link_score", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response2, hex(0))
 
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1, tx2]))
 
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(True))
+        score_addr1 = tx_result1['scoreAddress']
+        tx_result2 = self._get_tx_result(tx_results1, tx2)
+        self.assertEqual(tx_result2['status'], hex(True))
+        score_addr2 = tx_result2['scoreAddress']
 
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
+        response = self._run_async(self._write_precommit_state(precommit_req1))
+        self.assertEqual(response, hex(0))
 
-        request = {
+        validate_tx_response3, tx3 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr2, 'add_score_func', {"score_addr": score_addr1}))
+        self.assertEqual(validate_tx_response3, hex(0))
+
+        precommit_req2, tx_results2 = self._run_async(self._make_and_req_block([tx3]))
+        tx_result3 = self._get_tx_result(tx_results2, tx3)
+        self.assertEqual(tx_result3['status'], hex(True))
+        response = self._run_async(self._write_precommit_state(precommit_req2))
+        self.assertEqual(response, hex(0))
+
+        query_request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
-            "to": score_addr_array[1],
+            "to": score_addr2,
             "dataType": "call",
             "data": {
                 "method": "get_value",
@@ -412,40 +89,58 @@ class TestIntegrateInternalCall(unittest.TestCase):
             }
         }
 
-        response = self._run_async(self._icx_call(request))
+        response = self._run_async(self._query(query_request))
         self.assertEqual(response, hex(0))
 
-        value = 100
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'set_value',
-                                    {"value": hex(value)}))
-        self.assertEqual(is_commit, True)
+        value = 1 * self._icx_factor
+        validate_tx_response4, tx4 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr2, 'set_value', {"value": hex(value)}))
+        self.assertEqual(validate_tx_response4, hex(0))
 
-        response = self._run_async(self._icx_call(request))
+        precommit_req3, tx_results3 = self._run_async(self._make_and_req_block([tx4]))
+        tx_result4 = self._get_tx_result(tx_results3, tx4)
+        self.assertEqual(tx_result4['status'], hex(True))
+
+        response = self._run_async(self._write_precommit_state(precommit_req3))
+        self.assertEqual(response, hex(0))
+
+        response = self._run_async(self._query(query_request))
         self.assertEqual(response, hex(value))
 
     def test_link_score_cross(self):
-        score_addr_array = []
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_score", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+        validate_tx_response2, tx2 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_link_score_cross", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response2, hex(0))
 
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_score', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1, tx2]))
 
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_score_cross', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(True))
+        score_addr1 = tx_result1['scoreAddress']
+        tx_result2 = self._get_tx_result(tx_results1, tx2)
+        self.assertEqual(tx_result2['status'], hex(True))
+        score_addr2 = tx_result2['scoreAddress']
 
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
+        response = self._run_async(self._write_precommit_state(precommit_req1))
+        self.assertEqual(response, hex(0))
 
-        request = {
+        validate_tx_response3, tx3 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr2, 'add_score_func', {"score_addr": score_addr1}))
+        self.assertEqual(validate_tx_response3, hex(0))
+
+        precommit_req2, tx_results2 = self._run_async(self._make_and_req_block([tx3]))
+        tx_result3 = self._get_tx_result(tx_results2, tx3)
+        self.assertEqual(tx_result3['status'], hex(True))
+        response = self._run_async(self._write_precommit_state(precommit_req2))
+        self.assertEqual(response, hex(0))
+
+        query_request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
-            "to": score_addr_array[1],
+            "to": score_addr2,
             "dataType": "call",
             "data": {
                 "method": "get_value",
@@ -453,45 +148,63 @@ class TestIntegrateInternalCall(unittest.TestCase):
             }
         }
 
-        raise_exception_start_tag()
-        response = self._run_async(self._icx_call(request))
-        raise_exception_end_tag()
+        raise_exception_start_tag("test_link_score_cross")
+        response = self._run_async(self._query(query_request))
+        raise_exception_end_tag("test_link_score_cross")
         self.assertEqual(response['error']['code'], ExceptionCode.SERVER_ERROR)
         self.assertEqual(response['error']['message'], 'put is not allowed')
 
-        value = 100
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'set_value',
-                                    {"value": hex(value)}))
-        self.assertEqual(is_commit, True)
+        value = 1 * self._icx_factor
+        validate_tx_response4, tx4 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr2, 'set_value', {"value": hex(value)}))
+        self.assertEqual(validate_tx_response4, hex(0))
+
+        precommit_req3, tx_results3 = self._run_async(self._make_and_req_block([tx4]))
+        tx_result4 = self._get_tx_result(tx_results3, tx4)
+        self.assertEqual(tx_result4['status'], hex(True))
+
+        response = self._run_async(self._write_precommit_state(precommit_req3))
+        self.assertEqual(response, hex(0))
 
     def test_link_score_loop(self):
-        score_addr_array = []
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_link_loop", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+        validate_tx_response2, tx2 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_link_loop", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response2, hex(0))
 
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_loop', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1, tx2]))
 
-        is_commit, tx_results = self._run_async(
-            self._deploy_zip('test_link_loop', ZERO_SCORE_ADDRESS, self._admin_addr))
-        self.assertEqual(is_commit, True)
-        score_addr_array.append(tx_results[0]['scoreAddress'])
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(True))
+        score_addr1 = tx_result1['scoreAddress']
+        tx_result2 = self._get_tx_result(tx_results1, tx2)
+        self.assertEqual(tx_result2['status'], hex(True))
+        score_addr2 = tx_result2['scoreAddress']
 
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[1], 'add_score_func',
-                                    {"score_addr": score_addr_array[0]}))
-        self.assertEqual(is_commit, True)
+        response = self._run_async(self._write_precommit_state(precommit_req1))
+        self.assertEqual(response, hex(0))
 
-        is_commit, tx_results = self._run_async(
-            self._call_method_score(self._admin_addr, score_addr_array[0], 'add_score_func',
-                                    {"score_addr": score_addr_array[1]}))
-        self.assertEqual(is_commit, True)
+        validate_tx_response3, tx3 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr2, 'add_score_func', {"score_addr": score_addr1}))
+        self.assertEqual(validate_tx_response3, hex(0))
+        validate_tx_response4, tx4 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr1, 'add_score_func', {"score_addr": score_addr2}))
+        self.assertEqual(validate_tx_response4, hex(0))
 
-        request = {
+        precommit_req2, tx_results2 = self._run_async(self._make_and_req_block([tx3, tx4]))
+        tx_result3 = self._get_tx_result(tx_results2, tx3)
+        self.assertEqual(tx_result3['status'], hex(True))
+        tx_result4 = self._get_tx_result(tx_results2, tx4)
+        self.assertEqual(tx_result4['status'], hex(True))
+        response = self._run_async(self._write_precommit_state(precommit_req2))
+        self.assertEqual(response, hex(0))
+
+        query_request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
-            "to": score_addr_array[1],
+            "to": score_addr2,
             "dataType": "call",
             "data": {
                 "method": "get_value",
@@ -499,11 +212,27 @@ class TestIntegrateInternalCall(unittest.TestCase):
             }
         }
 
-        raise_exception_start_tag()
-        response = self._run_async(self._icx_call(request))
-        raise_exception_end_tag()
+        raise_exception_start_tag("test_link_score_loop1")
+        response = self._run_async(self._query(query_request))
+        raise_exception_end_tag("test_link_score_loop1")
         self.assertEqual(response['error']['code'], ExceptionCode.SERVER_ERROR)
         self.assertEqual(response['error']['message'], 'maximum recursion depth exceeded while calling a Python object')
+
+        value = 1 * self._icx_factor
+        validate_tx_response5, tx5 = self._run_async(
+            self._make_score_call_tx(self._admin_addr, score_addr2, 'set_value', {"value": hex(value)}))
+        self.assertEqual(validate_tx_response4, hex(0))
+
+        raise_exception_start_tag("test_link_score_loop2")
+        precommit_req4, tx_results3 = self._run_async(self._make_and_req_block([tx5]))
+        tx_result5 = self._get_tx_result(tx_results3, tx5)
+        self.assertEqual(tx_result5['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
+        self.assertEqual(tx_result5['failure']['message'],
+                         'maximum recursion depth exceeded while calling a Python object')
+        raise_exception_end_tag("test_link_score_loop2")
+
+        response = self._run_async(self._write_precommit_state(precommit_req4))
+        self.assertEqual(response, hex(0))
 
 
 if __name__ == '__main__':

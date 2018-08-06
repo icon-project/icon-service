@@ -65,11 +65,11 @@ def rmtree(path: str) -> None:
         pass
 
 
-def raise_exception_start_tag():
+def raise_exception_start_tag(tag: str=""):
     emblem_str = '=' * 20
-    Logger.error(f'{emblem_str} raise exception start {emblem_str}')
+    Logger.error(f'{emblem_str} [{tag}] raise exception start {emblem_str}')
 
 
-def raise_exception_end_tag():
+def raise_exception_end_tag(tag: str=""):
     emblem_str = '=' * 20
-    Logger.error(f'{emblem_str} raise exception end {emblem_str}')
+    Logger.error(f'{emblem_str} [{tag}] raise exception end {emblem_str}')
