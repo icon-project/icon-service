@@ -41,7 +41,7 @@ The most commonly used Value types are as follows.
     * [getStepCosts](#getstepcosts)
     * [getMaxStepLimit](#getmaxsteplimit)
     * [isDeployer](#isdeployer)
-    * [isInBlackList](#isinblocklist)
+    * [isInBlackList](#isinblacklist)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -385,17 +385,17 @@ None
 
 ## isInBlackList
 
-* Returns True if score in black list.
+* Returns True if SCORE is black list.
 
 ### Parameters
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address to query |
+| address | [T\_ADDR\_SCORE](#T_ADDR_SCORE) | SCORE address to query |
 
 ### Returns
 
-`T_INT` - "0x1" if the address is in the black list, otherwise "0x0"
+`T_INT` - "0x1" if the SCORE address is in the black list, otherwise "0x0"
 
 ### Examples
 
@@ -413,7 +413,7 @@ None
         "data": {
             "method": "isInBlackList",
             "params": {
-                "address": "hxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
+                "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
             }
         }
     }
@@ -756,14 +756,14 @@ Methods that could change states
 
 ## addScoreToBlackList
 
-* Adds a new address to the black list for SCORES that cause fatal problems.
+* Adds a new SCORE address to the black list that cause fatal problems.
 * Only the owner can call this function.
 
 ### Parameters
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | New EOA address that will be added to the SCORE black list |
+| address | [T\_ADDR\_SCORE](#T_ADDR_SCORE) | New SCORE address that will be added to the black list |
 
 ### Examples
 
@@ -786,7 +786,7 @@ Methods that could change states
         "data": {
             "method": "addScoreToBlackList",
             "params": {
-                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+                "address": "cx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
             }
         }
     }
@@ -795,13 +795,13 @@ Methods that could change states
 
 ## removeScoreFromBlackList
 
-* Removes an address from the black list.
+* Removes an SCORE address from the black list.
 
 ### Parameters
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| address | [T\_ADDR\_EOA](#T_ADDR_EOA) | EOA address that is in the SCORE black list |
+| address | [T\_ADDR\_SCORE](#T_ADDR_SCORE) | SCORE address that is in the black list |
 
 ### Examples
 
@@ -824,7 +824,7 @@ Methods that could change states
         "data": {
             "method": "removeScoreFromBlackList",
             "params": {
-                "address": "hx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
+                "address": "cx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
             }
         }
     }
