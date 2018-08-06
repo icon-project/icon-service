@@ -385,7 +385,7 @@ None
 
 ## isInBlackList
 
-* Returns True if SCORE is black list.
+* Returns True if SCORE is in the black list.
 
 ### Parameters
 
@@ -756,7 +756,7 @@ Methods that could change states
 
 ## addScoreToBlackList
 
-* Adds a new SCORE address to the black list that cause fatal problems.
+* Adds a new SCORE address to the black list that causes fatal problems.
 * Only the owner can call this function.
 
 ### Parameters
@@ -795,7 +795,7 @@ Methods that could change states
 
 ## removeScoreFromBlackList
 
-* Removes an SCORE address from the black list.
+* Removes the SCORE address from the black list.
 
 ### Parameters
 
