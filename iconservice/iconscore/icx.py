@@ -51,6 +51,3 @@ class Icx(object):
         self._context.traces.append(trace)
 
         return self._context.send(self._address, addr_to, amount)
-
-    def get_balance(self, address: 'Address') -> int:
-        return self._context.get_balance(address)
