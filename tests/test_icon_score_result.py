@@ -236,6 +236,7 @@ class TestTransactionResult(unittest.TestCase):
 
         inner_task._icon_service_engine._icon_score_engine.invoke = \
             Mock(side_effect=intercept_invoke)
+        inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
