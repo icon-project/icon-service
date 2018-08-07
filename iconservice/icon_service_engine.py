@@ -260,10 +260,6 @@ class IconServiceEngine(ContextContainer):
         if version == 2:
             return
 
-        _from: 'Address' = params.get('from')
-        if _from is None:
-            return
-
         _to: 'Address' = params.get('to')
         if _to is None or not _to.is_contract:
             return

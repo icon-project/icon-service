@@ -322,10 +322,10 @@ class Governance(IconScoreBase):
     def removeScoreFromBlackList(self, address: Address):
         if address not in self._score_black_list:
             self.revert('Invalid address: not in list')
-        # check message sender
+
+        # check message sender, only owner can remove from blacklist
         if self.msg.sender != self.owner:
-            if self.msg.sender != address:
-                self.revert('Invalid sender: not yourself')
+            self.revert('Invalid sender: not owner')
         # get the topmost value
         top = self._score_black_list.pop()
         if top != address:
