@@ -102,8 +102,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
                          (StepType.INPUT, 0))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
 
-    @patch(f'iconservice.iconscore.icon_score_context.call_fallback')
-    def test_internal_transfer_step(self, call_fallback):
+    def test_internal_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash(b'tx'))
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')

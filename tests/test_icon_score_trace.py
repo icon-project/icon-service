@@ -48,29 +48,31 @@ class TestTrace(unittest.TestCase):
     def setUp(self):
         db = Mock(spec=IconScoreDatabase)
         db.address = Mock(spec=Address)
-        context = Mock(spec=IconScoreContext)
+        context = IconScoreContext()
         traces = Mock(spec=List[Trace])
 
-        context.attach_mock(Mock(spec=Transaction), "tx")
-        context.attach_mock(Mock(spec=Block), "block")
-        context.attach_mock(Mock(spec=int), 'cumulative_step_used')
+        context.tx = Mock(spec=Transaction)
+        context.block = Mock(spec=Block)
+        context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.attach_mock(Mock(spec=IconScoreStepCounter), 'step_counter')
-        context.attach_mock(Mock(spec=list), "event_logs")
-        context.attach_mock(Mock(spec=BloomFilter), "logs_bloom")
-        context.attach_mock(traces, 'traces')
-
-        context.attach_mock(
-            Mock(side_effect=RevertException('testRevert')), 'revert')
+        context.step_counter = Mock(spec=IconScoreStepCounter)
+        context.event_logs = Mock(spec=list)
+        context.logs_bloom = Mock(spec=BloomFilter)
+        context.traces = traces
 
         ContextContainer._put_context(context)
-
+        context.icon_score_manager = Mock()
+        context.icon_score_manager.get_owner = Mock(return_value=None)
+        context.icx_engine = Mock()
+        context.icon_score_mapper = Mock()
+        context.icon_score_mapper.get_icon_score = Mock(return_value=None)
         self._score = TestScore(db)
 
     def tearDown(self):
         self._mock_icon_score = None
 
-    def test_transfer(self):
+    @patch(f'iconservice.iconscore.icon_score_context.call_method')
+    def test_transfer(self, call_method):
         context = ContextContainer._get_context()
         to_ = Mock(spec=Address)
         amount = 100
@@ -79,9 +81,10 @@ class TestTrace(unittest.TestCase):
         trace = context.traces.append.call_args[0][0]
         self.assertEqual(TraceType.TRANSFER, trace.trace)
         self.assertEqual(to_, trace.data[0])
-        self.assertEqual(amount, trace.data[1])
+        self.assertEqual(amount, trace.data[3])
 
-    def test_send(self):
+    @patch(f'iconservice.iconscore.icon_score_context.call_method')
+    def test_send(self, call_method):
         context = ContextContainer._get_context()
         to_ = Mock(spec=Address)
         amount = 100
@@ -90,9 +93,10 @@ class TestTrace(unittest.TestCase):
         trace = context.traces.append.call_args[0][0]
         self.assertEqual(TraceType.TRANSFER, trace.trace)
         self.assertEqual(to_, trace.data[0])
-        self.assertEqual(amount, trace.data[1])
+        self.assertEqual(amount, trace.data[3])
 
-    def test_call(self):
+    @patch(f'iconservice.iconscore.icon_score_context.call_method')
+    def test_call(self, call_method):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         func_name = "testCall"
@@ -109,7 +113,8 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(params['to'], trace.data[2][0])
         self.assertEqual(params['amount'], trace.data[2][1])
 
-    def test_interface_call(self):
+    @patch(f'iconservice.iconscore.icon_score_context.call_method')
+    def test_interface_call(self, call_method):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         to_ = Mock(spec=Address)
@@ -144,8 +149,6 @@ class TestTrace(unittest.TestCase):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
 
-        context.attach_mock(to_, "current_address")
-
         def intercept_charge_transaction_fee(*args, **kwargs):
             return Mock(spec=int), Mock(spec=int)
 
@@ -171,7 +174,6 @@ class TestTrace(unittest.TestCase):
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         self.assertEqual(TraceType.REVERT, trace.trace)
-        self.assertEqual(to_, trace.score_address)
         self.assertEqual(code, trace.data[0])
         self.assertEqual(reason, trace.data[1])
 
@@ -195,8 +197,6 @@ class TestTrace(unittest.TestCase):
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
 
-        context.attach_mock(to_, "current_address")
-
         def intercept_charge_transaction_fee(*args, **kwargs):
             return Mock(spec=int), Mock(spec=int)
 
@@ -212,21 +212,21 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_score_engine.attach_mock(
             mock_exception, "invoke")
 
-        raise_exception_start_tag()
+        raise_exception_start_tag("test_throw")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             context, {'version': 3, 'from': from_, 'to': to_})
-        raise_exception_end_tag()
+        raise_exception_end_tag("test_throw")
         self.assertEqual(0, tx_result.status)
 
         IconServiceEngine_charge_transaction_fee.assert_called()
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
         self.assertEqual(TraceType.THROW, trace.trace)
-        self.assertEqual(to_, trace.score_address)
         self.assertEqual(code, trace.data[0])
         self.assertEqual(error, trace.data[1])
 
-    def test_to_dict_camel(self):
+    @patch(f'iconservice.iconscore.icon_score_context.call_method')
+    def test_to_dict_camel(self, call_method):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         func_name = "testCall"
@@ -242,7 +242,7 @@ class TestTrace(unittest.TestCase):
         self.assertIn('trace', camel_dict)
         self.assertIn('data', camel_dict)
         self.assertEqual(TraceType.CALL.name, camel_dict['trace'])
-        self.assertEqual(3, len(camel_dict['data']))
+        self.assertEqual(4, len(camel_dict['data']))
 
 
 class TestInterfaceScore(InterfaceScore):

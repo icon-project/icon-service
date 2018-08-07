@@ -20,7 +20,7 @@ from abc import abstractmethod
 from functools import partial
 
 from iconservice.utils import int_to_bytes, byte_length_of_int
-from .icon_score_trace import Trace, TraceType
+from .icon_score_trace import TraceType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import *
@@ -31,7 +31,7 @@ from .icx import Icx
 from ..base.exception import *
 from ..base.type_converter import TypeConverter
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER, ICX_VALUE_KEY
 
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple
 
@@ -60,7 +60,13 @@ def interface(func):
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
         call_method = getattr(calling_obj, '_InterfaceScore__call_method')
-        ret = call_method(func_name, args, kwargs)
+        # icx_value = kwargs.get(ICX_VALUE_KEY)
+        # if icx_value is None:
+        #     icx_value = 0
+        # else:
+        #     del kwargs[ICX_VALUE_KEY]
+        icx_value = 0
+        ret = call_method(func_name, args, kwargs, icx_value)
         return ret
 
     return __wrapper
@@ -321,7 +327,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __create_db_observer(self) -> 'DatabaseObserver':
         return DatabaseObserver(self.__on_db_put, self.__on_db_delete)
 
-    def __call_method(self, func_name: str, arg_params: list, kw_params: dict):
+    def __call_method(self, func_name: str, arg_params: list, kw_params: dict, need_type_convert: bool):
 
         if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException(f"Can not call external method", func_name, type(self).__name__,
@@ -334,8 +340,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         score_func = getattr(self, func_name)
 
-        annotation_params = TypeConverter.make_annotations_from_method(score_func)
-        TypeConverter.convert_data_params(annotation_params, kw_params)
+        if need_type_convert:
+            annotation_params = TypeConverter.make_annotations_from_method(score_func)
+            TypeConverter.convert_data_params(annotation_params, kw_params)
         ret = score_func(*arg_params, **kw_params)
         self._context.func_type = prev_func_type
         return ret
@@ -364,7 +371,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         func = getattr(self, func_name)
         return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
 
-    def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict):
+    def __call_interface_score(self, addr_to: 'Address', func_name: str, arg_list: list, kw_dict: dict, icx_value: int):
         """Call external function provided by other IconScore with arguments without fallback
 
         :param addr_to: the address of other IconScore
@@ -372,25 +379,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param arg_list:
         :param kw_dict:
         """
-        return self.__call(addr_to, func_name, arg_list, kw_dict)
-
-    def __call(self, to_: 'Address', func_name: str, args: list, kwargs: dict):
-        """
-        Call external function provided by other IconScore with arguments
-        without fallback
-
-        :param to_: the address of other IconScore
-        :param func_name: function name provided by other IconScore
-        :param args: arguments
-        :param kwargs: keyword arguments
-        """
-        self._context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        arg_data = [arg for arg in args] + [arg for arg in kwargs.values()]
-        trace = Trace(self.__address, TraceType.CALL, [to_, func_name, arg_data])
-        self._context.traces.append(trace)
-
-        return self._context.call(
-            self.address, to_, func_name, args, kwargs)
+        return self._context.internal_call(
+            TraceType.CALL, self.address, addr_to, func_name, arg_list, kw_dict, icx_value)
 
     def __put_event_log(self,
                         event_signature: str,
@@ -552,7 +542,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def now(self):
         return self.block.timestamp
 
-    def call(self, addr_to: 'Address', func_name: str, kw_dict: dict):
+    def call(self, addr_to: 'Address', func_name: str, kw_dict: dict, icx_value: int=0):
 
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
 
@@ -563,7 +553,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param arg_list:
         :param kw_dict:
         """
-        return self.__call(addr_to, func_name, [], kw_dict)
+        return self._context.internal_call(
+            TraceType.CALL, self.address, addr_to, func_name, [], kw_dict, icx_value)
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
@@ -588,7 +579,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                                      tx_hash: bytes) -> Optional['Address']:
         return self._context.icon_score_manager.get_score_address_by_tx_hash(self._context, tx_hash)
 
-    def create_interface_score(self, addr_to: 'Address', interface_cls: Callable[['Address', callable], T]) -> T:
+    def create_interface_score(self,
+                               addr_to: 'Address',
+                               interface_cls: Callable[['Address', callable], T]) -> T:
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self.__call_interface_score)
