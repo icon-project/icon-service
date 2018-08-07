@@ -272,7 +272,7 @@ class IconServiceEngine(ContextContainer):
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
-            if governance_score.isInBlackList(_to):
+            if governance_score.isInScoreBlackList(_to):
                 raise ServerErrorException(f'The Score is in Black List (address: {_to})')
         finally:
             self._delete_context(context)

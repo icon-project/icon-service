@@ -223,8 +223,11 @@ class IconScoreInfoMapper(object):
         return icon_score
 
     def _validate_blacklist(self, address: 'Address'):
+        if address == GOVERNANCE_SCORE_ADDRESS:
+            return
+
         governance_info = self.get(GOVERNANCE_SCORE_ADDRESS)
-        if governance_info and governance_info.icon_score.isInBlackList(address):
+        if governance_info and governance_info.icon_score.isInScoreBlackList(address):
                 raise ServerErrorException(f'The Score is in Black List (address: {address})')
 
     def load_wait_icon_score(self,

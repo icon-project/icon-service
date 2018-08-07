@@ -41,7 +41,7 @@ The most commonly used Value types are as follows.
     * [getStepCosts](#getstepcosts)
     * [getMaxStepLimit](#getmaxsteplimit)
     * [isDeployer](#isdeployer)
-    * [isInBlackList](#isinblacklist)
+    * [isInScoreBlackList](#isinscoreblacklist)
 * Invoke methods
     * [acceptScore](#acceptscore)
     * [rejectScore](#rejectscore)
@@ -51,8 +51,8 @@ The most commonly used Value types are as follows.
     * [setStepCost](#setstepcost)
     * [addDeployer](#adddeployer)
     * [removeDeployer](#removedeployer)
-    * [addScoreToBlackList](#addscoretoblacklist)
-    * [removeScoreFromBlackList](#removescorefromblacklist)
+    * [addToScoreBlackList](#addtoscoreblacklist)
+    * [removeFromScoreBlackList](#removefromscoreblacklist)
 * Eventlog
     * [Accepted](#accepted)
     * [Rejected](#rejected)
@@ -383,7 +383,7 @@ None
 }
 ```
 
-## isInBlackList
+## isInScoreBlackList
 
 * Returns True if SCORE is in the black list.
 
@@ -411,7 +411,7 @@ None
         "to": "cx0000000000000000000000000000000000000001",
         "dataType": "call",
         "data": {
-            "method": "isInBlackList",
+            "method": "isInScoreBlackList",
             "params": {
                 "address": "cxb0776ee37f5b45bfaea8cff1d8232fbb6122ec32"
             }
@@ -754,7 +754,7 @@ Methods that could change states
 }
 ```
 
-## addScoreToBlackList
+## addToScoreBlackList
 
 * Adds a new SCORE address to the black list that causes fatal problems.
 * Only the owner can call this function.
@@ -784,7 +784,7 @@ Methods that could change states
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "call",
         "data": {
-            "method": "addScoreToBlackList",
+            "method": "addToScoreBlackList",
             "params": {
                 "address": "cx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
             }
@@ -793,7 +793,7 @@ Methods that could change states
 }
 ```
 
-## removeScoreFromBlackList
+## removeFromScoreBlackList
 
 * Removes the SCORE address from the black list.
 
@@ -822,7 +822,7 @@ Methods that could change states
         "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA=",
         "dataType": "call",
         "data": {
-            "method": "removeScoreFromBlackList",
+            "method": "removeFromScoreBlackList",
             "params": {
                 "address": "cx2d54d5ca2a1dffbcfc3fb2c86cc07cb826f6b931"
             }

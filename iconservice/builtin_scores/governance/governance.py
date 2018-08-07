@@ -306,7 +306,7 @@ class Governance(IconScoreBase):
             Logger.debug(f' --- {deployer}', TAG)
 
     @external
-    def addScoreToBlackList(self, address: Address):
+    def addToScoreBlackList(self, address: Address):
         if not address.is_contract:
             self.revert(f'Invalid SCORE Address: {address}')
 
@@ -319,7 +319,7 @@ class Governance(IconScoreBase):
             self._print_black_list('addScoreToBlackList')
 
     @external
-    def removeScoreFromBlackList(self, address: Address):
+    def removeFromScoreBlackList(self, address: Address):
         if address not in self._score_black_list:
             self.revert('Invalid address: not in list')
 
@@ -336,7 +336,7 @@ class Governance(IconScoreBase):
             self._print_black_list('removeScoreFromBlackList')
 
     @external(readonly=True)
-    def isInBlackList(self, address: Address) -> bool:
+    def isInScoreBlackList(self, address: Address) -> bool:
         Logger.debug(f'isInBlackList address: {address}', TAG)
         return address in self._score_black_list
 
