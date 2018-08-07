@@ -224,8 +224,6 @@ class TestIntegrateInternalCall(TestIntegrateBase):
         precommit_req4, tx_results3 = self._run_async(self._make_and_req_block([tx5]))
         tx_result5 = self._get_tx_result(tx_results3, tx5)
         self.assertEqual(tx_result5['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
-        self.assertEqual(tx_result5['failure']['message'],
-                         'maximum recursion depth exceeded while calling a Python object')
         raise_exception_end_tag("test_link_score_loop2")
 
         response = self._run_async(self._write_precommit_state(precommit_req4))

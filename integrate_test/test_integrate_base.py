@@ -84,7 +84,7 @@ class TestIntegrateBase(unittest.TestCase):
                     {
                         "name": "genesis",
                         "address": str(self._genesis_addr),
-                        "balance": hex(100 * 10 ** 18)
+                        "balance": hex(100 * self._icx_factor)
                     },
                     {
                         "name": "fee_treasury",

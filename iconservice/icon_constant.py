@@ -32,6 +32,7 @@ DATA_BYTE_ORDER = 'big'  # big endian
 FIXED_FEE = 10 ** 16
 
 ICON_DEX_DB_NAME = 'icon_dex'
+ICX_VALUE_KEY = 'icx_value'
 
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
 ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \

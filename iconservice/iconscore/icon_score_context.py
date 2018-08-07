@@ -16,11 +16,13 @@
 
 import threading
 from enum import IntEnum, unique
-from typing import TYPE_CHECKING, Optional, Union, List
+from typing import TYPE_CHECKING, Optional, Union, List, Any
 
-from ..base.address import Address
+from .icon_score_trace import Trace, TraceType
+from .icon_score_step import StepType
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
-from ..base.exception import IconScoreException, ExceptionCode
+from ..base.exception import IconScoreException, ExceptionCode, ServerErrorException
 from ..base.exception import RevertException
 from ..base.message import Message
 from ..base.transaction import Transaction
@@ -33,7 +35,6 @@ if TYPE_CHECKING:
     from .icon_score_info_mapper import IconScoreInfoMapper
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
-    from .icon_score_trace import Trace
     from ..deploy.icon_score_manager import IconScoreManager
 
 _thread_local_data = threading.local()
@@ -100,8 +101,8 @@ class IconScoreContext(object):
     icon_score_manager: 'IconScoreManager' = None
 
     def __init__(self,
-                 context_type: IconScoreContextType=IconScoreContextType.QUERY,
-                 func_type: IconScoreFuncType=IconScoreFuncType.WRITABLE,
+                 context_type: IconScoreContextType = IconScoreContextType.QUERY,
+                 func_type: IconScoreFuncType = IconScoreFuncType.WRITABLE,
                  block: 'Block' = None,
                  tx: 'Transaction' = None,
                  msg: 'Message' = None,
@@ -156,44 +157,66 @@ class IconScoreContext(object):
         """
         return self.icx_engine.get_balance(self, address)
 
-    def transfer(
-            self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
-        """Transfer the amount of icx to the account indicated by 'to'.
+    def internal_call(self,
+                      trace_type: 'TraceType',
+                      addr_from: 'Address',
+                      addr_to: 'Address',
+                      func_name: Optional[str],
+                      arg_params: Optional[list],
+                      kw_params: Optional[dict],
+                      icx_value: int,
+                      is_exc_handling: bool = False) -> Any:
 
-        If failed, an exception will be raised.
+        self._make_trace(trace_type, addr_from, addr_to, func_name, arg_params, kw_params, icx_value)
 
-        :param addr_from:
-        :param addr_to:
-        :param amount: icx amount in loop (1 icx == 1e18 loop)
-        """
-        ret = self.icx_engine.transfer(self, addr_from, addr_to, amount)
-        if addr_to.is_contract:
-            icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
-            call_fallback(icon_score)
+        if icx_value > 0 or addr_to.is_contract:
+            self.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+
+        if trace_type == TraceType.CALL:
+            ret = self._call(addr_from, addr_to, func_name, arg_params, kw_params, icx_value)
+        elif trace_type == TraceType.TRANSFER:
+            ret = self._transfer(addr_from, addr_to, icx_value, is_exc_handling)
+            if addr_to.is_contract:
+                self._call(addr_from, addr_to, None, [], {}, icx_value)
+        else:
+            ret = None
         return ret
 
-    def send(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
-        """Send the amount of icx to the account indicated by 'to'.
+    def _make_trace(self,
+                    trace_type: 'TraceType',
+                    _from: 'Address',
+                    _to: 'Address',
+                    func_name: Optional[str],
+                    arg_params: Optional[list],
+                    kw_params: Optional[dict],
+                    icx_value: int) -> None:
+        if arg_params is None:
+            arg_data1 = []
+        else:
+            arg_data1 = [arg for arg in arg_params]
 
-        :param addr_from:
-        :param addr_to: recipient address
-        :param amount: icx amount in loop (1 icx == 1e18 loop)
-        :return: True(success), False(failure)
-        """
-        ret = False
+        if kw_params is None:
+            arg_data2 = []
+        else:
+            arg_data2 = [arg for arg in kw_params.values()]
+
+        arg_data = arg_data1 + arg_data2
+        trace = Trace(_from, trace_type, [_to, func_name, arg_data, icx_value])
+        self.traces.append(trace)
+
+    def _transfer(self, addr_from: 'Address', addr_to: 'Address', icx_value: int, is_exc_handling: bool) -> bool:
+        ret = None
         try:
-            ret = self.icx_engine.transfer(self, addr_from, addr_to, amount)
-        except:
-            pass
-
-        if ret and addr_to.is_contract:
-            icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
-            call_fallback(icon_score)
-
+            ret = self.icx_engine.transfer(self, addr_from, addr_to, icx_value)
+        except BaseException as e:
+            if is_exc_handling:
+                pass
+            else:
+                raise e
         return ret
 
-    def call(self, addr_from: Address,
-             addr_to: 'Address', func_name: str, arg_params: list, kw_params: dict) -> object:
+    def _call(self, addr_from: Address,
+              addr_to: 'Address', func_name: Optional[str], arg_params: Optional[list], kw_params: Optional[dict], icx_value: int) -> object:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
@@ -201,11 +224,14 @@ class IconScoreContext(object):
         :param func_name:
         :param arg_params:
         :param kw_params:
+        :param icx_value:
         :return:
         """
+
+        self._validate_blacklist(addr_to)
         self.__msg_stack.append(self.msg)
 
-        self.msg = Message(sender=addr_from)
+        self.msg = Message(sender=addr_from, value=icx_value)
         self.current_address = addr_to
         icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
 
@@ -216,6 +242,14 @@ class IconScoreContext(object):
         self.msg = self.__msg_stack.pop()
 
         return ret
+
+    def _validate_blacklist(self, address: 'Address'):
+        if address == GOVERNANCE_SCORE_ADDRESS:
+            return
+
+        governance = self.icon_score_mapper.get_icon_score(self, GOVERNANCE_SCORE_ADDRESS)
+        if governance and governance.isInScoreBlackList(address):
+            raise ServerErrorException(f'The Score is in Black List (address: {address})')
 
     # def self_destruct(self, recipient: 'Address') -> None:
     #     """Destroy the current icon score, sending its funds to the given address
@@ -309,14 +343,21 @@ ATTR_CALL_METHOD = '_IconScoreBase__call_method'
 ATTR_CALL_FALLBACK = '_IconScoreBase__call_fallback'
 
 
-def call_method(icon_score: 'IconScoreBase', func_name: str, kw_params: dict,
-                addr_from: Optional['Address'] = None, arg_params: list = None) -> object:
+def call_method(icon_score: 'IconScoreBase', func_name: Optional[str], kw_params: dict,
+                addr_from: Optional['Address'] = None, arg_params: list = None) -> Any:
     __check_call_score_invalid(icon_score, addr_from)
 
-    if arg_params is None:
-        arg_params = []
-    call_method_func = getattr(icon_score, ATTR_CALL_METHOD)
-    return call_method_func(func_name, arg_params, kw_params)
+    if func_name is None:
+        call_fallback_func = getattr(icon_score, ATTR_CALL_FALLBACK)
+        call_fallback_func()
+    else:
+        call_method_func = getattr(icon_score, ATTR_CALL_METHOD)
+        if arg_params is None:
+            arg_params = []
+        if kw_params is None:
+            kw_params = {}
+        need_type_convert = addr_from is None
+        return call_method_func(func_name, arg_params, kw_params, need_type_convert)
 
 
 def __check_call_score_invalid(icon_score: 'IconScoreBase', addr_from: Optional['Address']) -> None:
@@ -327,14 +368,5 @@ def __check_call_score_invalid(icon_score: 'IconScoreBase', addr_from: Optional[
         raise IconScoreException("call function myself")
 
 
-def call_fallback(icon_score: 'IconScoreBase') -> None:
-    call_fallback_func = getattr(icon_score, ATTR_CALL_FALLBACK)
-    call_fallback_func()
-
-
 def __check_myself(addr_from: Optional['Address'], addr_to: 'Address') -> bool:
     return addr_from == addr_to
-
-
-def is_context_readonly(context: 'IconScoreContext') -> bool:
-    return context is not None and context.readonly
