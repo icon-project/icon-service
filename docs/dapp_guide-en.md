@@ -33,6 +33,7 @@ class SampleToken(IconScoreBase):
 
     _BALANCES = 'balances'
     _TOTAL_SUPPLY = 'total_supply'
+    _DECIMALS = 'decimals'
 
     @eventlog(indexed=3)
     def Transfer(self, _from: Address, _to: Address, _value: int, _data: bytes):
@@ -41,6 +42,7 @@ class SampleToken(IconScoreBase):
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
         self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
+        self._decimals = VarDB(self._DECIMALS, db, value_type=int)
         self._balances = DictDB(self._BALANCES, db, value_type=int)
 
     def on_install(self, initialSupply: int, decimals: int) -> None:
@@ -50,6 +52,7 @@ class SampleToken(IconScoreBase):
         Logger.debug(f'on_install: total_supply={total_supply}', TAG)
 
         self._total_supply.set(total_supply)
+        self._decimals.set(decimals)
         self._balances[self.msg.sender] = total_supply
 
     def on_update(self) -> None:
@@ -65,7 +68,7 @@ class SampleToken(IconScoreBase):
 
     @external(readonly=True)
     def decimals(self) -> int:
-        return 18
+        return self._decimals.get()
 
     @external(readonly=True)
     def totalSupply(self) -> int:
@@ -156,8 +159,6 @@ class SampleCrowdSale(IconScoreBase):
         Logger.debug(f'on_install: tokenScore={tokenScore}', TAG)
         Logger.debug(f'on_install: durationInBlocks={durationInBlocks}', TAG)
 
-        one_second_in_microseconds = 1 * 10 ** 6
-        now_seconds = self.now()
         icx_cost_of_each_token = 1
 
         self._addr_beneficiary.set(self.msg.sender)
@@ -213,7 +214,6 @@ class SampleCrowdSale(IconScoreBase):
         Logger.debug(f'after_dead_line: block.height = {self.block.height}', TAG)
         Logger.debug(f'after_dead_line: dead_line()  = {self._dead_line.get()}', TAG)
         return self.block.height >= self._dead_line.get()
-
 
     @external
     def check_goal_reached(self):
