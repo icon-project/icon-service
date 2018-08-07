@@ -60,11 +60,12 @@ def interface(func):
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
 
         call_method = getattr(calling_obj, '_InterfaceScore__call_method')
-        icx_value = kwargs.get(ICX_VALUE_KEY)
-        if icx_value is None:
-            icx_value = 0
-        else:
-            del kwargs[ICX_VALUE_KEY]
+        # icx_value = kwargs.get(ICX_VALUE_KEY)
+        # if icx_value is None:
+        #     icx_value = 0
+        # else:
+        #     del kwargs[ICX_VALUE_KEY]
+        icx_value = 0
         ret = call_method(func_name, args, kwargs, icx_value)
         return ret
 
