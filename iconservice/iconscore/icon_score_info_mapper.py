@@ -19,8 +19,8 @@ from threading import Lock
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
-from ..base.address import Address
-from ..base.exception import InvalidParamsException
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.exception import InvalidParamsException, ServerErrorException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..deploy import DeployState
@@ -200,6 +200,8 @@ class IconScoreInfoMapper(object):
         :return: IconScoreBase object
         """
 
+        self._validate_blacklist(address)
+
         icon_score_info = self.get(address)
         is_score_active = self._deploy_storage.is_score_active(context, address)
         score_id = self._deploy_storage.get_score_id(context, address)
@@ -219,6 +221,14 @@ class IconScoreInfoMapper(object):
 
         icon_score = icon_score_info.icon_score
         return icon_score
+
+    def _validate_blacklist(self, address: 'Address'):
+        if address == GOVERNANCE_SCORE_ADDRESS:
+            return
+
+        governance_info = self.get(GOVERNANCE_SCORE_ADDRESS)
+        if governance_info and governance_info.icon_score.isInScoreBlackList(address):
+                raise ServerErrorException(f'The Score is in Black List (address: {address})')
 
     def load_wait_icon_score(self,
                              address: 'Address',

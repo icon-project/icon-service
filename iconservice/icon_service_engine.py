@@ -255,6 +255,28 @@ class IconServiceEngine(ContextContainer):
         finally:
             self._delete_context(context)
 
+    def _validate_score_blacklist(self, context: 'IconScoreContext', params: dict):
+        version: int = params.get('version', 2)
+        if version == 2:
+            return
+
+        _to: 'Address' = params.get('to')
+        if _to is None or not _to.is_contract:
+            return
+
+        try:
+            self._put_context(context)
+            # Gets the governance SCORE
+            governance_score = self._icon_score_mapper.get_icon_score(
+                context, GOVERNANCE_SCORE_ADDRESS)
+            if governance_score is None:
+                raise ServerErrorException(f'governance_score is None')
+
+            if governance_score.isInScoreBlackList(_to):
+                raise ServerErrorException(f'The Score is in Black List (address: {_to})')
+        finally:
+            self._delete_context(context)
+
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
@@ -424,6 +446,7 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.create(step_limit, allow_step_overflow)
         context.clear_msg_stack()
 
+        self._validate_score_blacklist(context, params)
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             self._validate_deploy_whitelist(context, params)
 
@@ -455,6 +478,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter: IconScoreStepCounter = \
             self._step_counter_factory.create(step_limit)
 
+        self._validate_score_blacklist(context, params)
         ret = self._call(context, method, params)
 
         self._context_factory.destroy(context)
@@ -483,10 +507,11 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.get_step_cost(StepType.DEFAULT)
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
+        context = self._context_factory.create(IconScoreContextType.QUERY)
+        self._validate_score_blacklist(context, params)
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            context = self._context_factory.create(IconScoreContextType.QUERY)
             self._validate_deploy_whitelist(context, params)
-            self._context_factory.destroy(context)
+        self._context_factory.destroy(context)
 
     def _call(self,
               context: 'IconScoreContext',

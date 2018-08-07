@@ -38,6 +38,7 @@ class Governance(IconScoreBase):
     _SCORE_STATUS = 'score_status'
     _AUDITOR_LIST = 'auditor_list'
     _DEPLOYER_LIST = 'deployer_list'
+    _SCORE_BLACK_LIST = 'score_black_list'
     _STEP_PRICE = 'step_price'
     _STEP_COSTS = 'step_costs'
     _MAX_STEP_LIMIT = 'max_step_limit'
@@ -63,6 +64,7 @@ class Governance(IconScoreBase):
         self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
         self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
+        self._score_black_list = ArrayDB(self._SCORE_BLACK_LIST, db, value_type=Address)
         self._step_price = VarDB(self._STEP_PRICE, db, value_type=int)
         self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
         self._max_step_limit = VarDB(self._MAX_STEP_LIMIT, db, value_type=int)
@@ -302,6 +304,46 @@ class Governance(IconScoreBase):
         Logger.debug(f'{header}: list len = {len(self._deployer_list)}', TAG)
         for deployer in self._deployer_list:
             Logger.debug(f' --- {deployer}', TAG)
+
+    @external
+    def addToScoreBlackList(self, address: Address):
+        if not address.is_contract:
+            self.revert(f'Invalid SCORE Address: {address}')
+
+        # check message sender, only owner can add new blacklist
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+        if address not in self._score_black_list:
+            self._score_black_list.put(address)
+        if DEBUG is True:
+            self._print_black_list('addScoreToBlackList')
+
+    @external
+    def removeFromScoreBlackList(self, address: Address):
+        if address not in self._score_black_list:
+            self.revert('Invalid address: not in list')
+
+        # check message sender, only owner can remove from blacklist
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+        # get the topmost value
+        top = self._score_black_list.pop()
+        if top != address:
+            for i in range(len(self._score_black_list)):
+                if self._score_black_list[i] == address:
+                    self._score_black_list[i] = top
+        if DEBUG is True:
+            self._print_black_list('removeScoreFromBlackList')
+
+    @external(readonly=True)
+    def isInScoreBlackList(self, address: Address) -> bool:
+        Logger.debug(f'isInBlackList address: {address}', TAG)
+        return address in self._score_black_list
+
+    def _print_black_list(self, header: str):
+        Logger.debug(f'{header}: list len = {len(self._score_black_list)}', TAG)
+        for addr in self._score_black_list:
+            Logger.debug(f' --- {addr}', TAG)
 
     def _set_initial_step_costs(self):
         initial_costs = {

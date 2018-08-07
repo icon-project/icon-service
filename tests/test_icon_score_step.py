@@ -49,6 +49,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # Ignores deploy
         deploy_engine_invoke = Mock()
         deploy_storage_get_deploy_info = Mock(return_value=None)
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         self._inner_task._icon_service_engine. \
             _icon_score_deploy_engine.invoke = deploy_engine_invoke
         self._inner_task._icon_service_engine.\
@@ -119,6 +120,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score.transfer()
 
         score_engine_invoke = Mock(side_effect=intercept_invoke)
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         self._inner_task._icon_service_engine. \
             _icon_score_engine.invoke = score_engine_invoke
 
@@ -168,6 +170,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine. \
             _icon_score_engine.invoke = score_engine_invoke
+
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
         result = self._inner_task._invoke(request)
         score_engine_invoke.assert_called()
