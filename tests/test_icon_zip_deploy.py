@@ -33,8 +33,7 @@ from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_manager import IconScoreManager
-from iconservice.deploy import make_score_id
-from iconservice.icon_constant import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
@@ -55,6 +54,7 @@ class TestContextContainer(ContextContainer):
 class TestIconZipDeploy(unittest.TestCase):
     _ROOT_SCORE_PATH = 'tests/score'
     _TEST_DB_PATH = 'tests/test_db'
+    _ZERO_SCORE_ID = f'0x{bytes.hex(bytes(DEFAULT_BYTE_SIZE))}'
 
     @classmethod
     def setUpClass(cls):
@@ -147,8 +147,7 @@ class TestIconZipDeploy(unittest.TestCase):
             "contentType": "application/zip",
             "content": f'0x{bytes.hex(content)}'
         }
-        score_id = make_score_id(self._context.block.height, self._context.tx.index)
-        self._icon_deploy_storage.get_score_id = Mock(return_value=score_id)
+        self._icon_deploy_storage.get_score_id = Mock(return_value=self._ZERO_SCORE_ID)
 
         self._engine.invoke(
             self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)

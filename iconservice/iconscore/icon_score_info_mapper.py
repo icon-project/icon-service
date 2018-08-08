@@ -171,7 +171,11 @@ class IconScoreInfoMapper(object):
     def commit(self):
         for address, info in self._wait_score_mapper.items():
             self._score_mapper[address] = info
-            self._deploy_storage.put_deploy_state_info(None, address, DeployState.ACTIVE, info.score_id)
+            deploy_info = self._deploy_storage.get_deploy_info(None, address)
+            if deploy_info is None:
+                raise InvalidParamsException(f"can't put db about active deploystate")
+            else:
+                self._deploy_storage.update_deploy_state(None, address, DeployState.ACTIVE)
         self._wait_score_mapper.clear()
         self._wait_score_remove_table.clear()
 
@@ -201,7 +205,7 @@ class IconScoreInfoMapper(object):
         """
         icon_score_info = self.get(address)
         is_score_active = self._deploy_storage.is_score_active(context, address)
-        score_id = self._deploy_storage.get_score_id(context, address)
+        score_id = self._deploy_storage.get_current_score_id(context, address)
         if score_id is None:
             raise InvalidParamsException(f'score_id is None {address}')
 
