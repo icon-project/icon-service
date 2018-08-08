@@ -325,7 +325,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return getattr(cls, attr, {})
 
     def __create_db_observer(self) -> 'DatabaseObserver':
-        return DatabaseObserver(self.__on_db_put, self.__on_db_delete)
+        return DatabaseObserver(
+            self.__on_db_get, self.__on_db_put, self.__on_db_delete)
 
     def __call_method(self, func_name: str, arg_params: list, kw_params: dict, need_type_convert: bool):
 
@@ -460,6 +461,28 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     # noinspection PyUnusedLocal
     @staticmethod
+    def __on_db_get(context: 'IconScoreContext',
+                    key: bytes,
+                    value: bytes):
+        """Invoked when `get` is called in `ContextDatabase`.
+
+        # All steps are managed in the score
+        # Don't move to another codes
+
+        :param context: SCORE context
+        :param key: key
+        :param value: value
+        """
+
+        if context and context.step_counter and \
+                context.type != IconScoreContextType.DIRECT:
+            length = 1
+            if value:
+                length = len(value)
+            context.step_counter.apply_step(StepType.GET, length)
+
+    # noinspection PyUnusedLocal
+    @staticmethod
     def __on_db_put(context: 'IconScoreContext',
                     key: bytes,
                     old_value: bytes,
@@ -475,7 +498,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param new_value: new value
         """
 
-        if new_value and context and \
+        if context and context.step_counter and \
                 context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
@@ -500,7 +523,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param old_value: old value
         """
 
-        if old_value and context and \
+        if context and context.step_counter and \
                 context.type == IconScoreContextType.INVOKE:
             context.step_counter.apply_step(
                 StepType.DELETE, len(old_value))
