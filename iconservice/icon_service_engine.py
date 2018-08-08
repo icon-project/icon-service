@@ -197,6 +197,9 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
 
+        # Clarifies that This Context does not count steps
+        context.step_counter = None
+
         try:
             self._put_context(context)
             # Gets the governance SCORE
@@ -287,7 +290,6 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
-        self._init_global_value_by_governance_score()
 
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
@@ -303,6 +305,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
+                self._init_global_value_by_governance_score()
                 tx_result = self._invoke_request(context, tx_request, index)
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
