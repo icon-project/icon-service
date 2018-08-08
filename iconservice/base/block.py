@@ -31,7 +31,8 @@ class Block(object):
 
     _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s')
 
-    def __init__(self, block_height: int, block_hash: bytes, timestamp: int, prev_hash: Optional[bytes]) -> None:
+    def __init__(self, block_height: int, block_hash: bytes,
+                 timestamp: int, prev_hash: Optional[bytes]) -> None:
         """Constructor
 
         :param block_height: block height
@@ -65,8 +66,8 @@ class Block(object):
     def from_dict(params: dict):
         block_height = params.get('blockHeight')
         block_hash = params.get('blockHash')
-        timestamp = params.get('timestamp')
-        prev_hash = params.get('prevBlockHash')
+        timestamp = params.get('timestamp', 0)
+        prev_hash = params.get('prevBlockHash', b'\x00' * 32)
         return Block(block_height, block_hash, timestamp, prev_hash)
 
     @staticmethod
@@ -86,7 +87,8 @@ class Block(object):
         """
         byteorder = DATA_BYTE_ORDER
 
-        version, block_height_bytes, block_hash_bytes, timestamp_bytes, block_prev_hash_bytes = \
+        version, block_height_bytes, block_hash_bytes,\
+        timestamp_bytes, block_prev_hash_bytes = \
             Block._struct.unpack(buf)
 
         block_height = int.from_bytes(block_height_bytes, byteorder)
@@ -131,3 +133,13 @@ class Block(object):
         :return: binary data including information of account object
         """
         return self.to_bytes()
+
+    def __str__(self) -> str:
+        hash_hex = 'None' if self._hash is None else f'0x{self._hash.hex()}'
+        prev_hash_hex = \
+            'None' if self._prev_hash is None else f'0x{self._prev_hash.hex()}'
+
+        return f'height({self._height}) ' \
+            f'hash({hash_hex}) ' \
+            f'timestamp({self._timestamp}) ' \
+            f'prev_hash({prev_hash_hex})'

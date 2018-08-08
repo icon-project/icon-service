@@ -100,14 +100,15 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         ]
 
-        block = Block(0, create_block_hash(b'block'), 0, None)
+        block = Block(0, create_block_hash(b'genesis'), 0, None)
         tx = {'method': '',
               'params': {'txHash': create_tx_hash()},
               'genesisData': {'accounts': accounts}}
         tx_lists = [tx]
 
         self._engine.invoke(block, tx_lists)
-        self._engine.commit()
+        self._engine.commit(block)
+        self.genesis_block = block
 
     def tearDown(self):
         self._engine.close()
@@ -207,7 +208,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         original_invoke_request = self._engine._invoke_request
 
@@ -258,7 +259,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = \
@@ -289,7 +290,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
@@ -317,7 +318,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_price, step_price)
 
         # Write updated states to levelDB
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = self._engine._icx_engine.get_balance(
@@ -349,7 +350,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
@@ -380,7 +381,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = \
@@ -416,7 +417,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         before_from_balance: int = \
             self._engine._icx_engine.get_balance(None, self.from_)
@@ -451,7 +452,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         after_from_balance: int = \
@@ -489,7 +490,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         before_from_balance: int = \
             self._engine._icx_engine.get_balance(None, self.from_)
@@ -529,7 +530,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         after_from_balance: int = \
@@ -586,15 +587,29 @@ class TestIconServiceEngine(unittest.TestCase):
         context_factory.destroy(context)
 
     def test_commit(self):
+        block = Block(
+            block_height=1,
+            block_hash=create_block_hash(b'block'),
+            timestamp=0,
+            prev_hash=create_block_hash(b'prev'))
+
         with self.assertRaises(ServerErrorException) as cm:
-            self._engine.commit()
+            self._engine.commit(block)
         e = cm.exception
         self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
-        self.assertEqual('Precommit state is none on commit', e.message)
+        self.assertTrue(e.message.startswith('No precommit data'))
 
     def test_rollback(self):
-        self._engine.rollback()
-        self.assertIsNone(self._engine._precommit_state)
+        block = Block(
+            block_height=1,
+            block_hash=create_block_hash(b'block'),
+            timestamp=0,
+            prev_hash=self.genesis_block.hash)
+
+        block_result, state_root_hash = self._engine.invoke(block, [])
+
+        self._engine.rollback(block)
+        self.assertIsNone(self._engine._precommit_data_manager.get(block))
 
 
 if __name__ == '__main__':

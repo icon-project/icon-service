@@ -53,6 +53,16 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(block2.timestamp, 100)
         self.assertEqual(block2.prev_hash, prev_block_hash)
 
+    def test_str(self):
+
+        block = Block(1,
+                      create_block_hash(b'hash'),
+                      100,
+                      create_block_hash(b'prev_hash'))
+
+        text = str(block)
+        print(text)
+
 
 if __name__ == '__main__':
     unittest.main()

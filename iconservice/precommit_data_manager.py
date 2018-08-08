@@ -1,0 +1,123 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2018 ICON Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from .base.block import Block
+from .base.exception import ServerErrorException
+from .database.batch import BlockBatch
+from threading import Lock
+from typing import Optional
+
+
+class PrecommitData(object):
+    def __init__(self,
+                 block_batch: 'BlockBatch',
+                 block_result: list,
+                 score_mapper: Optional[dict]=None):
+        """
+
+        :param block_batch: changed states for a block
+        :param block_result: tx_results made from transactions in a block
+        :param score_mapper: newly deployed scores in a block
+        """
+        self.block_batch = block_batch
+        self.block_result = block_result
+        self.score_mapper = score_mapper
+
+
+class PrecommitDataManager(object):
+    """Manages multiple precommit data made from next candidate block
+
+    """
+
+    def __init__(self):
+        self._lock = Lock()
+        self._precommit_data_mapper = {}
+        self._last_block: 'Block' = None
+
+    @property
+    def last_block(self) -> 'Block':
+        with self._lock:
+            return self._last_block
+
+    @last_block.setter
+    def last_block(self, block: 'Block'):
+        """Set the last confirmed block
+
+        :param block:
+        :return:
+        """
+        with self._lock:
+            self._last_block = block
+
+    def push(self, precommit_data: 'PrecommitData'):
+        block: 'Block' = precommit_data.block_batch.block
+        self._precommit_data_mapper[block.hash] = precommit_data
+
+    def get(self, block_hash: 'bytes') -> Optional['PrecommitData']:
+        precommit_data = self._precommit_data_mapper.get(block_hash)
+        return precommit_data
+
+    def commit(self, block: 'Block'):
+        with self._lock:
+            self._last_block = block
+
+        # Clear remaining precommit data which have the same block height
+        self._precommit_data_mapper.clear()
+
+    def rollback(self, block: 'Block'):
+        if block.hash in self._precommit_data_mapper:
+            del self._precommit_data_mapper[block.hash]
+
+    def empty(self) -> bool:
+        return len(self._precommit_data_mapper) == 0
+
+    def validate_block_to_invoke(self, block: 'Block'):
+        """Check if the block to invoke is valid before invoking it
+
+        :param block: block to invoke
+        """
+        if self._last_block is None:
+            return
+
+        if block.prev_hash == self._last_block.hash and \
+                block.height == self._last_block.height + 1:
+            return
+
+        raise ServerErrorException(
+            f'Failed to invoke a block: '
+            f'last_block({self._last_block}) '
+            f'block_to_invoke({block})')
+
+    def validate_precommit_block(self, precommit_block: 'Block'):
+        """Check block validation
+        before write_precommit_state() or remove_precommit_state()
+
+        :param precommit_block:
+        """
+        assert isinstance(precommit_block, Block)
+
+        precommit_data = self._precommit_data_mapper.get(precommit_block.hash)
+        if precommit_data is None:
+            raise ServerErrorException(
+                f'No precommit data: precommit_block({precommit_block})')
+
+        if self._last_block is None:
+            return
+
+        if self._last_block.hash != precommit_block.prev_hash or \
+                self._last_block.height + 1 != precommit_block.height:
+            raise ServerErrorException(
+                f'Invalid precommit block: last_block({self._last_block}) precommit_block({precommit_block})')
