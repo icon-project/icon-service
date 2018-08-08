@@ -32,7 +32,7 @@ from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-    from .icon_score_mapper_container import IconScoreMapperContainer
+    from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
     from ..deploy.icon_score_manager import IconScoreManager
@@ -97,7 +97,7 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icx_engine: 'IcxEngine' = None
-    icon_score_mapper_container: 'IconScoreMapperContainer' = None
+    icon_score_mapper: 'IconScoreMapper' = None
     icon_score_manager: 'IconScoreManager' = None
 
     def __init__(self,
@@ -107,7 +107,8 @@ class IconScoreContext(object):
                  tx: 'Transaction' = None,
                  msg: 'Message' = None,
                  block_batch: 'BlockBatch' = None,
-                 tx_batch: 'TransactionBatch' = None) -> None:
+                 tx_batch: 'TransactionBatch' = None,
+                 new_icon_score_mapper: 'icon_score_mapper' = None) -> None:
         """Constructor
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
@@ -127,6 +128,7 @@ class IconScoreContext(object):
         self.current_address: Address = None
         self.block_batch = block_batch
         self.tx_batch = tx_batch
+        self.new_icon_score_mapper = new_icon_score_mapper
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
@@ -233,7 +235,7 @@ class IconScoreContext(object):
 
         self.msg = Message(sender=addr_from, value=icx_value)
         self.current_address = addr_to
-        icon_score = self.icon_score_mapper_container.get_icon_score(self, addr_to)
+        icon_score = self.get_icon_score(addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
                           addr_from=addr_from, arg_params=arg_params, kw_params=kw_params)
@@ -247,7 +249,7 @@ class IconScoreContext(object):
         if address == GOVERNANCE_SCORE_ADDRESS:
             return
 
-        governance = self.icon_score_mapper_container.get_icon_score(self, GOVERNANCE_SCORE_ADDRESS)
+        governance = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance and governance.isInScoreBlackList(address):
             raise ServerErrorException(f'The Score is in Black List (address: {address})')
 
@@ -276,12 +278,26 @@ class IconScoreContext(object):
         self.msg = None
         self.block_batch = None
         self.tx_batch = None
+        self.new_icon_score_mapper = None
         self.cumulative_step_used = 0
         self.step_counter = None
         self.event_logs = None
         self.logs_bloom = None
         self.traces = None
         self.clear_msg_stack()
+
+    def get_icon_score(self,
+                       address: 'Address') -> Optional['IconScoreBase']:
+        if self.type != IconScoreContextType.INVOKE or self.new_icon_score_mapper is None:
+            return self.icon_score_mapper.get_icon_score(self, address)
+        return self.new_icon_score_mapper.get_icon_score(self, address)
+
+    def load_icon_score(self,
+                        address: 'Address',
+                        score_id: str) -> Optional['IconScoreBase']:
+        if self.type != IconScoreContextType.INVOKE or self.new_icon_score_mapper is None:
+            return self.icon_score_mapper.load_icon_score(address, score_id)
+        return self.new_icon_score_mapper.load_icon_score(address, score_id)
 
 
 class IconScoreContextFactory(object):

@@ -31,7 +31,7 @@ from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..iconscore.icon_score_mapper_container import IconScoreMapperContainer
+    from ..iconscore.icon_score_mapper import IconScoreMapper
     from .icon_score_deploy_storage import IconScoreDeployTXParams
 
 
@@ -49,7 +49,7 @@ class IconScoreDeployEngine(object):
         """
         self._flag = None
         self._icon_score_deploy_storage = None
-        self._icon_score_mapper_container = None
+        self._icon_score_mapper = None
         self._icon_score_deployer = None
         self._icon_builtin_score_loader = None
         self._icon_score_manager = None
@@ -57,18 +57,18 @@ class IconScoreDeployEngine(object):
     def open(self,
              score_root_path: str,
              flag: int,
-             icon_score_mapper_container: 'IconScoreMapperContainer',
+             icon_score_mapper: 'IconScoreMapper',
              icon_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
 
         :param score_root_path:
         :param flag: flags composed by IconScoreDeployEngine
-        :param icon_score_mapper_container:
+        :param icon_score_mapper:
         :param icon_deploy_storage:
         """
         self._flag = flag
         self._icon_score_deploy_storage = icon_deploy_storage
-        self._icon_score_mapper_container = icon_score_mapper_container
+        self._icon_score_mapper = icon_score_mapper
         self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(score_root_path)
 
     @property
@@ -124,8 +124,10 @@ class IconScoreDeployEngine(object):
         self._score_deploy(context, tx_params)
         self._icon_score_deploy_storage.update_score_info(context, score_address, tx_hash)
 
-    def deploy_for_builtin(self, score_address: 'Address', src_score_path: str):
-        self._score_deploy_for_builtin(score_address, src_score_path)
+    def deploy_for_builtin(self, context: 'IconScoreContext',
+                           score_address: 'Address',
+                           src_score_path: str):
+        self._score_deploy_for_builtin(context, score_address, src_score_path)
 
     def _score_deploy(self, context: 'IconScoreContext', tx_params: 'IconScoreDeployTXParams'):
         """
@@ -147,9 +149,10 @@ class IconScoreDeployEngine(object):
 
         self._on_deploy(context, tx_params)
 
-    def _score_deploy_for_builtin(self, icon_score_address: 'Address',
+    def _score_deploy_for_builtin(self, context: 'IconScoreContext',
+                                  icon_score_address: 'Address',
                                   src_score_path: str):
-        self._on_deploy_for_builtin(icon_score_address, src_score_path)
+        self._on_deploy_for_builtin(context, icon_score_address, src_score_path)
 
     def write_deploy_info_and_tx_params(self,
                                         context: 'IconScoreContext',
@@ -167,23 +170,26 @@ class IconScoreDeployEngine(object):
                                                                       data)
 
     def write_deploy_info_and_tx_params_for_builtin(self,
+                                                    context: 'IconScoreContext',
                                                     icon_score_address: 'Address',
                                                     owner_address: 'Address') -> None:
         """Write score deploy info to context db for builtin
         """
-        self._icon_score_deploy_storage.put_deploy_info_and_tx_params_for_builtin(icon_score_address, owner_address)
+        self._icon_score_deploy_storage.\
+            put_deploy_info_and_tx_params_for_builtin(context, icon_score_address, owner_address)
 
     def _on_deploy_for_builtin(self,
+                               context: 'IconScoreContext',
                                icon_score_address: 'Address',
                                src_score_path: str) -> None:
         """Install an icon score for builtin
         """
 
-        score_root_path = self._icon_score_mapper_container.score_root_path
+        score_root_path = self._icon_score_mapper.score_root_path
         target_path = path.join(score_root_path,
                                 icon_score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
-        score_id = self._icon_score_deploy_storage.get_next_score_id(None, icon_score_address)
+        score_id = self._icon_score_deploy_storage.get_next_score_id(context, icon_score_address)
         target_path = path.join(target_path, score_id)
 
         filecopy = False
@@ -196,7 +202,7 @@ class IconScoreDeployEngine(object):
             pass
 
         try:
-            score = self._icon_score_mapper_container.load_icon_score(None, icon_score_address, score_id)
+            score = context.load_icon_score(icon_score_address, score_id)
             if score is None:
                 raise InvalidParamsException(f'score is None : {icon_score_address}')
 
@@ -228,7 +234,7 @@ class IconScoreDeployEngine(object):
 
         score_id = self._icon_score_deploy_storage.get_next_score_id(context, tx_params.score_address)
         if content_type == 'application/tbears':
-            score_root_path = self._icon_score_mapper_container.score_root_path
+            score_root_path = self._icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
                                     score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
@@ -244,7 +250,7 @@ class IconScoreDeployEngine(object):
                 score_id=score_id)
 
         try:
-            score = self._icon_score_mapper_container.load_icon_score(context, score_address, score_id)
+            score = context.load_icon_score(score_address, score_id)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')
 

@@ -240,9 +240,12 @@ class IconScoreDeployStorage(object):
             deploy_info.next_tx_hash = tx_hash
             self._put_deploy_info(context, deploy_info)
 
-    def put_deploy_info_and_tx_params_for_builtin(self, score_address: 'Address', owner: 'Address') -> None:
+    def put_deploy_info_and_tx_params_for_builtin(self,
+                                                  context: 'IconScoreContext',
+                                                  score_address: 'Address',
+                                                  owner: 'Address') -> None:
         deploy_info = IconScoreDeployInfo(score_address, DeployState.ACTIVE, owner, None, None)
-        self._put_deploy_info(None, deploy_info)
+        self._put_deploy_info(context, deploy_info)
 
     def update_score_info(self,
                           context: 'IconScoreContext',

@@ -26,7 +26,7 @@ from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from iconservice.iconscore.icon_score_mapper_container import IconScoreMapperContainer
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx.icx_engine import IcxEngine
 from tests import create_tx_hash
 
@@ -37,7 +37,7 @@ class TestTransactionValidator(unittest.TestCase):
         self.score_manager = Mock(spec=IconScoreManager)
         self.deploy_storage = Mock(spec=IconScoreDeployStorage)
 
-        self.icon_score_mapper_container = Mock(spec=IconScoreMapperContainer)
+        self.icon_score_mapper_container = Mock(spec=IconScoreMapper)
 
         self.validator = IconPreValidator(self.icx_engine, self.score_manager, self.deploy_storage)
 

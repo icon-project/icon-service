@@ -25,7 +25,6 @@ from ..base.exception import InvalidParamsException, ServerErrorException
 
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
-    from ..iconscore.icon_score_mapper_container import IconScoreMapperContainer
 
 
 class IconScoreEngine(object):
@@ -38,18 +37,18 @@ class IconScoreEngine(object):
         super().__init__()
 
         self.__icx_storage = None
-        self.__icon_score_mapper_container = None
+        self.__icon_score_mapper = None
 
     def open(self,
              icx_storage: 'IcxStorage',
-             icon_score_mapper_container: 'IconScoreMapperContainer') -> None:
+             icon_score_mapper: 'IconScoreMapper') -> None:
         """open
 
         :param icx_storage: Get IconScore owner info from icx_storage
-        :param icon_score_mapper_container:
+        :param icon_score_mapper:
         """
         self.__icx_storage = icx_storage
-        self.__icon_score_mapper_container = icon_score_mapper_container
+        self.__icon_score_mapper = icon_score_mapper
 
     def invoke(self,
                context: 'IconScoreContext',
@@ -123,7 +122,7 @@ class IconScoreEngine(object):
         call_method(icon_score, None, {})
 
     def _get_icon_score(self, context: 'IconScoreContext', icon_score_address: 'Address'):
-        icon_score = self.__icon_score_mapper_container.get_icon_score(context, icon_score_address)
+        icon_score = context.get_icon_score(icon_score_address)
         if icon_score is None:
             raise ServerErrorException(
                 f'SCORE not found: {icon_score_address}')

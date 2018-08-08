@@ -13,9 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+from shutil import rmtree
 from typing import TYPE_CHECKING, Optional
+from threading import Lock
 
+from iconcommons import Logger
+from ..icon_constant import DEFAULT_BYTE_SIZE
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
@@ -112,13 +116,14 @@ class IconScoreMapper(object):
         """Constructor
         """
         self.score_mapper = IconScoreMapperObject()
+        self._lock = Lock()
 
     def close(self):
         for addr, info in self.score_mapper.items():
             info.icon_score.db.close()
 
-    def update(self, mapper: Optional['IconScoreMapper']):
-        if mapper is not None:
+    def update(self, mapper: 'IconScoreMapper'):
+        with self._lock:
             self.score_mapper.update(mapper.score_mapper)
 
     @property
@@ -126,7 +131,8 @@ class IconScoreMapper(object):
         return self.icon_score_loader.score_root_path
 
     def __contains__(self, item) -> bool:
-        return item in self.score_mapper
+        with self._lock:
+            return item in self.score_mapper
 
     def get_icon_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreBase']:
         """
@@ -200,3 +206,58 @@ class IconScoreMapper(object):
         info = IconScoreInfo(icon_score, score_id)
         self.score_mapper[icon_score.address] = info
         return info
+
+    def _clear_garbage_score(self):
+        if self.icon_score_loader is None:
+            return
+        score_root_path = self.icon_score_loader.score_root_path
+        try:
+            dir_list = os.listdir(score_root_path)
+        except:
+            return
+
+        for dir_name in dir_list:
+            try:
+                address = Address.from_bytes(bytes.fromhex(dir_name))
+            except:
+                continue
+            deploy_info = self.deploy_storage.get_deploy_info(None, address)
+            if deploy_info is None:
+                self._remove_score_dir(address)
+                continue
+            else:
+                try:
+                    sub_dir_list = os.listdir(os.path.join(score_root_path, bytes.hex(address.to_bytes())))
+                except:
+                    continue
+                for sub_dir_name in sub_dir_list:
+                    try:
+                        tx_hash = bytes.fromhex(sub_dir_name[2:])
+                    except:
+                        continue
+
+                    if tx_hash == bytes(DEFAULT_BYTE_SIZE):
+                        continue
+                    if tx_hash == deploy_info.current_tx_hash:
+                        continue
+                    elif tx_hash == deploy_info.next_tx_hash:
+                        continue
+                    else:
+                        self._remove_score_dir(address, sub_dir_name)
+
+    @classmethod
+    def _remove_score_dir(cls, address: 'Address', score_id: Optional[str] = None):
+        if cls.icon_score_loader is None:
+            return
+        score_root_path = cls.icon_score_loader.score_root_path
+
+        if score_id is None:
+            target_path = os.path.join(score_root_path, bytes.hex(address.to_bytes()))
+        else:
+            target_path = os.path.join(score_root_path, bytes.hex(address.to_bytes()), score_id)
+
+        try:
+            rmtree(target_path)
+        except Exception as e:
+            Logger.warning(e)
+

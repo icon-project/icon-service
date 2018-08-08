@@ -598,7 +598,8 @@ class TestIconServiceEngine(unittest.TestCase):
             prev_hash=create_block_hash(b'prev'))
 
         with self.assertRaises(ServerErrorException) as cm:
-            e = cm.exception
+            self._engine.commit(block)
+        e = cm.exception
         self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
         self.assertTrue(e.message.startswith('No precommit data'))
 

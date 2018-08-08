@@ -274,7 +274,8 @@ class TestIntegrateBase(unittest.TestCase):
         }
 
         precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': bytes.hex(block_hash)}
+                             'blockHash': bytes.hex(block_hash),
+                             'prevBlockHash': bytes.hex(self._prev_block_hash)}
 
         invoke_response = await self._inner_task.invoke(make_request)
         tx_results = invoke_response.get('txResults')

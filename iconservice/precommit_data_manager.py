@@ -14,18 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from threading import Lock
+from typing import Optional
+
 from .base.block import Block
 from .base.exception import ServerErrorException
 from .database.batch import BlockBatch
-from threading import Lock
-from typing import Optional
+from .iconscore.icon_score_mapper import IconScoreMapper
 
 
 class PrecommitData(object):
     def __init__(self,
                  block_batch: 'BlockBatch',
                  block_result: list,
-                 score_mapper: Optional[dict]=None):
+                 score_mapper: Optional['IconScoreMapper']=None):
         """
 
         :param block_batch: changed states for a block

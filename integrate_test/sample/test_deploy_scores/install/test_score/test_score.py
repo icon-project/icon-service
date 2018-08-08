@@ -28,5 +28,6 @@ class TestScore(IconScoreBase):
 
     @external
     def set_value(self, value: int):
+        print('1111')
         self._value.set(value)
         self.Changed(value)

@@ -36,7 +36,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory, \
 from iconservice.iconscore.icon_score_context import IconScoreContextType, \
     IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
-from iconservice.iconscore.icon_score_mapper_container import IconScoreMapperContainer
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
@@ -80,21 +80,21 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_manager = IconScoreManager(self._score_deploy_engine)
 
-        IconScoreMapperContainer.icon_score_loader = self._icon_score_loader
-        IconScoreMapperContainer.deploy_storage = self._deploy_storage
-        self._icon_score_mapper_container = IconScoreMapperContainer()
+        IconScoreMapper.icon_score_loader = self._icon_score_loader
+        IconScoreMapper.deploy_storage = self._deploy_storage
+        self._icon_score_mapper = IconScoreMapper()
 
         self._context_container = TestContextContainer()
 
         self._score_deploy_engine.open(
             score_root_path=score_path,
             flag=0,
-            icon_score_mapper_container=self._icon_score_mapper_container,
+            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)
 
         self.score_engine = IconScoreEngine()
         self.score_engine.open(
-            self._icx_storage, self._icon_score_mapper_container)
+            self._icx_storage, self._icon_score_mapper)
 
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
         self._addr2 = create_address(AddressPrefix.EOA, b'addr2')
@@ -107,6 +107,7 @@ class TestIconScoreEngine2(unittest.TestCase):
 
         self._factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_manager = self._icon_score_manager
+        IconScoreContext.icon_score_mapper = self._icon_score_mapper
         self.make_context()
 
         self._total_supply = 1000 * 10 ** 18
@@ -121,7 +122,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         tx_hash = create_tx_hash()
         self._context.tx = Transaction(tx_hash=tx_hash, origin=self._addr1)
         self._context.block = Block(1, create_block_hash(), 0, None)
-        self._context.icon_score_mapper_container = self._icon_score_mapper_container
+        self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()
         self._step_counter: IconScoreStepCounter =\
@@ -136,7 +137,7 @@ class TestIconScoreEngine2(unittest.TestCase):
     def tearDown(self):
         try:
             self._context.type = IconScoreContextType.DIRECT
-            self._icon_score_mapper_container.close()
+            self._icon_score_mapper.close()
             self._icx_storage.close(self._context)
             ContextDatabaseFactory.close()
             self._factory.destroy(self._context)
@@ -153,7 +154,6 @@ class TestIconScoreEngine2(unittest.TestCase):
 
     def __request_install(self, project_name: str, score_address: 'Address'):
         self.make_context()
-        self._icon_score_mapper_container.create_context_score_mapper(self._context)
         score_id = f'0x{bytes.hex(create_tx_hash())}'
         self._deploy_storage.get_score_id = Mock(return_value=score_id)
         self.__ensure_dir(self._icon_score_loader.score_root_path)
@@ -165,8 +165,6 @@ class TestIconScoreEngine2(unittest.TestCase):
             to=ZERO_SCORE_ADDRESS,
             icon_score_address=score_address,
             data=install_data)
-
-        self._icon_score_mapper_container.commit(self._context.block.hash)
 
     def test_call_get_api(self):
         self.__request_install('sample_token', self._addr_token_score)

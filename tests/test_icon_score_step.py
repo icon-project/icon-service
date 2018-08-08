@@ -16,7 +16,7 @@
 
 import unittest
 from typing import Optional
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address
@@ -124,7 +124,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine. \
             _icon_score_engine.invoke = score_engine_invoke
 
-        self._inner_task._icon_service_engine._icon_score_mapper_container.get_icon_score = Mock(return_value=None)
+        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task._invoke(request)
         score_engine_invoke.assert_called()
 

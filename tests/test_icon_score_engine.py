@@ -31,7 +31,7 @@ from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
-from iconservice.iconscore.icon_score_mapper_container import IconScoreMapperContainer
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
@@ -68,9 +68,9 @@ class TestIconScoreEngine(unittest.TestCase):
 
         self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
 
-        IconScoreMapperContainer.icon_score_loader = self._icon_score_loader
-        IconScoreMapperContainer.deploy_storage = self._deploy_storage
-        self._icon_score_mapper = IconScoreMapperContainer()
+        IconScoreMapper.icon_score_loader = self._icon_score_loader
+        IconScoreMapper.deploy_storage = self._deploy_storage
+        self._icon_score_mapper = IconScoreMapper()
 
         self._engine = IconScoreEngine()
         self._engine.open(
