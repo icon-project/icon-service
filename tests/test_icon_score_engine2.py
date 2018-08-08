@@ -31,7 +31,6 @@ from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
-from iconservice.deploy import make_score_id
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, \
     ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContextType, \
@@ -153,7 +152,7 @@ class TestIconScoreEngine2(unittest.TestCase):
 
     def __request_install(self, project_name: str, score_address: 'Address'):
         self.make_context()
-        score_id = make_score_id(self._context.block.height, self._context.tx.index)
+        score_id = f'0x{bytes.hex(create_tx_hash())}'
         self._deploy_storage.get_score_id = Mock(return_value=score_id)
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, f'tests/sample/{project_name}')

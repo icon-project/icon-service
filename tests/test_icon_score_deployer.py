@@ -17,15 +17,15 @@
 import os
 import unittest
 
-from iconservice.deploy import make_score_id
 from iconservice.base.address import AddressPrefix
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from tests import create_address
+from tests import create_address, create_tx_hash
 
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
 class TestIconScoreDeployer(unittest.TestCase):
+
     def setUp(self):
         self.deployer = IconScoreDeployer('./')
         self.address = create_address(AddressPrefix.CONTRACT, b'addr')
@@ -43,10 +43,9 @@ class TestIconScoreDeployer(unittest.TestCase):
 
     def test_install(self):
         # Case when the user install SCORE first time.
-        block_height1, transaction_index1 = 1234, 12
-        score_id = make_score_id(block_height1, transaction_index1)
-        ret1 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id)
-        install_path = os.path.join(self.score_root_path, score_id)
+        score_id1 = f'0x{bytes.hex(create_tx_hash())}'
+        ret1 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id1)
+        install_path = os.path.join(self.score_root_path, score_id1)
         zip_file_info_gen = self.deployer.extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
         file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
 
@@ -55,7 +54,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             parent_directory_index = directory.rfind('/')
             parent_dir_name = directory[parent_directory_index + 1:]
             for file in filename:
-                if parent_dir_name == score_id:
+                if parent_dir_name == score_id1:
                     installed_contents.append(file)
                 else:
                     installed_contents.append(f'{parent_dir_name}/{file}')
@@ -64,31 +63,29 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
         # Case when the user install SCORE second time.
-        ret2 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id)
+        ret2 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id1)
         self.assertFalse(ret2)
 
         # Case when installing SCORE with badzipfile Data.
-        block_height2, transaction_index2 = 123, 13
-        score_id2 = make_score_id(block_height2, transaction_index2)
+        score_id2 = f'0x{bytes.hex(create_tx_hash())}'
         ret3 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path2), score_id2)
         install_path2 = os.path.join(self.score_root_path, score_id2)
         self.assertFalse(ret3)
         self.assertFalse(os.path.exists(install_path2))
 
         # Case when The user specifies an installation path that does not have permission.
-        ret4 = self.deployer2.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id)
+        ret4 = self.deployer2.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id1)
         self.assertFalse(ret4)
 
         # Case when the user try to install scores without directories.
 
-        score_id3 = make_score_id(block_height1, transaction_index2)
+        score_id3 = f'0x{bytes.hex(create_tx_hash())}'
         ret5 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path3), score_id3)
         install_path3 = os.path.join(self.score_root_path, score_id3)
         self.assertEqual(True, os.path.exists(install_path3))
 
     def test_remove_existing_score(self):
-        block_height1, transaction_index1 = 1234, 12
-        score_id = make_score_id(block_height1, transaction_index1)
+        score_id = f'0x{bytes.hex(create_tx_hash())}'
         install_path = os.path.join(self.score_root_path, score_id)
         self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), score_id)
         self.deployer.remove_existing_score(install_path)

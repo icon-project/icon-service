@@ -26,6 +26,3 @@ class DeployState(IntEnum):
     WAIT_TO_DEPLOY = 1
     ACTIVE = 2
 
-
-def make_score_id(block_height: int, tx_index: int):
-    return f'{block_height}_{tx_index}'
