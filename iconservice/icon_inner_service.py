@@ -12,20 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, TYPE_CHECKING
-from concurrent.futures.thread import ThreadPoolExecutor
 from asyncio import get_event_loop
+from concurrent.futures.thread import ThreadPoolExecutor
+from typing import Any, TYPE_CHECKING
 
-from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.base.type_converter import TypeConverter, ParamType
+from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
+
+from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
-from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, EnableThreadFlag, ENABLE_THREAD_FLAG
+from iconservice.base.type_converter import TypeConverter, ParamType
+from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
+    EnableThreadFlag, ENABLE_THREAD_FLAG
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case, exit_process
-
-from iconcommons.logger import Logger
-from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 
 if TYPE_CHECKING:
     from earlgrey import RobustConnection
@@ -87,9 +88,8 @@ class IconScoreInnerTask(object):
             params = TypeConverter.convert(request, ParamType.INVOKE)
             converted_block_params = params['block']
             block = Block.from_dict(converted_block_params)
-            self._icon_service_engine.validate_next_block(block)
-            converted_tx_requests = params['transactions']
 
+            converted_tx_requests = params['transactions']
             tx_results, state_root_hash = self._icon_service_engine.invoke(
                 block=block, tx_requests=converted_tx_requests)
 
@@ -156,9 +156,8 @@ class IconScoreInnerTask(object):
         try:
             converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
             block = Block.from_dict(converted_block_params)
-            self._icon_service_engine.validate_precommit(block)
 
-            self._icon_service_engine.commit()
+            self._icon_service_engine.commit(block)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
@@ -185,9 +184,8 @@ class IconScoreInnerTask(object):
         try:
             converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
             block = Block.from_dict(converted_block_params)
-            self._icon_service_engine.validate_precommit(block)
 
-            self._icon_service_engine.rollback()
+            self._icon_service_engine.rollback(block)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
