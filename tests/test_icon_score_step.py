@@ -196,6 +196,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             governance.STEP_TYPE_CONTRACT_UPDATE: 8000,
             governance.STEP_TYPE_CONTRACT_DESTRUCT: -7000,
             governance.STEP_TYPE_CONTRACT_SET: 1000,
+            governance.STEP_TYPE_GET: 5,
             governance.STEP_TYPE_SET: 20,
             governance.STEP_TYPE_REPLACE: 5,
             governance.STEP_TYPE_DELETE: -15,
@@ -207,7 +208,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         step_costs = governance_score.getStepCosts()
 
         for key, value in step_costs.items():
-            step_counter_factory.set_step_cost(StepType(key), value)
+            try:
+                step_counter_factory.set_step_cost(StepType(key), value)
+            except ValueError:
+                pass
 
         self.assertEqual(
             4000, step_counter_factory.get_step_cost(StepType.DEFAULT))
@@ -222,6 +226,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             step_counter_factory.get_step_cost(StepType.CONTRACT_DESTRUCT))
         self.assertEqual(
             1000, step_counter_factory.get_step_cost(StepType.CONTRACT_SET))
+        self.assertEqual(
+            5, step_counter_factory.get_step_cost(StepType.GET))
         self.assertEqual(
             20, step_counter_factory.get_step_cost(StepType.SET))
         self.assertEqual(

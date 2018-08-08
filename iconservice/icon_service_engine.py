@@ -221,7 +221,12 @@ class IconServiceEngine(ContextContainer):
             step_costs = governance_score.getStepCosts()
 
             for key, value in step_costs.items():
-                self._step_counter_factory.set_step_cost(StepType(key), value)
+                try:
+                    self._step_counter_factory.set_step_cost(
+                        StepType(key), value)
+                except ValueError:
+                    # Pass the unknown step type
+                    pass
 
             # Gets the max step limit and keep into the counter factory
             max_step_limit = governance_score.getMaxStepLimit()
