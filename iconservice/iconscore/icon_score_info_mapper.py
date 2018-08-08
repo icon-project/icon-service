@@ -19,6 +19,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
+from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
@@ -187,8 +188,12 @@ class IconScoreInfoMapper(object):
         self._wait_score_mapper.clear()
         self._wait_score_remove_table.clear()
 
-    def _remove_score_dir(self, address: 'Address', score_id: str = str()):
-        target_path = os.path.join(self.score_root_path, bytes.hex(address.to_bytes()), score_id)
+    def _remove_score_dir(self, address: 'Address', score_id: Optional[str] = None):
+        if score_id is None:
+            target_path = os.path.join(self.score_root_path, bytes.hex(address.to_bytes()))
+        else:
+            target_path = os.path.join(self.score_root_path, bytes.hex(address.to_bytes()), score_id)
+
         try:
             rmtree(target_path)
         except Exception as e:
@@ -287,7 +292,7 @@ class IconScoreInfoMapper(object):
 
         for dir_name in dir_list:
             try:
-                address = Address.from_bytes(bytes.fromhex(dir_name[2:]))
+                address = Address.from_bytes(bytes.fromhex(dir_name))
             except:
                 continue
             deploy_info = self._deploy_storage.get_deploy_info(None, address)
@@ -303,6 +308,9 @@ class IconScoreInfoMapper(object):
                     try:
                         tx_hash = bytes.fromhex(sub_dir_name[2:])
                     except:
+                        continue
+
+                    if tx_hash == bytes(DEFAULT_BYTE_SIZE):
                         continue
                     if tx_hash == deploy_info.current_tx_hash:
                         continue

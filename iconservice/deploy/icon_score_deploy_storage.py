@@ -203,7 +203,7 @@ class IconScoreDeployInfo(object):
 class IconScoreDeployStorage(object):
     _DEPLOY_STORAGE_PREFIX = b'isds|'
     _DEPLOY_STORAGE_DEPLOY_INFO_PREFIX = _DEPLOY_STORAGE_PREFIX + b'di|'
-    _DEPLOY_STORAGE_DEPLOY_STATE_INFO_PREFIX = _DEPLOY_STORAGE_PREFIX + b'si|'
+    _DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX = _DEPLOY_STORAGE_PREFIX + b'dtp|'
 
     def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
@@ -263,6 +263,7 @@ class IconScoreDeployStorage(object):
                 deploy_info.current_tx_hash = next_tx_hash
                 deploy_info.next_tx_hash = None
                 deploy_info.deploy_state = DeployState.WAIT_TO_DEPLOY
+
                 self._put_deploy_info(context, deploy_info)
 
                 tx_params = self.get_deploy_tx_params(context, deploy_info.current_tx_hash)
@@ -315,10 +316,11 @@ class IconScoreDeployStorage(object):
         :return:
         """
         value = deploy_tx_params.to_bytes()
-        self._db.put(context, self._create_db_key(self._DEPLOY_STORAGE_PREFIX, deploy_tx_params.tx_hash), value)
+        self._db.put(context, self._create_db_key(
+            self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_tx_params.tx_hash), value)
 
     def get_deploy_tx_params(self, context: 'IconScoreContext', tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
-        bytes_value = self._db.get(context, self._create_db_key(self._DEPLOY_STORAGE_PREFIX, tx_hash))
+        bytes_value = self._db.get(context, self._create_db_key(self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, tx_hash))
         if bytes_value:
             return IconScoreDeployTXParams.from_bytes(bytes_value)
         else:
