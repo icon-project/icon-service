@@ -14,9 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 from iconservice.utils import to_camel_case
 from ..base.exception import IconServiceBaseException, ExceptionCode
+
+if TYPE_CHECKING:
+    from iconservice.iconscore.icon_score_context import IconScoreContextType
 
 
 class AutoValueEnum(Enum):
@@ -48,7 +52,7 @@ class IconScoreStepCounterFactory(object):
     def __init__(self) -> None:
         self._step_cost_dict = {}
         self._step_price = 0
-        self._max_step_limit = 0
+        self._max_step_limits = {}
 
     def get_step_cost(self, step_type: 'StepType') -> int:
         return self._step_cost_dict.get(step_type, 0)
@@ -75,35 +79,34 @@ class IconScoreStepCounterFactory(object):
         """
         self._step_price = step_price
 
-    def get_max_step_limit(self):
+    def get_max_step_limit(self, context_type: 'IconScoreContextType'):
         """Returns the max step limit
 
         :return: the max step limit
         """
-        return self._max_step_limit
+        return self._max_step_limits.get(context_type, 0)
 
-    def set_max_step_limit(self, max_step_limit: int):
+    def set_max_step_limit(
+            self, context_type: 'IconScoreContextType', max_step_limit: int):
         """Sets the max step limit
 
-        :param max_step_limit: the max step limit
+        :param context_type: context type
+        :param max_step_limit: the max step limit for the context type
         """
-        self._max_step_limit = max_step_limit
+        self._max_step_limits[context_type] = max_step_limit
 
     def create(self, step_limit: int) \
             -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
-        :param step_limit: step limit of the transaction. if the input is
-        greater than the max step limit, the max step limit is applied
+        :param step_limit: step limit of the transaction.
         :return: step counter
         """
 
         # Copying a `dict` so as not to change step costs when processing a
         # transaction.
         return IconScoreStepCounter(
-            self._step_cost_dict.copy(),
-            min(step_limit, self._max_step_limit),
-            self._step_price)
+            self._step_cost_dict.copy(), step_limit, self._step_price)
 
 
 class OutOfStepException(IconServiceBaseException):

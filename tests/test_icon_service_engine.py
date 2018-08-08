@@ -160,7 +160,8 @@ class TestIconServiceEngine(unittest.TestCase):
 
         step_limit: int = params.get('stepLimit', 0)
         if params.get('version', 2) < 3:
-            step_limit = self._engine._step_counter_factory.get_max_step_limit()
+            step_limit = self._engine._step_counter_factory.get_max_step_limit(
+                context.type)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
@@ -222,7 +223,8 @@ class TestIconServiceEngine(unittest.TestCase):
             # asserts max step limit is applied to step counting.
             self.assertNotEqual(step_limit, context.step_counter.step_limit)
             self.assertEqual(
-                self._engine._step_counter_factory.get_max_step_limit(),
+                self._engine._step_counter_factory.get_max_step_limit(
+                    context.type),
                 context.step_counter.step_limit)
             return ret
 

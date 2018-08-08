@@ -229,8 +229,12 @@ class IconServiceEngine(ContextContainer):
                     pass
 
             # Gets the max step limit and keep into the counter factory
-            max_step_limit = governance_score.getMaxStepLimit()
-            self._step_counter_factory.set_max_step_limit(max_step_limit)
+            self._step_counter_factory.set_max_step_limit(
+                IconScoreContextType.INVOKE,
+                governance_score.getMaxStepLimit("invoke"))
+            self._step_counter_factory.set_max_step_limit(
+                IconScoreContextType.QUERY,
+                governance_score.getMaxStepLimit("query"))
 
         finally:
             self._delete_context(context)
@@ -429,8 +433,9 @@ class IconServiceEngine(ContextContainer):
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
-        step_limit = params.get('stepLimit',
-                                self._step_counter_factory.get_max_step_limit())
+        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
+        if 'stepLimit' in params:
+            step_limit = min(params['stepLimit'], step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -467,12 +472,13 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
         context.block = self._icx_storage.last_block
-        step_limit = self._step_counter_factory.get_max_step_limit()
+        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
         if params:
             from_ = params.get('from', None)
             context.msg = Message(sender=from_)
-            step_limit = params.get('stepLimit', step_limit)
+            if 'stepLimit' in params:
+                step_limit = min(params['stepLimit'], step_limit)
 
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
