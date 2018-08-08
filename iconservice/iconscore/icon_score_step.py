@@ -33,6 +33,7 @@ class StepType(AutoValueEnum):
     CONTRACT_UPDATE = auto()
     CONTRACT_DESTRUCT = auto()
     CONTRACT_SET = auto()
+    GET = auto()
     SET = auto()
     REPLACE = auto()
     DELETE = auto()

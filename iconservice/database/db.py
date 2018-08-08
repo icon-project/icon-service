@@ -136,9 +136,23 @@ class DatabaseObserver(object):
     """ An abstract class of database observer.
     """
 
-    def __init__(self, put_func: callable, delete_func: callable):
+    def __init__(self,
+                 get_func: callable, put_func: callable, delete_func: callable):
+        self.__get_func = get_func
         self.__put_func = put_func
         self.__delete_func = delete_func
+
+    def on_get(self, context: 'IconScoreContext', key: bytes, value: bytes):
+        """
+        Invoked when `get` is called in `ContextDatabase`
+
+        :param context: SCORE context
+        :param key: key
+        :param value: value
+        """
+        if not self.__get_func:
+            Logger.warning('__get_func is None', ICON_DB_LOG_TAG)
+        self.__get_func(context, key, value)
 
     def on_put(self,
                context: 'IconScoreContext',
@@ -317,15 +331,18 @@ class IconScoreDatabase(ContextGetter):
         self._observer: DatabaseObserver = None
 
     def get(self, key: bytes) -> bytes:
-        key = self._hash_key(key)
-        return self._context_db.get(self._context, key)
+        hashed_key = self._hash_key(key)
+        value = self._context_db.get(self._context, hashed_key)
+        if self._observer:
+            self._observer.on_get(self._context, key, value)
+        return value
 
     def put(self, key: bytes, value: bytes):
-        key = self._hash_key(key)
+        hashed_key = self._hash_key(key)
         if self._observer:
-            old_value = self._context_db.get(self._context, key)
+            old_value = self._context_db.get(self._context, hashed_key)
             self._observer.on_put(self._context, key, old_value, value)
-        self._context_db.put(self._context, key, value)
+        self._context_db.put(self._context, hashed_key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
         if prefix is None:
@@ -344,11 +361,11 @@ class IconScoreDatabase(ContextGetter):
         return icon_score_database
 
     def delete(self, key: bytes):
-        key = self._hash_key(key)
+        hashed_key = self._hash_key(key)
         if self._observer:
-            old_value = self._context_db.get(self._context, key)
+            old_value = self._context_db.get(self._context, hashed_key)
             self._observer.on_delete(self._context, key, old_value)
-        self._context_db.delete(self._context, key)
+        self._context_db.delete(self._context, hashed_key)
 
     def close(self):
         self._context_db.close(self._context)
