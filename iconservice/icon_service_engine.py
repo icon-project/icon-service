@@ -421,10 +421,11 @@ class IconServiceEngine(ContextContainer):
 
         from_ = params['from']
         to = params['to']
-        step_limit = params.get('stepLimit', 0)
-        allow_step_overflow = \
-            not self._is_flag_on(IconServiceFlag.fee) \
-            or params.get('version', 2) < 3
+
+        # If the request is V2 the stepLimit field is not there,
+        # so fills it as the max step limit to proceed the transaction.
+        step_limit = params.get('stepLimit',
+                                self._step_counter_factory.get_max_step_limit())
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -437,8 +438,7 @@ class IconServiceEngine(ContextContainer):
         context.event_logs: List['EventLog'] = []
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
-        context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit, allow_step_overflow)
+        context.step_counter = self._step_counter_factory.create(step_limit)
         context.clear_msg_stack()
 
         self._validate_score_blacklist(context, params)
