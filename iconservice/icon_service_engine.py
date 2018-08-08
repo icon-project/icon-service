@@ -197,6 +197,9 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
 
+        # Clarifies that This Context does not count steps
+        context.step_counter = None
+
         try:
             self._put_context(context)
             # Gets the governance SCORE
@@ -218,11 +221,20 @@ class IconServiceEngine(ContextContainer):
             step_costs = governance_score.getStepCosts()
 
             for key, value in step_costs.items():
-                self._step_counter_factory.set_step_cost(StepType(key), value)
+                try:
+                    self._step_counter_factory.set_step_cost(
+                        StepType(key), value)
+                except ValueError:
+                    # Pass the unknown step type
+                    pass
 
             # Gets the max step limit and keep into the counter factory
-            max_step_limit = governance_score.getMaxStepLimit()
-            self._step_counter_factory.set_max_step_limit(max_step_limit)
+            self._step_counter_factory.set_max_step_limit(
+                IconScoreContextType.INVOKE,
+                governance_score.getMaxStepLimit("invoke"))
+            self._step_counter_factory.set_max_step_limit(
+                IconScoreContextType.QUERY,
+                governance_score.getMaxStepLimit("query"))
 
         finally:
             self._delete_context(context)
@@ -410,10 +422,12 @@ class IconServiceEngine(ContextContainer):
 
         from_ = params['from']
         to = params['to']
-        step_limit = params.get('stepLimit', 0)
-        allow_step_overflow = \
-            not self._is_flag_on(IconServiceFlag.fee) \
-            or params.get('version', 2) < 3
+
+        # If the request is V2 the stepLimit field is not there,
+        # so fills it as the max step limit to proceed the transaction.
+        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
+        if 'stepLimit' in params:
+            step_limit = min(params['stepLimit'], step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -426,8 +440,7 @@ class IconServiceEngine(ContextContainer):
         context.event_logs: List['EventLog'] = []
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
-        context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit, allow_step_overflow)
+        context.step_counter = self._step_counter_factory.create(step_limit)
         context.clear_msg_stack()
 
         self._validate_score_blacklist(context, params)
@@ -450,13 +463,14 @@ class IconServiceEngine(ContextContainer):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
-        context.block = self._precommit_data_manager.last_block
-        step_limit = self._step_counter_factory.get_max_step_limit()
+        context.block = self._icx_storage.last_block
+        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
         if params:
             from_ = params.get('from', None)
             context.msg = Message(sender=from_)
-            step_limit = params.get('stepLimit', step_limit)
+            if 'stepLimit' in params:
+                step_limit = min(params['stepLimit'], step_limit)
 
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
