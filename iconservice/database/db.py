@@ -24,7 +24,6 @@ from iconservice.icon_constant import ICON_DB_LOG_TAG
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreFuncType
-from iconservice.utils import sha3_256
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -341,7 +340,11 @@ class IconScoreDatabase(ContextGetter):
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
-            self._observer.on_put(self._context, key, old_value, value)
+            if value:
+                self._observer.on_put(self._context, key, old_value, value)
+            else:
+                # If new value is None, then deletes the field
+                self._observer.on_delete(self._context, key, old_value)
         self._context_db.put(self._context, hashed_key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
@@ -364,7 +367,9 @@ class IconScoreDatabase(ContextGetter):
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
-            self._observer.on_delete(self._context, key, old_value)
+            # If old value is None, won't fire the callback
+            if old_value:
+                self._observer.on_delete(self._context, key, old_value)
         self._context_db.delete(self._context, hashed_key)
 
     def close(self):
@@ -373,15 +378,16 @@ class IconScoreDatabase(ContextGetter):
     def set_observer(self, observer: 'DatabaseObserver'):
         self._observer = observer
 
-    def _hash_key(self, key: bytes):
+    def _hash_key(self, key: bytes) -> bytes:
         """All key is hashed and stored
         to StateDB to avoid key conflicts among SCOREs
 
         :params key: key passed by SCORE
+        :return: key bytes
         """
         data = [self.address.to_bytes()]
         if self._prefix is not None:
             data.append(self._prefix)
         data.append(key)
 
-        return sha3_256(b'|'.join(data))
+        return b'|'.join(data)

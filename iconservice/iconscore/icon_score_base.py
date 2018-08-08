@@ -474,9 +474,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param value: value
         """
 
-        if value and context and context.step_counter and \
+        if context and context.step_counter and \
                 context.type != IconScoreContextType.DIRECT:
-            context.step_counter.apply_step(StepType.GET, len(value))
+            length = 1
+            if value:
+                length = len(value)
+            context.step_counter.apply_step(StepType.GET, length)
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -495,7 +498,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param new_value: new value
         """
 
-        if new_value and context and context.step_counter and \
+        if context and context.step_counter and \
                 context.type == IconScoreContextType.INVOKE:
             if old_value:
                 # modifying a value
@@ -520,7 +523,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param old_value: old value
         """
 
-        if old_value and context and context.step_counter and \
+        if context and context.step_counter and \
                 context.type == IconScoreContextType.INVOKE:
             context.step_counter.apply_step(
                 StepType.DELETE, len(old_value))

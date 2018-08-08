@@ -34,10 +34,14 @@ class TestDatabaseObserver(unittest.TestCase):
         self.mem_db = {}
         self.key_ = b"key1"
         self.last_value = None
+
+        def get(caller, key):
+            return self.last_value
+
         score_address = Address.from_data(
             AddressPrefix.CONTRACT, b'score_address')
         context_db = Mock(spec=ContextDatabase)
-        context_db.attach_mock(Mock(return_value=self.last_value), "get")
+        context_db.get = get
         self._observer = Mock(spec=DatabaseObserver)
         self._icon_score_database = IconScoreDatabase(score_address, context_db)
         self._icon_score_database.set_observer(self._observer)
@@ -72,6 +76,7 @@ class TestDatabaseObserver(unittest.TestCase):
         self.assertEqual(value, args[2])
 
     def test_delete(self):
+        self.last_value = b"oldvalue"
         self._icon_score_database.delete(self.key_)
         self._observer.on_delete.assert_called()
         args, _ = self._observer.on_delete.call_args

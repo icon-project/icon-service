@@ -395,4 +395,5 @@ class Governance(IconScoreBase):
     @external(readonly=True)
     def getMaxStepLimit(self, context_type: str) -> int:
         max_step_limit = self._max_step_limits[context_type]
+        # FIXME
         return max_step_limit if max_step_limit is not None else 0
