@@ -323,9 +323,6 @@ class IconServiceEngine(ContextContainer):
 
         return block_result, precommit_data.block_batch.digest()
 
-    def validate_block_to_invoke(self, block: 'Block'):
-        self._precommit_data_manager.validate_block_to_invoke(block)
-
     @staticmethod
     def _is_genesis_block(
             tx_index: int, block_height: int, tx_params: dict) -> bool:
