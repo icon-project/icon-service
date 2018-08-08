@@ -230,11 +230,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory.destroy(context)
 
     def _validate_deploy_whitelist(self, context: 'IconScoreContext', params: dict):
-        version: int = params.get('version', 2)
-        if version == 2:
-            return
-
-        data_type = params.get('dataType', None)
+        data_type = params.get('dataType')
         if data_type != 'deploy':
             return
 
@@ -256,10 +252,6 @@ class IconServiceEngine(ContextContainer):
             self._delete_context(context)
 
     def _validate_score_blacklist(self, context: 'IconScoreContext', params: dict):
-        version: int = params.get('version', 2)
-        if version == 2:
-            return
-
         _to: 'Address' = params.get('to')
         if _to is None or not _to.is_contract:
             return
