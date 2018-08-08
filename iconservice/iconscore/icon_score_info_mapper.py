@@ -167,6 +167,7 @@ class IconScoreInfoMapper(object):
             info.icon_score.db.close()
         for score_address, info in self._wait_score_mapper.items():
             info.icon_score.db.close()
+        self._clear_garbage_score()
 
     def commit(self):
         for address, info in self._wait_score_mapper.items():
@@ -186,8 +187,8 @@ class IconScoreInfoMapper(object):
         self._wait_score_mapper.clear()
         self._wait_score_remove_table.clear()
 
-    def _remove_score_dir(self, address: 'Address', score_id: str):
-        target_path = os.path.join(self.score_root_path, address.to_bytes().hex(), score_id)
+    def _remove_score_dir(self, address: 'Address', score_id: str = str()):
+        target_path = os.path.join(self.score_root_path, bytes.hex(address.to_bytes()), score_id)
         try:
             rmtree(target_path)
         except Exception as e:
@@ -278,4 +279,34 @@ class IconScoreInfoMapper(object):
             del self._wait_score_mapper[score_address]
         self._remove_score_dir(score_address, score_id)
 
+    def _clear_garbage_score(self):
+        try:
+            dir_list = os.listdir(self.score_root_path)
+        except:
+            return
 
+        for dir_name in dir_list:
+            try:
+                address = Address.from_bytes(bytes.fromhex(dir_name[2:]))
+            except:
+                continue
+            deploy_info = self._deploy_storage.get_deploy_info(None, address)
+            if deploy_info is None:
+                self._remove_score_dir(address)
+                continue
+            else:
+                try:
+                    sub_dir_list = os.listdir(os.path.join(self.score_root_path, bytes.hex(address.to_bytes())))
+                except:
+                    continue
+                for sub_dir_name in sub_dir_list:
+                    try:
+                        tx_hash = bytes.fromhex(sub_dir_name[2:])
+                    except:
+                        continue
+                    if tx_hash == deploy_info.current_tx_hash:
+                        continue
+                    elif tx_hash == deploy_info.next_tx_hash:
+                        continue
+                    else:
+                        self._remove_score_dir(address, sub_dir_name)
