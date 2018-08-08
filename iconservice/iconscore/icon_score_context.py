@@ -32,7 +32,7 @@ from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-    from .icon_score_info_mapper import IconScoreInfoMapper
+    from .icon_score_mapper_container import IconScoreMapperContainer
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
     from ..deploy.icon_score_manager import IconScoreManager
@@ -97,7 +97,7 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icx_engine: 'IcxEngine' = None
-    icon_score_mapper: 'IconScoreInfoMapper' = None
+    icon_score_mapper_container: 'IconScoreMapperContainer' = None
     icon_score_manager: 'IconScoreManager' = None
 
     def __init__(self,
@@ -233,7 +233,7 @@ class IconScoreContext(object):
 
         self.msg = Message(sender=addr_from, value=icx_value)
         self.current_address = addr_to
-        icon_score = self.icon_score_mapper.get_icon_score(self, addr_to)
+        icon_score = self.icon_score_mapper_container.get_icon_score(self, addr_to)
 
         ret = call_method(icon_score=icon_score, func_name=func_name,
                           addr_from=addr_from, arg_params=arg_params, kw_params=kw_params)
@@ -247,7 +247,7 @@ class IconScoreContext(object):
         if address == GOVERNANCE_SCORE_ADDRESS:
             return
 
-        governance = self.icon_score_mapper.get_icon_score(self, GOVERNANCE_SCORE_ADDRESS)
+        governance = self.icon_score_mapper_container.get_icon_score(self, GOVERNANCE_SCORE_ADDRESS)
         if governance and governance.isInScoreBlackList(address):
             raise ServerErrorException(f'The Score is in Black List (address: {address})')
 
@@ -282,32 +282,6 @@ class IconScoreContext(object):
         self.logs_bloom = None
         self.traces = None
         self.clear_msg_stack()
-
-    def commit(self) -> None:
-        """Write changed states in block_batch to StateDB
-
-        It is called on write_precommit message from loopchain
-        """
-        if self.readonly:
-            raise IconScoreException('Commit is not possbile on readonly context')
-
-        if self.block_batch is None:
-            raise IconScoreException('Commit failure: BlockBatch is None')
-
-        block_batch = self.block_batch
-        for icon_score_address in block_batch:
-            info = self.icon_score_mapper.get(icon_score_address)
-            if info is None:
-                raise IconScoreException('IconScoreInfo is None')
-            info.icon_score.db.write_batch(block_batch)
-
-    def rollback(self) -> None:
-        """Rollback changed states in block_batch
-
-        It will be done to clear data in block_batch
-        in IconScoreContextFactory.destroy()
-        """
-        # Nothing to do
 
 
 class IconScoreContextFactory(object):

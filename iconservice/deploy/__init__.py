@@ -23,6 +23,5 @@ class DeployType(IntEnum):
 
 class DeployState(IntEnum):
     INACTIVE = 0
-    WAIT_TO_DEPLOY = 1
-    ACTIVE = 2
+    ACTIVE = 1
 

@@ -28,7 +28,7 @@ from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
@@ -78,7 +78,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         icon_score_manager = IconScoreManager(self._score_deploy_engine)
         self._icon_score_loader = IconScoreLoader(score_path)
-        self._icon_score_mapper = IconScoreInfoMapper(
+        self._icon_score_mapper = IconScoreMapper(
             icon_score_manager, self._icon_score_loader)
 
         self._addr1 = create_address(AddressPrefix.EOA, b'addr1')

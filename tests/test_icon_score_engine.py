@@ -23,7 +23,6 @@ import os
 
 from tests import rmtree, create_address
 from iconservice.base.address import AddressPrefix
-from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.message import Message
@@ -32,11 +31,10 @@ from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_mapper_container import IconScoreMapperContainer
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_tx_hash, create_block_hash
 
@@ -69,7 +67,10 @@ class TestIconScoreEngine(unittest.TestCase):
         self._deploy_storage = IconScoreDeployStorage(self._icx_storage.db)
 
         self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
-        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader, self._deploy_storage)
+
+        IconScoreMapperContainer.icon_score_loader = self._icon_score_loader
+        IconScoreMapperContainer.deploy_storage = self._deploy_storage
+        self._icon_score_mapper = IconScoreMapperContainer()
 
         self._engine = IconScoreEngine()
         self._engine.open(

@@ -13,18 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-from shutil import rmtree
-from threading import Lock
+
 from typing import TYPE_CHECKING, Optional
 
-from iconcommons.logger import Logger
-from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
-from ..deploy import DeployState
 from ..deploy.icon_score_deploy_engine import IconScoreDeployStorage
 
 if TYPE_CHECKING:
@@ -48,24 +43,12 @@ class IconScoreInfo(object):
         self._score_id = score_id
 
     @property
-    def address(self) -> 'Address':
-        """Icon score address
-        """
-        return self._icon_score.address
-
-    @property
     def icon_score(self) -> 'IconScoreBase':
         """Returns IconScoreBase object
 
         If IconScoreBase object is None, Create it here.
         """
         return self._icon_score
-
-    @property
-    def owner(self) -> 'Address':
-        """The address of user who creates a tx for installing this icon_score
-        """
-        return self._icon_score.owner
 
     @property
     def score_id(self) -> str:
@@ -113,7 +96,7 @@ class IconScoreMapperObject(dict):
                 f'{info} is not IconScoreInfo type.')
 
 
-class IconScoreInfoMapper(object):
+class IconScoreMapper(object):
     """Icon score information mapping table
 
     This instance should be used as a singletone
@@ -122,86 +105,28 @@ class IconScoreInfoMapper(object):
     value: IconScoreInfo
     """
 
-    def __init__(self,
-                 icon_score_loader: 'IconScoreLoader',
-                 deploy_storage: 'IconScoreDeployStorage') -> None:
+    icon_score_loader: 'IconScoreLoader' = None
+    deploy_storage: 'IconScoreDeployStorage' = None
+
+    def __init__(self) -> None:
         """Constructor
         """
-
-        self._icon_score_loader = icon_score_loader
-        self._deploy_storage = deploy_storage
-
-        self._lock = Lock()
-        self._wait_score_mapper = IconScoreMapperObject()
-        self._score_mapper = IconScoreMapperObject()
-        self._wait_score_remove_table = dict()
-
-    def __contains__(self, item):
-        with self._lock:
-            is_in_score_mapper = item in self._score_mapper
-
-        is_in_wait_mapper = item in self._wait_score_mapper
-        return is_in_score_mapper or is_in_wait_mapper
-
-    def __len__(self):
-        with self._lock:
-            return len(self._score_mapper)
-
-    def __getitem__(self, address: 'Address') -> 'IconScoreInfo':
-        with self._lock:
-            return self._score_mapper[address]
-
-    def __setitem__(self, address: 'Address', info: 'IconScoreInfo') -> None:
-        with self._lock:
-            self._score_mapper[address] = info
-
-    def __delitem__(self, address: 'Address') -> None:
-        with self._lock:
-            del self._score_mapper[address]
-
-    def get(self, address: 'Address') -> 'IconScoreInfo':
-        with self._lock:
-            return self._score_mapper.get(address)
+        self.score_mapper = IconScoreMapperObject()
 
     def close(self):
-        for score_address, info in self._score_mapper.items():
+        for addr, info in self.score_mapper.items():
             info.icon_score.db.close()
-        for score_address, info in self._wait_score_mapper.items():
-            info.icon_score.db.close()
-        self._clear_garbage_score()
 
-    def commit(self):
-        for address, info in self._wait_score_mapper.items():
-            self._score_mapper[address] = info
-            deploy_info = self._deploy_storage.get_deploy_info(None, address)
-            if deploy_info is None:
-                raise InvalidParamsException(f"can't put db about active deploystate")
-            else:
-                self._deploy_storage.update_deploy_state(None, address, DeployState.ACTIVE)
-        self._wait_score_mapper.clear()
-        self._wait_score_remove_table.clear()
-
-    def rollback(self):
-        for info in list(self._wait_score_remove_table.values()):
-            address, score_id = info
-            self._remove_score_dir(address, score_id)
-        self._wait_score_mapper.clear()
-        self._wait_score_remove_table.clear()
-
-    def _remove_score_dir(self, address: 'Address', score_id: Optional[str] = None):
-        if score_id is None:
-            target_path = os.path.join(self.score_root_path, bytes.hex(address.to_bytes()))
-        else:
-            target_path = os.path.join(self.score_root_path, bytes.hex(address.to_bytes()), score_id)
-
-        try:
-            rmtree(target_path)
-        except Exception as e:
-            Logger.warning(e)
+    def update(self, mapper: Optional['IconScoreMapper']):
+        if mapper is not None:
+            self.score_mapper.update(mapper.score_mapper)
 
     @property
     def score_root_path(self) -> str:
-        return self._icon_score_loader.score_root_path
+        return self.icon_score_loader.score_root_path
+
+    def __contains__(self, item) -> bool:
+        return item in self.score_mapper
 
     def get_icon_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreBase']:
         """
@@ -209,9 +134,9 @@ class IconScoreInfoMapper(object):
         :param address:
         :return: IconScoreBase object
         """
-        icon_score_info = self.get(address)
-        is_score_active = self._deploy_storage.is_score_active(context, address)
-        score_id = self._deploy_storage.get_current_score_id(context, address)
+        icon_score_info = self.score_mapper.get(address)
+        is_score_active = self.deploy_storage.is_score_active(context, address)
+        score_id = self.deploy_storage.get_current_score_id(context, address)
         if score_id is None:
             raise InvalidParamsException(f'score_id is None {address}')
 
@@ -229,9 +154,9 @@ class IconScoreInfoMapper(object):
         icon_score = icon_score_info.icon_score
         return icon_score
 
-    def load_wait_icon_score(self,
-                             address: 'Address',
-                             score_id: str) -> Optional['IconScoreBase']:
+    def load_icon_score(self,
+                        address: 'Address',
+                        score_id: str) -> Optional['IconScoreBase']:
         """
         :param address:
         :param score_id:
@@ -242,7 +167,6 @@ class IconScoreInfoMapper(object):
         return icon_score
 
     def _load_score(self, address: 'Address', score_id) -> Optional['IconScoreInfo']:
-        self._wait_score_remove_table[address] = (address, score_id)
         score_wrapper = self._load_score_wrapper(address, score_id)
         score_db = self._create_icon_score_database(address)
         icon_score = score_wrapper(score_db)
@@ -267,54 +191,12 @@ class IconScoreInfoMapper(object):
         :return: IconScoreBase subclass (NOT instance)
         """
 
-        score_wrapper = self._icon_score_loader.load_score(address.to_bytes().hex(), score_id)
+        score_wrapper = self.icon_score_loader.load_score(address.to_bytes().hex(), score_id)
         if score_wrapper is None:
             raise InvalidParamsException(f'score_wrapper load Fail {address}')
         return score_wrapper
 
     def _add_score_to_mapper(self, icon_score: 'IconScoreBase', score_id: str) -> 'IconScoreInfo':
         info = IconScoreInfo(icon_score, score_id)
-        self._wait_score_mapper[icon_score.address] = info
+        self.score_mapper[icon_score.address] = info
         return info
-
-    def delete_wait_score_mapper(self, score_address: 'Address', score_id: str):
-        if score_address in self._wait_score_remove_table:
-            del self._wait_score_remove_table[score_address]
-        if score_address in self._wait_score_mapper:
-            del self._wait_score_mapper[score_address]
-        self._remove_score_dir(score_address, score_id)
-
-    def _clear_garbage_score(self):
-        try:
-            dir_list = os.listdir(self.score_root_path)
-        except:
-            return
-
-        for dir_name in dir_list:
-            try:
-                address = Address.from_bytes(bytes.fromhex(dir_name))
-            except:
-                continue
-            deploy_info = self._deploy_storage.get_deploy_info(None, address)
-            if deploy_info is None:
-                self._remove_score_dir(address)
-                continue
-            else:
-                try:
-                    sub_dir_list = os.listdir(os.path.join(self.score_root_path, bytes.hex(address.to_bytes())))
-                except:
-                    continue
-                for sub_dir_name in sub_dir_list:
-                    try:
-                        tx_hash = bytes.fromhex(sub_dir_name[2:])
-                    except:
-                        continue
-
-                    if tx_hash == bytes(DEFAULT_BYTE_SIZE):
-                        continue
-                    if tx_hash == deploy_info.current_tx_hash:
-                        continue
-                    elif tx_hash == deploy_info.next_tx_hash:
-                        continue
-                    else:
-                        self._remove_score_dir(address, sub_dir_name)

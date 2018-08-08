@@ -31,7 +31,7 @@ from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
+    from ..iconscore.icon_score_mapper_container import IconScoreMapperContainer
     from .icon_score_deploy_storage import IconScoreDeployTXParams
 
 
@@ -49,7 +49,7 @@ class IconScoreDeployEngine(object):
         """
         self._flag = None
         self._icon_score_deploy_storage = None
-        self._icon_score_mapper = None
+        self._icon_score_mapper_container = None
         self._icon_score_deployer = None
         self._icon_builtin_score_loader = None
         self._icon_score_manager = None
@@ -57,18 +57,18 @@ class IconScoreDeployEngine(object):
     def open(self,
              score_root_path: str,
              flag: int,
-             icon_score_mapper: 'IconScoreInfoMapper',
+             icon_score_mapper_container: 'IconScoreMapperContainer',
              icon_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
 
         :param score_root_path:
         :param flag: flags composed by IconScoreDeployEngine
-        :param icon_score_mapper:
+        :param icon_score_mapper_container:
         :param icon_deploy_storage:
         """
         self._flag = flag
         self._icon_score_deploy_storage = icon_deploy_storage
-        self._icon_score_mapper = icon_score_mapper
+        self._icon_score_mapper_container = icon_score_mapper_container
         self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(score_root_path)
 
     @property
@@ -122,11 +122,7 @@ class IconScoreDeployEngine(object):
             raise InvalidParamsException(f'tx_params is None : {tx_hash}')
         score_address = tx_params.score_address
         self._score_deploy(context, tx_params)
-
         self._icon_score_deploy_storage.update_score_info(context, score_address, tx_hash)
-        deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
-        if deploy_info is None:
-            raise InvalidParamsException(f'deploy_info is None : {score_address}')
 
     def deploy_for_builtin(self, score_address: 'Address', src_score_path: str):
         self._score_deploy_for_builtin(score_address, src_score_path)
@@ -183,7 +179,7 @@ class IconScoreDeployEngine(object):
         """Install an icon score for builtin
         """
 
-        score_root_path = self._icon_score_mapper.score_root_path
+        score_root_path = self._icon_score_mapper_container.score_root_path
         target_path = path.join(score_root_path,
                                 icon_score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
@@ -200,7 +196,7 @@ class IconScoreDeployEngine(object):
             pass
 
         try:
-            score = self._icon_score_mapper.load_wait_icon_score(icon_score_address, score_id)
+            score = self._icon_score_mapper_container.load_icon_score(None, icon_score_address, score_id)
             if score is None:
                 raise InvalidParamsException(f'score is None : {icon_score_address}')
 
@@ -210,7 +206,6 @@ class IconScoreDeployEngine(object):
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {icon_score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address, score_id)
             raise e
 
     def _on_deploy(self,
@@ -233,7 +228,7 @@ class IconScoreDeployEngine(object):
 
         score_id = self._icon_score_deploy_storage.get_next_score_id(context, tx_params.score_address)
         if content_type == 'application/tbears':
-            score_root_path = self._icon_score_mapper.score_root_path
+            score_root_path = self._icon_score_mapper_container.score_root_path
             target_path = path.join(score_root_path,
                                     score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
@@ -249,7 +244,7 @@ class IconScoreDeployEngine(object):
                 score_id=score_id)
 
         try:
-            score = self._icon_score_mapper.load_wait_icon_score(score_address, score_id)
+            score = self._icon_score_mapper_container.load_icon_score(context, score_address, score_id)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')
 
@@ -266,7 +261,6 @@ class IconScoreDeployEngine(object):
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(score_address, score_id)
             raise e
 
     @staticmethod
@@ -282,13 +276,3 @@ class IconScoreDeployEngine(object):
         annotations = TypeConverter.make_annotations_from_method(on_deploy)
         TypeConverter.convert_data_params(annotations, params)
         on_deploy(**params)
-
-    def commit(self, context: 'IconScoreContext') -> None:
-        pass
-
-    def rollback(self) -> None:
-        """It is called when the previous block has been canceled
-
-        Rollback install, update or remove tasks cached in the previous block
-        """
-        pass

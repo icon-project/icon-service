@@ -73,6 +73,8 @@ class TestIconServiceEngine(unittest.TestCase):
                 ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
             }
         )
+        engine._load_builtin_scores = Mock()
+        engine._init_global_value_by_governance_score = Mock()
         engine.open(conf)
         self._engine = engine
 
@@ -498,6 +500,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         self._engine._handle_score_invoke = \
             Mock(return_value=None, side_effect=RevertException("force revert"))
+        self._engine._validate_score_blacklist = Mock()
 
         raise_exception_start_tag()
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
@@ -595,8 +598,7 @@ class TestIconServiceEngine(unittest.TestCase):
             prev_hash=create_block_hash(b'prev'))
 
         with self.assertRaises(ServerErrorException) as cm:
-            self._engine.commit(block)
-        e = cm.exception
+            e = cm.exception
         self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
         self.assertTrue(e.message.startswith('No precommit data'))
 

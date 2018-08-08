@@ -241,7 +241,7 @@ class IconScoreDeployStorage(object):
             self._put_deploy_info(context, deploy_info)
 
     def put_deploy_info_and_tx_params_for_builtin(self, score_address: 'Address', owner: 'Address') -> None:
-        deploy_info = IconScoreDeployInfo(score_address, DeployState.WAIT_TO_DEPLOY, owner, None, None)
+        deploy_info = IconScoreDeployInfo(score_address, DeployState.ACTIVE, owner, None, None)
         self._put_deploy_info(None, deploy_info)
 
     def update_score_info(self,
@@ -262,25 +262,12 @@ class IconScoreDeployStorage(object):
             else:
                 deploy_info.current_tx_hash = next_tx_hash
                 deploy_info.next_tx_hash = None
-                deploy_info.deploy_state = DeployState.WAIT_TO_DEPLOY
-
+                deploy_info.deploy_state = DeployState.ACTIVE
                 self._put_deploy_info(context, deploy_info)
 
                 tx_params = self.get_deploy_tx_params(context, deploy_info.current_tx_hash)
                 if tx_params is None:
                     raise ServerErrorException(f'tx_params is None {deploy_info.current_tx_hash}')
-
-    def update_deploy_state(self,
-                            context: 'IconScoreContext',
-                            score_address: 'Address',
-                            deploy_state: 'DeployState') -> None:
-
-        deploy_info = self.get_deploy_info(context, score_address)
-        if deploy_info is None:
-            raise ServerErrorException(f'deploy_info is None score_addr : {score_address}')
-        else:
-            deploy_info.deploy_state = deploy_state
-            self._put_deploy_info(context, deploy_info)
 
     def _put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
         """
@@ -292,14 +279,14 @@ class IconScoreDeployStorage(object):
         value = deploy_info.to_bytes()
         self._db.put(context, self._create_db_key(
             self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, deploy_info.score_address.to_bytes()), value)
-        self._deploy_info_mapper[deploy_info.score_address] = deploy_info
+        # self._deploy_info_mapper[deploy_info.score_address] = deploy_info
 
     def get_deploy_info(self, context: Optional['IconScoreContext'], score_addr: 'Address') \
             -> Optional['IconScoreDeployInfo']:
-
-        cached_deployinfo = self._deploy_info_mapper.get(score_addr)
-        if cached_deployinfo is not None:
-            return cached_deployinfo
+        #
+        # cached_deployinfo = self._deploy_info_mapper.get(score_addr)
+        # if cached_deployinfo is not None:
+        #     return cached_deployinfo
 
         bytes_value = self._db.get(context, self._create_db_key(
             self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_addr.to_bytes()))

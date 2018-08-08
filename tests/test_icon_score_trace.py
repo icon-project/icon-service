@@ -64,8 +64,8 @@ class TestTrace(unittest.TestCase):
         context.icon_score_manager = Mock()
         context.icon_score_manager.get_owner = Mock(return_value=None)
         context.icx_engine = Mock()
-        context.icon_score_mapper = Mock()
-        context.icon_score_mapper.get_icon_score = Mock(return_value=None)
+        context.icon_score_mapper_container = Mock()
+        context.icon_score_mapper_container.get_icon_score = Mock(return_value=None)
         self._score = TestScore(db)
 
     def tearDown(self):
