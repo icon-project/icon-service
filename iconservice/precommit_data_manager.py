@@ -35,6 +35,7 @@ class PrecommitData(object):
         self.block_batch = block_batch
         self.block_result = block_result
         self.score_mapper = score_mapper
+        self.block = block_batch.block
 
 
 class PrecommitDataManager(object):
@@ -116,6 +117,8 @@ class PrecommitDataManager(object):
 
         if self._last_block is None:
             return
+
+        precommit_block = precommit_data.block
 
         if self._last_block.hash != precommit_block.prev_hash or \
                 self._last_block.height + 1 != precommit_block.height:
