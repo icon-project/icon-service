@@ -98,8 +98,7 @@ class IconPreValidator:
 
         # Check 'to' is not a SCORE address
         to: 'Address' = params['to']
-        if self._score_manager.is_score_active(
-                context=None, icon_score_address=to):
+        if to.is_contract:
             raise InvalidRequestException(
                 'It is not allowed to transfer coin to SCORE on protocol v2')
 
@@ -110,8 +109,7 @@ class IconPreValidator:
         :param params:
         :return:
         """
-        if step_price > 0:
-            self._check_minimum_step(params, minimum_step)
+        self._check_minimum_step(params, minimum_step)
 
         self._check_from_can_charge_fee_v3(params, step_price)
 

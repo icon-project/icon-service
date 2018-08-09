@@ -19,7 +19,7 @@ from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
 from iconcommons import Logger
-from . import DeployType, make_score_id
+from . import DeployType
 from .icon_builtin_score_loader import IconBuiltinScoreLoader
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
@@ -109,9 +109,7 @@ class IconScoreDeployEngine(object):
         is_audit_enabled = self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_AUDIT)
         return not is_audit_enabled or all((is_built_score, is_owner))
 
-    def deploy(self,
-               context: 'IconScoreContext',
-               tx_hash: bytes) -> None:
+    def deploy(self, context: 'IconScoreContext', tx_hash: bytes) -> None:
         """
         included audit deploy
         :param context:
@@ -123,7 +121,7 @@ class IconScoreDeployEngine(object):
         if tx_params is None:
             raise InvalidParamsException(f'tx_params is None : {tx_hash}')
         score_address = tx_params.score_address
-        self._score_deploy(tx_params)
+        self._score_deploy(context, tx_params)
 
         self._icon_score_deploy_storage.update_score_info(context, score_address, tx_hash)
         deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
@@ -133,11 +131,8 @@ class IconScoreDeployEngine(object):
     def deploy_for_builtin(self, score_address: 'Address', src_score_path: str):
         self._score_deploy_for_builtin(score_address, src_score_path)
 
-    def _score_deploy(self,
-                      tx_params: 'IconScoreDeployTXParams'):
-
+    def _score_deploy(self, context: 'IconScoreContext', tx_params: 'IconScoreDeployTXParams'):
         """
-
         :param tx_params: use deploy_data from IconScoreDeployTxParams info
         :return:
         """
@@ -154,7 +149,7 @@ class IconScoreDeployEngine(object):
             raise InvalidParamsException(
                 f'Invalid contentType: {content_type}')
 
-        self._on_deploy(tx_params)
+        self._on_deploy(context, tx_params)
 
     def _score_deploy_for_builtin(self, icon_score_address: 'Address',
                                   src_score_path: str):
@@ -192,9 +187,8 @@ class IconScoreDeployEngine(object):
         target_path = path.join(score_root_path,
                                 icon_score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
-        score_id = make_score_id(0, 0)
-        target_path = path.join(
-            target_path, score_id)
+        score_id = self._icon_score_deploy_storage.get_next_score_id(None, icon_score_address)
+        target_path = path.join(target_path, score_id)
 
         filecopy = False
         try:
@@ -220,6 +214,7 @@ class IconScoreDeployEngine(object):
             raise e
 
     def _on_deploy(self,
+                   context: 'IconScoreContext',
                    tx_params: 'IconScoreDeployTXParams') -> None:
         """
         load score on memory
@@ -236,7 +231,7 @@ class IconScoreDeployEngine(object):
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
 
-        score_id = tx_params.score_id
+        score_id = self._icon_score_deploy_storage.get_next_score_id(context, tx_params.score_address)
         if content_type == 'application/tbears':
             score_root_path = self._icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,

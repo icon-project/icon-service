@@ -14,13 +14,13 @@
 # limitations under the License.
 
 
-from collections import namedtuple
 from math import ceil
 from os import makedirs
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from .base.address import Address, generate_score_address, generate_score_address_for_tbears
+from .base.address import Address, generate_score_address, \
+    generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, \
     GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -34,7 +34,8 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .deploy.icon_score_manager import IconScoreManager
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, IconDeployFlag, ConfigKey
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
+    IconServiceFlag, IconDeployFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -48,6 +49,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
+from .precommit_data_manager import PrecommitData, PrecommitDataManager
 from .utils import byte_length_of_int
 from .utils import is_lowercase_hex_string
 from .utils.bloom import BloomFilter
@@ -81,7 +83,6 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_engine = None
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
-        self._precommit_state = None
         self._icon_pre_validator = None
         self._icon_score_deploy_storage = None
 
@@ -94,10 +95,7 @@ class IconServiceEngine(ContextContainer):
             'icx_getScoreApi': self._handle_icx_get_score_api
         }
 
-        # The precommit state is the state that has already been invoked,
-        # but not written to levelDB or file system.
-        self._PrecommitState = namedtuple(
-            'PrecommitState', ['block_batch', 'block_result'])
+        self._precommit_data_manager = PrecommitDataManager()
 
     def _is_flag_on(self, flag: 'IconServiceFlag') -> bool:
         return (self._flag & flag) == flag
@@ -167,6 +165,8 @@ class IconServiceEngine(ContextContainer):
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
 
+        self._precommit_data_manager.last_block = self._icx_storage.last_block
+
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
         key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOYER_WHITELIST]
@@ -197,6 +197,9 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
 
+        # Clarifies that This Context does not count steps
+        context.step_counter = None
+
         try:
             self._put_context(context)
             # Gets the governance SCORE
@@ -218,23 +221,30 @@ class IconServiceEngine(ContextContainer):
             step_costs = governance_score.getStepCosts()
 
             for key, value in step_costs.items():
-                self._step_counter_factory.set_step_cost(StepType(key), value)
+                try:
+                    self._step_counter_factory.set_step_cost(
+                        StepType(key), value)
+                except ValueError:
+                    # Pass the unknown step type
+                    pass
 
             # Gets the max step limit and keep into the counter factory
-            max_step_limit = governance_score.getMaxStepLimit()
-            self._step_counter_factory.set_max_step_limit(max_step_limit)
+            self._step_counter_factory.set_max_step_limit(
+                IconScoreContextType.INVOKE,
+                governance_score.getMaxStepLimit("invoke"))
+            self._step_counter_factory.set_max_step_limit(
+                IconScoreContextType.QUERY,
+                governance_score.getMaxStepLimit("query"))
 
         finally:
             self._delete_context(context)
 
         self._context_factory.destroy(context)
 
-    def _validate_deploy_whitelist(self, context: 'IconScoreContext', params: dict):
-        version: int = params.get('version', 2)
-        if version == 2:
-            return
+    def _validate_deploy_whitelist(
+            self, context: 'IconScoreContext', params: dict):
+        data_type = params.get('dataType')
 
-        data_type = params.get('dataType', None)
         if data_type != 'deploy':
             return
 
@@ -250,8 +260,26 @@ class IconServiceEngine(ContextContainer):
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
-            if not governance_score.is_deployer(_from):
+            if not governance_score.isDeployer(_from):
                 raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
+        finally:
+            self._delete_context(context)
+
+    def _validate_score_blacklist(self, context: 'IconScoreContext', params: dict):
+        _to: 'Address' = params.get('to')
+        if _to is None or not _to.is_contract:
+            return
+
+        try:
+            self._put_context(context)
+            # Gets the governance SCORE
+            governance_score = self._icon_score_mapper.get_icon_score(
+                context, GOVERNANCE_SCORE_ADDRESS)
+            if governance_score is None:
+                raise ServerErrorException(f'governance_score is None')
+
+            if governance_score.isInScoreBlackList(_to):
+                raise ServerErrorException(f'The Score is in Black List (address: {_to})')
         finally:
             self._delete_context(context)
 
@@ -273,6 +301,9 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
+        # Check for block validation before invoke
+        self._precommit_data_manager.validate_block_to_invoke(block)
+
         self._init_global_value_by_governance_score()
 
         context = self._context_factory.create(IconScoreContextType.INVOKE)
@@ -294,28 +325,15 @@ class IconServiceEngine(ContextContainer):
                 context.block_batch.update(context.tx_batch)
                 context.tx_batch.clear()
 
-        # precommit_state will be written to levelDB on commit()
-        self._precommit_state = self._PrecommitState(
-            block_batch=context.block_batch,
-            block_result=block_result)
+        # Save precommit data
+        # It will be written to levelDB on commit
+        precommit_data = PrecommitData(
+            context.block_batch, block_result, score_mapper={})
+        self._precommit_data_manager.push(precommit_data)
 
         self._context_factory.destroy(context)
 
-        return block_result, self._precommit_state.block_batch.digest()
-
-    def validate_next_block(self, block: 'Block') -> None:
-        last_block = self._icx_storage.last_block
-        if last_block is None:
-            return
-
-        if block.height != last_block.height + 1:
-            raise ServerErrorException(
-                f'NextBlockHeight[{block.height}] '
-                f'!= LastBlockHeight[{last_block.height}] + 1')
-        elif block.prev_hash != last_block.hash:
-            raise ServerErrorException(
-                f'NextBlock.prevHash[{block.prev_hash}] '
-                f'!= LastBlockHash[{last_block.hash}]')
+        return block_result, precommit_data.block_batch.digest()
 
     @staticmethod
     def _is_genesis_block(
@@ -404,10 +422,12 @@ class IconServiceEngine(ContextContainer):
 
         from_ = params['from']
         to = params['to']
-        step_limit = params.get('stepLimit', 0)
-        allow_step_overflow = \
-            not self._is_flag_on(IconServiceFlag.fee) \
-            or params.get('version', 2) < 3
+
+        # If the request is V2 the stepLimit field is not there,
+        # so fills it as the max step limit to proceed the transaction.
+        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
+        if 'stepLimit' in params:
+            step_limit = min(params['stepLimit'], step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -420,10 +440,10 @@ class IconServiceEngine(ContextContainer):
         context.event_logs: List['EventLog'] = []
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
-        context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit, allow_step_overflow)
+        context.step_counter = self._step_counter_factory.create(step_limit)
         context.clear_msg_stack()
 
+        self._validate_score_blacklist(context, params)
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             self._validate_deploy_whitelist(context, params)
 
@@ -444,17 +464,19 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
         context.block = self._icx_storage.last_block
-        step_limit = self._step_counter_factory.get_max_step_limit()
+        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
         if params:
             from_ = params.get('from', None)
             context.msg = Message(sender=from_)
-            step_limit = params.get('stepLimit', step_limit)
+            if 'stepLimit' in params:
+                step_limit = min(params['stepLimit'], step_limit)
 
         context.traces: List['Trace'] = []
         context.step_counter: IconScoreStepCounter = \
             self._step_counter_factory.create(step_limit)
 
+        self._validate_score_blacklist(context, params)
         ret = self._call(context, method, params)
 
         self._context_factory.destroy(context)
@@ -483,10 +505,11 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.get_step_cost(StepType.DEFAULT)
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
+        context = self._context_factory.create(IconScoreContextType.QUERY)
+        self._validate_score_blacklist(context, params)
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            context = self._context_factory.create(IconScoreContextType.QUERY)
             self._validate_deploy_whitelist(context, params)
-            self._context_factory.destroy(context)
+        self._context_factory.destroy(context)
 
     def _call(self,
               context: 'IconScoreContext',
@@ -808,45 +831,38 @@ class IconServiceEngine(ContextContainer):
         return self._icon_score_engine.get_score_api(
             context, icon_score_address)
 
-    def commit(self) -> None:
+    def commit(self, block: 'Block') -> None:
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
-        if self._precommit_state is None:
-            raise ServerErrorException(
-                'Precommit state is none on commit')
+        # Check for block validation before commit
+        self._precommit_data_manager.validate_precommit_block(block)
 
         context = self._context_factory.create(IconScoreContextType.DIRECT)
-        block_batch = self._precommit_state.block_batch
 
-        self._icx_context_db.write_batch(context=context, states=block_batch)
+        precommit_data: 'PrecommitData' = \
+            self._precommit_data_manager.get(block.hash)
+        block_batch = precommit_data.block_batch
+
+        self._icx_context_db.write_batch(
+            context=context, states=block_batch)
 
         self._icon_score_engine.commit(context)
         self._icon_score_deploy_engine.commit(context)
-        self._precommit_state = None
-
         self._icx_storage.put_block_info(context, block_batch.block)
         self._icon_score_mapper.commit()
+        self._precommit_data_manager.commit(block_batch.block)
+
         self._context_factory.destroy(context)
 
-    def validate_precommit(self, precommit_block: 'Block') -> None:
-        if self._precommit_state is None:
-            raise ServerErrorException('precommit_state is None')
-
-        block = self._precommit_state.block_batch.block
-
-        if block.hash != precommit_block.hash \
-                or block.height != precommit_block.height:
-            raise ServerErrorException(
-                f'block({block.height}, {block.hash.hex()}) != '
-                f'precommit block({precommit_block.height}, '
-                f'{precommit_block.hash.hex()})')
-
-    def rollback(self) -> None:
+    def rollback(self, block: 'Block') -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         """
-        self._precommit_state = None
+        # Check for block validation before rollback
+        self._precommit_data_manager.validate_precommit_block(block)
+
+        self._precommit_data_manager.rollback(block)
         self._icon_score_engine.rollback()
         self._icon_score_deploy_engine.rollback()
         self._icon_score_mapper.rollback()

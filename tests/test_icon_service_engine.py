@@ -38,7 +38,8 @@ from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
 from iconservice.utils.bloom import BloomFilter
-from tests import create_block_hash, create_address, rmtree, create_tx_hash
+from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
+    raise_exception_start_tag, raise_exception_end_tag
 
 context_factory = IconScoreContextFactory(max_size=1)
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -99,14 +100,15 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         ]
 
-        block = Block(0, create_block_hash(b'block'), 0, None)
+        block = Block(0, create_block_hash(b'genesis'), 0, None)
         tx = {'method': '',
               'params': {'txHash': create_tx_hash()},
               'genesisData': {'accounts': accounts}}
         tx_lists = [tx]
 
         self._engine.invoke(block, tx_lists)
-        self._engine.commit()
+        self._engine.commit(block)
+        self.genesis_block = block
 
     def tearDown(self):
         self._engine.close()
@@ -158,9 +160,9 @@ class TestIconServiceEngine(unittest.TestCase):
         }
 
         step_limit: int = params.get('stepLimit', 0)
-        allow_step_overflow = \
-            not self._engine._is_flag_on(IconServiceFlag.fee) \
-            or params.get('version', 2) < 3
+        if params.get('version', 2) < 3:
+            step_limit = self._engine._step_counter_factory.get_max_step_limit(
+                context.type)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
@@ -172,7 +174,7 @@ class TestIconServiceEngine(unittest.TestCase):
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter: IconScoreStepCounter = self._engine. \
-            _step_counter_factory.create(step_limit, allow_step_overflow)
+            _step_counter_factory.create(step_limit)
         self._engine._call(context, method, params)
 
         # from(genesis), to
@@ -206,7 +208,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         original_invoke_request = self._engine._invoke_request
 
@@ -222,7 +224,8 @@ class TestIconServiceEngine(unittest.TestCase):
             # asserts max step limit is applied to step counting.
             self.assertNotEqual(step_limit, context.step_counter.step_limit)
             self.assertEqual(
-                self._engine._step_counter_factory.get_max_step_limit(),
+                self._engine._step_counter_factory.get_max_step_limit(
+                    context.type),
                 context.step_counter.step_limit)
             return ret
 
@@ -257,7 +260,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = \
@@ -288,7 +291,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
@@ -316,7 +319,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_price, step_price)
 
         # Write updated states to levelDB
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = self._engine._icx_engine.get_balance(
@@ -348,7 +351,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
@@ -379,7 +382,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = \
@@ -415,7 +418,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         before_from_balance: int = \
             self._engine._icx_engine.get_balance(None, self.from_)
@@ -450,7 +453,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         after_from_balance: int = \
@@ -488,7 +491,7 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      create_block_hash(b'prev'))
+                      self.genesis_block.hash)
 
         before_from_balance: int = \
             self._engine._icx_engine.get_balance(None, self.from_)
@@ -496,7 +499,9 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine._handle_score_invoke = \
             Mock(return_value=None, side_effect=RevertException("force revert"))
 
+        raise_exception_start_tag()
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        raise_exception_end_tag()
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -526,7 +531,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self.assertEqual(step_price, 0)
         self.assertEqual(tx_result.step_price, step_price)
 
-        self._engine.commit()
+        self._engine.commit(block)
 
         # Check whether fee charging works well
         after_from_balance: int = \
@@ -570,7 +575,9 @@ class TestIconServiceEngine(unittest.TestCase):
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = Mock(spec=list)
 
+        raise_exception_start_tag()
         tx_result = self._engine._call(context, method, params)
+        raise_exception_end_tag()
         self.assertTrue(isinstance(tx_result, TransactionResult))
         self.assertEqual(TransactionResult.FAILURE, tx_result.status)
         self.assertEqual(self._icon_score_address, tx_result.to)
@@ -581,15 +588,29 @@ class TestIconServiceEngine(unittest.TestCase):
         context_factory.destroy(context)
 
     def test_commit(self):
+        block = Block(
+            block_height=1,
+            block_hash=create_block_hash(b'block'),
+            timestamp=0,
+            prev_hash=create_block_hash(b'prev'))
+
         with self.assertRaises(ServerErrorException) as cm:
-            self._engine.commit()
+            self._engine.commit(block)
         e = cm.exception
         self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
-        self.assertEqual('Precommit state is none on commit', e.message)
+        self.assertTrue(e.message.startswith('No precommit data'))
 
     def test_rollback(self):
-        self._engine.rollback()
-        self.assertIsNone(self._engine._precommit_state)
+        block = Block(
+            block_height=1,
+            block_hash=create_block_hash(b'block'),
+            timestamp=0,
+            prev_hash=self.genesis_block.hash)
+
+        block_result, state_root_hash = self._engine.invoke(block, [])
+
+        self._engine.rollback(block)
+        self.assertIsNone(self._engine._precommit_data_manager.get(block))
 
 
 if __name__ == '__main__':

@@ -29,6 +29,9 @@ if TYPE_CHECKING:
 
 
 class IcxEngine(object):
+    _GENESIS_DB_KEY = 'genesis'
+    _TREASURY_DB_KEY = 'fee_treasury'
+
     """Manages the balances of icon accounts
 
     The basic unit of icx coin is loop. (1 icx == 1e18 loop)
@@ -77,28 +80,52 @@ class IcxEngine(object):
                      account_name: str,
                      address: 'Address',
                      amount: int) -> None:
+        """This method is called only on invoking the genesis block
+
+        :param context:
+        :param account_type:
+        :param account_name:
+        :param address:
+        :param amount:
+        :return:
+        """
 
         account = Account(
             account_type=account_type, address=address, icx=int(amount))
 
-        obj = {
-            'version': 0,
-            'address': str(address)
-        }
-
-        text = json.dumps(obj)
-        self._storage.put_text(context, account_name, text)
-
         self._storage.put_account(context, account.address, account)
-        if account_type == AccountType.GENESIS:
-            self._genesis_address = address
+
+        if account.icx > 0:
             self._total_supply_amount += account.icx
             self._storage.put_total_supply(context, self._total_supply_amount)
-        elif account_type == AccountType.TREASURY:
-            self._fee_treasury_address = address
+
+        if account_type == AccountType.GENESIS or \
+                account_type == AccountType.TREASURY:
+            self._init_special_account(context, account)
+
+    def _init_special_account(self,
+                              context: 'IconScoreContext',
+                              account: 'Account') -> None:
+        """Compared to other general accounts,
+        additional tasks should be processed
+        for special accounts (genesis, treasury)
+
+        :param context:
+        :param account: genesis or treasury accounts
+        """
+        assert account.type in (AccountType.GENESIS, AccountType.TREASURY)
+
+        if account.type == AccountType.GENESIS:
+            db_key = self._GENESIS_DB_KEY
+            self._genesis_address = account.address
         else:
-            self._total_supply_amount += account.icx
-            self._storage.put_total_supply(context, self._total_supply_amount)
+            db_key = self._TREASURY_DB_KEY
+            self._fee_treasury_address = account.address
+
+        obj = {'version': 0, 'address': str(account.address)}
+        text = json.dumps(obj)
+
+        self._storage.put_text(context, db_key, text)
 
     def _load_genesis_account_from_storage(
             self,
@@ -109,10 +136,13 @@ class IcxEngine(object):
         :param context:
         :param storage: (IcxStorage) state db wrapper
         """
-        text = storage.get_text(context, 'genesis')
+        Logger.debug('_load_genesis_account_from_storage() start', ICX_LOG_TAG)
+        text = storage.get_text(context, self._GENESIS_DB_KEY)
         if text:
             obj = json.loads(text)
             self._genesis_address = Address.from_string(obj['address'])
+            Logger.info(f'{self._GENESIS_DB_KEY}: {self._genesis_address}', ICX_LOG_TAG)
+        Logger.debug('_load_genesis_account_from_storage() end', ICX_LOG_TAG)
 
     def _load_fee_treasury_account_from_storage(
             self,
@@ -123,10 +153,13 @@ class IcxEngine(object):
         :param context:
         :param storage: state db manager
         """
-        text = storage.get_text(context, 'fee_treasury')
+        Logger.debug('_load_fee_treasury_account_from_storage() start', ICX_LOG_TAG)
+        text = storage.get_text(context, self._TREASURY_DB_KEY)
         if text:
             obj = json.loads(text)
             self._fee_treasury_address = Address.from_string(obj['address'])
+            Logger.info(f'{self._TREASURY_DB_KEY}: {self._fee_treasury_address}', ICX_LOG_TAG)
+        Logger.debug('_load_fee_treasury_account_from_storage() end', ICX_LOG_TAG)
 
     def _load_total_supply_amount_from_storage(
             self,

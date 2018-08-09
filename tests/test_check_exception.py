@@ -19,6 +19,7 @@ import unittest
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.base.exception import ExternalException, PayableException
 from iconservice.base.exception import check_exception
+from tests import raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestCheckException(unittest.TestCase):
@@ -49,7 +50,9 @@ class TestCheckException(unittest.TestCase):
         return self.check_external_exception_func1()
 
     def test_external_exception_call(self):
+        raise_exception_start_tag()
         self.assertRaises(Exception, self.check_built_in_exception_func1)
+        raise_exception_end_tag()
 
         #handling exception
         #self.check_external_exception_func1()

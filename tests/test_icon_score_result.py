@@ -36,7 +36,8 @@ from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from tests import create_tx_hash, create_address
+from tests import create_tx_hash, create_address,\
+    raise_exception_start_tag, raise_exception_end_tag
 from tests.mock_generator import generate_service_engine, generate_inner_task, \
     create_request, ReqData
 
@@ -119,8 +120,10 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.tx.attach_mock(tx_index, "index")
         self._mock_context.tx_batch = TransactionBatch()
 
+        raise_exception_start_tag()
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
+        raise_exception_end_tag()
 
         self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(0, tx_result.status)
@@ -233,6 +236,7 @@ class TestTransactionResult(unittest.TestCase):
 
         inner_task._icon_service_engine._icon_score_engine.invoke = \
             Mock(side_effect=intercept_invoke)
+        inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')

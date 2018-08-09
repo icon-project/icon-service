@@ -22,13 +22,12 @@ from typing import TYPE_CHECKING
 
 from iconservice.base.address import AddressPrefix
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy import make_score_id
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from tests import create_address
+from tests import create_address, create_tx_hash
 from tests.mock_db import create_mock_icon_score_db
 
 if TYPE_CHECKING:
@@ -78,7 +77,7 @@ class TestIconScoreLoader(unittest.TestCase):
     def load_proj(self, proj: str, addr_score: 'Address') -> callable:
         target_path = path.join(self._score_path, addr_score.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
-        score_id = make_score_id(0, 0)
+        score_id = f'0x{bytes.hex(create_tx_hash())}'
         target_path = path.join(target_path, score_id)
 
         ref_path = path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))

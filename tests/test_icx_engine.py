@@ -15,17 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import shutil
+import unittest
 
 from iconservice.base.address import Address
 from iconservice.database.db import ContextDatabase
-from iconservice.icon_constant import FIXED_FEE
 from iconservice.iconscore.icon_score_context import ContextContainer
-from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.icx.icx_engine import IcxEngine
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.icx.icx_account import AccountType
+from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
 
 
@@ -47,9 +46,11 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.engine.open(icx_storage)
 
         self.engine.init_account(
-            self.context, AccountType.GENESIS, 'genesis', self.genesis_address, self.total_supply)
+            self.context, AccountType.GENESIS,
+            'genesis', self.genesis_address, self.total_supply)
         self.engine.init_account(
-            self.context, AccountType.TREASURY, 'treasury', self.fee_treasury_address, 0)
+            self.context, AccountType.TREASURY,
+            'treasury', self.fee_treasury_address, 0)
 
     def tearDown(self):
         self.engine.close()

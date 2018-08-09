@@ -18,7 +18,7 @@
 
 from typing import TYPE_CHECKING
 
-from .icon_score_context import IconScoreContext, call_method, call_fallback
+from .icon_score_context import IconScoreContext, call_method
 from .icon_score_info_mapper import IconScoreInfoMapper
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, ServerErrorException
@@ -119,7 +119,7 @@ class IconScoreEngine(object):
         """
 
         icon_score = self._get_icon_score(context, icon_score_address)
-        call_fallback(icon_score)
+        call_method(icon_score, None, {})
 
     def _get_icon_score(self, context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = self.__icon_score_info_mapper.get_icon_score(context, icon_score_address)

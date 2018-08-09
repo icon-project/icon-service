@@ -21,6 +21,7 @@ STEP_TYPE_CONTRACT_CREATE = 'contractCreate'
 STEP_TYPE_CONTRACT_UPDATE = 'contractUpdate'
 STEP_TYPE_CONTRACT_DESTRUCT = 'contractDestruct'
 STEP_TYPE_CONTRACT_SET = 'contractSet'
+STEP_TYPE_GET = 'get'
 STEP_TYPE_SET = 'set'
 STEP_TYPE_REPLACE = 'replace'
 STEP_TYPE_DELETE = 'delete'
@@ -29,19 +30,21 @@ STEP_TYPE_EVENT_LOG = 'eventLog'
 VALID_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
                         STEP_TYPE_CONTRACT_CALL, STEP_TYPE_CONTRACT_CREATE, STEP_TYPE_CONTRACT_UPDATE,
                         STEP_TYPE_CONTRACT_DESTRUCT, STEP_TYPE_CONTRACT_SET,
-                        STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, STEP_TYPE_INPUT,
+                        STEP_TYPE_GET, STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, STEP_TYPE_INPUT,
                         STEP_TYPE_EVENT_LOG]
 
+CONTEXT_TYPE_INVOKE = 'invoke'
+CONTEXT_TYPE_QUERY = 'query'
 
 class Governance(IconScoreBase):
 
     _SCORE_STATUS = 'score_status'
     _AUDITOR_LIST = 'auditor_list'
     _DEPLOYER_LIST = 'deployer_list'
+    _SCORE_BLACK_LIST = 'score_black_list'
     _STEP_PRICE = 'step_price'
     _STEP_COSTS = 'step_costs'
-    _MAX_STEP_LIMIT = 'max_step_limit'
-
+    _MAX_STEP_LIMITS = 'max_step_limits'
 
     @eventlog(indexed=1)
     def Accepted(self, tx_hash: str):
@@ -64,23 +67,28 @@ class Governance(IconScoreBase):
         self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
         self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
+        self._score_black_list = ArrayDB(self._SCORE_BLACK_LIST, db, value_type=Address)
         self._step_price = VarDB(self._STEP_PRICE, db, value_type=int)
         self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
-        self._max_step_limit = VarDB(self._MAX_STEP_LIMIT, db, value_type=int)
+        self._max_step_limits = DictDB(self._MAX_STEP_LIMITS, db, value_type=int)
 
-    def on_install(self, stepPrice: int = 10 ** 12, maxStepLimit: int = 0x4000000) -> None:
+    def on_install(self,
+                   stepPrice: int = 10 ** 12,
+                   maxInvokeStepLimit: int = 0x4000000,
+                   maxQueryStepLimit: int = 0x40000) -> None:
         super().on_install()
         # add owner into initial auditor list
         Logger.debug(f'on_install: owner = "{self.owner}"', TAG)
         self._auditor_list.put(self.owner)
-        # add owner into initial auditor list
+        # add owner into initial deployer list
         self._deployer_list.put(self.owner)
         # set initial step price
         self._step_price.set(stepPrice)
         # set initial step costs
         self._set_initial_step_costs()
-        # set initial max step limit
-        self._max_step_limit.set(maxStepLimit)
+        # set initial max step limits
+        self._max_step_limits[CONTEXT_TYPE_INVOKE] = maxInvokeStepLimit
+        self._max_step_limits[CONTEXT_TYPE_QUERY] = maxQueryStepLimit
 
     def on_update(self) -> None:
         super().on_update()
@@ -294,15 +302,55 @@ class Governance(IconScoreBase):
         if DEBUG is True:
             self._print_deployer_list('removeDeployer')
 
-    @external
-    def is_deployer(self, address: Address):
-        Logger.debug(f'is_deployer address: {address}', TAG)
+    @external(readonly=True)
+    def isDeployer(self, address: Address) -> bool:
+        Logger.debug(f'isDeployer address: {address}', TAG)
         return address in self._deployer_list
 
     def _print_deployer_list(self, header: str):
         Logger.debug(f'{header}: list len = {len(self._deployer_list)}', TAG)
         for deployer in self._deployer_list:
             Logger.debug(f' --- {deployer}', TAG)
+
+    @external
+    def addToScoreBlackList(self, address: Address):
+        if not address.is_contract:
+            self.revert(f'Invalid SCORE Address: {address}')
+
+        # check message sender, only owner can add new blacklist
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+        if address not in self._score_black_list:
+            self._score_black_list.put(address)
+        if DEBUG is True:
+            self._print_black_list('addScoreToBlackList')
+
+    @external
+    def removeFromScoreBlackList(self, address: Address):
+        if address not in self._score_black_list:
+            self.revert('Invalid address: not in list')
+
+        # check message sender, only owner can remove from blacklist
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+        # get the topmost value
+        top = self._score_black_list.pop()
+        if top != address:
+            for i in range(len(self._score_black_list)):
+                if self._score_black_list[i] == address:
+                    self._score_black_list[i] = top
+        if DEBUG is True:
+            self._print_black_list('removeScoreFromBlackList')
+
+    @external(readonly=True)
+    def isInScoreBlackList(self, address: Address) -> bool:
+        Logger.debug(f'isInBlackList address: {address}', TAG)
+        return address in self._score_black_list
+
+    def _print_black_list(self, header: str):
+        Logger.debug(f'{header}: list len = {len(self._score_black_list)}', TAG)
+        for addr in self._score_black_list:
+            Logger.debug(f' --- {addr}', TAG)
 
     def _set_initial_step_costs(self):
         initial_costs = {
@@ -312,6 +360,7 @@ class Governance(IconScoreBase):
             STEP_TYPE_CONTRACT_UPDATE: 8000,
             STEP_TYPE_CONTRACT_DESTRUCT: -7000,
             STEP_TYPE_CONTRACT_SET: 1000,
+            STEP_TYPE_GET: 5,
             STEP_TYPE_SET: 20,
             STEP_TYPE_REPLACE: 5,
             STEP_TYPE_DELETE: -15,
@@ -344,5 +393,7 @@ class Governance(IconScoreBase):
         self.StepCostChanged(stepType, cost)
 
     @external(readonly=True)
-    def getMaxStepLimit(self) -> int:
-        return self._max_step_limit.get()
+    def getMaxStepLimit(self, context_type: str) -> int:
+        max_step_limit = self._max_step_limits[context_type]
+        # FIXME
+        return max_step_limit if max_step_limit is not None else 0

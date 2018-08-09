@@ -135,12 +135,12 @@ class TestCallMethod(unittest.TestCase):
         self._mock_context.type = IconScoreContextType.INVOKE
         func = getattr(self.ins, '_IconScoreBase__call_method')
         # func('func1', {})
-        func('func2', (1, 2), {})
+        func('func2', (1, 2), {}, False)
         self._mock_context.type = IconScoreContextType.QUERY
         # func('func3', {})
         self._mock_context.type = IconScoreContextType.INVOKE
-        func('func4', (1, 2), {})
-        func('func5', (1, 2), {})
+        func('func4', (1, 2), {}, False)
+        func('func5', (1, 2), {}, False)
         # func('func6', {})
 
         print(self.ins.get_api())
@@ -174,6 +174,6 @@ class TestCallMethod(unittest.TestCase):
         self._mock_context.msg = Message(create_address(AddressPrefix.EOA, b'from'), 0)
         self.ins = CallClass2(create_mock_icon_score_db())
         func = getattr(self.ins, '_IconScoreBase__call_method')
-        func('func2', (1, 2), {})
+        func('func2', (1, 2), {}, False)
 
 
