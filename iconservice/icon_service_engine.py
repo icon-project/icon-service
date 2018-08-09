@@ -269,6 +269,8 @@ class IconServiceEngine(ContextContainer):
         _to: 'Address' = params.get('to')
         if _to is None or not _to.is_contract:
             return
+        if _to == ZERO_SCORE_ADDRESS:
+            return
 
         try:
             self._put_context(context)
