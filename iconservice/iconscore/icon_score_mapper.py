@@ -25,9 +25,9 @@ from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..deploy.icon_score_deploy_engine import IconScoreDeployStorage
+from .icon_score_base import IconScoreBase
 
 if TYPE_CHECKING:
-    from .icon_score_base import IconScoreBase
     from .icon_score_context import IconScoreContext
     from .icon_score_loader import IconScoreLoader
 
@@ -38,13 +38,13 @@ class IconScoreInfo(object):
     If this class is not necessary anymore, Remove it
     """
 
-    def __init__(self, icon_score: 'IconScoreBase', score_id: str) -> None:
+    def __init__(self, icon_score: 'IconScoreBase', tx_hash: bytes) -> None:
         """Constructor
 
         :param icon_score: icon score object
         """
         self._icon_score = icon_score
-        self._score_id = score_id
+        self._tx_hash = tx_hash
 
     @property
     def icon_score(self) -> 'IconScoreBase':
@@ -55,8 +55,8 @@ class IconScoreInfo(object):
         return self._icon_score
 
     @property
-    def score_id(self) -> str:
-        return self._score_id
+    def tx_hash(self) -> bytes:
+        return self._tx_hash
 
 
 class IconScoreMapperObject(dict):
@@ -142,12 +142,13 @@ class IconScoreMapper(object):
         """
         icon_score_info = self.score_mapper.get(address)
         is_score_active = self.deploy_storage.is_score_active(context, address)
-        score_id = self.deploy_storage.get_current_score_id(context, address)
-        if score_id is None:
-            raise InvalidParamsException(f'score_id is None {address}')
+        tx_hash = self.deploy_storage.get_current_tx_hash(context, address)
+        if tx_hash is None:
+            raise InvalidParamsException(f'tx_hash is None {address}')
 
         if is_score_active and icon_score_info is None:
-            icon_score_info = self._load_score(address, score_id)
+            score = self._load_score(address, tx_hash)
+            icon_score_info = IconScoreInfo(score, tx_hash)
 
         if icon_score_info is None:
             if is_score_active:
@@ -162,21 +163,28 @@ class IconScoreMapper(object):
 
     def load_icon_score(self,
                         address: 'Address',
-                        score_id: str) -> Optional['IconScoreBase']:
+                        tx_hash: bytes) -> Optional['IconScoreBase']:
         """
         :param address:
-        :param score_id:
+        :param tx_hash:
         :return: IconScoreBase object
         """
-        icon_score_info = self._load_score(address, score_id)
-        icon_score = icon_score_info.icon_score
-        return icon_score
 
-    def _load_score(self, address: 'Address', score_id) -> Optional['IconScoreInfo']:
-        score_wrapper = self._load_score_wrapper(address, score_id)
+        return self._load_score(address, tx_hash)
+
+    def put_icon_info(self,
+                      address: 'Address',
+                      icon_score: 'IconScoreBase',
+                      tx_hash: bytes):
+        self.score_mapper[address] = IconScoreInfo(icon_score, tx_hash)
+
+    def _load_score(self, address: 'Address', tx_hash: bytes) -> Optional['IconScoreBase']:
+        score_wrapper = self._load_score_wrapper(address, tx_hash)
         score_db = self._create_icon_score_database(address)
-        icon_score = score_wrapper(score_db)
-        return self._add_score_to_mapper(icon_score, score_id)
+        score = score_wrapper(score_db)
+        if not isinstance(score, IconScoreBase):
+            raise InvalidParamsException("score is not child from IconScoreBase")
+        return score
 
     @staticmethod
     def _create_icon_score_database(address: 'Address') -> 'IconScoreDatabase':
@@ -190,22 +198,17 @@ class IconScoreMapper(object):
         score_db = IconScoreDatabase(address, context_db)
         return score_db
 
-    def _load_score_wrapper(self, address: 'Address', score_id: str) -> callable:
+    def _load_score_wrapper(self, address: 'Address', tx_hash: bytes) -> callable:
         """Load IconScoreBase subclass from IconScore python package
 
         :param address: icon_score_address
         :return: IconScoreBase subclass (NOT instance)
         """
 
-        score_wrapper = self.icon_score_loader.load_score(address.to_bytes().hex(), score_id)
+        score_wrapper = self.icon_score_loader.load_score(address.to_bytes().hex(), tx_hash)
         if score_wrapper is None:
             raise InvalidParamsException(f'score_wrapper load Fail {address}')
         return score_wrapper
-
-    def _add_score_to_mapper(self, icon_score: 'IconScoreBase', score_id: str) -> 'IconScoreInfo':
-        info = IconScoreInfo(icon_score, score_id)
-        self.score_mapper[icon_score.address] = info
-        return info
 
     def _clear_garbage_score(self):
         if self.icon_score_loader is None:
@@ -246,18 +249,17 @@ class IconScoreMapper(object):
                         self._remove_score_dir(address, sub_dir_name)
 
     @classmethod
-    def _remove_score_dir(cls, address: 'Address', score_id: Optional[str] = None):
+    def _remove_score_dir(cls, address: 'Address', converted_tx_hash: Optional[str] = None):
         if cls.icon_score_loader is None:
             return
         score_root_path = cls.icon_score_loader.score_root_path
 
-        if score_id is None:
+        if converted_tx_hash is None:
             target_path = os.path.join(score_root_path, bytes.hex(address.to_bytes()))
         else:
-            target_path = os.path.join(score_root_path, bytes.hex(address.to_bytes()), score_id)
+            target_path = os.path.join(score_root_path, bytes.hex(address.to_bytes()), converted_tx_hash)
 
         try:
             rmtree(target_path)
         except Exception as e:
             Logger.warning(e)
-

@@ -180,17 +180,18 @@ class IconScoreDeployEngine(object):
 
     def _on_deploy_for_builtin(self,
                                context: 'IconScoreContext',
-                               icon_score_address: 'Address',
+                               score_address: 'Address',
                                src_score_path: str) -> None:
         """Install an icon score for builtin
         """
 
         score_root_path = self._icon_score_mapper.score_root_path
         target_path = path.join(score_root_path,
-                                icon_score_address.to_bytes().hex())
+                                score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
-        score_id = self._icon_score_deploy_storage.get_next_score_id(context, icon_score_address)
-        target_path = path.join(target_path, score_id)
+        tx_hash = self._icon_score_deploy_storage.get_next_tx_hash(context, score_address)
+        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+        target_path = path.join(target_path, converted_tx_hash)
 
         filecopy = False
         try:
@@ -202,17 +203,20 @@ class IconScoreDeployEngine(object):
             pass
 
         try:
-            score = context.load_icon_score(icon_score_address, score_id)
+            score = context.icon_score_mapper.load_icon_score(score_address, tx_hash)
             if score is None:
-                raise InvalidParamsException(f'score is None : {icon_score_address}')
+                raise InvalidParamsException(f'score is None : {score_address}')
 
             self._initialize_score(
                 on_deploy=score.on_install,
                 params={})
         except BaseException as e:
-            Logger.warning(f'load wait icon score fail!! address: {icon_score_address}', ICON_DEPLOY_LOG_TAG)
+            Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
+
+        if score is not None:
+            context.icon_score_mapper.put_icon_info(score_address, score, tx_hash)
 
     def _on_deploy(self,
                    context: 'IconScoreContext',
@@ -222,7 +226,7 @@ class IconScoreDeployEngine(object):
         write file system
         call on_deploy(install, update)
 
-        :param tx_params: use deploy_data, score_address, score_id, deploy_type from IconScoreDeployTxParams
+        :param tx_params: use deploy_data, score_address, tx_hash, deploy_type from IconScoreDeployTxParams
         :return:
         """
 
@@ -231,14 +235,15 @@ class IconScoreDeployEngine(object):
         content_type: str = data.get('contentType')
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
+        tx_hash = self._icon_score_deploy_storage.get_next_tx_hash(context, tx_params.score_address)
 
-        score_id = self._icon_score_deploy_storage.get_next_score_id(context, tx_params.score_address)
         if content_type == 'application/tbears':
             score_root_path = self._icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
                                     score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
-            target_path = path.join(target_path, score_id)
+            converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+            target_path = path.join(target_path, converted_tx_hash)
             try:
                 symlink(content, target_path, target_is_directory=True)
             except FileExistsError:
@@ -247,10 +252,9 @@ class IconScoreDeployEngine(object):
             self._icon_score_deployer.deploy(
                 address=score_address,
                 data=content,
-                score_id=score_id)
-
+                tx_hash=tx_hash)
         try:
-            score = context.load_icon_score(score_address, score_id)
+            score = context.new_icon_score_mapper.load_icon_score(score_address, tx_hash)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')
 
@@ -268,6 +272,9 @@ class IconScoreDeployEngine(object):
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
+
+        if score is not None:
+            context.icon_score_mapper.put_icon_info(score_address, score, tx_hash)
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],

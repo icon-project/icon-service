@@ -309,7 +309,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         tx_result2 = self._get_tx_result(tx_results2, tx2)
         self.assertEqual(tx_result2['status'], hex(False))
-        self.assertEqual(tx_result2['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
+        self.assertEqual(tx_result2['failure']['code'], hex(ExceptionCode.INVALID_PARAMS))
         raise_exception_end_tag("test_score_no_scorebase")
 
         response = self._run_async(self._write_precommit_state(precommit_req2))

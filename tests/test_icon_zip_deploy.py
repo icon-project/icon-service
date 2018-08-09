@@ -54,7 +54,7 @@ class TestContextContainer(ContextContainer):
 class TestIconZipDeploy(unittest.TestCase):
     _ROOT_SCORE_PATH = 'tests/score'
     _TEST_DB_PATH = 'tests/test_db'
-    _ZERO_SCORE_ID = f'0x{bytes.hex(bytes(DEFAULT_BYTE_SIZE))}'
+    _ZERO_SCORE_ID = bytes(DEFAULT_BYTE_SIZE)
 
     @classmethod
     def setUpClass(cls):
@@ -109,6 +109,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.msg = Message(self.from_address, 0)
 
         tx_hash = create_tx_hash()
+        self._context.new_icon_score_mapper = IconScoreMapper()
         self._context.tx = Transaction(tx_hash, origin=self.from_address)
         self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
@@ -148,7 +149,7 @@ class TestIconZipDeploy(unittest.TestCase):
             "contentType": "application/zip",
             "content": f'0x{bytes.hex(content)}'
         }
-        self._icon_deploy_storage.get_score_id = Mock(return_value=self._ZERO_SCORE_ID)
+        self._icon_deploy_storage.get_next_tx_hash = Mock(return_value=self._ZERO_SCORE_ID)
 
         self._engine.invoke(
             self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)

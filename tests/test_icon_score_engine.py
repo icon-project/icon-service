@@ -28,7 +28,7 @@ from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
@@ -82,6 +82,7 @@ class TestIconScoreEngine(unittest.TestCase):
             create_address(AddressPrefix.CONTRACT, b'SampleToken')
 
         self._factory = IconScoreContextFactory(max_size=1)
+        IconScoreContext.icon_score_mapper = self._icon_score_mapper
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash(b'test1')

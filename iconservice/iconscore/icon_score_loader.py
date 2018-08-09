@@ -52,13 +52,13 @@ class IconScoreLoader(object):
         return getattr(mod, score_package_info[__MAIN_SCORE])
 
     @staticmethod
-    def _get_score_path_by_score_id(score_root_path: str, address_body: str, score_id: str) -> str:
+    def _get_score_path_by_tx_hash(score_root_path: str, address_body: str, tx_hash: bytes) -> str:
         address_path = path.join(score_root_path, address_body)
-        return path.join(address_path, score_id)
+        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+        return path.join(address_path, converted_tx_hash)
 
-    def load_score(self, address_body: str, score_id: str) -> callable:
-        last_version_path = self._get_score_path_by_score_id(self._score_root_path, address_body, score_id)
-
+    def load_score(self, address_body: str, tx_hash: bytes) -> callable:
+        last_version_path = self._get_score_path_by_tx_hash(self._score_root_path, address_body, tx_hash)
         score_package_info = self._load_json(last_version_path)
         score = self._load_user_score_module(last_version_path, score_package_info)
         return score

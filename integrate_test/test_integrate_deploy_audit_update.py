@@ -338,7 +338,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         precommit_req4, tx_results4 = self._run_async(self._make_and_req_block([tx4]))
         tx_result4 = self._get_tx_result(tx_results4, tx4)
         self.assertEqual(tx_result4['status'], hex(False))
-        self.assertEqual(tx_result4['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
+        self.assertEqual(tx_result4['failure']['code'], hex(ExceptionCode.INVALID_PARAMS))
         raise_exception_end_tag("test_score_no_scorebase")
 
         response = self._run_async(self._write_precommit_state(precommit_req4))

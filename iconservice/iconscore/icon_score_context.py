@@ -218,7 +218,8 @@ class IconScoreContext(object):
         return ret
 
     def _call(self, addr_from: Address,
-              addr_to: 'Address', func_name: Optional[str], arg_params: Optional[list], kw_params: Optional[dict], icx_value: int) -> object:
+              addr_to: 'Address', func_name: Optional[str], arg_params: Optional[list], kw_params: Optional[dict],
+              icx_value: int) -> object:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
@@ -288,16 +289,13 @@ class IconScoreContext(object):
 
     def get_icon_score(self,
                        address: 'Address') -> Optional['IconScoreBase']:
-        if self.type != IconScoreContextType.INVOKE or self.new_icon_score_mapper is None:
-            return self.icon_score_mapper.get_icon_score(self, address)
-        return self.new_icon_score_mapper.get_icon_score(self, address)
-
-    def load_icon_score(self,
-                        address: 'Address',
-                        score_id: str) -> Optional['IconScoreBase']:
-        if self.type != IconScoreContextType.INVOKE or self.new_icon_score_mapper is None:
-            return self.icon_score_mapper.load_icon_score(address, score_id)
-        return self.new_icon_score_mapper.load_icon_score(address, score_id)
+        score = None
+        if self.type == IconScoreContextType.INVOKE:
+            if self.new_icon_score_mapper is not None:
+                score = self.new_icon_score_mapper.get_icon_score(self, address)
+        if score is None:
+            score = self.icon_score_mapper.get_icon_score(self, address)
+        return score
 
 
 class IconScoreContextFactory(object):

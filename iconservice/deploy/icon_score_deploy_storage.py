@@ -336,9 +336,9 @@ class IconScoreDeployStorage(object):
         else:
             return deploy_info.deploy_state == DeployState.ACTIVE
 
-    def get_current_score_id(self,
-                             context: 'IconScoreContext',
-                             icon_score_address: 'Address') -> Optional[str]:
+    def get_current_tx_hash(self,
+                            context: 'IconScoreContext',
+                            icon_score_address: 'Address') -> Optional[bytes]:
         """
         """
 
@@ -349,11 +349,11 @@ class IconScoreDeployStorage(object):
             tx_hash = deploy_info.current_tx_hash
             if tx_hash is None:
                 tx_hash = bytes(DEFAULT_BYTE_SIZE)
-            return f'0x{bytes.hex(tx_hash)}'
+            return tx_hash
 
-    def get_next_score_id(self,
-                          context: 'IconScoreContext',
-                          icon_score_address: 'Address') -> Optional[str]:
+    def get_next_tx_hash(self,
+                         context: 'IconScoreContext',
+                         icon_score_address: 'Address') -> Optional[bytes]:
         """
         """
 
@@ -364,7 +364,7 @@ class IconScoreDeployStorage(object):
             tx_hash = deploy_info.next_tx_hash
             if tx_hash is None:
                 tx_hash = bytes(DEFAULT_BYTE_SIZE)
-            return f'0x{bytes.hex(tx_hash)}'
+            return tx_hash
 
     def get_score_owner(self,
                         context: 'IconScoreContext',
