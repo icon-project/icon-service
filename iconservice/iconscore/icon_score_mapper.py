@@ -112,27 +112,48 @@ class IconScoreMapper(object):
     icon_score_loader: 'IconScoreLoader' = None
     deploy_storage: 'IconScoreDeployStorage' = None
 
-    def __init__(self) -> None:
+    def __init__(self, is_lock: bool = False) -> None:
         """Constructor
         """
         self.score_mapper = IconScoreMapperObject()
         self._lock = Lock()
+        self._is_lock = is_lock
+
+    def __contains__(self, item):
+        if self._is_lock:
+            with self._lock:
+                return item in self.score_mapper
+        else:
+            return item in self.score_mapper
+
+    def __setitem__(self, key, value):
+        if self._is_lock:
+            with self._lock:
+                self.score_mapper[key] = value
+        else:
+            self.score_mapper[key] = value
+
+    def get(self, key):
+        if self._is_lock:
+            with self._lock:
+                return self.score_mapper.get(key)
+        else:
+            return self.score_mapper.get(key)
+
+    def update(self, mapper: 'IconScoreMapper'):
+        if self._is_lock:
+            with self._lock:
+                self.score_mapper.update(mapper.score_mapper)
+        else:
+            self.score_mapper.update(mapper.score_mapper)
 
     def close(self):
         for addr, info in self.score_mapper.items():
             info.icon_score.db.close()
 
-    def update(self, mapper: 'IconScoreMapper'):
-        with self._lock:
-            self.score_mapper.update(mapper.score_mapper)
-
     @property
     def score_root_path(self) -> str:
         return self.icon_score_loader.score_root_path
-
-    def __contains__(self, item) -> bool:
-        with self._lock:
-            return item in self.score_mapper
 
     def get_icon_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreBase']:
         """
