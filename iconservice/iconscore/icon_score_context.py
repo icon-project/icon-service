@@ -231,7 +231,7 @@ class IconScoreContext(object):
         :return:
         """
 
-        self._validate_blacklist(addr_to)
+        self._validate_score_blacklist(addr_to)
         self.__msg_stack.append(self.msg)
 
         self.msg = Message(sender=addr_from, value=icx_value)
@@ -246,7 +246,7 @@ class IconScoreContext(object):
 
         return ret
 
-    def _validate_blacklist(self, address: 'Address'):
+    def _validate_score_blacklist(self, address: 'Address'):
         if address == GOVERNANCE_SCORE_ADDRESS:
             return
 

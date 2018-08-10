@@ -214,9 +214,7 @@ class IconScoreDeployEngine(object):
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
-
-        if score is not None:
-            context.icon_score_mapper.put_icon_info(score_address, score, tx_hash)
+        context.icon_score_mapper.put_icon_info(score_address, score, tx_hash)
 
     def _on_deploy(self,
                    context: 'IconScoreContext',
@@ -272,9 +270,7 @@ class IconScoreDeployEngine(object):
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
-
-        if score is not None:
-            context.icon_score_mapper.put_icon_info(score_address, score, tx_hash)
+        context.icon_score_mapper.put_icon_info(score_address, score, tx_hash)
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],
