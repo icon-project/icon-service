@@ -57,6 +57,7 @@ from .utils.bloom import BloomFilter
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
     from .iconscore.icon_score_event_log import EventLog
+    from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
 
 
@@ -160,7 +161,6 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
             flag=icon_score_deploy_engine_flags,
-            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
@@ -254,7 +254,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             # Gets the governance SCORE
-            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 

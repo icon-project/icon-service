@@ -13,23 +13,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 from shutil import rmtree
-from typing import TYPE_CHECKING, Optional
 from threading import Lock
+from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
-from ..icon_constant import DEFAULT_BYTE_SIZE
+from .icon_score_mapper_object import IconScoreInfo, IconScoreMapperObject
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..deploy.icon_score_deploy_engine import IconScoreDeployStorage
-from .icon_score_mapper_object import IconScoreInfo, IconScoreMapperObject
+from ..icon_constant import DEFAULT_BYTE_SIZE
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-    from .icon_score_context import IconScoreContext
     from .icon_score_loader import IconScoreLoader
 
 
@@ -52,12 +52,12 @@ class IconScoreMapper(object):
         self._lock = Lock()
         self._is_lock = is_lock
 
-    def __contains__(self, item):
+    def __contains__(self, address: 'Address'):
         if self._is_lock:
             with self._lock:
-                return item in self.score_mapper
+                return address in self.score_mapper
         else:
-            return item in self.score_mapper
+            return address in self.score_mapper
 
     def __setitem__(self, key, value):
         if self._is_lock:
@@ -88,56 +88,35 @@ class IconScoreMapper(object):
     def score_root_path(self) -> str:
         return self.icon_score_loader.score_root_path
 
-    def get_icon_score(self, context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreBase']:
-        """
-        :param context:
-        :param address:
-        :return: IconScoreBase object
-        """
-        icon_score_info = self.score_mapper.get(address)
-        is_score_active = self.deploy_storage.is_score_active(context, address)
-        tx_hash = self.deploy_storage.get_current_tx_hash(context, address)
-        if tx_hash is None:
-            raise InvalidParamsException(f'tx_hash is None {address}')
-
-        if is_score_active and icon_score_info is None:
-            score = self._load_score(address, tx_hash)
-            if score is not None:
-                icon_score_info = IconScoreInfo(score, tx_hash)
-
-        if icon_score_info is None:
-            if is_score_active:
-                raise InvalidParamsException(
-                    f'icon_score_info is None: {address}')
-            else:
-                raise InvalidParamsException(
-                    f'is_score_active is False: {address}')
-
-        icon_score = icon_score_info.icon_score
-        return icon_score
-
-    def load_icon_score(self,
-                        address: 'Address',
-                        tx_hash: bytes) -> Optional['IconScoreBase']:
+    def get_icon_score(self, address: 'Address', is_score_active: bool, tx_hash: bytes) -> Optional['IconScoreBase']:
         """
         :param address:
+        :param is_score_active:
         :param tx_hash:
         :return: IconScoreBase object
         """
+        score = None
+        icon_score_info = self.score_mapper.get(address)
+        if is_score_active and icon_score_info is None:
+            score = self.load_score(address, tx_hash)
+            if score is None:
+                raise InvalidParamsException(f"score is None address: {address}")
 
-        return self._load_score(address, tx_hash)
+        if icon_score_info is not None:
+            score = icon_score_info.icon_score
+        return score
+
+    def load_score(self, address: 'Address', tx_hash: bytes) -> Optional['IconScoreBase']:
+        score_wrapper = self._load_score_wrapper(address, tx_hash)
+        score_db = self._create_icon_score_database(address)
+        score = score_wrapper(score_db)
+        return score
 
     def put_icon_info(self,
                       address: 'Address',
                       icon_score: 'IconScoreBase',
                       tx_hash: bytes):
         self.score_mapper[address] = IconScoreInfo(icon_score, tx_hash)
-
-    def _load_score(self, address: 'Address', tx_hash: bytes) -> Optional['IconScoreBase']:
-        score_wrapper = self._load_score_wrapper(address, tx_hash)
-        score_db = self._create_icon_score_database(address)
-        score = score_wrapper(score_db)
-        return score
 
     @staticmethod
     def _create_icon_score_database(address: 'Address') -> 'IconScoreDatabase':

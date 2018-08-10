@@ -37,34 +37,11 @@ class TestIconScoreMapper(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_get_icon_score_tx_hash_is_none(self):
-        IconScoreMapper.deploy_storage.is_score_active = Mock(return_value=False)
-        IconScoreMapper.deploy_storage.get_current_tx_hash = Mock(return_value=None)
-
-        self.assertRaises(InvalidParamsException,
-                          self.icon_score_mapper.get_icon_score, self.context, create_address(AddressPrefix.EOA))
-
-    def test_get_icon_score_score_is_none_inactive(self):
-        IconScoreMapper.deploy_storage.is_score_active = Mock(return_value=False)
-        IconScoreMapper.deploy_storage.get_current_tx_hash = Mock(return_value=create_tx_hash())
-        self.icon_score_mapper._load_score = Mock(return_value=None)
-
-        self.assertRaises(InvalidParamsException,
-                          self.icon_score_mapper.get_icon_score, self.context, create_address(AddressPrefix.EOA))
-
-    def test_get_icon_score_score_is_none_active(self):
-        IconScoreMapper.deploy_storage.is_score_active = Mock(return_value=True)
-        IconScoreMapper.deploy_storage.get_current_tx_hash = Mock(return_value=create_tx_hash())
-        self.icon_score_mapper._load_score = Mock(return_value=None)
-
-        self.assertRaises(InvalidParamsException,
-                          self.icon_score_mapper.get_icon_score, self.context, create_address(AddressPrefix.EOA))
-
     def test_get_icon_score_score_success(self):
-        IconScoreMapper.deploy_storage.is_score_active = Mock(return_value=True)
-        IconScoreMapper.deploy_storage.get_current_tx_hash = Mock(return_value=create_tx_hash())
-        self.icon_score_mapper._load_score = Mock(return_value=TestScore())
-        self.icon_score_mapper.get_icon_score(self.context, create_address(AddressPrefix.EOA))
+        is_score_active = True
+        tx_hash = create_tx_hash()
+        self.icon_score_mapper.load_score = Mock(return_value=TestScore())
+        self.icon_score_mapper.get_icon_score(create_address(AddressPrefix.CONTRACT), is_score_active, tx_hash)
 
 
 class TestScore(IconScoreBase):

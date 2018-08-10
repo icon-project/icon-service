@@ -18,15 +18,16 @@ import threading
 from enum import IntEnum, unique
 from typing import TYPE_CHECKING, Optional, Union, List, Any
 
-from .icon_score_trace import Trace, TraceType
 from .icon_score_step import StepType
+from .icon_score_trace import Trace, TraceType
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
-from ..base.exception import IconScoreException, ExceptionCode, ServerErrorException
+from ..base.exception import IconScoreException, ExceptionCode, ServerErrorException, InvalidParamsException
 from ..base.exception import RevertException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
+from ..icon_constant import DEFAULT_BYTE_SIZE
 from ..icx.icx_engine import IcxEngine
 from ..utils.bloom import BloomFilter
 
@@ -287,14 +288,32 @@ class IconScoreContext(object):
         self.traces = None
         self.clear_msg_stack()
 
-    def get_icon_score(self,
-                       address: 'Address') -> Optional['IconScoreBase']:
+    def get_icon_score(self, address: 'Address') -> Optional['IconScoreBase']:
         score = None
         if self.type == IconScoreContextType.INVOKE:
             if self.new_icon_score_mapper is not None:
-                score = self.new_icon_score_mapper.get_icon_score(self, address)
+                score = self._get_icon_score(self.new_icon_score_mapper, address)
         if score is None:
-            score = self.icon_score_mapper.get_icon_score(self, address)
+            score = self._get_icon_score(self.icon_score_mapper, address)
+        return score
+
+    def _get_icon_score(self, score_mapper: 'IconScoreMapper', address: 'Address') -> Optional['IconScoreBase']:
+        is_score_active = self.icon_score_manager.is_score_active(self, address)
+        tx_hashes: Optional[tuple] = self.icon_score_manager.get_tx_hashes_by_score_address(self, address)
+        if tx_hashes is None:
+            raise InvalidParamsException(f'tx_hash is None {address}')
+        current_tx_hash = tx_hashes[0]
+        if current_tx_hash is None:
+            current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
+
+        score = score_mapper.get_icon_score(address, is_score_active, current_tx_hash)
+        if score is None:
+            if is_score_active:
+                raise InvalidParamsException(
+                    f'icon_score_info is None: {address}')
+            else:
+                raise InvalidParamsException(
+                    f'is_score_active is False: {address}')
         return score
 
 

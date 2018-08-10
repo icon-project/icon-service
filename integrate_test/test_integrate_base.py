@@ -54,6 +54,7 @@ class TestIntegrateBase(unittest.TestCase):
     def tearDown(self):
         if self._inner_task:
             self._inner_task._close()
+
         rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 
@@ -274,8 +275,7 @@ class TestIntegrateBase(unittest.TestCase):
         }
 
         precommit_request = {'blockHeight': hex(block_height),
-                             'blockHash': bytes.hex(block_hash),
-                             'prevBlockHash': bytes.hex(self._prev_block_hash)}
+                             'blockHash': bytes.hex(block_hash)}
 
         invoke_response = await self._inner_task.invoke(make_request)
         tx_results = invoke_response.get('txResults')

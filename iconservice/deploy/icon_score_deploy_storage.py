@@ -17,10 +17,10 @@ import json
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from ..icon_constant import DEFAULT_BYTE_SIZE
+from . import DeployType, DeployState
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
-from . import DeployType, DeployState
+from ..icon_constant import DEFAULT_BYTE_SIZE
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -335,36 +335,6 @@ class IconScoreDeployStorage(object):
             return False
         else:
             return deploy_info.deploy_state == DeployState.ACTIVE
-
-    def get_current_tx_hash(self,
-                            context: 'IconScoreContext',
-                            icon_score_address: 'Address') -> Optional[bytes]:
-        """
-        """
-
-        deploy_info = self.get_deploy_info(context, icon_score_address)
-        if deploy_info is None:
-            return None
-        else:
-            tx_hash = deploy_info.current_tx_hash
-            if tx_hash is None:
-                tx_hash = bytes(DEFAULT_BYTE_SIZE)
-            return tx_hash
-
-    def get_next_tx_hash(self,
-                         context: 'IconScoreContext',
-                         icon_score_address: 'Address') -> Optional[bytes]:
-        """
-        """
-
-        deploy_info = self.get_deploy_info(context, icon_score_address)
-        if deploy_info is None:
-            return None
-        else:
-            tx_hash = deploy_info.next_tx_hash
-            if tx_hash is None:
-                tx_hash = bytes(DEFAULT_BYTE_SIZE)
-            return tx_hash
 
     def get_score_owner(self,
                         context: 'IconScoreContext',

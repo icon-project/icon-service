@@ -90,7 +90,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._engine.open(
             score_root_path=score_path,
             flag=0,
-            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_deploy_storage)
 
         self.from_address = create_address(AddressPrefix.EOA)

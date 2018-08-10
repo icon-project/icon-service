@@ -13,9 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from .icon_score_base import IconScoreBase
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
-from .icon_score_base import IconScoreBase
 
 
 class IconScoreInfo(object):

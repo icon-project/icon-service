@@ -33,8 +33,10 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_tx_hash, create_block_hash
 
@@ -63,27 +65,30 @@ class TestIconScoreEngine(unittest.TestCase):
         self.__ensure_dir(db_path)
 
         icx_db = ContextDatabaseFactory.create_by_name('icx_db')
-        self._icx_storage = IcxStorage(icx_db)
-        self._deploy_storage = IconScoreDeployStorage(self._icx_storage.db)
+        self.icx_storage = IcxStorage(icx_db)
+        deploy_storage = IconScoreDeployStorage(self.icx_storage.db)
+        deploy_engine = IconScoreDeployEngine()
+        deploy_engine.open(self._ROOT_SCORE_PATH, 0, deploy_storage)
+        IconScoreContext.icon_score_manager = IconScoreManager(deploy_engine)
 
-        self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
+        self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
 
-        IconScoreMapper.icon_score_loader = self._icon_score_loader
-        IconScoreMapper.deploy_storage = self._deploy_storage
-        self._icon_score_mapper = IconScoreMapper()
+        IconScoreMapper.icon_score_loader = self.icon_score_loader
+        IconScoreMapper.deploy_storage = deploy_storage
+        self.icon_score_mapper = IconScoreMapper()
 
-        self._engine = IconScoreEngine()
-        self._engine.open(
-            self._icx_storage,
-            self._icon_score_mapper)
+        self.engine = IconScoreEngine()
+        self.engine.open(
+            self.icx_storage,
+            self.icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA, b'from')
         self._icon_score_address =\
             create_address(AddressPrefix.CONTRACT, b'SampleToken')
 
-        self._factory = IconScoreContextFactory(max_size=1)
-        IconScoreContext.icon_score_mapper = self._icon_score_mapper
-        self._context = self._factory.create(IconScoreContextType.DIRECT)
+        self.factory = IconScoreContextFactory(max_size=1)
+        IconScoreContext.icon_score_mapper = self.icon_score_mapper
+        self._context = self.factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash(b'test1')
         self._context.tx = Transaction(
@@ -92,9 +97,9 @@ class TestIconScoreEngine(unittest.TestCase):
         self._context.block = Block(1, block_hash, 0, None)
 
     def tearDown(self):
-        self._engine = None
-        self._icx_storage.close(self._context)
-        self._factory.destroy(self._context)
+        self.engine = None
+        self.icx_storage.close(self._context)
+        self.factory.destroy(self._context)
         ContextDatabaseFactory.close()
 
         remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
@@ -144,14 +149,14 @@ class TestIconScoreEngine(unittest.TestCase):
         # self._engine.invoke(
         #     self._context, self._icon_score_address, 'install', install_data)
         # self._engine.commit(self._context)
-        context = self._factory.create(IconScoreContextType.QUERY)
+        context = self.factory.create(IconScoreContextType.QUERY)
 
         with self.assertRaises(InvalidParamsException) as cm:
-            self._engine.query(
+            self.engine.query(
                 context, self._icon_score_address, 'call', calldata)
 
         e = cm.exception
         self.assertEqual(ExceptionCode.INVALID_PARAMS, e.code)
         print(e)
 
-        self._factory.destroy(context)
+        self.factory.destroy(context)

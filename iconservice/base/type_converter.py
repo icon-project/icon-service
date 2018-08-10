@@ -390,8 +390,7 @@ type_convert_templates[ParamType.QUERY] = {
 
 type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     "blockHeight": ValueType.INT,
-    "blockHash": ValueType.BYTES,
-    "prevBlockHash": ValueType.BYTES,
+    "blockHash": ValueType.BYTES
 }
 type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
