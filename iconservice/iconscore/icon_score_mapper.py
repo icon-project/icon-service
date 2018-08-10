@@ -169,7 +169,8 @@ class IconScoreMapper(object):
 
         if is_score_active and icon_score_info is None:
             score = self._load_score(address, tx_hash)
-            icon_score_info = IconScoreInfo(score, tx_hash)
+            if score is not None:
+                icon_score_info = IconScoreInfo(score, tx_hash)
 
         if icon_score_info is None:
             if is_score_active:
