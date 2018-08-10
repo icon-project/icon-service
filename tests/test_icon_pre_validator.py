@@ -178,7 +178,7 @@ class TestTransactionValidator(unittest.TestCase):
             self.validator.execute(params, step_price=1, minimum_step=100)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
-        self.assertEqual(f'Invalid address: {to}', cm.exception.message)
+        self.assertEqual(f'{to} is inactive SCORE', cm.exception.message)
 
     # TODO FIXME
     # def test_transfer_to_invalid_eoa_address(self):

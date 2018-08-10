@@ -25,79 +25,12 @@ from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..deploy.icon_score_deploy_engine import IconScoreDeployStorage
-from .icon_score_base import IconScoreBase
+from .icon_score_mapper_object import IconScoreInfo, IconScoreMapperObject
 
 if TYPE_CHECKING:
+    from .icon_score_base import IconScoreBase
     from .icon_score_context import IconScoreContext
     from .icon_score_loader import IconScoreLoader
-
-
-class IconScoreInfo(object):
-    """Contains information on one icon score
-
-    If this class is not necessary anymore, Remove it
-    """
-
-    def __init__(self, icon_score: 'IconScoreBase', tx_hash: bytes) -> None:
-        """Constructor
-
-        :param icon_score: icon score object
-        """
-        self._icon_score = icon_score
-        self._tx_hash = tx_hash
-
-    @property
-    def icon_score(self) -> 'IconScoreBase':
-        """Returns IconScoreBase object
-
-        If IconScoreBase object is None, Create it here.
-        """
-        return self._icon_score
-
-    @property
-    def tx_hash(self) -> bytes:
-        return self._tx_hash
-
-
-class IconScoreMapperObject(dict):
-    def __getitem__(self, key: 'Address') -> 'IconScoreInfo':
-        """operator[] overriding
-
-        :param key:
-        :return: IconScoreInfo instance
-        """
-        self._check_key_type(key)
-        return super().__getitem__(key)
-
-    def __setitem__(self,
-                    key: 'Address',
-                    value: 'IconScoreInfo') -> None:
-        """
-        :param key:
-        :param value: IconScoreInfo
-        """
-        self._check_key_type(key)
-        self._check_value_type(value)
-        super().__setitem__(key, value)
-
-    @staticmethod
-    def _check_key_type(address: 'Address') -> None:
-        """Check if key type is an icon score address type or not.
-
-        :param address: icon score address
-        """
-        if not isinstance(address, Address):
-            raise InvalidParamsException(
-                f'{address} is an invalid address')
-        if not address.is_contract:
-            raise InvalidParamsException(
-                f'{address} is not an icon score address.')
-
-    @staticmethod
-    def _check_value_type(info: IconScoreInfo) -> None:
-        if not isinstance(info, IconScoreInfo):
-            raise InvalidParamsException(
-                f'{info} is not IconScoreInfo type.')
 
 
 class IconScoreMapper(object):
@@ -204,8 +137,6 @@ class IconScoreMapper(object):
         score_wrapper = self._load_score_wrapper(address, tx_hash)
         score_db = self._create_icon_score_database(address)
         score = score_wrapper(score_db)
-        if not isinstance(score, IconScoreBase):
-            raise InvalidParamsException("score is not child from IconScoreBase")
         return score
 
     @staticmethod

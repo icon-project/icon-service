@@ -18,7 +18,7 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice import InvalidParamsException
+from iconservice import InvalidParamsException, IconScoreBase
 from iconservice.base.address import AddressPrefix
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
@@ -63,5 +63,17 @@ class TestIconScoreMapper(unittest.TestCase):
     def test_get_icon_score_score_success(self):
         IconScoreMapper.deploy_storage.is_score_active = Mock(return_value=True)
         IconScoreMapper.deploy_storage.get_current_tx_hash = Mock(return_value=create_tx_hash())
-        self.icon_score_mapper._load_score = Mock(return_value=1)
+        self.icon_score_mapper._load_score = Mock(return_value=TestScore())
         self.icon_score_mapper.get_icon_score(self.context, create_address(AddressPrefix.EOA))
+
+
+class TestScore(IconScoreBase):
+
+    def __init__(self):
+        pass
+
+    def on_install(self, **kwargs):
+        pass
+
+    def on_update(self, **kwargs):
+        pass
