@@ -22,6 +22,8 @@ Above command will create `sample_token` folder, and generate `__init__.py`, `sa
 When you deploy the contract, you can pass the amount of initial tokens to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
 
 ```python
+from iconservice import *
+
 TAG = 'SampleToken'
 
 class CrowdSaleInterface(InterfaceScore):
@@ -111,6 +113,8 @@ Exchange ratio to ICX is 1:1. Crowdsale target and its duration are set when the
 After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiery, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdrow their contributions back.
 
 ```python
+from iconservice import *
+
 TAG = 'SampleCrowdSale'
 
 class TokenInterface(InterfaceScore):
@@ -227,8 +231,7 @@ class SampleCrowdSale(IconScoreBase):
     @external
     def safe_withdrawal(self):
         if self._after_dead_line():
-            # each contributor can withdraw the amount they contributed 
-            # if the goal was not reached
+            # each contributor can withdraw the amount they contributed if the goal was not reached
             if not self._funding_goal_reached.get():
                 amount = self._balances[self.msg.sender]
                 self._balances[self.msg.sender] = 0
