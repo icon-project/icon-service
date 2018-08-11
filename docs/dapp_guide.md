@@ -106,11 +106,11 @@ Now, we are going to write a crowd sale contract using above token. Let's create
 $ tbears init sample_crowdsale SampleCrowdSale
 ```
 
-Exchange ratio to ICX is 1:1. Crowdsale target and its duration are set when the contract is first deployed.
+Exchange ratio to ICX is 1:1. Crowdsale target, token contract address and its duration are set when the contract is first deployed.
 
 `total_joiner_count` function returns the number of contributors, and `check_goal_reached` function tests if the crowdsale target has been met.
 
-After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiery, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdrow their contributions back.
+After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiary, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdraw their contributions back.
 
 ```python
 from iconservice import *
@@ -425,7 +425,7 @@ You need to get an InterfaceScore object by using IconScoreBase's built-in funct
 Using the object, you can invoke other Score's external function as if it is a local function call.
 
 ```python
-sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
+sample_token_score = self.create_interface_score(self._addr_token_score.get(), SampleTokenInterface)
 sample_token_score.transfer(self.msg.sender, value)
 ```
 
