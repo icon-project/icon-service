@@ -48,40 +48,40 @@ class IconScoreMapper(object):
     def __init__(self, is_lock: bool = False) -> None:
         """Constructor
         """
-        self.score_mapper = IconScoreMapperObject()
+        self._score_mapper = IconScoreMapperObject()
         self._lock = Lock()
         self._is_lock = is_lock
 
     def __contains__(self, address: 'Address'):
         if self._is_lock:
             with self._lock:
-                return address in self.score_mapper
+                return address in self._score_mapper
         else:
-            return address in self.score_mapper
+            return address in self._score_mapper
 
     def __setitem__(self, key, value):
         if self._is_lock:
             with self._lock:
-                self.score_mapper[key] = value
+                self._score_mapper[key] = value
         else:
-            self.score_mapper[key] = value
+            self._score_mapper[key] = value
 
     def get(self, key):
         if self._is_lock:
             with self._lock:
-                return self.score_mapper.get(key)
+                return self._score_mapper.get(key)
         else:
-            return self.score_mapper.get(key)
+            return self._score_mapper.get(key)
 
     def update(self, mapper: 'IconScoreMapper'):
         if self._is_lock:
             with self._lock:
-                self.score_mapper.update(mapper.score_mapper)
+                self._score_mapper.update(mapper._score_mapper)
         else:
-            self.score_mapper.update(mapper.score_mapper)
+            self._score_mapper.update(mapper._score_mapper)
 
     def close(self):
-        for addr, info in self.score_mapper.items():
+        for addr, info in self._score_mapper.items():
             info.icon_score.db.close()
 
     @property
@@ -95,8 +95,10 @@ class IconScoreMapper(object):
         :param tx_hash:
         :return: IconScoreBase object
         """
+        # TODO: If is_score_acitve is false, this func works as we expected?
         score = None
-        icon_score_info = self.score_mapper.get(address)
+        icon_score_info = self._score_mapper.get(address)
+
         if is_score_active and icon_score_info is None:
             score = self.load_score(address, tx_hash)
             if score is None:
@@ -104,6 +106,7 @@ class IconScoreMapper(object):
 
         if icon_score_info is not None:
             score = icon_score_info.icon_score
+
         return score
 
     def load_score(self, address: 'Address', tx_hash: bytes) -> Optional['IconScoreBase']:
@@ -116,7 +119,7 @@ class IconScoreMapper(object):
                       address: 'Address',
                       icon_score: 'IconScoreBase',
                       tx_hash: bytes):
-        self.score_mapper[address] = IconScoreInfo(icon_score, tx_hash)
+        self._score_mapper[address] = IconScoreInfo(icon_score, tx_hash)
 
     @staticmethod
     def _create_icon_score_database(address: 'Address') -> 'IconScoreDatabase':
