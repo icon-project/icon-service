@@ -122,7 +122,7 @@ class TestCallMethod(unittest.TestCase):
         self._mock_icon_score_manager.attach_mock(Mock(spec=IconScoreDeployStorage), "icon_deploy_storage")
 
         self._context_container = TestContextContainer()
-        self._context_container._put_context(self._mock_context)
+        self._context_container._push_context(self._mock_context)
 
     def tearDown(self):
         self.ins = None
