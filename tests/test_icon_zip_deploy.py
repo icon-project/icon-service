@@ -114,7 +114,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
 
     def tearDown(self):
         self._engine = None

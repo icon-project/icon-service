@@ -37,7 +37,7 @@ class TestIconContainerDB(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.DIRECT)
 
         self._context_container = TestContextContainer()
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
         pass
 
     def tearDown(self):

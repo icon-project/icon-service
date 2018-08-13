@@ -130,7 +130,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.event_logs = Mock(spec=list)
         self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
 
     def tearDown(self):
         try:

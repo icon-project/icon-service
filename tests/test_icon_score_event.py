@@ -45,7 +45,7 @@ class TestEventlog(unittest.TestCase):
         context.attach_mock(event_logs, 'event_logs')
         context.attach_mock(logs_bloom, 'logs_bloom')
         context.attach_mock(step_counter, 'step_counter')
-        ContextContainer._put_context(context)
+        ContextContainer._push_context(context)
 
         self._mock_score = EventlogScore(db)
 
