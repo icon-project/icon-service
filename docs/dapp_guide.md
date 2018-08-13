@@ -7,7 +7,7 @@ SCORE (Smart Contract on Reliable Environment) is a smart contract running on IC
 - SCORE code size is limited to about 64 KB (actually bounded by the maximum stepLimit value during its deploy transaction) after compression.
 - SCORE must follow sandbox policy - file system access or network API calls are prohibited.
 
-Simple Token & Crowd Sale
+Simple Token & Crowdsale
 --------------
 
 This document will explain how to write SCOREs with tbears framework.
@@ -100,7 +100,7 @@ class SampleToken(IconScoreBase):
 
 ```
 
-Now, we are going to write a crowd sale contract using above token. Let's create a new project for the crowd sale contract. 
+Now, we are going to write a crowdsale contract using above token. Let's create a new project for the crowdsale contract. 
 
 ```
 $ tbears init sample_crowdsale SampleCrowdSale
