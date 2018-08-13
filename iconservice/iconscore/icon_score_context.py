@@ -293,21 +293,20 @@ class IconScoreContext(object):
 
         if self.type == IconScoreContextType.INVOKE:
             if self.new_icon_score_mapper is not None:
-                score = self._get_icon_score(self.new_icon_score_mapper, address)
-
+                score = self.new_icon_score_mapper.get(address)
         if score is None:
-            score = self._get_icon_score(self.icon_score_mapper, address)
+            score = self._get_icon_score(address)
 
         return score
 
-    def _get_icon_score(self, score_mapper: 'IconScoreMapper', address: 'Address') -> Optional['IconScoreBase']:
+    def _get_icon_score(self, address: 'Address') -> Optional['IconScoreBase']:
         is_score_active = self.icon_score_manager.is_score_active(self, address)
         current_tx_hash, _ = self.icon_score_manager.get_tx_hashes_by_score_address(self, address)
 
         if current_tx_hash is None:
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
-        score = score_mapper.get_icon_score(address, is_score_active, current_tx_hash)
+        score = self.icon_score_mapper.get_icon_score(address, is_score_active, current_tx_hash)
         if score is None:
             if is_score_active:
                 raise InvalidParamsException(
@@ -316,7 +315,6 @@ class IconScoreContext(object):
                 raise InvalidParamsException(
                     f'SCORE is inactive: {address}')
         return score
-
 
 class IconScoreContextFactory(object):
     """IconScoreContextFactory
