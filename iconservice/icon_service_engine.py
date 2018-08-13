@@ -274,7 +274,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             # Gets the governance SCORE
-            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
