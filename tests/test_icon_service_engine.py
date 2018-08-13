@@ -502,9 +502,9 @@ class TestIconServiceEngine(unittest.TestCase):
             Mock(return_value=None, side_effect=RevertException("force revert"))
         self._engine._validate_score_blacklist = Mock()
 
-        raise_exception_start_tag()
+        raise_exception_start_tag("test_score_invoke_with_revert")
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
-        raise_exception_end_tag()
+        raise_exception_end_tag("test_score_invoke_with_revert")
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -578,9 +578,9 @@ class TestIconServiceEngine(unittest.TestCase):
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = Mock(spec=list)
 
-        raise_exception_start_tag()
+        raise_exception_start_tag("test_score_invoke_failure")
         tx_result = self._engine._call(context, method, params)
-        raise_exception_end_tag()
+        raise_exception_end_tag("test_score_invoke_failure")
         self.assertTrue(isinstance(tx_result, TransactionResult))
         self.assertEqual(TransactionResult.FAILURE, tx_result.status)
         self.assertEqual(self._icon_score_address, tx_result.to)

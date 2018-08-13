@@ -41,11 +41,12 @@ from .iconscore.icon_score_context import IconScoreContext, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_loader import IconScoreLoader
+from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_score_trace import Trace, TraceType
+from .iconscore.internal_call import InternalCall
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
@@ -144,7 +145,7 @@ class IconServiceEngine(ContextContainer):
                                                     icon_score_manger,
                                                     self._icon_score_deploy_storage)
 
-        IconScoreContext.icx_engine = self._icx_engine
+        InternalCall.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
         IconScoreContext.icon_score_manager = icon_score_manger
 
@@ -441,7 +442,7 @@ class IconServiceEngine(ContextContainer):
         context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter = self._step_counter_factory.create(step_limit)
-        context.clear_msg_stack()
+        context.msg_stack.clear()
 
         self._validate_score_blacklist(context, params)
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):

@@ -33,15 +33,16 @@ from iconservice.iconscore.icon_score_base import \
     IconScoreBase, InterfaceScore, external, interface, RevertException, \
     IconScoreException, ExceptionCode
 from iconservice.iconscore.icon_score_context import \
-    ContextContainer, IconScoreContext
+    ContextContainer, IconScoreContext, IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import Trace, TraceType
+from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests import create_tx_hash
+from tests import raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestTrace(unittest.TestCase):
@@ -66,18 +67,19 @@ class TestTrace(unittest.TestCase):
         context.icon_score_manager.get_owner = Mock(return_value=None)
         context.icon_score_manager.get_tx_hashes_by_score_address = \
             Mock(return_value=(create_tx_hash(), create_tx_hash()))
-        context.icx_engine = Mock()
+        context.internal_call = InternalCall(context)
+        context.internal_call._other_score_call = Mock()
         context.icon_score_mapper = Mock()
         context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))
-        context._validate_score_blacklist = Mock(return_value=False)
+        context.internal_call._validate_score_blacklist = Mock(return_value=False)
         self._score = TestScore(db)
 
     def tearDown(self):
         self._mock_icon_score = None
 
-    @patch(f'iconservice.iconscore.icon_score_context.call_method')
-    def test_transfer(self, call_method):
+    def test_transfer(self):
         context = ContextContainer._get_context()
+        context.type = IconScoreContextType.INVOKE
         to_ = Mock(spec=Address)
         amount = 100
         self._score.icx.transfer(to_, amount)
@@ -87,8 +89,7 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(to_, trace.data[0])
         self.assertEqual(amount, trace.data[3])
 
-    @patch(f'iconservice.iconscore.icon_score_context.call_method')
-    def test_send(self, call_method):
+    def test_send(self):
         context = ContextContainer._get_context()
         to_ = Mock(spec=Address)
         amount = 100
@@ -99,8 +100,7 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(to_, trace.data[0])
         self.assertEqual(amount, trace.data[3])
 
-    @patch(f'iconservice.iconscore.icon_score_context.call_method')
-    def test_call(self, call_method):
+    def test_call(self):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         func_name = "testCall"
@@ -117,8 +117,7 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(params['to'], trace.data[2][0])
         self.assertEqual(params['amount'], trace.data[2][1])
 
-    @patch(f'iconservice.iconscore.icon_score_context.call_method')
-    def test_interface_call(self, call_method):
+    def test_interface_call(self):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         to_ = Mock(spec=Address)
@@ -168,10 +167,10 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_score_engine.attach_mock(
             mock_revert, "invoke")
 
-        raise_exception_start_tag()
+        raise_exception_start_tag("test_revert")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             context, {'version': 3, 'from': from_, 'to': to_})
-        raise_exception_end_tag()
+        raise_exception_end_tag("test_revert")
         self.assertEqual(0, tx_result.status)
 
         IconServiceEngine_charge_transaction_fee.assert_called()
@@ -229,8 +228,7 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(code, trace.data[0])
         self.assertEqual(error, trace.data[1])
 
-    @patch(f'iconservice.iconscore.icon_score_context.call_method')
-    def test_to_dict_camel(self, call_method):
+    def test_to_dict_camel(self):
         context = ContextContainer._get_context()
         score_address = Mock(spec=Address)
         func_name = "testCall"
