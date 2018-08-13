@@ -27,11 +27,10 @@ from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG
+from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
     from .icon_score_deploy_storage import IconScoreDeployTXParams
 
 
@@ -49,7 +48,6 @@ class IconScoreDeployEngine(object):
         """
         self._flag = None
         self._icon_score_deploy_storage = None
-        self._icon_score_mapper = None
         self._icon_score_deployer = None
         self._icon_builtin_score_loader = None
         self._icon_score_manager = None
@@ -57,18 +55,15 @@ class IconScoreDeployEngine(object):
     def open(self,
              score_root_path: str,
              flag: int,
-             icon_score_mapper: 'IconScoreInfoMapper',
              icon_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
 
         :param score_root_path:
         :param flag: flags composed by IconScoreDeployEngine
-        :param icon_score_mapper:
         :param icon_deploy_storage:
         """
         self._flag = flag
         self._icon_score_deploy_storage = icon_deploy_storage
-        self._icon_score_mapper = icon_score_mapper
         self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(score_root_path)
 
     @property
@@ -122,14 +117,12 @@ class IconScoreDeployEngine(object):
             raise InvalidParamsException(f'tx_params is None : {tx_hash}')
         score_address = tx_params.score_address
         self._score_deploy(context, tx_params)
-
         self._icon_score_deploy_storage.update_score_info(context, score_address, tx_hash)
-        deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
-        if deploy_info is None:
-            raise InvalidParamsException(f'deploy_info is None : {score_address}')
 
-    def deploy_for_builtin(self, score_address: 'Address', src_score_path: str):
-        self._score_deploy_for_builtin(score_address, src_score_path)
+    def deploy_for_builtin(self, context: 'IconScoreContext',
+                           score_address: 'Address',
+                           src_score_path: str):
+        self._score_deploy_for_builtin(context, score_address, src_score_path)
 
     def _score_deploy(self, context: 'IconScoreContext', tx_params: 'IconScoreDeployTXParams'):
         """
@@ -151,9 +144,10 @@ class IconScoreDeployEngine(object):
 
         self._on_deploy(context, tx_params)
 
-    def _score_deploy_for_builtin(self, icon_score_address: 'Address',
+    def _score_deploy_for_builtin(self, context: 'IconScoreContext',
+                                  icon_score_address: 'Address',
                                   src_score_path: str):
-        self._on_deploy_for_builtin(icon_score_address, src_score_path)
+        self._on_deploy_for_builtin(context, icon_score_address, src_score_path)
 
     def write_deploy_info_and_tx_params(self,
                                         context: 'IconScoreContext',
@@ -171,24 +165,32 @@ class IconScoreDeployEngine(object):
                                                                       data)
 
     def write_deploy_info_and_tx_params_for_builtin(self,
+                                                    context: 'IconScoreContext',
                                                     icon_score_address: 'Address',
                                                     owner_address: 'Address') -> None:
         """Write score deploy info to context db for builtin
         """
-        self._icon_score_deploy_storage.put_deploy_info_and_tx_params_for_builtin(icon_score_address, owner_address)
+        self._icon_score_deploy_storage.\
+            put_deploy_info_and_tx_params_for_builtin(context, icon_score_address, owner_address)
 
     def _on_deploy_for_builtin(self,
-                               icon_score_address: 'Address',
+                               context: 'IconScoreContext',
+                               score_address: 'Address',
                                src_score_path: str) -> None:
         """Install an icon score for builtin
         """
 
-        score_root_path = self._icon_score_mapper.score_root_path
+        score_root_path = context.icon_score_mapper.score_root_path
         target_path = path.join(score_root_path,
-                                icon_score_address.to_bytes().hex())
+                                score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
-        score_id = self._icon_score_deploy_storage.get_next_score_id(None, icon_score_address)
-        target_path = path.join(target_path, score_id)
+
+        _, next_tx_hash = self._icon_score_deploy_storage.get_tx_hashes_by_score_address(context, score_address)
+        if next_tx_hash is None:
+            next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
+
+        converted_tx_hash: str = f'0x{bytes.hex(next_tx_hash)}'
+        target_path = path.join(target_path, converted_tx_hash)
 
         filecopy = False
         try:
@@ -200,18 +202,17 @@ class IconScoreDeployEngine(object):
             pass
 
         try:
-            score = self._icon_score_mapper.load_wait_icon_score(icon_score_address, score_id)
+            score = context.icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
-                raise InvalidParamsException(f'score is None : {icon_score_address}')
+                raise InvalidParamsException(f'score is None : {score_address}')
 
-            self._initialize_score(
-                on_deploy=score.on_install,
-                params={})
+            self._initialize_score(on_deploy=score.on_install, params={})
         except BaseException as e:
-            Logger.warning(f'load wait icon score fail!! address: {icon_score_address}', ICON_DEPLOY_LOG_TAG)
+            Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(icon_score_address, score_id)
             raise e
+
+        context.icon_score_mapper.put_icon_info(score_address, score, next_tx_hash)
 
     def _on_deploy(self,
                    context: 'IconScoreContext',
@@ -221,7 +222,7 @@ class IconScoreDeployEngine(object):
         write file system
         call on_deploy(install, update)
 
-        :param tx_params: use deploy_data, score_address, score_id, deploy_type from IconScoreDeployTxParams
+        :param tx_params: use deploy_data, score_address, tx_hash, deploy_type from IconScoreDeployTxParams
         :return:
         """
 
@@ -231,13 +232,19 @@ class IconScoreDeployEngine(object):
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
 
-        score_id = self._icon_score_deploy_storage.get_next_score_id(context, tx_params.score_address)
+        _, next_tx_hash =\
+            self._icon_score_deploy_storage.get_tx_hashes_by_score_address(context, tx_params.score_address)
+
+        if next_tx_hash is None:
+            next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
+
         if content_type == 'application/tbears':
-            score_root_path = self._icon_score_mapper.score_root_path
+            score_root_path = context.icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
                                     score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
-            target_path = path.join(target_path, score_id)
+            converted_tx_hash: str = f'0x{bytes.hex(next_tx_hash)}'
+            target_path = path.join(target_path, converted_tx_hash)
             try:
                 symlink(content, target_path, target_is_directory=True)
             except FileExistsError:
@@ -246,28 +253,27 @@ class IconScoreDeployEngine(object):
             self._icon_score_deployer.deploy(
                 address=score_address,
                 data=content,
-                score_id=score_id)
-
+                tx_hash=next_tx_hash)
         try:
-            score = self._icon_score_mapper.load_wait_icon_score(score_address, score_id)
+            score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')
 
             deploy_type = tx_params.deploy_type
-            on_deploy = None
             if deploy_type == DeployType.INSTALL:
                 on_deploy = score.on_install
             elif deploy_type == DeployType.UPDATE:
                 on_deploy = score.on_update
+            else:
+                on_deploy = None
 
-            self._initialize_score(
-                on_deploy=on_deploy,
-                params=params)
+            self._initialize_score(on_deploy=on_deploy, params=params)
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
-            self._icon_score_mapper.delete_wait_score_mapper(score_address, score_id)
             raise e
+
+        context.icon_score_mapper.put_icon_info(score_address, score, next_tx_hash)
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],
@@ -282,13 +288,3 @@ class IconScoreDeployEngine(object):
         annotations = TypeConverter.make_annotations_from_method(on_deploy)
         TypeConverter.convert_data_params(annotations, params)
         on_deploy(**params)
-
-    def commit(self, context: 'IconScoreContext') -> None:
-        pass
-
-    def rollback(self) -> None:
-        """It is called when the previous block has been canceled
-
-        Rollback install, update or remove tasks cached in the previous block
-        """
-        pass

@@ -85,7 +85,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         owner_address = Address.from_data(AddressPrefix.EOA, b'owner')
         tx_hash1 = create_tx_hash(b'txHash1')
         tx_hash2 = create_tx_hash(b'txHash2')
-        deploy_state = DeployState.WAIT_TO_DEPLOY
+        deploy_state = DeployState.INACTIVE
 
         info1 = IconScoreDeployInfo(score_address, deploy_state, owner_address, tx_hash1, tx_hash2)
 
@@ -104,7 +104,7 @@ class TestIconScoreDeployInfos(unittest.TestCase):
         owner_address = Address.from_data(AddressPrefix.EOA, b'owner')
         tx_hash1 = create_tx_hash(b'txHash1')
         tx_hash2 = None
-        deploy_state = DeployState.WAIT_TO_DEPLOY
+        deploy_state = DeployState.INACTIVE
 
         info1 = IconScoreDeployInfo(score_address, deploy_state, owner_address, tx_hash1, tx_hash2)
 

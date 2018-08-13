@@ -41,6 +41,7 @@ from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 from tests import raise_exception_start_tag, raise_exception_end_tag
+from tests import create_tx_hash
 
 
 class TestTrace(unittest.TestCase):
@@ -63,9 +64,12 @@ class TestTrace(unittest.TestCase):
         ContextContainer._put_context(context)
         context.icon_score_manager = Mock()
         context.icon_score_manager.get_owner = Mock(return_value=None)
+        context.icon_score_manager.get_tx_hashes_by_score_address = \
+            Mock(return_value=(create_tx_hash(), create_tx_hash()))
         context.icx_engine = Mock()
         context.icon_score_mapper = Mock()
-        context.icon_score_mapper.get_icon_score = Mock(return_value=None)
+        context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))
+        context._validate_score_blacklist = Mock(return_value=False)
         self._score = TestScore(db)
 
     def tearDown(self):

@@ -66,3 +66,4 @@ class IconScoreManager(object):
                                      context: 'IconScoreContext',
                                      tx_hash: bytes) -> Optional['Address']:
         return self.__deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
+

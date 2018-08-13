@@ -41,7 +41,7 @@ from .iconscore.icon_score_context import IconScoreContext, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
@@ -57,6 +57,7 @@ from .utils.bloom import BloomFilter
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
     from .iconscore.icon_score_event_log import EventLog
+    from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
 
 
@@ -134,12 +135,13 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_storage = IconScoreDeployStorage(
             self._icx_context_db)
 
-        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader, self._icon_score_deploy_storage)
+        IconScoreMapper.icon_score_loader = self._icon_score_loader
+        IconScoreMapper.deploy_storage = self._icon_score_deploy_storage
+        self._icon_score_mapper = IconScoreMapper(is_lock=True)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._icon_pre_validator = IconPreValidator(self._icx_engine,
                                                     icon_score_manger,
-                                                    self._icon_score_mapper,
                                                     self._icon_score_deploy_storage)
 
         IconScoreContext.icx_engine = self._icx_engine
@@ -159,7 +161,6 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
             flag=icon_score_deploy_engine_flags,
-            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
@@ -185,7 +186,6 @@ class IconServiceEngine(ContextContainer):
                 IconBuiltinScoreLoader(self._icon_score_deploy_engine)
             icon_builtin_score_loader.load_builtin_scores(
                 context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
-            self._icon_score_mapper.commit()
         finally:
             self._delete_context(context)
 
@@ -203,8 +203,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             # Gets the governance SCORE
-            governance_score = self._icon_score_mapper.get_icon_score(
-                context, GOVERNANCE_SCORE_ADDRESS)
+            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
@@ -255,8 +254,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             # Gets the governance SCORE
-            governance_score = self._icon_score_mapper.get_icon_score(
-                context, GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
@@ -275,8 +273,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._put_context(context)
             # Gets the governance SCORE
-            governance_score = self._icon_score_mapper.get_icon_score(
-                context, GOVERNANCE_SCORE_ADDRESS)
+            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
@@ -312,6 +309,7 @@ class IconServiceEngine(ContextContainer):
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
+        context.new_icon_score_mapper = IconScoreMapper()
         block_result = []
 
         if block.height == 0:
@@ -330,7 +328,7 @@ class IconServiceEngine(ContextContainer):
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
-            context.block_batch, block_result, score_mapper={})
+            context.block_batch, block_result, context.new_icon_score_mapper)
         self._precommit_data_manager.push(precommit_data)
 
         self._context_factory.destroy(context)
@@ -845,16 +843,15 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = \
             self._precommit_data_manager.get(block.hash)
         block_batch = precommit_data.block_batch
+        new_icon_score_mapper = precommit_data.score_mapper
+        if new_icon_score_mapper:
+            self._icon_score_mapper.update(new_icon_score_mapper)
 
         self._icx_context_db.write_batch(
             context=context, states=block_batch)
 
-        self._icon_score_engine.commit(context)
-        self._icon_score_deploy_engine.commit(context)
         self._icx_storage.put_block_info(context, block_batch.block)
-        self._icon_score_mapper.commit()
         self._precommit_data_manager.commit(block_batch.block)
-
         self._context_factory.destroy(context)
 
     def rollback(self, block: 'Block') -> None:
@@ -863,8 +860,4 @@ class IconServiceEngine(ContextContainer):
         """
         # Check for block validation before rollback
         self._precommit_data_manager.validate_precommit_block(block)
-
         self._precommit_data_manager.rollback(block)
-        self._icon_score_engine.rollback()
-        self._icon_score_deploy_engine.rollback()
-        self._icon_score_mapper.rollback()

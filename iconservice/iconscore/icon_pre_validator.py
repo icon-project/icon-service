@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from ..deploy.icon_score_manager import IconScoreManager
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
     from ..icx.icx_engine import IcxEngine
-    from ..iconscore.icon_score_info_mapper import IconScoreInfoMapper
 
 
 class IconPreValidator:
@@ -36,7 +35,6 @@ class IconPreValidator:
 
     def __init__(self, icx_engine: 'IcxEngine',
                  score_manager: 'IconScoreManager',
-                 score_mapper: 'IconScoreInfoMapper',
                  deploy_storage: 'IconScoreDeployStorage') -> None:
         """Constructor
 
@@ -44,7 +42,6 @@ class IconPreValidator:
         """
         self._icx = icx_engine
         self._score_manager = score_manager
-        self._score_mapper = score_mapper
         self._deploy_storage = deploy_storage
 
     def execute(self, params: dict, step_price: int, minimum_step: int) -> None:
@@ -116,8 +113,8 @@ class IconPreValidator:
         # Check if "to" address is valid
         to: 'Address' = params['to']
 
-        if not self._is_score_address(to):
-            raise InvalidRequestException(f'Invalid address: {to}')
+        if self._is_inactive_score(to):
+            raise InvalidRequestException(f'{to} is inactive SCORE')
 
         # Check data_type-specific elements
         data_type = params.get('dataType', None)
@@ -149,8 +146,8 @@ class IconPreValidator:
         """
         to: 'Address' = params['to']
 
-        if not self._is_score_address(to):
-            raise InvalidRequestException(f'{to} is not a SCORE address')
+        if self._is_inactive_score(to):
+            raise InvalidRequestException(f'{to} is inactive SCORE')
 
         data = params.get('data', None)
         if not isinstance(data, dict):
@@ -162,8 +159,8 @@ class IconPreValidator:
     def _validate_deploy_transaction(self, params: dict):
         to: 'Address' = params['to']
 
-        if not self._is_score_address(to):
-            raise InvalidRequestException(f'{to} is not a SCORE address')
+        if self._is_inactive_score(to):
+            raise InvalidRequestException(f'{to} is inactive SCORE')
 
         data = params.get('data', None)
         if not isinstance(data, dict):
@@ -212,14 +209,14 @@ class IconPreValidator:
             raise InvalidParamsException(f'Invalid params: {e}')
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
-        balance = self._icx.get_balance(context=None, address=from_)
+        balance = self._icx.get_balance(None, from_)
 
         if balance < value + fee:
             raise InvalidRequestException('Out of balance')
 
-    def _is_score_address(self, address: 'Address') -> bool:
+    def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract
         is_zero_score_address = address == ZERO_SCORE_ADDRESS
-        is_score_active = self._score_manager.is_score_active(context=None, icon_score_address=address)
-        is_score_address = is_contract and not is_zero_score_address and not is_score_active
-        return not is_score_address
+        is_score_active = self._score_manager.is_score_active(None, address)
+        _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
+        return _is_inactive_score

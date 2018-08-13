@@ -33,12 +33,12 @@ from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_manager import IconScoreManager
-from iconservice.icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
+from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
@@ -54,7 +54,7 @@ class TestContextContainer(ContextContainer):
 class TestIconZipDeploy(unittest.TestCase):
     _ROOT_SCORE_PATH = 'tests/score'
     _TEST_DB_PATH = 'tests/test_db'
-    _ZERO_SCORE_ID = f'0x{bytes.hex(bytes(DEFAULT_BYTE_SIZE))}'
+    _ZERO_SCORE_ID = bytes(DEFAULT_BYTE_SIZE)
 
     @classmethod
     def setUpClass(cls):
@@ -80,7 +80,9 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self._engine = IconScoreDeployEngine()
         self._icon_score_loader = IconScoreLoader(score_path)
-        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader, self._icon_deploy_storage)
+        IconScoreMapper.icon_score_loader = self._icon_score_loader
+        IconScoreMapper.deploy_storage = self._icon_deploy_storage
+        self._icon_score_mapper = IconScoreMapper()
 
         IconScoreContext.icon_score_manager = Mock(spec=IconScoreManager)
         self._context_container = TestContextContainer()
@@ -88,7 +90,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._engine.open(
             score_root_path=score_path,
             flag=0,
-            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._icon_deploy_storage)
 
         self.from_address = create_address(AddressPrefix.EOA)
@@ -106,8 +107,8 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self.from_address, 0)
 
-        tx_hash = create_tx_hash(
-            b'txHash' + self._tx_index.to_bytes(10, DATA_BYTE_ORDER))
+        tx_hash = create_tx_hash()
+        self._context.new_icon_score_mapper = IconScoreMapper()
         self._context.tx = Transaction(tx_hash, origin=self.from_address)
         self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
@@ -147,7 +148,7 @@ class TestIconZipDeploy(unittest.TestCase):
             "contentType": "application/zip",
             "content": f'0x{bytes.hex(content)}'
         }
-        self._icon_deploy_storage.get_score_id = Mock(return_value=self._ZERO_SCORE_ID)
+        self._icon_deploy_storage.get_next_tx_hash = Mock(return_value=self._ZERO_SCORE_ID)
 
         self._engine.invoke(
             self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)

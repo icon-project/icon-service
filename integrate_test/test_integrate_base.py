@@ -54,6 +54,7 @@ class TestIntegrateBase(unittest.TestCase):
     def tearDown(self):
         if self._inner_task:
             self._inner_task._close()
+
         rmtree(self._score_root_path)
         rmtree(self._state_db_root_path)
 

@@ -213,7 +213,6 @@ class TestIntegrateInternalCall(TestIntegrateBase):
         response = self._run_async(self._query(query_request))
         raise_exception_end_tag("test_link_score_loop1")
         self.assertEqual(response['error']['code'], ExceptionCode.SERVER_ERROR)
-        self.assertEqual(response['error']['message'], 'maximum recursion depth exceeded while calling a Python object')
 
         value = 1 * self._icx_factor
         validate_tx_response5, tx5 = self._run_async(
