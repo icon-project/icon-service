@@ -43,7 +43,7 @@ class TestIntegrateBase(unittest.TestCase):
         self._block_height = 0
         self._prev_block_hash = None
         self._version = 3
-        self._step_limit = 4 * 10 ** 6
+        self._step_limit = 1 * 10 ** 7
         self._icx_factor = 10 ** 18
 
         self._admin_addr = create_address(AddressPrefix.EOA)

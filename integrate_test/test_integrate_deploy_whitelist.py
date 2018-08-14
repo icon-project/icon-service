@@ -20,13 +20,13 @@
 import unittest
 
 from iconcommons.icon_config import IconConfig
-from iconservice import ExceptionCode
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 from integrate_test.test_integrate_base import TestIntegrateBase
+from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestIntegrateDeployWhiteList(TestIntegrateBase):
@@ -41,7 +41,6 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITELIST: True}})
 
         self._inner_task = IconScoreInnerTask(conf)
-        self._inner_task._open()
 
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)

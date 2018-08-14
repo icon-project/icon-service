@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import json
-import importlib.machinery
 import importlib.util
 from sys import path as sys_path
 from os import path
+
+from .import_validator import ImportValidator
 
 
 class IconScoreLoader(object):
@@ -43,13 +43,14 @@ class IconScoreLoader(object):
         __MAIN_FILE = 'main_file'
 
         tmp_str = f"{self._score_root_path}/"
-        import_path: str = last_version_path.split(tmp_str)[1]
-        import_path = import_path.replace('/', '.')
+        parent_import_path: str = last_version_path.split(tmp_str)[1]
+        parent_import = parent_import_path.replace('/', '.')
 
-        spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", import_path)
-        mod = importlib.util.module_from_spec(spec)
-        mod = mod.__loader__.load_module()
-        return getattr(mod, score_package_info[__MAIN_SCORE])
+        ImportValidator().validator(tmp_str + parent_import_path, parent_import)
+
+        spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", parent_import)
+        module = spec.loader.load_module()
+        return getattr(module, score_package_info[__MAIN_SCORE])
 
     @staticmethod
     def _get_score_path_by_tx_hash(score_root_path: str, address_body: str, tx_hash: bytes) -> str:
@@ -61,4 +62,5 @@ class IconScoreLoader(object):
         last_version_path = self._get_score_path_by_tx_hash(self._score_root_path, address_body, tx_hash)
         score_package_info = self._load_json(last_version_path)
         score = self._load_user_score_module(last_version_path, score_package_info)
+
         return score

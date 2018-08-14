@@ -18,16 +18,18 @@
 """
 
 import unittest
+from typing import List
 from unittest.mock import Mock
 
-from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, int_to_bytes
+
+from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import EventLogException, ScoreErrorException
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
+from iconservice.utils import int_to_bytes
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 
