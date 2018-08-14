@@ -20,10 +20,10 @@ from typing import TYPE_CHECKING
 
 from .icon_score_context import IconScoreContext
 from .icon_score_mapper import IconScoreMapper
-
 from ..base.address import Address
-from ..base.exception import InvalidParamsException, ServerErrorException
+from ..base.exception import InvalidParamsException, ServerErrorException, ExceptionCode, ExternalException
 from ..base.type_converter import TypeConverter
+from ..iconscore.icon_score_base2 import CONST_CLASS_EXTERNALS
 
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
@@ -110,6 +110,9 @@ class IconScoreEngine(object):
         kw_params: dict = data.get('params', {})
 
         icon_score = self._get_icon_score(context, icon_score_address)
+        if icon_score is None:
+            raise ServerErrorException(f'icon_score is None address: {icon_score_address}')
+
         converted_params = self._convert_score_parmas_by_annotations(icon_score, func_name, kw_params)
         external_func = getattr(icon_score, '_IconScoreBase__external_call')
         return external_func(func_name=func_name, arg_params=[], kw_params=converted_params)
@@ -117,6 +120,9 @@ class IconScoreEngine(object):
     @staticmethod
     def _convert_score_parmas_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
         tmp_params = kw_params
+
+        icon_score.external_call_validator(func_name)
+
         score_func = getattr(icon_score, func_name)
         annotation_params = TypeConverter.make_annotations_from_method(score_func)
         TypeConverter.convert_data_params(annotation_params, tmp_params)
