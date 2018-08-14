@@ -21,9 +21,8 @@ from typing import TYPE_CHECKING
 from .icon_score_context import IconScoreContext
 from .icon_score_mapper import IconScoreMapper
 from ..base.address import Address
-from ..base.exception import InvalidParamsException, ServerErrorException, ExceptionCode, ExternalException
+from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
-from ..iconscore.icon_score_base2 import CONST_CLASS_EXTERNALS
 
 if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
@@ -142,7 +141,8 @@ class IconScoreEngine(object):
         fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
         fallback_func()
 
-    def _get_icon_score(self, context: 'IconScoreContext', icon_score_address: 'Address'):
+    @staticmethod
+    def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = context.get_icon_score(icon_score_address)
         if icon_score is None:
             raise ServerErrorException(
