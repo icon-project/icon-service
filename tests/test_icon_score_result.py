@@ -18,9 +18,10 @@ import unittest
 from typing import Optional
 from unittest.mock import Mock
 
-from iconservice import EventLog, TypeConverter
+from iconservice import EventLog
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.type_converter import TypeConverter
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
@@ -120,10 +121,10 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.tx.attach_mock(tx_index, "index")
         self._mock_context.tx_batch = TransactionBatch()
 
-        raise_exception_start_tag()
+        raise_exception_start_tag("test_tx_failure")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
-        raise_exception_end_tag()
+        raise_exception_end_tag("test_tx_failure")
 
         self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(0, tx_result.status)
