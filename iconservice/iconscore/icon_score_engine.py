@@ -109,18 +109,16 @@ class IconScoreEngine(object):
         kw_params: dict = data.get('params', {})
 
         icon_score = self._get_icon_score(context, icon_score_address)
-        if icon_score is None:
-            raise ServerErrorException(f'icon_score is None address: {icon_score_address}')
 
-        converted_params = self._convert_score_parmas_by_annotations(icon_score, func_name, kw_params)
+        converted_params = self._convert_score_params_by_annotations(icon_score, func_name, kw_params)
         external_func = getattr(icon_score, '_IconScoreBase__external_call')
         return external_func(func_name=func_name, arg_params=[], kw_params=converted_params)
 
     @staticmethod
-    def _convert_score_parmas_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
+    def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
         tmp_params = kw_params
 
-        icon_score.external_call_validator(func_name)
+        icon_score.validate_external_method(func_name)
 
         score_func = getattr(icon_score, func_name)
         annotation_params = TypeConverter.make_annotations_from_method(score_func)
@@ -136,8 +134,7 @@ class IconScoreEngine(object):
         :param score_address:
         """
         icon_score = self._get_icon_score(context, score_address)
-        if icon_score is None:
-            raise ServerErrorException(f'SCORE is None Address: {score_address}')
+
         fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
         fallback_func()
 
