@@ -163,6 +163,7 @@ class IconScoreContext(object):
         self.event_logs = None
         self.logs_bloom = None
         self.traces = None
+        self.func_type = IconScoreFuncType.WRITABLE
 
         self.msg_stack.clear()
 
