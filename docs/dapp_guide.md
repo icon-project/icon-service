@@ -1,96 +1,164 @@
-간단한 토큰을 만들어봅니다.
+ICON Smart Contract - SCORE
 ==================================
 
-개요
+SCORE (Smart Contract on Reliable Environment) is a smart contract running on ICON network. A contract is a software that resides at a specific address on the blockchain and executed on ICON nodes. They are building blocks for DApp (Decentralized App). SCORE defines and exports interfaces, so that other SCORE can invoke its functions. The code is written in python, and is uploaded as compressed binary data on the blockchain.
+
+- Deployed SCORE can be updated. SCORE address remains the same after update. 
+- SCORE code size is limited to about 64 KB (actually bounded by the maximum stepLimit value during its deploy transaction) after compression.
+- SCORE must follow sandbox policy - file system access or network API calls are prohibited.
+
+Token & Crowdsale
 --------------
-```
-$ tbears init {project_name} {class_name}
-```
-위의 명령을 수행하면 {project_name} 폴더가 생기며,
-해당 폴더 안에 \_\_init\_\_.py, {project_name}.py, package.json 파일이 자동 생성됩니다.<br/>
-{project_name}.py 파일에는 {class_name}으로 메인 클래스가 선언되어 있습니다.<br/>
 
+This document will explain how to write SCOREs with tbears framework.
+Let's start by creating a simple token contract. You can create an empty project using `init` command. Suppose your project name is 'sample_token' and the main class name is 'SampleToken'.
 
-<br/>
-1000개의 초기 발행량을 가지며 처음 생성한 사람에게 전체 발행량을 발급하는 간단한 토큰 예제입니다.<br/>
-아울러 토큰을 전달하는 transfer 함수를 제공합니다.<br/>
+```
+$ tbears init sample_token SampleToken
+```
+
+Above command will create a project folder, `sample_token`, and generate `__init__.py`, `sample_token.py`, and `package.json` files in the folder.  `sample_token.py` has the main class declaration whose name is `SampleToken`. You need to implement `SampleToken` class. 
+
+IRC-2 standard defines the common behavior of tokens running on ICON. IRC-2 compliant token must implement following methods. The specification is here, [IRC-2](https://github.com/icon-project/IIPs/blob/master/IIPS/iip-2.md). 
 
 ```python
+@external(readonly=True)
+def name(self) -> str:
+    
+@external(readonly=True)
+def symbol(self) -> str:
+
+@external(readonly=True)
+def decimals(self) -> int:
+    
+@external(readonly=True)
+def totalSupply(self) -> int:
+
+@external(readonly=True)
+def balanceOf(self, _owner: Address) -> int:
+    
+@external
+def transfer(self, _to: Address, _value: int, _data: bytes=None):
+```
+
+Below is a complete token implementation. You can copy and paste it to fill your `sample_token.py`. Note that `CrowdSaleInterface` is declared in the beginning to interact with `SampleCrowdSale` contract defined later. 
+
+When you deploy the contract, `on_install` method is called. You can pass the amount of initial tokens to the parameter `initialSupply`, and, in this example, 100% of initial tokens go to the contract owner. 
+
+```python
+from iconservice import *
+
+TAG = 'SampleToken'
+
+class CrowdSaleInterface(InterfaceScore):
+    @interface
+    def tokenFallback(self, _from: Address, _value: int, _data: bytes):
+        pass
+
 class SampleToken(IconScoreBase):
 
-    __BALANCES = 'balances'
-    __TOTAL_SUPPLY = 'total_supply'
+    _BALANCES = 'balances'
+    _TOTAL_SUPPLY = 'total_supply'
+    _DECIMALS = 'decimals'
 
     @eventlog(indexed=3)
-    def Transfer(self, addr_from: Address, addr_to: Address, value: int): pass
+    def Transfer(self, _from: Address, _to: Address, _value: int, _data: bytes):
+        pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self.__total_supply = VarDB(self.__TOTAL_SUPPLY, db, value_type=int)
-        self.__balances = DictDB(self.__BALANCES, db, value_type=int)
+        self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
+        self._decimals = VarDB(self._DECIMALS, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
 
-    def on_install(self, init_supply: int = 1000, decimal: int = 18) -> None:
+    def on_install(self, initialSupply: int, decimals: int) -> None:
         super().on_install()
 
-        total_supply = init_supply * 10 ** decimal
+        total_supply = initialSupply * 10 ** decimals
+        Logger.debug(f'on_install: total_supply={total_supply}', TAG)
 
-        self.__total_supply.set(total_supply)
-        self.__balances[self.msg.sender] = total_supply
+        self._total_supply.set(total_supply)
+        self._decimals.set(decimals)
+        self._balances[self.msg.sender] = total_supply
 
     def on_update(self) -> None:
         super().on_update()
 
     @external(readonly=True)
-    def total_supply(self) -> int:
-        return self.__total_supply.get()
+    def name(self) -> str:
+        return "SampleToken"
 
     @external(readonly=True)
-    def balance_of(self, addr_from: Address) -> int:
-        return self.__balances[addr_from]
+    def symbol(self) -> str:
+        return "MST"
 
-    def __transfer(self, _addr_from: Address, _addr_to: Address, _value: int) -> bool:
+    @external(readonly=True)
+    def decimals(self) -> int:
+        return self._decimals.get()
 
-        if self.balance_of(_addr_from) < _value:
-            self.revert(f"{_addr_from}'s balance < {_value}")
+    @external(readonly=True)
+    def totalSupply(self) -> int:
+        return self._total_supply.get()
 
-        self.__balances[_addr_from] = self.__balances[_addr_from] - _value
-        self.__balances[_addr_to] = self.__balances[_addr_to] + _value
-
-        self.Transfer(_addr_from, _addr_to, _value)
-        return True
+    @external(readonly=True)
+    def balanceOf(self, _owner: Address) -> int:
+        return self._balances[_owner]
 
     @external
-    def transfer(self, addr_to: Address, value: int) -> bool:
-        return self.__transfer(self.msg.sender, addr_to, value)
+    def transfer(self, _to: Address, _value: int, _data: bytes=None):
+        if _data is None:
+            _data = b'None'
+        self._transfer(self.msg.sender, _to, _value, _data)
 
-    def fallback(self) -> None:
-        pass
+    def _transfer(self, _from: Address, _to: Address, _value: int, _data: bytes):
+        if self._balances[_from] < _value:
+            self.revert("Out of balance")
+
+        self._balances[_from] = self._balances[_from] - _value
+        self._balances[_to] = self._balances[_to] + _value
+        if _to.is_contract:
+            crowdsale_score = self.create_interface_score(_to, CrowdSaleInterface)
+            crowdsale_score.tokenFallback(_from, _value, _data)
+        self.Transfer(_from, _to, _value, _data)
+        Logger.debug(f'Transfer({_from}, {_to}, {_value}, {_data})', TAG)
 
 ```
 
-<br/>
-위의 샘플 토큰을 가지고 크라우드 세일을 하는 예제입니다.<br/>
-icx와의 교환 비율은 1:1이며 1분 후에 크라우드 세일이 종료됩니다.<br/>
-크라우드 펀딩에 참가한 총 인원을 구하는 함수(total_joiner_count)와 크라우드 세일 마감함수(check_goal_reached)<br/>
-그리고 크라우드 세일 성공 및 실패 시에 icx를 환급받는 함수(safe_withdrawal)를 제공합니다.<br/>
+Now, we are going to write a crowdsale contract using above token. Let's create a new project for the crowdsale contract. 
+
+```
+$ tbears init sample_crowdsale SampleCrowdSale
+```
+
+Our crowdsale contract will do the following.
+
+- Exchange ratio to ICX is 1:1. Crowdsale target, token contract address, and its duration are set when the contract is first deployed.
+- `total_joiner_count` function returns the number of contributors, and `check_goal_reached` function tests if the crowdsale target has been met.
+- After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiary, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdraw their contributions back.
+
+Again, complete source is given below. Note that crowdsale duration is given in number of blocks, because SCORE logic must be deterministic across nodes, thus it must not rely on clock time.
 
 ```python
-class SampleTokenInterface(InterfaceScore):
-    @interface
-    def transfer(self, addr_to: Address, value: int) -> bool: pass
+from iconservice import *
 
+TAG = 'SampleCrowdSale'
+
+class TokenInterface(InterfaceScore):
+    @interface
+    def transfer(self, _to: Address, _value: int, _data: bytes=None):
+        pass
 
 class SampleCrowdSale(IconScoreBase):
-    __ADDR_BENEFICIARY = 'addr_beneficiary'
-    __FUNDING_GOAL = 'funding_goal'
-    __AMOUNT_RAISE = 'amount_raise'
-    __DEAD_LINE = 'dead_line'
-    __PRICE = 'price'
-    __BALANCES = 'balances'
-    __ADDR_TOKEN_SCORE = 'addr_token_score'
-    __FUNDING_GOAL_REACHED = 'funding_goal_reached'
-    __CROWD_SALE_CLOSED = 'crowd_sale_closed'
-    __JOINER_LIST = 'joiner_list'
+    _ADDR_BENEFICIARY = 'addr_beneficiary'
+    _ADDR_TOKEN_SCORE = 'addr_token_score'
+    _FUNDING_GOAL = 'funding_goal'
+    _AMOUNT_RAISED = 'amount_raised'
+    _DEAD_LINE = 'dead_line'
+    _PRICE = 'price'
+    _BALANCES = 'balances'
+    _JOINER_LIST = 'joiner_list'
+    _FUNDING_GOAL_REACHED = 'funding_goal_reached'
+    _CROWDSALE_CLOSED = 'crowdsale_closed'
 
     @eventlog(indexed=3)
     def FundTransfer(self, backer: Address, amount: int, is_contribution: bool):
@@ -103,319 +171,335 @@ class SampleCrowdSale(IconScoreBase):
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
 
-        self.__addr_beneficiary = VarDB(self.__ADDR_BENEFICIARY, db, value_type=Address)
-        self.__addr_token_score = VarDB(self.__ADDR_TOKEN_SCORE, db, value_type=Address)
-        self.__funding_goal = VarDB(self.__FUNDING_GOAL, db, value_type=int)
-        self.__amount_raise = VarDB(self.__AMOUNT_RAISE, db, value_type=int)
-        self.__dead_line = VarDB(self.__DEAD_LINE, db, value_type=int)
-        self.__price = VarDB(self.__PRICE, db, value_type=int)
-        self.__balances = DictDB(self.__BALANCES, db, value_type=int)
-        self.__joiner_list = ArrayDB(self.__JOINER_LIST, db, value_type=Address)
-        self.__funding_goal_reached = VarDB(self.__FUNDING_GOAL_REACHED, db, value_type=bool)
-        self.__crowd_sale_closed = VarDB(self.__CROWD_SALE_CLOSED, db, value_type=bool)
+        self._addr_beneficiary = VarDB(self._ADDR_BENEFICIARY, db, value_type=Address)
+        self._addr_token_score = VarDB(self._ADDR_TOKEN_SCORE, db, value_type=Address)
+        self._funding_goal = VarDB(self._FUNDING_GOAL, db, value_type=int)
+        self._amount_raised = VarDB(self._AMOUNT_RAISED, db, value_type=int)
+        self._dead_line = VarDB(self._DEAD_LINE, db, value_type=int)
+        self._price = VarDB(self._PRICE, db, value_type=int)
+        self._balances = DictDB(self._BALANCES, db, value_type=int)
+        self._joiner_list = ArrayDB(self._JOINER_LIST, db, value_type=Address)
+        self._funding_goal_reached = VarDB(self._FUNDING_GOAL_REACHED, db, value_type=bool)
+        self._crowdsale_closed = VarDB(self._CROWDSALE_CLOSED, db, value_type=bool)
 
-        self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
-
-    def on_install(self, funding_goal_in_icx: int = 100, duration_in_minutes: int = 1,
-                   icx_cost_of_each_token: int = 1) -> None:
+    def on_install(self, fundingGoalInIcx: int, tokenScore: Address, durationInBlocks: int) -> None:
         super().on_install()
 
-        one_icx = 1 * 10 ** 18
-        one_minute_to_sec = 1 * 60
-        one_second_to_microsec = 1 * 10 ** 6
-        now_seconds = self.now()
+        Logger.debug(f'on_install: fundingGoalInIcx={fundingGoalInIcx}', TAG)
+        Logger.debug(f'on_install: tokenScore={tokenScore}', TAG)
+        Logger.debug(f'on_install: durationInBlocks={durationInBlocks}', TAG)
 
-        # genesis params
-        if_successful_send_to = self.msg.sender
-        addr_token_score = Address.from_string('cxb8f2c9ba48856df2e889d1ee30ff6d2e002651cf')
+        icx_cost_of_each_token = 1
 
-        self.__addr_beneficiary.set(if_successful_send_to)
-        self.__addr_token_score.set(addr_token_score)
-        self.__funding_goal.set(funding_goal_in_icx * one_icx)
-        self.__dead_line.set(now_seconds + duration_in_minutes * one_minute_to_sec * one_second_to_microsec)
-        price = int(icx_cost_of_each_token * one_icx)
-        self.__price.set(price)
+        self._addr_beneficiary.set(self.msg.sender)
+        self._addr_token_score.set(tokenScore)
+        self._funding_goal.set(fundingGoalInIcx)
+        self._dead_line.set(self.block.height + durationInBlocks)
+        price = int(icx_cost_of_each_token)
+        self._price.set(price)
 
-        self.__sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
+        self._funding_goal_reached.set(False)
+        self._crowdsale_closed.set(True)  # CrowdSale closed by default
 
     def on_update(self) -> None:
         super().on_update()
 
-    @external(readonly=True)
-    def total_joiner_count(self):
-        return len(self.__joiner_list)
+    @external
+    def tokenFallback(self, _from: Address, _value: int, _data: bytes):
+        if self.msg.sender == self._addr_token_score.get() \
+                and _from == self.owner:
+            # token supply to CrowdSale
+            Logger.debug(f'tokenFallback: token supply = "{_value}"', TAG)
+            if _value >= 0:
+                self._crowdsale_closed.set(False)  # start CrowdSale hereafter
+        else:
+            # reject if this is an unrecognized token transfer
+            Logger.debug(f'tokenFallback: REJECT transfer', TAG)
+            self.revert('Unexpected token owner!')
 
     @payable
-    def fallback(self) -> None:
-        if self.__crowd_sale_closed.get():
-            self.revert('crowd sale is closed')
+    def fallback(self):
+        if self._crowdsale_closed.get():
+            self.revert('CrowdSale is closed.')
 
         amount = self.msg.value
-        self.__balances[self.msg.sender] = self.__balances[self.msg.sender] + amount
-        self.__amount_raise.set(self.__amount_raise.get() + amount)
-        value = int(amount / self.__price.get())
+        self._balances[self.msg.sender] = self._balances[self.msg.sender] + amount
+        self._amount_raised.set(self._amount_raised.get() + amount)
+        value = int(amount / self._price.get())
+        data = b'called from CrowdSale'
+        token_score = self.create_interface_score(self._addr_token_score.get(), TokenInterface)
+        token_score.transfer(self.msg.sender, value, data)
 
-        self.__sample_token_score.transfer(self.msg.sender, value)
-
-        if self.msg.sender not in self.__joiner_list:
-            self.__joiner_list.put(self.msg.sender)
+        if self.msg.sender not in self._joiner_list:
+            self._joiner_list.put(self.msg.sender)
 
         self.FundTransfer(self.msg.sender, amount, True)
+        Logger.debug(f'FundTransfer({self.msg.sender}, {amount}, True)', TAG)
+
+    @external(readonly=True)
+    def total_joiner_count(self) -> int:
+        return len(self._joiner_list)
+
+    def _after_dead_line(self) -> bool:
+        Logger.debug(f'after_dead_line: block.height = {self.block.height}', TAG)
+        Logger.debug(f'after_dead_line: dead_line()  = {self._dead_line.get()}', TAG)
+        return self.block.height >= self._dead_line.get()
 
     @external
     def check_goal_reached(self):
-        if not self.__after_dead_line():
-            self.revert('before deadline')
-
-        if self.__amount_raise.get() >= self.__funding_goal.get():
-            self.__funding_goal_reached.set(True)
-            self.GoalReached(self.__addr_beneficiary.get(), self.__amount_raise.get())
-        self.__crowd_sale_closed.set(True)
-
-    def __after_dead_line(self):
-        return self.now() >= self.__dead_line.get()
+        if self._after_dead_line():
+            if self._amount_raised.get() >= self._funding_goal.get():
+                self._funding_goal_reached.set(True)
+                self.GoalReached(self._addr_beneficiary.get(), self._amount_raised.get())
+                Logger.debug(f'Goal reached!', TAG)
+            self._crowdsale_closed.set(True)
 
     @external
     def safe_withdrawal(self):
-        if not self.__after_dead_line():
-            self.revert('before deadline')
+        if self._after_dead_line():
+            # each contributor can withdraw the amount they contributed if the goal was not reached
+            if not self._funding_goal_reached.get():
+                amount = self._balances[self.msg.sender]
+                self._balances[self.msg.sender] = 0
+                if amount > 0:
+                    if self.icx.send(self.msg.sender, amount):
+                        self.FundTransfer(self.msg.sender, amount, False)
+                        Logger.debug(f'FundTransfer({self.msg.sender}, {amount}, False)', TAG)
+                    else:
+                        self._balances[self.msg.sender] = amount
 
-        if not self.__funding_goal_reached.get():
-            amount = self.__balances[self.msg.sender]
-            self.__balances[self.msg.sender] = 0
-            if amount > 0:
-                if self.icx.send(self.msg.sender, amount):
-                    self.FundTransfer(self.msg.sender, amount, False)
+            if self._funding_goal_reached.get() and self._addr_beneficiary.get() == self.msg.sender:
+                if self.icx.send(self._addr_beneficiary.get(), self._amount_raised.get()):
+                    self.FundTransfer(self._addr_beneficiary.get(), self._amount_raised.get(), False)
+                    Logger.debug(f'FundTransfer({self._addr_beneficiary.get()},'
+                                 f'{self._amount_raised.get()}, False)', TAG)
                 else:
-                    self.__balances[self.msg.sender] = amount
-
-        if self.__funding_goal_reached.get() and self.__addr_beneficiary.get() == self.msg.sender:
-            if self.icx.send(self.__addr_beneficiary.get(), self.__amount_raise.get()):
-                self.FundTransfer(self.__addr_beneficiary.get(), self.__amount_raise.get(),
-                                  False)
-            else:
-                self.__funding_goal_reached.set(False)
+                    # if the transfer to beneficiary fails, unlock contributors balance
+                    Logger.debug(f'Failed to send to beneficiary!', TAG)
+                    self._funding_goal_reached.set(False)
 
 ```
 
 
-문법 설명
+
+Syntax 
 --------------
-계약서 작성시 매개 변수 타입, 리턴 타입에 대한 명시(타입 힌트)를 해줄 것을 권장합니다.<br/>
-계약서에서 제공하는 외부 API에 대한 정보를 계약서에 명시된 타입 힌트를 이용하여 만들게 됩니다.<br/>
-만약 타입 힌트가 적혀있지 않다면 해당 API 정보에 함수명에 대한 내용만 자동 기입됩니다.<br/>
 
-예시)
+#### Type hints
+
+Type hinting is highly recommended for the input parameters and return value. When querying SCORE's APIs, API specification is generated based on its type hints. If type hints are not given, only function names will return.
+
+Example)
 ```python
-@external
-def func1(arg1: int, arg2: str) -> object:
-    pass
+@external(readonly=True)
+def func1(arg1: int, arg2: str) -> int:
+    return 100
 ```
 
-#### 예외 처리
-계약서를 작성하면서 예외를 처리하고 싶다면,<br/>
-IconServiceBaseException 예외를 상속받아서 구현하길 권장합니다.<br/>
+#### Exception handling
+When you handle exceptions in your contract, it is recommended to inherit `IconServiceBaseException`.
 
-#### 최상단 부모 클래스 (IconScoreBase)
-모든 DApp 관련 클래스를 만들 때는 IconScoreBase 클래스를 상속받아서 사용합니다.<br/>
-이 클래스를 상속받지 않은 계약서는 배포할 수 없습니다.<br/>
+#### IconScoreBase (The highest parent class)
+Every classes must inherit `IconScoreBase`. Contracts not derived from `IconScoreBase` can not be deployed.
 
 #### \_\_init\_\_
-파이썬 자체의 초기화 함수입니다. 이는 각각의 노드에서 해당 계약서가 로드될 때 호출되는 함수입니다.<br/>
-초기화 시에 해당 계약서에서 사용할 멤버 변수를 선언합니다.<br/>
-아울러 아래와 같이 부모 클래스의 초기화 함수를 반드시 호출해야 합니다.<br/>
+This is a python init function. This function is called when the contract is loaded at each node. Member variables should be declared here. 
 
-예시)
+Also, parent's init function must be called as follows.
+
+Example)
 ``` python
 super().__init__(db)
 ```
 
-#### on_install
-계약서가 최초 배포되었을 때 상태 DB에 기록할 내용을 구현합니다.<br/>
-이 함수의 호출은 최초 배포할 때 1회만 호출되며, 향후 계약서의 업데이트, 삭제 시에는 호출되지 않습니다.<br/>
+#### on\_install
+This function is called when the contract is deployed for the first time, and will not be called again on contract update or deletion afterward.
+This is the place where you initialize the state DB.
 
 #### VarDB, DictDB, ArrayDB
-상태 DB에 읽고 쓰는 작업을 좀 더 편리하게 하기 위한 유틸리티 클래스입니다.<br/>
-키는 숫자, 문자 모두 가능하며, 반환될 value_type은 integer(정수), str(문자), Address(주소 객체), 그리고 bytes가 가능합니다. <br/>
-존재하지 않는 키로 값을 얻으려 하면, value_type이 int일 때 0, str일 때 ""을 반환하며, Address 객체 및 bytes일 때는 None을 반환합니다.<br/>
-VarDB는 단순 키-값 형식의 상태를 저장할 때 사용할 수 있으며, DictDB는 파이썬의 dict와 비슷하게 동작할 수 있게 구현되었습니다. <br/>
-참고로 DictDB는 순서 보장이 되지 않습니다. <br/>
-Length와 iterator를 지원하는 ArrayDB는 순서 보장을 합니다. <br/>
+VarDB, DictDB, ArrayDB are utility classes wrapping the state DB.
+A `key` can be a number or characters, and `value_type` can be `int`, `str`, `Address`, and `bytes`.
+If the `key` does not exist, these classes return 0 when `value_type` is `int`, return "" when `str`, return `None` when the `value_type` is `Address` or `bytes`.
+VarDB can be used to store simple key-value state, and DictDB behaves more like python dict.
+DictDB does not maintain order, whereas ArrayDB, which supports length and iterator, maintains order.
 
-##### VarDB('DB에 접근할 key', '접근할 db', '반환될 type')<br/>
-예시) 상태 DB에 'name' 키로 'theloop' 값을 기록할 때:<br/>
+##### VarDB('key', 'target db', 'return type')
+Example) Setting `theloop` for the key `name` on the state DB:
 ```python
 VarDB('name', db, value_type=str).set('theloop')
 ```
-'name' 키에 대해 기록한 값을 읽어올 때:<br/>
+Example) Getting value by the key `name`:
 ```python
 name = VarDB('name', db, value_type=str).get()
-print(name) ##'theloop'
+print(name) ## 'theloop'
 ```
 
-##### DictDB('DB에 접근할 key', '접근할 db', '반환될 type', '컨테이너의 키에 대한 뎁스(기본값 1)')<br/>
-예시1) 상태 DB에 파이썬 dict의 형식을 사용할 때 (test_dict1['key'] 형식): <br/>
+##### DictDB('key', 'target db', 'return type', 'dict depth (default is 1)')
+Example 1) One-depth dict (test\_dict1['key']):
 ```python
 test_dict1 = DictDB('test_dict1', db, value_type=int)
 test_dict1['key'] = 1 ## set
 print(test_dict1['key']) ## get 1
 
-print(test_dict1['nonexistence_key']) # 0 출력(존재하지 않는 키에 접근, value_type=int)
+print(test_dict1['nonexistence_key']) # prints 0 (key does not exist and value_type=int)
 ```
 
-예시2) 이차원 배열 형식 (test_dict2['key1']['key2']):<br/>
+Example 2) Two-depth dict (test\_dict2\['key1']\['key2']):
 ```python
 test_dict2 = DictDB('test_dict2', db, value_type=str, depth=2)
 test_dict2['key1']['key2'] = 'a' ## set
 print(test_dict2['key1']['key2']) ## get 'a'
 
-print(test_dict2['key1']['nonexistence_key']) # "" 출력(존재하지 않는 키에 접근, value_type=str)
+print(test_dict2['key1']['nonexistent_key']) # prints "" (key does not exist and value_type=str)
 ```
 
-depth가 2 이상인 경우에 dict[key]로 접근시 value_type이 아니라 DictDB가 새로 만들어져 나옵니다.<br/>
-만약 설정한 depth와 다르게 하여 값을 세팅하려 하면 예외가 발생합니다.<br/>
+If the depth is more than 2, dict[key] returns new DictDB.
+Attempting to set a value to the wrong depth in the DictDB will raise an exception.    
 
-예시3)<br/>
+Example 3)
 ```python
-test_dict3 = DictDB('test_dict2', db, value_type=str, depth=3)
-test_dict3['key1']['key2']['key3'] = 1  # ok
-test_dict3['key1']['key2'] = 1  # raise mismatch exception
+test_dict3 = DictDB('test_dict3', db, value_type=int, depth=3)
+test_dict3['key1']['key2']['key3'] = 1 ## ok
+test_dict3['key1']['key2'] = 1 ## raise mismatch exception
 
 test_dict2 = test_dict3['key']['key2']
-test_dict2['key1'] = 1  # ok
+test_dict2['key1'] = 1 ## ok
 ```
 
-##### ArrayDB('DB에 접근할 key', '접근할 db', '반환될 type')<br/>
-1차원 Array만 지원합니다.<br/>
-put, get, pop을 지원하며, 중간 삽입(insert)은 지원하지 않습니다.<br/>
+##### ArrayDB('key', 'target db', 'return type')
+ArrayDB supports one dimensional array only.
+ArrayDB supports put, get, and pop. Does not support insert (adding elements in the middle of array).
 
 ```python
-test_array = ArrayDB('test_array', db, value_type=str)
+test_array = ArrayDB('test_array', db, value_type=int)
 test_array.put(0)
 test_array.put(1)
 test_array.put(2)
-test_array[0] = 0 # ok
-# test_array[100] = 1 # error
-len(test_array) # ok
-for e in test_array: # ok
+test_array.put(3)
+print(len(test_array)) ## prints 4
+print(test_array.pop()) ## prints 3
+test_array[0] = 0 ## ok
+# test_array[100] = 1 ## error
+for e in test_array: ## ok
     print(e)
-print(test_array[-1]) # ok
-print(test_array[-100]) # error
+print(test_array[-1]) ## ok
+# print(test_array[-100]) ## error
 ```
 
-#### external 데코레이터 (@external)
-이 데코레이터가 붙은 함수들만 외부에서 호출이 가능합니다.<br/>
-즉 외부에서 호출 가능한 API 목록에는 이 데코레이터가 붙은 함수들만 등록됩니다.<br/>
-external 데코레이터가 없는 함수를 호출하면 해당 call은 실패합니다.<br/>
-external(readonly=True)라고 선언된 함수는 읽기전용 db에만 접근 가능합니다. Solidity의 view 키워드 의미와 같습니다. <br/>
-만약 payable이 있는 상태이나 external(readonly=True)라고 선언되었다면 해당 call은 실패합니다.<br/>
-external 데코레이터가 중복으로 선언되어 있다면 import 타임에 IconScoreException이 발생합니다.<br/>
+#### external decorator (@external)
 
-#### payable 데코레이터 (@payable)
-이 데코레이터가 붙은 함수들만 icx 코인 거래가 가능합니다.<br/>
-0이 들어와도 문제가 없습니다. <br/>
-만약 payable이 없는 함수인데 msg.value (icx) 값이 있다면 해당 call은 실패합니다.<br/>
+Functions decorated with `@external` can be called from outside the contract. These functions are registered on the exportable API list.
+Any attempt to call a non-external function from outside the contract will fail.
+If a function is decorated with 'readonly' parameters, i.e., `@external(readonly=True)`, the function will have read-only access to the state DB. This is similar to view keyword in Solidity.
+If the read-only external function is also decorated with `@payable`, the function call will fail.
+Duplicate declaration of `@external` will raise IconScoreException on import time.
 
-#### eventlog 데코레이터 (@eventlog)
-이 데코레이터가 붙은 함수는 TxResult에 'eventlogs'의 내용으로 로그가 기록됩니다.<br/>
-해당 함수 선언은 구현 부가 없는 함수 작성을 권장하며, 설사 구현 부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
-함수 선언 시 매개 변수의 Type Hint는 필수입니다. Type Hint가 없다면 트랜잭션은 성공하지 못합니다.<br/>
-함수 선언 시에 데코레이터의 매개 변수에 `indexed` 값을 설정하면 해당 수 만큼의 변수(선언된 순서 순)가 인덱싱이 되어 블룸 필터(Bloom filter)에 적용이 됩니다.<br/>
+#### payable decorator (@payable)
+Only functions with `@payable` decorator are permitted to transfer icx coins.
+Transferring 0 icx is acceptable.
+If msg.value (icx) is passed to non-payable function, the call will fail.
 
-예시)<br/>
+#### eventlog decorator (@eventlog)
+Functions with `@eventlog` decorator will include logs in its TxResult as 'eventlogs'.
+It is recommended to declare a function without implementation body. Even if the function has a body, it does not be executed.
+When declaring a function, type hinting is a must. Without type hinting, transaction will fail.
+If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration
+will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed.
+Indexed parameters and non-indexed parameters are separately stored in TxResult.
+
+Example)
 ```python
-# 선언부
+# Declaration
 @eventlog
 def FundTransfer1(self, backer: Address, amount: int, is_contribution: bool): pass
 
-@eventlog(indexed=1) # 변수 1개(backer)만 인덱싱 됨
+@eventlog(indexed=1) # The first param (backer) will be indexed
 def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
 
-# 실행부
+# Execution
 self.FundTransfer1(self.msg.sender, amount, True)
 self.FundTransfer2(self.msg.sender, amount, True)
 ```
-매개 변수는 기본 타입(int, str, bytes, bool, Address)만 지원하며, array 타입은 지원하지 않습니다.<br/>
-인덱싱이 되지 않는 매개 변수는 TxResult에 인덱싱 된 매개 변수와 별도로 분리되어 저장됩니다.<br/>
-매개 변수의 인덱싱은 최대 3까지 가능합니다.<br/>
+Possible data types for function parameters are primitive types (int, str, bytes, bool, Address).
+Array type parameter is not supported.
 
 #### fallback
-fallback 함수에는 external 데코레이터를 사용할 수 없습니다. (즉 외부 계약서 및 유저가 호출 불가)<br/>
-만약 계약서에서 데이터 필드가 없는 순수한 icx 코인만 해당 계약서에 이체되었다면 이 fallback 함수가 호출됩니다.<br/>
-만약 icx 코인이 이체되었는데, payable을 붙이지 않은 기본 fallback 함수가 호출되었다면<br/>
-payable 규칙에 의거하여 해당 이체는 실패합니다.<br/>
+fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
+This fallback function is executed whenever the contract receives plain icx coins without data.
+If the fallback function is not decorated with `@payable`, the icx coin transfers to the contract will fail.
 
 #### InterfaceScore
-다른 스코어의 함수를 호출하는 인터페이스로, 기존에 제공하던 call 함수 대신 사용할 수 있습니다.<br/>
-사용 형식은 다음과 같습니다.<br/>
+InterfaceScore is an interface class used to invoke other SCORE's function.
+This interface should be used instead of legacy 'call' function.
+Usage syntax is as follows.
 
 ```python
 class SampleTokenInterface(InterfaceScore):
     @interface
     def transfer(self, addr_to: Address, value: int) -> bool: pass
 ```
-다른 스코어에 interface 데코레이터가 붙은 함수처럼 정의된 함수가 있다면 그 함수를 호출할 수 있습니다.<br/>
-eventlog 데코레이터와 마찬가지로 구현부가 없는 함수 작성을 권장하며, 설사 구현부가 있더라도 해당 내용은 동작하지 않습니다.<br/>
+If other SCORE has the function that has the same signature as defined here with `@interface` decorator,
+then that function can be invoked via InterfaceScore class object.
+Like `@eventlog` decorator, it is recommended to declare a function without implementation body.
+If there is a function body, it will be simply ignored.
 
-예시)<br/>
-IconScoreBase 내장함수 create_interface_score(스코어 주소, 인터페이스로 사용할 클래스)를 사용하여,
-InterfaceScore 객체를 가져옵니다.<br/>
-해당 객체를 사용하여 다른 스코어의 외부 함수를 일반 함수 콜처럼 호출할 수 있습니다.<br/>
+Example)
+You need to get an InterfaceScore object by using IconScoreBase's built-in function `create_interface_score('score address', 'interface class')`.
+Using the object, you can invoke other SCORE's external function as if it is a local function call.
 
 ```python
-sample_token_score = self.create_interface_score(self.__addr_token_score.get(), SampleTokenInterface)
+sample_token_score = self.create_interface_score(self._addr_token_score.get(), SampleTokenInterface)
 sample_token_score.transfer(self.msg.sender, value)
 ```
 
-내장 함수 설명
+Built-in functions
 --------------
-#### create_interface_score(addr_to(주소), interface_cls(인터페이스 클래스)) -> interface_cls 객체
-이 함수를 통하여 다른 스코어(addr_to)의 external 함수에 접근 가능한 객체를 얻습니다.
-
-#### [legacy] call(addr_to(주소), func_name,  kw_dict(함수의 params)) -> 콜 함수의 반환 값
-InterfaceScore가 도입되기 전에 다른 스코어의 함수를 호출하기 위해 제공했던 함수입니다.
+#### create\_interface\_score('score address', 'interface class') -> interface class instance
+This function returns an object, through which you have an access to the designated SCORE's external functions.
 
 #### revert(message: str) -> None
-개발자가 강제로 revert 예외를 발생시킬 수 있습니다.<br/>
-해당 예외가 발생하면 그동안 실행하면서 변경되었던 상태 DB 값은 롤백됩니다.<br/>
+Developer can force a revert exception.
 
-내장 프로퍼티 설명
+If the exception is thrown, all the changes in the state DB in current transaction will be rolled back.
+
+
+Built-in properties
 --------------
 
-#### msg : 스코어를 부른 계정의 정보가 담겨있습니다.
+#### msg : Holds information of the account who called the SCORE.
 * msg.sender :
-현재 이 스코어의 함수를 호출한 계정의 주소입니다. <br/>
-만약 해당 스코어에서 다른 스코어의 함수를 접근하면 호출한 스코어의 주소 값을 가리킵니다.<br/>
+Address of the account who called this function.
+If other contact called this function, msg.sender points to the caller contract's address.
 * msg.value :
-현재 이 스코어의 함수를 호출한 계정에서 전송하려는 icx 값입니다. <br/>
+Amount of icx that the sender attempts to transfer to the current SCORE.
 
-#### tx : 해당 트랜잭션의 정보입니다.
-* tx.origin : 트랜잭션을 만든 계정
-* tx.index : 트랜잭션 인덱스
-* tx.hash : 트랜잭션 해쉬 값
-* tx.timestamp : 트랜잭션이 생성된 시각
-* tx.nonce : (옵션) 임의의 값
+#### tx : Transaction info.
+* tx.origin : The account who created the transaction.
+* tx.index : Transaction index.
+* tx.hash : Transaction hash.
+* tx.timestamp : Transaction creation time.
+* tx.nonce : (optional) random value. 
 
-#### block : 해당 트랜잭션을 담고있는 블럭의 정보입니다.
-* block.height : 블럭의 높이 값
-* block.hash : 블럭의 해쉬 값
-* block.timestamp : 블럭이 생성된 시각
+#### block : Block info that contains current transaction.
+* block.height : Block height.
+* block.hash : Block hash.
+* block.timestamp : Block creation time.
 
-#### icx : icx 코인을 전송하기 위한 객체입니다.
-* icx.transfer(addr_to(주소), amount(정수값)) -> bool<br/>
-addr_to 주소로 amount만큼 icx 코인을 전송합니다.<br/>
-만약 로직 실행 중에 예외가 발생하면 해당 예외를 처리하지 않고 상위로 올려줍니다.<br/>
-성공하면 반환 값은 True입니다.<br/>
+#### icx : An object used to transfer icx coin.
+* icx.transfer(addr\_to(address), amount(integer)) -> bool
+Transfers designated amount of icx coin to `addr_to`.
+If exception occurs during execution, the exception will be escalated.
+Returns True if coin transfer succeeds.
 
-* icx.send(addr_to(주소), amount(정수값)) -> bool<br/>
-addr_to 주소로 amount만큼 icx 코인을 전송합니다.<br/>
-기본 동작은 transfer와 동일하나, 예외를 이 함수 안에서 처리합니다.<br/>
-전송을 성공하면 True, 실패하면 False가 반환됩니다.<br/>
+* icx.send(addr\_to(address), amount(integer)) -> bool
+Sends designated amount of icx coin to `addr_to`.
+Basic behavior is same as transfer, the difference is that exception is caught inside the function.
+Returns True when coin transfer succeeded, False when failed.
 
-#### db : 상태 DB를 접근하는 db 객체입니다.
+#### db : db instance used to access state DB.
 
-#### address : 스코어의 주소 값입니다.
+#### address : SCORE address.
 
-#### owner : 해당 스코어를 배포한 계정의 주소입니다.
+#### owner : Address of the account who deployed the contract.
 
-#### now : block.timestamp의 wrapping 함수입니다.
+#### now : Wrapping function of block.timestamp.

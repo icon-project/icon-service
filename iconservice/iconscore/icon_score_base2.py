@@ -14,12 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+from typing import TypeVar, TYPE_CHECKING
 from abc import ABC, ABCMeta
 from enum import IntEnum, unique
 
-from ..base.exception import InterfaceException
 from ..base.address import Address
+
+if TYPE_CHECKING:
+    from .icon_score_base import IconScoreBase
 
 T = TypeVar('T')
 BaseType = TypeVar('BaseType', bool, int, str, bytes, Address)
@@ -59,15 +61,14 @@ class InterfaceScoreMeta(ABCMeta):
 
 
 class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
-    def __init__(self, addr_to: 'Address', call_func: callable):
+    def __init__(self, addr_to: 'Address', from_score: 'IconScoreBase'):
         self.__addr_to = addr_to
-        self.__call_func = call_func
+        self.__from_score = from_score
 
-    def __call_method(self, func_name: str, arg_list: list, kw_dict: dict, icx_value: int):
-        if self.__call_func is None:
-            raise InterfaceException('self.__call_func is None')
+    @property
+    def addr_to(self) -> 'Address':
+        return self.__addr_to
 
-        if callable(self.__call_func):
-            return self.__call_func(self.__addr_to, func_name, arg_list, kw_dict, icx_value)
-        else:
-            raise InterfaceException(STR_IS_NOT_CALLABLE)
+    @property
+    def from_score(self) -> 'IconScoreBase':
+        return self.__from_score

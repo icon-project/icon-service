@@ -34,17 +34,18 @@ class IconScoreDeployer(object):
     def deploy(self,
                address: 'Address',
                data: bytes,
-               score_id: str) -> bool:
+               tx_hash: bytes) -> bool:
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
         :param address: score address
         :param data: The byte value of the zip file.
-        :param score_id:
+        :param tx_hash:
         :return:
         """
 
         score_root_path = os.path.join(self.score_root_path, address.to_bytes().hex())
-        install_path = os.path.join(score_root_path, score_id)
+        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+        install_path = os.path.join(score_root_path, converted_tx_hash)
 
         try:
             if os.path.isfile(install_path):

@@ -26,7 +26,7 @@ from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx.icx_engine import IcxEngine
 from tests import create_tx_hash
 
@@ -37,11 +37,9 @@ class TestTransactionValidator(unittest.TestCase):
         self.score_manager = Mock(spec=IconScoreManager)
         self.deploy_storage = Mock(spec=IconScoreDeployStorage)
 
-        # self.score_mapper = Mock(spec=IconScoreInfoMapper)
-        self.score_mapper = {}
+        self.icon_score_mapper_container = Mock(spec=IconScoreMapper)
 
-        self.validator = IconPreValidator(
-            self.icx_engine, self.score_manager, self.score_mapper, self.deploy_storage)
+        self.validator = IconPreValidator(self.icx_engine, self.score_manager, self.deploy_storage)
 
     def tearDown(self):
         self.icx_engine = None
@@ -180,7 +178,7 @@ class TestTransactionValidator(unittest.TestCase):
             self.validator.execute(params, step_price=1, minimum_step=100)
 
         self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
-        self.assertEqual(f'Invalid address: {to}', cm.exception.message)
+        self.assertEqual(f'{to} is inactive SCORE', cm.exception.message)
 
     # TODO FIXME
     # def test_transfer_to_invalid_eoa_address(self):
@@ -285,10 +283,9 @@ class TestTransactionValidatorV2(unittest.TestCase):
     def setUp(self):
         self.icx_engine = Mock(spec=IcxEngine)
         self.score_manager = Mock(spec=IconScoreManager)
-        self.score_mapper = Mock(spec=IconScoreInfoMapper)
         self.deploy_storage = Mock(spec=IconScoreDeployStorage)
         self.validator = IconPreValidator(
-            self.icx_engine, self.score_manager, self.score_mapper, self.deploy_storage)
+            self.icx_engine, self.score_manager, self.deploy_storage)
 
     def tearDown(self):
         self.icx_engine = None

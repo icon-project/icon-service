@@ -21,11 +21,12 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, IconScoreException, int_to_bytes
+    external, int_to_bytes
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.exception import EventLogException, ScoreErrorException
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContext, IconScoreContextType
+    IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
@@ -42,6 +43,7 @@ class TestEventlog(unittest.TestCase):
         logs_bloom = BloomFilter()
 
         context.type = IconScoreContextType.INVOKE
+        context.func_type = IconScoreFuncType.WRITABLE
         context.attach_mock(event_logs, 'event_logs')
         context.attach_mock(logs_bloom, 'logs_bloom')
         context.attach_mock(step_counter, 'step_counter')
@@ -87,11 +89,11 @@ class TestEventlog(unittest.TestCase):
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
-        self.assertRaises(IconScoreException, self._mock_score.ThreeIndexEvent,
+        self.assertRaises(ScoreErrorException, self._mock_score.ThreeIndexEvent,
                           name, address)
 
         # This event is declared 4 indexed_count
-        self.assertRaises(IconScoreException, self._mock_score.FourIndexEvent,
+        self.assertRaises(ScoreErrorException, self._mock_score.FourIndexEvent,
                           name, address, age, phone_number)
 
     def test_call_event_kwarg(self):
@@ -135,7 +137,7 @@ class TestEventlog(unittest.TestCase):
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
-        self.assertRaises(IconScoreException, self._mock_score.OneIndexEvent,
+        self.assertRaises(ScoreErrorException, self._mock_score.OneIndexEvent,
                           name, address, age)
 
         one_event_bloom_data = \
@@ -247,6 +249,13 @@ class TestEventlog(unittest.TestCase):
         self.assertIn('data', camel_dict)
         self.assertEqual(3, len(camel_dict['indexed']))
         self.assertEqual(3, len(camel_dict['data']))
+
+    def test_event_log_on_readonly_method(self):
+        context = ContextContainer._get_context()
+        context.func_type = IconScoreFuncType.READONLY
+
+        with self.assertRaises(EventLogException):
+            self._mock_score.BoolIndexEvent(False)
 
     def tearDown(self):
         self._mock_icon_score = None

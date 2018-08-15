@@ -50,9 +50,9 @@ class TestCheckException(unittest.TestCase):
         return self.check_external_exception_func1()
 
     def test_external_exception_call(self):
-        raise_exception_start_tag()
+        raise_exception_start_tag("test_external_exception_call")
         self.assertRaises(Exception, self.check_built_in_exception_func1)
-        raise_exception_end_tag()
+        raise_exception_end_tag("test_external_exception_call")
 
         #handling exception
         #self.check_external_exception_func1()

@@ -342,7 +342,7 @@ class IconScoreDatabase(ContextGetter):
             old_value = self._context_db.get(self._context, hashed_key)
             if value:
                 self._observer.on_put(self._context, key, old_value, value)
-            else:
+            elif old_value:
                 # If new value is None, then deletes the field
                 self._observer.on_delete(self._context, key, old_value)
         self._context_db.put(self._context, hashed_key, value)

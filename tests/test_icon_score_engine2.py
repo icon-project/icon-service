@@ -36,7 +36,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContextFactory, \
 from iconservice.iconscore.icon_score_context import IconScoreContextType, \
     IconScoreContext
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
-from iconservice.iconscore.icon_score_info_mapper import IconScoreInfoMapper
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
@@ -79,32 +79,32 @@ class TestIconScoreEngine2(unittest.TestCase):
 
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_manager = IconScoreManager(self._score_deploy_engine)
-        self._icon_score_mapper = IconScoreInfoMapper(self._icon_score_loader,
-                                                      self._deploy_storage)
+
+        IconScoreMapper.icon_score_loader = self._icon_score_loader
+        IconScoreMapper.deploy_storage = self._deploy_storage
+        self._icon_score_mapper = IconScoreMapper()
 
         self._context_container = TestContextContainer()
 
         self._score_deploy_engine.open(
             score_root_path=score_path,
             flag=0,
-            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)
 
         self.score_engine = IconScoreEngine()
         self.score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
-        self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
-        self._addr2 = create_address(AddressPrefix.EOA, b'addr2')
-        self._addr3 = create_address(AddressPrefix.EOA, b'addr3')
+        self._addr1 = create_address(AddressPrefix.EOA)
+        self._addr2 = create_address(AddressPrefix.EOA)
+        self._addr3 = create_address(AddressPrefix.EOA)
 
-        self._addr_token_score = create_address(
-            AddressPrefix.CONTRACT, b'sample_token')
-        self._addr_crowd_sale_score = create_address(
-            AddressPrefix.CONTRACT, b'sample_crowd_sale')
+        self._addr_token_score = create_address(AddressPrefix.CONTRACT)
+        self._addr_crowd_sale_score = create_address(AddressPrefix.CONTRACT)
 
         self._factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_manager = self._icon_score_manager
+        IconScoreContext.icon_score_mapper = self._icon_score_mapper
         self.make_context()
 
         self._total_supply = 1000 * 10 ** 18
@@ -116,12 +116,12 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._addr1, 0)
 
-        tx_hash = create_tx_hash(
-            b'txHash' + self._tx_index.to_bytes(32, 'big', signed=True))
+        tx_hash = create_tx_hash()
         self._context.tx = Transaction(tx_hash=tx_hash, origin=self._addr1)
-        self._context.block = Block(1, create_block_hash(b'block'), 0, None)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
+        self._context.new_icon_score_mapper = IconScoreMapper()
         self.__step_counter_factory = IconScoreStepCounterFactory()
         self._step_counter: IconScoreStepCounter =\
             self.__step_counter_factory.create(100)
@@ -140,10 +140,11 @@ class TestIconScoreEngine2(unittest.TestCase):
             ContextDatabaseFactory.close()
             self._factory.destroy(self._context)
         finally:
-            remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-            rmtree(remove_path)
-            remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-            rmtree(remove_path)
+            # remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+            # rmtree(remove_path)
+            # remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+            # rmtree(remove_path)
+            pass
 
     @staticmethod
     def __ensure_dir(dir_path):
@@ -152,8 +153,7 @@ class TestIconScoreEngine2(unittest.TestCase):
 
     def __request_install(self, project_name: str, score_address: 'Address'):
         self.make_context()
-        score_id = f'0x{bytes.hex(create_tx_hash())}'
-        self._deploy_storage.get_score_id = Mock(return_value=score_id)
+        self._deploy_storage.get_next_tx_hash = Mock(return_value=self._context.tx.hash)
         self.__ensure_dir(self._icon_score_loader.score_root_path)
         path = os.path.join(TEST_ROOT_PATH, f'tests/sample/{project_name}')
         install_data = {'contentType': 'application/tbears', 'content': path}
@@ -163,9 +163,6 @@ class TestIconScoreEngine2(unittest.TestCase):
             to=ZERO_SCORE_ADDRESS,
             icon_score_address=score_address,
             data=install_data)
-
-        self._score_deploy_engine.commit(self._context)
-        self._icon_score_mapper.commit()
 
     def test_call_get_api(self):
         self.__request_install('sample_token', self._addr_token_score)

@@ -16,7 +16,7 @@
 import os
 from typing import TYPE_CHECKING
 
-from ..base.address import Address, AddressPrefix
+from ..base.address import Address
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 
 if TYPE_CHECKING:
@@ -50,8 +50,9 @@ class IconBuiltinScoreLoader(object):
             return
 
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
-        self._deploy_engine.write_deploy_info_and_tx_params_for_builtin(icon_score_address, builtin_score_owner)
-        self._deploy_engine.deploy_for_builtin(icon_score_address, score_path)
+        self._deploy_engine.\
+            write_deploy_info_and_tx_params_for_builtin(context, icon_score_address, builtin_score_owner)
+        self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
 
     @classmethod
     def is_builtin_score(cls, score_address: 'Address') -> bool:

@@ -140,7 +140,13 @@ class IcxEngine(object):
         text = storage.get_text(context, self._GENESIS_DB_KEY)
         if text:
             obj = json.loads(text)
-            self._genesis_address = Address.from_string(obj['address'])
+
+            # Support to load MainNet 1.0 db
+            address: str = obj['address']
+            if len(address) == 40:
+                address = f'hx{address}'
+
+            self._genesis_address = Address.from_string(address)
             Logger.info(f'{self._GENESIS_DB_KEY}: {self._genesis_address}', ICX_LOG_TAG)
         Logger.debug('_load_genesis_account_from_storage() end', ICX_LOG_TAG)
 
@@ -157,7 +163,13 @@ class IcxEngine(object):
         text = storage.get_text(context, self._TREASURY_DB_KEY)
         if text:
             obj = json.loads(text)
-            self._fee_treasury_address = Address.from_string(obj['address'])
+
+            # Support to load MainNet 1.0 db
+            address: str = obj['address']
+            if len(address) == 40:
+                address = f'hx{address}'
+
+            self._fee_treasury_address = Address.from_string(address)
             Logger.info(f'{self._TREASURY_DB_KEY}: {self._fee_treasury_address}', ICX_LOG_TAG)
         Logger.debug('_load_fee_treasury_account_from_storage() end', ICX_LOG_TAG)
 
