@@ -21,9 +21,9 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, IconScoreException, int_to_bytes
+    external, int_to_bytes
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.base.exception import EventLogException
+from iconservice.base.exception import EventLogException, ScoreErrorException
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
@@ -89,11 +89,11 @@ class TestEventlog(unittest.TestCase):
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
-        self.assertRaises(IconScoreException, self._mock_score.ThreeIndexEvent,
+        self.assertRaises(ScoreErrorException, self._mock_score.ThreeIndexEvent,
                           name, address)
 
         # This event is declared 4 indexed_count
-        self.assertRaises(IconScoreException, self._mock_score.FourIndexEvent,
+        self.assertRaises(ScoreErrorException, self._mock_score.FourIndexEvent,
                           name, address, age, phone_number)
 
     def test_call_event_kwarg(self):
@@ -137,7 +137,7 @@ class TestEventlog(unittest.TestCase):
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
-        self.assertRaises(IconScoreException, self._mock_score.OneIndexEvent,
+        self.assertRaises(ScoreErrorException, self._mock_score.OneIndexEvent,
                           name, address, age)
 
         one_event_bloom_data = \

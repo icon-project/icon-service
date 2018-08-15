@@ -56,6 +56,10 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
+    def _log_exception(self, e: BaseException, tag: str=ICON_INNER_LOG_TAG) -> None:
+        Logger.exception(e, tag)
+        Logger.error(e, tag)
+
     @message_queue_task
     async def hello(self):
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
@@ -83,6 +87,12 @@ class IconScoreInnerTask(object):
             return self._invoke(request)
 
     def _invoke(self, request: dict):
+        """Process transactions in a block
+
+        :param request:
+        :return:
+        """
+
         response = None
         try:
             params = TypeConverter.convert(request, ParamType.INVOKE)
@@ -101,10 +111,10 @@ class IconScoreInnerTask(object):
             }
             response = MakeResponse.make_response(results)
         except IconServiceBaseException as icon_e:
-            Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
@@ -122,6 +132,7 @@ class IconScoreInnerTask(object):
 
     def _query(self, request: dict):
         response = None
+
         try:
             converted_request = TypeConverter.convert(request, ParamType.QUERY)
 
@@ -132,10 +143,10 @@ class IconScoreInnerTask(object):
                 value = str(value)
             response = MakeResponse.make_response(value)
         except IconServiceBaseException as icon_e:
-            Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
@@ -160,10 +171,10 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.commit(block)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
-            Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
@@ -188,10 +199,10 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.rollback(block)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
-            Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
@@ -216,10 +227,10 @@ class IconScoreInnerTask(object):
             self._icon_service_engine.validate_transaction(converted_request)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
-            Logger.exception(icon_e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)

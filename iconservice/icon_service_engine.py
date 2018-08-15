@@ -24,7 +24,7 @@ from .base.address import Address, generate_score_address, \
 from .base.address import ZERO_SCORE_ADDRESS, \
     GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
-from .base.exception import ExceptionCode, RevertException
+from .base.exception import ExceptionCode, RevertException, ScoreErrorException
 from .base.exception import IconServiceBaseException, ServerErrorException
 from .base.message import Message
 from .base.transaction import Transaction
@@ -394,15 +394,8 @@ class IconServiceEngine(ContextContainer):
 
             tx_result.status = TransactionResult.SUCCESS
 
-        except IconServiceBaseException as e:
-            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
-            # Add failure info to transaction result
-            tx_result.failure = TransactionResult.Failure(
-                code=e.code, message=e.message)
-        except Exception as e:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
-            tx_result.failure = TransactionResult.Failure(
-                code=ExceptionCode.SERVER_ERROR, message=str(e))
+        except BaseException as e:
+            tx_result.failure = self._get_failure_from_exception(e)
 
         return tx_result
 
@@ -791,11 +784,17 @@ class IconServiceEngine(ContextContainer):
         """
 
         if isinstance(e, IconServiceBaseException):
-            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+            if e.code == ExceptionCode.SCORE_ERROR or isinstance(e, ScoreErrorException):
+                Logger.warning(e.message, ICON_SERVICE_LOG_TAG)
+            else:
+                Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+
             code = e.code
             message = e.message
         else:
             Logger.exception(e, ICON_SERVICE_LOG_TAG)
+            Logger.error(e, ICON_SERVICE_LOG_TAG)
+
             code = ExceptionCode.SERVER_ERROR
             message = str(e)
 

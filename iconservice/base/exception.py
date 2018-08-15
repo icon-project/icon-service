@@ -48,8 +48,9 @@ class ExceptionCode(IntEnum):
             return str(self.name).capitalize().replace('_', ' ')
 
 
-# 아이콘 서비스에서 사용하는 모든 예외는 다음을 상속받는다.
 class IconServiceBaseException(BaseException):
+    """All custom exceptions used in ICONService SHOULD inherit from IconServiceBaseException
+    """
 
     def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.OK):
         if message is None:
@@ -87,6 +88,11 @@ class MethodNotFoundException(IconServiceBaseException):
 class ServerErrorException(IconServiceBaseException):
     def __init__(self, message: Optional[str]):
         super().__init__(message, ExceptionCode.SERVER_ERROR)
+
+
+class ScoreErrorException(IconServiceBaseException):
+    def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_ERROR):
+        super().__init__(message, code)
 
 
 class InvalidRequestException(IconServiceBaseException):
@@ -150,22 +156,22 @@ class PayableException(APIIconScoreBaseException):
         super().__init__(message, func_name, cls_name, code)
 
 
-class RevertException(IconScoreException):
+class RevertException(ScoreErrorException):
     def __init__(self, message: Optional[str], code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR):
         super().__init__(message, code)
 
 
-class InterfaceException(IconScoreException):
+class InterfaceException(ScoreErrorException):
     def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_ERROR):
         super().__init__(message, code)
 
 
-class EventLogException(IconScoreException):
+class EventLogException(ScoreErrorException):
     def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_ERROR):
         super().__init__(message, code)
 
 
-class ContainerDBException(IconScoreException):
+class ContainerDBException(ScoreErrorException):
     def __init__(self, message: Optional[str], code: ExceptionCode = ExceptionCode.SCORE_ERROR):
         super().__init__(message, code)
 
