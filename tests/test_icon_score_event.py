@@ -23,9 +23,10 @@ from unittest.mock import Mock
 from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
     external, IconScoreException, int_to_bytes
 from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.exception import EventLogException
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContext, IconScoreContextType
+    IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
@@ -42,6 +43,7 @@ class TestEventlog(unittest.TestCase):
         logs_bloom = BloomFilter()
 
         context.type = IconScoreContextType.INVOKE
+        context.func_type = IconScoreFuncType.WRITABLE
         context.attach_mock(event_logs, 'event_logs')
         context.attach_mock(logs_bloom, 'logs_bloom')
         context.attach_mock(step_counter, 'step_counter')
@@ -247,6 +249,13 @@ class TestEventlog(unittest.TestCase):
         self.assertIn('data', camel_dict)
         self.assertEqual(3, len(camel_dict['indexed']))
         self.assertEqual(3, len(camel_dict['data']))
+
+    def test_event_log_on_readonly_method(self):
+        context = ContextContainer._get_context()
+        context.func_type = IconScoreFuncType.READONLY
+
+        with self.assertRaises(EventLogException):
+            self._mock_score.BoolIndexEvent(False)
 
     def tearDown(self):
         self._mock_icon_score = None

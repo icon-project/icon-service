@@ -390,6 +390,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             raise EventLogException(
                 'The event log can not be called in the query call')
 
+        if self._context.func_type != IconScoreFuncType.WRITABLE:
+            raise EventLogException(
+                'Only writable method can record event logs')
+
         if indexed_args_count > INDEXED_ARGS_LIMIT:
             raise EventLogException(
                 f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
