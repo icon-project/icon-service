@@ -1,25 +1,49 @@
 ICON Smart Contract - SCORE
 ==================================
 
-SCORE (Smart Contract on Reliable Environment) is a smart contract running on ICON network. A contract is a software that resides at a specific address on the blockchain and executed on ICON nodes. They are building blocks for DApp (Decentralized App). SCORE defines and exports interfaces, so that other SCORE can invoke its functions. The code is written in python, and to be uploaded as compressed binary data on the blockchain.
+SCORE (Smart Contract on Reliable Environment) is a smart contract running on ICON network. A contract is a software that resides at a specific address on the blockchain and executed on ICON nodes. They are building blocks for DApp (Decentralized App). SCORE defines and exports interfaces, so that other SCORE can invoke its functions. The code is written in python, and is uploaded as compressed binary data on the blockchain.
 
 - Deployed SCORE can be updated. SCORE address remains the same after update. 
 - SCORE code size is limited to about 64 KB (actually bounded by the maximum stepLimit value during its deploy transaction) after compression.
 - SCORE must follow sandbox policy - file system access or network API calls are prohibited.
 
-Simple Token & Crowdsale
+Token & Crowdsale
 --------------
 
 This document will explain how to write SCOREs with tbears framework.
-Let's start by creating a simple token contract.
+Let's start by creating a simple token contract. You can create an empty project using `init` command. Suppose your project name is 'sample_token' and the main class name is 'SampleToken'.
 
 ```
 $ tbears init sample_token SampleToken
 ```
 
-Above command will create `sample_token` folder, and generate `__init__.py`, `sample_token.py`, `package.json` files in the folder.  `sample_token.py` has a main class declaration whose name is `SampleToken`.
+Above command will create a project folder, `sample_token`, and generate `__init__.py`, `sample_token.py`, and `package.json` files in the folder.  `sample_token.py` has the main class declaration whose name is `SampleToken`. You need to implement `SampleToken` class. 
 
-When you deploy the contract, you can pass the amount of initial tokens to the parameter `initialSupply`, and in this example, 100% of initial tokens go to the contract owner. `transfer` function is given to transfer tokens to other accounts.
+IRC-2 standard defines the common behavior of tokens running on ICON. IRC-2 compliant token must implement following methods. The specification is here, [IRC-2](https://github.com/icon-project/IIPs/blob/master/IIPS/iip-2.md). 
+
+```python
+@external(readonly=True)
+def name(self) -> str:
+    
+@external(readonly=True)
+def symbol(self) -> str:
+
+@external(readonly=True)
+def decimals(self) -> int:
+    
+@external(readonly=True)
+def totalSupply(self) -> int:
+
+@external(readonly=True)
+def balanceOf(self, _owner: Address) -> int:
+    
+@external
+def transfer(self, _to: Address, _value: int, _data: bytes=None):
+```
+
+Below is a complete token implementation. You can copy and paste it to fill your `sample_token.py`. Note that `CrowdSaleInterface` is declared in the beginning to interact with `SampleCrowdSale` contract defined later. 
+
+When you deploy the contract, `on_install` method is called. You can pass the amount of initial tokens to the parameter `initialSupply`, and, in this example, 100% of initial tokens go to the contract owner. 
 
 ```python
 from iconservice import *
@@ -106,11 +130,13 @@ Now, we are going to write a crowdsale contract using above token. Let's create 
 $ tbears init sample_crowdsale SampleCrowdSale
 ```
 
-Exchange ratio to ICX is 1:1. Crowdsale target, token contract address and its duration are set when the contract is first deployed.
+Our crowdsale contract will do the following.
 
-`total_joiner_count` function returns the number of contributors, and `check_goal_reached` function tests if the crowdsale target has been met.
+- Exchange ratio to ICX is 1:1. Crowdsale target, token contract address, and its duration are set when the contract is first deployed.
+- `total_joiner_count` function returns the number of contributors, and `check_goal_reached` function tests if the crowdsale target has been met.
+- After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiary, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdraw their contributions back.
 
-After the crowdsale finished, `safe_withdrawal` function transfers the fund to the beneficiary, contract owner in this example, if the sales target has been met. If sales target failed, each contributors can withdraw their contributions back.
+Again, complete source is given below. Note that crowdsale duration is given in number of blocks, because SCORE logic must be deterministic across nodes, thus it must not rely on clock time.
 
 ```python
 from iconservice import *
@@ -261,7 +287,7 @@ Syntax
 
 #### Type hints
 
-Type hinting is highly recommended for the input parameters and return value. When querying Score's APIs, API specification is generated based on its type hints. If type hints are not given, only function names will return.
+Type hinting is highly recommended for the input parameters and return value. When querying SCORE's APIs, API specification is generated based on its type hints. If type hints are not given, only function names will return.
 
 Example)
 ```python
@@ -293,7 +319,7 @@ This is the place where you initialize the state DB.
 #### VarDB, DictDB, ArrayDB
 VarDB, DictDB, ArrayDB are utility classes wrapping the state DB.
 A `key` can be a number or characters, and `value_type` can be `int`, `str`, `Address`, and `bytes`.
-If the `key` does not exist, these classes return 0 when `value_type` is `int`, return "" when `str`, return None when the `value_type` is `Address` or `bytes`.
+If the `key` does not exist, these classes return 0 when `value_type` is `int`, return "" when `str`, return `None` when the `value_type` is `Address` or `bytes`.
 VarDB can be used to store simple key-value state, and DictDB behaves more like python dict.
 DictDB does not maintain order, whereas ArrayDB, which supports length and iterator, maintains order.
 
@@ -362,11 +388,9 @@ print(test_array[-1]) ## ok
 
 #### external decorator (@external)
 
-Functions decorated with `@external` can be called from outside the contract.
-These functions are registered on the exportable API list.
+Functions decorated with `@external` can be called from outside the contract. These functions are registered on the exportable API list.
 Any attempt to call a non-external function from outside the contract will fail.
-If a function is decorated with 'readonly' parameters, i.e., `@external(readonly=True)`,
-the function will have read-only access to the state DB. This is similar to view keyword in Solidity.
+If a function is decorated with 'readonly' parameters, i.e., `@external(readonly=True)`, the function will have read-only access to the state DB. This is similar to view keyword in Solidity.
 If the read-only external function is also decorated with `@payable`, the function call will fail.
 Duplicate declaration of `@external` will raise IconScoreException on import time.
 
@@ -377,8 +401,7 @@ If msg.value (icx) is passed to non-payable function, the call will fail.
 
 #### eventlog decorator (@eventlog)
 Functions with `@eventlog` decorator will include logs in its TxResult as 'eventlogs'.
-It is recommended to declare a function without implementation body. 
-Even if the function has a body, it does not be executed.
+It is recommended to declare a function without implementation body. Even if the function has a body, it does not be executed.
 When declaring a function, type hinting is a must. Without type hinting, transaction will fail.
 If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration
 will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed.
@@ -406,7 +429,7 @@ This fallback function is executed whenever the contract receives plain icx coin
 If the fallback function is not decorated with `@payable`, the icx coin transfers to the contract will fail.
 
 #### InterfaceScore
-InterfaceScore is an interface class used to invoke other Score's function.
+InterfaceScore is an interface class used to invoke other SCORE's function.
 This interface should be used instead of legacy 'call' function.
 Usage syntax is as follows.
 
@@ -422,7 +445,7 @@ If there is a function body, it will be simply ignored.
 
 Example)
 You need to get an InterfaceScore object by using IconScoreBase's built-in function `create_interface_score('score address', 'interface class')`.
-Using the object, you can invoke other Score's external function as if it is a local function call.
+Using the object, you can invoke other SCORE's external function as if it is a local function call.
 
 ```python
 sample_token_score = self.create_interface_score(self._addr_token_score.get(), SampleTokenInterface)
@@ -432,7 +455,7 @@ sample_token_score.transfer(self.msg.sender, value)
 Built-in functions
 --------------
 #### create\_interface\_score('score address', 'interface class') -> interface class instance
-This function returns an object, through which you have an access to the designated Score's external functions.
+This function returns an object, through which you have an access to the designated SCORE's external functions.
 
 #### revert(message: str) -> None
 Developer can force a revert exception.
@@ -443,12 +466,12 @@ If the exception is thrown, all the changes in the state DB in current transacti
 Built-in properties
 --------------
 
-#### msg : Holds information of the account who called the Score.
+#### msg : Holds information of the account who called the SCORE.
 * msg.sender :
 Address of the account who called this function.
 If other contact called this function, msg.sender points to the caller contract's address.
 * msg.value :
-Amount of icx that the sender attempts to transfer to the current Score.
+Amount of icx that the sender attempts to transfer to the current SCORE.
 
 #### tx : Transaction info.
 * tx.origin : The account who created the transaction.
@@ -475,7 +498,7 @@ Returns True when coin transfer succeeded, False when failed.
 
 #### db : db instance used to access state DB.
 
-#### address : Score address.
+#### address : SCORE address.
 
 #### owner : Address of the account who deployed the contract.
 
