@@ -37,7 +37,7 @@ def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
         return context.type
 
 
-def _is_db_wriable_on_context(context: 'IconScoreContext'):
+def _is_db_writable_on_context(context: 'IconScoreContext'):
     """Check if db is writable on a given context
 
     :param context:
@@ -254,7 +254,7 @@ class ContextDatabase(object):
         :param key:
         :param value:
         """
-        if not _is_db_wriable_on_context(context):
+        if not _is_db_writable_on_context(context):
             raise DatabaseException('put is not allowed')
 
         context_type = _get_context_type(context)
@@ -270,7 +270,7 @@ class ContextDatabase(object):
         :param context:
         :param key: key to delete from db
         """
-        if not _is_db_wriable_on_context(context):
+        if not _is_db_writable_on_context(context):
             raise DatabaseException('delete is not allowed')
 
         context_type = _get_context_type(context)
@@ -285,7 +285,7 @@ class ContextDatabase(object):
 
         :param context:
         """
-        if not _is_db_wriable_on_context(context):
+        if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'close is not allowed on readonly context')
 
@@ -296,7 +296,7 @@ class ContextDatabase(object):
                     context: 'IconScoreContext',
                     states: dict):
 
-        if not _is_db_wriable_on_context(context):
+        if not _is_db_writable_on_context(context):
             raise DatabaseException(
                 'write_batch is not allowed on readonly context')
 
