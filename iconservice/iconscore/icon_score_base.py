@@ -317,6 +317,18 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_api(cls) -> dict:
         return getattr(cls, CONST_CLASS_API, "")
 
+    def validate_external_method(self, func_name) -> None:
+        """Validate the method indicated by func_name is an external method
+
+        :param func_name: name of method
+        """
+
+        if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
+            raise ExternalException(f"Invalid external method",
+                                    func_name,
+                                    type(self).__name__,
+                                    ExceptionCode.METHOD_NOT_FOUND)
+
     @classmethod
     def __get_attr_dict(cls, attr: str) -> dict:
         return getattr(cls, attr, {})
@@ -329,9 +341,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                         func_name: str,
                         arg_params: list,
                         kw_params: dict) -> Any:
-        if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
-            raise ExternalException(f"Can not call external method", func_name, type(self).__name__,
-                                    ExceptionCode.METHOD_NOT_FOUND)
+        self.validate_external_method(func_name)
 
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 

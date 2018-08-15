@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 from .icon_score_context import IconScoreContext
 from .icon_score_mapper import IconScoreMapper
-
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
@@ -110,13 +109,17 @@ class IconScoreEngine(object):
         kw_params: dict = data.get('params', {})
 
         icon_score = self._get_icon_score(context, icon_score_address)
-        converted_params = self._convert_score_parmas_by_annotations(icon_score, func_name, kw_params)
+
+        converted_params = self._convert_score_params_by_annotations(icon_score, func_name, kw_params)
         external_func = getattr(icon_score, '_IconScoreBase__external_call')
         return external_func(func_name=func_name, arg_params=[], kw_params=converted_params)
 
     @staticmethod
-    def _convert_score_parmas_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
+    def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
         tmp_params = kw_params
+
+        icon_score.validate_external_method(func_name)
+
         score_func = getattr(icon_score, func_name)
         annotation_params = TypeConverter.make_annotations_from_method(score_func)
         TypeConverter.convert_data_params(annotation_params, tmp_params)
@@ -131,12 +134,12 @@ class IconScoreEngine(object):
         :param score_address:
         """
         icon_score = self._get_icon_score(context, score_address)
-        if icon_score is None:
-            raise ServerErrorException(f'SCORE is None Address: {score_address}')
+
         fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
         fallback_func()
 
-    def _get_icon_score(self, context: 'IconScoreContext', icon_score_address: 'Address'):
+    @staticmethod
+    def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = context.get_icon_score(icon_score_address)
         if icon_score is None:
             raise ServerErrorException(
