@@ -89,12 +89,17 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_storage = None
 
         # JSON-RPC handlers
-        self._handlers = {
+        self._icx_handlers = {
             'icx_getBalance': self._handle_icx_get_balance,
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
             'icx_getScoreApi': self._handle_icx_get_score_api
+        }
+
+        # SYS handlers
+        self._sys_handlers = {
+            'sys_getLastBlock': self._handle_sys_get_last_block
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -529,7 +534,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         self._put_context(context)
-        handler = self._handlers[method]
+        handler = self._icx_handlers[method]
         ret_val = handler(context, params)
         self._delete_context(context)
         return ret_val
@@ -861,3 +866,19 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before rollback
         self._precommit_data_manager.validate_precommit_block(block)
         self._precommit_data_manager.rollback(block)
+
+    def sys_call(self, method: str, params: dict) -> dict:
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
+
+        handler = self._sys_handlers[method]
+        ret = handler(context, params)
+        self._context_factory.destroy(context)
+        return ret
+
+    def _handle_sys_get_last_block(self, context: 'IconScoreContext', params: dict) -> dict:
+        block = self._precommit_data_manager.last_block
+        response = {'blackHeight': block.height,
+                    'blackHash': block.hash,
+                    'timestamp': block.timestamp,
+                    'prevBlackHash': block.prev_hash}
+        return response

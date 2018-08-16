@@ -44,6 +44,7 @@ class ParamType(IntEnum):
     REMOVE_PRECOMMIT = 500
 
     VALIDATE_TRANSACTION = 600
+    SYS_CALL = 700
 
 
 class ValueType(IntEnum):
@@ -271,7 +272,7 @@ class TypeConverter:
         if isinstance(value, dict):
             for k, v in value.items():
                 if isinstance(v, bytes):
-                    is_hash = k in ('blockHash', 'txHash')
+                    is_hash = k in ('blockHash', 'txHash', 'prevBlockHash')
                     value[k] = TypeConverter._convert_bytes_reverse(v, is_hash)
                 else:
                     value[k] = TypeConverter.convert_type_reverse(v)
@@ -419,4 +420,9 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
             "tx_hash": "txHash"
         }
     }
+}
+
+type_convert_templates[ParamType.SYS_CALL] = {
+    "method": ValueType.STRING,
+    "params": ValueType.LATER
 }
