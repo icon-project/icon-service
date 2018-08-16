@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,8 +39,7 @@ class TestDatabaseObserver(unittest.TestCase):
         def get(caller, key):
             return self.last_value
 
-        score_address = Address.from_data(
-            AddressPrefix.CONTRACT, b'score_address')
+        score_address = Address.from_data(AddressPrefix.CONTRACT, b'score')
         context_db = Mock(spec=ContextDatabase)
         context_db.get = get
         self._observer = Mock(spec=DatabaseObserver)

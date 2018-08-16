@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ from tests import create_block_hash
 
 class TestBlock(unittest.TestCase):
     def test_Block_from_bytes_to_bytes(self):
-        block_hash = create_block_hash(b'block1')
-        prev_block_hash = create_block_hash(b'prev_block1')
+        block_hash = create_block_hash()
+        prev_block_hash = create_block_hash()
         block1 = Block(1, block_hash, 100, prev_block_hash)
         data = Block.to_bytes(block1)
         self.assertEqual(bytes(block1), data)
@@ -39,7 +39,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(block2.prev_hash, prev_block_hash)
 
     def test_Block_from_bytes_to_bytes(self):
-        block_hash = create_block_hash(b'block1')
+        block_hash = create_block_hash()
         prev_block_hash = None
         block1 = Block(1, block_hash, 100, prev_block_hash)
         data = Block.to_bytes(block1)
@@ -56,9 +56,9 @@ class TestBlock(unittest.TestCase):
     def test_str(self):
 
         block = Block(1,
-                      create_block_hash(b'hash'),
+                      create_block_hash(),
                       100,
-                      create_block_hash(b'prev_hash'))
+                      create_block_hash())
 
         text = str(block)
         print(text)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,8 +56,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine.\
             _icon_score_deploy_storage.get_deploy_info = deploy_storage_get_deploy_info
 
-        tx_hash = bytes.hex(create_tx_hash(b'tx'))
-        from_ = create_address(AddressPrefix.EOA, b'from')
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
         to_ = Address.from_string('cx0000000000000000000000000000000000000000')
         content_type = 'application/zip'
         data = {
@@ -86,9 +86,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     def test_transfer_step(self):
-        tx_hash = bytes.hex(create_tx_hash(b'tx'))
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.EOA, b'eoa')
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.EOA)
 
         request = create_request([
             ReqData(tx_hash, from_, to_, None, None),
@@ -104,9 +104,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
 
     def test_internal_transfer_step(self):
-        tx_hash = bytes.hex(create_tx_hash(b'tx'))
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.CONTRACT, b'score')
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
             ReqData(tx_hash, from_, to_, 'call', {})
@@ -141,9 +141,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     def test_set_db(self):
-        tx_hash = bytes.hex(create_tx_hash(b'tx'))
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.CONTRACT, b'score')
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
             ReqData(tx_hash, from_, to_, 'call', {})
@@ -178,9 +178,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     def test_get_db(self):
-        tx_hash = bytes.hex(create_tx_hash(b'tx'))
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.CONTRACT, b'score')
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
             ReqData(tx_hash, from_, to_, 'call', {})
@@ -218,8 +218,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
     def test_query_db(self):
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.CONTRACT, b'score')
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
 
         request = {
             'method': 'icx_call',
@@ -254,9 +254,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(args_list[0][0],(StepType.GET, 100))
 
     def test_event_log_step(self):
-        tx_hash = bytes.hex(create_tx_hash(b'tx'))
-        from_ = create_address(AddressPrefix.EOA, b'from')
-        to_ = create_address(AddressPrefix.CONTRACT, b'score')
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
             ReqData(tx_hash, from_, to_, 'call', {})
@@ -266,7 +266,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._put_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
-            address = create_address(AddressPrefix.EOA, b'address')
+            address = create_address(AddressPrefix.EOA)
             score = SampleScore(IconScoreDatabase(address, context_db))
             i_data_param = b'i_data'
             data_param = b'data'

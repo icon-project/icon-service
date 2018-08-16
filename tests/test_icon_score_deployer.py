@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class TestIconScoreDeployer(unittest.TestCase):
 
     def setUp(self):
         self.deployer = IconScoreDeployer('./')
-        self.address = create_address(AddressPrefix.CONTRACT, b'addr')
+        self.address = create_address(AddressPrefix.CONTRACT)
         self.archive_path = os.path.join(DIRECTORY_PATH, 'sample','valid.zip')
         self.archive_path2 = os.path.join(DIRECTORY_PATH, 'sample', 'invalid.zip')
         self.archive_path3 = os.path.join(DIRECTORY_PATH, 'sample', 'valid.zip')

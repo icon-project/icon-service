@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ from tests import create_address
 class TestIcxStorage(unittest.TestCase):
     def setUp(self):
         self.db_name = 'icx.db'
-        self.address = create_address(AddressPrefix.EOA, b'addr1')
+        self.address = create_address(AddressPrefix.EOA)
         db = ContextDatabase.from_path(self.db_name)
         self.assertIsNotNone(db)
 
@@ -54,7 +54,7 @@ class TestIcxStorage(unittest.TestCase):
     def test_get_put_account(self):
         context = self.context
         account = Account()
-        account.address = create_address(AddressPrefix.EOA, b'addr2')
+        account.address = create_address(AddressPrefix.EOA)
         account.deposit(10 ** 19)
 
         self.storage.put_account(context, account.address, account)
@@ -65,7 +65,7 @@ class TestIcxStorage(unittest.TestCase):
     def test_delete_account(self):
         context = self.context
         account = Account()
-        account.address = create_address(AddressPrefix.EOA, b'addr7')
+        account.address = create_address(AddressPrefix.EOA)
         self.storage.put_account(context, account.address, account)
 
         ret = self.storage.is_address_present(context, account.address)

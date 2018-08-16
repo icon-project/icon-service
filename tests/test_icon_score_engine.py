@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,18 +82,17 @@ class TestIconScoreEngine(unittest.TestCase):
             self.icx_storage,
             self.icon_score_mapper)
 
-        self._from = create_address(AddressPrefix.EOA, b'from')
-        self._icon_score_address =\
-            create_address(AddressPrefix.CONTRACT, b'SampleToken')
+        self._from = create_address(AddressPrefix.EOA)
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT)
 
         self.factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_mapper = self.icon_score_mapper
         self._context = self.factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
-        tx_hash = create_tx_hash(b'test1')
+        tx_hash = create_tx_hash()
         self._context.tx = Transaction(
-            tx_hash, origin=create_address(AddressPrefix.EOA, b'owner'))
-        block_hash = create_block_hash(b'block1')
+            tx_hash, origin=create_address(AddressPrefix.EOA))
+        block_hash = create_block_hash()
         self._context.block = Block(1, block_hash, 0, None)
 
     def tearDown(self):

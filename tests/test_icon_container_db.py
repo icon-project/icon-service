@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,7 +46,8 @@ class TestIconContainerDB(unittest.TestCase):
         pass
 
     def test_success_list(self):
-        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], create_address(AddressPrefix.EOA, b'123')]
+        addr1 = create_address(AddressPrefix.CONTRACT)
+        test_list = [1, 2, 3, [4, 5, 6], [7, 8, 9, [10, 11, 12]], addr1]
         ContainerUtil.put_to_db(self.db, 'test_list', test_list)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 0, value_type=int), 1)
@@ -61,11 +62,11 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 0, value_type=int), 10)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 1, value_type=int), 11)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 4, 3, 2, value_type=int), 12)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 5, value_type=Address),
-                         create_address(AddressPrefix.EOA, b'123'))
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_list', 5, value_type=Address), addr1)
 
     def test_success_dict(self):
-        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}, 4: create_address(AddressPrefix.CONTRACT, b'123')}
+        addr1 = create_address(AddressPrefix.CONTRACT)
+        test_dict = {1: 'a', 2: ['a', 'b', ['c', 'd']], 3: {'a': 1}, 4: addr1}
         ContainerUtil.put_to_db(self.db, 'test_dict', test_dict)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 1, value_type=str), 'a')
@@ -74,18 +75,17 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 0, value_type=str), 'c')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 2, 2, 1, value_type=str), 'd')
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 3, 'a', value_type=int), 1)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 4, value_type=Address),
-                         create_address(AddressPrefix.CONTRACT, b'123'))
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_dict', 4, value_type=Address), addr1)
 
     def test_success_tuple(self):
-        test_tuple = tuple([1, 2, 3, create_address(AddressPrefix.CONTRACT, b'234')])
+        addr1 = create_address(AddressPrefix.CONTRACT)
+        test_tuple = tuple([1, 2, 3, addr1])
         ContainerUtil.put_to_db(self.db, 'test_tuple', test_tuple)
 
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 0, value_type=int), 1)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 1, value_type=int), 2)
         self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 2, value_type=int), 3)
-        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 3, value_type=Address),
-                         create_address(AddressPrefix.CONTRACT, b'234'))
+        self.assertEqual(ContainerUtil.get_from_db(self.db, 'test_tuple', 3, value_type=Address), addr1)
 
     def test_fail_container(self):
         testlist = [[]]
@@ -153,7 +153,7 @@ class TestIconContainerDB(unittest.TestCase):
 
         test_var2 = VarDB(2,
                           self.db, value_type=Address)
-        address = create_address(AddressPrefix.CONTRACT, b'test_var2')
+        address = create_address(AddressPrefix.CONTRACT)
         test_var2.set(address)
         data = test_var2.get()
         self.assertEqual(data, address)
@@ -161,7 +161,7 @@ class TestIconContainerDB(unittest.TestCase):
         test_var4 = VarDB(4,
                           self.db, value_type=Address)
 
-        address3 = create_address(AddressPrefix.from_string('cx'), b'test_var4')
+        address3 = create_address(AddressPrefix.CONTRACT)
         test_var4.set(address3)
         self.assertEqual(test_var4.get(), address3)
 

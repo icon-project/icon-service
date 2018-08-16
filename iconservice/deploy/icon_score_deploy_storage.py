@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -169,6 +169,10 @@ class IconScoreDeployInfo(object):
         if int(bytes.hex(next_tx_hash), 16) == 0:
             next_tx_hash = None
         converted_next_tx_hash = next_tx_hash
+
+        # MIGRATION
+        if deploy_state == 2:
+            deploy_state = 1
 
         info = IconScoreDeployInfo(score_addr, DeployState(deploy_state), owner_addr,
                                    converted_current_tx_hash, converted_next_tx_hash)
