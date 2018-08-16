@@ -50,7 +50,7 @@ class TestTransactionValidator(unittest.TestCase):
     def test_validate_success(self):
         params = {
             'version': 3,
-            'txHash': create_tx_hash(b'tx'),
+            'txHash': create_tx_hash(),
             'from': Address.from_data(AddressPrefix.EOA, b'from'),
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 0,

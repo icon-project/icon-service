@@ -27,10 +27,10 @@ from tests import create_block_hash, create_tx_hash, create_address
 
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):
-        block_hash = create_block_hash(b'block')
-        tx_hash = create_tx_hash(b'tx')
+        block_hash = create_block_hash()
+        tx_hash = create_tx_hash()
         tx_index = 0
-        to = create_address(AddressPrefix.EOA, b'to')
+        to = create_address(AddressPrefix.EOA)
 
         tx = Transaction(tx_hash, tx_index)
 

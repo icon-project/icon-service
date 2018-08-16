@@ -38,8 +38,7 @@ class TestDatabaseObserver(unittest.TestCase):
         def get(caller, key):
             return self.last_value
 
-        score_address = Address.from_data(
-            AddressPrefix.CONTRACT, b'score_address')
+        score_address = Address.from_data(AddressPrefix.CONTRACT, b'score')
         context_db = Mock(spec=ContextDatabase)
         context_db.get = get
         self._observer = Mock(spec=DatabaseObserver)
