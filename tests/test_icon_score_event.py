@@ -91,11 +91,11 @@ class TestEventlog(unittest.TestCase):
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
-        self.assertRaises(ScoreErrorException, self._mock_score.ThreeIndexEvent,
+        self.assertRaises(EventLogException, self._mock_score.ThreeIndexEvent,
                           name, address)
 
         # This event is declared 4 indexed_count
-        self.assertRaises(ScoreErrorException, self._mock_score.FourIndexEvent,
+        self.assertRaises(EventLogException, self._mock_score.FourIndexEvent,
                           name, address, age, phone_number)
 
     def test_call_event_kwarg(self):
