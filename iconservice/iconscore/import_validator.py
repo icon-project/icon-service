@@ -13,9 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-import dis
 import importlib.util
 from os import walk
 
@@ -26,6 +23,10 @@ IMPORT_STAR = 84
 IMPORT_NAME = 108
 IMPORT_FROM = 109
 IMPORT_TABLE = [IMPORT_STAR, IMPORT_NAME, IMPORT_FROM]
+
+LOAD_BUILD_CLASS = 71
+
+CODE_ATTR = 'co_code'
 
 ICONSERVICE = 'iconservice'
 ICONSERVICE_BASE_ADDRESS = 'iconservice.base.address'
@@ -55,6 +56,7 @@ WHITE_IMPORT_LIST = \
 
 class ImportValidator(object):
     PREV_IMPORT_NAME = None
+    PREV_LOAD_BUILD_CLASS = None
     CUSTOM_IMPORT_LIST = []
 
     @staticmethod
@@ -67,13 +69,8 @@ class ImportValidator(object):
             full_name = ''.join((parent_imp, '.', imp))
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
-            byte_code = dis.Bytecode(code)
-            byte_code_list = [x for x in byte_code.codeobj.co_code]
-
-            for index in range(0, int(len(byte_code_list)), 2):
-                key = byte_code_list[index]
-                value = byte_code_list[index + 1]
-                ImportValidator._validate_import(key, value, code.co_names)
+            ImportValidator._validate_import_from_code(code)
+            ImportValidator._validate_import_from_const(code.co_consts)
 
     @staticmethod
     def _make_custom_import_list(pkg_root_path: str) -> list:
@@ -90,6 +87,26 @@ class ImportValidator(object):
                         pkg_path = file_name
                     tmp_list.append(pkg_path)
         return tmp_list
+
+    @staticmethod
+    def _validate_import_from_code(code):
+        if not hasattr(code, CODE_ATTR):
+            return
+
+        byte_code_list = [x for x in code.co_code]
+
+        for index in range(0, int(len(byte_code_list)), 2):
+            key = byte_code_list[index]
+            value = byte_code_list[index + 1]
+            ImportValidator._validate_import(key, value, code.co_names)
+
+    @staticmethod
+    def _validate_import_from_const(co_consts: tuple):
+        for co_const in co_consts:
+            if not hasattr(co_const, CODE_ATTR):
+                continue
+            ImportValidator._validate_import_from_code(co_const)
+            ImportValidator._validate_import_from_const(co_const.co_consts)
 
     @staticmethod
     def _validate_import(key: int, value: int, co_names: tuple):
