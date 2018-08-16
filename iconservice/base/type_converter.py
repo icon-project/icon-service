@@ -44,6 +44,7 @@ class ParamType(IntEnum):
     REMOVE_PRECOMMIT = 500
 
     VALIDATE_TRANSACTION = 600
+    SYS_CALL = 700
 
 
 class ValueType(IntEnum):
@@ -419,4 +420,9 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
             "tx_hash": "txHash"
         }
     }
+}
+
+type_convert_templates[ParamType.SYS_CALL] = {
+    "method": ValueType.STRING,
+    "params": ValueType.LATER
 }

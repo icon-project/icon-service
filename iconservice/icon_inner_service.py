@@ -66,6 +66,8 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def sys_call(self, request: dict):
+        # An internal protocol that communicates A and B
+        # It has the same input and return values ​​as the protocol using the JSON-RPC format
         Logger.info(f'sys_call {request}', ICON_INNER_LOG_TAG)
         return self._sys_call(request)
 
@@ -73,7 +75,7 @@ class IconScoreInnerTask(object):
         response = None
 
         try:
-            converted_request = TypeConverter.convert(request, ParamType.QUERY)
+            converted_request = TypeConverter.convert(request, ParamType.SYS_CALL)
             ret = self._icon_service_engine.sys_call(method=converted_request['method'],
                                                      params=converted_request['params'])
             response = TypeConverter.convert_type_reverse(ret)
