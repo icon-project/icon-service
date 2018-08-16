@@ -47,6 +47,7 @@ class ConfigKey:
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
     SERVICE_DEPLOYER_WHITELIST = 'deployerWhiteList'
+    SERVICE_IMPORT_WHITELIST = 'importWhiteList'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
     CHANNEL = 'channel'
@@ -67,6 +68,7 @@ class IconServiceFlag(IntFlag):
     fee = 1
     audit = 2
     deployerWhiteList = 4
+    importWhiteList = 8
 
 
 class IconDeployFlag(IntFlag):
@@ -76,6 +78,11 @@ class IconDeployFlag(IntFlag):
     # MUST approve install or update SCORE transactions.
     ENABLE_DEPLOY_AUDIT = 1
     ENABLE_DEPLOY_WHITELIST = 2
+
+
+class IconScoreLoaderFlag(IntFlag):
+    NONE = 0
+    ENABLE_VALIDATE_IMPORT_WHITELIST = 1
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
