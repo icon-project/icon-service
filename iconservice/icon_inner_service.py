@@ -56,13 +56,36 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
-    def _log_exception(self, e: BaseException, tag: str=ICON_INNER_LOG_TAG) -> None:
+    def _log_exception(self, e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
         Logger.error(e, tag)
 
     @message_queue_task
     async def hello(self):
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
+
+    @message_queue_task
+    async def sys_call(self, request: dict):
+        Logger.info(f'sys_call {request}', ICON_INNER_LOG_TAG)
+        return self._sys_call(request)
+
+    def _sys_call(self, request: dict):
+        response = None
+
+        try:
+            converted_request = TypeConverter.convert(request, ParamType.QUERY)
+            ret = self._icon_service_engine.sys_call(method=converted_request['method'],
+                                                     params=converted_request['params'])
+            response = TypeConverter.convert_type_reverse(ret)
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+        finally:
+            Logger.info(f'sys_call response with {response}', ICON_INNER_LOG_TAG)
+        return response
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
@@ -75,6 +98,16 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def close(self):
         self._close()
+
+    @message_queue_task
+    async def invoke(self, request: dict):
+        Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
+        if self._is_thread_flag_on(EnableThreadFlag.Invoke):
+            loop = get_event_loop()
+            return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
+                                              self._invoke, request)
+        else:
+            return self._invoke(request)
 
     @message_queue_task
     async def invoke(self, request: dict):

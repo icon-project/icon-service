@@ -45,6 +45,11 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
+    def test_sys_call(self):
+        request = {'method': 'sys_getLastBlack', 'params': {}}
+        ret = self._run_async(self._sys_call(request))
+        print(ret)
+
     def test_invoke_success(self):
         value1 = 1 * self._icx_factor
 
