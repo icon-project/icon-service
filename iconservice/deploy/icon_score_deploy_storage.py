@@ -170,6 +170,10 @@ class IconScoreDeployInfo(object):
             next_tx_hash = None
         converted_next_tx_hash = next_tx_hash
 
+        # MIGRATION
+        if deploy_state == 2:
+            deploy_state = 1
+
         info = IconScoreDeployInfo(score_addr, DeployState(deploy_state), owner_addr,
                                    converted_current_tx_hash, converted_next_tx_hash)
         return info
