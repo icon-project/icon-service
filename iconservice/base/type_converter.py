@@ -272,7 +272,7 @@ class TypeConverter:
         if isinstance(value, dict):
             for k, v in value.items():
                 if isinstance(v, bytes):
-                    is_hash = k in ('blockHash', 'txHash', 'prevBlackHash')
+                    is_hash = k in ('blockHash', 'txHash', 'prevBlockHash')
                     value[k] = TypeConverter._convert_bytes_reverse(v, is_hash)
                 else:
                     value[k] = TypeConverter.convert_type_reverse(v)
