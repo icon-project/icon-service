@@ -140,9 +140,12 @@ class ImportValidator(object):
     @staticmethod
     def _is_contain_custom_import(import_name: str) -> bool:
         for custom_import in ImportValidator.CUSTOM_IMPORT_LIST:
-            import_list = custom_import.split('.')
-            if import_list is not None:
-                for imp in import_list:
-                    if import_name == imp:
-                        return True
+            if import_name == custom_import:
+                return True
+            else:
+                import_list = custom_import.split('.')
+                if import_list is not None:
+                    for imp in import_list:
+                        if import_name == imp:
+                            return True
         return False
