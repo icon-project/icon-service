@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import importlib.util
 from os import walk
 
@@ -27,6 +28,7 @@ IMPORT_TABLE = [IMPORT_STAR, IMPORT_NAME, IMPORT_FROM]
 LOAD_BUILD_CLASS = 71
 
 CODE_ATTR = 'co_code'
+CODE_NAMES_ATTR = 'co_names'
 
 ICONSERVICE = 'iconservice'
 ICONSERVICE_BASE_ADDRESS = 'iconservice.base.address'
@@ -53,6 +55,8 @@ WHITE_IMPORT_LIST = \
         ABC: ['ABCMeta', 'abstractmethod', 'ABC']
     }
 
+BLACKLIST_KEYWORD_LIST = ['exec']
+
 
 class ImportValidator(object):
     PREV_IMPORT_NAME = None
@@ -71,6 +75,7 @@ class ImportValidator(object):
             code = spec.loader.get_code(full_name)
             ImportValidator._validate_import_from_code(code)
             ImportValidator._validate_import_from_const(code.co_consts)
+            ImportValidator._validate_blacklist_keyword_from_names(code.co_names)
 
     @staticmethod
     def _make_custom_import_list(pkg_root_path: str) -> list:
@@ -87,6 +92,12 @@ class ImportValidator(object):
                         pkg_path = file_name
                     tmp_list.append(pkg_path)
         return tmp_list
+
+    @staticmethod
+    def _validate_blacklist_keyword_from_names(co_names: tuple):
+        for co_name in co_names:
+            if co_name in BLACKLIST_KEYWORD_LIST:
+                raise ServerErrorException(f'invalid blacklist keyword: {co_name}')
 
     @staticmethod
     def _validate_import_from_code(code):
@@ -107,6 +118,8 @@ class ImportValidator(object):
                 continue
             ImportValidator._validate_import_from_code(co_const)
             ImportValidator._validate_import_from_const(co_const.co_consts)
+            if hasattr(co_const, CODE_NAMES_ATTR):
+                ImportValidator._validate_blacklist_keyword_from_names(co_const.co_names)
 
     @staticmethod
     def _validate_import(key: int, value: int, co_names: tuple):
