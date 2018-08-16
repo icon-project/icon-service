@@ -99,7 +99,7 @@ class IconServiceEngine(ContextContainer):
 
         # SYS handlers
         self._sys_handlers = {
-            'sys_getLastBlack': self._handle_sys_get_last_black
+            'sys_getLastBlock': self._handle_sys_get_last_block
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -875,7 +875,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory.destroy(context)
         return ret
 
-    def _handle_sys_get_last_black(self, context: 'IconScoreContext', params: dict) -> dict:
+    def _handle_sys_get_last_block(self, context: 'IconScoreContext', params: dict) -> dict:
         black = self._precommit_data_manager.last_block
         response = {'blackHeight': black.height,
                     'blackHash': black.hash,

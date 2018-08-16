@@ -46,7 +46,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_sys_call(self):
-        request = {'method': 'sys_getLastBlack', 'params': {}}
+        request = {'method': 'sys_getLastBlock', 'params': {}}
         ret = self._run_async(self._sys_call(request))
         print(ret)
 
