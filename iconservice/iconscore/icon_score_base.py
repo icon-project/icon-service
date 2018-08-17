@@ -29,6 +29,7 @@ from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_step import StepType
 from .icx import Icx
+from .crypto import Crypto
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException
@@ -306,6 +307,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__address = db.address
         self.__owner = self.get_owner(self.__address)
         self.__icx = None
+        self.__crypto = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException('this score has no external functions', '__init__', str(type(self)))
@@ -560,6 +562,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             self.__icx._context = self._context
 
         return self.__icx
+
+    @property
+    def crypto(self) -> 'Crypto':
+        if self.__crypto is None:
+            self.__crypto = Crypto()
+        return self.__crypto
 
     def now(self):
         return self.block.timestamp
