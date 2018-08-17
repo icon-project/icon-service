@@ -300,10 +300,6 @@ class TestIntegrateBase(unittest.TestCase):
         response = await self._inner_task.query(make_request)
         return response
 
-    async def _sys_call(self, request: dict):
-        ret = await self._inner_task.sys_call(request)
-        return ret
-
     def _get_tx_result(self, tx_results: dict, tx: dict) -> dict:
         tx_hash = tx['params']['txHash']
         return tx_results[tx_hash]
