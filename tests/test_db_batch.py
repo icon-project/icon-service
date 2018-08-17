@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,29 +25,26 @@ from tests import create_hash_256
 
 class TestBatch(unittest.TestCase):
     def setUp(self):
-        block_hash: bytes = create_hash_256(b'block_hash')
-        prev_block_hash: bytes = create_hash_256(b'prev_block_hash')
+        self.block_hash: bytes = create_hash_256()
+        self.prev_block_hash: bytes = create_hash_256()
 
         block = Block(
             block_height=10,
-            block_hash=block_hash,
+            block_hash=self.block_hash,
             timestamp=0,
-            prev_hash=prev_block_hash)
+            prev_hash=self.prev_block_hash)
 
         self.block_batch = BlockBatch(block)
 
     def test_property(self):
-        block_hash: bytes = create_hash_256(b'block_hash')
-        prev_block_hash: bytes = create_hash_256(b'prev_block_hash')
-
         self.assertEqual(10, self.block_batch.block.height)
         self.assertEqual(0, self.block_batch.block.timestamp)
-        self.assertEqual(block_hash, self.block_batch.block.hash)
+        self.assertEqual(self.block_hash, self.block_batch.block.hash)
         self.assertEqual(
-            prev_block_hash, self.block_batch.block.prev_hash)
+            self.prev_block_hash, self.block_batch.block.prev_hash)
 
     def test_len(self):
-        key = create_hash_256(b'key')
+        key = create_hash_256()
 
         self.block_batch[key] = b'value0'
         self.assertEqual(1, len(self.block_batch))
@@ -55,7 +52,7 @@ class TestBatch(unittest.TestCase):
         self.block_batch[key] = b'value1'
         self.assertEqual(1, len(self.block_batch))
 
-        key1 = create_hash_256(b'key1')
+        key1 = create_hash_256()
         self.block_batch[key1] = b'value1'
         self.assertEqual(2, len(self.block_batch))
 
@@ -67,7 +64,7 @@ class TestBatch(unittest.TestCase):
 
     def test_get_item(self):
         byteorder = 'big'
-        key = create_hash_256(b'key')
+        key = create_hash_256()
 
         self.block_batch[key] = b'value'
         self.assertEqual(b'value', self.block_batch[key])
@@ -79,17 +76,17 @@ class TestBatch(unittest.TestCase):
             int.from_bytes(self.block_batch[key], byteorder))
 
     def test_put_tx_batch(self):
-        tx_hash = create_hash_256(b'tx_hash')
+        tx_hash = create_hash_256()
         tx_batch = TransactionBatch(tx_hash)
 
-        key = create_hash_256(b'key')
+        key = create_hash_256()
         tx_batch[key] = b'value'
 
-        key0 = create_hash_256(b'key0')
+        key0 = create_hash_256()
         tx_batch[key0] = b'value0'
-        key1 = create_hash_256(b'key1')
+        key1 = create_hash_256()
         tx_batch[key1] = b'value1'
-        key2 = create_hash_256(b'key2')
+        key2 = create_hash_256()
         tx_batch[key2] = b'value2'
 
         self.assertEqual(4, len(tx_batch))
@@ -108,11 +105,11 @@ class TestBatch(unittest.TestCase):
     def test_digest(self):
         block_batch = self.block_batch
 
-        key0 = create_hash_256(b'key0')
+        key0 = create_hash_256()
         block_batch[key0] = b'value0'
-        key1 = create_hash_256(b'key1')
+        key1 = create_hash_256()
         block_batch[key1] = b'value1'
-        key2 = create_hash_256(b'key2')
+        key2 = create_hash_256()
         block_batch[key2] = b'value2'
 
         data = [key0, b'value0', key1, b'value1', key2, b'value2']

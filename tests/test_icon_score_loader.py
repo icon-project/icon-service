@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,8 +52,8 @@ class TestIconScoreLoader(unittest.TestCase):
     def setUp(self):
         self._score_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         self._loader = IconScoreLoader(self._score_path)
-        self._addr_test_score01 = create_address(AddressPrefix.CONTRACT, b'test_score01')
-        self._addr_test_score02 = create_address(AddressPrefix.CONTRACT, b'test_score02')
+        self._addr_test_score01 = create_address(AddressPrefix.CONTRACT)
+        self._addr_test_score02 = create_address(AddressPrefix.CONTRACT)
 
         self.db = create_mock_icon_score_db()
         self._factory = IconScoreContextFactory(max_size=1)

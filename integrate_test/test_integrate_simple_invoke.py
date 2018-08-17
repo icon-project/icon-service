@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,6 +44,11 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
+
+    def test_ise_get_status(self):
+        request = {}
+        ret = self._run_async(self._query(request, 'ise_getStatus'))
+        print(ret)
 
     def test_invoke_success(self):
         value1 = 1 * self._icx_factor

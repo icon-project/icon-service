@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._icon_score_mapper = IconScoreMapper(
             icon_score_manager, self._icon_score_loader)
 
-        self._addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        self._addr1 = create_address(AddressPrefix.EOA)
         self._score_deploy_engine.open(
             score_root_path=score_path,
             flags=IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT,
@@ -108,8 +108,8 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.msg = Message(self._addr1, 0)
 
         self._context.tx = Transaction(
-            create_tx_hash(b'txHash'), origin=self._addr1)
-        self._context.block = Block(1, create_block_hash(b'block'), 0, None)
+            create_tx_hash(), origin=self._addr1)
+        self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()

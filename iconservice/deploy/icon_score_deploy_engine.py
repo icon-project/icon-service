@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -192,12 +192,8 @@ class IconScoreDeployEngine(object):
         converted_tx_hash: str = f'0x{bytes.hex(next_tx_hash)}'
         target_path = path.join(target_path, converted_tx_hash)
 
-        filecopy = False
         try:
-            if filecopy:
-                copytree(src_score_path, target_path)
-            else:
-                symlink(src_score_path, target_path, target_is_directory=True)
+            copytree(src_score_path, target_path)
         except FileExistsError:
             pass
 

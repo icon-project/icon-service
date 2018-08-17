@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,7 +94,8 @@ class IconServiceEngine(ContextContainer):
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
-            'icx_getScoreApi': self._handle_icx_get_score_api
+            'icx_getScoreApi': self._handle_icx_get_score_api,
+            'ise_getStatus': self._handle_ise_get_status
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -830,6 +831,19 @@ class IconServiceEngine(ContextContainer):
         icon_score_address: Address = params['address']
         return self._icon_score_engine.get_score_api(
             context, icon_score_address)
+
+    def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
+
+        block = self._precommit_data_manager.last_block
+        response = {
+            'lastBlock': {
+                'blockHeight': block.height,
+                'blockHash': block.hash,
+                'timestamp': block.timestamp,
+                'prevBlockHash': block.prev_hash
+            }
+        }
+        return response
 
     def commit(self, block: 'Block') -> None:
         """Write updated states in a context.block_batch to StateDB

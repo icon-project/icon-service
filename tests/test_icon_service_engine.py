@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ class TestIconServiceEngine(unittest.TestCase):
         conf.load()
         conf.update_conf(
             {
-                ConfigKey.BUILTIN_SCORE_OWNER: str(create_address(AddressPrefix.EOA, b'ADMIN')),
+                ConfigKey.BUILTIN_SCORE_OWNER: str(create_address(AddressPrefix.EOA)),
                 ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                 ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
             }
@@ -78,15 +78,12 @@ class TestIconServiceEngine(unittest.TestCase):
         engine.open(conf)
         self._engine = engine
 
-        self._genesis_address = create_address(
-            AddressPrefix.EOA, b'genesis')
-        self._treasury_address = create_address(
-            AddressPrefix.EOA, b'treasury')
+        self._genesis_address = create_address(AddressPrefix.EOA)
+        self._treasury_address = create_address(AddressPrefix.EOA)
 
         self.from_ = self._genesis_address
-        self._to = create_address(AddressPrefix.EOA, b'to')
-        self._icon_score_address = create_address(
-            AddressPrefix.CONTRACT, b'score')
+        self._to = create_address(AddressPrefix.EOA)
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT)
         self._total_supply = 100 * 10 ** 18
 
         accounts = [
@@ -102,7 +99,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         ]
 
-        block = Block(0, create_block_hash(b'genesis'), 0, None)
+        block = Block(0, create_block_hash(), 0, None)
         tx = {'method': '',
               'params': {'txHash': create_tx_hash()},
               'genesisData': {'accounts': accounts}}
@@ -188,7 +185,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke(self):
         block_height = 1
-        block_hash = create_block_hash(b'block')
+        block_hash = create_block_hash()
         block_timestamp = 0
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
@@ -273,7 +270,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_v2_without_fee(self):
         block_height = 1
-        block_hash = create_block_hash(b'block')
+        block_hash = create_block_hash()
         block_timestamp = 0
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
@@ -332,7 +329,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_v3_without_fee(self):
         block_height = 1
-        block_hash = create_block_hash(b'block')
+        block_hash = create_block_hash()
         block_timestamp = 0
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
@@ -399,7 +396,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
-        block_hash = create_block_hash(b'block')
+        block_hash = create_block_hash()
         block_timestamp = 0
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
@@ -475,7 +472,7 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
 
-        self._to = create_address(AddressPrefix.CONTRACT, b'to')
+        self._to = create_address(AddressPrefix.CONTRACT)
 
         tx_v3 = {
             'method': 'icx_sendTransaction',
@@ -593,9 +590,9 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_commit(self):
         block = Block(
             block_height=1,
-            block_hash=create_block_hash(b'block'),
+            block_hash=create_block_hash(),
             timestamp=0,
-            prev_hash=create_block_hash(b'prev'))
+            prev_hash=create_block_hash())
 
         with self.assertRaises(ServerErrorException) as cm:
             self._engine.commit(block)
@@ -606,7 +603,7 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_rollback(self):
         block = Block(
             block_height=1,
-            block_hash=create_block_hash(b'block'),
+            block_hash=create_block_hash(),
             timestamp=0,
             prev_hash=self.genesis_block.hash)
 

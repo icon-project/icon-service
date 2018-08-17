@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ class ParamType(IntEnum):
     ICX_GET_BALANCE = 302
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
+    ISE_GET_STATUS = 305
 
     WRITE_PRECOMMIT = 400
     REMOVE_PRECOMMIT = 500
@@ -271,7 +272,7 @@ class TypeConverter:
         if isinstance(value, dict):
             for k, v in value.items():
                 if isinstance(v, bytes):
-                    is_hash = k in ('blockHash', 'txHash')
+                    is_hash = k in ('blockHash', 'txHash', 'prevBlockHash')
                     value[k] = TypeConverter._convert_bytes_reverse(v, is_hash)
                 else:
                     value[k] = TypeConverter.convert_type_reverse(v)
@@ -375,6 +376,10 @@ type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
 }
 type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[ParamType.ICX_GET_BALANCE]
 
+type_convert_templates[ParamType.ISE_GET_STATUS] = {
+    "filter": [ValueType.STRING]
+}
+
 type_convert_templates[ParamType.QUERY] = {
     "method": ValueType.STRING,
     "params": {
@@ -384,6 +389,7 @@ type_convert_templates[ParamType.QUERY] = {
             "icx_getBalance": type_convert_templates[ParamType.ICX_GET_BALANCE],
             "icx_getTotalSupply": type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
             "icx_getScoreApi": type_convert_templates[ParamType.ICX_GET_SCORE_API],
+            "ise_getStatus": type_convert_templates[ParamType.ISE_GET_STATUS]
         }
     }
 }

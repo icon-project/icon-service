@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_block_convert(self):
         block_height = 1001
-        block_hash = create_block_hash(b'block1')
+        block_hash = create_block_hash()
         timestamp = 12345
-        prev_block_hash = create_block_hash(b'prevBlock1')
+        prev_block_hash = create_block_hash()
 
         request_params = {
             "blockHeight": hex(block_height),
@@ -45,9 +45,9 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_negative(self):
         block_height = -1001
-        block_hash = create_block_hash(b'block1')
+        block_hash = create_block_hash()
         timestamp = -12345
-        prev_block_hash = create_block_hash(b'prevBlock1')
+        prev_block_hash = create_block_hash()
 
         request_params = {
             "blockHeight": hex(block_height),
@@ -65,7 +65,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_account_convert(self):
         name = 'genesis'
-        address = create_address(AddressPrefix.EOA, b'addr')
+        address = create_address(AddressPrefix.EOA)
         balance = 10000 * 10 ** 18
 
         request_params = {
@@ -82,8 +82,8 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_call_data_convert(self):
         method = 'method'
-        data_from = create_address(AddressPrefix.EOA, b'data_from')
-        data_to = create_address(AddressPrefix.EOA, b'data_to')
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
         data_value = 1 * 10 ** 18
 
         request_params = {
@@ -106,8 +106,8 @@ class TestTypeConverter(unittest.TestCase):
     def test_deploy_data_convert(self):
         content_type = 'application/zip'
         content = "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e"
-        data_from = create_address(AddressPrefix.EOA, b'data_from')
-        data_to = create_address(AddressPrefix.EOA, b'data_to')
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
         data_value = 1 * 10 ** 18
 
         request_params = {
@@ -133,8 +133,8 @@ class TestTypeConverter(unittest.TestCase):
         method = "icx_sendTransaction"
         tx_hash = create_block_hash(b'txHash')
         version = 3
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         value = 10 * 10 ** 18
         step_limit = 1000
         timestamp = 12345
@@ -142,8 +142,8 @@ class TestTypeConverter(unittest.TestCase):
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
         data_type = "call"
         data_method = "transfer"
-        data_from = create_address(AddressPrefix.EOA, b'data_from')
-        data_to = create_address(AddressPrefix.EOA, b'data_to')
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
         data_value = 1 * 10 ** 18
 
         request_params = {
@@ -192,8 +192,8 @@ class TestTypeConverter(unittest.TestCase):
         method = "icx_sendTransaction"
         tx_hash = create_block_hash(b'txHash')
         version = 3
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         value = 10 * 10 ** 18
         step_limit = 1000
         timestamp = 12345
@@ -202,8 +202,8 @@ class TestTypeConverter(unittest.TestCase):
         data_type = "deploy"
         content_type = "application/zip"
         content = "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e"
-        data_from = create_address(AddressPrefix.EOA, b'data_from')
-        data_to = create_address(AddressPrefix.EOA, b'data_to')
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
         data_value = 1 * 10 ** 18
 
         request_params = {
@@ -252,23 +252,23 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_invoke_convert(self):
         block_height = 1001
-        block_hash = create_block_hash(b'block1')
+        block_hash = create_block_hash()
         timestamp = 12345
-        prev_block_hash = create_block_hash(b'prevBlock1')
+        prev_block_hash = create_block_hash()
 
         method = "icx_sendTransaction"
-        tx_hash = create_block_hash(b'txHash')
+        tx_hash = create_block_hash()
         version = 3
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         value = 10 * 10 ** 18
         step_limit = 1000
         nonce = 123
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
         data_type = "call"
         data_method = "transfer"
-        data_from = create_address(AddressPrefix.EOA, b'data_from')
-        data_to = create_address(AddressPrefix.EOA, b'data_to')
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
         data_value = 1 * 10 ** 18
 
         request_params = {
@@ -330,11 +330,11 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_icx_call_convert(self):
         version = 3
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         data_type = "call"
         data_method = "get_balance"
-        data_addr = create_address(AddressPrefix.EOA, b'data_addr')
+        data_addr = create_address(AddressPrefix.EOA)
 
         request_params = {
             "version": hex(version),
@@ -360,7 +360,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_icx_get_balance_convert(self):
         version = 3
-        addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        addr1 = create_address(AddressPrefix.EOA)
 
         request_params = {
             "version": hex(version),
@@ -384,7 +384,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_icx_get_score_api_convert(self):
         version = 3
-        score_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        score_addr = create_address(AddressPrefix.CONTRACT)
 
         request_params = {
             "version": hex(version),
@@ -399,11 +399,11 @@ class TestTypeConverter(unittest.TestCase):
     def test_query_convert1(self):
         method = "icx_call"
         version = 3
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         data_type = "call"
         data_method = "get_balance"
-        data_addr = create_address(AddressPrefix.EOA, b'data_addr')
+        data_addr = create_address(AddressPrefix.EOA)
 
         request_params = {
             "method": method,
@@ -434,7 +434,7 @@ class TestTypeConverter(unittest.TestCase):
     def test_query_convert2(self):
         method = "icx_getBalance"
         version = 3
-        addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        addr1 = create_address(AddressPrefix.EOA)
 
         request_params = {
             "method": method,
@@ -469,7 +469,7 @@ class TestTypeConverter(unittest.TestCase):
     def test_query_convert4(self):
         method = "icx_getScoreApi"
         version = 3
-        addr1 = create_address(AddressPrefix.EOA, b'addr1')
+        addr1 = create_address(AddressPrefix.EOA)
 
         request_params = {
             "method": method,
@@ -487,7 +487,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_write_precommit_convert(self):
         block_height = 1001
-        block_hash = create_block_hash(b'block1')
+        block_hash = create_block_hash()
 
         request_params = {
             "blockHeight": hex(block_height),
@@ -501,7 +501,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_remove_precommit_convert(self):
         block_height = 1001
-        block_hash = create_block_hash(b'block1')
+        block_hash = create_block_hash()
 
         request_params = {
             "blockHeight": hex(block_height),
@@ -516,8 +516,8 @@ class TestTypeConverter(unittest.TestCase):
     def test_validate_tx_convert(self):
         method = "icx_sendTransaction"
         version = 3
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         value = 10 * 10 ** 18
         step_limit = 1000
         timestamp = 12345
@@ -525,8 +525,8 @@ class TestTypeConverter(unittest.TestCase):
         signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
         data_type = "call"
         data_method = "transfer"
-        data_from = create_address(AddressPrefix.EOA, b'data_from')
-        data_to = create_address(AddressPrefix.EOA, b'data_to')
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
         data_value = 1 * 10 ** 18
 
         request_params = {
@@ -571,9 +571,9 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_v2_invoke_convert(self):
         method = "icx_sendTransaction"
-        tx_hash = create_block_hash(b'txHash')
-        from_addr = create_address(AddressPrefix.EOA, b'from')
-        to_addr = create_address(AddressPrefix.CONTRACT, b'score')
+        tx_hash = create_block_hash()
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = create_address(AddressPrefix.CONTRACT)
         value = 10 * 10 ** 18
         fee = 10 * 10 ** 16
         timestamp = 12345

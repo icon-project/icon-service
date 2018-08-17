@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from shutil import copytree
 from typing import TYPE_CHECKING
 
 from ..base.address import Address
@@ -47,12 +48,24 @@ class IconBuiltinScoreLoader(object):
                             icon_score_address: 'Address',
                             builtin_score_owner: 'Address'):
         if self._deploy_engine.icon_deploy_storage.is_score_active(context, icon_score_address):
+            self.check_copy_governance()
             return
 
         score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, score_name)
         self._deploy_engine.\
             write_deploy_info_and_tx_params_for_builtin(context, icon_score_address, builtin_score_owner)
         self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
+
+    # TODO remove code after next version
+    def check_copy_governance(self):
+        score_path = os.path.join(PRE_BUILTIN_SCORE_ROOT_PATH, 'governance')
+        score_root_path = self._deploy_engine._icon_score_deployer.score_root_path
+        score_id = f'0x{bytes.hex(bytes(32))}'
+        target_path = os.path.join(score_root_path, GOVERNANCE_SCORE_ADDRESS.to_bytes().hex())
+        link_path = os.path.join(target_path, score_id)
+        if os.path.islink(link_path):
+            os.unlink(link_path)
+            copytree(score_path, link_path)
 
     @classmethod
     def is_builtin_score(cls, score_address: 'Address') -> bool:

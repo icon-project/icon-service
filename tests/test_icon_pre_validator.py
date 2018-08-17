@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ class TestTransactionValidator(unittest.TestCase):
     def test_validate_success(self):
         params = {
             'version': 3,
-            'txHash': create_tx_hash(b'tx'),
+            'txHash': create_tx_hash(),
             'from': Address.from_data(AddressPrefix.EOA, b'from'),
             'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
             'value': 0,
