@@ -86,16 +86,6 @@ class IconScoreInnerTask(object):
         else:
             return self._invoke(request)
 
-    @message_queue_task
-    async def invoke(self, request: dict):
-        Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
-        if self._is_thread_flag_on(EnableThreadFlag.Invoke):
-            loop = get_event_loop()
-            return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
-                                              self._invoke, request)
-        else:
-            return self._invoke(request)
-
     def _invoke(self, request: dict):
         """Process transactions in a block
 
