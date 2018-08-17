@@ -877,8 +877,8 @@ class IconServiceEngine(ContextContainer):
 
     def _handle_sys_get_last_block(self, context: 'IconScoreContext', params: dict) -> dict:
         block = self._precommit_data_manager.last_block
-        response = {'blackHeight': block.height,
-                    'blackHash': block.hash,
+        response = {'blockHeight': block.height,
+                    'blockHash': block.hash,
                     'timestamp': block.timestamp,
-                    'prevBlackHash': block.prev_hash}
+                    'prevBlockHash': block.prev_hash}
         return response
