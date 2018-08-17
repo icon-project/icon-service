@@ -39,12 +39,12 @@ class ParamType(IntEnum):
     ICX_GET_BALANCE = 302
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
+    ISE_GET_STATUS = 305
 
     WRITE_PRECOMMIT = 400
     REMOVE_PRECOMMIT = 500
 
     VALIDATE_TRANSACTION = 600
-    SYS_CALL = 700
 
 
 class ValueType(IntEnum):
@@ -376,6 +376,10 @@ type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
 }
 type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[ParamType.ICX_GET_BALANCE]
 
+type_convert_templates[ParamType.ISE_GET_STATUS] = {
+    "filter": [ValueType.STRING]
+}
+
 type_convert_templates[ParamType.QUERY] = {
     "method": ValueType.STRING,
     "params": {
@@ -385,6 +389,7 @@ type_convert_templates[ParamType.QUERY] = {
             "icx_getBalance": type_convert_templates[ParamType.ICX_GET_BALANCE],
             "icx_getTotalSupply": type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
             "icx_getScoreApi": type_convert_templates[ParamType.ICX_GET_SCORE_API],
+            "ise_getStatus": type_convert_templates[ParamType.ISE_GET_STATUS]
         }
     }
 }
@@ -420,9 +425,4 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
             "tx_hash": "txHash"
         }
     }
-}
-
-type_convert_templates[ParamType.SYS_CALL] = {
-    "method": ValueType.STRING,
-    "params": ValueType.LATER
 }

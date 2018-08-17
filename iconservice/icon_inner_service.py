@@ -64,31 +64,6 @@ class IconScoreInnerTask(object):
     async def hello(self):
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
 
-    @message_queue_task
-    async def sys_call(self, request: dict):
-        # An internal protocol that communicates A and B
-        # It has the same input and return values ​​as the protocol using the JSON-RPC format
-        Logger.info(f'sys_call {request}', ICON_INNER_LOG_TAG)
-        return self._sys_call(request)
-
-    def _sys_call(self, request: dict):
-        response = None
-
-        try:
-            converted_request = TypeConverter.convert(request, ParamType.SYS_CALL)
-            ret = self._icon_service_engine.sys_call(method=converted_request['method'],
-                                                     params=converted_request['params'])
-            response = TypeConverter.convert_type_reverse(ret)
-        except IconServiceBaseException as icon_e:
-            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
-        except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
-        finally:
-            Logger.info(f'sys_call response with {response}', ICON_INNER_LOG_TAG)
-        return response
-
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
 

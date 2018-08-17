@@ -45,9 +45,9 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
 
-    def test_sys_call(self):
-        request = {'method': 'sys_getLastBlock', 'params': {}}
-        ret = self._run_async(self._sys_call(request))
+    def test_ise_get_status(self):
+        request = {}
+        ret = self._run_async(self._query(request, 'ise_getStatus'))
         print(ret)
 
     def test_invoke_success(self):
