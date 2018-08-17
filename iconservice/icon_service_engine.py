@@ -836,12 +836,12 @@ class IconServiceEngine(ContextContainer):
 
         block = self._precommit_data_manager.last_block
         response = {
-            'lastBlock':
-                {'blockHeight': block.height,
-                 'blockHash': block.hash,
-                 'timestamp': block.timestamp,
-                 'prevBlockHash': block.prev_hash
-                 }
+            'lastBlock': {
+                'blockHeight': block.height,
+                'blockHash': block.hash,
+                'timestamp': block.timestamp,
+                'prevBlockHash': block.prev_hash
+            }
         }
         return response
 
