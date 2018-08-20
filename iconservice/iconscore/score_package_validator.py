@@ -41,7 +41,7 @@ INSPECT = 'inspect'
 FUNC_TOOLS = 'functools'
 ABC = 'abc'
 
-WHITE_IMPORT_LIST = \
+WHITELIST_IMPORT = \
     {
         ICONSERVICE: [],
         ICONSERVICE_BASE_ADDRESS: ['Address', 'ZERO_SCORE_ADDRESS'],
@@ -55,27 +55,27 @@ WHITE_IMPORT_LIST = \
         ABC: ['ABCMeta', 'abstractmethod', 'ABC']
     }
 
-BLACKLIST_KEYWORD_LIST = ['exec']
+BLACKLIST_RESERVED_KEYWORD = ['exec']
 
 
-class ImportValidator(object):
+class ScorePackageValidator(object):
     PREV_IMPORT_NAME = None
     PREV_LOAD_BUILD_CLASS = None
     CUSTOM_IMPORT_LIST = []
 
     @staticmethod
     def validator(parent_imp_path: str, parent_imp: str) -> callable:
-        ImportValidator.PREV_IMPORT_NAME = None
+        ScorePackageValidator.PREV_IMPORT_NAME = None
 
-        ImportValidator.CUSTOM_IMPORT_LIST = ImportValidator._make_custom_import_list(parent_imp_path)
+        ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(parent_imp_path)
 
-        for imp in ImportValidator.CUSTOM_IMPORT_LIST:
+        for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
             full_name = ''.join((parent_imp, '.', imp))
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
-            ImportValidator._validate_import_from_code(code)
-            ImportValidator._validate_import_from_const(code.co_consts)
-            ImportValidator._validate_blacklist_keyword_from_names(code.co_names)
+            ScorePackageValidator._validate_import_from_code(code)
+            ScorePackageValidator._validate_import_from_const(code.co_consts)
+            ScorePackageValidator._validate_blacklist_keyword_from_names(code.co_names)
 
     @staticmethod
     def _make_custom_import_list(pkg_root_path: str) -> list:
@@ -96,7 +96,7 @@ class ImportValidator(object):
     @staticmethod
     def _validate_blacklist_keyword_from_names(co_names: tuple):
         for co_name in co_names:
-            if co_name in BLACKLIST_KEYWORD_LIST:
+            if co_name in BLACKLIST_RESERVED_KEYWORD:
                 raise ServerErrorException(f'invalid blacklist keyword: {co_name}')
 
     @staticmethod
@@ -109,17 +109,17 @@ class ImportValidator(object):
         for index in range(0, int(len(byte_code_list)), 2):
             key = byte_code_list[index]
             value = byte_code_list[index + 1]
-            ImportValidator._validate_import(key, value, code.co_names)
+            ScorePackageValidator._validate_import(key, value, code.co_names)
 
     @staticmethod
     def _validate_import_from_const(co_consts: tuple):
         for co_const in co_consts:
             if not hasattr(co_const, CODE_ATTR):
                 continue
-            ImportValidator._validate_import_from_code(co_const)
-            ImportValidator._validate_import_from_const(co_const.co_consts)
+            ScorePackageValidator._validate_import_from_code(co_const)
+            ScorePackageValidator._validate_import_from_const(co_const.co_consts)
             if hasattr(co_const, CODE_NAMES_ATTR):
-                ImportValidator._validate_blacklist_keyword_from_names(co_const.co_names)
+                ScorePackageValidator._validate_blacklist_keyword_from_names(co_const.co_names)
 
     @staticmethod
     def _validate_import(key: int, value: int, co_names: tuple):
@@ -128,31 +128,31 @@ class ImportValidator(object):
 
         if key == IMPORT_NAME:
             import_name = co_names[value]
-            ImportValidator.PREV_IMPORT_NAME = import_name
-            if import_name not in WHITE_IMPORT_LIST:
-                if not ImportValidator._is_contain_custom_import(import_name):
+            ScorePackageValidator.PREV_IMPORT_NAME = import_name
+            if import_name not in WHITELIST_IMPORT:
+                if not ScorePackageValidator._is_contain_custom_import(import_name):
                     raise ServerErrorException(f'invalid import '
                                                f'import_name: {import_name}')
         elif key == IMPORT_STAR:
-            if ImportValidator.PREV_IMPORT_NAME not in WHITE_IMPORT_LIST:
-                if not ImportValidator._is_contain_custom_import(ImportValidator.PREV_IMPORT_NAME):
+            if ScorePackageValidator.PREV_IMPORT_NAME not in WHITELIST_IMPORT:
+                if not ScorePackageValidator._is_contain_custom_import(ScorePackageValidator.PREV_IMPORT_NAME):
                     raise ServerErrorException(f'invalid import '
-                                               f'import_name: {ImportValidator.PREV_IMPORT_NAME}')
+                                               f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
         elif key == IMPORT_FROM:
-            if ImportValidator.PREV_IMPORT_NAME in WHITE_IMPORT_LIST:
-                from_list = WHITE_IMPORT_LIST[ImportValidator.PREV_IMPORT_NAME]
+            if ScorePackageValidator.PREV_IMPORT_NAME in WHITELIST_IMPORT:
+                from_list = WHITELIST_IMPORT[ScorePackageValidator.PREV_IMPORT_NAME]
                 if co_names[value] not in from_list:
                     raise ServerErrorException(f'invalid import '
-                                               f'import_name: {ImportValidator.PREV_IMPORT_NAME}')
-            elif ImportValidator._is_contain_custom_import(ImportValidator.PREV_IMPORT_NAME):
+                                               f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
+            elif ScorePackageValidator._is_contain_custom_import(ScorePackageValidator.PREV_IMPORT_NAME):
                 pass
             else:
                 raise ServerErrorException(f'invalid import '
-                                           f'import_name: {ImportValidator.PREV_IMPORT_NAME}')
+                                           f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
 
     @staticmethod
     def _is_contain_custom_import(import_name: str) -> bool:
-        for custom_import in ImportValidator.CUSTOM_IMPORT_LIST:
+        for custom_import in ScorePackageValidator.CUSTOM_IMPORT_LIST:
             if import_name == custom_import:
                 return True
             else:

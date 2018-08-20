@@ -119,7 +119,7 @@ class TestIconServiceEngine(unittest.TestCase):
         table = {ConfigKey.SERVICE_FEE: True,
                  ConfigKey.SERVICE_AUDIT: False,
                  ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
-                 ConfigKey.SERVICE_IMPORT_WHITELIST: False}
+                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         flag = self._engine._make_service_flag(table)
         self.assertEqual(flag, IconServiceFlag.fee)
 
@@ -398,7 +398,7 @@ class TestIconServiceEngine(unittest.TestCase):
         table = {ConfigKey.SERVICE_FEE: True,
                  ConfigKey.SERVICE_AUDIT: False,
                  ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
-                 ConfigKey.SERVICE_IMPORT_WHITELIST: False}
+                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
@@ -472,7 +472,7 @@ class TestIconServiceEngine(unittest.TestCase):
         table = {ConfigKey.SERVICE_FEE: True,
                  ConfigKey.SERVICE_AUDIT: False,
                  ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
-                 ConfigKey.SERVICE_IMPORT_WHITELIST: False}
+                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1

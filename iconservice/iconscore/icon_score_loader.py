@@ -19,7 +19,7 @@ import json
 from os import path
 from sys import path as sys_path
 
-from .import_validator import ImportValidator
+from .score_package_validator import ScorePackageValidator
 from ..icon_constant import IconScoreLoaderFlag
 
 
@@ -52,8 +52,8 @@ class IconScoreLoader(object):
         parent_import_path: str = last_version_path.split(tmp_str)[1]
         parent_import = parent_import_path.replace('/', '.')
 
-        if self._is_flag_on(IconScoreLoaderFlag.ENABLE_VALIDATE_IMPORT_WHITELIST):
-            ImportValidator().validator(tmp_str + parent_import_path, parent_import)
+        if self._is_flag_on(IconScoreLoaderFlag.ENABLE_VALIDATE_SCORE_PACKAGE):
+            ScorePackageValidator().validator(tmp_str + parent_import_path, parent_import)
 
         spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", parent_import)
         module = spec.loader.load_module()

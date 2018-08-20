@@ -123,7 +123,7 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = IconScoreContextFactory(max_size=5)
 
         icon_score_loader_flags = IconScoreLoaderFlag.NONE
-        if self._is_flag_on(IconServiceFlag.importWhiteList):
+        if self._is_flag_on(IconServiceFlag.scorePackageValiator):
             icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_VALIDATE_IMPORT_WHITELIST
         self._icon_score_loader = IconScoreLoader(score_root_path, flag=icon_score_loader_flags)
 
@@ -178,7 +178,7 @@ class IconServiceEngine(ContextContainer):
         key_table = [ConfigKey.SERVICE_FEE,
                      ConfigKey.SERVICE_AUDIT,
                      ConfigKey.SERVICE_DEPLOYER_WHITELIST,
-                     ConfigKey.SERVICE_IMPORT_WHITELIST]
+                     ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR]
         flag = 0
         for key in key_table:
             is_enable = flag_table[key]
