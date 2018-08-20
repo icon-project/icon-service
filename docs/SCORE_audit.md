@@ -13,7 +13,7 @@ Code should be deterministic as it will run on multiple nodes. You should avoid 
 To pass an ICON audit, we recommend you do the following.
 
 - DO NOT import any system packages. DO import only “iconservice” and the files of your own implementation placed in the same folder.
-- DO NOT make any long-running operation inside the SCORE. Average block generation time would be 2 seconds in ICON, your transaction should not interrupt the block generation.
+- DO NOT make any long-running operation inside the SCORE. Average block generation time would be 2 seconds in ICON, your transaction should not interrupt the block generation. No zero transaction blocks for now.
 
 ## Audit Process
 
