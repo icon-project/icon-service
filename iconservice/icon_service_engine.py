@@ -123,8 +123,8 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = IconScoreContextFactory(max_size=5)
 
         icon_score_loader_flags = IconScoreLoaderFlag.NONE
-        if self._is_flag_on(IconServiceFlag.scorePackageValiator):
-            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_VALIDATE_IMPORT_WHITELIST
+        if self._is_flag_on(IconServiceFlag.scorePackageValidator):
+            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_VALIDATE_SCORE_PACKAGE
         self._icon_score_loader = IconScoreLoader(score_root_path, flag=icon_score_loader_flags)
 
         self._icx_engine = IcxEngine()

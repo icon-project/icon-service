@@ -1,5 +1,4 @@
 from iconservice import *
-from iconservice.base.address import ZERO_SCORE_ADDRESS
 from .standard_token_support_blacklist import StandardTokenSupportBlacklist, only_operator
 from .ownership.role import Role
 

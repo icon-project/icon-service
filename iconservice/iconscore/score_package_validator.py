@@ -31,28 +31,10 @@ CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
 
 ICONSERVICE = 'iconservice'
-ICONSERVICE_BASE_ADDRESS = 'iconservice.base.address'
-ICONSERVICE_BASE_EXCEPTION = 'iconservice.base.exception'
-ICONSERVICE_ICONSCORE_ICON_CONTAINER_DB = 'iconservice.iconscore.icon_container_db'
-ICONSERVICE_ICONSCORE_ICON_SCORE_BASE = 'iconservice.icon_score_base'
-ICONSERVICE_ICONSCORE_ICON_SCORE_BASE2 = 'iconservice.icon_score_base2'
-ICONCOMMONS_LOGGER = 'iconcommons.logger'
-INSPECT = 'inspect'
-FUNC_TOOLS = 'functools'
-ABC = 'abc'
 
 WHITELIST_IMPORT = \
     {
-        ICONSERVICE: [],
-        ICONSERVICE_BASE_ADDRESS: ['Address', 'ZERO_SCORE_ADDRESS'],
-        ICONSERVICE_BASE_EXCEPTION: ['IconScoreException'],
-        ICONSERVICE_ICONSCORE_ICON_CONTAINER_DB: ['VarDB', 'DictDB', 'ArrayDB'],
-        ICONSERVICE_ICONSCORE_ICON_SCORE_BASE: ['interface', 'eventlog', 'external', 'payable', 'IconScoreBase'],
-        ICONSERVICE_ICONSCORE_ICON_SCORE_BASE2: ['InterfaceScore'],
-        ICONCOMMONS_LOGGER: ['Logger'],
-        INSPECT: ['isfunction'],
-        FUNC_TOOLS: ['wraps'],
-        ABC: ['ABCMeta', 'abstractmethod', 'ABC']
+        ICONSERVICE: []
     }
 
 BLACKLIST_RESERVED_KEYWORD = ['exec']
