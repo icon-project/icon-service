@@ -137,7 +137,8 @@ class TypeConverter:
                 return True
         elif not params or not template:
             return True
-
+        return False
+    
     @staticmethod
     def _convert_using_switch(params: Union[str, dict, None],
                               tmp_params: dict,
