@@ -834,16 +834,41 @@ class IconServiceEngine(ContextContainer):
 
     def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
 
-        block = self._precommit_data_manager.last_block
-        response = {
-            'lastBlock': {
-                'blockHeight': block.height,
-                'blockHash': block.hash,
-                'timestamp': block.timestamp,
-                'prevBlockHash': block.prev_hash
-            }
-        }
+        response = dict()
+        if not bool(params) or params.get('lastBlock'):
+            last_block_status = self._make_last_block_status()
+            response['lastBlock'] = last_block_status
         return response
+
+    def _make_last_block_status(self) -> Optional[dict]:
+        block = self._precommit_data_manager.last_block
+        if block is None:
+            block_height = -1
+            block_hash = b'\x00' * 32
+            timestamp = 0
+            prev_block_hash = block_hash
+        else:
+            block_height = block.height
+            block_hash = block.hash
+            timestamp = block.timestamp
+            prev_block_hash = block.prev_hash
+
+        return {'lastBlock': {
+            'blockHeight': block_height,
+            'blockHash': block_hash,
+            'timestamp': timestamp,
+            'prevBlockHash': prev_block_hash
+        }
+    }
+
+
+    @staticmethod
+    def _create_invalid_block():
+        block_height = -1
+        block_hash = b'\x00' * 32
+        timestamp = 0
+        prev_block_hash = block_hash
+        return Block(block_height, block_hash, timestamp, prev_block_hash)
 
     def commit(self, block: 'Block') -> None:
         """Write updated states in a context.block_batch to StateDB
