@@ -74,8 +74,8 @@ class TypeConverter:
         return converted_params
 
     @staticmethod
-    def _convert(params: dict, template: Union[list, dict]) -> Any:
-        if not params or not template:
+    def _convert(params: Union[str, dict, None], template: Union[list, dict, ValueType]) -> Any:
+        if TypeConverter._skip_params(params, template):
             return params
 
         if isinstance(template, dict) and KEY_CONVERTER in template:
@@ -129,8 +129,20 @@ class TypeConverter:
         return tmp_params.get(CONVERT_USING_SWITCH_KEY)
 
     @staticmethod
-    def _convert_using_switch(params: dict, tmp_params: dict, template: Union[list, dict]) -> Any:
-        if not params or not template:
+    def _skip_params(params: Union[str, dict, None], template: Union[list, dict, ValueType]) -> bool:
+        if params is None:
+            raise InvalidParamsException(f'TypeConvert Exception None value, templete: {str(template)}')
+        if isinstance(params, str):
+            if params != "" and not template:
+                return True
+        elif not params or not template:
+            return True
+
+    @staticmethod
+    def _convert_using_switch(params: Union[str, dict, None],
+                              tmp_params: dict,
+                              template: Union[list, dict, ValueType]) -> Any:
+        if TypeConverter._skip_params(params, template):
             return params
 
         switch_key = template.get(SWITCH_KEY)

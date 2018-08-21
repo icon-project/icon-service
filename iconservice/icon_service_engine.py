@@ -443,7 +443,6 @@ class IconServiceEngine(ContextContainer):
         context.step_counter = self._step_counter_factory.create(step_limit)
         context.msg_stack.clear()
 
-        self._validate_score_blacklist(context, params)
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             self._validate_deploy_whitelist(context, params)
 
