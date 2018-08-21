@@ -24,7 +24,8 @@ from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import *
 from .icon_score_step import StepType
-from .icon_score_context import IconScoreContextType, IconScoreFuncType
+from .icon_score_context import IconScoreContextType, IconScoreFuncType, \
+    ContextContainer
 from .icon_score_context import ContextGetter
 from .icx import Icx
 from ..base.exception import *
@@ -222,6 +223,18 @@ def payable(func):
         return res
 
     return __wrapper
+
+
+def revert(message: Optional[str] = None,
+           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+    """
+    Reverts the transaction and breaks.
+    All the changes of state DB will be reverted.
+
+    :param message: revert message
+    :param code: code
+    """
+    raise RevertException(message, code)
 
 
 class IconScoreObject(ABC):
@@ -578,7 +591,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
-        self._context.revert(message, code)
+        revert(message, code)
 
     def deploy(self, tx_hash: bytes):
         self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)
