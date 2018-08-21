@@ -114,16 +114,19 @@ class OutOfStepException(IconServiceBaseException):
     """
 
     def __init__(self, step_limit: int, step_used: int,
-                 requested_step: int) -> None:
+                 requested_step: int, step_type: StepType) -> None:
         """Constructor
 
         :param step_limit: step limit of the transaction
         :param step_used: used steps in the transaction
         :param requested_step: consuming steps before the exception is thrown
+        :param step_type: step type that
+        the exception has been thrown when processing
         """
         self.__step_limit: int = step_limit
         self.__step_used = step_used
         self.__requested_step = requested_step
+        self.__step_type = step_type
 
     @property
     def code(self) -> int:
@@ -135,8 +138,7 @@ class OutOfStepException(IconServiceBaseException):
         Returns the exception message
         :return: the exception message
         """
-        return f'Out of step: {self.requested_step} steps requested, but ' \
-               f'{self.step_limit - self.step_used} steps remained'
+        return f'Out of step: {self.__step_type.value()}'
 
     @property
     def step_limit(self) -> int:
@@ -211,11 +213,6 @@ class IconScoreStepCounter(object):
         """ Increases steps for given step cost
         """
         step_to_apply = self._step_cost_dict.get(step_type, 0) * count
-        return self.__apply_step(step_to_apply)
-
-    def __apply_step(self, step_to_apply) -> int:
-        """ Increases step
-        """
         if step_to_apply + self._step_used > self._step_limit:
             step_used = self._step_used
             self._step_used = self._step_limit
