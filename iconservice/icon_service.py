@@ -14,18 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import argparse
 import setproctitle
+import sys
 
-from earlgrey import MessageQueueService
-from iconservice.icon_inner_service import IconScoreInnerService
-from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
+from earlgrey import MessageQueueService, aio_pika, asyncio
 
-from iconservice.icon_config import default_icon_config
-from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, ExitCode
-from iconcommons.logger import Logger
 from iconcommons.icon_config import IconConfig
+from iconcommons.logger import Logger
+from iconservice.icon_config import default_icon_config
+from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
+from iconservice.icon_inner_service import IconScoreInnerService
+from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, ExitCode
 
 
 class IconService(object):
@@ -108,15 +108,30 @@ def main():
     Logger.load_config(conf)
     Logger.print_config(conf, ICON_SERVICE_STANDALONE)
 
+    _run_async(_check_rabbitmq())
     icon_service = IconService()
     icon_service.serve(config=conf)
     Logger.info(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
 
 
 def run_in_foreground(conf: 'IconConfig'):
+    _run_async(_check_rabbitmq())
+
     icon_service = IconService()
     icon_service.serve(config=conf)
 
+
+def _run_async(async_func):
+    loop = asyncio.new_event_loop()
+    return loop.run_until_complete(async_func)
+
+
+async def _check_rabbitmq():
+    try:
+        await aio_pika.connect()
+    except ConnectionRefusedError:
+        Logger.error("rabbitmq-service disable", ICON_SERVICE_STANDALONE)
+        exit(0)
 
 if __name__ == '__main__':
     main()
