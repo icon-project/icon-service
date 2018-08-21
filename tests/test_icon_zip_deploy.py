@@ -115,6 +115,8 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
         self._context_container._push_context(self._context)
+        self._context.validate_deploy_whitelist = Mock()
+        self._context.validate_score_blacklist = Mock()
 
     def tearDown(self):
         self._engine = None

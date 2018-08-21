@@ -91,6 +91,9 @@ class IconScoreDeployEngine(object):
             DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
 
         try:
+            context.validate_score_blacklist(icon_score_address)
+            if self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_WHITELIST):
+                context.validate_deploy_whitelist(context.tx.origin, icon_score_address)
             self.write_deploy_info_and_tx_params(context, deploy_state, icon_score_address, data)
             if self._check_audit_ignore(context, icon_score_address):
                 self.deploy(context, context.tx.hash)

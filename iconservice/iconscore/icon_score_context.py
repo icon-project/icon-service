@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
 from .internal_call import InternalCall
-from ..base.address import Address
+from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
 from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
     from ..deploy.icon_score_manager import IconScoreManager
+    from ..builtin_scores.governance.governance import Governance
 
 _thread_local_data = threading.local()
 
@@ -195,6 +196,34 @@ class IconScoreContext(object):
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
         return self.icon_score_mapper.get_icon_score(address, current_tx_hash)
+
+    def validate_score_blacklist(self, to_score_addr: 'Address'):
+        if not to_score_addr.is_contract:
+            return
+        if to_score_addr == ZERO_SCORE_ADDRESS:
+            return
+
+        # Gets the governance SCORE
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if governance_score.isInScoreBlackList(to_score_addr):
+            raise ServerErrorException(f'The Score is in Black List (address: {to_score_addr})')
+
+    def validate_deploy_whitelist(self, deploy_owner: 'Address', score_addr: 'Address'):
+        if deploy_owner.is_contract:
+            return
+        if score_addr == ZERO_SCORE_ADDRESS:
+            return
+
+        # Gets the governance SCORE
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if not governance_score.isDeployer(deploy_owner):
+            raise ServerErrorException(f'Invalid deployer: no permission (address: {deploy_owner})')
 
 
 class IconScoreContextFactory(object):

@@ -131,6 +131,8 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
         self._context_container._push_context(self._context)
+        self._context.validate_deploy_whitelist = Mock()
+        self._context.validate_score_blacklist = Mock()
 
     def tearDown(self):
         try:

@@ -443,9 +443,6 @@ class IconServiceEngine(ContextContainer):
         context.step_counter = self._step_counter_factory.create(step_limit)
         context.msg_stack.clear()
 
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            self._validate_deploy_whitelist(context, params)
-
         return self._call(context, method, params)
 
     def query(self, method: str, params: dict) -> Any:
@@ -475,7 +472,6 @@ class IconServiceEngine(ContextContainer):
         context.step_counter: IconScoreStepCounter = \
             self._step_counter_factory.create(step_limit)
 
-        self._validate_score_blacklist(context, params)
         ret = self._call(context, method, params)
 
         self._context_factory.destroy(context)

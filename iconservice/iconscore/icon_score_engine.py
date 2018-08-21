@@ -64,6 +64,7 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
+        context.validate_score_blacklist(icon_score_address)
         if data_type == 'call':
             self._call(context, icon_score_address, data)
         else:
@@ -78,6 +79,7 @@ class IconScoreEngine(object):
 
         Handles messagecall of icx_call
         """
+        context.validate_score_blacklist(icon_score_address)
         if data_type == 'call':
             return self._call(context, icon_score_address, data)
         else:
