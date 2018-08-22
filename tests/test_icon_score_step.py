@@ -91,7 +91,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.EOA)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, None, None),
+            ReqData(tx_hash, from_, to_, "", ""),
         ])
 
         result = self._inner_task._invoke(request)

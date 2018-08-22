@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
 from .internal_call import InternalCall
-from ..base.address import Address
+from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
 from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
     from ..deploy.icon_score_manager import IconScoreManager
+    from ..builtin_scores.governance.governance import Governance
 
 _thread_local_data = threading.local()
 
@@ -195,6 +196,35 @@ class IconScoreContext(object):
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
         return self.icon_score_mapper.get_icon_score(address, current_tx_hash)
+
+    def validate_score_blacklist(self, score_address: 'Address'):
+        """Prevent SCOREs in blacklist
+
+        :param score_address:
+        """
+        if not score_address.is_contract:
+            raise ServerErrorException(f'Invalid SCORE address: {score_address}')
+
+        # Gets the governance SCORE
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if governance_score.isInScoreBlackList(score_address):
+            raise ServerErrorException(f'SCORE in blacklist: {score_address}')
+
+    def validate_deployer(self, deployer: 'Address'):
+        """Check if a given deployer is allowed to deploy a SCORE
+
+        :param deployer: EOA address to deploy a SCORE
+        """
+        # Gets the governance SCORE
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if not governance_score.isDeployer(deployer):
+            raise ServerErrorException(f'Invalid deployer: no permission (address: {deployer})')
 
 
 class IconScoreContextFactory(object):

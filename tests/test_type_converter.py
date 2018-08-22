@@ -16,6 +16,7 @@
 
 import unittest
 
+from iconservice import InvalidParamsException
 from iconservice.base.address import AddressPrefix
 from iconservice.base.type_converter import TypeConverter, ParamType
 from tests import create_block_hash, create_address
@@ -249,6 +250,95 @@ class TestTypeConverter(unittest.TestCase):
         self.assertNotEqual(data_from, ret_params['params']['data']['params']['from'])
         self.assertNotEqual(data_to, ret_params['params']['data']['params']['to'])
         self.assertNotEqual(data_value, ret_params['params']['data']['params']['value'])
+
+    def test_transaction_conver3(self):
+        method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
+        version = 3
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = ""
+        value = 10 * 10 ** 18
+        step_limit = 1000
+        timestamp = 12345
+        nonce = 123
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+        data_type = "deploy"
+        content_type = "application/zip"
+        content = "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e"
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
+        data_value = 1 * 10 ** 18
+
+        request_params = {
+            "method": method,
+            "params": {
+                "txHash": bytes.hex(tx_hash),
+                "version": hex(version),
+                "from": str(from_addr),
+                "to": str(to_addr),
+                "value": hex(value),
+                "stepLimit": hex(step_limit),
+                "timestamp": hex(timestamp),
+                "nonce": hex(nonce),
+                "signature": signature,
+                "dataType": data_type,
+                "data": {
+                    "contentType": content_type,
+                    "content": content,
+                    "params": {
+                        "from": str(data_from),
+                        "to": str(data_to),
+                        "value": hex(data_value)
+                    }
+                }
+            }
+        }
+
+        self.assertRaises(InvalidParamsException, TypeConverter.convert, request_params, ParamType.INVOKE_TRANSACTION)
+
+    def test_transaction_conver4(self):
+        method = "icx_sendTransaction"
+        tx_hash = create_block_hash(b'txHash')
+        version = 3
+        from_addr = create_address(AddressPrefix.EOA)
+        to_addr = None
+        value = 10 * 10 ** 18
+        step_limit = 1000
+        timestamp = 12345
+        nonce = 123
+        signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
+        data_type = "deploy"
+        content_type = "application/zip"
+        content = "0x1867291283973610982301923812873419826abcdef91827319263187263a7326e"
+        data_from = create_address(AddressPrefix.EOA)
+        data_to = create_address(AddressPrefix.EOA)
+        data_value = 1 * 10 ** 18
+
+        request_params = {
+            "method": method,
+            "params": {
+                "txHash": bytes.hex(tx_hash),
+                "version": hex(version),
+                "from": str(from_addr),
+                "to": str(to_addr),
+                "value": hex(value),
+                "stepLimit": hex(step_limit),
+                "timestamp": hex(timestamp),
+                "nonce": hex(nonce),
+                "signature": signature,
+                "dataType": data_type,
+                "data": {
+                    "contentType": content_type,
+                    "content": content,
+                    "params": {
+                        "from": str(data_from),
+                        "to": str(data_to),
+                        "value": hex(data_value)
+                    }
+                }
+            }
+        }
+        self.assertRaises(InvalidParamsException, TypeConverter.convert, request_params, ParamType.INVOKE_TRANSACTION)
 
     def test_invoke_convert(self):
         block_height = 1001
