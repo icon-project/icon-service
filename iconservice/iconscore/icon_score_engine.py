@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from .icon_score_context import IconScoreContext
 from .icon_score_mapper import IconScoreMapper
-from ..base.address import Address
+from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
 
@@ -64,7 +64,12 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
+        assert icon_score_address is not None
+        assert icon_score_address is not ZERO_SCORE_ADDRESS
+        assert icon_score_address.is_contract
+
         context.validate_score_blacklist(icon_score_address)
+
         if data_type == 'call':
             self._call(context, icon_score_address, data)
         else:
@@ -79,7 +84,12 @@ class IconScoreEngine(object):
 
         Handles messagecall of icx_call
         """
+        assert icon_score_address is not None
+        assert icon_score_address is not ZERO_SCORE_ADDRESS
+        assert icon_score_address.is_contract
+
         context.validate_score_blacklist(icon_score_address)
+
         if data_type == 'call':
             return self._call(context, icon_score_address, data)
         else:

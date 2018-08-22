@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Optional, Any
 
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.exception import ServerErrorException
 from ..base.message import Message
 

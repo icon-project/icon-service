@@ -463,7 +463,7 @@ class IconServiceEngine(ContextContainer):
         step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
         if params:
-            from_ = params.get('from', None)
+            from_: 'Address' = params.get('from', None)
             context.msg = Message(sender=from_)
             if 'stepLimit' in params:
                 step_limit = min(params['stepLimit'], step_limit)

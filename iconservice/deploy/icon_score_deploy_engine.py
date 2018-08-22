@@ -87,26 +87,28 @@ class IconScoreDeployEngine(object):
             otherwise score address to update
         :param data: calldata
         """
-        assert icon_score_address is not None and icon_score_address != ZERO_SCORE_ADDRESS
+        assert icon_score_address is not None
+        assert icon_score_address != ZERO_SCORE_ADDRESS
+        assert icon_score_address.is_contract
 
-        if icon_score_address is None or icon_score_address == ZERO_SCORE_ADDRESS:
+        if icon_score_address in (None, ZERO_SCORE_ADDRESS):
             raise ServerErrorException(f'Invalid SCORE address: {icon_score_address}')
 
-        deploy_state: 'DeployType' = \
+        deploy_type: 'DeployType' = \
             DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
 
         try:
             context.validate_score_blacklist(icon_score_address)
 
             if self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_WHITELIST):
-                context.validate_deployer(context.tx.origin, icon_score_address)
+                context.validate_deployer(context.tx.origin)
 
-            self.write_deploy_info_and_tx_params(context, deploy_state, icon_score_address, data)
+            self.write_deploy_info_and_tx_params(context, deploy_type, icon_score_address, data)
 
             if self._check_audit_ignore(context, icon_score_address):
                 self.deploy(context, context.tx.hash)
         except BaseException as e:
-            Logger.warning('write deploy info and tx params fail!!', ICON_DEPLOY_LOG_TAG)
+            Logger.warning('Failed to write deploy info and tx params', ICON_DEPLOY_LOG_TAG)
             raise e
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):

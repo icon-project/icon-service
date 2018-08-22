@@ -203,8 +203,7 @@ class IconScoreContext(object):
         :param score_address:
         """
         if not score_address.is_contract:
-            raise ServerErrorException(
-                'Invalid address: {to_score_addr} MUST be a score address')
+            raise ServerErrorException(f'Invalid SCORE address: {score_address}')
 
         # Gets the governance SCORE
         governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
@@ -214,11 +213,10 @@ class IconScoreContext(object):
         if governance_score.isInScoreBlackList(score_address):
             raise ServerErrorException(f'SCORE in blacklist: {score_address}')
 
-    def validate_deployer(self, deployer: 'Address', score_address: 'Address'):
+    def validate_deployer(self, deployer: 'Address'):
         """Check if a given deployer is allowed to deploy a SCORE
 
         :param deployer: EOA address to deploy a SCORE
-        :param score_address: SCORE address to deploy
         """
         # Gets the governance SCORE
         governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
