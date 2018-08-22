@@ -60,7 +60,7 @@ class TestIconScoreLoader(unittest.TestCase):
         IconScoreContext.icon_score_manager = MockIconScoreManager()
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         self._context_container = TestContextContainer()
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
 
     def tearDown(self):
         remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)

@@ -188,13 +188,13 @@ class IconServiceEngine(ContextContainer):
     def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         try:
-            self._put_context(context)
+            self._push_context(context)
             icon_builtin_score_loader = \
                 IconBuiltinScoreLoader(self._icon_score_deploy_engine)
             icon_builtin_score_loader.load_builtin_scores(
                 context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
     def _init_global_value_by_governance_score(self):
         """Initialize step_counter_factory with parameters
@@ -208,7 +208,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter = None
 
         try:
-            self._put_context(context)
+            self._push_context(context)
             # Gets the governance SCORE
             governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
@@ -243,7 +243,7 @@ class IconServiceEngine(ContextContainer):
                 governance_score.getMaxStepLimit("query"))
 
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
         self._context_factory.destroy(context)
 
@@ -259,7 +259,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         try:
-            self._put_context(context)
+            self._push_context(context)
             # Gets the governance SCORE
             governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
@@ -268,7 +268,7 @@ class IconServiceEngine(ContextContainer):
             if not governance_score.isDeployer(_from):
                 raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
     def _validate_score_blacklist(self, context: 'IconScoreContext', params: dict):
         _to: 'Address' = params.get('to')
@@ -278,7 +278,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         try:
-            self._put_context(context)
+            self._push_context(context)
             # Gets the governance SCORE
             governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
@@ -287,7 +287,7 @@ class IconServiceEngine(ContextContainer):
             if governance_score.isInScoreBlackList(_to):
                 raise ServerErrorException(f'The Score is in Black List (address: {_to})')
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -534,10 +534,10 @@ class IconServiceEngine(ContextContainer):
                 (dict) result or error object in jsonrpc response
         """
 
-        self._put_context(context)
+        self._push_context(context)
         handler = self._handlers[method]
         ret_val = handler(context, params)
-        self._delete_context(context)
+        self._pop_context()
         return ret_val
 
     def _handle_icx_get_balance(self,

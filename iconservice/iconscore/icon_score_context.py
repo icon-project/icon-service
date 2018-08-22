@@ -48,22 +48,37 @@ class ContextContainer(object):
     """
 
     @staticmethod
-    def _get_context() -> 'IconScoreContext':
-        return getattr(_thread_local_data, 'context', None)
+    def _get_context() -> Optional['IconScoreContext']:
+        context_stack: List['IconScoreContext'] \
+            = getattr(_thread_local_data, 'context_stack', None)
+
+        if context_stack is not None and len(context_stack) > 0:
+            return context_stack[-1]
+        else:
+            return None
 
     @staticmethod
-    def _put_context(value: 'IconScoreContext') -> None:
-        setattr(_thread_local_data, 'context', value)
+    def _push_context(context: 'IconScoreContext') -> None:
+        context_stack: List['IconScoreContext'] \
+            = getattr(_thread_local_data, 'context_stack', None)
+
+        if context_stack is None:
+            context_stack = []
+            setattr(_thread_local_data, 'context_stack', context_stack)
+
+        context_stack.append(context)
 
     @staticmethod
-    def _delete_context(context: 'IconScoreContext') -> None:
-        """Delete the context of the current thread
+    def _pop_context() -> 'IconScoreContext':
+        """Delete the last pushed context of the current thread
         """
-        if context is not _thread_local_data.context:
-            raise IconScoreException(
-                'Critical error in context management')
+        context_stack: List['IconScoreContext'] \
+            = getattr(_thread_local_data, 'context_stack', None)
 
-        del _thread_local_data.context
+        if context_stack is not None and len(context_stack) > 0:
+            return context_stack.pop()
+        else:
+            raise IconScoreException('Critical error in context management')
 
 
 class ContextGetter(object):
@@ -72,7 +87,7 @@ class ContextGetter(object):
 
     @property
     def _context(self) -> 'IconScoreContext':
-        return getattr(_thread_local_data, 'context', None)
+        return ContextContainer._get_context()
 
 
 @unique
