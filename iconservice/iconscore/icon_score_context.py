@@ -16,14 +16,13 @@
 
 import threading
 from enum import IntEnum, unique
-from typing import TYPE_CHECKING, Optional, Union, List
+from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
 from .internal_call import InternalCall
 from ..base.address import Address
 from ..base.block import Block
-from ..base.exception import IconScoreException, ExceptionCode, InvalidParamsException
-from ..base.exception import RevertException
+from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
@@ -78,7 +77,7 @@ class ContextContainer(object):
         if context_stack is not None and len(context_stack) > 0:
             return context_stack.pop()
         else:
-            raise IconScoreException('Critical error in context management')
+            raise ServerErrorException('Failed to pop a context out of context_stack')
 
 
 class ContextGetter(object):
