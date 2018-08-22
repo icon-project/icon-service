@@ -858,13 +858,12 @@ class IconServiceEngine(ContextContainer):
             timestamp = block.timestamp
             prev_block_hash = block.prev_hash
 
-        return {'lastBlock': {
+        return {
             'blockHeight': block_height,
             'blockHash': block_hash,
             'timestamp': timestamp,
             'prevBlockHash': prev_block_hash
         }
-    }
 
     @staticmethod
     def _create_invalid_block():

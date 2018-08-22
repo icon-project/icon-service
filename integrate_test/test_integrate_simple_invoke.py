@@ -48,7 +48,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
     def test_ise_get_status(self):
         request = {'filter': ['lastBlock']}
         ret = self._run_async(self._query(request, 'ise_getStatus'))
-        print(ret)
+        self.assertEqual(ret['lastBlock']['blockHeight'], hex(0))
 
     def test_invoke_success(self):
         value1 = 1 * self._icx_factor
