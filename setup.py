@@ -4,6 +4,8 @@ import os
 from setuptools import setup, find_packages
 
 requires = [
+    'earlgrey',
+    'icon-commons',
     'plyvel',
     'jsonpickle',
     'setproctitle'
@@ -16,7 +18,7 @@ if version is None:
         version = version_file.read().strip()
 
 setup_options = {
-    'name': 'iconservice',
+    'name': 'icon-service',
     'version': version,
     'description': 'iconservice for python',
     'long_description_content_type': 'text/markdown',
