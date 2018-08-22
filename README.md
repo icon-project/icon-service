@@ -40,9 +40,7 @@ $ virtualenv -p python3 venv
 $ source venv/bin/activate
 
 # Install the ICON SCORE dev tools
-(venv) $ pip install earlgrey-x.x.x-py3-none-any.whl
-(venv) $ pip install iconcommons-x.x.x-py3-none-any.whl
-(venv) $ pip install iconservice-x.x.x-py3-none-any.whl
+(venv) $ pip install icon-service
 ```
 
 ### Setup on Linux
@@ -62,9 +60,7 @@ $ virtualenv -p python3 venv
 $ source venv/bin/activate
 
 # Install the ICON SCORE dev tools
-(venv) $ pip install earlgrey-x.x.x-py3-none-any.whl
-(venv) $ pip install iconcommons-x.x.x-py3-none-any.whl
-(venv) $ pip install iconservice-x.x.x-py3-none-any.whl
+(venv) $ pip install icon-service
 ```
 
 ## Building source code
@@ -79,12 +75,7 @@ $ source venv/bin/activate    # Enter the virtual environment.
 iconservice-x.x.x-py3-none-any.whl
 ```
 
-##  Reference
-
-- [ICON JSON-RPC API v3](https://repo.theloop.co.kr/theloop/LoopChain/wikis/doc/loopchain-json-rpc-v3)
-- [earlgrey](https://github.com/icon-project/earlgrey)
-- [icon Commons](https://repo.theloop.co.kr/icon/commons)
-- [LoopChain](https://repo.theloop.co.kr/theloop/LoopChain)
+## Reference
 
 ## License
 
