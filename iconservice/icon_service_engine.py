@@ -171,7 +171,7 @@ class IconServiceEngine(ContextContainer):
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
 
-        if self._conf.get(ConfigKey.TBEARS_MODE, False):
+        if self._conf.get(ConfigKey.TBEARS_MODE, True):
             flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
         return flags
 
