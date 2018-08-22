@@ -40,7 +40,7 @@ $ virtualenv -p python3 venv
 $ source venv/bin/activate
 
 # Install the ICON SCORE dev tools
-(venv) $ pip install icon-service
+(venv) $ pip install iconservice
 ```
 
 ### Setup on Linux
@@ -60,7 +60,7 @@ $ virtualenv -p python3 venv
 $ source venv/bin/activate
 
 # Install the ICON SCORE dev tools
-(venv) $ pip install icon-service
+(venv) $ pip install iconservice
 ```
 
 ## Building source code
