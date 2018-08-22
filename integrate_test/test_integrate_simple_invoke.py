@@ -46,7 +46,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_ise_get_status(self):
-        request = {}
+        request = {'filter': ['lastBlock']}
         ret = self._run_async(self._query(request, 'ise_getStatus'))
         print(ret)
 
