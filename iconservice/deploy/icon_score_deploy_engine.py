@@ -25,7 +25,7 @@ from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
 
@@ -87,14 +87,22 @@ class IconScoreDeployEngine(object):
             otherwise score address to update
         :param data: calldata
         """
+        assert icon_score_address is not None and icon_score_address != ZERO_SCORE_ADDRESS
+
+        if icon_score_address is None or icon_score_address == ZERO_SCORE_ADDRESS:
+            raise ServerErrorException(f'Invalid SCORE address: {icon_score_address}')
+
         deploy_state: 'DeployType' = \
             DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
 
         try:
             context.validate_score_blacklist(icon_score_address)
+
             if self._is_flag_on(IconDeployFlag.ENABLE_DEPLOY_WHITELIST):
-                context.validate_deploy_whitelist(context.tx.origin, icon_score_address)
+                context.validate_deployer(context.tx.origin, icon_score_address)
+
             self.write_deploy_info_and_tx_params(context, deploy_state, icon_score_address, data)
+
             if self._check_audit_ignore(context, icon_score_address):
                 self.deploy(context, context.tx.hash)
         except BaseException as e:

@@ -197,33 +197,36 @@ class IconScoreContext(object):
 
         return self.icon_score_mapper.get_icon_score(address, current_tx_hash)
 
-    def validate_score_blacklist(self, to_score_addr: 'Address'):
-        if not to_score_addr.is_contract:
-            return
-        if to_score_addr == ZERO_SCORE_ADDRESS:
-            return
+    def validate_score_blacklist(self, score_address: 'Address'):
+        """Prevent SCOREs in blacklist
+
+        :param score_address:
+        """
+        if not score_address.is_contract:
+            raise ServerErrorException(
+                'Invalid address: {to_score_addr} MUST be a score address')
 
         # Gets the governance SCORE
         governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
-        if governance_score.isInScoreBlackList(to_score_addr):
-            raise ServerErrorException(f'The Score is in Black List (address: {to_score_addr})')
+        if governance_score.isInScoreBlackList(score_address):
+            raise ServerErrorException(f'SCORE in blacklist: {score_address}')
 
-    def validate_deploy_whitelist(self, deploy_owner: 'Address', score_addr: 'Address'):
-        if deploy_owner.is_contract:
-            return
-        if score_addr == ZERO_SCORE_ADDRESS:
-            return
+    def validate_deployer(self, deployer: 'Address', score_address: 'Address'):
+        """Check if a given deployer is allowed to deploy a SCORE
 
+        :param deployer: EOA address to deploy a SCORE
+        :param score_address: SCORE address to deploy
+        """
         # Gets the governance SCORE
         governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
-        if not governance_score.isDeployer(deploy_owner):
-            raise ServerErrorException(f'Invalid deployer: no permission (address: {deploy_owner})')
+        if not governance_score.isDeployer(deployer):
+            raise ServerErrorException(f'Invalid deployer: no permission (address: {deployer})')
 
 
 class IconScoreContextFactory(object):
