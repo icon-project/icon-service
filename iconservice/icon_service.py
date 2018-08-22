@@ -86,6 +86,8 @@ def main():
                         help="icon score amqp_target : [127.0.0.1]")
     parser.add_argument("-c", dest=ConfigKey.CONFIG, type=str, default=None,
                         help="icon score config")
+    parser.add_argument("-tbears", dest=ConfigKey.TBEARS_MODE, action='store_true',
+                        help="tbears mode")
     args = parser.parse_args()
 
     args_params = dict(vars(args))

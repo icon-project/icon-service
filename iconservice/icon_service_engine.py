@@ -154,15 +154,9 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
-        icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
-        if self._is_flag_on(IconServiceFlag.audit):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
-
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
-            flag=icon_score_deploy_engine_flags,
+            flag=self._make_deploy_engine_flag(),
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
@@ -170,12 +164,23 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
 
+    def _make_deploy_engine_flag(self) -> int:
+        flags = IconDeployFlag.NONE.value
+        if self._is_flag_on(IconServiceFlag.audit):
+            flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
+        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
+            flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
+
+        if self._conf(ConfigKey.TBEARS_MODE):
+            flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
+        return flags
+
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
         key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOYER_WHITELIST]
         flag = 0
         for key in key_table:
-            is_enable = flag_table[key]
+            is_enable = flag_table.get(key, False)
             if is_enable:
                 flag |= IconServiceFlag[key]
         return flag
