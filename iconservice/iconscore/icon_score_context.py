@@ -141,14 +141,6 @@ class IconScoreContext(object):
     def readonly(self):
         return self.type == IconScoreContextType.QUERY
 
-    def revert(self, message: Optional[str], code: Union[ExceptionCode, int]) -> None:
-        """Abort score execution and revert state changes
-
-        :param message: error log message
-        :param code:
-        """
-        raise RevertException(message, code)
-
     def clear(self) -> None:
         """Set instance member variables to None
         """
