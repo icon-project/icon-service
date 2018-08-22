@@ -276,6 +276,7 @@ class IconScoreBaseMeta(ABCMeta):
             payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
 
+        ScoreApiGenerator.check_on_deploy(custom_funcs)
         api_list = ScoreApiGenerator.generate(custom_funcs)
         setattr(cls, CONST_CLASS_API, api_list)
 
