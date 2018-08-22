@@ -95,13 +95,13 @@ class IconScoreMapper(object):
         :return: IconScoreBase object
         """
         score = None
-        icon_score_info = self._score_mapper.get(address)
+        icon_score_info = self.get(address)
 
         if icon_score_info is None:
             score = self.load_score(address, tx_hash)
             if score is None:
                 raise InvalidParamsException(f"score is None address: {address}")
-            self.put_icon_info(address, score, tx_hash)
+            self.put_score_info(address, score, tx_hash)
 
         if icon_score_info is not None:
             score = icon_score_info.icon_score
@@ -114,11 +114,11 @@ class IconScoreMapper(object):
         score = score_wrapper(score_db)
         return score
 
-    def put_icon_info(self,
-                      address: 'Address',
-                      icon_score: 'IconScoreBase',
-                      tx_hash: bytes):
-        self._score_mapper[address] = IconScoreInfo(icon_score, tx_hash)
+    def put_score_info(self,
+                       address: 'Address',
+                       icon_score: 'IconScoreBase',
+                       tx_hash: bytes):
+        self[address] = IconScoreInfo(icon_score, tx_hash)
 
     @staticmethod
     def _create_icon_score_database(address: 'Address') -> 'IconScoreDatabase':

@@ -188,10 +188,7 @@ class IconScoreContext(object):
         if current_tx_hash is None:
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
-        score = self.icon_score_mapper.get_icon_score(address, current_tx_hash)
-        if is_score_active and score is None:
-                raise InvalidParamsException(f'icon_score_info is None: {address}')
-        return score
+        return self.icon_score_mapper.get_icon_score(address, current_tx_hash)
 
 
 class IconScoreContextFactory(object):
