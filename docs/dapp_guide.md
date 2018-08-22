@@ -10,7 +10,7 @@ SCORE (Smart Contract on Reliable Environment) is a smart contract running on IC
 Token & Crowdsale
 --------------
 
-This document will explain how to write SCOREs with tbears framework.
+This document will explain how to write SCOREs with T-Bears framework.
 Let's start by creating a simple token contract. You can create an empty project using `init` command. Suppose your project name is 'sample_token' and the main class name is 'SampleToken'.
 
 ```
