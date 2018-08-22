@@ -27,7 +27,7 @@ from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from tests import create_address, create_tx_hash, rmtree
+from tests import create_address, create_tx_hash
 from tests.mock_db import create_mock_icon_score_db
 
 if TYPE_CHECKING:
@@ -51,12 +51,9 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def setUp(self):
         self._score_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        self._db_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-
-        rmtree(self._score_path)
-        rmtree(self._db_path)
-
         self._loader = IconScoreLoader(self._score_path)
+        self._addr_test_score01 = create_address(AddressPrefix.CONTRACT)
+        self._addr_test_score02 = create_address(AddressPrefix.CONTRACT)
 
         self.db = create_mock_icon_score_db()
         self._factory = IconScoreContextFactory(max_size=1)
@@ -66,8 +63,11 @@ class TestIconScoreLoader(unittest.TestCase):
         self._context_container._put_context(self._context)
 
     def tearDown(self):
-        rmtree(self._score_path)
-        rmtree(self._db_path)
+        remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+        IconScoreDeployer.remove_existing_score(remove_path)
+        remove_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+        IconScoreDeployer.remove_existing_score(remove_path)
+        pass
 
     @staticmethod
     def __ensure_dir(dir_path):
@@ -88,9 +88,9 @@ class TestIconScoreLoader(unittest.TestCase):
     def test_install(self):
         self.__ensure_dir(self._score_path)
 
-        score = self.load_proj('test_score01', create_address(AddressPrefix.CONTRACT))
+        score = self.load_proj('test_score01', self._addr_test_score01)
         print('test_score01', score.get_api())
-        score = self.load_proj('test_score02', create_address(AddressPrefix.CONTRACT))
+        score = self.load_proj('test_score02', self._addr_test_score02)
         print('test_score02', score.get_api())
 
         ins_score = score(self.db)
