@@ -88,21 +88,20 @@ class IconScoreMapper(object):
     def score_root_path(self) -> str:
         return self.icon_score_loader.score_root_path
 
-    def get_icon_score(self, address: 'Address', is_score_active: bool, tx_hash: bytes) -> Optional['IconScoreBase']:
+    def get_icon_score(self, address: 'Address', tx_hash: bytes) -> Optional['IconScoreBase']:
         """
         :param address:
-        :param is_score_active:
         :param tx_hash:
         :return: IconScoreBase object
         """
-        # TODO: If is_score_acitve is false, this func works as we expected?
         score = None
         icon_score_info = self._score_mapper.get(address)
 
-        if is_score_active and icon_score_info is None:
+        if icon_score_info is None:
             score = self.load_score(address, tx_hash)
             if score is None:
                 raise InvalidParamsException(f"score is None address: {address}")
+            self.put_icon_info(address, score, tx_hash)
 
         if icon_score_info is not None:
             score = icon_score_info.icon_score
