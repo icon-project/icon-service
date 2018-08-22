@@ -840,7 +840,7 @@ class IconServiceEngine(ContextContainer):
     def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
 
         response = dict()
-        if not bool(params) or params.get('lastBlock'):
+        if not bool(params) or params.get('filter'):
             last_block_status = self._make_last_block_status()
             response['lastBlock'] = last_block_status
         return response
@@ -858,14 +858,12 @@ class IconServiceEngine(ContextContainer):
             timestamp = block.timestamp
             prev_block_hash = block.prev_hash
 
-        return {'lastBlock': {
+        return {
             'blockHeight': block_height,
             'blockHash': block_hash,
             'timestamp': timestamp,
             'prevBlockHash': prev_block_hash
         }
-    }
-
 
     @staticmethod
     def _create_invalid_block():

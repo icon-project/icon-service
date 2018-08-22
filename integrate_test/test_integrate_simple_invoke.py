@@ -46,9 +46,42 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(tx_results[0]['status'], hex(1))
 
     def test_ise_get_status(self):
+        request = {'filter': ['lastBlock']}
+        ret = self._run_async(self._query(request, 'ise_getStatus'))
+        last_block = ret['lastBlock']
+
+        self.assertEqual(last_block['blockHeight'], hex(0))
+
+        self.assertTrue('blockHash' in last_block)
+        self.assertTrue(isinstance(last_block['blockHash'], str))
+        self.assertEqual(len(last_block['blockHash']), 64)
+
+        self.assertTrue('prevBlockHash' in last_block)
+        self.assertTrue(isinstance(last_block['prevBlockHash'], str))
+        self.assertEqual(len(last_block['prevBlockHash']), 64)
+
+        self.assertTrue('timestamp' in last_block)
+        self.assertTrue(isinstance(last_block['timestamp'], str))
+        self.assertTrue(last_block['timestamp'].startswith('0x'))
+
+    def test_ise_get_status2(self):
         request = {}
         ret = self._run_async(self._query(request, 'ise_getStatus'))
-        print(ret)
+        last_block = ret['lastBlock']
+
+        self.assertEqual(last_block['blockHeight'], hex(0))
+
+        self.assertTrue('blockHash' in last_block)
+        self.assertTrue(isinstance(last_block['blockHash'], str))
+        self.assertEqual(len(last_block['blockHash']), 64)
+
+        self.assertTrue('prevBlockHash' in last_block)
+        self.assertTrue(isinstance(last_block['prevBlockHash'], str))
+        self.assertEqual(len(last_block['prevBlockHash']), 64)
+
+        self.assertTrue('timestamp' in last_block)
+        self.assertTrue(isinstance(last_block['timestamp'], str))
+        self.assertTrue(last_block['timestamp'].startswith('0x'))
 
     def test_invoke_success(self):
         value1 = 1 * self._icx_factor
