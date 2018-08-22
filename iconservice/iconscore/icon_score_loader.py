@@ -17,7 +17,7 @@
 import json
 import importlib.machinery
 import importlib.util
-from sys import path as sys_path
+import sys
 from os import path
 
 
@@ -26,7 +26,8 @@ class IconScoreLoader(object):
 
     def __init__(self, score_root_path: str):
         self._score_root_path = score_root_path
-        sys_path.append(score_root_path)
+        if not score_root_path in sys.path:
+            sys.path.append(score_root_path)
 
     @property
     def score_root_path(self):
