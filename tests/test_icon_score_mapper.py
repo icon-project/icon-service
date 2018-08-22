@@ -48,8 +48,8 @@ class TestScore(IconScoreBase):
     def __init__(self):
         pass
 
-    def on_install(self, **kwargs):
+    def on_install(self):
         pass
 
-    def on_update(self, **kwargs):
+    def on_update(self):
         pass
