@@ -66,6 +66,7 @@ def main():
         -ak : key sharing peer group using queue name. use it if one more peers connect one MQ
         -ch : loopchain channel ex) loopchain_default
         -fg : foreground process
+        -tbears : tbears mode
     """)
 
     parser.add_argument('command', type=str,
@@ -86,6 +87,8 @@ def main():
                         help="icon score config")
     parser.add_argument("-fg", dest='foreground', action='store_true',
                         help="icon score service run foreground")
+    parser.add_argument("-tbears", dest=ConfigKey.TBEARS_MODE, action='store_true',
+                        help="tbears mode")
 
     args = parser.parse_args()
 
@@ -155,6 +158,8 @@ def _start_process(conf: 'IconConfig'):
             continue
         custom_argv.append(k)
         custom_argv.append(str(v))
+    if conf[ConfigKey.TBEARS_MODE]:
+        custom_argv.append('-tbears')
 
     is_foreground = conf.get('foreground', False)
     if is_foreground:

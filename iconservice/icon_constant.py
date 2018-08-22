@@ -53,6 +53,7 @@ class ConfigKey:
     AMQP_KEY = 'amqpKey'
     AMQP_TARGET = 'amqpTarget'
     CONFIG = 'config'
+    TBEARS_MODE = 'tbearsMode'
 
 
 class EnableThreadFlag(IntFlag):
@@ -76,6 +77,7 @@ class IconDeployFlag(IntFlag):
     # MUST approve install or update SCORE transactions.
     ENABLE_DEPLOY_AUDIT = 1
     ENABLE_DEPLOY_WHITELIST = 2
+    ENABLE_TBEARS_MODE = 4
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

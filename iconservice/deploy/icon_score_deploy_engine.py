@@ -134,8 +134,8 @@ class IconScoreDeployEngine(object):
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
-            # Install a score which is under development on tbears
-            pass
+            if not self._is_flag_on(IconDeployFlag.ENABLE_TBEARS_MODE):
+                raise InvalidParamsException(f"can't symlink deploy")
         elif content_type == 'application/zip':
             data['content'] = bytes.fromhex(data['content'][2:])
         else:
