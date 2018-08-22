@@ -154,15 +154,9 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
-        icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
-        if self._is_flag_on(IconServiceFlag.audit):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
-
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
-            flag=icon_score_deploy_engine_flags,
+            flag=self._make_deploy_engine_flag(),
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
@@ -170,12 +164,23 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
 
+    def _make_deploy_engine_flag(self) -> int:
+        flags = IconDeployFlag.NONE.value
+        if self._is_flag_on(IconServiceFlag.audit):
+            flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
+        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
+            flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
+
+        if self._conf.get(ConfigKey.TBEARS_MODE, False):
+            flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
+        return flags
+
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
         key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOYER_WHITELIST]
         flag = 0
         for key in key_table:
-            is_enable = flag_table[key]
+            is_enable = flag_table.get(key, False)
             if is_enable:
                 flag |= IconServiceFlag[key]
         return flag
@@ -834,16 +839,41 @@ class IconServiceEngine(ContextContainer):
 
     def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
 
-        block = self._precommit_data_manager.last_block
-        response = {
-            'lastBlock': {
-                'blockHeight': block.height,
-                'blockHash': block.hash,
-                'timestamp': block.timestamp,
-                'prevBlockHash': block.prev_hash
-            }
-        }
+        response = dict()
+        if not bool(params) or params.get('lastBlock'):
+            last_block_status = self._make_last_block_status()
+            response['lastBlock'] = last_block_status
         return response
+
+    def _make_last_block_status(self) -> Optional[dict]:
+        block = self._precommit_data_manager.last_block
+        if block is None:
+            block_height = -1
+            block_hash = b'\x00' * 32
+            timestamp = 0
+            prev_block_hash = block_hash
+        else:
+            block_height = block.height
+            block_hash = block.hash
+            timestamp = block.timestamp
+            prev_block_hash = block.prev_hash
+
+        return {'lastBlock': {
+            'blockHeight': block_height,
+            'blockHash': block_hash,
+            'timestamp': timestamp,
+            'prevBlockHash': prev_block_hash
+        }
+    }
+
+
+    @staticmethod
+    def _create_invalid_block():
+        block_height = -1
+        block_hash = b'\x00' * 32
+        timestamp = 0
+        prev_block_hash = block_hash
+        return Block(block_height, block_hash, timestamp, prev_block_hash)
 
     def commit(self, block: 'Block') -> None:
         """Write updated states in a context.block_batch to StateDB

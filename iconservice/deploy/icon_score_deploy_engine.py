@@ -134,8 +134,8 @@ class IconScoreDeployEngine(object):
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
-            # Install a score which is under development on tbears
-            pass
+            if not self._is_flag_on(IconDeployFlag.ENABLE_TBEARS_MODE):
+                raise InvalidParamsException(f"can't symlink deploy")
         elif content_type == 'application/zip':
             data['content'] = bytes.fromhex(data['content'][2:])
         else:
@@ -208,7 +208,7 @@ class IconScoreDeployEngine(object):
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
 
-        context.icon_score_mapper.put_icon_info(score_address, score, next_tx_hash)
+        context.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
 
     def _on_deploy(self,
                    context: 'IconScoreContext',
@@ -269,7 +269,7 @@ class IconScoreDeployEngine(object):
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
 
-        context.icon_score_mapper.put_icon_info(score_address, score, next_tx_hash)
+        context.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],

@@ -10,7 +10,7 @@ SCORE (Smart Contract on Reliable Environment) is a smart contract running on IC
 Token & Crowdsale
 --------------
 
-This document will explain how to write SCOREs with tbears framework.
+This document will explain how to write SCOREs with T-Bears framework.
 Let's start by creating a simple token contract. You can create an empty project using `init` command. Suppose your project name is 'sample_token' and the main class name is 'SampleToken'.
 
 ```
@@ -41,7 +41,7 @@ def balanceOf(self, _owner: Address) -> int:
 def transfer(self, _to: Address, _value: int, _data: bytes=None):
 ```
 
-Below is a complete token implementation. You can copy and paste it to fill your `sample_token.py`. Note that `CrowdSaleInterface` is declared in the beginning to interact with `SampleCrowdSale` contract defined later. 
+Below is a complete token implementation. You can copy and paste it to fill your `sample_token.py`. Note that `CrowdSaleInterface` is declared in the beginning to interact with `SampleCrowdSale` contract defined later. (In fact, `tbears samples` command will generate the two sample projects, `standard_token` and `standard_crowd_sale`, with the complete source code provided. However, we used `init` command here to illustrate how to create a new project.)
 
 When you deploy the contract, `on_install` method is called. You can pass the amount of initial tokens to the parameter `initialSupply`, and, in this example, 100% of initial tokens go to the contract owner. 
 
