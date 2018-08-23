@@ -25,6 +25,7 @@ from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
+from ..base.message import Message
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
@@ -264,8 +265,8 @@ class IconScoreDeployEngine(object):
                 data=content,
                 tx_hash=next_tx_hash)
 
-        backup_msg_sender = context.msg.sender
-        backup_tx_origin = context.tx.origin
+        backup_msg = context.msg
+        backup_tx = context.tx
 
         try:
             score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
@@ -280,9 +281,8 @@ class IconScoreDeployEngine(object):
             else:
                 on_deploy = None
 
-            deploy_owner = self.icon_deploy_storage.get_score_owner(context, score_address)
-            context.msg.sender = deploy_owner
-            context.tx.origin = deploy_owner
+            context.msg = Message(sender=score.owner)
+            context.tx = None
 
             self._initialize_score(on_deploy=on_deploy, params=params)
         except BaseException as e:
@@ -290,8 +290,8 @@ class IconScoreDeployEngine(object):
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
         finally:
-            context.msg.sender = backup_msg_sender
-            context.tx.origin = backup_tx_origin
+            context.msg = backup_msg
+            context.tx = backup_tx
 
         context.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
 

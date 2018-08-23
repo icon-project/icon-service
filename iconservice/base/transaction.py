@@ -34,9 +34,15 @@ class Transaction(object):
         """
         self._hash = tx_hash
         self._index = index
+        self._origin = origin
         self._timestamp = timestamp
         self._nonce = nonce
-        self.origin = origin
+
+    @property
+    def origin(self) -> 'Address':
+        """transaction creator
+        """
+        return self._origin
 
     @property
     def index(self) -> int:
