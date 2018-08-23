@@ -266,10 +266,7 @@ def sha3_256(data: bytes) -> bytes:
     if context.step_counter:
         context.step_counter.apply_step(StepType.API_CALL, 1)
 
-    if data:
-        return hashlib.sha3_256(data).digest()
-    else:
-        return hashlib.sha3_256().digest()
+    return hashlib.sha3_256(data).digest()
 
 
 class IconScoreObject(ABC):

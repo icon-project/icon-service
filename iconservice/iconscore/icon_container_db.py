@@ -196,6 +196,12 @@ class DictDB(object):
     def __delitem__(self, key):
         self.__remove(key)
 
+    def __contains__(self, key: K):
+        # Plyvel doesn't allow setting None value in the DB.
+        # so there is no case of returning None value if the key exists.
+        value = self._db.get(ContainerUtil.encode_key(key))
+        return value is not None
+
     def __remove(self, key: K) -> None:
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
