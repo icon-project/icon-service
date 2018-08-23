@@ -23,17 +23,16 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address
 from iconservice.base.block import Block
+from iconservice.base.exception import RevertException, ExceptionCode, IconScoreException
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from iconservice.iconscore.icon_score_base import \
-    IconScoreBase, InterfaceScore, external, interface, RevertException, \
-    IconScoreException, ExceptionCode
-from iconservice.iconscore.icon_score_context import \
-    ContextContainer, IconScoreContext, IconScoreContextType
+from iconservice.iconscore.icon_score_base import IconScoreBase, external, interface
+from iconservice.iconscore.icon_score_base2 import InterfaceScore
+from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import Trace, TraceType

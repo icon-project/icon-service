@@ -51,7 +51,7 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def setUp(self):
         self._score_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        self._loader = IconScoreLoader(self._score_path)
+        self._loader = IconScoreLoader(self._score_path, 0)
         self._addr_test_score01 = create_address(AddressPrefix.CONTRACT)
         self._addr_test_score02 = create_address(AddressPrefix.CONTRACT)
 

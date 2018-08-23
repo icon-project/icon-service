@@ -77,7 +77,7 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._deploy_storage = IconScoreDeployStorage(self._icx_db)
         self._deploy_storage.is_score_active = Mock(return_value=True)
 
-        self._icon_score_loader = IconScoreLoader(score_path)
+        self._icon_score_loader = IconScoreLoader(score_path, 0)
         self._icon_score_manager = IconScoreManager(self._score_deploy_engine)
 
         IconScoreMapper.icon_score_loader = self._icon_score_loader

@@ -15,28 +15,31 @@
 # limitations under the License.
 
 import warnings
+from abc import abstractmethod, ABC, ABCMeta
 from inspect import isfunction, getmembers, signature, Parameter
-from abc import abstractmethod
-from functools import partial
 
-from iconservice.utils import int_to_bytes, byte_length_of_int
-from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
+from functools import partial, wraps
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
+
+from .crypto import Crypto
 from .icon_score_api_generator import ScoreApiGenerator
-from .icon_score_base2 import *
-from .icon_score_step import StepType
-from .icon_score_context import IconScoreContextType, IconScoreFuncType, \
-    ContextContainer
+from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
+    FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
+    CONST_CLASS_PAYABLES, CONST_CLASS_API, BaseType, T
 from .icon_score_context import ContextGetter
+from .icon_score_context import IconScoreContextType, IconScoreFuncType
+from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
+from .icon_score_step import StepType
 from .icx import Icx
-from ..base.exception import *
+from ..base.address import Address
+from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
+    EventLogException, ExternalException, RevertException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import DATA_BYTE_ORDER
-
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple
+from ..utils import int_to_bytes, byte_length_of_int
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
-    from ..base.address import Address
     from ..base.transaction import Transaction
     from ..base.message import Message
     from ..base.block import Block
@@ -318,6 +321,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__address = db.address
         self.__owner = self.get_owner(self.__address)
         self.__icx = None
+        self.__crypto = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException('this score has no external functions', '__init__', str(type(self)))
@@ -572,6 +576,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             self.__icx._context = self._context
 
         return self.__icx
+
+    @property
+    def crypto(self) -> 'Crypto':
+        if self.__crypto is None:
+            self.__crypto = Crypto()
+        return self.__crypto
 
     def now(self):
         return self.block.timestamp

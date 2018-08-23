@@ -35,7 +35,7 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .deploy.icon_score_manager import IconScoreManager
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
-    IconServiceFlag, IconDeployFlag, ConfigKey
+    IconServiceFlag, IconDeployFlag, ConfigKey, IconScoreLoaderFlag
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -122,7 +122,11 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._context_factory = IconScoreContextFactory(max_size=5)
-        self._icon_score_loader = IconScoreLoader(score_root_path)
+
+        icon_score_loader_flags = IconScoreLoaderFlag.NONE
+        if self._is_flag_on(IconServiceFlag.scorePackageValidator):
+            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
+        self._icon_score_loader = IconScoreLoader(score_root_path, flag=icon_score_loader_flags)
 
         self._icx_engine = IcxEngine()
         self._icon_score_engine = IconScoreEngine()
@@ -177,7 +181,10 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
-        key_table = [ConfigKey.SERVICE_FEE, ConfigKey.SERVICE_AUDIT, ConfigKey.SERVICE_DEPLOYER_WHITELIST]
+        key_table = [ConfigKey.SERVICE_FEE,
+                     ConfigKey.SERVICE_AUDIT,
+                     ConfigKey.SERVICE_DEPLOYER_WHITELIST,
+                     ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR]
         flag = 0
         for key in key_table:
             is_enable = flag_table.get(key, False)

@@ -52,6 +52,7 @@ VALID_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
 
+
 class Governance(IconScoreBase):
 
     _SCORE_STATUS = 'score_status'

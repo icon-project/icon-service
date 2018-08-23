@@ -79,7 +79,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
 
         self._engine = IconScoreDeployEngine()
-        self._icon_score_loader = IconScoreLoader(score_path)
+        self._icon_score_loader = IconScoreLoader(score_path, 0)
         IconScoreMapper.icon_score_loader = self._icon_score_loader
         IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()

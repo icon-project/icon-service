@@ -116,7 +116,10 @@ class TestIconServiceEngine(unittest.TestCase):
         rmtree(self._state_db_root_path)
 
     def test_make_flag(self):
-        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False, ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}
+        table = {ConfigKey.SERVICE_FEE: True,
+                 ConfigKey.SERVICE_AUDIT: False,
+                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
+                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         flag = self._engine._make_service_flag(table)
         self.assertEqual(flag, IconServiceFlag.fee)
 
@@ -392,7 +395,10 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_invoke_v3_with_fee(self):
 
-        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False, ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}
+        table = {ConfigKey.SERVICE_FEE: True,
+                 ConfigKey.SERVICE_AUDIT: False,
+                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
+                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
@@ -463,7 +469,10 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_score_invoke_with_revert(self):
 
-        table = {ConfigKey.SERVICE_FEE: True, ConfigKey.SERVICE_AUDIT: False, ConfigKey.SERVICE_DEPLOYER_WHITELIST: False}
+        table = {ConfigKey.SERVICE_FEE: True,
+                 ConfigKey.SERVICE_AUDIT: False,
+                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
+                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1

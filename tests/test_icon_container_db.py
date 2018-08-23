@@ -16,7 +16,8 @@
 
 import unittest
 
-from iconservice import Address, IconScoreContextType
+from iconservice import Address
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
