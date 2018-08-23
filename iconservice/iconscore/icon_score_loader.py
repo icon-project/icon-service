@@ -70,8 +70,8 @@ class IconScoreLoader(object):
         return path.join(address_path, converted_tx_hash)
 
     # TODO input only path
-    def load_score(self, address: 'Address', tx_hash: bytes) -> callable:
-        score_path = self._get_score_path_by_tx_hash(self._score_root_path, address.to_bytes().hex(), tx_hash)
+    def load_score(self, address_body: str, tx_hash: bytes) -> callable:
+        score_path = self._get_score_path_by_tx_hash(self._score_root_path, address_body, tx_hash)
         score_package_info = self._load_json(score_path)
         score = self._load_user_score_module(score_path, score_package_info)
 

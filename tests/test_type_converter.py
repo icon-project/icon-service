@@ -16,7 +16,7 @@
 
 import unittest
 
-from iconservice import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException
 from iconservice.base.address import AddressPrefix
 from iconservice.base.type_converter import TypeConverter, ParamType
 from tests import create_block_hash, create_address
