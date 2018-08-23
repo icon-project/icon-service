@@ -29,7 +29,7 @@ class IconScoreLoader(object):
     def __init__(self, score_root_path: str, flag: int):
         self._score_root_path = score_root_path
         self._flag = flag
-        if not score_root_path in sys.path:
+        if score_root_path not in sys.path:
             sys.path.append(score_root_path)
 
     def _is_flag_on(self, flag: 'IconScoreLoaderFlag') -> bool:
@@ -58,8 +58,9 @@ class IconScoreLoader(object):
             ScorePackageValidator().validator(score_path, parent_import)
 
         spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", parent_import)
-        module = spec.loader.load_module()
-        return getattr(module, score_package_info[__MAIN_SCORE])
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return getattr(mod, score_package_info[__MAIN_SCORE])
 
     # TODO outside
     @staticmethod
