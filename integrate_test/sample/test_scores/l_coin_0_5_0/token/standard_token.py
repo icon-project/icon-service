@@ -8,7 +8,7 @@ class StandardToken(BasicToken):
     """
     __DBKEY_ALLOWED = 'allowed'
 
-    @eventlog(indexed=2)
+    @eventlog(indexed=3)
     def Approval(self, owner: Address, spender: Address, value: int):
         pass
 
@@ -36,7 +36,7 @@ class StandardToken(BasicToken):
         return self._allowed[owner][spender]
 
     @external
-    def increase_approval(self, spender: Address, value: int) -> bool:
+    def increaseApproval(self, spender: Address, value: int) -> bool:
         """
         Increase the amount of tokens that an owner allowed to a spender
 
@@ -52,7 +52,7 @@ class StandardToken(BasicToken):
         return True
 
     @external
-    def decrease_approval(self, spender: Address, value: int) -> bool:
+    def decreaseApproval(self, spender: Address, value: int) -> bool:
         """
         Decrease the amount of tokens that an owner allowed to a spender.
 
@@ -69,27 +69,27 @@ class StandardToken(BasicToken):
         return True
 
     @external
-    def transfer_from(self, from_addr: Address, to_addr: Address, value: int) -> bool:
+    def transferFrom(self, fromAddr: Address, toAddr: Address, value: int) -> bool:
         """
         Transfer tokens from one address to another
 
-        :param from_addr: address The address which you want to send tokens from
-        :param to_addr: address The address whitch you want to transfer to
+        :param fromAddr: address The address which you want to send tokens from
+        :param toAddr: address The address whitch you want to transfer to
         :param value: int the amount of tokens to be transferred
         :return:
         """
-        if self.balanceOf(from_addr) < value:
+        if self.balanceOf(fromAddr) < value:
             self.revert(f"User balance is not enough.")
 
-        if self._allowed[from_addr][self.msg.sender] < value:
+        if self._allowed[fromAddr][self.msg.sender] < value:
             self.revert("User doesn't have allowed value.")
 
-        self._balances[from_addr] = self._balances[from_addr] - value
-        self._balances[to_addr] = self._balances[to_addr] + value
-        self._allowed[from_addr][self.msg.sender] = self._allowed[from_addr][self.msg.sender] - value
+        self._balances[fromAddr] = self._balances[fromAddr] - value
+        self._balances[toAddr] = self._balances[toAddr] + value
+        self._allowed[fromAddr][self.msg.sender] = self._allowed[fromAddr][self.msg.sender] - value
 
-        self.Transfer(from_addr, to_addr, value, 'None')
-        Logger.debug(f"transfer_from [after] from : {self.balanceOf(from_addr)}, to {self.balanceOf(to_addr)}, ",
-                     f"allowed : {self.allowance(from_addr, self.msg.sender)}")
+        self.Transfer(fromAddr, toAddr, value, 'None')
+        Logger.debug(f"transfer_from [after] from : {self.balanceOf(fromAddr)}, to {self.balanceOf(toAddr)}, ",
+                     f"allowed : {self.allowance(fromAddr, self.msg.sender)}")
 
         return True

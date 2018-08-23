@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter, isclass
+from inspect import signature, Signature, Parameter, isclass, BoundArguments
 from typing import Any, Optional
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
@@ -58,7 +58,12 @@ class ScoreApiGenerator:
 
     @staticmethod
     def __check_on_deploy_function(sig_info: 'Signature') -> None:
-        ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
+        params = dict(sig_info.parameters)
+        for param_name, param in params.items():
+            if param_name == 'self' or param_name == 'cls':
+                continue
+            if param.kind != Parameter.VAR_KEYWORD:
+                ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:

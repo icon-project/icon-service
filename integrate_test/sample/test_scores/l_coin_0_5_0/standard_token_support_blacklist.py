@@ -4,6 +4,7 @@ from .token.standard_token import StandardToken
 from .ownership.blacklist import Blacklist
 from .ownership.role import Role
 
+
 def check_blacklist(func):
     """
     Check if sender is blacklisted.
@@ -20,17 +21,16 @@ def check_blacklist(func):
 
 def only_operator(func):
     if not isfunction(func):
-        raise IconScoreException(f"{func} isn't function.")
+        revert(f"{func} isn't function.")
 
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
         if isinstance(calling_obj, StandardTokenSupportBlacklist):
             sender = calling_obj.tx.origin if calling_obj.tx else calling_obj.msg.sender
-            if calling_obj.is_ownership_user(sender):
+            if calling_obj.isOwnershipUser(sender):
                 return func(calling_obj, *args, **kwargs)
-
-            raise IconScoreException(f"{sender} don't have authority'")
-        raise IconScoreException(f"invalid operation")
+            revert(f"{sender} don't have authority'")
+        revert(f"invalid operation")
 
     return __wrapper
 
@@ -63,31 +63,31 @@ class StandardTokenSupportBlacklist(StandardToken):
         self._blacklist = Blacklist(db)
         self.__ownership = Role(db, self.__ROLE_OWNERSHIP)
 
-    def on_install(self, **kwargs):
+    def on_install(self, **kwargs) -> None:
         super().on_install(**kwargs)
-        self.add_ownership_user(self.msg.sender)
+        self.addOwnershipUser(self.msg.sender)
         Logger.debug(f"StandardTokenSupportBlacklist install ownership operator is [{self.msg.sender}]")
 
     @only_owner
     @external
-    def add_ownership_user(self, user: Address, message: str = None):
+    def addOwnershipUser(self, user: Address, message: str = None):
         self.__ownership.add(user)
         self.AddOwnership(user)
 
     @only_owner
     @external
-    def remove_ownership_user(self, user: Address, message: str = None):
+    def removeOwnershipIUser(self, user: Address, message: str = None):
         self.__ownership.remove(user)
         self.RemoveOwnership(user)
 
     @only_owner
     @external(readonly=True)
-    def is_ownership_user(self, user: Address) -> bool:
+    def isOwnershipUser(self, user: Address) -> bool:
         return self.__ownership.has(user)
 
     @only_operator
     @external
-    def add_blacklist(self, user: Address, message: str = None):
+    def addBlacklist(self, user: Address, message: str = None):
         if user.is_contract:
             self.revert("user address is invalid")
 
@@ -96,7 +96,7 @@ class StandardTokenSupportBlacklist(StandardToken):
 
     @only_operator
     @external
-    def remove_blacklist(self, user: Address, message: str = None):
+    def removeBlacklist(self, user: Address, message: str = None):
         if user.is_contract:
             self.revert("user address is invalid")
 
@@ -105,13 +105,13 @@ class StandardTokenSupportBlacklist(StandardToken):
 
     @only_operator
     @external(readonly=True)
-    def is_blacklisted(self, user: Address) -> bool:
+    def isBlacklisted(self, user: Address) -> bool:
         return self._blacklist.is_blacklisted(user)
 
     @check_blacklist
     @external
-    def transfer(self, to_addr: Address, value: int, message: str = None) -> bool:
-        return super().transfer(to_addr, value, message)
+    def transfer(self, toAddr: Address, value: int, message: str = None) -> bool:
+        return super().transfer(toAddr, value, message)
 
     @check_blacklist
     @external
@@ -120,15 +120,15 @@ class StandardTokenSupportBlacklist(StandardToken):
 
     @check_blacklist
     @external
-    def increase_approval(self, spender: Address, value: int) -> bool:
-        return super().increase_approval(spender, value)
+    def increaseApproval(self, spender: Address, value: int) -> bool:
+        return super().increaseApproval(spender, value)
 
     @check_blacklist
     @external
-    def decrease_approval(self, spender: Address, value: int) -> bool:
-        return super().decrease_approval(spender, value)
+    def decreaseApproval(self, spender: Address, value: int) -> bool:
+        return super().decreaseApproval(spender, value)
 
     @check_blacklist
     @external
-    def transfer_from(self, from_addr: Address, to_addr: Address, value: int) -> bool:
-        return super().transfer_from(from_addr, to_addr, value)
+    def transferFrom(self, fromAddr: Address, toAddr: Address, value: int) -> bool:
+        return super().transferFrom(fromAddr, toAddr, value)
