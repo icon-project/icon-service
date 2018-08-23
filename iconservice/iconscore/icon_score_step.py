@@ -43,6 +43,7 @@ class StepType(AutoValueEnum):
     DELETE = auto()
     INPUT = auto()
     EVENT_LOG = auto()
+    API_CALL = auto()
 
 
 class IconScoreStepCounterFactory(object):

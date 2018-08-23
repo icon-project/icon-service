@@ -43,11 +43,12 @@ STEP_TYPE_REPLACE = 'replace'
 STEP_TYPE_DELETE = 'delete'
 STEP_TYPE_INPUT = 'input'
 STEP_TYPE_EVENT_LOG = 'eventLog'
+STEP_TYPE_API_CALL = 'apiCall'
 VALID_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
                         STEP_TYPE_CONTRACT_CALL, STEP_TYPE_CONTRACT_CREATE, STEP_TYPE_CONTRACT_UPDATE,
                         STEP_TYPE_CONTRACT_DESTRUCT, STEP_TYPE_CONTRACT_SET,
                         STEP_TYPE_GET, STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, STEP_TYPE_INPUT,
-                        STEP_TYPE_EVENT_LOG]
+                        STEP_TYPE_EVENT_LOG, STEP_TYPE_API_CALL]
 
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
@@ -382,7 +383,8 @@ class Governance(IconScoreBase):
             STEP_TYPE_REPLACE: 5,
             STEP_TYPE_DELETE: -15,
             STEP_TYPE_INPUT: 20,
-            STEP_TYPE_EVENT_LOG: 10
+            STEP_TYPE_EVENT_LOG: 10,
+            STEP_TYPE_API_CALL: 0
         }
         for key in VALID_STEP_COST_KEYS:
             value: int = initial_costs[key]
@@ -411,6 +413,4 @@ class Governance(IconScoreBase):
 
     @external(readonly=True)
     def getMaxStepLimit(self, context_type: str) -> int:
-        max_step_limit = self._max_step_limits[context_type]
-        # FIXME
-        return max_step_limit if max_step_limit is not None else 0
+        return self._max_step_limits[context_type]
