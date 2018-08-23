@@ -17,161 +17,145 @@
 """IconScoreEngine testcase
 """
 
-import os
-import unittest
-from typing import TYPE_CHECKING
-from unittest.mock import Mock
 
+import unittest
+import os
+
+from tests import rmtree, create_address
 from iconservice.base.address import AddressPrefix
-from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
+from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine, IconDeployFlag
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory, \
-    ContextContainer
-from iconservice.iconscore.icon_score_context import IconScoreContextType, \
-    IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContext
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_step import IconScoreStepCounter
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
-from iconservice.icx.icx_engine import IcxEngine
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.utils.bloom import BloomFilter
-from tests import create_address, create_tx_hash, create_block_hash, rmtree, TEST_ROOT_PATH
-
-if TYPE_CHECKING:
-    from iconservice.base.address import Address
+from tests import create_tx_hash, create_block_hash
 
 
-class TestContextContainer(ContextContainer):
-    pass
+TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
-# have to score.zip unpack and proj_name = test_score
 class TestIconScoreEngine(unittest.TestCase):
-    _ROOT_SCORE_PATH = '.score'
-    _TEST_DB_PATH = '.statedb'
+    _ROOT_SCORE_PATH = os.path.join(TEST_ROOT_PATH, 'score')
+    _TEST_DB_PATH = 'tests/test_db/'
 
     def setUp(self):
-        self._tx_index = 0
-
         rmtree(self._ROOT_SCORE_PATH)
         rmtree(self._TEST_DB_PATH)
 
-        ContextDatabaseFactory.open(self._TEST_DB_PATH, ContextDatabaseFactory.Mode.SINGLE_DB)
-        self.__ensure_dir(self._TEST_DB_PATH)
+        archive_path = 'tests/sample/valid.zip'
+        archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
+        zip_bytes = self.read_zipfile_as_byte(archive_path)
+        install_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+        self.__unpack_zip_file(install_path, zip_bytes)
 
-        icx_db = ContextDatabaseFactory.create_by_name('icon_dex')
+        db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+        ContextDatabaseFactory.open(
+            db_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+
+        self.__ensure_dir(db_path)
+
+        icx_db = ContextDatabaseFactory.create_by_name('icx_db')
         self.icx_storage = IcxStorage(icx_db)
-        deploy_storage = IconScoreDeployStorage(icx_db)
-        deploy_storage.is_score_active = Mock(return_value=True)
-        self.score_deploy_engine = IconScoreDeployEngine()
-        icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
-        self._icon_score_manager = IconScoreManager(self.score_deploy_engine)
+        deploy_storage = IconScoreDeployStorage(self.icx_storage.db)
+        deploy_engine = IconScoreDeployEngine()
+        deploy_engine.open(self._ROOT_SCORE_PATH, 0, deploy_storage)
+        IconScoreContext.icon_score_manager = IconScoreManager(deploy_engine)
 
-        IconScoreMapper.icon_score_loader = icon_score_loader
+        self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH, 0)
+
+        IconScoreMapper.icon_score_loader = self.icon_score_loader
         IconScoreMapper.deploy_storage = deploy_storage
-        self._icon_score_mapper = IconScoreMapper()
-
-        self._context_container = TestContextContainer()
-
-        self.score_deploy_engine.open(
-            score_root_path=self._ROOT_SCORE_PATH,
-            flag=IconDeployFlag.ENABLE_TBEARS_MODE.value,
-            icon_deploy_storage=deploy_storage)
+        self.icon_score_mapper = IconScoreMapper()
 
         self.engine = IconScoreEngine()
         self.engine.open(
-            self.icx_storage, self._icon_score_mapper)
+            self.icx_storage,
+            self.icon_score_mapper)
 
-        self._addr1 = create_address(AddressPrefix.EOA)
-        self._addr2 = create_address(AddressPrefix.EOA)
-        self._addr3 = create_address(AddressPrefix.EOA)
-
-        self._addr_token_score = create_address(AddressPrefix.CONTRACT)
-        self._addr_crowd_sale_score = create_address(AddressPrefix.CONTRACT)
+        self._from = create_address(AddressPrefix.EOA)
+        self._icon_score_address = create_address(AddressPrefix.CONTRACT)
 
         self.factory = IconScoreContextFactory(max_size=1)
-        IconScoreContext.icon_score_manager = self._icon_score_manager
-        IconScoreContext.icon_score_mapper = self._icon_score_mapper
-        self.make_context()
-
-        self._total_supply = 1000 * 10 ** 18
-        self._one_icx = 1 * 10 ** 18
-        self._one_icx_to_token = 1
-
-    def make_context(self):
-        self._tx_index += 1
+        IconScoreContext.icon_score_mapper = self.icon_score_mapper
         self._context = self.factory.create(IconScoreContextType.DIRECT)
-        self._context.msg = Message(self._addr1, 0)
-
+        self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash()
-        self._context.tx = Transaction(tx_hash=tx_hash, origin=self._addr1)
-        self._context.block = Block(1, create_block_hash(), 0, None)
-        self._context.icon_score_mapper = self._icon_score_mapper
-        self._context.icx = IcxEngine()
-        self._context.new_icon_score_mapper = IconScoreMapper()
-        self.__step_counter_factory = IconScoreStepCounterFactory()
-        self._step_counter: IconScoreStepCounter =\
-            self.__step_counter_factory.create(100)
-        self._context.step_counter = self._step_counter
-        self._context.icx.open(self.icx_storage)
-        self._context.event_logs = Mock(spec=list)
-        self._context.logs_bloom = Mock(spec=BloomFilter)
-        self._context.traces = Mock(spec=list)
-        self._context_container._push_context(self._context)
-        self._context.validate_score_blacklist = Mock()
+        self._context.tx = Transaction(
+            tx_hash, origin=create_address(AddressPrefix.EOA))
+        block_hash = create_block_hash()
+        self._context.block = Block(1, block_hash, 0, None)
 
     def tearDown(self):
         self.engine = None
-        self._context.type = IconScoreContextType.DIRECT
         self.icx_storage.close(self._context)
         self.factory.destroy(self._context)
         ContextDatabaseFactory.close()
 
-        rmtree(self._ROOT_SCORE_PATH)
-        rmtree(self._TEST_DB_PATH)
+        remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+        IconScoreDeployer.remove_existing_score(remove_path)
+        remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
+        IconScoreDeployer.remove_existing_score(remove_path)
 
     @staticmethod
-    def __ensure_dir(dir_path):
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
+    def read_zipfile_as_byte(archive_path: str) -> bytes:
+        with open(archive_path, 'rb') as f:
+            byte_data = f.read()
+            return byte_data
 
-    def __request_install(self, project_name: str, score_address: 'Address'):
-        self.make_context()
-        self.score_deploy_engine.icon_deploy_storage.get_next_tx_hash = Mock(return_value=self._context.tx.hash)
-        self.__ensure_dir(self._ROOT_SCORE_PATH)
-        path = os.path.join(TEST_ROOT_PATH, f'sample/{project_name}')
-        install_data = {'contentType': 'application/tbears', 'content': path}
+    @staticmethod
+    def __unpack_zip_file(install_path: str, data: bytes):
+        file_info_generator = IconScoreDeployer.extract_files_gen(data)
+        for name, file_info, parent_directory in file_info_generator:
+            if not os.path.exists(os.path.join(install_path, parent_directory)):
+                os.makedirs(os.path.join(install_path, parent_directory))
+            with file_info as file_info_context,\
+                    open(os.path.join(install_path, name), 'wb') as dest:
+                contents = file_info_context.read()
+                dest.write(contents)
+        return True
 
-        self.score_deploy_engine.invoke(
-            context=self._context,
-            to=ZERO_SCORE_ADDRESS,
-            icon_score_address=score_address,
-            data=install_data)
+    @staticmethod
+    def __ensure_dir(file_path):
+        directory = os.path.dirname(file_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
-    def test_call_get_api(self):
-        self.__request_install('sample_token', self._addr_token_score)
-        self._context.type = IconScoreContextType.QUERY
+    # FIXME
+    # def test_install(self):
+    #     proj_name = 'test_score'
+    #     path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
+    #     install_data = {'contentType': 'application/tbears', 'content': path}
+    #     self._engine.invoke(
+    #         self._context, self._icon_score_address, 'install', install_data)
+    #     self._engine.commit(self._context)
 
-        api = self.engine.get_score_api(
-            self._context, self._addr_token_score)
-        print(api)
+    def test_call_method(self):
+        calldata = {'method': 'total_supply', 'params': {}}
 
-    def test_call_balance_of1(self):
-        self.__request_install('sample_token', self._addr_token_score)
-        self._context.type = IconScoreContextType.QUERY
-        call_data = {
-            'method': 'balance_of',
-            'params': {'addr_from': str(self._addr1)}
-        }
+        # proj_name = 'test_score'
+        # path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
+        # install_data = {'contentType': 'application/tbears', 'content': path}
+        # self._engine.invoke(
+        #     self._context, self._icon_score_address, 'install', install_data)
+        # self._engine.commit(self._context)
+        context = self.factory.create(IconScoreContextType.QUERY)
 
-        value = self.engine.query(
-            self._context, self._addr_token_score, 'call', call_data)
-        self.assertEqual(self._total_supply, value)
+        with self.assertRaises(InvalidParamsException) as cm:
+            self.engine.query(
+                context, self._icon_score_address, 'call', calldata)
+
+        e = cm.exception
+        self.assertEqual(ExceptionCode.INVALID_PARAMS, e.code)
+        print(e)
+
+        self.factory.destroy(context)

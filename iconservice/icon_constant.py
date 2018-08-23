@@ -47,6 +47,7 @@ class ConfigKey:
     SERVICE_FEE = 'fee'
     SERVICE_AUDIT = 'audit'
     SERVICE_DEPLOYER_WHITELIST = 'deployerWhiteList'
+    SERVICE_SCORE_PACKAGE_VALIDATOR = 'scorePackageValidator'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
     CHANNEL = 'channel'
@@ -68,6 +69,7 @@ class IconServiceFlag(IntFlag):
     fee = 1
     audit = 2
     deployerWhiteList = 4
+    scorePackageValidator = 8
 
 
 class IconDeployFlag(IntFlag):
@@ -78,6 +80,11 @@ class IconDeployFlag(IntFlag):
     ENABLE_DEPLOY_AUDIT = 1
     ENABLE_DEPLOY_WHITELIST = 2
     ENABLE_TBEARS_MODE = 4
+
+
+class IconScoreLoaderFlag(IntFlag):
+    NONE = 0
+    ENABLE_SCORE_PACKAGE_VALIDATOR = 1
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

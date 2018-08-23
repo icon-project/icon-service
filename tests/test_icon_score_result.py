@@ -18,13 +18,14 @@ import unittest
 from typing import Optional
 from unittest.mock import Mock
 
-from iconservice import EventLog
+
+from iconservice.iconscore.icon_score_base import EventLog
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
-from iconservice.base.type_converter import TypeConverter
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
 from iconservice.base.transaction import Transaction
+from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine

@@ -18,12 +18,12 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice import InvalidParamsException, IconScoreBase
 from iconservice.base.address import AddressPrefix
-from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.iconscore.icon_score_base import IconScoreBase
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from tests import create_address, create_tx_hash
 
 

@@ -25,8 +25,9 @@ from iconservice.icon_inner_service import IconScoreInnerTask
 from integrate_test.test_integrate_base import TestIntegrateBase
 from tests import raise_exception_start_tag, raise_exception_end_tag
 
+from hashlib import sha3_256
 
-class TestIntegrateGetScoreApi(TestIntegrateBase):
+class TestIntegrateScores(TestIntegrateBase):
     def setUp(self):
         super().setUp()
         self.sample_root = "test_scores"
@@ -40,6 +41,50 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
         self.assertEqual(tx_results[0]['status'], hex(1))
+
+    def test_l_coin(self):
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "l_coin_3", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1]))
+
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(True))
+        score_addr1 = tx_result1['scoreAddress']
+
+        response = self._run_async(self._write_precommit_state(precommit_req1))
+        self.assertEqual(response, hex(0))
+
+    def test_using_crypto(self):
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_using_crypto", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1]))
+
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(True))
+        score_addr1 = tx_result1['scoreAddress']
+
+        response = self._run_async(self._write_precommit_state(precommit_req1))
+        self.assertEqual(response, hex(0))
+
+        value = 'a'
+
+        query_request = {
+            "version": hex(self._version),
+            "from": str(self._admin_addr),
+            "to": score_addr1,
+            "dataType": "call",
+            "data": {
+                "method": "get_value",
+                "params": {"value": value}
+            }
+        }
+        response = self._run_async(self._query(query_request))
+        self.assertEqual(response, sha3_256(value.encode()).hexdigest())
+
 
     def test_db_returns(self):
         validate_tx_response1, tx1 = self._run_async(
