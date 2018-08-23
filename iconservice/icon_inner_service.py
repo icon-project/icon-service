@@ -56,7 +56,7 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
-    def _log_exception(self, e: BaseException, tag: str=ICON_INNER_LOG_TAG) -> None:
+    def _log_exception(self, e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
         Logger.error(e, tag)
 

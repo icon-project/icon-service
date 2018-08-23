@@ -16,10 +16,12 @@
 
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
-from functools import partial, wraps
 from inspect import isfunction, getmembers, signature, Parameter
+
+from functools import partial, wraps
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 
+from .crypto import Crypto
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
     FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
@@ -29,10 +31,9 @@ from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_step import StepType
 from .icx import Icx
-from .crypto import Crypto
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
-    EventLogException, ExternalException
+    EventLogException, ExternalException, RevertException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import DATA_BYTE_ORDER
 from ..utils import int_to_bytes, byte_length_of_int
@@ -227,6 +228,18 @@ def payable(func):
     return __wrapper
 
 
+def revert(message: Optional[str] = None,
+           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+    """
+    Reverts the transaction and breaks.
+    All the changes of state DB will be reverted.
+
+    :param message: revert message
+    :param code: code
+    """
+    raise RevertException(message, code)
+
+
 class IconScoreObject(ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
@@ -279,6 +292,7 @@ class IconScoreBaseMeta(ABCMeta):
             payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
 
+        ScoreApiGenerator.check_on_deploy(custom_funcs)
         api_list = ScoreApiGenerator.generate(custom_funcs)
         setattr(cls, CONST_CLASS_API, api_list)
 
@@ -588,7 +602,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
-        self._context.revert(message, code)
+        revert(message, code)
 
     def deploy(self, tx_hash: bytes):
         self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)

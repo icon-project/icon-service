@@ -61,7 +61,7 @@ class TestTrace(unittest.TestCase):
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = traces
 
-        ContextContainer._put_context(context)
+        ContextContainer._push_context(context)
         context.icon_score_manager = Mock()
         context.icon_score_manager.get_owner = Mock(return_value=None)
         context.icon_score_manager.get_tx_hashes_by_score_address = \

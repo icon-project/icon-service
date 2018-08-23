@@ -107,9 +107,6 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
             self._make_score_call_tx(self._admin_addr, score_addr1, 'set_value', {"value": hex(value)}))
         self.assertEqual(validate_tx_response3['error']['code'], ExceptionCode.SERVER_ERROR)
 
-        precommit_req3, error_response = self._run_async(self._make_and_req_block([tx3]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
-
         query_request = {
             "version": hex(self._version),
             "from": str(self._admin_addr),
@@ -181,9 +178,6 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         validate_tx_response3, tx3 = self._run_async(
             self._make_score_call_tx(self._admin_addr, score_addr1, 'set_value', {"value": hex(value)}))
         self.assertEqual(validate_tx_response3['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req3, error_response = self._run_async(self._make_and_req_block([tx3]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
         raise_exception_end_tag("test_score_add_blacklist")
 
     def test_score_remove_deployer(self):

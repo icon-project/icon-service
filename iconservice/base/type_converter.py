@@ -39,6 +39,7 @@ class ParamType(IntEnum):
     ICX_GET_BALANCE = 302
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
+    ISE_GET_STATUS = 305
 
     WRITE_PRECOMMIT = 400
     REMOVE_PRECOMMIT = 500
@@ -56,7 +57,7 @@ class ValueType(IntEnum):
     BYTES = 6
 
 
-type_convert_templates = dict()
+type_convert_templates = {}
 CONVERT_USING_SWITCH_KEY = 'CONVERT_USING_SWITCH_KEY'
 SWITCH_KEY = "SWITCH_KEY"
 KEY_CONVERTER = 'KEY_CONVERTER'
@@ -73,15 +74,15 @@ class TypeConverter:
         return converted_params
 
     @staticmethod
-    def _convert(params: dict, template: Union[list, dict]) -> Any:
-        if not params or not template:
+    def _convert(params: Union[str, dict, None], template: Union[list, dict, ValueType]) -> Any:
+        if TypeConverter._skip_params(params, template):
             return params
 
         if isinstance(template, dict) and KEY_CONVERTER in template:
             params = TypeConverter._convert_key(params, template[KEY_CONVERTER])
 
         if isinstance(params, dict) and isinstance(template, dict):
-            new_params = dict()
+            new_params = {}
             for key, value in params.items():
                 if TypeConverter._check_convert_using_method(key, template):
                     ref_key_table = deepcopy(new_params)
@@ -91,7 +92,7 @@ class TypeConverter:
                     new_value = TypeConverter._convert(value, template.get(key))
                 new_params[key] = new_value
         elif isinstance(params, list) and isinstance(template, list):
-            new_params = list()
+            new_params = []
             for item in params:
                 new_item = TypeConverter._convert(item, template[0])
                 new_params.append(new_item)
@@ -104,7 +105,7 @@ class TypeConverter:
 
     @staticmethod
     def _convert_key(params, key_convert_dict):
-        new_params = dict()
+        new_params = {}
         for key in params:
             if key in key_convert_dict:
                 old_key = key
@@ -128,26 +129,39 @@ class TypeConverter:
         return tmp_params.get(CONVERT_USING_SWITCH_KEY)
 
     @staticmethod
-    def _convert_using_switch(params: dict, tmp_params: dict, template: Union[list, dict]) -> Any:
-        if not params or not template:
+    def _skip_params(params: Union[str, dict, None], template: Union[list, dict, ValueType]) -> bool:
+        if params is None:
+            raise InvalidParamsException(f'TypeConvert Exception None value, template: {str(template)}')
+        if isinstance(params, str):
+            if params != "" and not template:
+                return True
+        elif not params or not template:
+            return True
+        return False
+    
+    @staticmethod
+    def _convert_using_switch(params: Union[str, dict, None],
+                              tmp_params: dict,
+                              template: Union[list, dict, ValueType]) -> Any:
+        if TypeConverter._skip_params(params, template):
             return params
 
         switch_key = template.get(SWITCH_KEY)
-        templete_key = tmp_params.get(switch_key)
-        target_templete = template.get(templete_key)
+        template_key = tmp_params.get(switch_key)
+        target_template = template.get(template_key)
 
-        if isinstance(params, dict) and isinstance(target_templete, dict):
-            new_params = dict()
+        if isinstance(params, dict) and isinstance(target_template, dict):
+            new_params = {}
             for key, value in params.items():
-                new_value = TypeConverter._convert(value, target_templete.get(key))
+                new_value = TypeConverter._convert(value, target_template.get(key))
                 new_params[key] = new_value
-        elif isinstance(params, list) and isinstance(target_templete, list):
-            new_params = list()
+        elif isinstance(params, list) and isinstance(target_template, list):
+            new_params = []
             for item in params:
-                new_item = TypeConverter._convert(item, target_templete[0])
+                new_item = TypeConverter._convert(item, target_template[0])
                 new_params.append(new_item)
-        elif isinstance(target_templete, ValueType):
-            new_params = TypeConverter._convert_value(params, target_templete)
+        elif isinstance(target_template, ValueType):
+            new_params = TypeConverter._convert_value(params, target_template)
         else:
             new_params = params
 
@@ -271,7 +285,7 @@ class TypeConverter:
         if isinstance(value, dict):
             for k, v in value.items():
                 if isinstance(v, bytes):
-                    is_hash = k in ('blockHash', 'txHash')
+                    is_hash = k in ('blockHash', 'txHash', 'prevBlockHash')
                     value[k] = TypeConverter._convert_bytes_reverse(v, is_hash)
                 else:
                     value[k] = TypeConverter.convert_type_reverse(v)
@@ -375,6 +389,10 @@ type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
 }
 type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[ParamType.ICX_GET_BALANCE]
 
+type_convert_templates[ParamType.ISE_GET_STATUS] = {
+    "filter": [ValueType.STRING]
+}
+
 type_convert_templates[ParamType.QUERY] = {
     "method": ValueType.STRING,
     "params": {
@@ -384,6 +402,7 @@ type_convert_templates[ParamType.QUERY] = {
             "icx_getBalance": type_convert_templates[ParamType.ICX_GET_BALANCE],
             "icx_getTotalSupply": type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
             "icx_getScoreApi": type_convert_templates[ParamType.ICX_GET_SCORE_API],
+            "ise_getStatus": type_convert_templates[ParamType.ISE_GET_STATUS]
         }
     }
 }

@@ -97,9 +97,6 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
             self._make_deploy_tx(self.sample_root, "install/test_score", ZERO_SCORE_ADDRESS, self._addr1,
                                  deploy_params={'value': hex(value)}))
         self.assertEqual(validate_tx_response1['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req1, error_response = self._run_async(self._make_and_req_block([tx1]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
         raise_exception_end_tag("test_score_add_deployer")
 
         validate_tx_response2, tx2 = self._run_async(
@@ -200,9 +197,6 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
             self._make_deploy_tx(self.sample_root, "update/test_score", score_addr1, self._addr1,
                                  deploy_params={'value': hex(value2)}))
         self.assertEqual(validate_tx_response4['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req4, error_response = self._run_async(self._make_and_req_block([tx4]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
         raise_exception_end_tag("test_score_remove_deployer")
 
         query_request = {

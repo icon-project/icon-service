@@ -16,14 +16,13 @@
 
 import threading
 from enum import IntEnum, unique
-from typing import TYPE_CHECKING, Optional, Union, List
+from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
 from .internal_call import InternalCall
-from ..base.address import Address
+from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
-from ..base.exception import IconScoreException, ExceptionCode, InvalidParamsException
-from ..base.exception import RevertException
+from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
@@ -36,6 +35,7 @@ if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
     from ..deploy.icon_score_manager import IconScoreManager
+    from ..builtin_scores.governance.governance import Governance
 
 _thread_local_data = threading.local()
 
@@ -48,22 +48,37 @@ class ContextContainer(object):
     """
 
     @staticmethod
-    def _get_context() -> 'IconScoreContext':
-        return getattr(_thread_local_data, 'context', None)
+    def _get_context() -> Optional['IconScoreContext']:
+        context_stack: List['IconScoreContext'] \
+            = getattr(_thread_local_data, 'context_stack', None)
+
+        if context_stack is not None and len(context_stack) > 0:
+            return context_stack[-1]
+        else:
+            return None
 
     @staticmethod
-    def _put_context(value: 'IconScoreContext') -> None:
-        setattr(_thread_local_data, 'context', value)
+    def _push_context(context: 'IconScoreContext') -> None:
+        context_stack: List['IconScoreContext'] \
+            = getattr(_thread_local_data, 'context_stack', None)
+
+        if context_stack is None:
+            context_stack = []
+            setattr(_thread_local_data, 'context_stack', context_stack)
+
+        context_stack.append(context)
 
     @staticmethod
-    def _delete_context(context: 'IconScoreContext') -> None:
-        """Delete the context of the current thread
+    def _pop_context() -> 'IconScoreContext':
+        """Delete the last pushed context of the current thread
         """
-        if context is not _thread_local_data.context:
-            raise IconScoreException(
-                'Critical error in context management')
+        context_stack: List['IconScoreContext'] \
+            = getattr(_thread_local_data, 'context_stack', None)
 
-        del _thread_local_data.context
+        if context_stack is not None and len(context_stack) > 0:
+            return context_stack.pop()
+        else:
+            raise ServerErrorException('Failed to pop a context out of context_stack')
 
 
 class ContextGetter(object):
@@ -72,7 +87,7 @@ class ContextGetter(object):
 
     @property
     def _context(self) -> 'IconScoreContext':
-        return getattr(_thread_local_data, 'context', None)
+        return ContextContainer._get_context()
 
 
 @unique
@@ -141,14 +156,6 @@ class IconScoreContext(object):
     def readonly(self):
         return self.type == IconScoreContextType.QUERY
 
-    def revert(self, message: Optional[str], code: Union[ExceptionCode, int]) -> None:
-        """Abort score execution and revert state changes
-
-        :param message: error log message
-        :param code:
-        """
-        raise RevertException(message, code)
-
     def clear(self) -> None:
         """Set instance member variables to None
         """
@@ -182,18 +189,43 @@ class IconScoreContext(object):
         is_score_active = self.icon_score_manager.is_score_active(self, address)
         current_tx_hash, _ = self.icon_score_manager.get_tx_hashes_by_score_address(self, address)
 
+        if not is_score_active:
+            raise InvalidParamsException(f'SCORE is inactive: {address}')
+
         if current_tx_hash is None:
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
-        score = self.icon_score_mapper.get_icon_score(address, is_score_active, current_tx_hash)
-        if score is None:
-            if is_score_active:
-                raise InvalidParamsException(
-                    f'icon_score_info is None: {address}')
-            else:
-                raise InvalidParamsException(
-                    f'SCORE is inactive: {address}')
-        return score
+        return self.icon_score_mapper.get_icon_score(address, current_tx_hash)
+
+    def validate_score_blacklist(self, score_address: 'Address'):
+        """Prevent SCOREs in blacklist
+
+        :param score_address:
+        """
+        if not score_address.is_contract:
+            raise ServerErrorException(f'Invalid SCORE address: {score_address}')
+
+        # Gets the governance SCORE
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if governance_score.isInScoreBlackList(score_address):
+            raise ServerErrorException(f'SCORE in blacklist: {score_address}')
+
+    def validate_deployer(self, deployer: 'Address'):
+        """Check if a given deployer is allowed to deploy a SCORE
+
+        :param deployer: EOA address to deploy a SCORE
+        """
+        # Gets the governance SCORE
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        if not governance_score.isDeployer(deployer):
+            raise ServerErrorException(f'Invalid deployer: no permission (address: {deployer})')
+
 
 class IconScoreContextFactory(object):
     """IconScoreContextFactory

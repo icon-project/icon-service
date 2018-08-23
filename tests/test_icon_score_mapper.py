@@ -38,10 +38,9 @@ class TestIconScoreMapper(unittest.TestCase):
         pass
 
     def test_get_icon_score_score_success(self):
-        is_score_active = True
         tx_hash = create_tx_hash()
         self.icon_score_mapper.load_score = Mock(return_value=TestScore())
-        self.icon_score_mapper.get_icon_score(create_address(AddressPrefix.CONTRACT), is_score_active, tx_hash)
+        self.icon_score_mapper.get_icon_score(create_address(AddressPrefix.CONTRACT), tx_hash)
 
 
 class TestScore(IconScoreBase):
@@ -49,8 +48,8 @@ class TestScore(IconScoreBase):
     def __init__(self):
         pass
 
-    def on_install(self, **kwargs):
+    def on_install(self):
         pass
 
-    def on_update(self, **kwargs):
+    def on_update(self):
         pass

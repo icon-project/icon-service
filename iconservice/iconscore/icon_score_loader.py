@@ -16,8 +16,8 @@
 
 import importlib.util
 import json
+import sys
 from os import path
-from sys import path as sys_path
 
 from .score_package_validator import ScorePackageValidator
 from ..icon_constant import IconScoreLoaderFlag
@@ -29,7 +29,8 @@ class IconScoreLoader(object):
     def __init__(self, score_root_path: str, flag: int):
         self._score_root_path = score_root_path
         self._flag = flag
-        sys_path.append(score_root_path)
+        if not score_root_path in sys.path:
+            sys.path.append(score_root_path)
 
     def _is_flag_on(self, flag: 'IconScoreLoaderFlag') -> bool:
         return (self._flag & flag) == flag

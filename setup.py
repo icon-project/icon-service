@@ -4,6 +4,8 @@ import os
 from setuptools import setup, find_packages
 
 requires = [
+    'earlgrey',
+    'iconcommons',
     'plyvel',
     'jsonpickle',
     'setproctitle'
@@ -19,8 +21,10 @@ setup_options = {
     'name': 'iconservice',
     'version': version,
     'description': 'iconservice for python',
-    'long_description': open('docs/class.md').read(),
-    'author': 'ICON foundation',
+    'long_description_content_type': 'text/markdown',
+    'long_description': open('README.md').read(),
+    'author': 'ICON Foundation',
+    'author_email': 'foo@icon.foundation',
     'packages': find_packages(exclude=['tests*', 'docs']),
     'package_data': {'iconservice': [
         'icon_service.json',

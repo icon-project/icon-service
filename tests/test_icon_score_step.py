@@ -91,7 +91,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.EOA)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, None, None),
+            ReqData(tx_hash, from_, to_, "", ""),
         ])
 
         result = self._inner_task._invoke(request)
@@ -114,7 +114,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
+            ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
@@ -151,7 +151,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
+            ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.set_db(100)
@@ -191,7 +191,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
+            ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.get_db()
@@ -234,7 +234,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
+            ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             return score.query_db()
@@ -264,7 +264,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
-            ContextContainer._put_context(args[0])
+            ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             address = create_address(AddressPrefix.EOA)
             score = SampleScore(IconScoreDatabase(address, context_db))

@@ -94,7 +94,8 @@ class IconServiceEngine(ContextContainer):
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
-            'icx_getScoreApi': self._handle_icx_get_score_api
+            'icx_getScoreApi': self._handle_icx_get_score_api,
+            'ise_getStatus': self._handle_ise_get_status
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -157,21 +158,26 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_engine.open(
             self._icx_storage, self._icon_score_mapper)
 
-        icon_score_deploy_engine_flags = IconDeployFlag.NONE.value
-        if self._is_flag_on(IconServiceFlag.audit):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            icon_score_deploy_engine_flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
-
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
-            flag=icon_score_deploy_engine_flags,
+            flag=self._make_deploy_engine_flag(),
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
+
+    def _make_deploy_engine_flag(self) -> int:
+        flags = IconDeployFlag.NONE.value
+        if self._is_flag_on(IconServiceFlag.audit):
+            flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
+        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
+            flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
+
+        if self._conf.get(ConfigKey.TBEARS_MODE, True):
+            flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
+        return flags
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
@@ -181,7 +187,7 @@ class IconServiceEngine(ContextContainer):
                      ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR]
         flag = 0
         for key in key_table:
-            is_enable = flag_table[key]
+            is_enable = flag_table.get(key, False)
             if is_enable:
                 flag |= IconServiceFlag[key]
         return flag
@@ -189,13 +195,13 @@ class IconServiceEngine(ContextContainer):
     def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         try:
-            self._put_context(context)
+            self._push_context(context)
             icon_builtin_score_loader = \
                 IconBuiltinScoreLoader(self._icon_score_deploy_engine)
             icon_builtin_score_loader.load_builtin_scores(
                 context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
     def _init_global_value_by_governance_score(self):
         """Initialize step_counter_factory with parameters
@@ -209,7 +215,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter = None
 
         try:
-            self._put_context(context)
+            self._push_context(context)
             # Gets the governance SCORE
             governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
@@ -244,7 +250,7 @@ class IconServiceEngine(ContextContainer):
                 governance_score.getMaxStepLimit("query"))
 
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
         self._context_factory.destroy(context)
 
@@ -260,7 +266,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         try:
-            self._put_context(context)
+            self._push_context(context)
             # Gets the governance SCORE
             governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
@@ -269,7 +275,7 @@ class IconServiceEngine(ContextContainer):
             if not governance_score.isDeployer(_from):
                 raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
     def _validate_score_blacklist(self, context: 'IconScoreContext', params: dict):
         _to: 'Address' = params.get('to')
@@ -279,7 +285,7 @@ class IconServiceEngine(ContextContainer):
             return
 
         try:
-            self._put_context(context)
+            self._push_context(context)
             # Gets the governance SCORE
             governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
@@ -288,7 +294,7 @@ class IconServiceEngine(ContextContainer):
             if governance_score.isInScoreBlackList(_to):
                 raise ServerErrorException(f'The Score is in Black List (address: {_to})')
         finally:
-            self._delete_context(context)
+            self._pop_context()
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
@@ -444,10 +450,6 @@ class IconServiceEngine(ContextContainer):
         context.step_counter = self._step_counter_factory.create(step_limit)
         context.msg_stack.clear()
 
-        self._validate_score_blacklist(context, params)
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            self._validate_deploy_whitelist(context, params)
-
         return self._call(context, method, params)
 
     def query(self, method: str, params: dict) -> Any:
@@ -468,7 +470,7 @@ class IconServiceEngine(ContextContainer):
         step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
         if params:
-            from_ = params.get('from', None)
+            from_: 'Address' = params.get('from', None)
             context.msg = Message(sender=from_)
             if 'stepLimit' in params:
                 step_limit = min(params['stepLimit'], step_limit)
@@ -477,7 +479,6 @@ class IconServiceEngine(ContextContainer):
         context.step_counter: IconScoreStepCounter = \
             self._step_counter_factory.create(step_limit)
 
-        self._validate_score_blacklist(context, params)
         ret = self._call(context, method, params)
 
         self._context_factory.destroy(context)
@@ -535,10 +536,10 @@ class IconServiceEngine(ContextContainer):
                 (dict) result or error object in jsonrpc response
         """
 
-        self._put_context(context)
+        self._push_context(context)
         handler = self._handlers[method]
         ret_val = handler(context, params)
-        self._delete_context(context)
+        self._pop_context()
         return ret_val
 
     def _handle_icx_get_balance(self,
@@ -837,6 +838,42 @@ class IconServiceEngine(ContextContainer):
         icon_score_address: Address = params['address']
         return self._icon_score_engine.get_score_api(
             context, icon_score_address)
+
+    def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
+
+        response = dict()
+        if not bool(params) or params.get('filter'):
+            last_block_status = self._make_last_block_status()
+            response['lastBlock'] = last_block_status
+        return response
+
+    def _make_last_block_status(self) -> Optional[dict]:
+        block = self._precommit_data_manager.last_block
+        if block is None:
+            block_height = -1
+            block_hash = b'\x00' * 32
+            timestamp = 0
+            prev_block_hash = block_hash
+        else:
+            block_height = block.height
+            block_hash = block.hash
+            timestamp = block.timestamp
+            prev_block_hash = block.prev_hash
+
+        return {
+            'blockHeight': block_height,
+            'blockHash': block_hash,
+            'timestamp': timestamp,
+            'prevBlockHash': prev_block_hash
+        }
+
+    @staticmethod
+    def _create_invalid_block():
+        block_height = -1
+        block_hash = b'\x00' * 32
+        timestamp = 0
+        prev_block_hash = block_hash
+        return Block(block_height, block_hash, timestamp, prev_block_hash)
 
     def commit(self, block: 'Block') -> None:
         """Write updated states in a context.block_batch to StateDB

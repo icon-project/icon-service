@@ -28,7 +28,7 @@ from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine, IconDeployFlag
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory, \
@@ -43,7 +43,7 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
 from iconservice.utils.bloom import BloomFilter
-from tests import rmtree, create_address, create_tx_hash, create_block_hash
+from tests import create_address, create_tx_hash, create_block_hash
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -88,7 +88,7 @@ class TestIconScoreEngine2(unittest.TestCase):
 
         self._score_deploy_engine.open(
             score_root_path=score_path,
-            flag=0,
+            flag=IconDeployFlag.ENABLE_TBEARS_MODE.value,
             icon_deploy_storage=self._deploy_storage)
 
         self.score_engine = IconScoreEngine()
@@ -130,7 +130,9 @@ class TestIconScoreEngine2(unittest.TestCase):
         self._context.event_logs = Mock(spec=list)
         self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
+        self._context.validate_deployer = Mock()
+        self._context.validate_score_blacklist = Mock()
 
     def tearDown(self):
         try:

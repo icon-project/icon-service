@@ -23,6 +23,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
 from integrate_test.test_integrate_base import TestIntegrateBase
+from tests import raise_exception_start_tag, raise_exception_end_tag
 
 from hashlib import sha3_256
 
@@ -261,3 +262,38 @@ class TestIntegrateScores(TestIntegrateBase):
 
         response = self._run_async(self._query(query_request))
         self.assertEqual(response, value)
+
+    def test_default_value_fail_install(self):
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_default_value_fail1", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+
+        raise_exception_start_tag("test_default_value_fail_install")
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1]))
+        raise_exception_end_tag("test_default_value_fail_install")
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(False))
+
+    def test_default_value_fail_update(self):
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_default_value_fail2", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+
+        raise_exception_start_tag("test_default_value_fail_update")
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1]))
+        raise_exception_end_tag("test_default_value_fail_update")
+
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(False))
+
+    def test_default_value_fail_external(self):
+        validate_tx_response1, tx1 = self._run_async(
+            self._make_deploy_tx(self.sample_root, "test_default_value_fail3", ZERO_SCORE_ADDRESS, self._admin_addr))
+        self.assertEqual(validate_tx_response1, hex(0))
+
+        raise_exception_start_tag("test_default_value_fail_external")
+        precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1]))
+        raise_exception_end_tag("test_default_value_fail_external")
+
+        tx_result1 = self._get_tx_result(tx_results1, tx1)
+        self.assertEqual(tx_result1['status'], hex(False))
