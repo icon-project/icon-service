@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Optional, Any
 
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.exception import ServerErrorException
 from ..base.message import Message
 
@@ -127,7 +127,7 @@ class InternalCall(object):
         :return:
         """
 
-        self._validate_score_blacklist(addr_to)
+        self.__context.validate_score_blacklist(addr_to)
         self.__context.msg_stack.append(self.__context.msg)
 
         self.__context.msg = Message(sender=addr_from, value=amount)
@@ -145,14 +145,6 @@ class InternalCall(object):
             ret = external_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
 
         self.current_address = addr_from
-        self.msg = self.__context.msg_stack.pop()
+        self.__context.msg = self.__context.msg_stack.pop()
 
         return ret
-
-    def _validate_score_blacklist(self, address: 'Address'):
-        if address == GOVERNANCE_SCORE_ADDRESS:
-            return
-
-        governance = self.__context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
-        if governance and governance.isInScoreBlackList(address):
-            raise ServerErrorException(f'The Score is in Black List (address: {address})')

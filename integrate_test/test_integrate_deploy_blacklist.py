@@ -20,13 +20,13 @@
 import unittest
 
 from iconcommons.icon_config import IconConfig
-from iconservice import ExceptionCode
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 from integrate_test.test_integrate_base import TestIntegrateBase
+from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestIntegrateDeployBlackList(TestIntegrateBase):
@@ -40,7 +40,6 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr)})
 
         self._inner_task = IconScoreInnerTask(conf)
-        self._inner_task._open()
 
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
@@ -107,9 +106,6 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         validate_tx_response3, tx3 = self._run_async(
             self._make_score_call_tx(self._admin_addr, score_addr1, 'set_value', {"value": hex(value)}))
         self.assertEqual(validate_tx_response3['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req3, error_response = self._run_async(self._make_and_req_block([tx3]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
 
         query_request = {
             "version": hex(self._version),
@@ -182,9 +178,6 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         validate_tx_response3, tx3 = self._run_async(
             self._make_score_call_tx(self._admin_addr, score_addr1, 'set_value', {"value": hex(value)}))
         self.assertEqual(validate_tx_response3['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req3, error_response = self._run_async(self._make_and_req_block([tx3]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
         raise_exception_end_tag("test_score_add_blacklist")
 
     def test_score_remove_deployer(self):

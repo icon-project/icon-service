@@ -79,7 +79,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
 
         self._engine = IconScoreDeployEngine()
-        self._icon_score_loader = IconScoreLoader(score_path)
+        self._icon_score_loader = IconScoreLoader(score_path, 0)
         IconScoreMapper.icon_score_loader = self._icon_score_loader
         IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()
@@ -114,7 +114,9 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
+        self._context.validate_deployer = Mock()
+        self._context.validate_score_blacklist = Mock()
 
     def tearDown(self):
         self._engine = None

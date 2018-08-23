@@ -18,7 +18,8 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
-from iconservice import IconScoreDatabase, DatabaseObserver
+from iconservice.database.db import DatabaseObserver
+from iconservice import IconScoreDatabase
 from iconservice.database.db import ContextDatabase
 from iconservice.utils import sha3_256
 

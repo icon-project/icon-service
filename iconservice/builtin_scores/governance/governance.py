@@ -43,14 +43,56 @@ STEP_TYPE_REPLACE = 'replace'
 STEP_TYPE_DELETE = 'delete'
 STEP_TYPE_INPUT = 'input'
 STEP_TYPE_EVENT_LOG = 'eventLog'
-VALID_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
-                        STEP_TYPE_CONTRACT_CALL, STEP_TYPE_CONTRACT_CREATE, STEP_TYPE_CONTRACT_UPDATE,
-                        STEP_TYPE_CONTRACT_DESTRUCT, STEP_TYPE_CONTRACT_SET,
-                        STEP_TYPE_GET, STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, STEP_TYPE_INPUT,
-                        STEP_TYPE_EVENT_LOG]
+STEP_TYPE_API_CALL = 'apiCall'
+INITIAL_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
+                          STEP_TYPE_CONTRACT_CALL, STEP_TYPE_CONTRACT_CREATE, STEP_TYPE_CONTRACT_UPDATE,
+                          STEP_TYPE_CONTRACT_DESTRUCT, STEP_TYPE_CONTRACT_SET,
+                          STEP_TYPE_GET, STEP_TYPE_SET, STEP_TYPE_REPLACE, STEP_TYPE_DELETE, STEP_TYPE_INPUT,
+                          STEP_TYPE_EVENT_LOG, STEP_TYPE_API_CALL]
 
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
+
+
+class StepCosts:
+    """
+    DB for stepCosts management.
+    It is combined DictDB and ArrayDB in order to iterate items.
+    """
+    _STEP_TYPES = 'step_types'
+    _STEP_COSTS = 'step_costs'
+
+    def __init__(self, db: IconScoreDatabase):
+        self._step_types = ArrayDB(self._STEP_TYPES, db, value_type=str)
+        self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
+
+    def __setitem__(self, step_type: str, cost: int):
+        if step_type not in self._step_costs:
+            self._step_types.put(step_type)
+
+        self._step_costs[step_type] = cost
+
+    def __getitem__(self, step_type: str):
+        return self._step_costs[step_type]
+
+    def __delitem__(self, step_type: str):
+        # delete does not actually do delete but set zero
+        if step_type in self._step_costs:
+            self._step_costs[step_type] = 0
+
+    def __contains__(self, step_type: str):
+        return step_type in self._step_costs
+
+    def __iter__(self):
+        return self._step_types.__iter__()
+
+    def __len__(self):
+        return self._step_types.__len__()
+
+    def items(self):
+        for step_type in self._step_types:
+            yield (step_type, self._step_costs[step_type])
+
 
 class Governance(IconScoreBase):
 
@@ -59,7 +101,6 @@ class Governance(IconScoreBase):
     _DEPLOYER_LIST = 'deployer_list'
     _SCORE_BLACK_LIST = 'score_black_list'
     _STEP_PRICE = 'step_price'
-    _STEP_COSTS = 'step_costs'
     _MAX_STEP_LIMITS = 'max_step_limits'
 
     @eventlog(indexed=1)
@@ -85,7 +126,7 @@ class Governance(IconScoreBase):
         self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
         self._score_black_list = ArrayDB(self._SCORE_BLACK_LIST, db, value_type=Address)
         self._step_price = VarDB(self._STEP_PRICE, db, value_type=int)
-        self._step_costs = DictDB(self._STEP_COSTS, db, value_type=int)
+        self._step_costs = StepCosts(db)
         self._max_step_limits = DictDB(self._MAX_STEP_LIMITS, db, value_type=int)
 
     def on_install(self,
@@ -108,6 +149,12 @@ class Governance(IconScoreBase):
 
     def on_update(self) -> None:
         super().on_update()
+
+        if len(self._step_costs) == 0:
+            # migrates from old DB of step_costs.
+            for step_type in INITIAL_STEP_COST_KEYS:
+                if step_type in self._step_costs:
+                    self._step_costs._step_types.put(step_type)
 
     def _get_current_status(self, score_address: Address):
         return self._score_status[score_address][CURRENT]
@@ -381,17 +428,17 @@ class Governance(IconScoreBase):
             STEP_TYPE_REPLACE: 5,
             STEP_TYPE_DELETE: -15,
             STEP_TYPE_INPUT: 20,
-            STEP_TYPE_EVENT_LOG: 10
+            STEP_TYPE_EVENT_LOG: 10,
+            STEP_TYPE_API_CALL: 0
         }
-        for key in VALID_STEP_COST_KEYS:
-            value: int = initial_costs[key]
+        for key, value in initial_costs.items():
             self._step_costs[key] = value
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:
         result = {}
-        for key in VALID_STEP_COST_KEYS:
-            result[key] = self._step_costs[key]
+        for key, value in self._step_costs.items():
+            result[key] = value
         return result
 
     @external
@@ -399,8 +446,6 @@ class Governance(IconScoreBase):
         # only owner can set new step cost
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
-        if stepType not in VALID_STEP_COST_KEYS:
-            self.revert(f'Invalid step type: {stepType}')
         if cost < 0:
             if stepType != STEP_TYPE_CONTRACT_DESTRUCT and \
                     stepType != STEP_TYPE_DELETE:
@@ -410,6 +455,4 @@ class Governance(IconScoreBase):
 
     @external(readonly=True)
     def getMaxStepLimit(self, context_type: str) -> int:
-        max_step_limit = self._max_step_limits[context_type]
-        # FIXME
-        return max_step_limit if max_step_limit is not None else 0
+        return self._max_step_limits[context_type]

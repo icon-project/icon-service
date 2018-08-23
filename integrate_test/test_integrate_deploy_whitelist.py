@@ -20,13 +20,13 @@
 import unittest
 
 from iconcommons.icon_config import IconConfig
-from iconservice import ExceptionCode
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 from integrate_test.test_integrate_base import TestIntegrateBase
+from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestIntegrateDeployWhiteList(TestIntegrateBase):
@@ -41,7 +41,6 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITELIST: True}})
 
         self._inner_task = IconScoreInnerTask(conf)
-        self._inner_task._open()
 
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
@@ -98,9 +97,6 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
             self._make_deploy_tx(self.sample_root, "install/test_score", ZERO_SCORE_ADDRESS, self._addr1,
                                  deploy_params={'value': hex(value)}))
         self.assertEqual(validate_tx_response1['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req1, error_response = self._run_async(self._make_and_req_block([tx1]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
         raise_exception_end_tag("test_score_add_deployer")
 
         validate_tx_response2, tx2 = self._run_async(
@@ -201,9 +197,6 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
             self._make_deploy_tx(self.sample_root, "update/test_score", score_addr1, self._addr1,
                                  deploy_params={'value': hex(value2)}))
         self.assertEqual(validate_tx_response4['error']['code'], ExceptionCode.SERVER_ERROR)
-
-        precommit_req4, error_response = self._run_async(self._make_and_req_block([tx4]))
-        self.assertEqual(error_response['error']['code'], ExceptionCode.SERVER_ERROR)
         raise_exception_end_tag("test_score_remove_deployer")
 
         query_request = {

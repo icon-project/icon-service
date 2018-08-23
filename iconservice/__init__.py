@@ -13,9 +13,14 @@
 # limitations under the License.
 """Package for objects which are related with Icon Services"""
 
-from .base.address import Address
-from .base.exception import *
+from .base.address import Address, ZERO_SCORE_ADDRESS
+from .base.exception import IconScoreException
 from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
-from .iconscore.icon_score_base import *
+from .iconscore.icon_score_base import interface, eventlog, external, payable, IconScoreBase, IconScoreDatabase, sha3_256
+from .iconscore.icon_score_base2 import InterfaceScore
 from iconcommons.logger import Logger
+
+from inspect import isfunction
+from functools import wraps
+from abc import ABCMeta, abstractmethod, ABC
 

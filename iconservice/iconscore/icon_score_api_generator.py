@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter, isclass
+from inspect import signature, Signature, Parameter, isclass, BoundArguments
 from typing import Any, Optional
 from ..base.address import Address
-from ..base.exception import IconScoreException, IconTypeError
+from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
 from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
     CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
 from ..base.type_converter import TypeConverter
@@ -37,18 +37,33 @@ class ScoreApiGenerator:
     __API_PARAMS_INDEXED = 'Indexed'
     __API_TYPE_FUNCTION = 'function'
     __API_TYPE_EVENT = 'eventlog'
-    # __API_TYPE_ON_INSTALL = 'on_install'
-    # __API_TYPE_ON_UPDATE = 'on_update'
     __API_TYPE_FALLBACK = STR_FALLBACK
+
+    __API_TYPE_ON_INSTALL = 'on_install'
+    __API_TYPE_ON_UPDATE = 'on_update'
 
     @staticmethod
     def generate(score_funcs: list) -> list:
         api = []
-
         ScoreApiGenerator.__generate_functions(api, score_funcs)
         ScoreApiGenerator.__generate_events(api, score_funcs)
-
         return api
+
+    @staticmethod
+    def check_on_deploy(score_funcs: list) -> None:
+        for func in score_funcs:
+            if func.__name__ == ScoreApiGenerator.__API_TYPE_ON_INSTALL or \
+                    func.__name__ == ScoreApiGenerator.__API_TYPE_ON_UPDATE:
+                ScoreApiGenerator.__check_on_deploy_function(signature(func))
+
+    @staticmethod
+    def __check_on_deploy_function(sig_info: 'Signature') -> None:
+        params = dict(sig_info.parameters)
+        for param_name, param in params.items():
+            if param_name == 'self' or param_name == 'cls':
+                continue
+            if param.kind != Parameter.VAR_KEYWORD:
+                ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
@@ -67,11 +82,6 @@ class ScoreApiGenerator:
                             func.__name__, is_payable, signature(func)))
             except IconTypeError as e:
                 raise IconScoreException(f"{e.message} at {func.__name__}")
-
-            # elif func.__name__ == ScoreApiGenerator.__API_TYPE_ON_INSTALL:
-            #     src.append(ScoreApiGenerator.__generate_on_install_function(func.__name__, signature(func)))
-            # elif func.__name__ == ScoreApiGenerator.__API_TYPE_ON_UPDATE:
-            #     src.append(ScoreApiGenerator.__generate_on_update_function(func.__name__, signature(func)))
 
     @staticmethod
     def __generate_normal_function(func_name: str, is_readonly: bool, is_payable: bool, sig_info: 'Signature') -> dict:
@@ -104,22 +114,6 @@ class ScoreApiGenerator:
             info[ScoreApiGenerator.__API_PAYABLE] = is_payable
 
         return info
-
-    # @staticmethod
-    # def __generate_on_install_function(func_name: str, sig_info: 'Signature') -> dict:
-    #     info = dict()
-    #     info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_ON_INSTALL
-    #     info[ScoreApiGenerator.__API_NAME] = func_name
-    #     info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
-    #     return info
-    #
-    # @staticmethod
-    # def __generate_on_update_function(func_name: str, sig_info: 'Signature') -> dict:
-    #     info = dict()
-    #     info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_ON_UPDATE
-    #     info[ScoreApiGenerator.__API_NAME] = func_name
-    #     info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
-    #     return info
 
     @staticmethod
     def __generate_events(src: list, score_funcs: list) -> None:
@@ -213,6 +207,8 @@ class ScoreApiGenerator:
         if is_indexed:
             info[ScoreApiGenerator.__API_INPUTS_INDEXED] = is_indexed
         if param.default is not Parameter.empty:
+            if param.default is not None and not isinstance(param.default, main_type):
+                raise InvalidParamsException(f'default params type mismatch. value: {param.default} type: {main_type}')
             info[ScoreApiGenerator.__API_INPUTS_DEFAULT] = TypeConverter.convert_type_reverse(param.default)
         src.append(info)
 

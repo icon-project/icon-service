@@ -20,13 +20,13 @@
 import unittest
 
 from iconcommons.icon_config import IconConfig
-from iconservice import ExceptionCode
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import raise_exception_start_tag, raise_exception_end_tag
 from integrate_test.test_integrate_base import TestIntegrateBase
+from tests import raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestIntegrateDeployAuditInstall(TestIntegrateBase):
@@ -40,7 +40,6 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
                           ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}})
 
         self._inner_task = IconScoreInnerTask(conf)
-        self._inner_task._open()
 
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
@@ -101,6 +100,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         response = self._run_async(self._query(query_request))
         self.assertEqual(response, hex(value2))
+
 
     def test_score_address_already_in_use(self):
         value1 = 1 * self._icx_factor

@@ -14,28 +14,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import warnings
+from abc import abstractmethod, ABC, ABCMeta
 from inspect import isfunction, getmembers, signature, Parameter
-from abc import abstractmethod
-from functools import partial
 
-from iconservice.utils import int_to_bytes, byte_length_of_int
-from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
+from functools import partial, wraps
+from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
+
 from .icon_score_api_generator import ScoreApiGenerator
-from .icon_score_base2 import *
-from .icon_score_step import StepType
+from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
+    FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
+    CONST_CLASS_PAYABLES, CONST_CLASS_API, BaseType, T
+from .icon_score_context import ContextGetter, ContextContainer
 from .icon_score_context import IconScoreContextType, IconScoreFuncType
-from .icon_score_context import ContextGetter
+from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
+from .icon_score_step import StepType
 from .icx import Icx
-from ..base.exception import *
+from ..base.address import Address
+from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
+    EventLogException, ExternalException, RevertException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import DATA_BYTE_ORDER
-
-from typing import TYPE_CHECKING, Callable, Any, List, Tuple
+from ..utils import int_to_bytes, byte_length_of_int
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
-    from ..base.address import Address
     from ..base.transaction import Transaction
     from ..base.message import Message
     from ..base.block import Block
@@ -118,7 +122,15 @@ def __retrieve_event_signature(function_name, parameters) -> str:
     type_names: List[str] = []
     for i, param in enumerate(parameters):
         if i > 0:
-            type_names.append(str(param.annotation.__name__))
+            if isinstance(param.annotation, type):
+                main_type = param.annotation
+            elif param.annotation == 'Address':
+                main_type = Address
+            else:
+                raise IconTypeError(
+                    f"Unsupported argument type: '{type(param.annotation)}'")
+
+            type_names.append(str(main_type.__name__))
     return f"{function_name}({','.join(type_names)})"
 
 
@@ -166,6 +178,14 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
                 main_type = sub_tree
         else:
             main_type = annotation
+
+        if not isinstance(main_type, type):
+            if main_type == 'Address':
+                main_type = Address
+            else:
+                raise IconTypeError(
+                    f"Unsupported argument type: '{type(main_type)}'")
+
         if not isinstance(value, main_type):
             raise IconTypeError(f"Mismatch type type of '{name}': "
                                 f"{type(value)}, expected: {main_type}")
@@ -224,6 +244,31 @@ def payable(func):
     return __wrapper
 
 
+def revert(message: Optional[str] = None,
+           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+    """
+    Reverts the transaction and breaks.
+    All the changes of state DB will be reverted.
+
+    :param message: revert message
+    :param code: code
+    """
+    raise RevertException(message, code)
+
+
+def sha3_256(data: bytes) -> bytes:
+    """
+    Computes hash using the input data
+    :param data: input data
+    :return: hashed data in bytes
+    """
+    context = ContextContainer._get_context()
+    if context.step_counter:
+        context.step_counter.apply_step(StepType.API_CALL, 1)
+
+    return hashlib.sha3_256(data).digest()
+
+
 class IconScoreObject(ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
@@ -276,6 +321,7 @@ class IconScoreBaseMeta(ABCMeta):
             payable_funcs = {func.__name__: signature(func) for func in payable_funcs}
             setattr(cls, CONST_CLASS_PAYABLES, payable_funcs)
 
+        ScoreApiGenerator.check_on_deploy(custom_funcs)
         api_list = ScoreApiGenerator.generate(custom_funcs)
         setattr(cls, CONST_CLASS_API, api_list)
 
@@ -578,7 +624,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
-        self._context.revert(message, code)
+        revert(message, code)
 
     def deploy(self, tx_hash: bytes):
         self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)

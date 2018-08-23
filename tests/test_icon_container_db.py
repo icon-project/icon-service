@@ -16,7 +16,8 @@
 
 import unittest
 
-from iconservice import Address, IconScoreContextType
+from iconservice import Address
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
@@ -37,7 +38,7 @@ class TestIconContainerDB(unittest.TestCase):
         self._context = self._factory.create(IconScoreContextType.DIRECT)
 
         self._context_container = TestContextContainer()
-        self._context_container._put_context(self._context)
+        self._context_container._push_context(self._context)
         pass
 
     def tearDown(self):

@@ -18,16 +18,18 @@
 """
 
 import unittest
+from typing import List
 from unittest.mock import Mock
 
-from iconservice import eventlog, IconScoreBase, IconScoreDatabase, List, \
-    external, int_to_bytes
+
+from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import EventLogException, ScoreErrorException
 from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
+from iconservice.utils import int_to_bytes
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 
@@ -47,7 +49,7 @@ class TestEventlog(unittest.TestCase):
         context.attach_mock(event_logs, 'event_logs')
         context.attach_mock(logs_bloom, 'logs_bloom')
         context.attach_mock(step_counter, 'step_counter')
-        ContextContainer._put_context(context)
+        ContextContainer._push_context(context)
 
         self._mock_score = EventlogScore(db)
 
@@ -89,11 +91,11 @@ class TestEventlog(unittest.TestCase):
 
         # This event is declared 3 indexed_count,
         # but it accept only 2 arguments.
-        self.assertRaises(ScoreErrorException, self._mock_score.ThreeIndexEvent,
+        self.assertRaises(EventLogException, self._mock_score.ThreeIndexEvent,
                           name, address)
 
         # This event is declared 4 indexed_count
-        self.assertRaises(ScoreErrorException, self._mock_score.FourIndexEvent,
+        self.assertRaises(EventLogException, self._mock_score.FourIndexEvent,
                           name, address, age, phone_number)
 
     def test_call_event_kwarg(self):
@@ -272,11 +274,8 @@ class EventlogScore(IconScoreBase):
     def on_update(self) -> None:
         pass
 
-    def on_selfdestruct(self, recipient: 'Address') -> None:
-        pass
-
     @eventlog
-    def ZeroIndexEvent(self, name: str, address: Address, age: int):
+    def ZeroIndexEvent(self, name: str, address: 'Address', age: int):
         pass
 
     @eventlog(indexed=1)

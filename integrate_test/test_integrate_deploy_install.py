@@ -20,13 +20,13 @@
 import unittest
 
 from iconcommons.icon_config import IconConfig
-from iconservice import ExceptionCode
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
-from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 from integrate_test.test_integrate_base import TestIntegrateBase
+from tests import create_address, raise_exception_start_tag, raise_exception_end_tag
 
 
 class TestIntegrateDeployInstall(TestIntegrateBase):
@@ -40,7 +40,6 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         conf.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin_addr)})
 
         self._inner_task = IconScoreInnerTask(conf)
-        self._inner_task._open()
 
         is_commit, tx_results = self._run_async(self._genesis_invoke())
         self.assertEqual(is_commit, True)
@@ -175,7 +174,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         tx_result1 = self._get_tx_result(tx_results1, tx1)
         self.assertEqual(tx_result1['status'], hex(False))
-        self.assertEqual(tx_result1['failure']['code'], hex(ExceptionCode.INVALID_PARAMS))
+        self.assertEqual(tx_result1['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
         raise_exception_end_tag("test_score_no_scorebase")
 
     def test_score_on_install_error(self):
