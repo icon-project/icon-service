@@ -28,12 +28,8 @@ class IconScoreLoader(object):
 
     def __init__(self, score_root_path: str, flag: int):
         self._score_root_path = score_root_path
-<<<<<<< HEAD
-        if score_root_path not in sys.path:
-=======
         self._flag = flag
-        if not score_root_path in sys.path:
->>>>>>> develop
+        if score_root_path not in sys.path:
             sys.path.append(score_root_path)
 
     def _is_flag_on(self, flag: 'IconScoreLoaderFlag') -> bool:
