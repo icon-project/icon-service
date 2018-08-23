@@ -233,7 +233,6 @@ class TypeConverter:
 
     @staticmethod
     def convert_data_params(annotation_params: dict, kw_params: dict) -> None:
-
         for key, param in annotation_params.items():
             if key == 'self' or key == 'cls':
                 continue

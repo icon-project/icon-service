@@ -6,37 +6,11 @@ class TokenScoreInterface(InterfaceScore):
     Interface of called contract, when transfer the coin to other contract.
     """
     @interface
-    def tokenFallback(self, from_addr: Address, value: int, message: str):
+    def tokenFallback(self, fromAddr: Address, value: int, message: str):
         pass
 
 
-class IRC2Basic(ABC):
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @abstractmethod
-    def symbol(self) -> str:
-        pass
-
-    @abstractmethod
-    def decimals(self) -> int:
-        pass
-
-    @abstractmethod
-    def totalSupply(self) -> int:
-        pass
-
-    @abstractmethod
-    def balanceOf(self, _owner: Address) -> int:
-        pass
-
-    @abstractmethod
-    def transfer(self, _to: Address, _value: int, _message: str = None) -> bool:
-        pass
-
-
-class BasicToken(IconScoreBase, IRC2Basic):
+class BasicToken(IconScoreBase):
     """
         Basic version of StandardToken, with no allowances.
         support IRC2 Protocol (based on ERC223 and ERC20)
@@ -79,8 +53,8 @@ class BasicToken(IconScoreBase, IRC2Basic):
         Logger.debug(f"BasicToken called on_install decimals : {decimals}, {self._decimals.get()}, "
                      f"name : {name}, {self._name.get()}, symbol : {symbol}, {self._symbol.get()}")
 
-    def on_update(self, **kwargs) -> None:
-        super().on_update(**kwargs)
+    def on_update(self) -> None:
+        super().on_update()
 
     def _transfer(self, from_addr: Address, to_addr: Address, value: int, message: str) -> bool:
         if from_addr == to_addr or value < 0:
@@ -112,11 +86,11 @@ class BasicToken(IconScoreBase, IRC2Basic):
         return self._decimals.get()
 
     @external
-    def transfer(self, to_addr: Address, value: int, message: str = None) -> bool:
+    def transfer(self, toAddr: Address, value: int, message: str = None) -> bool:
         if message is None:
             message = 'None'
 
-        return self._transfer(self.msg.sender, to_addr, value, message)
+        return self._transfer(self.msg.sender, toAddr, value, message)
 
     @external(readonly=True)
     def name(self) -> str:

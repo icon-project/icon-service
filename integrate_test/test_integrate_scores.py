@@ -44,7 +44,7 @@ class TestIntegrateScores(TestIntegrateBase):
 
     def test_l_coin(self):
         validate_tx_response1, tx1 = self._run_async(
-            self._make_deploy_tx(self.sample_root, "l_coin_3", ZERO_SCORE_ADDRESS, self._admin_addr))
+            self._make_deploy_tx(self.sample_root, "l_coin_0_5_0", ZERO_SCORE_ADDRESS, self._admin_addr))
         self.assertEqual(validate_tx_response1, hex(0))
 
         precommit_req1, tx_results1 = self._run_async(self._make_and_req_block([tx1]))
@@ -84,7 +84,6 @@ class TestIntegrateScores(TestIntegrateBase):
         }
         response = self._run_async(self._query(query_request))
         self.assertEqual(response, sha3_256(value.encode()).hexdigest())
-
 
     def test_db_returns(self):
         validate_tx_response1, tx1 = self._run_async(
