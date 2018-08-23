@@ -263,6 +263,10 @@ class IconScoreDeployEngine(object):
                 address=score_address,
                 data=content,
                 tx_hash=next_tx_hash)
+
+        backup_msg_sender = context.msg.sender
+        backup_tx_origin = context.tx.origin
+
         try:
             score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
@@ -276,11 +280,18 @@ class IconScoreDeployEngine(object):
             else:
                 on_deploy = None
 
+            deploy_owner = self.icon_deploy_storage.get_score_owner(context, score_address)
+            context.msg.sender = deploy_owner
+            context.tx.origin = deploy_owner
+
             self._initialize_score(on_deploy=on_deploy, params=params)
         except BaseException as e:
             Logger.warning(f'load wait icon score fail!! address: {score_address}', ICON_DEPLOY_LOG_TAG)
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
+        finally:
+            context.msg.sender = backup_msg_sender
+            context.tx.origin = backup_tx_origin
 
         context.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
 

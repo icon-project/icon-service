@@ -102,6 +102,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         response = self._run_async(self._query(query_request))
         self.assertEqual(response, hex(value2))
 
+
     def test_score_address_already_in_use(self):
         value1 = 1 * self._icx_factor
         timestamp = 1
