@@ -17,5 +17,5 @@ class TestScore(IconScoreBase):
 
     @external
     def hello(self) -> None:
-        self.Hello(self.msg.sender, self.tx.origin)
+        # self.Hello(self.msg.sender, self.tx.origin)
         print('hello')

@@ -174,7 +174,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         tx_result1 = self._get_tx_result(tx_results1, tx1)
         self.assertEqual(tx_result1['status'], hex(False))
-        self.assertEqual(tx_result1['failure']['code'], hex(ExceptionCode.INVALID_PARAMS))
+        self.assertEqual(tx_result1['failure']['code'], hex(ExceptionCode.SERVER_ERROR))
         raise_exception_end_tag("test_score_no_scorebase")
 
     def test_score_on_install_error(self):

@@ -63,8 +63,8 @@ class StandardTokenSupportBlacklist(StandardToken):
         self._blacklist = Blacklist(db)
         self.__ownership = Role(db, self.__ROLE_OWNERSHIP)
 
-    def on_install(self, decimals: int = 18, name: str = None, symbol: str = None, message: str = None) -> None:
-        super().on_install(decimals=decimals, name=name, symbol=symbol, message=message)
+    def on_install(self, **kwargs) -> None:
+        super().on_install(**kwargs)
         self.addOwnershipUser(self.msg.sender)
         Logger.debug(f"StandardTokenSupportBlacklist install ownership operator is [{self.msg.sender}]")
 
