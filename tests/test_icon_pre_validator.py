@@ -14,17 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import time
-
+import unittest
 from unittest.mock import Mock
 
 from iconservice.base.address import Address, AddressPrefix, ZERO_SCORE_ADDRESS, \
     generate_score_address
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx.icx_engine import IcxEngine
@@ -277,6 +276,28 @@ class TestTransactionValidator(unittest.TestCase):
 
         params['to'] = score_address
         self.validator._validate_new_score_address_on_deploy_transaction(params)
+
+    def test_value_in_deploy_transaction(self):
+        from_ = Address.from_data(AddressPrefix.EOA, b'from3')
+        timestamp = int(time.time() * 10 ** 6)
+        value = 1
+        nonce = 3
+
+        params = {
+            'from': from_,
+            'to': ZERO_SCORE_ADDRESS,
+            'value': value,
+            'timestamp': timestamp,
+            'nonce': nonce,
+            'dataType': 'deploy',
+            'data': {
+                'contentType': 'application/zip',
+                'content': '0x1234'
+            }
+        }
+
+        with self.assertRaises(InvalidParamsException):
+            self.validator._validate_deploy_transaction(params)
 
 
 class TestTransactionValidatorV2(unittest.TestCase):
