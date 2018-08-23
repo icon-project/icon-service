@@ -272,11 +272,8 @@ class EventlogScore(IconScoreBase):
     def on_update(self) -> None:
         pass
 
-    def on_selfdestruct(self, recipient: 'Address') -> None:
-        pass
-
     @eventlog
-    def ZeroIndexEvent(self, name: str, address: Address, age: int):
+    def ZeroIndexEvent(self, name: str, address: 'Address', age: int):
         pass
 
     @eventlog(indexed=1)
