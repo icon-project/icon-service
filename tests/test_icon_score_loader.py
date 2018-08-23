@@ -17,6 +17,8 @@
 import inspect
 import unittest
 from os import path, makedirs, symlink
+from time import sleep
+
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import AddressPrefix
@@ -66,7 +68,6 @@ class TestIconScoreLoader(unittest.TestCase):
         rmtree(self._ROOT_SCORE_PATH)
         rmtree(self._TEST_DB_PATH)
 
-
     @staticmethod
     def __ensure_dir(dir_path):
         if not path.exists(dir_path):
@@ -85,9 +86,10 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def test_install(self):
         self.__ensure_dir(self._ROOT_SCORE_PATH)
-
+        sleep(1)
         score = self.load_proj('test_score01', create_address(AddressPrefix.CONTRACT))
         print('test_score01', score.get_api())
+        sleep(1)
         score = self.load_proj('test_score02', create_address(AddressPrefix.CONTRACT))
         print('test_score02', score.get_api())
 
