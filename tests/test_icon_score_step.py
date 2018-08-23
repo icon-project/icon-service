@@ -23,7 +23,7 @@ from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
 from iconservice.iconscore.icon_score_base import \
-    IconScoreBase, eventlog, external
+    IconScoreBase, eventlog, external, sha3_256
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
@@ -301,6 +301,74 @@ class TestIconScoreStepCounter(unittest.TestCase):
                          (StepType.EVENT_LOG, event_log_data_size))
         self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
 
+    def test_hash_readonly(self):
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
+
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 'call', {})
+        ])
+
+        # noinspection PyUnusedLocal
+        def intercept_invoke(*args, **kwargs):
+            ContextContainer._push_context(args[0])
+            context_db = self._inner_task._icon_service_engine._icx_context_db
+            score = SampleScore(IconScoreDatabase(to_, context_db))
+            score.hash_readonly()
+
+        score_engine_invoke = Mock(side_effect=intercept_invoke)
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
+        self._inner_task._icon_service_engine. \
+            _icon_score_engine.invoke = score_engine_invoke
+
+        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
+        result = self._inner_task._invoke(request)
+        score_engine_invoke.assert_called()
+
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+
+        call_args_list = self.step_counter.apply_step.call_args_list
+        self.assertEqual(call_args_list[0][0], (StepType.DEFAULT, 1))
+        self.assertEqual(call_args_list[1][0], (StepType.INPUT, 0))
+        self.assertEqual(call_args_list[2][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1))
+        self.assertEqual(len(call_args_list), 4)
+
+    def test_hash_writable(self):
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
+
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 'call', {})
+        ])
+
+        # noinspection PyUnusedLocal
+        def intercept_invoke(*args, **kwargs):
+            ContextContainer._push_context(args[0])
+            context_db = self._inner_task._icon_service_engine._icx_context_db
+            score = SampleScore(IconScoreDatabase(to_, context_db))
+            score.hash_writable()
+
+        score_engine_invoke = Mock(side_effect=intercept_invoke)
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
+        self._inner_task._icon_service_engine. \
+            _icon_score_engine.invoke = score_engine_invoke
+
+        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
+        result = self._inner_task._invoke(request)
+        score_engine_invoke.assert_called()
+
+        self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
+
+        call_args_list = self.step_counter.apply_step.call_args_list
+        self.assertEqual(call_args_list[0][0], (StepType.DEFAULT, 1))
+        self.assertEqual(call_args_list[1][0], (StepType.INPUT, 0))
+        self.assertEqual(call_args_list[2][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1))
+        self.assertEqual(len(call_args_list), 4)
+
     def test_set_step_costs(self):
         governance_score = Mock()
         governance_score.getStepCosts = Mock(return_value={
@@ -393,5 +461,13 @@ class SampleScore(IconScoreBase):
     def query_db(self) -> bytes:
         get = self._db_field.get()
         return get
+
+    @external(readonly=True)
+    def hash_readonly(self) -> bytes:
+        return sha3_256(b'1234')
+
+    @external
+    def hash_writable(self) -> bytes:
+        return sha3_256(b'1234')
 
 

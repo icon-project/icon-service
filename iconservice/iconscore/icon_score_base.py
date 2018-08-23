@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from inspect import isfunction, getmembers, signature, Parameter
@@ -21,12 +22,11 @@ from inspect import isfunction, getmembers, signature, Parameter
 from functools import partial, wraps
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 
-from .crypto import Crypto
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
     FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, BaseType, T
-from .icon_score_context import ContextGetter
+from .icon_score_context import ContextGetter, ContextContainer
 from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
 from .icon_score_step import StepType
@@ -256,6 +256,22 @@ def revert(message: Optional[str] = None,
     raise RevertException(message, code)
 
 
+def sha3_256(data: bytes) -> bytes:
+    """
+    Computes hash using the input data
+    :param data: input data
+    :return: hashed data in bytes
+    """
+    context = ContextContainer._get_context()
+    if context.step_counter:
+        context.step_counter.apply_step(StepType.API_CALL, 1)
+
+    if data:
+        return hashlib.sha3_256(data).digest()
+    else:
+        return hashlib.sha3_256().digest()
+
+
 class IconScoreObject(ABC):
     """ 오직 __init__ 파라미터 상속용
         이것이 필요한 이유는 super().__init__이 우리 예상처럼 부모, 자식일 수 있으나 다중상속일때는 조금 다르게 흘러간다.
@@ -337,7 +353,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__address = db.address
         self.__owner = self.get_owner(self.__address)
         self.__icx = None
-        self.__crypto = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
             raise ExternalException('this score has no external functions', '__init__', str(type(self)))
@@ -592,12 +607,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             self.__icx._context = self._context
 
         return self.__icx
-
-    @property
-    def crypto(self) -> 'Crypto':
-        if self.__crypto is None:
-            self.__crypto = Crypto()
-        return self.__crypto
 
     def now(self):
         return self.block.timestamp
