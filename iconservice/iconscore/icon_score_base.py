@@ -122,7 +122,15 @@ def __retrieve_event_signature(function_name, parameters) -> str:
     type_names: List[str] = []
     for i, param in enumerate(parameters):
         if i > 0:
-            type_names.append(str(param.annotation.__name__))
+            if isinstance(param.annotation, type):
+                main_type = param.annotation
+            elif param.annotation == 'Address':
+                main_type = Address
+            else:
+                raise IconTypeError(
+                    f"Unsupported argument type: '{type(param.annotation)}'")
+
+            type_names.append(str(main_type.__name__))
     return f"{function_name}({','.join(type_names)})"
 
 
@@ -170,6 +178,14 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
                 main_type = sub_tree
         else:
             main_type = annotation
+
+        if not isinstance(main_type, type):
+            if main_type == 'Address':
+                main_type = Address
+            else:
+                raise IconTypeError(
+                    f"Unsupported argument type: '{type(main_type)}'")
+
         if not isinstance(value, main_type):
             raise IconTypeError(f"Mismatch type type of '{name}': "
                                 f"{type(value)}, expected: {main_type}")
