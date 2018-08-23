@@ -159,6 +159,10 @@ class IconPreValidator:
     def _validate_deploy_transaction(self, params: dict):
         to: 'Address' = params['to']
 
+        value: int = params.get('value', 0)
+        if value != 0:
+            raise InvalidParamsException('value must be 0 in a deploy transaction')
+
         if self._is_inactive_score(to):
             raise InvalidRequestException(f'{to} is inactive SCORE')
 
