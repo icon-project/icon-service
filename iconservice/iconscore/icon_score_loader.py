@@ -26,7 +26,7 @@ class IconScoreLoader(object):
 
     def __init__(self, score_root_path: str):
         self._score_root_path = score_root_path
-        if not score_root_path in sys.path:
+        if score_root_path not in sys.path:
             sys.path.append(score_root_path)
 
     @property
@@ -47,9 +47,12 @@ class IconScoreLoader(object):
         import_path: str = last_version_path.split(tmp_str)[1]
         import_path = import_path.replace('/', '.')
 
+        parent_import = '.'.join(import_path.rsplit('.')[:-1])
+        importlib.import_module(parent_import)
+
         spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", import_path)
         mod = importlib.util.module_from_spec(spec)
-        mod = mod.__loader__.load_module()
+        spec.loader.exec_module(mod)
         return getattr(mod, score_package_info[__MAIN_SCORE])
 
     @staticmethod

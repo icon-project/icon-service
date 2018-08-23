@@ -17,34 +17,28 @@
 """IconScoreEngine testcase
 """
 
-
 import os
 import unittest
-
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
-from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from tests import create_address, create_block_hash, create_tx_hash
-
-TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
+from tests import create_address, create_block_hash, create_tx_hash, TEST_ROOT_PATH, rmtree
 
 
 class TestContextContainer(ContextContainer):
@@ -52,34 +46,28 @@ class TestContextContainer(ContextContainer):
 
 
 class TestIconZipDeploy(unittest.TestCase):
-    _ROOT_SCORE_PATH = 'tests/score'
-    _TEST_DB_PATH = 'tests/test_db'
+    _ROOT_SCORE_PATH = '.score'
+    _TEST_DB_PATH = '.statedb'
     _ZERO_SCORE_ID = bytes(DEFAULT_BYTE_SIZE)
 
     @classmethod
     def setUpClass(cls):
-        db_path = os.path.join(TEST_ROOT_PATH, cls._TEST_DB_PATH)
-        ContextDatabaseFactory.open(
-            db_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+        ContextDatabaseFactory.open(cls._TEST_DB_PATH, ContextDatabaseFactory.Mode.SINGLE_DB)
 
     @classmethod
     def tearDownClass(cls):
         ContextDatabaseFactory.close()
 
     def setUp(self):
-        db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        score_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-
         self._tx_index = 0
-        self.__ensure_dir(db_path)
+        self.__ensure_dir(self._TEST_DB_PATH)
 
-        self._icx_db = ContextDatabaseFactory.create_by_name('icx_db')
-        self._icx_db.address = ICX_ENGINE_ADDRESS
-        self._icx_storage = IcxStorage(self._icx_db)
-        self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
+        icx_db = ContextDatabaseFactory.create_by_name('icx_db')
+        self.icx_storage = IcxStorage(icx_db)
+        self._icon_deploy_storage = IconScoreDeployStorage(icx_db)
 
-        self._engine = IconScoreDeployEngine()
-        self._icon_score_loader = IconScoreLoader(score_path)
+        self.engine = IconScoreDeployEngine()
+        self._icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
         IconScoreMapper.icon_score_loader = self._icon_score_loader
         IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()
@@ -87,8 +75,8 @@ class TestIconZipDeploy(unittest.TestCase):
         IconScoreContext.icon_score_manager = Mock(spec=IconScoreManager)
         self._context_container = TestContextContainer()
 
-        self._engine.open(
-            score_root_path=score_path,
+        self.engine.open(
+            score_root_path=self._ROOT_SCORE_PATH,
             flag=0,
             icon_deploy_storage=self._icon_deploy_storage)
 
@@ -96,7 +84,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self.sample_token_address = create_address(AddressPrefix.CONTRACT)
 
-        self._factory = IconScoreContextFactory(max_size=1)
+        self.factory = IconScoreContextFactory(max_size=1)
         self.make_context()
 
         self._one_icx = 1 * 10 ** 18
@@ -104,7 +92,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
     def make_context(self):
         self._tx_index += 1
-        self._context = self._factory.create(IconScoreContextType.DIRECT)
+        self._context = self.factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self.from_address, 0)
 
         tx_hash = create_tx_hash()
@@ -113,23 +101,19 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.block = Block(1, create_block_hash(), 0, None)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
-        self._context.icx.open(self._icx_storage)
+        self._context.icx.open(self.icx_storage)
         self._context_container._push_context(self._context)
-        self._context.validate_deployer = Mock()
         self._context.validate_score_blacklist = Mock()
 
     def tearDown(self):
-        self._engine = None
-        self._icon_score_mapper.close()
-        self._factory.destroy(self._context)
+        self.engine = None
+        self._context.type = IconScoreContextType.DIRECT
+        self.icx_storage.close(self._context)
+        self.factory.destroy(self._context)
+        ContextDatabaseFactory.close()
 
-        remove_path = os.path.join(TEST_ROOT_PATH, 'tests')
-        IconScoreDeployer.remove_existing_score(remove_path)
-        remove_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        IconScoreDeployer.remove_existing_score(remove_path)
-        remove_path = os.path.join(
-            TEST_ROOT_PATH, self.sample_token_address.to_bytes().hex())
-        IconScoreDeployer.remove_existing_score(remove_path)
+        rmtree(self._ROOT_SCORE_PATH)
+        rmtree(self._TEST_DB_PATH)
 
     @staticmethod
     def __ensure_dir(dir_path):
@@ -152,7 +136,7 @@ class TestIconZipDeploy(unittest.TestCase):
         }
         self._icon_deploy_storage.get_next_tx_hash = Mock(return_value=self._ZERO_SCORE_ID)
 
-        self._engine.invoke(
+        self.engine.invoke(
             self._context, ZERO_SCORE_ADDRESS, self.sample_token_address, data)
 
         self.assertTrue(

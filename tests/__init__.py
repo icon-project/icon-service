@@ -20,6 +20,8 @@
 
 
 import hashlib
+import os
+
 import shutil
 import sys
 
@@ -32,6 +34,8 @@ from iconcommons.logger import Logger
 
 if TYPE_CHECKING:
     from iconservice.base.address import AddressPrefix
+
+TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 
 
 def create_address(prefix: 'AddressPrefix', data: bytes=None) -> 'Address':
