@@ -41,8 +41,6 @@ class Transaction(object):
     @property
     def origin(self) -> 'Address':
         """transaction creator
-
-        :return:
         """
         return self._origin
 
