@@ -125,7 +125,7 @@ class IconServiceEngine(ContextContainer):
 
         icon_score_loader_flags = IconScoreLoaderFlag.NONE
         if self._is_flag_on(IconServiceFlag.scorePackageValidator):
-            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_VALIDATE_SCORE_PACKAGE
+            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
         self._icon_score_loader = IconScoreLoader(score_root_path, flag=icon_score_loader_flags)
 
         self._icx_engine = IcxEngine()

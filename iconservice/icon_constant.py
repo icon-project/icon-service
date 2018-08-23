@@ -84,7 +84,7 @@ class IconDeployFlag(IntFlag):
 
 class IconScoreLoaderFlag(IntFlag):
     NONE = 0
-    ENABLE_VALIDATE_SCORE_PACKAGE = 1
+    ENABLE_SCORE_PACKAGE_VALIDATOR = 1
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

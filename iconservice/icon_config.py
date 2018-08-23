@@ -28,6 +28,6 @@ default_icon_config = {
         ConfigKey.SERVICE_FEE: False,
         ConfigKey.SERVICE_AUDIT: False,
         ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
-        ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False
+        ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: True
     }
 }

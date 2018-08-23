@@ -45,30 +45,33 @@ class IconScoreLoader(object):
         with open(root_path, 'r') as f:
             return json.load(f)
 
-    def _load_user_score_module(self, last_version_path: str, score_package_info: dict) -> callable:
+    # TODO sum
+    def _load_user_score_module(self, score_path: str, score_package_info: dict) -> callable:
         __MAIN_SCORE = 'main_score'
         __MAIN_FILE = 'main_file'
 
         tmp_str = f"{self._score_root_path}/"
-        parent_import_path: str = last_version_path.split(tmp_str)[1]
+        parent_import_path: str = score_path.split(tmp_str)[1]
         parent_import = parent_import_path.replace('/', '.')
 
-        if self._is_flag_on(IconScoreLoaderFlag.ENABLE_VALIDATE_SCORE_PACKAGE):
-            ScorePackageValidator().validator(tmp_str + parent_import_path, parent_import)
+        if self._is_flag_on(IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR):
+            ScorePackageValidator().validator(score_path, parent_import)
 
         spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", parent_import)
         module = spec.loader.load_module()
         return getattr(module, score_package_info[__MAIN_SCORE])
 
+    # TODO outside
     @staticmethod
     def _get_score_path_by_tx_hash(score_root_path: str, address_body: str, tx_hash: bytes) -> str:
         address_path = path.join(score_root_path, address_body)
         converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
         return path.join(address_path, converted_tx_hash)
 
-    def load_score(self, address_body: str, tx_hash: bytes) -> callable:
-        last_version_path = self._get_score_path_by_tx_hash(self._score_root_path, address_body, tx_hash)
-        score_package_info = self._load_json(last_version_path)
-        score = self._load_user_score_module(last_version_path, score_package_info)
+    # TODO input only path
+    def load_score(self, address: 'Address', tx_hash: bytes) -> callable:
+        score_path = self._get_score_path_by_tx_hash(self._score_root_path, address.to_bytes().hex(), tx_hash)
+        score_package_info = self._load_json(score_path)
+        score = self._load_user_score_module(score_path, score_package_info)
 
         return score

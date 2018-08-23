@@ -139,7 +139,7 @@ class IconScoreMapper(object):
         :return: IconScoreBase subclass (NOT instance)
         """
 
-        score_wrapper = self.icon_score_loader.load_score(address.to_bytes().hex(), tx_hash)
+        score_wrapper = self.icon_score_loader.load_score(address, tx_hash)
         if score_wrapper is None:
             raise InvalidParamsException(f'score_wrapper load Fail {address}')
         return score_wrapper

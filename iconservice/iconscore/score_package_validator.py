@@ -19,7 +19,7 @@ from os import walk
 
 from ..base.exception import ServerErrorException
 
-
+# cpython
 IMPORT_STAR = 84
 IMPORT_NAME = 108
 IMPORT_FROM = 109
