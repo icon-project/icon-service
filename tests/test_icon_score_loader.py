@@ -83,7 +83,8 @@ class TestIconScoreLoader(unittest.TestCase):
 
         ref_path = path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
         symlink(ref_path, target_path, target_is_directory=True)
-        return self._loader.load_score(addr_score.to_bytes().hex(), tx_hash)
+        score_path = self._loader.make_score_path(addr_score, tx_hash)
+        return self._loader.load_score(score_path)
 
     def test_install(self):
         self.__ensure_dir(self._score_path)
