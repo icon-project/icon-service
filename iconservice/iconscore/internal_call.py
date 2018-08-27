@@ -145,7 +145,7 @@ class InternalCall(object):
             ret = external_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
 
         self.current_address = addr_from
-        self.msg = self.__context.msg_stack.pop()
+        self.__context.msg = self.__context.msg_stack.pop()
 
         return ret
 
