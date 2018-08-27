@@ -369,6 +369,60 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1))
         self.assertEqual(len(call_args_list), 4)
 
+    def test_out_of_step(self):
+        tx_hash = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = create_address(AddressPrefix.CONTRACT)
+
+        request = create_request([
+            ReqData(tx_hash, from_, to_, 'call', {})
+        ])
+
+        # noinspection PyUnusedLocal
+        def intercept_invoke(*args, **kwargs):
+            ContextContainer._push_context(args[0])
+            context_db = self._inner_task._icon_service_engine._icx_context_db
+            score = SampleScore(IconScoreDatabase(to_, context_db))
+            score.hash_writable()
+
+        score_engine_invoke = Mock(side_effect=intercept_invoke)
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
+        self._inner_task._icon_service_engine. \
+            _icon_score_engine.invoke = score_engine_invoke
+
+        raw_step_costs = {
+            governance.STEP_TYPE_DEFAULT: 4000,
+            governance.STEP_TYPE_CONTRACT_CALL: 1500,
+            governance.STEP_TYPE_CONTRACT_CREATE: 20000,
+            governance.STEP_TYPE_CONTRACT_UPDATE: 8000,
+            governance.STEP_TYPE_CONTRACT_DESTRUCT: -7000,
+            governance.STEP_TYPE_CONTRACT_SET: 1000,
+            governance.STEP_TYPE_GET: 5,
+            governance.STEP_TYPE_SET: 20,
+            governance.STEP_TYPE_REPLACE: 5,
+            governance.STEP_TYPE_DELETE: -15,
+            governance.STEP_TYPE_INPUT: 20,
+            governance.STEP_TYPE_EVENT_LOG: 10,
+            governance.STEP_TYPE_API_CALL: 0
+        }
+        step_costs = {}
+
+        factory = self._inner_task._icon_service_engine._step_counter_factory
+
+        for key, value in raw_step_costs.items():
+            try:
+                step_costs[StepType(key)] = value
+            except ValueError:
+                # Pass the unknown step type
+                pass
+
+        self.step_counter = IconScoreStepCounter(step_costs, 100, 0)
+        factory.create = Mock(return_value=self.step_counter)
+
+        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
+        result = self._inner_task._invoke(request)
+        self.assertTrue(result['txResults'][tx_hash]['failure']['message'].startswith("Out of step"))
+
     def test_set_step_costs(self):
         governance_score = Mock()
         governance_score.getStepCosts = Mock(return_value={
