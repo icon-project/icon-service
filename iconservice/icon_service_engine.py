@@ -111,8 +111,8 @@ class IconServiceEngine(ContextContainer):
 
         self._conf = conf
         self._flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
-        score_root_path = self._conf[ConfigKey.SCORE_ROOT_PATH]
-        state_db_root_path = self._conf[ConfigKey.STATE_DB_ROOT_PATH]
+        score_root_path: str = self._conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
+        state_db_root_path: str = self._conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
 
         makedirs(score_root_path, exist_ok=True)
         makedirs(state_db_root_path, exist_ok=True)

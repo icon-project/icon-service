@@ -18,7 +18,6 @@ import importlib.util
 import json
 import sys
 from os import path
-
 from typing import TYPE_CHECKING
 
 from .score_package_validator import ScorePackageValidator
@@ -69,11 +68,12 @@ class IconScoreLoader(object):
         return getattr(mod, score_package_info[self._MAIN_SCORE])
 
     def _make_pkg_root_import(self, score_path: str) -> str:
-        # str = .score/addr/tx_hash
-        # str = /addr/tx_hash
-        # arr = str.split('/')
-        # arr = [addr, tx_hash]
-        # '.'.join -> .addr.tx_hash
-        # str[1:] = addr.tx_hash
-        score_path = score_path.replace(self.score_root_path, "", 1)
-        return '.'.join(score_path.split('/'))[1:]
+        """
+        score_root_path: .../.score
+
+        :param score_path: ex) .../.score/address/tx_hash
+        :return: address.tx_hash
+        """
+
+        text = score_path[len(self.score_root_path):].strip('/')
+        return '.'.join(text.split('/'))
