@@ -170,30 +170,6 @@ class ScoreApiGenerator:
         return info_list
 
     @staticmethod
-    def __get_main_type(t: type) -> type:
-        """
-        Retrieves a main type of the input
-        :param t: target
-        :return: main_type
-        """
-        if hasattr(t, '_subs_tree'):
-            # Generic type has a '_subs_tree'
-            sub_tree = t._subs_tree()
-            if isinstance(sub_tree, tuple):
-                # Generic declaration with sub type. `Generic[T1,...]`
-                main_type = sub_tree[0]
-                # In Optional type case sub_tree[0] is Union,
-                # and there are three items in sub_tree.
-                # We can know the main type as considering sub_tree[1],
-                # but currently, Optional type is not supported.
-            else:
-                # Generic declaration only
-                main_type = sub_tree
-        else:
-            main_type = t
-        return main_type
-
-    @staticmethod
     def __convert_str_to_type(params_type: Any) -> Any:
         if not isinstance(params_type, str):
             return params_type
