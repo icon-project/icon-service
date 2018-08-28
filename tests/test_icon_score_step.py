@@ -44,6 +44,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.step_counter.step_limit = 5000000
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self._inner_task = None
 
     def test_install_step(self):

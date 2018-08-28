@@ -26,10 +26,6 @@ from tests.mock_db import create_mock_icon_score_db
 from tests import create_address
 
 
-class TestContextContainer(ContextContainer):
-    pass
-
-
 class TestIconContainerDB(unittest.TestCase):
 
     def setUp(self):
@@ -37,11 +33,11 @@ class TestIconContainerDB(unittest.TestCase):
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.DIRECT)
 
-        self._context_container = TestContextContainer()
-        self._context_container._push_context(self._context)
+        ContextContainer._push_context(self._context)
         pass
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self.db = None
         pass
 

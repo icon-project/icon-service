@@ -114,7 +114,7 @@ class TestIconScoreEngine(unittest.TestCase):
 
     @staticmethod
     def __unpack_zip_file(install_path: str, data: bytes):
-        file_info_generator = IconScoreDeployer.extract_files_gen(data)
+        file_info_generator = IconScoreDeployer._extract_files_gen(data)
         for name, file_info, parent_directory in file_info_generator:
             if not os.path.exists(os.path.join(install_path, parent_directory)):
                 os.makedirs(os.path.join(install_path, parent_directory))

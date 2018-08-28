@@ -106,11 +106,6 @@ class CallClass2(CallClass1):
     def fallback(self):
         pass
 
-
-class TestContextContainer(ContextContainer):
-    pass
-
-
 class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
@@ -121,10 +116,10 @@ class TestCallMethod(unittest.TestCase):
         self._mock_icon_score_manager = Mock(spec=IconScoreManager)
         self._mock_icon_score_manager.attach_mock(Mock(spec=IconScoreDeployStorage), "icon_deploy_storage")
 
-        self._context_container = TestContextContainer()
-        self._context_container._push_context(self._mock_context)
+        ContextContainer._push_context(self._mock_context)
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self.ins = None
 
     def test_success_call_method(self):

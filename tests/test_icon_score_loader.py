@@ -36,10 +36,6 @@ if TYPE_CHECKING:
 TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
 
 
-class TestContextContainer(ContextContainer):
-    pass
-
-
 class MockIconScoreManager(object):
     def get_owner(self, context, address):
         return None
@@ -59,15 +55,15 @@ class TestIconScoreLoader(unittest.TestCase):
         self._factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_manager = MockIconScoreManager()
         self._context = self._factory.create(IconScoreContextType.DIRECT)
-        self._context_container = TestContextContainer()
-        self._context_container._push_context(self._context)
+        ContextContainer._push_context(self._context)
 
     def tearDown(self):
+        ContextContainer._clear_context()
+
         remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
-        pass
 
     @staticmethod
     def __ensure_dir(dir_path):

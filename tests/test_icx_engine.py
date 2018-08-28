@@ -53,6 +53,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             'treasury', self.fee_treasury_address, 0)
 
     def tearDown(self):
+        self._clear_context()
         self.engine.close()
         self.engine = None
         self.factory.destroy(self.context)

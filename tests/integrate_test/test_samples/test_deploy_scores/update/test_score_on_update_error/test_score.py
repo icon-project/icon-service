@@ -13,15 +13,13 @@ class TestScore(IconScoreBase):
 
     def on_install(self, value: int) -> None:
         super().on_install()
+
+    def on_update(self, value: int) -> None:
+        super().on_update()
         self._value.set(value)
 
-        a = {}
-        # Raise KeyError
-        b = a[value]
-        print(b)
-
-    def on_update(self) -> None:
-        super().on_update()
+        self.revert("raise exception!")
+        print("print!")
 
     @external(readonly=True)
     def hello(self) -> str:

@@ -18,6 +18,7 @@ import os
 import unittest
 
 from iconservice.base.address import AddressPrefix
+from iconservice.base.exception import ExceptionCode
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from tests import create_address, create_tx_hash
 
@@ -44,10 +45,10 @@ class TestIconScoreDeployer(unittest.TestCase):
     def test_install(self):
         # Case when the user install SCORE first time.
         tx_hash1 = create_tx_hash()
-        ret1 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
+        self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
         converted_tx_hash = f'0x{bytes.hex(tx_hash1)}'
         install_path = os.path.join(self.score_root_path, converted_tx_hash)
-        zip_file_info_gen = self.deployer.extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
+        zip_file_info_gen = self.deployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
         file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
 
         installed_contents = []
@@ -60,30 +61,32 @@ class TestIconScoreDeployer(unittest.TestCase):
                 else:
                     installed_contents.append(f'{parent_dir_name}/{file}')
         self.assertEqual(True, os.path.exists(install_path))
-        self.assertTrue(ret1)
         self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
         # Case when the user install SCORE second time.
-        ret2 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
-        self.assertFalse(ret2)
+        with self.assertRaises(BaseException) as e:
+            self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
 
         # Case when installing SCORE with badzipfile Data.
         tx_hash2 = create_tx_hash()
-        ret3 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path2), tx_hash2)
+        with self.assertRaises(BaseException) as e:
+            self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path2), tx_hash2)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
         converted_tx_hash = f'0x{bytes.hex(tx_hash2)}'
         install_path2 = os.path.join(self.score_root_path, converted_tx_hash)
-        self.assertFalse(ret3)
         self.assertFalse(os.path.exists(install_path2))
 
         # Case when The user specifies an installation path that does not have permission.
-        ret4 = self.deployer2.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
-        self.assertFalse(ret4)
+        with self.assertRaises(BaseException) as e:
+            self.deployer2.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
+        self.assertIsInstance(e.exception, PermissionError)
 
         # Case when the user try to install scores without directories.
 
         tx_hash3 = create_tx_hash()
         converted_tx_hash = f'0x{bytes.hex(tx_hash3)}'
-        ret5 = self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path3), tx_hash3)
+        self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path3), tx_hash3)
         install_path3 = os.path.join(self.score_root_path, converted_tx_hash)
         self.assertEqual(True, os.path.exists(install_path3))
 

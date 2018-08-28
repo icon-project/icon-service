@@ -9,11 +9,11 @@ class TestInterface(InterfaceScore):
 class TestLinkScore(IconScoreBase):
     _SCORE_ADDR = 'score_addr'
 
-    @eventlog(indexed=2)
-    def BeforeInstall(self, msg_sender: Address, tx_origin: Address): pass
+    @eventlog(indexed=1)
+    def BeforeInstall(self, msg_sender: Address): pass
 
-    @eventlog(indexed=2)
-    def AfterInstall(self, msg_sender: Address, tx_origin: Address): pass
+    @eventlog(indexed=1)
+    def AfterInstall(self, msg_sender: Address): pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
@@ -24,9 +24,9 @@ class TestLinkScore(IconScoreBase):
         super().on_install()
         self._addr_score.set(score_addr)
         test_interface = self.create_interface_score(self._addr_score.get(), TestInterface)
-        # self.BeforeInstall(self.msg.sender, self.tx.origin)
+        self.BeforeInstall(self.msg.sender)
         test_interface.hello()
-        # self.AfterInstall(self.msg.sender, self.tx.origin)
+        self.AfterInstall(self.msg.sender)
 
     def on_update(self) -> None:
         super().on_update()

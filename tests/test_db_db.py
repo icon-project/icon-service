@@ -207,6 +207,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         db.delete(context, b'key0')
         self.assertIsNone(tx_batch[b'key0'])
 
+
 class TestIconScoreDatabase(unittest.TestCase):
     def setUp(self):
         state_db_root_path = 'state_db'
