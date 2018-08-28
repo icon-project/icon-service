@@ -83,7 +83,8 @@ class TestIconScoreLoader(unittest.TestCase):
 
         ref_path = path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
         symlink(ref_path, target_path, target_is_directory=True)
-        return self._loader.load_score(addr_score.to_bytes().hex(), tx_hash)
+        score_path = self._loader.make_score_path(addr_score, tx_hash)
+        return self._loader.load_score(score_path)
 
     def test_install(self):
         self.__ensure_dir(self._score_path)
@@ -98,3 +99,20 @@ class TestIconScoreLoader(unittest.TestCase):
 
         ins_score.print_test()
         self.assertTrue(IconScoreBase in inspect.getmro(score))
+
+    def test_make_pkg_root_import(self):
+        address = '010cb2b5d7cca1dec18c51de595155a4468711d4f4'
+        tx_hash = '0x49485e08589256a68e02a63fa3484b16edd322a729394fbd6b543d77a7f68621'
+        score_root_path = './.score'
+        score_path = f'{score_root_path}/{address}/{tx_hash}'
+        expected_import_name: str = f'{address}.{tx_hash}'
+
+        loader = IconScoreLoader(score_root_path, 0)
+        import_name: str = loader._make_pkg_root_import(score_path)
+        self.assertEqual(import_name, expected_import_name)
+
+        score_root_path = '/haha/hoho/hehe/score/'
+        score_path = f'{score_root_path}/{address}/{tx_hash}'
+        loader = IconScoreLoader(score_root_path, 0)
+        import_name: str = loader._make_pkg_root_import(score_path)
+        self.assertEqual(import_name, expected_import_name)

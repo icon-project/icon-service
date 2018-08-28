@@ -46,13 +46,13 @@ class ScorePackageValidator(object):
     CUSTOM_IMPORT_LIST = []
 
     @staticmethod
-    def validator(parent_imp_path: str, parent_imp: str) -> callable:
+    def validator(pkg_root_path: str, pkg_import_root: str) -> callable:
         ScorePackageValidator.PREV_IMPORT_NAME = None
 
-        ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(parent_imp_path)
+        ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(pkg_root_path)
 
         for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
-            full_name = ''.join((parent_imp, '.', imp))
+            full_name = ''.join((pkg_import_root, '.', imp))
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
             ScorePackageValidator._validate_import_from_code(code)

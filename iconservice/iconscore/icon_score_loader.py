@@ -18,13 +18,19 @@ import importlib.util
 import json
 import sys
 from os import path
+from typing import TYPE_CHECKING
 
 from .score_package_validator import ScorePackageValidator
 from ..icon_constant import IconScoreLoaderFlag
 
+if TYPE_CHECKING:
+    from ..base.address import Address
+
 
 class IconScoreLoader(object):
     _PACKAGE_PATH = 'package.json'
+    _MAIN_SCORE = 'main_score'
+    _MAIN_FILE = 'main_file'
 
     def __init__(self, score_root_path: str, flag: int):
         self._score_root_path = score_root_path
@@ -40,39 +46,42 @@ class IconScoreLoader(object):
         return self._score_root_path
 
     @staticmethod
-    def _load_json(root_path: str) -> dict:
-        root_path = path.join(root_path, IconScoreLoader._PACKAGE_PATH)
-        with open(root_path, 'r') as f:
+    def _load_json(score_path: str) -> dict:
+        pkg_json_path = path.join(score_path, IconScoreLoader._PACKAGE_PATH)
+        with open(pkg_json_path, 'r') as f:
             return json.load(f)
 
-    # TODO sum
-    def _load_user_score_module(self, score_path: str, score_package_info: dict) -> callable:
-        __MAIN_SCORE = 'main_score'
-        __MAIN_FILE = 'main_file'
+    def make_score_path(self, score_addr: 'Address', tx_hash: 'bytes') -> str:
+        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+        return path.join(self._score_root_path, score_addr.to_bytes().hex(), converted_tx_hash)
 
-        tmp_str = f"{self._score_root_path}/"
-        parent_import_path: str = score_path.split(tmp_str)[1]
-        parent_import = parent_import_path.replace('/', '.')
+    def load_score(self, score_path: str) -> callable:
+        score_package_info = self._load_json(score_path)
+        pkg_root_import: str = self._make_pkg_root_import(score_path)
 
         if self._is_flag_on(IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR):
-            ScorePackageValidator().validator(score_path, parent_import)
+            ScorePackageValidator().validator(score_path, pkg_root_import)
 
-        spec = importlib.util.find_spec(f".{score_package_info[__MAIN_FILE]}", parent_import)
+        spec = importlib.util.find_spec(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        return getattr(mod, score_package_info[__MAIN_SCORE])
+        
+        # import_class_path = import_path.replace('/', '.') + f".{score_package_info[__MAIN_FILE]}"
+        # import_file_path = tmp_str + import_path + f"/{score_package_info[__MAIN_FILE]}" + '.py'
+        #
+        # loader = importlib.machinery.SourceFileLoader(import_class_path, import_file_path)
+        # spec = importlib.util.spec_from_loader(import_class_path, loader)
+        # mod = importlib.util.module_from_spec(spec)
 
-    # TODO outside
-    @staticmethod
-    def _get_score_path_by_tx_hash(score_root_path: str, address_body: str, tx_hash: bytes) -> str:
-        address_path = path.join(score_root_path, address_body)
-        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
-        return path.join(address_path, converted_tx_hash)
+        return getattr(mod, score_package_info[self._MAIN_SCORE])
 
-    # TODO input only path
-    def load_score(self, address_body: str, tx_hash: bytes) -> callable:
-        score_path = self._get_score_path_by_tx_hash(self._score_root_path, address_body, tx_hash)
-        score_package_info = self._load_json(score_path)
-        score = self._load_user_score_module(score_path, score_package_info)
+    def _make_pkg_root_import(self, score_path: str) -> str:
+        """
+        score_root_path: .../.score
 
-        return score
+        :param score_path: ex) .../.score/address/tx_hash
+        :return: address.tx_hash
+        """
+
+        text = score_path[len(self.score_root_path):].strip('/')
+        return '.'.join(text.split('/'))

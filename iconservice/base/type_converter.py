@@ -226,6 +226,7 @@ class TypeConverter:
 
     @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
+        # in python 3.7, get_type_hints method return _GenericAlias type object(when parameter has 'NoneType' as a default)
         hints = get_type_hints(func)
         if hints.get('return') is not None:
             del hints['return']
@@ -248,19 +249,14 @@ class TypeConverter:
     @staticmethod
     def _filter_none_type(annotation_type: type) -> type:
         main_type = None
-        if hasattr(annotation_type, '_subs_tree'):
-            # Generic type has a '_subs_tree'
-            sub_tree = annotation_type._subs_tree()
-            if isinstance(sub_tree, tuple):
-                for t in sub_tree:
-                    if t is Union or t is type(None):
-                        pass
-                    else:
-                        main_type = t
-                        break
-            else:
-                # Generic declaration only
-                main_type = sub_tree
+
+        # in python 3.7, _subs_tree method has excluded.
+        if hasattr(annotation_type, '__args__'):
+            annotations = annotation_type.__args__
+            for type in annotations:
+                if type != None:
+                    main_type = type
+                    break
         else:
             main_type = annotation_type
         return main_type
