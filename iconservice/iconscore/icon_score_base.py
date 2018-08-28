@@ -36,7 +36,7 @@ from ..base.exception import IconScoreException, IconTypeError, InterfaceExcepti
     EventLogException, ExternalException, RevertException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..icon_constant import DATA_BYTE_ORDER
-from ..utils import int_to_bytes, byte_length_of_int
+from ..utils import int_to_bytes, byte_length_of_int, get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -167,17 +167,8 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
         if annotation is Parameter.empty:
             raise IconTypeError(
                 f"Missing argument hint for '{function_name}': '{name}'")
-        if hasattr(annotation, '_subs_tree'):
-            # Generic type has a '_subs_tree'
-            sub_tree = annotation._subs_tree()
-            if isinstance(sub_tree, tuple):
-                # Generic declaration with sub type. `Generic[T1,...]`
-                main_type = sub_tree[0]
-            else:
-                # Generic declaration only
-                main_type = sub_tree
-        else:
-            main_type = annotation
+
+        main_type = get_main_type_from_annotations_type(annotation)
 
         if not isinstance(main_type, type):
             if main_type == 'Address':

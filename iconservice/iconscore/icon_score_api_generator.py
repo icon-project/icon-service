@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter, isclass, BoundArguments
+from inspect import signature, Signature, Parameter, isclass
 from typing import Any, Optional
+
+from ..utils import get_main_type_from_annotations_type
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
 from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
@@ -149,8 +151,9 @@ class ScoreApiGenerator:
             raise IconTypeError(
                 f"'Returning type should be declared in read-only functions")
 
-        params_type = ScoreApiGenerator.__convert_str_to_type(params_type)
-        main_type = ScoreApiGenerator.__get_main_type(params_type)
+        main_type = get_main_type_from_annotations_type(params_type)
+        main_type = ScoreApiGenerator.__convert_str_to_type(main_type)
+
         # At first, finds if the type is a 'list' or a 'dict'
         # if not, finds a base type
         find = (t for t in [list, dict]
@@ -165,6 +168,30 @@ class ScoreApiGenerator:
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
         info_list.append(info)
         return info_list
+
+    @staticmethod
+    def __get_main_type(t: type) -> type:
+        """
+        Retrieves a main type of the input
+        :param t: target
+        :return: main_type
+        """
+        if hasattr(t, '_subs_tree'):
+            # Generic type has a '_subs_tree'
+            sub_tree = t._subs_tree()
+            if isinstance(sub_tree, tuple):
+                # Generic declaration with sub type. `Generic[T1,...]`
+                main_type = sub_tree[0]
+                # In Optional type case sub_tree[0] is Union,
+                # and there are three items in sub_tree.
+                # We can know the main type as considering sub_tree[1],
+                # but currently, Optional type is not supported.
+            else:
+                # Generic declaration only
+                main_type = sub_tree
+        else:
+            main_type = t
+        return main_type
 
     @staticmethod
     def __convert_str_to_type(params_type: Any) -> Any:
@@ -195,7 +222,7 @@ class ScoreApiGenerator:
         if param.annotation is Parameter.empty:
             raise IconTypeError(f"Missing argument hint for '{param.name}'")
 
-        main_type = ScoreApiGenerator.__get_main_type(param.annotation)
+        main_type = get_main_type_from_annotations_type(param.annotation)
         main_type = ScoreApiGenerator.__convert_str_to_type(main_type)
         api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
@@ -211,30 +238,6 @@ class ScoreApiGenerator:
                 raise InvalidParamsException(f'default params type mismatch. value: {param.default} type: {main_type}')
             info[ScoreApiGenerator.__API_INPUTS_DEFAULT] = TypeConverter.convert_type_reverse(param.default)
         src.append(info)
-
-    @staticmethod
-    def __get_main_type(t: type) -> type:
-        """
-        Retrieves a main type of the input
-        :param t: target
-        :return: main_type
-        """
-        if hasattr(t, '_subs_tree'):
-            # Generic type has a '_subs_tree'
-            sub_tree = t._subs_tree()
-            if isinstance(sub_tree, tuple):
-                # Generic declaration with sub type. `Generic[T1,...]`
-                main_type = sub_tree[0]
-                # In Optional type case sub_tree[0] is Union,
-                # and there are three items in sub_tree.
-                # We can know the main type as considering sub_tree[1],
-                # but currently, Optional type is not supported.
-            else:
-                # Generic declaration only
-                main_type = sub_tree
-        else:
-            main_type = t
-        return main_type
 
     @staticmethod
     def __find_base_super_type(t: type) -> Optional[type]:

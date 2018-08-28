@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import Union, Any, get_type_hints
 from enum import IntEnum
 
+from ..utils import get_main_type_from_annotations_type
 from .address import Address
 from .exception import InvalidParamsException
 
@@ -226,7 +227,9 @@ class TypeConverter:
 
     @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
-        # in python 3.7, get_type_hints method return _GenericAlias type object(when parameter has 'NoneType' as a default)
+        # in python 3.7, get_type_hints method return _GenericAlias type object
+        # (when parameter has 'NoneType' as a default)
+
         hints = get_type_hints(func)
         if hints.get('return') is not None:
             del hints['return']
@@ -242,24 +245,9 @@ class TypeConverter:
             if kw_param is None:
                 continue
 
-            param = TypeConverter._filter_none_type(param)
+            param = get_main_type_from_annotations_type(param)
             kw_param = TypeConverter._convert_data_value(param, kw_param)
             kw_params[key] = kw_param
-
-    @staticmethod
-    def _filter_none_type(annotation_type: type) -> type:
-        main_type = None
-
-        # in python 3.7, _subs_tree method has excluded.
-        if hasattr(annotation_type, '__args__'):
-            annotations = annotation_type.__args__
-            for type in annotations:
-                if type != None:
-                    main_type = type
-                    break
-        else:
-            main_type = annotation_type
-        return main_type
 
     @staticmethod
     def _convert_data_value(annotation_type: type, param: Any) -> Any:
