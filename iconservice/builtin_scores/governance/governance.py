@@ -423,7 +423,7 @@ class Governance(IconScoreBase):
             STEP_TYPE_CONTRACT_UPDATE: 8000,
             STEP_TYPE_CONTRACT_DESTRUCT: -7000,
             STEP_TYPE_CONTRACT_SET: 1000,
-            STEP_TYPE_GET: 5,
+            STEP_TYPE_GET: 0,
             STEP_TYPE_SET: 20,
             STEP_TYPE_REPLACE: 5,
             STEP_TYPE_DELETE: -15,
