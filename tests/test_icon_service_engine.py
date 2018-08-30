@@ -764,6 +764,35 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(value, to_balance)
         self.assertEqual(from_balance, self._total_supply - value - fee)
 
+    def test_get_balance_with_malformed_address_and_type_converter(self):
+        empty_address = MalformedAddress.from_string('')
+        short_address_without_hx = MalformedAddress.from_string('12341234')
+        short_address = MalformedAddress.from_string('hx1234512345')
+        long_address_without_hx = MalformedAddress.from_string(
+            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
+        long_address = MalformedAddress.from_string(
+            'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
+        malformed_addresses = [
+            '',
+            '12341234',
+            'hx1234123456',
+            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf',
+            'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf']
+
+        method: str = 'icx_getBalance'
+
+        for address in malformed_addresses:
+            request = {'method': method, 'params': {'address': address}}
+
+            converted_request = TypeConverter.convert(request, ParamType.QUERY)
+            self.assertEqual(method, converted_request['method'])
+
+            params: dict = converted_request['params']
+            self.assertEqual(MalformedAddress.from_string(address), params['address'])
+
+            balance: int = self._engine.query(
+                converted_request['method'], converted_request['params'])
+            self.assertEqual(0, balance)
 
 if __name__ == '__main__':
     unittest.main()

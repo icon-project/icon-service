@@ -182,7 +182,7 @@ type_convert_templates[ParamType.ICX_CALL] = {
 }
 type_convert_templates[ParamType.ICX_GET_BALANCE] = {
     ConstantKeys.VERSION: ValueType.INT,
-    ConstantKeys.ADDRESS: ValueType.ADDRESS
+    ConstantKeys.ADDRESS: ValueType.ADDRESS_OR_MALFORMED_ADDRESS
 }
 type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
     ConstantKeys.VERSION: ValueType.INT
