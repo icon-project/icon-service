@@ -13,12 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from collections import namedtuple
-from typing import List
 from unittest.mock import Mock, patch
 
-from iconcommons.icon_config import IconConfig
+from typing import List
 
+from iconcommons.icon_config import IconConfig
 from iconservice.database.db import ContextDatabase
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_inner_service import IconScoreInnerTask

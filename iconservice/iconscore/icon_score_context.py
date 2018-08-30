@@ -80,6 +80,10 @@ class ContextContainer(object):
         else:
             raise ServerErrorException('Failed to pop a context out of context_stack')
 
+    @staticmethod
+    def _clear_context() -> None:
+        setattr(_thread_local_data, 'context_stack', None)
+
 
 class ContextGetter(object):
     """The class which refers to IconScoreContext should inherit ContextGetter
