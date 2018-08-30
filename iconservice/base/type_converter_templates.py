@@ -49,6 +49,7 @@ class ValueType(IntEnum):
     BOOL = 4
     ADDRESS = 5
     BYTES = 6
+    ADDRESS_OR_MALFORMED_ADDRESS = 7
 
 
 type_convert_templates = {}
@@ -134,7 +135,7 @@ type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
     ConstantKeys.VERSION: ValueType.INT,
     ConstantKeys.TX_HASH: ValueType.BYTES,
     ConstantKeys.FROM: ValueType.ADDRESS,
-    ConstantKeys.TO: ValueType.ADDRESS,
+    ConstantKeys.TO: ValueType.ADDRESS_OR_MALFORMED_ADDRESS,
     ConstantKeys.VALUE: ValueType.INT,
     ConstantKeys.STEP_LIMIT: ValueType.INT,
     ConstantKeys.FEE: ValueType.INT,

@@ -225,6 +225,102 @@ class Address(object):
         return Address(prefix, b'\x00' * zero_size + num_bytes)
 
 
+class MalformedAddress(object):
+    """This class only exists to support an invalid format address which was created by legacy bug
+    """
+    def __init__(self,
+                 address_prefix: AddressPrefix,
+                 address_body: bytes) -> None:
+        """Constructor
+
+        :param address_prefix: address prefix enumerator
+        :param address_body: 20-byte address body
+        """
+        if not isinstance(address_prefix, AddressPrefix) or \
+                address_prefix != AddressPrefix.EOA:
+            raise InvalidParamsException('Invalid address prefix type')
+        if not isinstance(address_body, bytes):
+            raise InvalidParamsException('Invalid address body type')
+
+        self._prefix = address_prefix
+        self._body = address_body
+
+    @property
+    def prefix(self) -> AddressPrefix:
+        """Returns address prefix part
+
+        :return: AddressPrefix.EOA(0) or AddressPrefix.CONTRACT(1)
+        """
+        return self._prefix
+
+    @property
+    def body(self) -> bytes:
+        return self._body
+
+    def __eq__(self, other) -> bool:
+        """operator == overriding
+
+        :return: bool
+        """
+        return \
+            isinstance(other, MalformedAddress) \
+            and self._prefix == other.prefix \
+            and self._body == other.body
+
+    def __ne__(self, other) -> bool:
+        """operator != overriding
+
+        :return: (bool)
+        """
+        return not self.__eq__(other)
+
+    def __str__(self) -> str:
+        """operator str() overriding
+
+        returns prefix(2) + 40-char hexadecimal address
+
+        :return: (str) 42-char address
+        """
+        return f'{str(self.prefix)}{self.body.hex()}'
+
+    def __hash__(self) -> int:
+        """Returns a hash value for this object
+
+        :return: hash value
+        """
+        return hash(self._prefix.to_bytes(1, DATA_BYTE_ORDER) + self._body)
+
+    @property
+    def is_contract(self) -> bool:
+        """Is this a contract address?
+
+        :return: True(contract) False(Not contract)
+        """
+        return self.prefix == AddressPrefix.CONTRACT
+
+    @staticmethod
+    def from_string(address: str):
+        """Create Address object from 42-char address
+
+        :return: (Address)
+        """
+        if address.startswith('hx'):
+            body = address[2:]
+        else:
+            body = address
+
+        address_body = bytes.fromhex(body)
+
+        return MalformedAddress(AddressPrefix.EOA, address_body)
+
+    def to_bytes(self) -> bytes:
+        """Convert Address object to bytes
+
+        :return: data including information of Address object
+        """
+        return self._body
+
+
 # cx0000000000000000000000000000000000000000
 ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
