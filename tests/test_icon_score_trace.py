@@ -68,6 +68,7 @@ class TestTrace(unittest.TestCase):
             Mock(return_value=(create_tx_hash(), create_tx_hash()))
         context.internal_call = InternalCall(context)
         context.internal_call._other_score_call = Mock()
+        context.internal_call.icx_engine = Mock(spec=IcxEngine)
         context.icon_score_mapper = Mock()
         context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))
         context.internal_call._validate_score_blacklist = Mock(return_value=False)

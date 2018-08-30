@@ -41,7 +41,7 @@ from iconservice.utils.bloom import BloomFilter
 from tests import create_tx_hash, create_address, \
     raise_exception_start_tag, raise_exception_end_tag, rmtree
 from tests.mock_generator import generate_service_engine, generate_inner_task, \
-    create_request, ReqData
+    create_request, ReqData, clear_inner_task
 
 
 class TestTransactionResult(unittest.TestCase):
@@ -76,8 +76,7 @@ class TestTransactionResult(unittest.TestCase):
 
     def tearDown(self):
         ContextContainer._clear_context()
-        self._icon_service_engine = None
-        self._mock_context = None
+        clear_inner_task()
 
 
     def test_tx_success(self):
@@ -264,6 +263,8 @@ class TestTransactionResult(unittest.TestCase):
             self.assertIn('stepUsed', result)
             self.assertEqual(1, len(result['eventLogs']))
             self.assertEqual(step_total, int(result['cumulativeStepUsed'], 16))
+
+        clear_inner_task()
 
 
 # noinspection PyPep8Naming

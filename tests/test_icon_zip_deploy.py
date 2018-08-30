@@ -118,6 +118,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
     def tearDown(self):
         self._engine = None
+        ContextContainer._pop_context()
         self._icon_score_mapper.close()
         self._factory.destroy(self._context)
 
