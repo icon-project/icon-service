@@ -255,7 +255,10 @@ def sha3_256(data: bytes) -> bytes:
     """
     context = ContextContainer._get_context()
     if context.step_counter:
-        context.step_counter.apply_step(StepType.API_CALL, 1)
+        step_count = 1
+        if data:
+            step_count += len(data)
+        context.step_counter.apply_step(StepType.API_CALL, step_count)
 
     return hashlib.sha3_256(data).digest()
 

@@ -256,6 +256,7 @@ class IcxEngine(object):
         :param from_: icx sender
         :param to: icx receiver
         :param amount: the amount of coin in loop to transfer
+        :return True
         """
         if from_ != to and amount > 0:
             # get account info from state db.

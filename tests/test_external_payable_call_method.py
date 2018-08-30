@@ -20,8 +20,6 @@ from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
-from iconservice.base.exception import ExternalException, PayableException, \
-    IconScoreException
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
@@ -32,13 +30,11 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType, IconS
 from iconservice.iconscore.icon_score_context import Message, ContextContainer, \
     IconScoreContext
 from tests import create_address
-from tests.mock_db import create_mock_icon_score_db
 
 
 def decorator(func):
     @wraps(func)
     def __wrapper(calling_obj: object, *args, **kwargs):
-        print('!!')
         res = func(calling_obj, *args, **kwargs)
         return res
     return __wrapper
@@ -107,10 +103,6 @@ class CallClass2(CallClass1):
         pass
 
 
-class TestContextContainer(ContextContainer):
-    pass
-
-
 class TestCallMethod(unittest.TestCase):
 
     def setUp(self):
@@ -121,16 +113,16 @@ class TestCallMethod(unittest.TestCase):
         self._mock_icon_score_manager = Mock(spec=IconScoreManager)
         self._mock_icon_score_manager.attach_mock(Mock(spec=IconScoreDeployStorage), "icon_deploy_storage")
 
-        self._context_container = TestContextContainer()
-        self._context_container._push_context(self._mock_context)
+        ContextContainer._push_context(self._mock_context)
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self.ins = None
 
     def test_success_call_method(self):
         self._mock_context.readonly = False
         self._mock_context.func_type = IconScoreFuncType.WRITABLE
-        self.ins = CallClass2(create_mock_icon_score_db())
+        self.ins = CallClass2(Mock())
         self._mock_context.msg = Message(create_address(AddressPrefix.EOA), 0)
         self._mock_context.type = IconScoreContextType.INVOKE
         func = getattr(self.ins, '_IconScoreBase__external_call')
@@ -172,7 +164,7 @@ class TestCallMethod(unittest.TestCase):
         self._mock_context.readonly = False
         self._mock_context.func_type = IconScoreFuncType.WRITABLE
         self._mock_context.msg = Message(create_address(AddressPrefix.EOA), 0)
-        self.ins = CallClass2(create_mock_icon_score_db())
+        self.ins = CallClass2(Mock())
         func = getattr(self.ins, '_IconScoreBase__external_call')
         func('func2', (1, 2), {})
 

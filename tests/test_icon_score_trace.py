@@ -74,6 +74,7 @@ class TestTrace(unittest.TestCase):
         self._score = TestScore(db)
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self._mock_icon_score = None
 
     def test_transfer(self):

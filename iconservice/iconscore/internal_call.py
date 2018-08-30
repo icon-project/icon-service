@@ -37,9 +37,24 @@ class InternalCall(object):
         return self.icx_engine.get_balance(self.__context, address)
 
     def icx_send_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
+        """transfer icx to the given 'addr_to'
+
+        :param addr_from: icx sender address
+        :param addr_to: icx receiver address
+        :param amount: icx amount
+        :return: True(success) False(failed)
+        """
         return self._call(TraceType.TRANSFER, addr_from, addr_to, None, (), {}, amount, True)
 
     def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
+        """transfer icx to the given 'addr_to'
+        If failed, an exception will be raised
+
+        :param addr_from: icx sender address
+        :param addr_to: icx receiver address
+        :param amount: the amount of icx to transfer
+        :return: True(success) False(failed)
+        """
         return self._call(TraceType.TRANSFER, addr_from, addr_to, None, (), {}, amount)
 
     def other_external_call(self,
@@ -69,8 +84,8 @@ class InternalCall(object):
         if trace_type == TraceType.CALL:
             ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
         elif trace_type == TraceType.TRANSFER:
-            ret = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
-            if addr_to.is_contract:
+            ret: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
+            if ret and addr_to.is_contract:
                 self._other_score_call(addr_from, addr_to, None, (), {}, amount)
         else:
             ret = None
@@ -99,15 +114,12 @@ class InternalCall(object):
         self.__context.traces.append(trace)
 
     def _icx_transfer(self, addr_from: 'Address', addr_to: 'Address', icx_value: int, is_exc_handling: bool) -> bool:
-        ret = None
         try:
-            ret = self.icx_engine.transfer(self.__context, addr_from, addr_to, icx_value)
+            return self.icx_engine.transfer(self.__context, addr_from, addr_to, icx_value)
         except BaseException as e:
-            if is_exc_handling:
-                pass
-            else:
+            if not is_exc_handling:
                 raise e
-        return ret
+        return False
 
     def _other_score_call(self,
                           addr_from: Address,

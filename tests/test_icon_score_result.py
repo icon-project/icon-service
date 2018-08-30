@@ -75,6 +75,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.current_address = Mock(spec=Address)
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self._icon_service_engine = None
         self._mock_context = None
 

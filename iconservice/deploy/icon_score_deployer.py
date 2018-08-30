@@ -20,8 +20,6 @@ import shutil
 
 from iconservice.base.address import Address
 from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
-from iconservice.icon_constant import ICON_DEPLOY_LOG_TAG
-from iconcommons.logger import Logger
 
 
 class IconScoreDeployer(object):
@@ -34,7 +32,7 @@ class IconScoreDeployer(object):
     def deploy(self,
                address: 'Address',
                data: bytes,
-               tx_hash: bytes) -> bool:
+               tx_hash: bytes) -> None:
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
         :param address: score address
@@ -57,26 +55,19 @@ class IconScoreDeployer(object):
             if not os.path.exists(install_path):
                 os.makedirs(install_path)
 
-            file_info_generator = IconScoreDeployer.extract_files_gen(data)
+            file_info_generator = IconScoreDeployer._extract_files_gen(data)
             for name, file_info, parent_directory in file_info_generator:
                 if not os.path.exists(os.path.join(install_path, parent_directory)):
                     os.makedirs(os.path.join(install_path, parent_directory))
                 with file_info as file_info_context, open(os.path.join(install_path, name), 'wb') as dest:
                     contents = file_info_context.read()
                     dest.write(contents)
-            return True
-        except ScoreInstallException as e:
-            Logger.debug(e, ICON_DEPLOY_LOG_TAG)
-            return False
-        except ScoreInstallExtractException:
-            os.rmdir(install_path)
-            return False
-        except PermissionError as pe:
-            Logger.debug(pe, ICON_DEPLOY_LOG_TAG)
-            return False
+        except BaseException as e:
+            shutil.rmtree(install_path, ignore_errors=True)
+            raise e
 
     @staticmethod
-    def extract_files_gen(data: bytes):
+    def _extract_files_gen(data: bytes):
         """Yield (filename, file_information, parent_directory_name) tuple.
 
         :param data: The byte value of the zip file.
@@ -114,6 +105,8 @@ class IconScoreDeployer(object):
             raise ScoreInstallExtractException("Bad zip file.")
         except zipfile.LargeZipFile:
             raise ScoreInstallExtractException("Large zip file.")
+        except Exception as e:
+            raise ScoreInstallExtractException(f'extract_files_gen error -> exception: {e}')
 
     @staticmethod
     def remove_existing_score(archive_path: str) -> None:

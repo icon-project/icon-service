@@ -300,10 +300,16 @@ class IconServiceEngine(ContextContainer):
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
         """
-
-        self._icx_engine.close()
-        self._icon_score_mapper.close()
-        ContextDatabaseFactory.close()
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        self._push_context(context)
+        try:
+            self._icx_engine.close()
+            self._icon_score_mapper.close()
+        finally:
+            self._pop_context()
+            self._context_factory.destroy(context)
+            ContextDatabaseFactory.close()
+            self._clear_context()
 
     def invoke(self,
                block: 'Block',

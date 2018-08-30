@@ -53,6 +53,9 @@ class TestEventlog(unittest.TestCase):
 
         self._mock_score = EventlogScore(db)
 
+    def tearDown(self):
+        ContextContainer._clear_context()
+
     def test_call_event(self):
         context = ContextContainer._get_context()
 

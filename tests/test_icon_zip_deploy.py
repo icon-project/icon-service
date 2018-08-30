@@ -47,10 +47,6 @@ from tests import create_address, create_block_hash, create_tx_hash
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
-class TestContextContainer(ContextContainer):
-    pass
-
-
 class TestIconZipDeploy(unittest.TestCase):
     _ROOT_SCORE_PATH = 'tests/score'
     _TEST_DB_PATH = 'tests/test_db'
@@ -85,7 +81,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icon_score_mapper = IconScoreMapper()
 
         IconScoreContext.icon_score_manager = Mock(spec=IconScoreManager)
-        self._context_container = TestContextContainer()
 
         self._engine.open(
             score_root_path=score_path,
@@ -102,6 +97,9 @@ class TestIconZipDeploy(unittest.TestCase):
         self._one_icx = 1 * 10 ** 18
         self._one_icx_to_token = 1
 
+    def tearDown(self):
+        ContextContainer._clear_context()
+
     def make_context(self):
         self._tx_index += 1
         self._context = self._factory.create(IconScoreContextType.DIRECT)
@@ -114,7 +112,7 @@ class TestIconZipDeploy(unittest.TestCase):
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)
-        self._context_container._push_context(self._context)
+        ContextContainer._push_context(self._context)
         self._context.validate_deployer = Mock()
         self._context.validate_score_blacklist = Mock()
 
