@@ -30,6 +30,8 @@ DEFAULT_BYTE_SIZE = 32
 DATA_BYTE_ORDER = 'big'  # big endian
 # Fixed fee is 0.01 icx.
 FIXED_FEE = 10 ** 16
+# Max data field size
+MAX_DATA_SIZE = 512 * 1024
 
 ICON_DEX_DB_NAME = 'icon_dex'
 
