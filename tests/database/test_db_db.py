@@ -34,12 +34,11 @@ from tests import rmtree
 class TestKeyValueDatabase(unittest.TestCase):
 
     def setUp(self):
-        state_db_root_path = 'state_db'
-        self.state_db_root_path = state_db_root_path
-        rmtree(state_db_root_path)
-        os.mkdir(state_db_root_path)
+        self.state_db_root_path = 'state_db'
+        rmtree(self.state_db_root_path)
+        os.mkdir(self.state_db_root_path)
 
-        self.db = KeyValueDatabase.from_path(state_db_root_path, True)
+        self.db = KeyValueDatabase.from_path(self.state_db_root_path, True)
 
     def tearDown(self):
         self.db.close()

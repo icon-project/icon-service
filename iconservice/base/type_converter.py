@@ -15,12 +15,14 @@
 # limitations under the License.
 
 from copy import deepcopy
+
 from typing import Union, Any, get_type_hints
 
 from iconservice.base.type_converter_templates import ParamType, \
     type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
 from .address import Address
 from .exception import InvalidParamsException
+from ..utils import get_main_type_from_annotations_type
 
 score_base_support_type = (int, str, bytes, bool, Address)
 
@@ -188,6 +190,9 @@ class TypeConverter:
 
     @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
+        # in python 3.7, get_type_hints method return _GenericAlias type object
+        # (when parameter has 'NoneType' as a default)
+
         hints = get_type_hints(func)
         if hints.get('return') is not None:
             del hints['return']
@@ -203,29 +208,9 @@ class TypeConverter:
             if kw_param is None:
                 continue
 
-            param = TypeConverter._filter_none_type(param)
+            param = get_main_type_from_annotations_type(param)
             kw_param = TypeConverter._convert_data_value(param, kw_param)
             kw_params[key] = kw_param
-
-    @staticmethod
-    def _filter_none_type(annotation_type: type) -> type:
-        main_type = None
-        if hasattr(annotation_type, '_subs_tree'):
-            # Generic type has a '_subs_tree'
-            sub_tree = annotation_type._subs_tree()
-            if isinstance(sub_tree, tuple):
-                for t in sub_tree:
-                    if t is Union or t is type(None):
-                        pass
-                    else:
-                        main_type = t
-                        break
-            else:
-                # Generic declaration only
-                main_type = sub_tree
-        else:
-            main_type = annotation_type
-        return main_type
 
     @staticmethod
     def _convert_data_value(annotation_type: type, param: Any) -> Any:

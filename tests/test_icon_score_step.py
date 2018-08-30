@@ -22,12 +22,13 @@ from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
+from iconservice.icon_config import default_icon_config
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external, sha3_256
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
-from tests import create_tx_hash, create_address
+from tests import create_tx_hash, create_address, rmtree
 from tests.mock_generator import generate_inner_task, create_request, ReqData
 
 
@@ -46,6 +47,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def tearDown(self):
         ContextContainer._clear_context()
         self._inner_task = None
+        score_root_path = default_icon_config['scoreRootPath']
+        state_db_root_path = default_icon_config['stateDbRootPath']
+        rmtree(score_root_path)
+        rmtree(state_db_root_path)
 
     def test_install_step(self):
         # Ignores deploy

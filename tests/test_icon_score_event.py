@@ -36,11 +36,11 @@ from iconservice.utils.bloom import BloomFilter
 
 class TestEventlog(unittest.TestCase):
     def setUp(self):
-        db = Mock(spec=IconScoreDatabase)
         address = Mock(spec=Address)
+        db = Mock(spec=IconScoreDatabase)
         db.attach_mock(address, 'address')
         context = Mock(spec=IconScoreContext)
-        event_logs = Mock(spec=List['EventLog'])
+        event_logs = Mock(spec=list)
         step_counter = Mock(spec=IconScoreStepCounter)
         logs_bloom = BloomFilter()
 

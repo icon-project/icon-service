@@ -50,7 +50,7 @@ class TestTrace(unittest.TestCase):
         db = Mock(spec=IconScoreDatabase)
         db.address = Mock(spec=Address)
         context = IconScoreContext()
-        traces = Mock(spec=List[Trace])
+        traces = Mock(spec=list)
 
         context.tx = Mock(spec=Transaction)
         context.block = Mock(spec=Block)
@@ -81,6 +81,7 @@ class TestTrace(unittest.TestCase):
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
         to_ = Mock(spec=Address)
+        context.internal_call.icx_engine = Mock(spec=IcxEngine)
         amount = 100
         self._score.icx.transfer(to_, amount)
         context.traces.append.assert_called()
