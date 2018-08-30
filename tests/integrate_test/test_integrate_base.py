@@ -19,25 +19,19 @@
 
 from unittest import TestCase
 
+from typing import TYPE_CHECKING, Union, Optional, Any
+
 from iconcommons import IconConfig
-from iconservice.database.db import KeyValueDatabase
+from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
-from tests.integrate_test.mock_db import MockKeyValueDatabase
-from iconservice.base.block import Block
-
-from typing import TYPE_CHECKING, Union, Optional, Any
-
 from tests.integrate_test.in_memory_zip import InMemoryZip
-
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
-
-origin_db_func = KeyValueDatabase.from_path
 
 
 class TestIntegrateBase(TestCase):
@@ -57,7 +51,7 @@ class TestIntegrateBase(TestCase):
         cls._genesis: 'Address' = create_address()
         cls._fee_treasury: 'Address' = create_address()
 
-        cls._addr_array = [create_address() for i in range(10)]
+        cls._addr_array = [create_address() for _ in range(10)]
 
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path)
@@ -76,22 +70,12 @@ class TestIntegrateBase(TestCase):
 
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(config)
-        # self._change_mock_db()
 
         self._genesis_invoke()
-
-    @staticmethod
-    def _change_mock_db():
-        KeyValueDatabase.from_path = MockKeyValueDatabase.from_path
-
-    @staticmethod
-    def _rollback_mock_db():
-        KeyValueDatabase.from_path = origin_db_func
 
     def tearDown(self):
         self.icon_service_engine.close()
         root_clear(self._score_root_path, self._state_db_root_path)
-        self._rollback_mock_db()
 
     def _make_init_config(self) -> dict:
         return {}

@@ -21,6 +21,7 @@ import unittest
 from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException
 from iconservice.icx.icx_account import AccountType, Account
+from tests import create_address
 
 
 class TestAccountType(unittest.TestCase):
@@ -53,8 +54,7 @@ class TestAccount(unittest.TestCase):
         self.assertFalse(account1.locked)
         self.assertFalse(account1.c_rep)
 
-        text = 'hx00678792645ed9f18f1560c4b2e1b0aa028f61e4'
-        account1.address = Address.from_string(text)
+        account1.address = create_address()
 
         account1.deposit(100)
         self.assertEqual(100, account1.icx)

@@ -17,10 +17,10 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix, Address
-from iconservice.database.db import DatabaseObserver
 from iconservice import IconScoreDatabase
+from iconservice.base.address import AddressPrefix, Address
 from iconservice.database.db import ContextDatabase
+from iconservice.database.db import DatabaseObserver
 from iconservice.utils import sha3_256
 
 
@@ -45,7 +45,6 @@ class TestDatabaseObserver(unittest.TestCase):
         self._observer = Mock(spec=DatabaseObserver)
         self._icon_score_database = IconScoreDatabase(score_address, context_db)
         self._icon_score_database.set_observer(self._observer)
-
 
     def test_set(self):
         value = b"value1"

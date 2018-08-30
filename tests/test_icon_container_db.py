@@ -17,19 +17,20 @@
 import unittest
 
 from iconservice import Address
+from iconservice.database.db import ContextDatabase, IconScoreDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ContainerDBException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContextFactory
-from tests.mock_db import create_mock_icon_score_db
 from tests import create_address
+from tests.mock_db import MockKeyValueDatabase
 
 
 class TestIconContainerDB(unittest.TestCase):
 
     def setUp(self):
-        self.db = create_mock_icon_score_db()
+        self.db = self.create_db()
         self._factory = IconScoreContextFactory(max_size=1)
         self._context = self._factory.create(IconScoreContextType.DIRECT)
 
@@ -40,6 +41,12 @@ class TestIconContainerDB(unittest.TestCase):
         ContextContainer._clear_context()
         self.db = None
         pass
+
+    @staticmethod
+    def create_db():
+        mock_db = MockKeyValueDatabase.create_db()
+        context_db = ContextDatabase(mock_db)
+        return IconScoreDatabase(create_address(), context_db)
 
     def test_success_list(self):
         addr1 = create_address(AddressPrefix.CONTRACT)

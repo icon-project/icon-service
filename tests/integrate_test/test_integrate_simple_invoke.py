@@ -20,7 +20,6 @@
 import unittest
 
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import ConfigKey
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
