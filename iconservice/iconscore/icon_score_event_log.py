@@ -14,12 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Any
 
+from .icon_score_context import IconScoreContextType, IconScoreFuncType
+from .icon_score_step import StepType
 from ..base.address import Address
+from ..base.exception import EventLogException
+from ..icon_constant import DATA_BYTE_ORDER
+from ..utils import int_to_bytes, byte_length_of_int
+from .icon_score_base2 import BaseType
 
 if TYPE_CHECKING:
-    from .icon_score_base2 import BaseType
+    from .icon_score_context import IconScoreContext
+
 
 INDEXED_ARGS_LIMIT = 3
 
@@ -61,3 +68,92 @@ class EventLog(object):
             new_dict[casing(key) if casing else key] = value
 
         return new_dict
+
+
+class EventLogEmitter(object):
+    @staticmethod
+    def emit_event_log(context: 'IconScoreContext',
+                       score_address: 'Address',
+                       event_signature: str,
+                       arguments: List[Any],
+                       indexed_args_count: int):
+        """
+        Puts a eventlog to the running context
+
+        :param context: running context.
+        :param score_address: score address which event is occurred at.
+        :param event_signature: signature of the eventlog
+        :param arguments: arguments of eventlog call
+        :param indexed_args_count: count of the indexed arguments
+        :return:
+        """
+
+        if context.type == IconScoreContextType.QUERY:
+            raise EventLogException(
+                'The event log can not be called in the query call')
+
+        if context.func_type != IconScoreFuncType.WRITABLE:
+            raise EventLogException(
+                'Only writable method can record event logs')
+
+        if indexed_args_count > INDEXED_ARGS_LIMIT:
+            raise EventLogException(
+                f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
+
+        if indexed_args_count > len(arguments):
+            raise EventLogException(
+                f'declared indexed_args_count is {indexed_args_count}, '
+                f'but argument count is {len(arguments)}')
+
+        event_size = EventLogEmitter.__get_byte_length(event_signature)
+        context.logs_bloom.add(EventLogEmitter.__get_bloom_data(0, event_signature))
+        indexed: List[BaseType] = [event_signature]
+        data: List[BaseType] = []
+        for i, argument in enumerate(arguments):
+            # Raises an exception if the types are not supported
+            if not EventLogEmitter.__is_base_type(argument):
+                raise EventLogException(f'Not supported type: {type(argument)}')
+
+            event_size += EventLogEmitter.__get_byte_length(argument)
+
+            # Separates indexed type and base type with keeping order.
+            if i < indexed_args_count:
+                indexed.append(argument)
+                bloom_data = EventLogEmitter.__get_bloom_data(i + 1, argument)
+                context.logs_bloom.add(bloom_data)
+            else:
+                data.append(argument)
+
+        context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
+        event = EventLog(score_address, indexed, data)
+        context.event_logs.append(event)
+
+    @staticmethod
+    def __is_base_type(value) -> bool:
+        for base_type in BaseType.__constraints__:
+            if isinstance(value, base_type):
+                return True
+        return False
+
+    @staticmethod
+    def __get_byte_length(data: 'BaseType') -> int:
+        if isinstance(data, int):
+            return byte_length_of_int(data)
+        else:
+            return len(EventLogEmitter.__base_type_to_bytes(data))
+
+    @staticmethod
+    def __base_type_to_bytes(data: 'BaseType') -> bytes:
+        if isinstance(data, str):
+            return data.encode('utf-8')
+        elif isinstance(data, Address):
+            return data.body
+        elif isinstance(data, bytes):
+            return data
+        elif isinstance(data, int):
+            return int_to_bytes(data)
+
+    @staticmethod
+    def __get_bloom_data(index: int, data: BaseType) -> bytes:
+        return index.to_bytes(1, DATA_BYTE_ORDER) + \
+               EventLogEmitter.__base_type_to_bytes(data)

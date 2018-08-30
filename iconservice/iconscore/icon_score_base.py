@@ -25,18 +25,17 @@ from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
     FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, BaseType, T
+    CONST_CLASS_PAYABLES, CONST_CLASS_API, T
 from .icon_score_context import ContextGetter, ContextContainer
 from .icon_score_context import IconScoreContextType, IconScoreFuncType
-from .icon_score_event_log import INDEXED_ARGS_LIMIT, EventLog
+from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException, RevertException
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import DATA_BYTE_ORDER
-from ..utils import int_to_bytes, byte_length_of_int, get_main_type_from_annotations_type
+from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -106,8 +105,8 @@ def eventlog(func=None, *, indexed=0):
         except IconTypeError as e:
             raise EventLogException(e.message)
 
-        call_method = getattr(calling_obj, '_IconScoreBase__put_event_log')
-        return call_method(event_signature, arguments, indexed)
+        return EventLogEmitter.emit_event_log(
+            calling_obj._context, calling_obj.address, event_signature, arguments, indexed)
 
     return __wrapper
 
@@ -415,86 +414,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __is_func_readonly(self, func_name: str) -> bool:
         func = getattr(self, func_name)
         return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
-
-    def __put_event_log(self,
-                        event_signature: str,
-                        arguments: List[Any],
-                        indexed_args_count: int):
-        """
-        Puts a eventlog to the context running
-
-        :param event_signature: signature of eventlog
-        :param arguments: arguments of eventlog call
-        """
-        if self._context.type == IconScoreContextType.QUERY:
-            raise EventLogException(
-                'The event log can not be called in the query call')
-
-        if self._context.func_type != IconScoreFuncType.WRITABLE:
-            raise EventLogException(
-                'Only writable method can record event logs')
-
-        if indexed_args_count > INDEXED_ARGS_LIMIT:
-            raise EventLogException(
-                f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
-
-        if indexed_args_count > len(arguments):
-            raise EventLogException(
-                f'declared indexed_args_count is {indexed_args_count}, '
-                f'but argument count is {len(arguments)}')
-
-        event_size = self.__get_byte_length(event_signature)
-        self._context.logs_bloom.add(self.__get_bloom_data(0, event_signature))
-        indexed: List[BaseType] = [event_signature]
-        data: List[BaseType] = []
-        for i, argument in enumerate(arguments):
-            # Raises an exception if the types are not supported
-            if not IconScoreBase.__is_base_type(argument):
-                raise EventLogException(f'Not supported type: {type(argument)}')
-
-            event_size += self.__get_byte_length(argument)
-
-            # Separates indexed type and base type with keeping order.
-            if i < indexed_args_count:
-                indexed.append(argument)
-                bloom_data = self.__get_bloom_data(i + 1, argument)
-                self._context.logs_bloom.add(bloom_data)
-            else:
-                data.append(argument)
-
-        self._context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
-        event = EventLog(self.address, indexed, data)
-        self._context.event_logs.append(event)
-
-    @staticmethod
-    def __is_base_type(value) -> bool:
-        for base_type in BaseType.__constraints__:
-            if isinstance(value, base_type):
-                return True
-        return False
-
-    @staticmethod
-    def __get_byte_length(data: 'BaseType') -> int:
-        if isinstance(data, int):
-            return byte_length_of_int(data)
-        else:
-            return len(IconScoreBase.__base_type_to_bytes(data))
-
-    @staticmethod
-    def __base_type_to_bytes(data: 'BaseType') -> bytes:
-        if isinstance(data, str):
-            return data.encode('utf-8')
-        elif isinstance(data, Address):
-            return data.body
-        elif isinstance(data, bytes):
-            return data
-        elif isinstance(data, int):
-            return int_to_bytes(data)
-
-    @staticmethod
-    def __get_bloom_data(index: int, data: BaseType) -> bytes:
-        return index.to_bytes(1, DATA_BYTE_ORDER) + \
-               IconScoreBase.__base_type_to_bytes(data)
 
     # noinspection PyUnusedLocal
     @staticmethod
