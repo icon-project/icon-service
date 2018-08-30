@@ -20,7 +20,7 @@ from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_step import StepType
 from ..base.address import Address
 from ..base.exception import EventLogException
-from ..icon_constant import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from ..utils import int_to_bytes, byte_length_of_int
 from .icon_score_base2 import BaseType
 
@@ -124,7 +124,10 @@ class EventLogEmitter(object):
             else:
                 data.append(argument)
 
-        context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
+        # skip counting steps for auto emitted event 'ICXTransfer(Address,Address,int)'
+        if event_signature != ICX_TRANSFER_EVENT_LOG:
+            context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
+
         event = EventLog(score_address, indexed, data)
         context.event_logs.append(event)
 

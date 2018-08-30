@@ -22,6 +22,7 @@ from inspect import isfunction, getmembers, signature, Parameter
 from functools import partial, wraps
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
     FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
@@ -104,6 +105,11 @@ def eventlog(func=None, *, indexed=0):
             arguments = __resolve_arguments(func_name, parameters, args, kwargs)
         except IconTypeError as e:
             raise EventLogException(e.message)
+
+        if event_signature == ICX_TRANSFER_EVENT_LOG:
+            # 'ICXTransfer(Address,Address,int)' is reserved
+            raise EventLogException(
+                f'Cannot use the event log \'{ICX_TRANSFER_EVENT_LOG}\'.')
 
         return EventLogEmitter.emit_event_log(
             calling_obj._context, calling_obj.address, event_signature, arguments, indexed)

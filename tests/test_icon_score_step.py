@@ -136,15 +136,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
-        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
-                         (StepType.DEFAULT, 1))
-        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
-                         (StepType.INPUT, 0))
-        self.assertEqual(self.step_counter.apply_step.call_args_list[2][0],
-                         (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(self.step_counter.apply_step.call_args_list[3][0],
-                         (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
+        call_args_list = self.step_counter.apply_step.call_args_list
+        self.assertEqual(call_args_list[0][0], (StepType.DEFAULT, 1))
+        self.assertEqual(call_args_list[1][0], (StepType.INPUT, 0))
+        self.assertEqual(call_args_list[2][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(call_args_list[3][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(len(call_args_list), 4)
 
     def test_set_db(self):
         tx_hash = bytes.hex(create_tx_hash())

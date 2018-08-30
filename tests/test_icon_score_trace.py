@@ -21,7 +21,7 @@ import unittest
 from typing import List
 from unittest.mock import Mock, patch
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import RevertException, ExceptionCode, IconScoreException
 from iconservice.base.transaction import Transaction
@@ -35,12 +35,12 @@ from iconservice.iconscore.icon_score_base2 import InterfaceScore
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
-from iconservice.iconscore.icon_score_trace import Trace, TraceType
+from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from tests import create_tx_hash
+from tests import create_tx_hash, create_address
 from tests import raise_exception_start_tag, raise_exception_end_tag
 
 
@@ -48,7 +48,7 @@ class TestTrace(unittest.TestCase):
 
     def setUp(self):
         db = Mock(spec=IconScoreDatabase)
-        db.address = Mock(spec=Address)
+        db.address = create_address(AddressPrefix.CONTRACT)
         context = IconScoreContext()
         traces = Mock(spec=list)
 
@@ -80,7 +80,7 @@ class TestTrace(unittest.TestCase):
     def test_transfer(self):
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
-        to_ = Mock(spec=Address)
+        to_ = create_address(AddressPrefix.EOA)
         context.internal_call.icx_engine = Mock(spec=IcxEngine)
         amount = 100
         self._score.icx.transfer(to_, amount)

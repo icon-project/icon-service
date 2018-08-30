@@ -25,10 +25,11 @@ from unittest.mock import Mock
 from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import EventLogException, ScoreErrorException
-from iconservice.icon_constant import DATA_BYTE_ORDER
+from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
+from iconservice.icx import IcxEngine
 from iconservice.utils import int_to_bytes
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
@@ -36,19 +37,24 @@ from iconservice.utils.bloom import BloomFilter
 
 class TestEventlog(unittest.TestCase):
     def setUp(self):
-        address = Mock(spec=Address)
+        address = Address.from_data(AddressPrefix.CONTRACT, b'address')
         db = Mock(spec=IconScoreDatabase)
         db.attach_mock(address, 'address')
-        context = Mock(spec=IconScoreContext)
+        context = IconScoreContext()
         event_logs = Mock(spec=list)
+        traces = Mock(spec=list)
         step_counter = Mock(spec=IconScoreStepCounter)
         logs_bloom = BloomFilter()
 
         context.type = IconScoreContextType.INVOKE
         context.func_type = IconScoreFuncType.WRITABLE
-        context.attach_mock(event_logs, 'event_logs')
-        context.attach_mock(logs_bloom, 'logs_bloom')
-        context.attach_mock(step_counter, 'step_counter')
+        context.event_logs = event_logs
+        context.traces = traces
+        context.logs_bloom = logs_bloom
+        context.step_counter = step_counter
+        context.icon_score_manager = Mock()
+        context.icon_score_manager.get_owner = Mock()
+        context.internal_call.icx_engine = Mock(spec=IcxEngine)
         ContextContainer._push_context(context)
 
         self._mock_score = EventlogScore(db)
@@ -262,6 +268,27 @@ class TestEventlog(unittest.TestCase):
         with self.assertRaises(EventLogException):
             self._mock_score.BoolIndexEvent(False)
 
+    def test_reserved_event_log(self):
+        context = ContextContainer._get_context()
+        context.func_type = IconScoreFuncType.READONLY
+
+        address = Address.from_data(AddressPrefix.EOA, b'address')
+        with self.assertRaises(EventLogException):
+            self._mock_score.ICXTransfer(address, address, 0)
+
+    def test_icx_transfer_event(self):
+        context = ContextContainer._get_context()
+
+        address = Address.from_data(AddressPrefix.EOA, b'address')
+
+        # Tests simple event emit
+        self._mock_score.icx.send(address, 0)
+        context.event_logs.append.assert_called()
+        event_log = context.event_logs.append.call_args[0][0]
+        self.assertEqual(4, len(event_log.indexed))
+        self.assertEqual(ICX_TRANSFER_EVENT_LOG, event_log.indexed[0])
+        self.assertEqual(0, len(event_log.data))
+
     def tearDown(self):
         self._mock_icon_score = None
 
@@ -313,6 +340,10 @@ class EventlogScore(IconScoreBase):
     @eventlog(indexed=2)
     def MixedEvent(self, i_data: bytes, address: Address, amount: int,
                    data: bytes, text: str):
+        pass
+
+    @eventlog(indexed=3)
+    def ICXTransfer(self, from_: Address, to: Address, amount: int):
         pass
 
     @external

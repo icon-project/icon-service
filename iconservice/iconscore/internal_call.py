@@ -16,6 +16,8 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG
+from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
 from ..base.address import Address
@@ -85,8 +87,10 @@ class InternalCall(object):
             ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
         elif trace_type == TraceType.TRANSFER:
             ret: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
-            if ret and addr_to.is_contract:
-                self._other_score_call(addr_from, addr_to, None, (), {}, amount)
+            if ret:
+                self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
+                if addr_to.is_contract:
+                    self._other_score_call(addr_from, addr_to, None, (), {}, amount)
         else:
             ret = None
         return ret
@@ -160,3 +164,11 @@ class InternalCall(object):
         self.__context.msg = self.__context.msg_stack.pop()
 
         return ret
+
+    def emit_event_log_for_icx_transfer(self, from_: 'Address', to: 'Address', value: int):
+        event_signature = ICX_TRANSFER_EVENT_LOG
+        print(from_, to, value)
+        arguments = [from_, to, value]
+        indexed_args_count = 3
+        EventLogEmitter.emit_event_log(
+            self.__context, from_, event_signature, arguments, indexed_args_count)
