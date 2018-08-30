@@ -18,21 +18,16 @@
 import inspect
 import unittest
 from os import path, makedirs, symlink
-from typing import TYPE_CHECKING
 
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from tests import create_address, create_tx_hash
-
-if TYPE_CHECKING:
-    from iconservice.base.address import Address
+from tests import create_address, create_tx_hash, rmtree
 
 TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
 
@@ -44,19 +39,16 @@ class TestIconScoreLoader(unittest.TestCase):
     def setUp(self):
         self._score_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         self._loader = IconScoreLoader(self._score_path, 0)
-        self._addr_test_score01 = create_address(AddressPrefix.CONTRACT)
-        self._addr_test_score02 = create_address(AddressPrefix.CONTRACT)
 
-        self.db = Mock()
         self._factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_manager = Mock()
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         ContextContainer._push_context(self._context)
 
     def tearDown(self):
-        ContextContainer._clear_context()
-
+        ContextContainer._pop_context()
         remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+        rmtree(remove_path)
         IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
@@ -66,7 +58,8 @@ class TestIconScoreLoader(unittest.TestCase):
         if not path.exists(dir_path):
             makedirs(dir_path)
 
-    def load_proj(self, proj: str, addr_score: 'Address') -> callable:
+    def load_proj(self, proj: str) -> callable:
+        addr_score = create_address(1)
         target_path = path.join(self._score_path, addr_score.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
         tx_hash = create_tx_hash()
@@ -81,13 +74,12 @@ class TestIconScoreLoader(unittest.TestCase):
     def test_install(self):
         self.__ensure_dir(self._score_path)
 
-        # TODO:
-        # score = self.load_proj('test_score01', self._addr_test_score01)
-        # print('test_score01', score.get_api())
-        score = self.load_proj('test_score02', self._addr_test_score02)
+        score = self.load_proj('test_score01')
+        print('test_score01', score.get_api())
+        score = self.load_proj('test_score02')
         print('test_score02', score.get_api())
 
-        ins_score = score(self.db)
+        ins_score = score(Mock())
 
         ins_score.print_test()
         self.assertTrue(IconScoreBase in inspect.getmro(score))
