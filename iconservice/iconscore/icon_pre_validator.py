@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
-from ..icon_constant import FIXED_FEE
+from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE
 
 
 if TYPE_CHECKING:
@@ -55,6 +55,9 @@ class IconPreValidator:
         :param step_price:
         :param minimum_step: minimum step
         """
+
+        self._check_data_size(params)
+
         value: int = params.get('value', 0)
         if value < 0:
             raise InvalidParamsException("value < 0")
@@ -73,6 +76,40 @@ class IconPreValidator:
             self._check_from_can_charge_fee_v2(params)
         else:
             self._check_from_can_charge_fee_v3(params, step_price)
+
+    def _check_data_size(self, params: dict):
+        """
+        Validates transaction data size whether total character length is less than MAX_DATA_SIZE
+        If the property is a key-value object, counts key length and value length.
+
+        Assume that values in params have already been converted
+        to original format (string -> int, string -> Address, etc)
+        But the field of 'data' has not been converted (TypeConvert marks it as LATER)
+
+        :param params: params of icx_sendTransaction JSON-RPC request
+        """
+
+        if 'data' in params:
+            data = params['data']
+            size = self._get_character_length(data)
+
+            if size > MAX_DATA_SIZE:
+                raise InvalidRequestException(f'The data field is too big')
+
+    def _get_character_length(self, data) -> int:
+        size = 0
+        if data:
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    size += len(k)
+                    size += self._get_character_length(v)
+            elif isinstance(data, list):
+                for v in data:
+                    size += self._get_character_length(v)
+            elif isinstance(data, str):
+                size += len(data)
+
+        return size
 
     def _check_from_can_charge_fee_v2(self, params: dict):
         fee: int = params['fee']

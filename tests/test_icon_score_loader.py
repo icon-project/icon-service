@@ -20,6 +20,8 @@ import unittest
 from os import path, makedirs, symlink
 from typing import TYPE_CHECKING
 
+from unittest.mock import Mock
+
 from iconservice.base.address import AddressPrefix
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.iconscore.icon_score_base import IconScoreBase
@@ -28,21 +30,11 @@ from iconservice.iconscore.icon_score_context import ContextContainer, \
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from tests import create_address, create_tx_hash
-from tests.mock_db import create_mock_icon_score_db
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
 
 TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
-
-
-class TestContextContainer(ContextContainer):
-    pass
-
-
-class MockIconScoreManager(object):
-    def get_owner(self, context, address):
-        return None
 
 
 class TestIconScoreLoader(unittest.TestCase):
@@ -55,19 +47,19 @@ class TestIconScoreLoader(unittest.TestCase):
         self._addr_test_score01 = create_address(AddressPrefix.CONTRACT)
         self._addr_test_score02 = create_address(AddressPrefix.CONTRACT)
 
-        self.db = create_mock_icon_score_db()
+        self.db = Mock()
         self._factory = IconScoreContextFactory(max_size=1)
-        IconScoreContext.icon_score_manager = MockIconScoreManager()
+        IconScoreContext.icon_score_manager = Mock()
         self._context = self._factory.create(IconScoreContextType.DIRECT)
-        self._context_container = TestContextContainer()
-        self._context_container._push_context(self._context)
+        ContextContainer._push_context(self._context)
 
     def tearDown(self):
+        ContextContainer._clear_context()
+
         remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
         remove_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
         IconScoreDeployer.remove_existing_score(remove_path)
-        pass
 
     @staticmethod
     def __ensure_dir(dir_path):

@@ -16,51 +16,14 @@
 
 from copy import deepcopy
 from typing import Union, Any, get_type_hints
-from enum import IntEnum
 
-from .address import Address
+from iconservice.base.type_converter_templates import ParamType, \
+    type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
+from .address import Address, MalformedAddress, is_icon_address_valid
 from .exception import InvalidParamsException
+from ..utils import get_main_type_from_annotations_type
 
 score_base_support_type = (int, str, bytes, bool, Address)
-
-
-class ParamType(IntEnum):
-    BLOCK = 0
-
-    INVOKE_TRANSACTION = 100
-    ACCOUNT_DATA = 101
-    CALL_DATA = 102
-    DEPLOY_DATA = 103
-
-    INVOKE = 200
-
-    QUERY = 300
-    ICX_CALL = 301
-    ICX_GET_BALANCE = 302
-    ICX_GET_TOTAL_SUPPLY = 303
-    ICX_GET_SCORE_API = 304
-    ISE_GET_STATUS = 305
-
-    WRITE_PRECOMMIT = 400
-    REMOVE_PRECOMMIT = 500
-
-    VALIDATE_TRANSACTION = 600
-
-
-class ValueType(IntEnum):
-    IGNORE = 0
-    LATER = 1
-    INT = 2
-    STRING = 3
-    BOOL = 4
-    ADDRESS = 5
-    BYTES = 6
-
-
-type_convert_templates = {}
-CONVERT_USING_SWITCH_KEY = 'CONVERT_USING_SWITCH_KEY'
-SWITCH_KEY = "SWITCH_KEY"
-KEY_CONVERTER = 'KEY_CONVERTER'
 
 
 class TypeConverter:
@@ -171,12 +134,16 @@ class TypeConverter:
     def _convert_value(value: Any, value_type: ValueType) -> Any:
         if value_type == ValueType.INT:
             converted_value = TypeConverter._convert_value_int(value)
+        elif value_type == ValueType.HEXADECIMAL:
+            converted_value = TypeConverter._convert_value_hexadecimal(value)
         elif value_type == ValueType.STRING:
             converted_value = TypeConverter._convert_value_string(value)
         elif value_type == ValueType.BOOL:
             converted_value = TypeConverter._convert_value_bool(value)
         elif value_type == ValueType.ADDRESS:
             converted_value = TypeConverter._convert_value_address(value)
+        elif value_type == ValueType.ADDRESS_OR_MALFORMED_ADDRESS:
+            converted_value = TypeConverter._convert_value_address_or_malformed_address(value)
         elif value_type == ValueType.BYTES:  # hash...(block_hash, tx_hash)
             converted_value = TypeConverter._convert_value_bytes(value)
         else:
@@ -192,6 +159,19 @@ class TypeConverter:
                 return int(value)
         else:
             raise InvalidParamsException(f'TypeConvert Exception int value :{value}, type: {type(value)}')
+
+    @staticmethod
+    def _convert_value_hexadecimal(value: str) -> int:
+        """Convert value into integer, assuming that value is a hexadecimal string
+
+        :param value: hexadecimal string
+        :return: int
+        """
+        if not isinstance(value, str):
+            raise InvalidParamsException(
+                f'TypeConvert Exception int value :{value}, type: {type(value)}')
+
+        return int(value, 16)
 
     @staticmethod
     def _convert_value_string(value: str) -> str:
@@ -215,6 +195,19 @@ class TypeConverter:
             raise InvalidParamsException(f'TypeConvert Exception address value :{value}, type: {type(value)}')
 
     @staticmethod
+    def _convert_value_address_or_malformed_address(value: str) -> 'Address':
+        if not isinstance(value, str):
+            raise InvalidParamsException(
+                f'TypeConvert Exception address value :{value}, type: {type(value)}')
+
+        if is_icon_address_valid(value):
+            return Address.from_string(value)
+
+        # This code is just used to support a legacy bug
+        # Do not use MalformedAddress elsewhere
+        return MalformedAddress.from_string(value)
+
+    @staticmethod
     def _convert_value_bytes(value: str) -> bytes:
         if isinstance(value, str):
             if value.startswith('0x'):
@@ -226,6 +219,9 @@ class TypeConverter:
 
     @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
+        # in python 3.7, get_type_hints method return _GenericAlias type object
+        # (when parameter has 'NoneType' as a default)
+
         hints = get_type_hints(func)
         if hints.get('return') is not None:
             del hints['return']
@@ -241,29 +237,9 @@ class TypeConverter:
             if kw_param is None:
                 continue
 
-            param = TypeConverter._filter_none_type(param)
+            param = get_main_type_from_annotations_type(param)
             kw_param = TypeConverter._convert_data_value(param, kw_param)
             kw_params[key] = kw_param
-
-    @staticmethod
-    def _filter_none_type(annotation_type: type) -> type:
-        main_type = None
-        if hasattr(annotation_type, '_subs_tree'):
-            # Generic type has a '_subs_tree'
-            sub_tree = annotation_type._subs_tree()
-            if isinstance(sub_tree, tuple):
-                for t in sub_tree:
-                    if t is Union or t is type(None):
-                        pass
-                    else:
-                        main_type = t
-                        break
-            else:
-                # Generic declaration only
-                main_type = sub_tree
-        else:
-            main_type = annotation_type
-        return main_type
 
     @staticmethod
     def _convert_data_value(annotation_type: type, param: Any) -> Any:
@@ -306,135 +282,3 @@ class TypeConverter:
             return bytes.hex(value)
         else:
             return f'0x{bytes.hex(value)}'
-
-
-type_convert_templates[ParamType.BLOCK] = {
-    "blockHeight": ValueType.INT,
-    "blockHash": ValueType.BYTES,
-    "timestamp": ValueType.INT,
-    "prevBlockHash": ValueType.BYTES,
-}
-
-type_convert_templates[ParamType.ACCOUNT_DATA] = {
-    "name": ValueType.STRING,
-    "address": ValueType.ADDRESS,
-    "balance": ValueType.INT
-}
-
-type_convert_templates[ParamType.CALL_DATA] = {
-    "method": ValueType.STRING,
-    "params": ValueType.LATER
-}
-
-type_convert_templates[ParamType.DEPLOY_DATA] = {
-    "contentType": ValueType.STRING,
-    "content": ValueType.IGNORE,
-    "params": ValueType.LATER
-}
-
-type_convert_templates[ParamType.INVOKE_TRANSACTION] = {
-    "method": ValueType.STRING,
-    "params": {
-        "txHash": ValueType.BYTES,
-        "version": ValueType.INT,
-        "from": ValueType.ADDRESS,
-        "to": ValueType.ADDRESS,
-        "value": ValueType.INT,
-        "stepLimit": ValueType.INT,
-        "fee": ValueType.INT,
-        "timestamp": ValueType.INT,
-        "nonce": ValueType.INT,
-        "signature": ValueType.IGNORE,
-        "dataType": ValueType.STRING,
-        "data": {
-            CONVERT_USING_SWITCH_KEY: {
-                SWITCH_KEY: "dataType",
-                "call": type_convert_templates[ParamType.CALL_DATA],
-                "deploy": type_convert_templates[ParamType.DEPLOY_DATA]
-            }
-        },
-        KEY_CONVERTER: {
-            "tx_hash": "txHash"
-        }
-    },
-    "genesisData": {
-        "accounts": [
-            type_convert_templates[ParamType.ACCOUNT_DATA]
-        ],
-        "message": ValueType.STRING
-    }
-}
-
-type_convert_templates[ParamType.INVOKE] = {
-    "block": type_convert_templates[ParamType.BLOCK],
-    "transactions": [
-        type_convert_templates[ParamType.INVOKE_TRANSACTION]
-    ]
-}
-
-type_convert_templates[ParamType.ICX_CALL] = {
-    "version": ValueType.INT,
-    "from": ValueType.ADDRESS,
-    "to": ValueType.ADDRESS,
-    "dataType": ValueType.STRING,
-    "data": ValueType.LATER
-}
-type_convert_templates[ParamType.ICX_GET_BALANCE] = {
-    "version": ValueType.INT,
-    "address": ValueType.ADDRESS
-}
-type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY] = {
-    "version": ValueType.INT
-}
-type_convert_templates[ParamType.ICX_GET_SCORE_API] = type_convert_templates[ParamType.ICX_GET_BALANCE]
-
-type_convert_templates[ParamType.ISE_GET_STATUS] = {
-    "filter": [ValueType.STRING]
-}
-
-type_convert_templates[ParamType.QUERY] = {
-    "method": ValueType.STRING,
-    "params": {
-        CONVERT_USING_SWITCH_KEY: {
-            SWITCH_KEY: "method",
-            "icx_call": type_convert_templates[ParamType.ICX_CALL],
-            "icx_getBalance": type_convert_templates[ParamType.ICX_GET_BALANCE],
-            "icx_getTotalSupply": type_convert_templates[ParamType.ICX_GET_TOTAL_SUPPLY],
-            "icx_getScoreApi": type_convert_templates[ParamType.ICX_GET_SCORE_API],
-            "ise_getStatus": type_convert_templates[ParamType.ISE_GET_STATUS]
-        }
-    }
-}
-
-type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
-    "blockHeight": ValueType.INT,
-    "blockHash": ValueType.BYTES
-}
-type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
-
-type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
-    "method": ValueType.STRING,
-    "params": {
-        "version": ValueType.INT,
-        "txHash": ValueType.BYTES,
-        "from": ValueType.ADDRESS,
-        "to": ValueType.ADDRESS,
-        "value": ValueType.INT,
-        "stepLimit": ValueType.INT,
-        "fee": ValueType.INT,
-        "timestamp": ValueType.INT,
-        "nonce": ValueType.INT,
-        "signature": ValueType.IGNORE,
-        "dataType": ValueType.STRING,
-        "data": {
-            CONVERT_USING_SWITCH_KEY: {
-                SWITCH_KEY: "dataType",
-                "call": type_convert_templates[ParamType.CALL_DATA],
-                "deploy": type_convert_templates[ParamType.DEPLOY_DATA]
-            }
-        },
-        KEY_CONVERTER: {
-            "tx_hash": "txHash"
-        }
-    }
-}

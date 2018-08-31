@@ -65,6 +65,7 @@ class IconScoreLoader(object):
         spec = importlib.util.find_spec(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
+
         return getattr(mod, score_package_info[self._MAIN_SCORE])
 
     def _make_pkg_root_import(self, score_path: str) -> str:

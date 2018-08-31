@@ -24,7 +24,7 @@ import re
 import os
 import signal
 import hashlib
-from typing import Any
+from typing import Any, Union
 
 
 def int_to_bytes(n: int) -> bytes:
@@ -67,3 +67,21 @@ def check_error_response(result: Any):
 
 def exit_process():
     os.killpg(0, signal.SIGKILL)
+
+
+def get_main_type_from_annotations_type(annotations_type: type) -> type:
+    main_type = None
+
+    if hasattr(annotations_type, '__origin__') and annotations_type.__origin__ is not Union:
+        return annotations_type.__origin__
+
+    # in python 3.7, _subs_tree method has excluded.
+    if hasattr(annotations_type, '__args__'):
+        annotations = annotations_type.__args__
+        for annotation_type in annotations:
+            if annotation_type is not None:
+                main_type = annotation_type
+                break
+    else:
+        main_type = annotations_type
+    return main_type

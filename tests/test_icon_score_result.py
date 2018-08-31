@@ -18,8 +18,6 @@ import unittest
 from typing import Optional
 from unittest.mock import Mock
 
-
-from iconservice.iconscore.icon_score_base import EventLog
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
@@ -35,10 +33,11 @@ from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
 from iconservice.iconscore.icon_score_context import IconScoreContext, \
     ContextContainer
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
+from iconservice.iconscore.icon_score_event_log import EventLog
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
-from tests import create_tx_hash, create_address,\
+from tests import create_tx_hash, create_address, \
     raise_exception_start_tag, raise_exception_end_tag
 from tests.mock_generator import generate_service_engine, generate_inner_task, \
     create_request, ReqData
@@ -47,7 +46,6 @@ from tests.mock_generator import generate_service_engine, generate_inner_task, \
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):
         self._icon_service_engine = generate_service_engine()
-
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
 
@@ -76,6 +74,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.current_address = Mock(spec=Address)
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self._icon_service_engine = None
         self._mock_context = None
 

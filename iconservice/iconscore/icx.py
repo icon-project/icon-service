@@ -31,9 +31,22 @@ class Icx(object):
         self._address = address
 
     def transfer(self, addr_to: 'Address', amount: int) -> bool:
+        """transfer the amount of icx to the given 'addr_to'
+        If failed, an exception will be raised
+
+        :param addr_to: receiver address
+        :param amount: the amount of icx to transfer
+        :return: True(success)
+        """
         return self._context.internal_call.icx_transfer_call(self._address, addr_to, amount)
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
+        """transfer the amount of icx to the given 'addr_to'
+
+        :param addr_to: receiver address
+        :param amount: the amount of icx to transfer
+        :return: True(success) False(failed)
+        """
         return self._context.internal_call.icx_send_call(self._address, addr_to, amount)
 
     def get_balance(self, address: 'Address') -> int:

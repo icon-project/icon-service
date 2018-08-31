@@ -256,6 +256,7 @@ class IcxEngine(object):
         :param from_: icx sender
         :param to: icx receiver
         :param amount: the amount of coin in loop to transfer
+        :return True
         """
         if from_ != to and amount > 0:
             # get account info from state db.
@@ -266,8 +267,7 @@ class IcxEngine(object):
             to_account.deposit(amount)
 
             # write newly updated state into state db.
-            self._storage.put_account(
-                context, from_account.address, from_account)
+            self._storage.put_account(context, from_account.address, from_account)
             self._storage.put_account(context, to_account.address, to_account)
 
         return True

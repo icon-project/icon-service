@@ -22,12 +22,13 @@ from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
+from iconservice.icon_config import default_icon_config
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external, sha3_256
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
-from tests import create_tx_hash, create_address
+from tests import create_tx_hash, create_address, rmtree
 from tests.mock_generator import generate_inner_task, create_request, ReqData
 
 
@@ -44,7 +45,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.step_counter.step_limit = 5000000
 
     def tearDown(self):
+        ContextContainer._clear_context()
         self._inner_task = None
+        score_root_path = default_icon_config['scoreRootPath']
+        state_db_root_path = default_icon_config['stateDbRootPath']
+        rmtree(score_root_path)
+        rmtree(state_db_root_path)
 
     def test_install_step(self):
         # Ignores deploy
@@ -130,15 +136,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
-        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
-                         (StepType.DEFAULT, 1))
-        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
-                         (StepType.INPUT, 0))
-        self.assertEqual(self.step_counter.apply_step.call_args_list[2][0],
-                         (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(self.step_counter.apply_step.call_args_list[3][0],
-                         (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 4)
+        call_args_list = self.step_counter.apply_step.call_args_list
+        self.assertEqual(call_args_list[0][0], (StepType.DEFAULT, 1))
+        self.assertEqual(call_args_list[1][0], (StepType.INPUT, 0))
+        self.assertEqual(call_args_list[2][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(call_args_list[3][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(len(call_args_list), 4)
 
     def test_set_db(self):
         tx_hash = bytes.hex(create_tx_hash())
@@ -310,12 +313,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ReqData(tx_hash, from_, to_, 'call', {})
         ])
 
+        data_to_hash = b'1234'
+
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
-            score.hash_readonly()
+            score.hash_readonly(data_to_hash)
 
         score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
@@ -332,7 +337,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(call_args_list[0][0], (StepType.DEFAULT, 1))
         self.assertEqual(call_args_list[1][0], (StepType.INPUT, 0))
         self.assertEqual(call_args_list[2][0], (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1))
+        self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1 + len(data_to_hash)))
         self.assertEqual(len(call_args_list), 4)
 
     def test_hash_writable(self):
@@ -344,12 +349,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ReqData(tx_hash, from_, to_, 'call', {})
         ])
 
+        data_to_hash = b'1234'
+
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
-            score.hash_writable()
+            score.hash_writable(data_to_hash)
 
         score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
@@ -366,7 +373,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual(call_args_list[0][0], (StepType.DEFAULT, 1))
         self.assertEqual(call_args_list[1][0], (StepType.INPUT, 0))
         self.assertEqual(call_args_list[2][0], (StepType.CONTRACT_CALL, 1))
-        self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1))
+        self.assertEqual(call_args_list[3][0], (StepType.API_CALL, 1 + len(data_to_hash)))
         self.assertEqual(len(call_args_list), 4)
 
     def test_out_of_step(self):
@@ -517,11 +524,11 @@ class SampleScore(IconScoreBase):
         return get
 
     @external(readonly=True)
-    def hash_readonly(self) -> bytes:
-        return sha3_256(b'1234')
+    def hash_readonly(self, data: bytes) -> bytes:
+        return sha3_256(data)
 
     @external
-    def hash_writable(self) -> bytes:
-        return sha3_256(b'1234')
+    def hash_writable(self, data: bytes) -> bytes:
+        return sha3_256(data)
 
 
