@@ -49,7 +49,10 @@ class ValueType(IntEnum):
     BOOL = 4
     ADDRESS = 5
     BYTES = 6
+
+    # For backward compatibility (TestNet)
     ADDRESS_OR_MALFORMED_ADDRESS = 7
+    HEXADECIMAL = 8
 
 
 type_convert_templates = {}
@@ -136,9 +139,9 @@ type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
     ConstantKeys.TX_HASH: ValueType.BYTES,
     ConstantKeys.FROM: ValueType.ADDRESS,
     ConstantKeys.TO: ValueType.ADDRESS_OR_MALFORMED_ADDRESS,
-    ConstantKeys.VALUE: ValueType.INT,
+    ConstantKeys.VALUE: ValueType.HEXADECIMAL,
     ConstantKeys.STEP_LIMIT: ValueType.INT,
-    ConstantKeys.FEE: ValueType.INT,
+    ConstantKeys.FEE: ValueType.HEXADECIMAL,
     ConstantKeys.TIMESTAMP: ValueType.INT,
     ConstantKeys.NONCE: ValueType.INT,
     ConstantKeys.SIGNATURE: ValueType.IGNORE,

@@ -134,6 +134,8 @@ class TypeConverter:
     def _convert_value(value: Any, value_type: ValueType) -> Any:
         if value_type == ValueType.INT:
             converted_value = TypeConverter._convert_value_int(value)
+        elif value_type == ValueType.HEXADECIMAL:
+            converted_value = TypeConverter._convert_value_hexadecimal(value)
         elif value_type == ValueType.STRING:
             converted_value = TypeConverter._convert_value_string(value)
         elif value_type == ValueType.BOOL:
@@ -157,6 +159,19 @@ class TypeConverter:
                 return int(value)
         else:
             raise InvalidParamsException(f'TypeConvert Exception int value :{value}, type: {type(value)}')
+
+    @staticmethod
+    def _convert_value_hexadecimal(value: str) -> int:
+        """Convert value into integer, assuming that value is a hexadecimal string
+
+        :param value: hexadecimal string
+        :return: int
+        """
+        if not isinstance(value, str):
+            raise InvalidParamsException(
+                f'TypeConvert Exception int value :{value}, type: {type(value)}')
+
+        return int(value, 16)
 
     @staticmethod
     def _convert_value_string(value: str) -> str:
