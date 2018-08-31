@@ -302,6 +302,7 @@ class TestTypeConverter(unittest.TestCase):
         data_from = create_address()
         data_to = create_address()
         data_value = 1 * 10 ** 18
+        fixed_fee = 10 ** 16
 
         request = {
             ConstantKeys.BLOCK: {
@@ -332,6 +333,19 @@ class TestTypeConverter(unittest.TestCase):
                                 ConstantKeys.VALUE: hex(data_value)
                             }
                         }
+                    }
+                },
+                {
+                    ConstantKeys.METHOD: method,
+                    ConstantKeys.PARAMS: {
+                        ConstantKeys.TX_HASH: bytes.hex(tx_hash),
+                        ConstantKeys.FROM: str(from_addr),
+                        ConstantKeys.TO: str(to_addr),
+                        ConstantKeys.VALUE: hex(value)[2:],
+                        ConstantKeys.FEE: hex(fixed_fee),
+                        ConstantKeys.TIMESTAMP: hex(timestamp),
+                        ConstantKeys.NONCE: hex(nonce),
+                        ConstantKeys.SIGNATURE: signature,
                     }
                 }
             ]
@@ -367,6 +381,18 @@ class TestTypeConverter(unittest.TestCase):
         self.assertNotEqual(data_from, transaction_data_params_params[ConstantKeys.FROM])
         self.assertNotEqual(data_to, transaction_data_params_params[ConstantKeys.TO])
         self.assertNotEqual(data_value, transaction_data_params_params[ConstantKeys.VALUE])
+
+        # Check the 2nd tx (v2)
+        transaction_params = ret_params[ConstantKeys.TRANSACTIONS][1]
+        transaction_params_params = transaction_params[ConstantKeys.PARAMS]
+        self.assertEqual(tx_hash, transaction_params_params[ConstantKeys.TX_HASH])
+        self.assertEqual(from_addr, transaction_params_params[ConstantKeys.FROM])
+        self.assertEqual(to_addr, transaction_params_params[ConstantKeys.TO])
+        self.assertEqual(value, transaction_params_params[ConstantKeys.VALUE])
+        self.assertEqual(fixed_fee, transaction_params_params[ConstantKeys.FEE])
+        self.assertEqual(timestamp, transaction_params_params[ConstantKeys.TIMESTAMP])
+        self.assertEqual(nonce, transaction_params_params[ConstantKeys.NONCE])
+        self.assertEqual(signature, transaction_params_params[ConstantKeys.SIGNATURE])
 
     def test_genesis_invoke_convert(self):
         block_height = 1001
