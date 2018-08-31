@@ -228,7 +228,7 @@ class TestTransactionValidator(unittest.TestCase):
     #     self.assertEqual(f'Invalid address: {to}', cm.exception.message)
 
     def test_execute_to_check_out_of_balance(self):
-        step_price = 10 ** 12
+        step_price = 10 ** 10
         value = 2 * 10 ** 18
         step_limit = 20000
 
@@ -377,7 +377,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.validator.execute(tx, step_price=0, minimum_step=100)
 
     def test_execute_to_check_out_of_balance(self):
-        step_price = 10 ** 12
+        step_price = 10 ** 10
         self.icx_engine.get_balance = Mock(return_value=0)
         self.score_manager.is_score_active = Mock(return_value=False)
 

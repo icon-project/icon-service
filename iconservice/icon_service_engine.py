@@ -712,16 +712,16 @@ class IconServiceEngine(ContextContainer):
         if version < 3:
             # Support coin transfer based on protocol v2
             # 0.01 icx == 10**16 loop
-            # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
-            step_used = 10 ** 4
+            # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
+            step_used = 10 ** 6
 
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
             elif self._is_flag_on(IconServiceFlag.fee):
                 # 0.01 icx == 10**16 loop
-                # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
-                step_price = 10 ** 12
+                # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
+                step_price = 10 ** 10
 
         # Charge a fee to from account
         fee: int = step_used * step_price
