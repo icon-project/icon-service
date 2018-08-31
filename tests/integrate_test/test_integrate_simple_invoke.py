@@ -19,6 +19,7 @@
 
 import unittest
 
+from iconservice.base.address import MalformedAddress
 from iconservice.base.exception import ExceptionCode
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -131,6 +132,40 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
 
         response = self._query(query_request, 'icx_getBalance')
         self.assertEqual(response, 0)
+
+    def test_send_icx_using_malformed_address1(self):
+        value1 = 1 * self._icx_factor
+
+        malformed_address = MalformedAddress.from_string("hx1234")
+        tx = self._make_icx_send_tx(self._genesis, malformed_address, value1,
+                                    disable_pre_validate=True, support_v2=True)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        query_request = {
+            "address": malformed_address
+        }
+
+        response = self._query(query_request, 'icx_getBalance')
+        self.assertEqual(response, value1)
+
+    def test_send_icx_using_malformed_address2(self):
+        value1 = 1 * self._icx_factor
+
+        malformed_address = MalformedAddress.from_string("11")
+        tx = self._make_icx_send_tx(self._genesis, malformed_address, value1,
+                                    disable_pre_validate=True, support_v2=True)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        query_request = {
+            "address": malformed_address
+        }
+
+        response = self._query(query_request, 'icx_getBalance')
+        self.assertEqual(response, value1)
 
 
 if __name__ == '__main__':

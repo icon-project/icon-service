@@ -17,6 +17,7 @@
 """functions and classes to handle address
 """
 
+from abc import abstractmethod
 import hashlib
 from enum import IntEnum
 
@@ -97,15 +98,19 @@ class Address(object):
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
+
+        self.check_init_address(address_prefix, address_body)
+        self.__prefix = address_prefix
+        self.__body = address_body
+
+    @abstractmethod
+    def check_init_address(self, address_prefix: 'AddressPrefix', address_body: bytes):
         if not isinstance(address_prefix, AddressPrefix):
             raise InvalidParamsException('Invalid address prefix type')
         if not isinstance(address_body, bytes):
             raise InvalidParamsException('Invalid address body type')
         if len(address_body) != 20:
             raise InvalidParamsException('Address length is not 20 in bytes')
-
-        self.__prefix = address_prefix
-        self.__body = address_body
 
     @property
     def prefix(self) -> AddressPrefix:
@@ -225,7 +230,7 @@ class Address(object):
         return Address(prefix, b'\x00' * zero_size + num_bytes)
 
 
-class MalformedAddress(object):
+class MalformedAddress(Address):
     """This class only exists to support an invalid format address which was created by legacy bug
     """
     def __init__(self,
@@ -236,67 +241,14 @@ class MalformedAddress(object):
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
-        if not isinstance(address_prefix, AddressPrefix) or \
-                address_prefix != AddressPrefix.EOA:
+        super(MalformedAddress, self).__init__(address_prefix, address_body)
+
+    @abstractmethod
+    def check_init_address(self, address_prefix: 'AddressPrefix', address_body: bytes):
+        if not isinstance(address_prefix, AddressPrefix):
             raise InvalidParamsException('Invalid address prefix type')
         if not isinstance(address_body, bytes):
             raise InvalidParamsException('Invalid address body type')
-
-        self._prefix = address_prefix
-        self._body = address_body
-
-    @property
-    def prefix(self) -> AddressPrefix:
-        """Returns address prefix part
-
-        :return: AddressPrefix.EOA(0) or AddressPrefix.CONTRACT(1)
-        """
-        return self._prefix
-
-    @property
-    def body(self) -> bytes:
-        return self._body
-
-    def __eq__(self, other) -> bool:
-        """operator == overriding
-
-        :return: bool
-        """
-        return \
-            isinstance(other, MalformedAddress) \
-            and self._prefix == other.prefix \
-            and self._body == other.body
-
-    def __ne__(self, other) -> bool:
-        """operator != overriding
-
-        :return: (bool)
-        """
-        return not self.__eq__(other)
-
-    def __str__(self) -> str:
-        """operator str() overriding
-
-        returns prefix(2) + 40-char hexadecimal address
-
-        :return: (str) 42-char address
-        """
-        return f'{str(self.prefix)}{self.body.hex()}'
-
-    def __hash__(self) -> int:
-        """Returns a hash value for this object
-
-        :return: hash value
-        """
-        return hash(self._prefix.to_bytes(1, DATA_BYTE_ORDER) + self._body)
-
-    @property
-    def is_contract(self) -> bool:
-        """Is this a contract address?
-
-        :return: True(contract) False(Not contract)
-        """
-        return self.prefix == AddressPrefix.CONTRACT
 
     @staticmethod
     def from_string(address: str):
@@ -312,13 +264,6 @@ class MalformedAddress(object):
         address_body = bytes.fromhex(body)
 
         return MalformedAddress(AddressPrefix.EOA, address_body)
-
-    def to_bytes(self) -> bytes:
-        """Convert Address object to bytes
-
-        :return: data including information of Address object
-        """
-        return self._body
 
 
 # cx0000000000000000000000000000000000000000

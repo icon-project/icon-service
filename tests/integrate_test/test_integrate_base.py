@@ -31,7 +31,7 @@ from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
 
 if TYPE_CHECKING:
-    from iconservice.base.address import Address
+    from iconservice.base.address import Address, MalformedAddress
 
 
 class TestIntegrateBase(TestCase):
@@ -211,14 +211,14 @@ class TestIntegrateBase(TestCase):
 
     def _make_icx_send_tx(self,
                           addr_from: Optional['Address'],
-                          addr_to: 'Address',
-                          value: int):
+                          addr_to: Union['Address', 'MalformedAddress'],
+                          value: int, disable_pre_validate: bool = False,
+                          support_v2: bool = False):
 
         timestamp_us = create_timestamp()
         nonce = 0
 
         request_params = {
-            "version": self._version,
             "from": addr_from,
             "to": addr_to,
             "value": value,
@@ -228,6 +228,11 @@ class TestIntegrateBase(TestCase):
             "signature": self._signature
         }
 
+        if support_v2:
+            request_params["fee"] = 10 ** 16
+        else:
+            request_params["version"] = self._version
+
         method = 'icx_sendTransaction'
         # Insert txHash into request params
         request_params['txHash'] = create_tx_hash()
@@ -236,7 +241,8 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        if not disable_pre_validate:
+            self.icon_service_engine.validate_transaction(tx)
         return tx
 
     def _make_and_req_block(self, tx_list: list, block_height: int = None) -> tuple:
