@@ -16,7 +16,7 @@
 
 """IconServiceEngine testcase
 """
-
+from time import sleep
 from unittest import TestCase
 
 from typing import TYPE_CHECKING, Union, Optional, Any
@@ -54,6 +54,8 @@ class TestIntegrateBase(TestCase):
         cls._addr_array = [create_address() for _ in range(10)]
 
     def setUp(self):
+        # for prevent fail unittest about module load fail
+        sleep(1)
         root_clear(self._score_root_path, self._state_db_root_path)
 
         self._block_height = 0
