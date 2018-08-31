@@ -810,7 +810,7 @@ class IconServiceEngine(ContextContainer):
             Logger.error(e, ICON_SERVICE_LOG_TAG)
 
             code = ExceptionCode.SERVER_ERROR
-            message = 'Unexpected error'
+            message = str(e)
 
         return TransactionResult.Failure(code, message)
 
