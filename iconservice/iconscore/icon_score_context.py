@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
 from .internal_call import InternalCall
-from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
 from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
@@ -158,7 +158,8 @@ class IconScoreContext(object):
 
     @property
     def readonly(self):
-        return self.type == IconScoreContextType.QUERY
+        return self.type == IconScoreContextType.QUERY or \
+            self.func_type == IconScoreFuncType.READONLY
 
     def clear(self) -> None:
         """Set instance member variables to None

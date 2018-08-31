@@ -35,6 +35,8 @@ MAX_DATA_SIZE = 512 * 1024
 
 ICON_DEX_DB_NAME = 'icon_dex'
 
+ICX_TRANSFER_EVENT_LOG = 'ICXTransfer(Address,Address,int)'
+
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
 ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{scoreRootPath}." \
