@@ -16,13 +16,12 @@
 
 from typing import TYPE_CHECKING, List, Optional, Any
 
-from .icon_score_context import IconScoreContextType, IconScoreFuncType
+from .icon_score_base2 import BaseType
 from .icon_score_step import StepType
 from ..base.address import Address
 from ..base.exception import EventLogException
 from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from ..utils import int_to_bytes, byte_length_of_int
-from .icon_score_base2 import BaseType
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -88,13 +87,9 @@ class EventLogEmitter(object):
         :return:
         """
 
-        if context.type == IconScoreContextType.QUERY:
+        if context.readonly:
             raise EventLogException(
-                'The event log can not be called in the query call')
-
-        if context.func_type != IconScoreFuncType.WRITABLE:
-            raise EventLogException(
-                'Only writable method can record event logs')
+                'The event log can not be recorded on readonly context')
 
         if indexed_args_count > INDEXED_ARGS_LIMIT:
             raise EventLogException(

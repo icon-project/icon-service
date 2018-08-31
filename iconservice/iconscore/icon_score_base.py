@@ -109,7 +109,7 @@ def eventlog(func=None, *, indexed=0):
         if event_signature == ICX_TRANSFER_EVENT_LOG:
             # 'ICXTransfer(Address,Address,int)' is reserved
             raise EventLogException(
-                f'Cannot use the event log \'{ICX_TRANSFER_EVENT_LOG}\'.')
+                f'The event log \'{ICX_TRANSFER_EVENT_LOG}\' is reserved')
 
         return EventLogEmitter.emit_event_log(
             calling_obj._context, calling_obj.address, event_signature, arguments, indexed)
