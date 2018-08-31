@@ -445,7 +445,7 @@ class IconServiceEngine(ContextContainer):
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
                                  origin=from_,
-                                 timestamp=params['timestamp'],
+                                 timestamp=params.get('timestamp', context.block.timestamp),
                                  nonce=params.get('nonce', None))
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
