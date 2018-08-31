@@ -18,6 +18,7 @@
 import inspect
 import unittest
 from os import path, makedirs, symlink
+from time import sleep
 
 from unittest.mock import Mock
 
@@ -76,6 +77,7 @@ class TestIconScoreLoader(unittest.TestCase):
 
         score = self.load_proj('test_score01')
         print('test_score01', score.get_api())
+        sleep(1)
         score = self.load_proj('test_score02')
         print('test_score02', score.get_api())
 

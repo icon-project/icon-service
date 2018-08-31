@@ -56,6 +56,7 @@ class TestIntegrateBase(TestCase):
     def setUp(self):
         # for prevent fail unittest about module load fail
         sleep(1)
+
         root_clear(self._score_root_path, self._state_db_root_path)
 
         self._block_height = 0
