@@ -44,7 +44,7 @@ class TestIntegrateBase(TestCase):
         cls._signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
         cls._version = 3
-        cls._step_limit = 1 * 10 ** 7
+        cls._step_limit = 1 * 10 ** 9
         cls._icx_factor = 10 ** 18
 
         cls._admin: 'Address' = create_address()
