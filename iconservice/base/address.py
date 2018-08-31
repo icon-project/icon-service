@@ -92,25 +92,24 @@ class Address(object):
 
     def __init__(self,
                  address_prefix: AddressPrefix,
-                 address_body: bytes) -> None:
+                 address_body: bytes, ignore_length_validate: bool = False) -> None:
         """Constructor
 
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
 
-        self.check_init_address(address_prefix, address_body)
-        self.__prefix = address_prefix
-        self.__body = address_body
-
-    @abstractmethod
-    def check_init_address(self, address_prefix: 'AddressPrefix', address_body: bytes):
         if not isinstance(address_prefix, AddressPrefix):
             raise InvalidParamsException('Invalid address prefix type')
         if not isinstance(address_body, bytes):
             raise InvalidParamsException('Invalid address body type')
-        if len(address_body) != 20:
-            raise InvalidParamsException('Address length is not 20 in bytes')
+
+        if not ignore_length_validate:
+            if len(address_body) != 20:
+                raise InvalidParamsException('Address length is not 20 in bytes')
+
+        self.__prefix = address_prefix
+        self.__body = address_body
 
     @property
     def prefix(self) -> AddressPrefix:
@@ -241,14 +240,8 @@ class MalformedAddress(Address):
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
-        super(MalformedAddress, self).__init__(address_prefix, address_body)
 
-    @abstractmethod
-    def check_init_address(self, address_prefix: 'AddressPrefix', address_body: bytes):
-        if not isinstance(address_prefix, AddressPrefix):
-            raise InvalidParamsException('Invalid address prefix type')
-        if not isinstance(address_body, bytes):
-            raise InvalidParamsException('Invalid address body type')
+        super().__init__(address_prefix, address_body, ignore_length_validate=True)
 
     @staticmethod
     def from_string(address: str):
@@ -256,12 +249,16 @@ class MalformedAddress(Address):
 
         :return: (Address)
         """
-        if address.startswith('hx'):
-            body = address[2:]
-        else:
-            body = address
 
-        address_body = bytes.fromhex(body)
+        try:
+            if address.startswith('hx'):
+                body = address[2:]
+            else:
+                body = address
+
+            address_body = bytes.fromhex(body)
+        except:
+            raise InvalidParamsException('Invalid address')
 
         return MalformedAddress(AddressPrefix.EOA, address_body)
 
