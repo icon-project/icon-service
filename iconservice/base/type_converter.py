@@ -15,12 +15,11 @@
 # limitations under the License.
 
 from copy import deepcopy
-
 from typing import Union, Any, get_type_hints
 
 from iconservice.base.type_converter_templates import ParamType, \
     type_convert_templates, ValueType, KEY_CONVERTER, CONVERT_USING_SWITCH_KEY, SWITCH_KEY
-from .address import Address
+from .address import Address, MalformedAddress, is_icon_address_valid
 from .exception import InvalidParamsException
 from ..utils import get_main_type_from_annotations_type
 
@@ -141,6 +140,8 @@ class TypeConverter:
             converted_value = TypeConverter._convert_value_bool(value)
         elif value_type == ValueType.ADDRESS:
             converted_value = TypeConverter._convert_value_address(value)
+        elif value_type == ValueType.ADDRESS_OR_MALFORMED_ADDRESS:
+            converted_value = TypeConverter._convert_value_address_or_malformed_address(value)
         elif value_type == ValueType.BYTES:  # hash...(block_hash, tx_hash)
             converted_value = TypeConverter._convert_value_bytes(value)
         else:
@@ -177,6 +178,19 @@ class TypeConverter:
             return Address.from_string(value)
         else:
             raise InvalidParamsException(f'TypeConvert Exception address value :{value}, type: {type(value)}')
+
+    @staticmethod
+    def _convert_value_address_or_malformed_address(value: str) -> 'Address':
+        if not isinstance(value, str):
+            raise InvalidParamsException(
+                f'TypeConvert Exception address value :{value}, type: {type(value)}')
+
+        if is_icon_address_valid(value):
+            return Address.from_string(value)
+
+        # This code is just used to support a legacy bug
+        # Do not use MalformedAddress elsewhere
+        return MalformedAddress.from_string(value)
 
     @staticmethod
     def _convert_value_bytes(value: str) -> bytes:

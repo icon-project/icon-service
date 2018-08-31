@@ -18,7 +18,7 @@ import unittest
 
 from iconservice.base.address import Address, AddressPrefix, \
     ICON_EOA_ADDRESS_PREFIX, ICON_CONTRACT_ADDRESS_PREFIX, \
-    ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, is_icon_address_valid, split_icon_address
+    ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, is_icon_address_valid, split_icon_address, MalformedAddress
 from iconservice.base.exception import ExceptionCode
 from tests import create_address
 
@@ -138,6 +138,18 @@ class TestAddress(unittest.TestCase):
                          "hx000000000000000000000000000000000000000a")
         self.assertEqual(str(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1024)),
                          "cx0000000000000000000000000000000000000400")
+
+    def test_malformed_address(self):
+        address: str = "hx123456"
+        addr = MalformedAddress.from_string(address)
+        self.assertEqual(str(addr), address)
+
+    def test_invalid_address(self):
+        address: str = "hx123456"
+        with self.assertRaises(BaseException) as e:
+            Address.from_string(address)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.message, "Invalid address")
 
 
 if __name__ == '__main__':

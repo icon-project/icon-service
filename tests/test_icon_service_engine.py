@@ -16,13 +16,17 @@
 
 """IconScoreEngine testcase
 """
+import hashlib
 import os
 import unittest
+import time
 from unittest.mock import Mock
 
 from iconcommons.icon_config import IconConfig
-from iconservice.base.address import AddressPrefix
+from iconservice.base.address import AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
+from iconservice.base.type_converter import TypeConverter
+from iconservice.base.type_converter_templates import ParamType
 from iconservice.base.exception import ExceptionCode, ServerErrorException, \
     RevertException
 from iconservice.base.message import Message
@@ -330,6 +334,64 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
 
+    def test_invoke_v2_with_zero_fee_and_malformed_to_address(self):
+        block_height = 1
+        block_hash = create_block_hash()
+        block_timestamp = 0
+        tx_hash = create_tx_hash()
+        value = 1 * 10 ** 18
+        to = MalformedAddress.from_string('')
+        fixed_fee: int = 10 ** 16
+
+        tx_v2 = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'from': self.from_,
+                'to': to,
+                'value': value,
+                'fee': fixed_fee,
+                'timestamp': 1234567890,
+                'txHash': tx_hash
+            }
+        }
+
+        block = Block(block_height,
+                      block_hash,
+                      block_timestamp,
+                      self.genesis_block.hash)
+
+        tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
+        self.assertIsInstance(state_root_hash, bytes)
+        self.assertEqual(len(state_root_hash), 32)
+        self.assertEqual(len(tx_results), 1)
+
+        tx_result: 'TransactionResult' = tx_results[0]
+        self.assertIsNone(tx_result.failure)
+        self.assertIsNone(tx_result.score_address)
+        self.assertEqual(tx_result.status, 1)
+        self.assertEqual(tx_result.block_height, block_height)
+        self.assertEqual(tx_result.block_hash, block_hash)
+        self.assertEqual(tx_result.tx_index, 0)
+        self.assertEqual(tx_result.tx_hash, tx_hash)
+
+        # step_used MUST BE 10000 on protocol v2
+        self.assertEqual(tx_result.step_used, 10000)
+
+        step_price = self._engine._get_step_price()
+        self.assertEqual(tx_result.step_price, step_price)
+
+        # Write updated states to levelDB
+        self._engine.commit(block)
+
+        # Check whether fee charging works well
+        from_balance: int = self._engine._icx_engine.get_balance(
+            None, self.from_)
+        to_balance: int = self._engine._icx_engine.get_balance(None, to)
+        fee = tx_result.step_price * tx_result.step_used
+        self.assertEqual(0, fee)
+        self.assertEqual(value, to_balance)
+        self.assertEqual(from_balance, self._total_supply - value - fee)
+
     def test_invoke_v3_without_fee(self):
         block_height = 1
         block_hash = create_block_hash()
@@ -617,10 +679,120 @@ class TestIconServiceEngine(unittest.TestCase):
             prev_hash=self.genesis_block.hash)
 
         block_result, state_root_hash = self._engine.invoke(block, [])
+        self.assertIsInstance(block_result, list)
+        self.assertEqual(state_root_hash, hashlib.sha3_256(b'').digest())
 
         self._engine.rollback(block)
         self.assertIsNone(self._engine._precommit_data_manager.get(block))
 
+    def test_invoke_v2_with_malformed_to_address_and_type_converter(self):
+        to = ''
+        to_address = MalformedAddress.from_string(to)
+        fixed_fee: int = 10 ** 16
+        value = 1 * 10 ** 18
+        block_height = 1
+        block_hash: bytes = create_block_hash(b'block')
+        prev_block_hash: bytes = self.genesis_block.hash
+        tx_hash: bytes = create_tx_hash(b'tx')
+        timestamp: int = int(time.time() * 1000)
+
+        request = {
+            'block': {
+                'blockHeight': hex(block_height),
+                'blockHash': block_hash.hex(),
+                'prevBlockHash': prev_block_hash.hex(),
+                'timestamp': str(timestamp)
+            },
+            'transactions': [
+                {
+                    'method': 'icx_sendTransaction',
+                    'params': {
+                        'from': str(self.from_),
+                        'to': to,
+                        'fee': hex(fixed_fee),
+                        'value': hex(value),
+                        'timestamp': '0x574024617ae39',
+                        'nonce': '0x1',
+                        'signature': 'yKMiB12Os0ZK9+XYiBSwydvMXA0y/LS9HzmZwtczQ1VAK98/mGUOmpwTjByFArjdkx72GOWIOzu6eqyZnKeHBAE=',
+                        'txHash': tx_hash.hex()
+                    }
+                }
+            ]
+        }
+
+        params = TypeConverter.convert(request, ParamType.INVOKE)
+        converted_block_params = params['block']
+        block = Block.from_dict(converted_block_params)
+
+        self.assertEqual(block_height, block.height)
+        self.assertEqual(block_hash, block.hash)
+        self.assertEqual(prev_block_hash, block.prev_hash)
+        self.assertEqual(timestamp, block.timestamp)
+
+        transactions: list = params['transactions']
+        self.assertIsInstance(transactions[0]['params']['to'], MalformedAddress)
+
+        tx_results, state_root_hash = self._engine.invoke(block, transactions)
+        self.assertIsInstance(state_root_hash, bytes)
+        self.assertEqual(len(state_root_hash), 32)
+        self.assertEqual(len(tx_results), 1)
+
+        tx_result: 'TransactionResult' = tx_results[0]
+        self.assertIsNone(tx_result.failure)
+        self.assertIsNone(tx_result.score_address)
+        self.assertEqual(tx_result.status, 1)
+        self.assertEqual(tx_result.block_height, block_height)
+        self.assertEqual(tx_result.block_hash, block_hash)
+        self.assertEqual(tx_result.tx_index, 0)
+        self.assertEqual(tx_result.tx_hash, tx_hash)
+
+        # step_used MUST BE 10000 on protocol v2
+        self.assertEqual(tx_result.step_used, 10000)
+
+        step_price = self._engine._get_step_price()
+        self.assertEqual(tx_result.step_price, step_price)
+
+        # Write updated states to levelDB
+        self._engine.commit(block)
+
+        # Check whether fee charging works well
+        from_balance: int = self._engine._icx_engine.get_balance(
+            None, self.from_)
+        to_balance: int = self._engine._icx_engine.get_balance(None, to_address)
+        fee = tx_result.step_price * tx_result.step_used
+        self.assertEqual(0, fee)
+        self.assertEqual(value, to_balance)
+        self.assertEqual(from_balance, self._total_supply - value - fee)
+
+    def test_get_balance_with_malformed_address_and_type_converter(self):
+        empty_address = MalformedAddress.from_string('')
+        short_address_without_hx = MalformedAddress.from_string('12341234')
+        short_address = MalformedAddress.from_string('hx1234512345')
+        long_address_without_hx = MalformedAddress.from_string(
+            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
+        long_address = MalformedAddress.from_string(
+            'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
+        malformed_addresses = [
+            '',
+            '12341234',
+            'hx1234123456',
+            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf',
+            'hxdf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf']
+
+        method: str = 'icx_getBalance'
+
+        for address in malformed_addresses:
+            request = {'method': method, 'params': {'address': address}}
+
+            converted_request = TypeConverter.convert(request, ParamType.QUERY)
+            self.assertEqual(method, converted_request['method'])
+
+            params: dict = converted_request['params']
+            self.assertEqual(MalformedAddress.from_string(address), params['address'])
+
+            balance: int = self._engine.query(
+                converted_request['method'], converted_request['params'])
+            self.assertEqual(0, balance)
 
 if __name__ == '__main__':
     unittest.main()

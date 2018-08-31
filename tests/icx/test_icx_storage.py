@@ -19,7 +19,7 @@
 import shutil
 import unittest
 
-from iconservice.base.address import AddressPrefix
+from iconservice.base.address import AddressPrefix, MalformedAddress
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
@@ -75,6 +75,65 @@ class TestIcxStorage(unittest.TestCase):
 
         ret = self.storage.is_address_present(context, self.address)
         self.assertFalse(ret)
+
+
+class TestIcxStorageForMalformedAddress(unittest.TestCase):
+    def setUp(self):
+        empty_address = MalformedAddress.from_string('')
+        short_address_without_hx = MalformedAddress.from_string('12341234')
+        short_address = MalformedAddress.from_string('hx1234512345')
+        long_address_without_hx = MalformedAddress.from_string(
+            'cf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
+        long_address = MalformedAddress.from_string(
+            'hxcf85fac2d0b507a2db9ce9526e6d01476f16a2d269f51636f9c4b2d512017faf')
+        self.addresses = [
+            empty_address,
+            short_address_without_hx, short_address,
+            long_address_without_hx, long_address]
+
+        self.db_name = 'icx.db'
+        db = ContextDatabase.from_path(self.db_name)
+        self.assertIsNotNone(db)
+
+        self.storage = IcxStorage(db)
+
+        self.factory = IconScoreContextFactory(max_size=1)
+        context = self.factory.create(IconScoreContextType.DIRECT)
+        self.context = context
+
+    def tearDown(self):
+        context = self.context
+        self.storage.close(context)
+
+        shutil.rmtree(self.db_name)
+
+    def test_get_put_account(self):
+        context = self.context
+        account = Account()
+        account.deposit(10 ** 19)
+
+        for address in self.addresses:
+            account.address = address
+            self.storage.put_account(context, account.address, account)
+
+            account2 = self.storage.get_account(context, account.address)
+            self.assertEqual(account, account2)
+
+    def test_delete_account(self):
+        context = self.context
+        account = Account()
+
+        for address in self.addresses:
+            account.address = address
+            self.storage.put_account(context, account.address, account)
+
+            ret = self.storage.is_address_present(context, account.address)
+            self.assertTrue(ret)
+
+            self.storage.delete_account(context, account.address)
+
+            ret = self.storage.is_address_present(context, account.address)
+            self.assertFalse(ret)
 
 
 if __name__ == '__main__':
