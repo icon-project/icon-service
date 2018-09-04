@@ -54,9 +54,6 @@ class TestIntegrateBase(TestCase):
         cls._addr_array = [create_address() for _ in range(10)]
 
     def setUp(self):
-        # for prevent fail unittest about module load fail
-        sleep(1)
-
         root_clear(self._score_root_path, self._state_db_root_path)
 
         self._block_height = 0
@@ -69,6 +66,8 @@ class TestIntegrateBase(TestCase):
                                                 ConfigKey.SERVICE_FEE: False,
                                                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
                                                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
+        config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
+                            ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
         config.update_conf(self._make_init_config())
 
         self.icon_service_engine = IconServiceEngine()

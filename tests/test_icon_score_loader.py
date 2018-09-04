@@ -34,11 +34,10 @@ TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
 
 
 class TestIconScoreLoader(unittest.TestCase):
-    _ROOT_SCORE_PATH = 'tests/score'
-    _TEST_DB_PATH = 'tests/test_db'
+    _ROOT_SCORE_PATH = '.score'
 
     def setUp(self):
-        self._score_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
+        self._score_path = self._ROOT_SCORE_PATH
         self._loader = IconScoreLoader(self._score_path, 0)
 
         self._factory = IconScoreContextFactory(max_size=1)
@@ -48,11 +47,7 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def tearDown(self):
         ContextContainer._pop_context()
-        remove_path = path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
-        rmtree(remove_path)
-        IconScoreDeployer.remove_existing_score(remove_path)
-        remove_path = path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        IconScoreDeployer.remove_existing_score(remove_path)
+        rmtree(self._score_path)
 
     @staticmethod
     def __ensure_dir(dir_path):
@@ -60,7 +55,7 @@ class TestIconScoreLoader(unittest.TestCase):
             makedirs(dir_path)
 
     def load_proj(self, proj: str) -> callable:
-        addr_score = create_address(1)
+        addr_score = create_address(1, data=proj.encode())
         target_path = path.join(self._score_path, addr_score.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
         tx_hash = create_tx_hash()
@@ -77,7 +72,6 @@ class TestIconScoreLoader(unittest.TestCase):
 
         score = self.load_proj('test_score01')
         print('test_score01', score.get_api())
-        sleep(1)
         score = self.load_proj('test_score02')
         print('test_score02', score.get_api())
 
