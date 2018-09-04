@@ -21,28 +21,24 @@
 
 import hashlib
 import os
-
-import shutil
+import random
 import sys
 
-import random
-from typing import TYPE_CHECKING
+import shutil
 
-from iconservice.base.address import Address
-from iconservice.icon_constant import DATA_BYTE_ORDER
 from iconcommons.logger import Logger
+from iconservice.base.address import Address, AddressPrefix
+from iconservice.icon_constant import DATA_BYTE_ORDER
 
-if TYPE_CHECKING:
-    from iconservice.base.address import AddressPrefix
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 
 
-def create_address(prefix: 'AddressPrefix', data: bytes=None) -> 'Address':
+def create_address(prefix: int = 0, data: bytes=None) -> 'Address':
     if data is None:
         data = create_tx_hash()
     hash_value = hashlib.sha3_256(data).digest()
-    return Address(prefix, hash_value[-20:])
+    return Address(AddressPrefix(prefix), hash_value[-20:])
 
 
 def create_hash_256(data: bytes=None) -> bytes:

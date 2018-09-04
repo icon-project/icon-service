@@ -20,9 +20,10 @@ if version is None:
 setup_options = {
     'name': 'iconservice',
     'version': version,
-    'description': 'iconservice for python',
+    'description': 'ICON Service for python',
     'long_description_content_type': 'text/markdown',
     'long_description': open('README.md').read(),
+    'url': 'https://github.com/icon-project/icon-service',
     'author': 'ICON Foundation',
     'author_email': 'foo@icon.foundation',
     'packages': find_packages(exclude=['tests*', 'docs']),

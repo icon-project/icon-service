@@ -98,6 +98,31 @@ class TestTransactionValidator(unittest.TestCase):
             self.assertEqual(ExceptionCode.INVALID_REQUEST, cm.exception.code)
             self.assertEqual('Step limit too low', cm.exception.message)
 
+    def test_validate_data_size(self):
+        params = {
+            'version': 3,
+            'txHash': create_tx_hash(),
+            'from': Address.from_data(AddressPrefix.EOA, b'from'),
+            'to': Address.from_data(AddressPrefix.CONTRACT, b'to'),
+            'value': 0,
+            'stepLimit': 100,
+            'timestamp': int(time.time() * 10 ** 6),
+            'nonce': 1,
+            'dataType': 'call',
+            'data': {
+                'method': 'method01',
+                'params': {
+                    'param00001': 'a' * 100 * 1024,
+                    'param00002': 'b' * 100 * 1024,
+                    'param00003': 'c' * 100 * 1024
+                }
+            }
+        }
+        length = self.validator._get_character_length(params['data'])
+        expected_length = len('method') + len('method01') + len('params') + \
+                          len('param00001') + len('param00002') + len('param00003') + 300 * 1024
+        self.assertEqual(length, expected_length)
+
     def test_negative_balance(self):
         step_price = 0
         self.icx_engine.get_balance = Mock(return_value=0)
@@ -203,7 +228,7 @@ class TestTransactionValidator(unittest.TestCase):
     #     self.assertEqual(f'Invalid address: {to}', cm.exception.message)
 
     def test_execute_to_check_out_of_balance(self):
-        step_price = 10 ** 12
+        step_price = 10 ** 10
         value = 2 * 10 ** 18
         step_limit = 20000
 
@@ -352,7 +377,7 @@ class TestTransactionValidatorV2(unittest.TestCase):
         self.validator.execute(tx, step_price=0, minimum_step=100)
 
     def test_execute_to_check_out_of_balance(self):
-        step_price = 10 ** 12
+        step_price = 10 ** 10
         self.icx_engine.get_balance = Mock(return_value=0)
         self.score_manager.is_score_active = Mock(return_value=False)
 

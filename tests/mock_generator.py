@@ -13,17 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from collections import namedtuple
-from typing import List
 from unittest.mock import Mock, patch
 
-from iconcommons.icon_config import IconConfig
+from typing import List
 
+from iconcommons.icon_config import IconConfig
 from iconservice.database.db import ContextDatabase
 from iconservice.icon_config import default_icon_config
+from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
-from tests import create_block_hash
+from tests import create_block_hash, rmtree
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
 ICX_ENGINE_PATH = 'iconservice.icx.icx_engine.IcxEngine'
@@ -75,6 +77,11 @@ def generate_inner_task(
     inner_task._icon_service_engine._icx_engine._transfer = Mock()
 
     return inner_task
+
+
+def clear_inner_task():
+    rmtree(default_icon_config[ConfigKey.SCORE_ROOT_PATH])
+    rmtree(default_icon_config[ConfigKey.STATE_DB_ROOT_PATH])
 
 
 # noinspection PyProtectedMember

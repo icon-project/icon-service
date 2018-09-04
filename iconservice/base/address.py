@@ -17,6 +17,7 @@
 """functions and classes to handle address
 """
 
+from abc import abstractmethod
 import hashlib
 from enum import IntEnum
 
@@ -91,18 +92,21 @@ class Address(object):
 
     def __init__(self,
                  address_prefix: AddressPrefix,
-                 address_body: bytes) -> None:
+                 address_body: bytes, ignore_length_validate: bool = False) -> None:
         """Constructor
 
         :param address_prefix: address prefix enumerator
         :param address_body: 20-byte address body
         """
+
         if not isinstance(address_prefix, AddressPrefix):
             raise InvalidParamsException('Invalid address prefix type')
         if not isinstance(address_body, bytes):
             raise InvalidParamsException('Invalid address body type')
-        if len(address_body) != 20:
-            raise InvalidParamsException('Address length is not 20 in bytes')
+
+        if not ignore_length_validate:
+            if len(address_body) != 20:
+                raise InvalidParamsException('Address length is not 20 in bytes')
 
         self.__prefix = address_prefix
         self.__body = address_body
@@ -223,6 +227,40 @@ class Address(object):
         if zero_size < 0:
             raise InvalidParamsException(f'num_bytes is over 20 bytes num: {num}')
         return Address(prefix, b'\x00' * zero_size + num_bytes)
+
+
+class MalformedAddress(Address):
+    """This class only exists to support an invalid format address which was created by legacy bug
+    """
+    def __init__(self,
+                 address_prefix: AddressPrefix,
+                 address_body: bytes) -> None:
+        """Constructor
+
+        :param address_prefix: address prefix enumerator
+        :param address_body: 20-byte address body
+        """
+
+        super().__init__(address_prefix, address_body, ignore_length_validate=True)
+
+    @staticmethod
+    def from_string(address: str):
+        """Create Address object from 42-char address
+
+        :return: (Address)
+        """
+
+        try:
+            if address.startswith('hx'):
+                body = address[2:]
+            else:
+                body = address
+
+            address_body = bytes.fromhex(body)
+        except:
+            raise InvalidParamsException('Invalid address')
+
+        return MalformedAddress(AddressPrefix.EOA, address_body)
 
 
 # cx0000000000000000000000000000000000000000

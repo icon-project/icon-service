@@ -139,7 +139,7 @@ class OutOfStepException(IconServiceBaseException):
         Returns the exception message
         :return: the exception message
         """
-        return f'Out of step: {self.__step_type.value()}'
+        return f'Out of step: {self.__step_type.value}'
 
     @property
     def step_limit(self) -> int:
@@ -218,7 +218,7 @@ class IconScoreStepCounter(object):
             step_used = self._step_used
             self._step_used = self._step_limit
             raise OutOfStepException(
-                self._step_limit, step_used, step_to_apply)
+                self._step_limit, step_used, step_to_apply, step_type)
 
         self._step_used += step_to_apply
 

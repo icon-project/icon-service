@@ -111,8 +111,8 @@ class IconServiceEngine(ContextContainer):
 
         self._conf = conf
         self._flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
-        score_root_path = self._conf[ConfigKey.SCORE_ROOT_PATH]
-        state_db_root_path = self._conf[ConfigKey.STATE_DB_ROOT_PATH]
+        score_root_path: str = self._conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
+        state_db_root_path: str = self._conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
 
         makedirs(score_root_path, exist_ok=True)
         makedirs(state_db_root_path, exist_ok=True)
@@ -300,10 +300,16 @@ class IconServiceEngine(ContextContainer):
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
         """
-
-        self._icx_engine.close()
-        self._icon_score_mapper.close()
-        ContextDatabaseFactory.close()
+        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        self._push_context(context)
+        try:
+            self._icx_engine.close()
+            self._icon_score_mapper.close()
+        finally:
+            self._pop_context()
+            self._context_factory.destroy(context)
+            ContextDatabaseFactory.close()
+            self._clear_context()
 
     def invoke(self,
                block: 'Block',
@@ -439,7 +445,7 @@ class IconServiceEngine(ContextContainer):
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
                                  origin=from_,
-                                 timestamp=params['timestamp'],
+                                 timestamp=params.get('timestamp', context.block.timestamp),
                                  nonce=params.get('nonce', None))
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
@@ -706,16 +712,16 @@ class IconServiceEngine(ContextContainer):
         if version < 3:
             # Support coin transfer based on protocol v2
             # 0.01 icx == 10**16 loop
-            # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
-            step_used = 10 ** 4
+            # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
+            step_used = 10 ** 6
 
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
             elif self._is_flag_on(IconServiceFlag.fee):
                 # 0.01 icx == 10**16 loop
-                # FIXED_FEE(0.01 icx) == step_used(10**4) * step_price(10**12)
-                step_price = 10 ** 12
+                # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
+                step_price = 10 ** 10
 
         # Charge a fee to from account
         fee: int = step_used * step_price
