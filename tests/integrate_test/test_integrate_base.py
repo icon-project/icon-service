@@ -16,7 +16,7 @@
 
 """IconServiceEngine testcase
 """
-
+from time import sleep
 from unittest import TestCase
 
 from typing import TYPE_CHECKING, Union, Optional, Any
@@ -66,6 +66,8 @@ class TestIntegrateBase(TestCase):
                                                 ConfigKey.SERVICE_FEE: False,
                                                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
                                                 ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
+        config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
+                            ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
         config.update_conf(self._make_init_config())
 
         self.icon_service_engine = IconServiceEngine()

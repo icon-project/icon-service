@@ -403,6 +403,49 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         response = self._query(query_request, 'icx_getBalance')
         self.assertEqual(response, 0)
 
+    def test_score_revert_link_send_fail(self):
+        tx1 = self._make_deploy_tx("test_fallback_call_scores",
+                                   "test_score_revert",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+        tx2 = self._make_deploy_tx("test_fallback_call_scores",
+                                   "test_link_score_send_fail",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+        self.assertEqual(tx_results[1].status, int(True))
+        score_addr2 = tx_results[1].score_address
+
+        tx3 = self._make_score_call_tx(self._addr_array[0],
+                                       score_addr2,
+                                       'add_score_func',
+                                       {"score_addr": str(score_addr1)})
+
+        value = 1 * self._icx_factor
+        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
+
+        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(tx_results[1].status, int(False))
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[1].failure.message, "Fail icx.send!")
+
+        query_request = {
+            "address": score_addr1
+        }
+
+        response = self._query(query_request, 'icx_getBalance')
+        self.assertEqual(response, 0)
+
     def test_fallback(self):
         query_request = {
             "address": self._genesis
