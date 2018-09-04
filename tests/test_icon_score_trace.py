@@ -93,7 +93,8 @@ class TestTrace(unittest.TestCase):
 
     def test_send(self):
         context = ContextContainer._get_context()
-        to_ = Mock(spec=Address)
+        context.type = IconScoreContextType.INVOKE
+        to_ = create_address(AddressPrefix.EOA)
         amount = 100
         self._score.icx.send(to_, amount)
         context.traces.append.assert_called()
