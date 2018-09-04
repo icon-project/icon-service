@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
 import argparse
 import setproctitle
@@ -128,7 +129,9 @@ def _run_async(async_func):
 
 async def _check_rabbitmq():
     try:
-        await aio_pika.connect()
+        amqp_user_name = os.getenv("AMQP_USERNAME", "guest")
+        amqp_password = os.getenv("AMQP_PASSWORD", "guest")
+        await aio_pika.connect(login=amqp_user_name, password=amqp_password)
     except ConnectionRefusedError:
         Logger.error("rabbitmq-service disable", ICON_SERVICE_STANDALONE)
         exit(0)
