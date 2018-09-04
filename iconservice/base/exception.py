@@ -131,19 +131,6 @@ class APIIconScoreBaseException(IconScoreException):
         return f'msg: {self.message}, func: {self.func_name}, cls: {self.cls_name} ({self.code})'
 
 
-def check_exception(func):
-    @wraps(func)
-    def _wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (IconServiceBaseException, Exception) as e:
-            Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
-            raise e
-        finally:
-            pass
-    return _wrapper
-
-
 class ExternalException(APIIconScoreBaseException):
     def __init__(self, message: Optional[str], func_name: str, cls_name: str,
                  code: ExceptionCode = ExceptionCode.SCORE_ERROR):
