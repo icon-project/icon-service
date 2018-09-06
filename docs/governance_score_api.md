@@ -5,6 +5,7 @@ This document describes APIs that Governance SCORE provides.
 
 | Date | Author | Changes |
 |:---- |:-----: |:--------|
+| 2018.09.06 | Yongwoo Lee | Update getMaxStepLimit |
 | 2018.08.01 | Heonseung Lee | Added addDeployer, removeDeployer |
 | 2018.07.20 | Jaechang Namgoong | Added getMaxStepLimit |
 | 2018.07.16 | Yongwoo Lee | Added getStepCosts, setStepCost, StepCostChanged |
@@ -300,7 +301,9 @@ None
 
 ### Parameters
 
-None
+| Key | Value Type | Description |
+|:----|:-----------|-----|
+| context_type | string | 'invoke' for sendTransaction, 'query' for call |
 
 ### Returns
 
@@ -320,7 +323,10 @@ None
         "to": "cx0000000000000000000000000000000000000001",
         "dataType": "call",
         "data": {
-            "method": "getMaxStepLimit"
+            "method": "getMaxStepLimit",
+            "params": {
+                "context_type": "invoke"
+            }
         }
     }
 }
