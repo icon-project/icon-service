@@ -144,7 +144,6 @@ class IconPreValidator:
         :return:
         """
         self._check_minimum_step(params, minimum_step)
-
         self._check_from_can_charge_fee_v3(params, step_price)
 
         # Check if "to" address is valid
@@ -222,9 +221,9 @@ class IconPreValidator:
         :param params:
         :return:
         """
-        assert params['dataType'] == 'deploy'
-        assert 'to' in params
-        assert 'from' in params
+
+        if params['dataType'] != 'deploy':
+            raise InvalidRequestException(f'dataType is not deploy')
 
         to: 'Address' = params['to']
         if to != ZERO_SCORE_ADDRESS:
@@ -234,8 +233,7 @@ class IconPreValidator:
             data: dict = params['data']
             content_type: str = data['contentType']
 
-            if content_type != 'application/tbears':
-
+            if content_type == 'application/zip':
                 from_: 'Address' = params['from']
                 timestamp: int = params['timestamp']
                 nonce: int = params.get('nonce')
@@ -245,9 +243,15 @@ class IconPreValidator:
                 deploy_info = self._deploy_storage.get_deploy_info(None, score_address)
                 if deploy_info is not None:
                     raise InvalidRequestException(f'SCORE address already in use: {score_address}')
+            elif content_type == 'application/tbears':
+                pass
+            else:
+                raise InvalidRequestException(f'Invalid contentType {content_type}')
 
-        except Exception as e:
-            raise InvalidParamsException(f'Invalid params: {e}')
+        except KeyError as ke:
+            raise InvalidParamsException(f'Invalid params: {ke}')
+        except BaseException as e:
+            raise e
 
     def _check_balance(self, from_: 'Address', value: int, fee: int):
         balance = self._icx.get_balance(None, from_)
