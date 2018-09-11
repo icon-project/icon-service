@@ -24,11 +24,10 @@ if TYPE_CHECKING:
 
 @unique
 class TraceType(Enum):
-    TRANSFER = 0
-    CALL = 1
-    REVERT = 2
-    THROW = 3
-    DESTROY = 4
+    CALL = 0
+    REVERT = 1
+    THROW = 2
+    DESTROY = 3
 
 
 class Trace(object):
