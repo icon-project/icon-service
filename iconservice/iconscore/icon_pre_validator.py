@@ -134,7 +134,7 @@ class IconPreValidator:
         to: 'Address' = params['to']
         if to.is_contract:
             raise InvalidRequestException(
-                'It is not allowed to transfer coin to SCORE on protocol v2')
+                'Not allowed to transfer coin to SCORE on protocol v2')
 
     def _validate_transaction_v3(
             self, params: dict, step_price: int, minimum_step: int):
@@ -200,7 +200,7 @@ class IconPreValidator:
             raise InvalidParamsException('value must be 0 in a deploy transaction')
 
         if self._is_inactive_score(to):
-            raise InvalidRequestException(f'{to} is inactive SCORE')
+            raise InvalidRequestException(f'{to} is an inactive SCORE')
 
         data = params.get('data', None)
         if not isinstance(data, dict):
@@ -221,9 +221,6 @@ class IconPreValidator:
         :param params:
         :return:
         """
-
-        if params['dataType'] != 'deploy':
-            raise InvalidRequestException(f'dataType is not deploy')
 
         to: 'Address' = params['to']
         if to != ZERO_SCORE_ADDRESS:
@@ -246,7 +243,7 @@ class IconPreValidator:
             elif content_type == 'application/tbears':
                 pass
             else:
-                raise InvalidRequestException(f'Invalid contentType {content_type}')
+                raise InvalidRequestException(f'Invalid contentType: {content_type}')
 
         except KeyError as ke:
             raise InvalidParamsException(f'Invalid params: {ke}')
