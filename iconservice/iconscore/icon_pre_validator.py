@@ -253,7 +253,7 @@ class IconPreValidator:
         balance = self._icx.get_balance(None, from_)
 
         if balance < value + fee:
-            raise InvalidRequestException('Out of balance')
+            raise InvalidRequestException(f'Out of balance: balance({balance}) < value({value}) + fee({value})')
 
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract
