@@ -239,8 +239,7 @@ class IconScoreDeployStorage(object):
             if deploy_info.owner != owner:
                 raise ServerErrorException(f'invalid owner: {deploy_info.owner} != {owner}')
             if deploy_info.next_tx_hash is not None:
-                self._db.delete(context, self._create_db_key(
-                    self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_info.next_tx_hash))
+                self._db.delete(context, deploy_info.next_tx_hash)
             deploy_info.next_tx_hash = tx_hash
             self._put_deploy_info(context, deploy_info)
 
