@@ -236,10 +236,6 @@ class IcxEngine(object):
                  from_: Address,
                  to: Address,
                  amount: int) -> bool:
-        if context.readonly:
-            raise InvalidRequestException(
-                'icx transfer is not allowed on readonly context')
-
         if amount < 0:
             raise InvalidParamsException('Amount is less than zero')
 

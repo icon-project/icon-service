@@ -87,7 +87,7 @@ class TestTrace(unittest.TestCase):
         self._score.icx.transfer(to_, amount)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
-        self.assertEqual(TraceType.TRANSFER, trace.trace)
+        self.assertEqual(TraceType.CALL, trace.trace)
         self.assertEqual(to_, trace.data[0])
         self.assertEqual(amount, trace.data[3])
 
@@ -99,7 +99,7 @@ class TestTrace(unittest.TestCase):
         self._score.icx.send(to_, amount)
         context.traces.append.assert_called()
         trace = context.traces.append.call_args[0][0]
-        self.assertEqual(TraceType.TRANSFER, trace.trace)
+        self.assertEqual(TraceType.CALL, trace.trace)
         self.assertEqual(to_, trace.data[0])
         self.assertEqual(amount, trace.data[3])
 
