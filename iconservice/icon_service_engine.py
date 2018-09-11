@@ -511,6 +511,15 @@ class IconServiceEngine(ContextContainer):
         step_price: int = self._get_step_price()
         minimum_step = \
             self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+
+        if 'data' in params:
+            # minimum_step is the sum of
+            # default STEP cost and input STEP costs if data field exists
+            data = params['data']
+            input_size = self._get_byte_length(data)
+            minimum_step += input_size * \
+                self._step_counter_factory.get_step_cost(StepType.INPUT)
+
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
         context = self._context_factory.create(IconScoreContextType.QUERY)
