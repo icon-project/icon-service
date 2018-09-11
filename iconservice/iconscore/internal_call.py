@@ -46,7 +46,7 @@ class InternalCall(object):
         :param amount: icx amount
         :return: True(success) False(failed)
         """
-        return self._call(TraceType.TRANSFER, addr_from, addr_to, None, (), {}, amount, True)
+        return self._call(addr_from, addr_to, None, (), {}, amount, True)
 
     def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
         """transfer icx to the given 'addr_to'
@@ -57,7 +57,7 @@ class InternalCall(object):
         :param amount: the amount of icx to transfer
         :return: True(success) False(failed)
         """
-        return self._call(TraceType.TRANSFER, addr_from, addr_to, None, (), {}, amount)
+        return self._call(addr_from, addr_to, None, (), {}, amount)
 
     def other_external_call(self,
                             addr_from: 'Address',
@@ -66,10 +66,9 @@ class InternalCall(object):
                             arg_params: tuple,
                             kw_params: dict,
                             amount: int) -> Any:
-        return self._call(TraceType.CALL, addr_from, addr_to, func_name, arg_params, kw_params, amount)
+        return self._call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
 
     def _call(self,
-              trace_type: 'TraceType',
               addr_from: 'Address',
               addr_to: 'Address',
               func_name: Optional[str],
@@ -78,25 +77,23 @@ class InternalCall(object):
               amount: int,
               is_exc_handling: bool = False) -> Any:
 
-        self._make_trace(trace_type, addr_from, addr_to, func_name, arg_params, kw_params, amount)
+        self._make_trace(addr_from, addr_to, func_name, arg_params, kw_params, amount)
 
-        if amount > 0 or addr_to.is_contract:
-            self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+        self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
-        if trace_type == TraceType.CALL:
-            ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
-        elif trace_type == TraceType.TRANSFER:
-            ret: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
-            if ret:
+        is_success_icx_transfer: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
+        
+        ret = None
+        if is_success_icx_transfer:
+            if amount > 0:
                 self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
-                if addr_to.is_contract:
-                    self._other_score_call(addr_from, addr_to, None, (), {}, amount)
-        else:
-            ret = None
+            if addr_to.is_contract:
+                ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+                if func_name is None:
+                    ret = is_success_icx_transfer
         return ret
 
     def _make_trace(self,
-                    trace_type: 'TraceType',
                     _from: 'Address',
                     _to: 'Address',
                     func_name: Optional[str],
@@ -114,7 +111,7 @@ class InternalCall(object):
             arg_data2 = [arg for arg in kw_params.values()]
 
         arg_data = arg_data1 + arg_data2
-        trace = Trace(_from, trace_type, [_to, func_name, arg_data, amount])
+        trace = Trace(_from, TraceType.CALL, [_to, func_name, arg_data, amount])
         self.__context.traces.append(trace)
 
     def _icx_transfer(self, addr_from: 'Address', addr_to: 'Address', icx_value: int, is_exc_handling: bool) -> bool:

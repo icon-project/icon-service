@@ -282,7 +282,7 @@ class TestEventlog(unittest.TestCase):
         address = Address.from_data(AddressPrefix.EOA, b'address')
 
         # Tests simple event emit
-        self._mock_score.icx.send(address, 0)
+        self._mock_score.icx.send(address, 1)
         context.event_logs.append.assert_called()
         event_log = context.event_logs.append.call_args[0][0]
         self.assertEqual(4, len(event_log.indexed))
