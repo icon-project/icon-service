@@ -108,6 +108,21 @@ class TestIconContainerDB(unittest.TestCase):
 
         self.assertEqual(test_dict['a'], 1)
 
+    def test_success_dict_other_Key(self):
+        name = 'test_dict'
+        test_dict = DictDB(name, self.db, depth=2, value_type=int)
+
+        prefix: bytes = ContainerUtil.create_db_prefix(DictDB, name)
+        self.assertEqual(b'\x01|' + name.encode(), prefix)
+
+        addr1 = create_address(1)
+        addr2 = create_address(0)
+        test_dict['a'][addr1] = 1
+        test_dict['a'][addr2] = 2
+
+        self.assertEqual(test_dict['a'][addr1], 1)
+        self.assertEqual(test_dict['a'][addr2], 2)
+
     def test_success_dict_depth2(self):
         name = 'test_dict'
         test_dict = DictDB(name, self.db, depth=3, value_type=int)
