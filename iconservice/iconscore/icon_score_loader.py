@@ -64,14 +64,9 @@ class IconScoreLoader(object):
         if self._is_flag_on(IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR):
             ScorePackageValidator().validator(score_path, pkg_root_import)
 
-        # don't remove code until fix hidden bug! it's like magic number!
-        # I think creating file stream like write log fix the hidden bug Temporarily
-        Logger.debug("== load_score ==")
-        Logger.debug(f'sys_module: {sys.modules}')
-
-        spec = importlib.util.find_spec(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        # in order for the new module to be noticed by the import system
+        importlib.invalidate_caches()
+        mod = importlib.import_module(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
 
         return getattr(mod, score_package_info[self._MAIN_SCORE])
 
