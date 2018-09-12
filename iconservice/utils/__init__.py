@@ -65,10 +65,6 @@ def check_error_response(result: Any):
     return isinstance(result, dict) and result.get('error')
 
 
-def exit_process():
-    os.killpg(0, signal.SIGKILL)
-
-
 def get_main_type_from_annotations_type(annotations_type: type) -> type:
     main_type = None
 

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import signal
 
 import argparse
 import setproctitle
@@ -26,10 +27,13 @@ from iconcommons.logger import Logger
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerService
-from iconservice.icon_service_cli import ICON_SERVICE_STANDALONE, ExitCode
+from iconservice.icon_service_cli import ICON_SERVICE_CLI, ExitCode
+
+ICON_SERVICE = 'IconService'
 
 
 class IconService(object):
+
     """IconScore service for stand alone start.
     It provides gRPC interface for peer_service to communicate with icon service.
     Its role is the bridge between loopchain and IconServiceEngine.
@@ -43,7 +47,7 @@ class IconService(object):
     def serve(self, config: 'IconConfig'):
         async def _serve():
             await self._inner_service.connect(exclusive=True)
-            Logger.info(f'Start IconService Service serve!', ICON_SERVICE_STANDALONE)
+            Logger.info(f'Start IconService Service serve!', ICON_SERVICE)
 
         channel = config[ConfigKey.CHANNEL]
         amqp_key = config[ConfigKey.AMQP_KEY]
@@ -53,19 +57,33 @@ class IconService(object):
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
-        Logger.info(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
-        Logger.info(f'score_root_path : {score_root_path}', ICON_SERVICE_STANDALONE)
-        Logger.info(f'icon_score_state_db_root_path  : {db_root_patn}', ICON_SERVICE_STANDALONE)
-        Logger.info(f'amqp_target  : {amqp_target}', ICON_SERVICE_STANDALONE)
-        Logger.info(f'amqp_key  :  {amqp_key}', ICON_SERVICE_STANDALONE)
-        Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE_STANDALONE)
-        Logger.info(f'==========IconService Service params==========', ICON_SERVICE_STANDALONE)
+        Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
+        Logger.info(f'score_root_path : {score_root_path}', ICON_SERVICE)
+        Logger.info(f'icon_score_state_db_root_path  : {db_root_patn}', ICON_SERVICE)
+        Logger.info(f'amqp_target  : {amqp_target}', ICON_SERVICE)
+        Logger.info(f'amqp_key  :  {amqp_key}', ICON_SERVICE)
+        Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE)
+        Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
 
         self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
 
         loop = MessageQueueService.loop
         loop.create_task(_serve())
-        loop.run_forever()
+        loop.add_signal_handler(signal.SIGINT, self.close)
+        loop.add_signal_handler(signal.SIGTERM, self.close)
+
+        try:
+            loop.run_forever()
+        finally:
+            """
+            If the function is called when the operation is not an endless loop 
+            in an asynchronous function, the await is terminated immediately.
+            """
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    def close(self):
+        self._inner_service.clean_close()
 
     def _set_icon_score_stub_params(self, channel: str, amqp_key: str, amqp_target: str):
         self._icon_score_queue_name = \
@@ -107,17 +125,16 @@ def main():
     conf.load()
     conf.update_conf(dict(vars(args)))
     Logger.load_config(conf)
-    Logger.print_config(conf, ICON_SERVICE_STANDALONE)
+    Logger.print_config(conf, ICON_SERVICE_CLI)
 
     _run_async(_check_rabbitmq())
     icon_service = IconService()
     icon_service.serve(config=conf)
-    Logger.info(f'==========IconService Done==========', ICON_SERVICE_STANDALONE)
+    Logger.info(f'==========IconService Done==========', ICON_SERVICE_CLI)
 
 
 def run_in_foreground(conf: 'IconConfig'):
     _run_async(_check_rabbitmq())
-
     icon_service = IconService()
     icon_service.serve(config=conf)
 
@@ -135,7 +152,7 @@ async def _check_rabbitmq():
         connection = await aio_pika.connect(login=amqp_user_name, password=amqp_password)
         connection.connect()
     except ConnectionRefusedError:
-        Logger.error("rabbitmq-service disable", ICON_SERVICE_STANDALONE)
+        Logger.error("rabbitmq-service disable", ICON_SERVICE_CLI)
         exit(0)
     finally:
         if connection:
