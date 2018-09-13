@@ -453,8 +453,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param new_value: new value
         """
 
-        if context and context.step_counter and \
-                context.type == IconScoreContextType.INVOKE:
+        if context and context.step_counter and not context.readonly:
             if old_value:
                 # modifying a value
                 context.step_counter.apply_step(
@@ -478,8 +477,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param old_value: old value
         """
 
-        if context and context.step_counter and \
-                context.type == IconScoreContextType.INVOKE:
+        if context and context.step_counter and not context.readonly:
             context.step_counter.apply_step(
                 StepType.DELETE, len(old_value))
 

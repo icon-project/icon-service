@@ -90,8 +90,10 @@ class IconScoreContextType(IntEnum):
     DIRECT = 0
     # Record data to cache and after confirming the block, write them to db
     INVOKE = 1
+    # Record data to cache for estimation of steps, discard cache after estimation.
+    ESTIMATION = 2
     # Not possible to write data to db
-    QUERY = 2
+    QUERY = 3
 
 
 @unique
