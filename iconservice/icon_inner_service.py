@@ -14,9 +14,9 @@
 
 from asyncio import get_event_loop
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Any, TYPE_CHECKING
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
+from typing import Any, TYPE_CHECKING
 
 from iconcommons.logger import Logger
 from iconservice.base.address import Address
@@ -26,7 +26,7 @@ from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
     EnableThreadFlag, ENABLE_THREAD_FLAG
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.utils import check_error_response, to_camel_case, exit_process
+from iconservice.utils import check_error_response, to_camel_case
 
 if TYPE_CHECKING:
     from earlgrey import RobustConnection
@@ -221,7 +221,6 @@ class IconScoreInnerTask(object):
     def _validate_transaction(self, request: dict):
         response = None
         try:
-            self._validate_jsonschema(request)
             converted_request = TypeConverter.convert(
                 request, ParamType.VALIDATE_TRANSACTION)
             self._icon_service_engine.validate_transaction(converted_request)
@@ -235,12 +234,6 @@ class IconScoreInnerTask(object):
         finally:
             Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
             return response
-
-    def _validate_jsonschema(self, request: dict):
-        # TODO: Skip jsonschema validation
-        # to support deprecated unittest using ICON JSON-RPC api v2
-        # validate_jsonschema(request)
-        pass
 
     @message_queue_task
     async def change_block_hash(self, params):
@@ -265,8 +258,10 @@ class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
 
     def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
         Logger.error("MQ Connection lost.")
+        self.clean_close()
+
+    def clean_close(self):
         self._task._close()
-        exit_process()
 
 
 class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
@@ -275,4 +270,3 @@ class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
     def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
         Logger.error("MQ Connection lost.")
         self._task._close()
-        exit_process()
