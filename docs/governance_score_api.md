@@ -17,7 +17,7 @@ This document describes APIs that Governance SCORE provides.
 
 # Overview
 
-* Governance SCORE means a built-in SCORE that manages many adjustable parameters required by the operation of ICON network.
+* Governance SCORE is a built-in SCORE that manages adjustable characteristics of ICON network.
 * Address: cx0000000000000000000000000000000000000001
 
 # Value Types
@@ -63,12 +63,13 @@ The most commonly used Value types are as follows.
 
 # Query Methods
 
-Query methods that do not change states
+Query method does not change state. Read-only.
 
 ## getScoreStatus
 
 * Queries the current status of the given SCORE.
-* This tells the current status of SCORE and the audit status of the next SCORE.
+* This tells the status of the SCORE of given address.
+* `current` is the installed and running SCORE instance, while `next` is the SCORE code that has been requested to deploy or update, but not installed yet.
 
 ### Parameters
 
@@ -243,7 +244,7 @@ None
 
 ## getStepCosts
 
-* Returns a table of the step costs for the specific action in SCORE
+* Returns a table of the step costs for each actions.
 
 ### Parameters
 
@@ -251,7 +252,7 @@ None
 
 ### Returns
 
-`T_DICT` - a dict:  keys - camel-cased action strings, values - step costs in integer
+`T_DICT` - a dict:  key - camel-cased action strings, value - step costs in integer
 
 ### Examples
 
@@ -344,7 +345,7 @@ None
 
 ## isDeployer
 
-* Returns True if the given address can deploy SCORE.
+* Returns "0x1" if the given address is in the deployer list.
 
 ### Parameters
 
@@ -391,7 +392,7 @@ None
 
 ## isInScoreBlackList
 
-* Returns True if SCORE is in the black list.
+* Returns "0x1" if the SCORE is in the black list.
 
 ### Parameters
 
@@ -438,19 +439,19 @@ None
 
 # Invoke Methods
 
-Methods that could change states
+Invoke method can initiate state transition.
 
 ## acceptScore
 
-* Accepts SCORE deployment requests
-* This could be invoked only by addresses that are in the auditor list.
-* The accepted SCORE will be able to use since the next block.
+* Accepts SCORE deployment request.
+* This method can be invoked only from the addresses that are in the auditor list.
+* The accepted SCORE will be executing from the next block.
 
 ### Parameters
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| txHash | [T\_HASH](#T_HASH) | Transaction hash when the SCORE deployment was requested |
+| txHash | [T\_HASH](#T_HASH) | Transaction hash of the SCORE deploy transaction. |
 
 ### Examples
 
@@ -482,14 +483,14 @@ Methods that could change states
 
 ## rejectScore
 
-* Rejects SCORE deployment requests
-* This could be invoked only by addresses that are in the auditor list.
+* Rejects SCORE deployment request.
+* This can be invoked only from the addresses that are in the auditor list.
 
 ### Parameters
 
 | Key | Value Type | Description |
 |:----|:-----------|-----|
-| txHash | [T\_HASH](#T_HASH) | Transaction hash when the SCORE deployment was requested |
+| txHash | [T\_HASH](#T_HASH) | Transaction hash of the SCORE deploy request. |
 | reason | T\_TEXT | Reason for rejecting |
 
 ### Examples
@@ -523,9 +524,9 @@ Methods that could change states
 
 ## addAuditor
 
-* Adds a new address to the auditor list that has the authority to review auditing.
-* Only addresses registered in the auditor list can call acceptScore and rejectScore.
-* Only the owner can call this function.
+* Adds a new address to the auditor list.
+* Only the addresses registered in the auditor list can call `acceptScore` and `rejectScore`.
+* Only the owner of the Governance SCORE can call this function.
 
 ### Parameters
 
@@ -563,9 +564,9 @@ Methods that could change states
 
 ## removeAuditor
 
-* Removes an address from the auditor list that has the authority to review auditing.
-* The address removed from the auditor list cannot do auditing afterward.
-* This function can be invoked only by either Governance SCORE owner or auditor himself.
+* Removes an address from the auditor list.
+* The address removed from the auditor list cannot call `acceptScore` and `rejectScore` afterward.
+* This function can be invoked only by either Governance SCORE owner or the auditor herself.
 
 ### Parameters
 
@@ -604,7 +605,7 @@ Methods that could change states
 ## setStepPrice
 
 * Sets the current step price in loop.
-* Only the owner can call this function.
+* Only the owner of the Governance SCORE can call this function.
 
 ### Parameters
 
@@ -642,8 +643,8 @@ Methods that could change states
 
 ## setStepCost
 
-* Sets the step costs for the specific action in SCORE.
-* Only the owner can call this function.
+* Sets the step cost for a specific action of SCORE.
+* Only the owner of the Governance SCORE can call this function.
 
 ### Parameters
 
@@ -683,8 +684,9 @@ Methods that could change states
 
 ## addDeployer
 
-* Adds a new address to the deployer list that has the authority to register any SCORE.
-* Only the owner can call this function.
+* Adds a new address to the deployer list.
+* Deployer has the authority to register any SCORE without going through the audit process.
+* Only the owner of the Governance SCORE can call this function.
 
 ### Parameters
 
@@ -722,9 +724,9 @@ Methods that could change states
 
 ## removeDeployer
 
-* Removes an address from the deployer list that has the authority to register any SCORE.
-* The address removed from the deployer list cannot do registering afterward.
-* This function can be invoked only by either Governance SCORE owner or deployer himself.
+* Removes an address from the deployer list.
+* The address removed from the deployer list cannot register SCORE afterward.
+* This function can be invoked only by either Governance SCORE owner or the deployer herself.
 
 ### Parameters
 
@@ -762,8 +764,9 @@ Methods that could change states
 
 ## addToScoreBlackList
 
-* Adds a new SCORE address to the black list that causes fatal problems.
-* Only the owner can call this function.
+* Adds a new SCORE address to the black list that caused fatal problems.
+* SCOREs in the block list will not be invoked afterward. 
+* Only the owner of the Governance SCORE can call this function.
 
 ### Parameters
 
@@ -842,7 +845,7 @@ Methods that could change states
 
 ## Accepted
 
-Must trigger on any successful acceptScore transaction.
+Triggered on any successful acceptScore transaction.
 
 ```python
 @eventlog(indexed=1)
@@ -852,7 +855,7 @@ def Accepted(self, tx_hash: str):
 
 ## Rejected
 
-Must trigger on any successful rejectScore transaction.
+Triggered on any successful rejectScore transaction.
 
 ```python
 @eventlog(indexed=1)
@@ -862,7 +865,7 @@ def Rejected(self, tx_hash: str, reason: str):
 
 ## StepPriceChanged
 
-Must trigger on any successful setStepPrice transaction.
+Triggered on any successful setStepPrice transaction.
 
 ```python
 @eventlog(indexed=1)
@@ -872,7 +875,7 @@ def StepPriceChanged(self, step_price: int):
 
 ## StepCostChanged
 
-Must trigger on any successful setStepCost transaction.
+Triggered on any successful setStepCost transaction.
 
 ```python
 @eventlog(indexed=1)
