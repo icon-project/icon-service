@@ -92,6 +92,7 @@ class IconServiceEngine(ContextContainer):
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
+            'icx_estimateStep': self._process_transaction,
             'icx_getScoreApi': self._handle_icx_get_score_api,
             'ise_getStatus': self._handle_ise_get_status
         }
@@ -441,6 +442,47 @@ class IconServiceEngine(ContextContainer):
 
         return self._call(context, method, params)
 
+    def estimate_step(self, request: dict) -> int:
+        """
+        Estimates the amount of step to process a specific transaction.
+        :return: amount of step
+        """
+        method = request['method']
+        params = request['params']
+
+        from_ = params['from']
+        to = params['to']
+
+        context = self._context_factory.create(IconScoreContextType.ESTIMATION)
+        context.block = self._precommit_data_manager.last_block
+        context.block_batch = BlockBatch(Block.from_block(context.block))
+        context.tx_batch = TransactionBatch()
+        context.new_icon_score_mapper = IconScoreMapper()
+
+        # Fills the step_limit as the max step limit to proceed the transaction.
+        step_limit = self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
+
+        context.tx = Transaction(origin=from_,
+                                 timestamp=params.get('timestamp', context.block.timestamp),
+                                 nonce=params.get('nonce', None))
+
+        context.msg = Message(sender=from_, value=params.get('value', 0))
+        context.current_address = to
+        context.event_logs: List['EventLog'] = []
+        context.logs_bloom: BloomFilter = BloomFilter()
+        context.traces: List['Trace'] = []
+        context.step_counter = self._step_counter_factory.create(step_limit)
+
+        # Deposits virtual ICXs to the sender
+        # to prevent validation error due to 'out of balance'
+        account = self._icx_storage.get_account(context, from_)
+        account.deposit(step_limit * self._get_step_price() + params.get('value', 0))
+        self._icx_storage.put_account(context, from_, account)
+
+        self._call(context, method, params)
+
+        return context.step_counter.step_used
+
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
 
@@ -487,7 +529,8 @@ class IconServiceEngine(ContextContainer):
             in IconInnerService
         :return:
         """
-        assert request['method'] == 'icx_sendTransaction'
+        method = request['method']
+        assert method in ('icx_sendTransaction', 'icx_estimateStep')
         assert 'params' in request
 
         params: dict = request['params']
@@ -573,7 +616,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         icon_score_address: Address = params['to']
-        data_type = params.get('dataType', None)
+        data_type = params.get('data¬Type', None)
         data = params.get('data', None)
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
@@ -597,24 +640,12 @@ class IconServiceEngine(ContextContainer):
         tx_result = TransactionResult(context.tx, context.block)
 
         try:
-            to: Address = params['to']
-            tx_result.to = to
+            tx_result.to = params['to']
 
-            # Check if from account can charge a tx fee
-            self._icon_pre_validator.execute_to_check_out_of_balance(
-                params,
-                step_price=context.step_counter.step_price)
+            # process the transaction
+            score_address = self._process_transaction(context, params)
 
-            # Every send_transaction are calculated DEFAULT STEP at first
-            context.step_counter.apply_step(StepType.DEFAULT, 1)
-            input_size = self._get_byte_length(params.get('data', None))
-
-            context.step_counter.apply_step(StepType.INPUT, input_size)
-            self._transfer_coin(context, params)
-
-            if to.is_contract:
-                tx_result.score_address = self._handle_score_invoke(context, to, params)
-
+            tx_result.score_address = score_address
             tx_result.status = TransactionResult.SUCCESS
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
@@ -645,6 +676,39 @@ class IconServiceEngine(ContextContainer):
             tx_result.traces = context.traces
 
         return tx_result
+
+    def _process_transaction(self,
+                             context: 'IconScoreContext',
+                             params: dict) -> Optional['Address']:
+        """
+        Processes the transaction
+
+        :param params: JSON-RPC params
+        :return: SCORE address if 'deploy' command. otherwise None
+        """
+
+        to: Address = params['to']
+
+        # Checks the balance only on the invoke context(skip estimate context)
+        if context.type == IconScoreContextType.INVOKE:
+            # Check if from account can charge a tx fee
+            self._icon_pre_validator.execute_to_check_out_of_balance(
+                params,
+                step_price=context.step_counter.step_price)
+
+        # Every send_transaction are calculated DEFAULT STEP at first
+        context.step_counter.apply_step(StepType.DEFAULT, 1)
+
+        input_size = self._get_byte_length(params.get('data', None))
+        context.step_counter.apply_step(StepType.INPUT, input_size)
+
+        self._transfer_coin(context, params)
+
+        score_address = None
+        if to.is_contract:
+            score_address = self._handle_score_invoke(context, to, params)
+
+        return score_address
 
     def _get_byte_length(self, data) -> int:
         size = 0

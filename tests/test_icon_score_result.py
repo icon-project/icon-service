@@ -31,7 +31,7 @@ from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
 from iconservice.iconscore.icon_score_context import IconScoreContext, \
-    ContextContainer
+    ContextContainer, IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_event_log import EventLog
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
@@ -62,6 +62,7 @@ class TestTransactionResult(unittest.TestCase):
             Mock(spec=IconPreValidator)
 
         self._mock_context = Mock(spec=IconScoreContext)
+        self._mock_context.type = IconScoreContextType.INVOKE
         self._mock_context.tx = Mock(spec=Transaction)
         self._mock_context.block = Mock(spec=Block)
         self._mock_context.readonly = False
