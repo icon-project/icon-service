@@ -37,7 +37,7 @@ from .deploy.icon_score_manager import IconScoreManager
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
     IconServiceFlag, IconDeployFlag, ConfigKey, IconScoreLoaderFlag
 from .iconscore.icon_pre_validator import IconPreValidator
-from .iconscore.icon_score_context import IconScoreContext, ContextContainer
+from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
@@ -640,6 +640,10 @@ class IconServiceEngine(ContextContainer):
             context.event_logs.clear()
             context.logs_bloom.value = 0
         finally:
+            # Revert func_type to IconScoreFuncType.WRITABLE
+            # to avoid DatabaseException in self._charge_transaction_fee()
+            context.func_type = IconScoreFuncType.WRITABLE
+
             # Charge a fee to from account
             final_step_used, final_step_price = \
                 self._charge_transaction_fee(
