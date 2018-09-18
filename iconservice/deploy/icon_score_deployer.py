@@ -27,10 +27,11 @@ class IconScoreDeployer(object):
         self.score_root_path = score_root_path
 
     def deploy(self, address: Address, data: bytes, tx_hash: bytes):
-        """
-        :param address: score address
-        :param data: The byte value of the zip file.
-        :param tx_hash:
+        """Deploy SCORE; Stores SCORE on the root path
+
+        :param address: SCORE address
+        :param data: Bytes of the zip file.
+        :param tx_hash: Transaction hash
         """
         score_root_path = os.path.join(self.score_root_path, address.to_bytes().hex())
         converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
