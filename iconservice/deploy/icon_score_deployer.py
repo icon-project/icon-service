@@ -84,6 +84,7 @@ class IconScoreDeployer(object):
                                 and not file_path.startswith('.')
                                 and file_path.find('/.') < 0
                                 and matched_file_path in file_path
+                                and file_path.find(matched_file_path) == 0
                         ):
                             file_path = file_path.replace(matched_file_path, '')
                             parent_directory = os.path.dirname(file_path)
