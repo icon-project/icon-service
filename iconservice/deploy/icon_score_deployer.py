@@ -69,11 +69,10 @@ class IconScoreDeployer(object):
                 matched_file_path = ""
                 # Finds the depth having the file 'package.json'.
                 for zip_info in memory_zip_infolist:
-                    with memory_zip.open(zip_info) as file:
-                        file_path = zip_info.filename
-                        if "package.json" in file_path:
-                            matched_file_path = file_path[:len(file_path)-len("package.json")]
-                            break
+                    file_path = zip_info.filename
+                    if "package.json" in file_path:
+                        matched_file_path = file_path[:len(file_path)-len("package.json")]
+                        break
 
                 for zip_info in memory_zip_infolist:
                     with memory_zip.open(zip_info) as file:
@@ -83,7 +82,6 @@ class IconScoreDeployer(object):
                                 and file_path.find('__pycache__') < 0
                                 and not file_path.startswith('.')
                                 and file_path.find('/.') < 0
-                                and matched_file_path in file_path
                                 and file_path.find(matched_file_path) == 0
                         ):
                             file_path = file_path.replace(matched_file_path, '')
