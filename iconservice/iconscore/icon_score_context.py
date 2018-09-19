@@ -134,11 +134,11 @@ class IconScoreContext(object):
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
-        self.logs_bloom: BloomFilter = None
         self.traces: List['Trace'] = None
 
         self.internal_call = InternalCall(self)
         self.msg_stack = []
+        self._event_log_stack = []
 
     @property
     def readonly(self):
@@ -157,7 +157,6 @@ class IconScoreContext(object):
         self.cumulative_step_used = 0
         self.step_counter = None
         self.event_logs = None
-        self.logs_bloom = None
         self.traces = None
         self.func_type = IconScoreFuncType.WRITABLE
 
@@ -276,6 +275,9 @@ class IconScoreContext(object):
 
         self.tx_batch.enter_call()
 
+        self._event_log_stack.append(self.event_logs)
+        self.event_logs = []
+
     def revert_call(self):
         """An exception happens during calling an external function provided by other SCORE
         Revert the states changed by this function call
@@ -285,6 +287,8 @@ class IconScoreContext(object):
 
         self.tx_batch.revert_call()
 
+        self.event_logs.clear()
+
     def leave_call(self):
         """Finish to call external function provided by other SCORE
         """
@@ -292,6 +296,9 @@ class IconScoreContext(object):
             return
 
         self.tx_batch.leave_call()
+
+        prev_event_logs = self._event_log_stack.pop()
+        self.event_logs = prev_event_logs + self.event_logs
 
 
 class IconScoreContextFactory(object):

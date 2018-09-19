@@ -38,7 +38,6 @@ from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
-from iconservice.utils.bloom import BloomFilter
 from tests import create_tx_hash, create_address
 from tests import raise_exception_start_tag, raise_exception_end_tag
 
@@ -56,8 +55,7 @@ class TestTrace(unittest.TestCase):
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter = Mock(spec=IconScoreStepCounter)
-        context.event_logs = Mock(spec=list)
-        context.logs_bloom = Mock(spec=BloomFilter)
+        context.event_logs = []
         context.traces = traces
         context.tx_batch = TransactionBatch()
 

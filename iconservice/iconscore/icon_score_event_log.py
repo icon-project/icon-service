@@ -101,7 +101,6 @@ class EventLogEmitter(object):
                 f'but argument count is {len(arguments)}')
 
         event_size = EventLogEmitter.__get_byte_length(event_signature)
-        context.logs_bloom.add(EventLogEmitter.__get_bloom_data(0, event_signature))
         indexed: List[BaseType] = [event_signature]
         data: List[BaseType] = []
         for i, argument in enumerate(arguments):
@@ -114,8 +113,6 @@ class EventLogEmitter(object):
             # Separates indexed type and base type with keeping order.
             if i < indexed_args_count:
                 indexed.append(argument)
-                bloom_data = EventLogEmitter.__get_bloom_data(i + 1, argument)
-                context.logs_bloom.add(bloom_data)
             else:
                 data.append(argument)
 
@@ -152,6 +149,6 @@ class EventLogEmitter(object):
             return int_to_bytes(data)
 
     @staticmethod
-    def __get_bloom_data(index: int, data: 'BaseType') -> bytes:
+    def get_bloom_data(index: int, data: 'BaseType') -> bytes:
         return index.to_bytes(1, DATA_BYTE_ORDER) + \
                EventLogEmitter.__base_type_to_bytes(data)
