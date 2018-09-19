@@ -23,7 +23,7 @@ import time
 from unittest.mock import Mock
 
 from iconcommons.icon_config import IconConfig
-from iconservice.base.address import AddressPrefix, MalformedAddress
+from iconservice.base.address import Address, AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.base.type_converter import TypeConverter
 from iconservice.base.type_converter_templates import ParamType
@@ -77,13 +77,15 @@ class TestIconServiceEngine(unittest.TestCase):
                 ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
             }
         )
-        engine._load_builtin_scores = Mock()
-        engine._init_global_value_by_governance_score = Mock()
+        # engine._load_builtin_scores = Mock()
+        # engine._init_global_value_by_governance_score = Mock()
         engine.open(conf)
         self._engine = engine
 
         self._genesis_address = create_address(AddressPrefix.EOA)
         self._treasury_address = create_address(AddressPrefix.EOA)
+        self._governance_score_address =\
+            Address.from_string('cx0000000000000000000000000000000000000001')
 
         self.from_ = self._genesis_address
         self._to = create_address(AddressPrefix.EOA)
@@ -197,7 +199,7 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
 
-        step_limit = 200000000
+        step_limit = 200000000000000
         tx_v3 = {
             'method': 'icx_sendTransaction',
             'params': {
@@ -402,11 +404,12 @@ class TestIconServiceEngine(unittest.TestCase):
         tx_v3 = {
             'method': 'icx_sendTransaction',
             'params': {
+                'nid': 3,
                 'version': 3,
                 'from': self._genesis_address,
                 'to': self._to,
                 'value': value,
-                'stepLimit': 20000,
+                'stepLimit': 1000000,
                 'timestamp': 1234567890,
                 'txHash': tx_hash
             }
@@ -468,15 +471,17 @@ class TestIconServiceEngine(unittest.TestCase):
         block_timestamp = 0
         tx_hash = create_tx_hash()
         value = 1 * 10 ** 18
+        step_limit = 1000000
 
         tx_v3 = {
             'method': 'icx_sendTransaction',
             'params': {
+                'nid': 3,
                 'version': 3,
                 'from': self._genesis_address,
                 'to': self._to,
                 'value': value,
-                'stepLimit': 20000,
+                'stepLimit': step_limit,
                 'timestamp': 1234567890,
                 'txHash': tx_hash
             }
@@ -658,6 +663,57 @@ class TestIconServiceEngine(unittest.TestCase):
 
         context_factory.destroy(context)
 
+    def test_score_invoke_failure_by_readonly_external_call(self):
+        block_height = 1
+        block_hash = create_block_hash()
+        block_timestamp = 0
+        tx_hash = create_tx_hash()
+        value = 0
+        to = self._governance_score_address
+
+        step_limit = 200000000
+        tx_v3 = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'txHash': tx_hash,
+                'nid': 3,
+                'version': 3,
+                'from': self._genesis_address,
+                'to': to,
+                'value': value,
+                'stepLimit': step_limit,
+                'timestamp': 1234567890,
+                'dataType': 'call',
+                'data': {
+                    'method': 'getScoreStatus',
+                    'params': {
+                        'txHash': tx_hash
+                    }
+                },
+                'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
+            }
+        }
+
+        block = Block(block_height,
+                      block_hash,
+                      block_timestamp,
+                      self.genesis_block.hash)
+
+        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self.assertIsInstance(state_root_hash, bytes)
+        self.assertEqual(len(state_root_hash), 32)
+
+        self.assertEqual(len(tx_results), 1)
+
+        tx_result: 'TransactionResult' = tx_results[0]
+        self.assertIsNotNone(tx_result.failure)
+        self.assertIsNone(tx_result.score_address)
+        self.assertEqual(tx_result.status, 0)
+        self.assertEqual(tx_result.block_height, block_height)
+        self.assertEqual(tx_result.block_hash, block_hash)
+        self.assertEqual(tx_result.tx_index, 0)
+        self.assertEqual(tx_result.tx_hash, tx_hash)
+
     def test_commit(self):
         block = Block(
             block_height=1,
@@ -793,6 +849,7 @@ class TestIconServiceEngine(unittest.TestCase):
             balance: int = self._engine.query(
                 converted_request['method'], converted_request['params'])
             self.assertEqual(0, balance)
+
 
 if __name__ == '__main__':
     unittest.main()

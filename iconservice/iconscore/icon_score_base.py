@@ -396,6 +396,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         score_func = getattr(self, func_name)
         ret = score_func(*arg_params, **kw_params)
         self._context.func_type = prev_func_type
+
         return ret
 
     def __fallback_call(self) -> None:
