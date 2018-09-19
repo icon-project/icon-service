@@ -77,20 +77,28 @@ class InternalCall(object):
               amount: int,
               is_exc_handling: bool = False) -> Any:
 
-        self._make_trace(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+        self.__context.enter_call()
 
-        self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+        try:
+            self._make_trace(addr_from, addr_to, func_name, arg_params, kw_params, amount)
 
-        is_success_icx_transfer: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
+            self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
-        ret = is_success_icx_transfer
-        if is_success_icx_transfer:
-            if amount > 0:
-                self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
-            if addr_to.is_contract:
-                ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+            is_success_icx_transfer: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
 
-        return ret
+            ret = is_success_icx_transfer
+            if is_success_icx_transfer:
+                if amount > 0:
+                    self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
+                if addr_to.is_contract:
+                    ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+
+            return ret
+        except BaseException as e:
+            self.__context.revert_call()
+            raise e
+        finally:
+            self.__context.leave_call()
 
     def _make_trace(self,
                     _from: 'Address',

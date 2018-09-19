@@ -18,14 +18,13 @@
 """
 
 import unittest
-from typing import List
 from unittest.mock import Mock
 
-
-from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import EventLogException, ScoreErrorException
+from iconservice.database.batch import TransactionBatch
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
+from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
@@ -48,6 +47,7 @@ class TestEventlog(unittest.TestCase):
 
         context.type = IconScoreContextType.INVOKE
         context.func_type = IconScoreFuncType.WRITABLE
+        context.tx_batch = TransactionBatch()
         context.event_logs = event_logs
         context.traces = traces
         context.logs_bloom = logs_bloom

@@ -26,8 +26,7 @@ from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icon_constant import IconScoreContextType, IconScoreFuncType, DEFAULT_BYTE_SIZE
-from ..icon_constant import IconServiceFlag
+from ..icon_constant import IconScoreContextType, IconScoreFuncType, DEFAULT_BYTE_SIZE, IconServiceFlag
 from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -96,6 +95,8 @@ class ContextGetter(object):
 
 
 class IconScoreContext(object):
+    """Contains the useful information to process user's jsonrpc request
+    """
     icon_score_mapper: 'IconScoreMapper' = None
     icon_score_deploy_engine: 'IconScoreDeployEngine'
     icon_service_flag: int = 0
@@ -197,6 +198,7 @@ class IconScoreContext(object):
             current_tx_hash = None
         else:
             current_tx_hash = deploy_info.current_tx_hash
+
         if current_tx_hash is None:
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
@@ -214,7 +216,7 @@ class IconScoreContext(object):
             raise ServerErrorException(f'Invalid SCORE address: {score_address}')
 
         # Gets the governance SCORE
-        governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -227,7 +229,7 @@ class IconScoreContext(object):
         :param deployer: EOA address to deploy a SCORE
         """
         # Gets the governance SCORE
-        governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -265,6 +267,31 @@ class IconScoreContext(object):
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         return self.icon_score_deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
+
+    def enter_call(self):
+        """Start to call external function provided by other SCORE
+        """
+        if self.type != IconScoreContextType.INVOKE:
+            return
+
+        self.tx_batch.enter_call()
+
+    def revert_call(self):
+        """An exception happens during calling an external function provided by other SCORE
+        Revert the states changed by this function call
+        """
+        if self.type != IconScoreContextType.INVOKE:
+            return
+
+        self.tx_batch.revert_call()
+
+    def leave_call(self):
+        """Finish to call external function provided by other SCORE
+        """
+        if self.type != IconScoreContextType.INVOKE:
+            return
+
+        self.tx_batch.leave_call()
 
 
 class IconScoreContextFactory(object):

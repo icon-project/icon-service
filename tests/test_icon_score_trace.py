@@ -18,7 +18,6 @@
 """
 
 import unittest
-from typing import List
 from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address, AddressPrefix
@@ -60,6 +59,7 @@ class TestTrace(unittest.TestCase):
         context.event_logs = Mock(spec=list)
         context.logs_bloom = Mock(spec=BloomFilter)
         context.traces = traces
+        context.tx_batch = TransactionBatch()
 
         ContextContainer._push_context(context)
         context.icon_score_manager = Mock()
