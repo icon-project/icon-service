@@ -83,15 +83,18 @@ class InternalCall(object):
 
         is_success_icx_transfer: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
         
-        ret = False
         if is_success_icx_transfer:
             if amount > 0:
                 self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
             if addr_to.is_contract:
                 ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
-                if func_name is None:
-                    ret = True
-        return ret
+
+                # If the function is not fallback, returns the returning value of the function.
+                # Otherwise returns bool value of the transfer result (success, failure)
+                if func_name is not None:
+                    return ret
+
+        return is_success_icx_transfer
 
     def _make_trace(self,
                     _from: 'Address',
