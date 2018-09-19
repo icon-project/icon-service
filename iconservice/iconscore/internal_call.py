@@ -82,15 +82,14 @@ class InternalCall(object):
         self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
         is_success_icx_transfer: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
-        
-        ret = False
+
+        ret = is_success_icx_transfer
         if is_success_icx_transfer:
             if amount > 0:
                 self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
             if addr_to.is_contract:
                 ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
-                if func_name is None:
-                    ret = True
+
         return ret
 
     def _make_trace(self,
@@ -152,7 +151,8 @@ class InternalCall(object):
 
         if func_name is None:
             fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
-            ret = fallback_func()
+            fallback_func()
+            ret = True
         else:
             external_func = getattr(icon_score, '_IconScoreBase__external_call')
             ret = external_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
