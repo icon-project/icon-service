@@ -154,9 +154,6 @@ class InternalCall(object):
         self.current_address = addr_to
         icon_score = self.__context.get_icon_score(addr_to)
 
-        if addr_from == icon_score.address:
-            raise ServerErrorException("call function myself")
-
         if func_name is None:
             fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
             fallback_func()
