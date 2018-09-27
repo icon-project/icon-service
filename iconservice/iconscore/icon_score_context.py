@@ -138,7 +138,7 @@ class IconScoreContext(object):
 
         self.internal_call = InternalCall(self)
         self.msg_stack = []
-        self._event_log_stack = []
+        self.event_log_stack = []
 
     @property
     def readonly(self):
@@ -161,6 +161,7 @@ class IconScoreContext(object):
         self.func_type = IconScoreFuncType.WRITABLE
 
         self.msg_stack.clear()
+        self.event_log_stack.clear()
 
     def is_score_active(self,
                         context: Optional['IconScoreContext'],
@@ -275,7 +276,7 @@ class IconScoreContext(object):
 
         self.tx_batch.enter_call()
 
-        self._event_log_stack.append(self.event_logs)
+        self.event_log_stack.append(self.event_logs)
         self.event_logs = []
 
     def revert_call(self):
@@ -297,7 +298,7 @@ class IconScoreContext(object):
 
         self.tx_batch.leave_call()
 
-        prev_event_logs = self._event_log_stack.pop()
+        prev_event_logs = self.event_log_stack.pop()
         self.event_logs = prev_event_logs + self.event_logs
 
 

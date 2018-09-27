@@ -427,6 +427,7 @@ class IconServiceEngine(ContextContainer):
         context.traces: List['Trace'] = []
         context.step_counter = self._step_counter_factory.create(step_limit)
         context.msg_stack.clear()
+        context.event_log_stack.clear()
 
         return self._call(context, method, params)
 
