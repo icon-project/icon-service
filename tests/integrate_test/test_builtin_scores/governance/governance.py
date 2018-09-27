@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 from iconservice import *
 
 TAG = 'Governance'
@@ -552,7 +551,7 @@ class Governance(IconScoreBase):
         import_stmt_dict = {}
         try:
             import_stmt_dict: dict = self._check_import_stmt(import_stmt)
-        except (json.JSONDecodeError, TypeError) as e:
+        except Exception as e:
             self.revert(f'Invalid import statement: {e}')
         # add to import white list
         log_entry = []
@@ -608,7 +607,7 @@ class Governance(IconScoreBase):
         import_stmt_dict = {}
         try:
             import_stmt_dict: dict = self._check_import_stmt(import_stmt)
-        except (json.JSONDecodeError, TypeError) as e:
+        except Exception as e:
             self.revert(f'Invalid import statement: {e}')
 
         # remove from import white list
@@ -663,7 +662,7 @@ class Governance(IconScoreBase):
     def isInImportWhiteList(self, import_stmt: str) -> bool:
         try:
             import_stmt_dict: dict = self._check_import_stmt(import_stmt)
-        except (json.JSONDecodeError, TypeError) as e:
+        except Exception as e:
             raise ValueError(f'{e}')
 
         cache_import_white_list = self._get_import_white_list()
@@ -691,7 +690,7 @@ class Governance(IconScoreBase):
     @staticmethod
     def _check_import_stmt(import_stmt: str) -> dict:
         Logger.debug(f'check_import_stmt: {import_stmt}')
-        import_stmt_dict: dict = json.loads(import_stmt.replace("\'", "\""))
+        import_stmt_dict: dict = json_loads(import_stmt.replace("\'", "\""))
         for key, value in import_stmt_dict.items():
             if not isinstance(key, str):
                 raise TypeError("Key must be of type `str`")

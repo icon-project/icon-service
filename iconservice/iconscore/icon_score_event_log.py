@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING, List, Optional, Any
 
-from .icon_score_base2 import BaseType
+from .icon_score_constant import BaseType
 from .icon_score_step import StepType
 from ..base.address import Address
 from ..base.exception import EventLogException
@@ -152,6 +152,6 @@ class EventLogEmitter(object):
             return int_to_bytes(data)
 
     @staticmethod
-    def __get_bloom_data(index: int, data: BaseType) -> bytes:
+    def __get_bloom_data(index: int, data: 'BaseType') -> bytes:
         return index.to_bytes(1, DATA_BYTE_ORDER) + \
                EventLogEmitter.__base_type_to_bytes(data)

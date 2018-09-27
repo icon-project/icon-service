@@ -14,41 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar, TYPE_CHECKING
-from abc import ABC, ABCMeta
-from enum import IntEnum, unique
+import hashlib
+import json
 
+from typing import TYPE_CHECKING, Optional, Union, Any
+from abc import ABC, ABCMeta
+
+from ..base.exception import RevertException, ExceptionCode
+from ..iconscore.icon_score_context import ContextContainer
+from ..iconscore.icon_score_step import StepType
 from ..base.address import Address
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-
-T = TypeVar('T')
-BaseType = TypeVar('BaseType', bool, int, str, bytes, Address)
-
-CONST_CLASS_EXTERNALS = '__externals'
-CONST_CLASS_PAYABLES = '__payables'
-CONST_CLASS_INDEXES = '__indexes'
-CONST_CLASS_API = '__api'
-
-CONST_BIT_FLAG = '__bit_flag'
-CONST_INDEXED_ARGS_COUNT = '__indexed_args_count'
-
-FORMAT_IS_NOT_FUNCTION_OBJECT = "isn't function object: {}, cls: {}"
-FORMAT_IS_NOT_DERIVED_OF_OBJECT = "isn't derived of {}"
-FORMAT_DECORATOR_DUPLICATED = "can't duplicated {} decorator func: {}, cls: {}"
-STR_IS_NOT_CALLABLE = 'is not callable'
-STR_FALLBACK = 'fallback'
-
-
-@unique
-class ConstBitFlag(IntEnum):
-    NonFlag = 0
-    ReadOnly = 1
-    External = 2
-    Payable = 4
-    EventLog = 8
-    Interface = 16
 
 
 class InterfaceScoreMeta(ABCMeta):
@@ -72,3 +50,39 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     @property
     def from_score(self) -> 'IconScoreBase':
         return self.__from_score
+
+
+def revert(message: Optional[str] = None,
+           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+    """
+    Reverts the transaction and breaks.
+    All the changes of state DB will be reverted.
+
+    :param message: revert message
+    :param code: code
+    """
+    raise RevertException(message, code)
+
+
+def sha3_256(data: bytes) -> bytes:
+    """
+    Computes hash using the input data
+    :param data: input data
+    :return: hashed data in bytes
+    """
+    context = ContextContainer._get_context()
+    if context.step_counter:
+        step_count = 1
+        if data:
+            step_count += len(data)
+        context.step_counter.apply_step(StepType.API_CALL, step_count)
+
+    return hashlib.sha3_256(data).digest()
+
+
+def json_dumps(obj: Any, **kwargs) -> str:
+    return json.dumps(obj, **kwargs)
+
+
+def json_loads(src: str, **kwargs) -> Any:
+    return json.loads(src, **kwargs)

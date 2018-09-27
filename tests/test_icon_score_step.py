@@ -23,7 +23,8 @@ from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
 from iconservice.iconscore.icon_score_base import \
-    IconScoreBase, eventlog, external, sha3_256
+    IconScoreBase, eventlog, external
+from iconservice.iconscore.icon_score_base2 import sha3_256
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
