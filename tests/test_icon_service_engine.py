@@ -261,7 +261,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_flag_on(IconServiceFlag.fee):
+
+        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
         else:
@@ -442,7 +443,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_flag_on(IconServiceFlag.fee):
+        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
             # step_used MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
         else:
@@ -517,7 +518,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_cost)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_flag_on(IconServiceFlag.fee):
+        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(
                 step_price, self._engine._step_counter_factory.get_step_price())
@@ -599,7 +600,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if self._engine._is_flag_on(IconServiceFlag.fee):
+        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(
                 step_price, self._engine._step_counter_factory.get_step_price())

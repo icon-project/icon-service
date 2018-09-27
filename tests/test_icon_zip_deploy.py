@@ -84,7 +84,6 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self._engine.open(
             score_root_path=score_path,
-            flag=0,
             icon_deploy_storage=self._icon_deploy_storage)
 
         self.from_address = create_address(AddressPrefix.EOA)
@@ -115,6 +114,7 @@ class TestIconZipDeploy(unittest.TestCase):
         ContextContainer._push_context(self._context)
         self._context.validate_deployer = Mock()
         self._context.validate_score_blacklist = Mock()
+        self._context.is_deploy_service_flag_on = Mock(return_value=False)
 
     def tearDown(self):
         self._engine = None

@@ -62,14 +62,12 @@ class ConfigKey:
 
 
 class EnableThreadFlag(IntFlag):
-    NonFlag = 0
     Invoke = 1
     Query = 2
     Validate = 4
 
 
 class IconServiceFlag(IntFlag):
-    none = 0
     fee = 1
     audit = 2
     deployerWhiteList = 4
@@ -77,7 +75,6 @@ class IconServiceFlag(IntFlag):
 
 
 class IconDeployFlag(IntFlag):
-    NONE = 0
     # To complete to install or update a SCORE,
     # some specified address owner like genesis address owner
     # MUST approve install or update SCORE transactions.
