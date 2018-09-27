@@ -202,6 +202,9 @@ class IconScoreContext(object):
 
         return self.icon_score_mapper.get_icon_score(address, current_tx_hash)
 
+    def try_score_package_validate(self, address: 'Address', tx_hash: bytes):
+        self.icon_score_mapper.try_score_package_validate(address, tx_hash)
+
     def validate_score_blacklist(self, score_address: 'Address'):
         """Prevent SCOREs in blacklist
 

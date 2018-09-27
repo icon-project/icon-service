@@ -269,6 +269,8 @@ class IconScoreDeployEngine(object):
         backup_tx = context.tx
 
         try:
+            if self._is_flag_on(IconDeployFlag.ENABLE_SCORE_PACKAGE_VALIDATOR):
+                context.try_score_package_validate(score_address, next_tx_hash)
             score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')

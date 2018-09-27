@@ -1,0 +1,1 @@
+from .link_coin import LinkCoin # noqa

@@ -137,7 +137,7 @@ class Governance(IconScoreBase):
 
     @property
     def import_white_list_cache(self):
-        return self._import_white_list_cache
+        return self._get_import_white_list()
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
@@ -151,7 +151,6 @@ class Governance(IconScoreBase):
         self._version = VarDB(self._VERSION, db, value_type=str)
         self._import_white_list = DictDB(self._IMPORT_WHITE_LIST, db, value_type=str)
         self._import_white_list_keys = ArrayDB(self._IMPORT_WHITE_LIST_KEYS, db, value_type=str)
-        self._import_white_list_cache = {}
 
     def on_install(self, stepPrice: int = 10 ** 10) -> None:
         super().on_install()
@@ -238,10 +237,22 @@ class Governance(IconScoreBase):
             if value:
                 del db[key]
 
+    @staticmethod
+    def _is_builtin_score(score_address: Address) -> bool:
+        builtin_scores = ["cx0000000000000000000000000000000000000001"]
+        return True if str(score_address) in builtin_scores else False
+
     @external(readonly=True)
     def getScoreStatus(self, address: Address) -> dict:
         # check score address
         current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
+        # Governance
+        if self._is_builtin_score(address):
+            result = {"current": {
+                "status": "active"
+            }}
+            return result
+
         if current_tx_hash is None and next_tx_hash is None:
             self.revert('SCORE not found')
         result = {}
@@ -532,20 +543,17 @@ class Governance(IconScoreBase):
         if self._import_white_list[key] == "":
             self._import_white_list[key] = "*"
             self._import_white_list_keys.put(key)
-            self._import_white_list_cache = self._get_import_white_list()
 
     @external
     def addImportWhiteList(self, import_stmt: str):
         # only owner can add import white list
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
-
         import_stmt_dict = {}
         try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt=import_stmt)
+            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
         except (json.JSONDecodeError, TypeError) as e:
             self.revert(f'Invalid import statement: {e}')
-
         # add to import white list
         log_entry = []
         for key, value in import_stmt_dict.items():
@@ -567,7 +575,8 @@ class Governance(IconScoreBase):
             elif old_value == "":
                 # set import white list
                 self._import_white_list[key] = ','.join(value)
-
+                # add to import white list keys
+                self._import_white_list_keys.put(key)
                 # make added item list for eventlog
                 log_entry.append((key, value))
             else:
@@ -585,9 +594,7 @@ class Governance(IconScoreBase):
 
         # make eventlog
         if len(log_entry):
-            self.AddImportWhiteListLog(add_list=str(log_entry), add_count=len(log_entry))
-
-        # TODO send noti to SCORE engine
+            self.AddImportWhiteListLog(str(log_entry), len(log_entry))
 
         if DEBUG is True:
             Logger.debug(f'checking added item ({import_stmt}): {self.isInImportWhiteList(import_stmt)}')
@@ -600,7 +607,7 @@ class Governance(IconScoreBase):
 
         import_stmt_dict = {}
         try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt=import_stmt)
+            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
         except (json.JSONDecodeError, TypeError) as e:
             self.revert(f'Invalid import statement: {e}')
 
@@ -647,12 +654,7 @@ class Governance(IconScoreBase):
 
         if len(log_entry):
             # make eventlog
-            self.AddImportWhiteListLog(add_list=str(log_entry), add_count=len(log_entry))
-
-            # update import white list cache
-            self._import_white_list_cache = self._get_import_white_list()
-
-        # TODO send noti to SCORE engine
+            self.AddImportWhiteListLog(str(log_entry), len(log_entry))
 
         if DEBUG is True:
             Logger.debug(f'checking removed item ({import_stmt}): {self.isInImportWhiteList(import_stmt)}')
@@ -660,12 +662,13 @@ class Governance(IconScoreBase):
     @external(readonly=True)
     def isInImportWhiteList(self, import_stmt: str) -> bool:
         try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt=import_stmt)
+            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
         except (json.JSONDecodeError, TypeError) as e:
             raise ValueError(f'{e}')
 
+        cache_import_white_list = self._get_import_white_list()
         for key, value in import_stmt_dict.items():
-            old_value: list = self._import_white_list_cache.get(key, None)
+            old_value: list = cache_import_white_list.get(key, None)
             if old_value is None:
                 return False
 

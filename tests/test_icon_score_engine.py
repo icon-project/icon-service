@@ -71,7 +71,7 @@ class TestIconScoreEngine(unittest.TestCase):
         deploy_engine.open(self._ROOT_SCORE_PATH, 0, deploy_storage)
         IconScoreContext.icon_score_manager = IconScoreManager(deploy_engine)
 
-        self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH, 0)
+        self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
 
         IconScoreMapper.icon_score_loader = self.icon_score_loader
         IconScoreMapper.deploy_storage = deploy_storage

@@ -15,13 +15,15 @@
 # limitations under the License.
 
 import os
+
 from shutil import rmtree
 from threading import Lock
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
+from iconservice.builtin_scores.governance.governance import Governance
 from .icon_score_mapper_object import IconScoreInfo, IconScoreMapperObject
-from ..base.address import Address
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
@@ -31,6 +33,7 @@ from ..icon_constant import DEFAULT_BYTE_SIZE
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_loader import IconScoreLoader
+    from .icon_score_context import IconScoreContext
 
 
 class IconScoreMapper(object):
@@ -107,6 +110,19 @@ class IconScoreMapper(object):
             score = icon_score_info.icon_score
 
         return score
+
+    def try_score_package_validate(self, address: 'Address', tx_hash: bytes):
+        score_path = self.icon_score_loader.make_score_path(address, tx_hash)
+        whitelist_table = self._get_score_package_validator_table()
+        self.icon_score_loader.try_score_package_validate(whitelist_table, score_path)
+
+    def _get_score_package_validator_table(self) -> dict:
+        governance_info = self.get(GOVERNANCE_SCORE_ADDRESS)
+        if governance_info:
+            governance: 'Governance' = governance_info.icon_score
+            return governance.import_white_list_cache
+        else:
+            return {"iconservice": ['*']}
 
     def load_score(self, address: 'Address', tx_hash: bytes) -> Optional['IconScoreBase']:
         score_wrapper = self._load_score_wrapper(address, tx_hash)

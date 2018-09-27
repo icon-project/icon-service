@@ -84,11 +84,7 @@ class IconDeployFlag(IntFlag):
     ENABLE_DEPLOY_AUDIT = 1
     ENABLE_DEPLOY_WHITELIST = 2
     ENABLE_TBEARS_MODE = 4
-
-
-class IconScoreLoaderFlag(IntFlag):
-    NONE = 0
-    ENABLE_SCORE_PACKAGE_VALIDATOR = 1
+    ENABLE_SCORE_PACKAGE_VALIDATOR = 8
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
