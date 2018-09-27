@@ -168,7 +168,9 @@ class TestIntegrateDeployAuditDeployOwner(TestIntegrateBase):
         }
         response = self._query(query_request)
         self.assertTrue("current" in response
-                        and response["current"]["status"] == "active")
+                        and response["current"]["status"] == "active"
+                        and "deployTxHash" not in response["current"]
+                        and "auditTxHash" not in response["current"])
 
 
 if __name__ == '__main__':
