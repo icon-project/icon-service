@@ -35,7 +35,7 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .deploy.icon_score_manager import IconScoreManager
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
-    IconServiceFlag, IconDeployFlag, ConfigKey, IconScoreLoaderFlag
+    IconServiceFlag, IconDeployFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -122,11 +122,7 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._context_factory = IconScoreContextFactory(max_size=5)
-
-        icon_score_loader_flags = IconScoreLoaderFlag.NONE
-        if self._is_flag_on(IconServiceFlag.scorePackageValidator):
-            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
-        self._icon_score_loader = IconScoreLoader(score_root_path, flag=icon_score_loader_flags)
+        self._icon_score_loader = IconScoreLoader(score_root_path)
 
         self._icx_engine = IcxEngine()
         self._icon_score_engine = IconScoreEngine()
@@ -174,6 +170,8 @@ class IconServiceEngine(ContextContainer):
             flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
         if self._is_flag_on(IconServiceFlag.deployerWhiteList):
             flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
+        if self._is_flag_on(IconServiceFlag.scorePackageValidator):
+            flags |= IconDeployFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
 
         if self._conf.get(ConfigKey.TBEARS_MODE, True):
             flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value

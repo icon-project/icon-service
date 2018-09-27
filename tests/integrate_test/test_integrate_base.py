@@ -16,13 +16,14 @@
 
 """IconServiceEngine testcase
 """
-from time import sleep
+import os
 from unittest import TestCase
 
 from typing import TYPE_CHECKING, Union, Optional, Any
 
 from iconcommons import IconConfig
 from iconservice.base.block import Block
+from iconservice.deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
@@ -35,6 +36,10 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateBase(TestCase):
+    @staticmethod
+    def mock_pre_builtin_score_root_path():
+        root_path = os.path.abspath(os.path.dirname(__file__))
+        return os.path.join(root_path, 'test_builtin_scores')
 
     @classmethod
     def setUpClass(cls):
@@ -44,7 +49,7 @@ class TestIntegrateBase(TestCase):
         cls._signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
         cls._version = 3
-        cls._step_limit = 1 * 10 ** 9
+        cls._step_limit = 1 * 10 ** 12
         cls._icx_factor = 10 ** 18
 
         cls._admin: 'Address' = create_address()
@@ -52,6 +57,8 @@ class TestIntegrateBase(TestCase):
         cls._fee_treasury: 'Address' = create_address()
 
         cls._addr_array = [create_address() for _ in range(10)]
+
+        IconBuiltinScoreLoader._pre_builtin_score_root_path = TestIntegrateBase.mock_pre_builtin_score_root_path
 
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path)

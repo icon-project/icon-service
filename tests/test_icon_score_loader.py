@@ -18,11 +18,9 @@
 import inspect
 import unittest
 from os import path, makedirs, symlink
-from time import sleep
 
 from unittest.mock import Mock
 
-from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextFactory, IconScoreContextType
@@ -38,7 +36,7 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def setUp(self):
         self._score_path = self._ROOT_SCORE_PATH
-        self._loader = IconScoreLoader(self._score_path, 0)
+        self._loader = IconScoreLoader(self._score_path)
 
         self._factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_manager = Mock()
@@ -87,12 +85,12 @@ class TestIconScoreLoader(unittest.TestCase):
         score_path = f'{score_root_path}/{address}/{tx_hash}'
         expected_import_name: str = f'{address}.{tx_hash}'
 
-        loader = IconScoreLoader(score_root_path, 0)
+        loader = IconScoreLoader(score_root_path)
         import_name: str = loader._make_pkg_root_import(score_path)
         self.assertEqual(import_name, expected_import_name)
 
         score_root_path = '/haha/hoho/hehe/score/'
         score_path = f'{score_root_path}/{address}/{tx_hash}'
-        loader = IconScoreLoader(score_root_path, 0)
+        loader = IconScoreLoader(score_root_path)
         import_name: str = loader._make_pkg_root_import(score_path)
         self.assertEqual(import_name, expected_import_name)
