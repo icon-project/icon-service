@@ -64,6 +64,9 @@ def interface(func):
         score = calling_obj.from_score
         addr_to = calling_obj.addr_to
 
+        if addr_to is None:
+            raise InterfaceException('Can\'t create an interface SCORE with None address')
+
         # icx_value = kwargs.get(ICX_VALUE_KEY)
         # if icx_value is None:
         #     icx_value = 0
@@ -568,8 +571,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def create_interface_score(self,
                                addr_to: 'Address',
                                interface_cls: Callable[['Address', callable], T]) -> T:
-        if addr_to is None:
-            raise InterfaceException('Can\'t create an interface SCORE with None address')
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self)
