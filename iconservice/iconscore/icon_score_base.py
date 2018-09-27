@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from inspect import isfunction, getmembers, signature, Parameter
@@ -24,17 +23,18 @@ from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG
 from .icon_score_api_generator import ScoreApiGenerator
-from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
-    FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
+from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
+    ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T
-from .icon_score_context import ContextGetter, ContextContainer
+from .icon_score_base2 import InterfaceScore, revert
+from .icon_score_context import ContextGetter
 from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
-    EventLogException, ExternalException, RevertException
+    EventLogException, ExternalException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..utils import get_main_type_from_annotations_type
 
@@ -241,34 +241,6 @@ def payable(func):
         return res
 
     return __wrapper
-
-
-def revert(message: Optional[str] = None,
-           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
-    """
-    Reverts the transaction and breaks.
-    All the changes of state DB will be reverted.
-
-    :param message: revert message
-    :param code: code
-    """
-    raise RevertException(message, code)
-
-
-def sha3_256(data: bytes) -> bytes:
-    """
-    Computes hash using the input data
-    :param data: input data
-    :return: hashed data in bytes
-    """
-    context = ContextContainer._get_context()
-    if context.step_counter:
-        step_count = 1
-        if data:
-            step_count += len(data)
-        context.step_counter.apply_step(StepType.API_CALL, step_count)
-
-    return hashlib.sha3_256(data).digest()
 
 
 class IconScoreObject(ABC):
