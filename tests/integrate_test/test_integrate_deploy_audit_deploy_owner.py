@@ -18,7 +18,6 @@
 """
 
 import unittest
-
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import ConfigKey
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -87,6 +86,89 @@ class TestIntegrateDeployAuditDeployOwner(TestIntegrateBase):
         self.assertEqual(before_install[1], self._addr_array[1])
         self.assertEqual(hello[1], score_addr2)
         self.assertEqual(after_install[1], self._addr_array[1])
+
+    def test_getscorestatus_of_governance_when_audit_is_on(self):
+        """
+        Test calling getScoreStatus() for governance SCORE in the case that audit is on
+
+        - A return value of Normal SCORE and Governance has the same format.
+        - For example, the return value of Governance should be
+            {"current": {"status": "active"}}.
+        """
+        tx1 = self._make_deploy_tx("test_audit_deploy_owner",
+                                   "test_score",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+        tx_hash1 = tx_results[0].tx_hash
+
+        # case when normal SCORE which is not governance is pending
+        query_request = {
+            "version": self._version,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getScoreStatus",
+                "params": {
+                    "address": str(score_addr1)
+                }
+            }
+        }
+        response = self._query(query_request)
+        self.assertTrue("next" in response
+                        and "deployTxHash" in response["next"]
+                        and response["next"]["status"] == "pending")
+
+        tx2 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'acceptScore',
+                                       {"txHash": f'0x{bytes.hex(tx_hash1)}'})
+
+        prev_block, tx_results = self._make_and_req_block([tx2])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+
+        # case when normal SCORE which is not governance is active
+        query_request = {
+            "version": self._version,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getScoreStatus",
+                "params": {
+                    "address": str(score_addr1)
+                }
+            }
+        }
+        response = self._query(query_request)
+        self.assertTrue("current" in response
+                        and "deployTxHash" in response["current"]
+                        and "auditTxHash" in response["current"]
+                        and response["current"]["status"] == "active")
+
+        # case when governance
+        query_request = {
+            "version": self._version,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getScoreStatus",
+                "params": {
+                    "address": str(GOVERNANCE_SCORE_ADDRESS)
+                }
+            }
+        }
+        response = self._query(query_request)
+        self.assertTrue("current" in response
+                        and response["current"]["status"] == "active")
 
 
 if __name__ == '__main__':
