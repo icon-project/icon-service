@@ -74,14 +74,4 @@ class IconServiceFlag(IntFlag):
     scorePackageValidator = 8
 
 
-class IconDeployFlag(IntFlag):
-    # To complete to install or update a SCORE,
-    # some specified address owner like genesis address owner
-    # MUST approve install or update SCORE transactions.
-    ENABLE_DEPLOY_AUDIT = 1
-    ENABLE_DEPLOY_WHITELIST = 2
-    ENABLE_TBEARS_MODE = 4
-    ENABLE_SCORE_PACKAGE_VALIDATOR = 8
-
-
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

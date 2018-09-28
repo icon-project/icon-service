@@ -114,7 +114,7 @@ class TestIconZipDeploy(unittest.TestCase):
         ContextContainer._push_context(self._context)
         self._context.validate_deployer = Mock()
         self._context.validate_score_blacklist = Mock()
-        self._context.is_deploy_service_flag_on = Mock(return_value=False)
+        self._context.is_service_flag_on = Mock(return_value=False)
 
     def tearDown(self):
         self._engine = None

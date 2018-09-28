@@ -146,6 +146,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
         IconScoreContext.icon_score_manager = icon_score_manger
         IconScoreContext.icon_service_flag = service_config_flag
+        IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
         self._icon_score_engine.open(

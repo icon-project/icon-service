@@ -28,7 +28,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconDeployFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -42,7 +42,6 @@ class IconScoreDeployEngine(object):
     def __init__(self) -> None:
         """Constructor
         """
-        self._flag = None
         self._icon_score_deploy_storage = None
         self._icon_score_deployer = None
         self._icon_builtin_score_loader = None
@@ -89,7 +88,7 @@ class IconScoreDeployEngine(object):
         try:
             context.validate_score_blacklist(icon_score_address)
 
-            if context.is_deploy_service_flag_on(IconDeployFlag.ENABLE_DEPLOY_WHITELIST):
+            if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
                 context.validate_deployer(context.tx.origin)
 
             self.write_deploy_info_and_tx_params(context, deploy_type, icon_score_address, data)
@@ -103,7 +102,7 @@ class IconScoreDeployEngine(object):
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
         is_built_score = IconBuiltinScoreLoader.is_builtin_score(icon_score_address)
         is_owner = context.tx.origin == self._icon_score_deploy_storage.get_score_owner(context, icon_score_address)
-        is_audit_enabled = context.is_deploy_service_flag_on(IconDeployFlag.ENABLE_DEPLOY_AUDIT)
+        is_audit_enabled = context.is_service_flag_on(IconServiceFlag.audit)
         return not is_audit_enabled or all((is_built_score, is_owner))
 
     def deploy(self, context: 'IconScoreContext', tx_hash: bytes) -> None:
@@ -136,7 +135,7 @@ class IconScoreDeployEngine(object):
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
-            if not context.is_deploy_service_flag_on(IconDeployFlag.ENABLE_TBEARS_MODE):
+            if not context.legacy_tbears_mode:
                 raise InvalidParamsException(f"can't symlink deploy")
         elif content_type == 'application/zip':
             data['content'] = bytes.fromhex(data['content'][2:])
@@ -257,7 +256,7 @@ class IconScoreDeployEngine(object):
         backup_tx = context.tx
 
         try:
-            if context.is_deploy_service_flag_on(IconDeployFlag.ENABLE_SCORE_PACKAGE_VALIDATOR):
+            if context.is_service_flag_on(IconServiceFlag.scorePackageValidator):
                 context.try_score_package_validate(score_address, next_tx_hash)
             score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:

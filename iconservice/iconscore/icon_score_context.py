@@ -28,8 +28,8 @@ from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icon_constant import DEFAULT_BYTE_SIZE, ConfigKey
-from ..icon_constant import IconServiceFlag, IconDeployFlag
+from ..icon_constant import DEFAULT_BYTE_SIZE
+from ..icon_constant import IconServiceFlag
 from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -121,6 +121,7 @@ class IconScoreContext(object):
     icon_score_mapper: 'IconScoreMapper' = None
     icon_score_manager: 'IconScoreManager' = None
     icon_service_flag: int = 0
+    legacy_tbears_mode = False
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
@@ -242,11 +243,6 @@ class IconScoreContext(object):
         service_flag = self._get_service_flag()
         return self._is_flag_on(service_flag, flag)
 
-    def is_deploy_service_flag_on(self, flag: 'IconDeployFlag'):
-        service_flag = self._get_service_flag()
-        deploy_flag = self._make_deploy_engine_flag(service_flag)
-        return self._is_flag_on(deploy_flag, flag)
-
     @staticmethod
     def _is_flag_on(src_flag: int, dst_flag: int):
         return src_flag & dst_flag == dst_flag
@@ -259,25 +255,9 @@ class IconScoreContext(object):
         service_config = self.icon_service_flag
         try:
             service_config = governance_score.service_config
-        except AttributeError as e:
-            if e.args[0] == "'Governance' object has no attribute 'service_config'":
-                pass
-            else:
-                raise e
+        except AttributeError:
+            pass
         return service_config
-
-    def _make_deploy_engine_flag(self, service_flag: int) -> int:
-        flags = 0
-        if self._is_flag_on(service_flag, IconServiceFlag.audit):
-            flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(service_flag, IconServiceFlag.deployerWhiteList):
-            flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
-        if self._is_flag_on(service_flag, IconServiceFlag.scorePackageValidator):
-            flags |= IconDeployFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
-
-        # if self._conf.get(ConfigKey.TBEARS_MODE, True): legacy
-        flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
-        return flags
 
 
 class IconScoreContextFactory(object):
