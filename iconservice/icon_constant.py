@@ -62,29 +62,16 @@ class ConfigKey:
 
 
 class EnableThreadFlag(IntFlag):
-    NonFlag = 0
     Invoke = 1
     Query = 2
     Validate = 4
 
 
 class IconServiceFlag(IntFlag):
-    none = 0
     fee = 1
     audit = 2
     deployerWhiteList = 4
     scorePackageValidator = 8
-
-
-class IconDeployFlag(IntFlag):
-    NONE = 0
-    # To complete to install or update a SCORE,
-    # some specified address owner like genesis address owner
-    # MUST approve install or update SCORE transactions.
-    ENABLE_DEPLOY_AUDIT = 1
-    ENABLE_DEPLOY_WHITELIST = 2
-    ENABLE_TBEARS_MODE = 4
-    ENABLE_SCORE_PACKAGE_VALIDATOR = 8
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

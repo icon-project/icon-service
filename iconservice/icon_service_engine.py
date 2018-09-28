@@ -34,8 +34,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .deploy.icon_score_manager import IconScoreManager
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
-    IconServiceFlag, IconDeployFlag, ConfigKey
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
@@ -100,9 +99,6 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
 
-    def _is_flag_on(self, flag: 'IconServiceFlag') -> bool:
-        return (self._flag & flag) == flag
-
     def open(self, conf: 'IconConfig') -> None:
         """Get necessary parameters and initialize diverse objects
 
@@ -110,7 +106,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         self._conf = conf
-        self._flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
+        service_config_flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
         score_root_path: str = self._conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         state_db_root_path: str = self._conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
 
@@ -149,6 +145,8 @@ class IconServiceEngine(ContextContainer):
         InternalCall.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
         IconScoreContext.icon_score_manager = icon_score_manger
+        IconScoreContext.icon_service_flag = service_config_flag
+        IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
         self._icon_score_engine.open(
@@ -156,7 +154,6 @@ class IconServiceEngine(ContextContainer):
 
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
-            flag=self._make_deploy_engine_flag(),
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
@@ -164,31 +161,14 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
 
-    def _make_deploy_engine_flag(self) -> int:
-        flags = IconDeployFlag.NONE.value
-        if self._is_flag_on(IconServiceFlag.audit):
-            flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
-        if self._is_flag_on(IconServiceFlag.scorePackageValidator):
-            flags |= IconDeployFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
-
-        if self._conf.get(ConfigKey.TBEARS_MODE, True):
-            flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
-        return flags
-
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
-        key_table = [ConfigKey.SERVICE_FEE,
-                     ConfigKey.SERVICE_AUDIT,
-                     ConfigKey.SERVICE_DEPLOYER_WHITELIST,
-                     ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR]
-        flag = 0
-        for key in key_table:
-            is_enable = flag_table.get(key, False)
+        make_flag = 0
+        for flag in IconServiceFlag:
+            is_enable = flag_table.get(flag.name, False)
             if is_enable:
-                flag |= IconServiceFlag[key]
-        return flag
+                make_flag |= flag
+        return make_flag
 
     def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
@@ -207,7 +187,7 @@ class IconServiceEngine(ContextContainer):
 
         :return:
         """
-        context = self._context_factory.create(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
 
         # Clarifies that This Context does not count steps
         context.step_counter = None
@@ -215,13 +195,13 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
             # Gets the step price if the fee flag is on
             # and set to the counter factory
-            if self._is_flag_on(IconServiceFlag.fee):
+            if context.is_service_flag_on(IconServiceFlag.fee):
                 step_price = governance_score.getStepPrice()
             else:
                 step_price = 0
@@ -520,9 +500,9 @@ class IconServiceEngine(ContextContainer):
 
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
-        context = self._context_factory.create(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
+        if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
             self._validate_deploy_whitelist(context, params)
         self._context_factory.destroy(context)
 
@@ -729,7 +709,7 @@ class IconServiceEngine(ContextContainer):
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
-            elif self._is_flag_on(IconServiceFlag.fee):
+            elif context.is_service_flag_on(IconServiceFlag.fee):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
                 step_price = 10 ** 10

@@ -105,6 +105,7 @@ class Governance(IconScoreBase):
     _VERSION = 'version'
     _IMPORT_WHITE_LIST = 'import_white_list'
     _IMPORT_WHITE_LIST_KEYS = 'import_white_list_keys'
+    _SERVICE_CONFIG = 'service_config'
 
     @eventlog(indexed=1)
     def Accepted(self, txHash: str):
@@ -134,9 +135,17 @@ class Governance(IconScoreBase):
     def RemoveImportWhiteListLog(self, removeList: str, removeCount: int):
         pass
 
+    @eventlog(indexed=0)
+    def UpdateServiceConfigLog(self, serviceFlag: int):
+        pass
+
     @property
     def import_white_list_cache(self):
         return self._get_import_white_list()
+
+    @property
+    def service_config(self):
+        return self._service_config.get()
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
@@ -150,6 +159,7 @@ class Governance(IconScoreBase):
         self._version = VarDB(self._VERSION, db, value_type=str)
         self._import_white_list = DictDB(self._IMPORT_WHITE_LIST, db, value_type=str)
         self._import_white_list_keys = ArrayDB(self._IMPORT_WHITE_LIST_KEYS, db, value_type=str)
+        self._service_config = VarDB(self._SERVICE_CONFIG, db, value_type=int)
 
     def on_install(self, stepPrice: int = 10 ** 10) -> None:
         super().on_install()
@@ -166,17 +176,21 @@ class Governance(IconScoreBase):
         self._set_initial_max_step_limits()
         # set initial import white list
         self._set_initial_import_white_list()
+        self._set_initial_service_config()
 
     def on_update(self) -> None:
         super().on_update()
-        last_version = self._version.get()
-        self._version.set('0.0.2')
 
-        if self._versions(last_version) < self._versions('0.0.2'):
+        if self.is_less_than_target_version('0.0.2'):
             self._migrate_v0_0_2()
+        if self.is_less_than_target_version('0.0.3'):
+            self._migrate_v0_0_3()
 
-        # set initial import white list
-        self._set_initial_import_white_list()
+        self._version.set('0.0.3')
+
+    def is_less_than_target_version(self, target_version: str) -> bool:
+        last_version = self._version.get()
+        return self._versions(last_version) < self._versions(target_version)
 
     def _migrate_v0_0_2(self):
         """
@@ -190,6 +204,11 @@ class Governance(IconScoreBase):
 
         self._set_initial_step_costs()
         self._set_initial_max_step_limits()
+
+    def _migrate_v0_0_3(self):
+        # set initial import white list
+        self._set_initial_import_white_list()
+        self._set_initial_service_config()
 
     def _get_current_status(self, score_address: Address):
         return self._score_status[score_address][CURRENT]
@@ -723,3 +742,38 @@ class Governance(IconScoreBase):
             for i in range(len(self._import_white_list_keys)):
                 if self._import_white_list_keys[i] == key:
                     self._import_white_list_keys[i] = top
+
+    def _set_initial_service_config(self):
+        self._service_config.set(self._context.icon_service_flag)
+
+    @external
+    def updateServiceConfig(self, serviceFlag: int):
+        max_flag = 0
+        for flag in IconServiceFlag:
+            max_flag |= flag
+
+        if serviceFlag > max_flag:
+            self.revert(f'updateServiceConfig: serviceFlag({serviceFlag}) > max_flag({max_flag})')
+
+        prev_service_config = self._service_config.get()
+        if prev_service_config != serviceFlag:
+            self._service_config.set(serviceFlag)
+            self.UpdateServiceConfigLog(serviceFlag)
+            if DEBUG is True:
+                Logger.debug(f'updateServiceConfig (prev: {prev_service_config} flag: {serviceFlag})')
+        else:
+            if DEBUG is True:
+                Logger.debug(f'updateServiceConfig not update ({serviceFlag})')
+
+    @external(readonly=True)
+    def getServiceConfig(self) -> dict:
+        table = {}
+        service_flag = self._service_config.get()
+
+        for flag in IconServiceFlag:
+            if service_flag & flag == flag:
+                table[flag.name] = True
+            else:
+                table[flag.name] = False
+        return table
+

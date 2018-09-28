@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
+import operator
 from enum import IntEnum, unique
+
+import threading
 from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
@@ -27,6 +29,7 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import DEFAULT_BYTE_SIZE
+from ..icon_constant import IconServiceFlag
 from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -117,6 +120,8 @@ class IconScoreContext(object):
     """
     icon_score_mapper: 'IconScoreMapper' = None
     icon_score_manager: 'IconScoreManager' = None
+    icon_service_flag: int = 0
+    legacy_tbears_mode = False
 
     def __init__(self,
                  context_type: IconScoreContextType = IconScoreContextType.QUERY,
@@ -159,7 +164,7 @@ class IconScoreContext(object):
     @property
     def readonly(self):
         return self.type == IconScoreContextType.QUERY or \
-            self.func_type == IconScoreFuncType.READONLY
+               self.func_type == IconScoreFuncType.READONLY
 
     def clear(self) -> None:
         """Set instance member variables to None
@@ -233,6 +238,26 @@ class IconScoreContext(object):
 
         if not governance_score.isDeployer(deployer):
             raise ServerErrorException(f'Invalid deployer: no permission (address: {deployer})')
+
+    def is_service_flag_on(self, flag: 'IconServiceFlag'):
+        service_flag = self._get_service_flag()
+        return self._is_flag_on(service_flag, flag)
+
+    @staticmethod
+    def _is_flag_on(src_flag: int, dst_flag: int):
+        return src_flag & dst_flag == dst_flag
+
+    def _get_service_flag(self) -> int:
+        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+
+        service_config = self.icon_service_flag
+        try:
+            service_config = governance_score.service_config
+        except AttributeError:
+            pass
+        return service_config
 
 
 class IconScoreContextFactory(object):

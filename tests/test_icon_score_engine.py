@@ -68,7 +68,7 @@ class TestIconScoreEngine(unittest.TestCase):
         self.icx_storage = IcxStorage(icx_db)
         deploy_storage = IconScoreDeployStorage(self.icx_storage.db)
         deploy_engine = IconScoreDeployEngine()
-        deploy_engine.open(self._ROOT_SCORE_PATH, 0, deploy_storage)
+        deploy_engine.open(self._ROOT_SCORE_PATH, deploy_storage)
         IconScoreContext.icon_score_manager = IconScoreManager(deploy_engine)
 
         self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
