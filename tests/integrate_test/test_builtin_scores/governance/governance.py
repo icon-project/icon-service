@@ -94,9 +94,8 @@ class StepCosts:
             yield (step_type, self._step_costs[step_type])
 
 
-class Governance(IconScoreBase):
-
-    _SCORE_STATUS = 'score_status'
+class Governance(IconSystemScoreBase):
+    _SCORE_STATUS = 'score_status'  # legacy
     _AUDITOR_LIST = 'auditor_list'
     _DEPLOYER_LIST = 'deployer_list'
     _SCORE_BLACK_LIST = 'score_black_list'
@@ -106,6 +105,8 @@ class Governance(IconScoreBase):
     _IMPORT_WHITE_LIST = 'import_white_list'
     _IMPORT_WHITE_LIST_KEYS = 'import_white_list_keys'
     _SERVICE_CONFIG = 'service_config'
+    _AUDIT_STATUS = 'audit_status'
+    _REJECT_STATUS = 'reject_status'
 
     @eventlog(indexed=1)
     def Accepted(self, txHash: str):
@@ -149,7 +150,7 @@ class Governance(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
+        # self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
         self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
         self._score_black_list = ArrayDB(self._SCORE_BLACK_LIST, db, value_type=Address)
@@ -160,6 +161,8 @@ class Governance(IconScoreBase):
         self._import_white_list = DictDB(self._IMPORT_WHITE_LIST, db, value_type=str)
         self._import_white_list_keys = ArrayDB(self._IMPORT_WHITE_LIST_KEYS, db, value_type=str)
         self._service_config = VarDB(self._SERVICE_CONFIG, db, value_type=int)
+        self._audit_status = DictDB(self._AUDIT_STATUS, db, value_type=bytes)
+        self._reject_status = DictDB(self._REJECT_STATUS, db, value_type=bytes)
 
     def on_install(self, stepPrice: int = 10 ** 10) -> None:
         super().on_install()
@@ -176,6 +179,7 @@ class Governance(IconScoreBase):
         self._set_initial_max_step_limits()
         # set initial import white list
         self._set_initial_import_white_list()
+        # set initial service config
         self._set_initial_service_config()
 
     def on_update(self) -> None:
@@ -210,12 +214,6 @@ class Governance(IconScoreBase):
         self._set_initial_import_white_list()
         self._set_initial_service_config()
 
-    def _get_current_status(self, score_address: Address):
-        return self._score_status[score_address][CURRENT]
-
-    def _get_next_status(self, score_address: Address):
-        return self._score_status[score_address][NEXT]
-
     @staticmethod
     def _versions(version: str):
         parts = []
@@ -227,85 +225,79 @@ class Governance(IconScoreBase):
                     pass
         return tuple(parts)
 
-    @staticmethod
-    def _fill_status_with_str(db: DictDB):
-        count = 0
-        status = {}
-        for key in VALID_STATUS_KEYS:
-            value: bytes = db[key]
-            if value:
-                if key == STATUS:
-                    status[key] = value.decode()
-                else:
-                    status[key] = value
-                count += 1
-        return count, status
-
-    @staticmethod
-    def _save_status(db: DictDB, status: dict) -> None:
-        for key in VALID_STATUS_KEYS:
-            value: bytes = status[key]
-            if value:
-                db[key] = value
-
-    @staticmethod
-    def _remove_status(db: DictDB) -> None:
-        for key in VALID_STATUS_KEYS:
-            value = db[key]
-            if value:
-                del db[key]
-
-    @staticmethod
-    def _is_builtin_score(score_address: Address) -> bool:
-        builtin_scores = ["cx0000000000000000000000000000000000000001"]
-        return True if str(score_address) in builtin_scores else False
-
     @external(readonly=True)
     def getScoreStatus(self, address: Address) -> dict:
-        # check score address
-        current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
         # Governance
-        if self._is_builtin_score(address):
-            result = {"current": {
-                "status": "active"
-            }}
+        if self.is_builtin_score(address):
+            result = {
+                CURRENT: {
+                    STATUS: STATUS_ACTIVE
+                }}
             return result
 
-        if current_tx_hash is None and next_tx_hash is None:
+        deploy_info = self.get_deploy_info(address)
+        if deploy_info is None:
             self.revert('SCORE not found')
-        result = {}
-        build_initial_status = False
-        # get current status
-        _current = self._get_current_status(address)
-        count1, status = self._fill_status_with_str(_current)
-        if count1 > 0:
-            if current_tx_hash is None:
-                self.revert('current_tx_hash is None')
-            if current_tx_hash != status[DEPLOY_TX_HASH]:
-                self.revert('Current deploy tx mismatch')
-            # audit has been performed (accepted)
-            result[CURRENT] = status
-        # get next status
-        _next = self._get_next_status(address)
-        count2, status = self._fill_status_with_str(_next)
-        if count2 > 0:
-            # check if another pending tx has been arrived
-            if next_tx_hash is not None and \
-                    next_tx_hash != status[DEPLOY_TX_HASH]:
-                build_initial_status = True
+
+        current_tx_hash = deploy_info.current_tx_hash
+        next_tx_hash = deploy_info.next_tx_hash
+        active = self.is_score_active(address)
+
+        # install audit
+        if current_tx_hash is None and next_tx_hash and active is False:
+            reject_tx_hash = self._reject_status[next_tx_hash]
+            if reject_tx_hash:
+                result = {
+                    NEXT: {
+                        STATUS: STATUS_REJECTED,
+                        DEPLOY_TX_HASH: next_tx_hash,
+                        AUDIT_TX_HASH: reject_tx_hash
+                    }}
             else:
-                # audit has been performed (rejected)
-                result[NEXT] = status
+                result = {
+                    NEXT: {
+                        STATUS: STATUS_PENDING,
+                        DEPLOY_TX_HASH: next_tx_hash
+                    }}
+        elif current_tx_hash and next_tx_hash is None and active is True:
+            audit_tx_hash = self._audit_status[current_tx_hash]
+            result = {
+                CURRENT: {
+                    STATUS: STATUS_ACTIVE,
+                    DEPLOY_TX_HASH: current_tx_hash
+                }}
+            if audit_tx_hash:
+                result[CURRENT][AUDIT_TX_HASH] = audit_tx_hash
         else:
-            if next_tx_hash is not None:
-                build_initial_status = True
-        # there is no information, build initial status
-        if build_initial_status:
-            status = {
-                STATUS: STATUS_PENDING,
-                DEPLOY_TX_HASH: next_tx_hash
-            }
-            result[NEXT] = status
+            # update audit
+            if current_tx_hash and next_tx_hash and active is True:
+                current_audit_tx_hash = self._audit_status[current_tx_hash]
+                next_reject_tx_hash = self._reject_status[next_tx_hash]
+                if next_reject_tx_hash:
+                    result = {
+                        CURRENT: {
+                            STATUS: STATUS_ACTIVE,
+                            DEPLOY_TX_HASH: current_tx_hash,
+                            AUDIT_TX_HASH: current_audit_tx_hash
+                        },
+                        NEXT: {
+                            STATUS: STATUS_REJECTED,
+                            DEPLOY_TX_HASH: next_tx_hash,
+                            AUDIT_TX_HASH: next_reject_tx_hash
+                        }}
+                else:
+                    result = {
+                        CURRENT: {
+                            STATUS: STATUS_ACTIVE,
+                            DEPLOY_TX_HASH: current_tx_hash,
+                            AUDIT_TX_HASH: current_audit_tx_hash
+                        },
+                        NEXT: {
+                            STATUS: STATUS_PENDING,
+                            DEPLOY_TX_HASH: next_tx_hash
+                        }}
+            else:
+                result = {}
         return result
 
     @external(readonly=True)
@@ -327,32 +319,28 @@ class Governance(IconScoreBase):
         Logger.debug(f'acceptScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
             self.revert('Invalid sender: no permission')
+
         # check txHash
-        score_address = self.get_score_address_by_tx_hash(txHash)
-        if score_address is None:
+        tx_params = self.get_deploy_tx_params(txHash)
+        if tx_params is None:
             self.revert('Invalid txHash')
-        Logger.debug(f'acceptScore: score_address = "{score_address}"', TAG)
-        # check next: it should be 'pending'
-        result = self.getScoreStatus(score_address)
-        try:
-            next_status = result[NEXT][STATUS]
-            if next_status != STATUS_PENDING:
-                self.revert(f'Invalid status: next is {next_status}')
-        except KeyError:
-            self.revert('Invalid status: no next status')
-        # next: pending -> null
-        _next = self._get_next_status(score_address)
-        self._remove_status(_next)
-        # current: null -> active
-        _current = self._get_current_status(score_address)
-        status = {
-            STATUS: STATUS_ACTIVE,
-            DEPLOY_TX_HASH: txHash,
-            AUDIT_TX_HASH: self.tx.hash
-        }
-        self._save_status(_current, status)
-        self.deploy(txHash)
+
+        self._deploy(txHash, tx_params.score_address)
+
+        Logger.debug(f'acceptScore: score_address = "{tx_params.score_address}"', TAG)
+
+        self._audit_status[txHash] = self.tx.hash
+
         self.Accepted('0x' + txHash.hex())
+
+    def _deploy(self, tx_hash: bytes, score_addr: Address):
+        owner = self.get_owner(score_addr)
+        tmp_sender = self.msg.sender
+        self.msg.sender = owner
+        try:
+            self._context.deploy(tx_hash)
+        finally:
+            self.msg.sender = tmp_sender
 
     @external
     def rejectScore(self, txHash: bytes, reason: str):
@@ -360,27 +348,16 @@ class Governance(IconScoreBase):
         Logger.debug(f'rejectScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
             self.revert('Invalid sender: no permission')
+
         # check txHash
-        score_address = self.get_score_address_by_tx_hash(txHash)
-        if score_address is None:
+        tx_params = self.get_deploy_tx_params(txHash)
+        if tx_params is None:
             self.revert('Invalid txHash')
-        Logger.debug(f'rejectScore: score_address = "{score_address}", reason = {reason}', TAG)
-        # check next: it should be 'pending'
-        result = self.getScoreStatus(score_address)
-        try:
-            next_status = result[NEXT][STATUS]
-            if next_status != STATUS_PENDING:
-                self.revert(f'Invalid status: next is {next_status}')
-        except KeyError:
-            self.revert('Invalid status: no next status')
-        # next: pending -> rejected
-        _next = self._get_next_status(score_address)
-        status = {
-            STATUS: STATUS_REJECTED,
-            DEPLOY_TX_HASH: txHash,
-            AUDIT_TX_HASH: self.tx.hash
-        }
-        self._save_status(_next, status)
+
+        Logger.debug(f'rejectScore: score_address = "{tx_params.score_address}", reason = {reason}', TAG)
+
+        self._reject_status[txHash] = self.tx.hash
+
         self.Rejected('0x' + txHash.hex(), reason)
 
     @external
@@ -744,7 +721,7 @@ class Governance(IconScoreBase):
                     self._import_white_list_keys[i] = top
 
     def _set_initial_service_config(self):
-        self._service_config.set(self._context.icon_service_flag)
+        self._service_config.set(self.get_icon_service_flag())
 
     @external
     def updateServiceConfig(self, serviceFlag: int):

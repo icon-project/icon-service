@@ -52,8 +52,7 @@ class TestEventlog(unittest.TestCase):
         context.traces = traces
         context.logs_bloom = logs_bloom
         context.step_counter = step_counter
-        context.icon_score_manager = Mock()
-        context.icon_score_manager.get_owner = Mock()
+        context.get_owner = Mock()
         context.internal_call.icx_engine = Mock(spec=IcxEngine)
         ContextContainer._push_context(context)
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag
+from enum import IntFlag, unique, IntEnum
 
 ICON_SERVICE_LOG_TAG = 'IconService'
 ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
@@ -72,6 +72,24 @@ class IconServiceFlag(IntFlag):
     audit = 2
     deployerWhiteList = 4
     scorePackageValidator = 8
+
+
+@unique
+class IconScoreContextType(IntEnum):
+    # Write data to db directly
+    DIRECT = 0
+    # Record data to cache and after confirming the block, write them to db
+    INVOKE = 1
+    # Not possible to write data to db
+    QUERY = 2
+
+
+@unique
+class IconScoreFuncType(IntEnum):
+    # ReadOnly function
+    READONLY = 0
+    # Writable function
+    WRITABLE = 1
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

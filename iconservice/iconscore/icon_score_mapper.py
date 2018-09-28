@@ -33,7 +33,6 @@ from ..icon_constant import DEFAULT_BYTE_SIZE
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     from .icon_score_loader import IconScoreLoader
-    from .icon_score_context import IconScoreContext
 
 
 class IconScoreMapper(object):

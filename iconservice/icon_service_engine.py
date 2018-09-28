@@ -16,13 +16,12 @@
 
 from math import ceil
 from os import makedirs
+
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from .base.address import Address, generate_score_address, \
-    generate_score_address_for_tbears
-from .base.address import ZERO_SCORE_ADDRESS, \
-    GOVERNANCE_SCORE_ADDRESS
+from .base.address import Address, generate_score_address, generate_score_address_for_tbears
+from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, RevertException, ScoreErrorException
 from .base.exception import IconServiceBaseException, ServerErrorException
@@ -33,7 +32,6 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from .deploy.icon_score_manager import IconScoreManager
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -124,8 +122,6 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_engine = IconScoreEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
 
-        icon_score_manger = IconScoreManager(self._icon_score_deploy_engine)
-
         self._icx_context_db = \
             ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         # self._icx_context_db.address = ICX_ENGINE_ADDRESS
@@ -139,12 +135,11 @@ class IconServiceEngine(ContextContainer):
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._icon_pre_validator = IconPreValidator(self._icx_engine,
-                                                    icon_score_manger,
                                                     self._icon_score_deploy_storage)
 
         InternalCall.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
-        IconScoreContext.icon_score_manager = icon_score_manger
+        IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
@@ -188,7 +183,6 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
-
         # Clarifies that This Context does not count steps
         context.step_counter = None
 

@@ -25,7 +25,6 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
@@ -76,7 +75,6 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._score_deploy_engine = IconScoreDeployEngine()
         self._deploy_storage = IconScoreDeployStorage(self._icx_db)
 
-        icon_score_manager = IconScoreManager(self._score_deploy_engine)
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_mapper = IconScoreMapper(
             icon_score_manager, self._icon_score_loader)

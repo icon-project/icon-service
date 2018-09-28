@@ -32,9 +32,9 @@ from .icon_score_context import IconScoreContextType, IconScoreFuncType
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
-from ..base.address import Address
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
-    EventLogException, ExternalException
+    EventLogException, ExternalException, ServerErrorException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..utils import get_main_type_from_annotations_type
 
@@ -521,24 +521,13 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         revert(message, code)
 
-    def deploy(self, tx_hash: bytes):
-        self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)
-
-    def is_score_active(self, score_address: 'Address'):
-        self._context.icon_score_manager.is_score_active(self._context, score_address)
+    def is_score_active(self, score_address: 'Address')-> bool:
+        return self._context.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         if score_address:
             score_address = self.address
-        return self._context.icon_score_manager.get_owner(self._context, score_address)
-
-    def get_tx_hashes_by_score_address(self,
-                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
-        return self._context.icon_score_manager.get_tx_hashes_by_score_address(self._context, score_address)
-
-    def get_score_address_by_tx_hash(self,
-                                     tx_hash: bytes) -> Optional['Address']:
-        return self._context.icon_score_manager.get_score_address_by_tx_hash(self._context, tx_hash)
+        return self._context.get_owner(self._context, score_address)
 
     def create_interface_score(self,
                                addr_to: 'Address',
@@ -546,3 +535,28 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self)
+
+    def deploy(self, tx_hash: bytes):
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        if self.address == GOVERNANCE_SCORE_ADDRESS:
+            # switch
+            score_addr = self.get_score_address_by_tx_hash(tx_hash)
+            owner = self.get_owner(score_addr)
+            tmp_sender = self._context.msg.sender
+            self._context.msg.sender = owner
+            try:
+                self._context.deploy(tx_hash)
+            finally:
+                self._context.msg = tmp_sender
+        else:
+            raise ServerErrorException('Permission Error')
+
+    def get_tx_hashes_by_score_address(self,
+                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        return self._context.get_tx_hashes_by_score_address(self._context, score_address)
+
+    def get_score_address_by_tx_hash(self,
+                                     tx_hash: bytes) -> Optional['Address']:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        return self._context.get_score_address_by_tx_hash(self._context, tx_hash)
