@@ -20,15 +20,12 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import IconServiceFlag
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateImportWhiteList(TestIntegrateBase):
-    def _make_init_config(self) -> dict:
-        return {ConfigKey.SERVICE: {ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: True}}
-
     def _import_query_request(self, import_stmt: str):
         query_request = {
             "version": self._version,
@@ -46,7 +43,26 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
 
         return query_request
 
+    def import_white_list_enable(self):
+        tx1 = self._make_deploy_tx("test_builtin",
+                                   "0_0_3/governance",
+                                   self._admin,
+                                   GOVERNANCE_SCORE_ADDRESS)
+
+        tx2 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'updateServiceConfig',
+                                       {"serviceFlag": hex(IconServiceFlag.scorePackageValidator)})
+
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(tx_results[1].status, int(True))
+
     def test_score_import_white_list(self):
+        self.import_white_list_enable()
+
         # query import whitelist
         query_request = self._import_query_request("{ 'iconservice': [] }")
         response = self._query(query_request)
@@ -179,6 +195,8 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.assertEqual(response, int(True))
 
     def test_apply_score_import_white_list(self):
+        self.import_white_list_enable()
+
         tx1 = self._make_deploy_tx("test_scores",
                                    "l_coin_0_5_0_using_import_os",
                                    self._addr_array[0],
@@ -206,6 +224,8 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.assertEqual(tx_results[2].status, int(True))
 
     def test_deploy_invalid_score(self):
+        self.import_white_list_enable()
+
         deploy_list = [
                        'import/test_score_import_in_top_level',
                        'import/test_score_import_in_method',

@@ -42,7 +42,7 @@ class IconScoreDeployEngine(object):
     def __init__(self) -> None:
         """Constructor
         """
-        self._icon_score_deploy_storage = None
+        self._icon_score_deploy_storage: 'IconScoreDeployStorage' = None
         self._icon_score_deployer = None
         self._icon_builtin_score_loader = None
 
@@ -58,7 +58,7 @@ class IconScoreDeployEngine(object):
         self._icon_score_deployer: IconScoreDeployer = IconScoreDeployer(score_root_path)
 
     @property
-    def icon_deploy_storage(self):
+    def icon_deploy_storage(self) -> 'IconScoreDeployStorage':
         return self._icon_score_deploy_storage
 
     def invoke(self,
@@ -186,7 +186,11 @@ class IconScoreDeployEngine(object):
                                 score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
 
-        _, next_tx_hash = self._icon_score_deploy_storage.get_tx_hashes_by_score_address(context, score_address)
+        deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
+        if deploy_info is None:
+            next_tx_hash = None
+        else:
+            next_tx_hash = deploy_info.next_tx_hash
         if next_tx_hash is None:
             next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
@@ -229,9 +233,11 @@ class IconScoreDeployEngine(object):
         content: bytes = data.get('content')
         params: dict = data.get('params', {})
 
-        _, next_tx_hash =\
-            self._icon_score_deploy_storage.get_tx_hashes_by_score_address(context, tx_params.score_address)
-
+        deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, tx_params.score_address)
+        if deploy_info is None:
+            next_tx_hash = None
+        else:
+            next_tx_hash = deploy_info.next_tx_hash
         if next_tx_hash is None:
             next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 

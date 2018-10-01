@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import warnings
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional, Tuple
 
@@ -322,7 +323,7 @@ class IconScoreDeployStorage(object):
         return prefix + src_key
 
     def is_score_active(self,
-                        context: 'IconScoreContext',
+                        context: Optional['IconScoreContext'],
                         score_address: 'Address') -> bool:
         """Returns whether IconScore is active or not
 
@@ -355,6 +356,7 @@ class IconScoreDeployStorage(object):
     def get_tx_hashes_by_score_address(self,
                                        context: 'IconScoreContext',
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info:
             return deploy_info.current_tx_hash, deploy_info.next_tx_hash
@@ -364,6 +366,7 @@ class IconScoreDeployStorage(object):
     def get_score_address_by_tx_hash(self,
                                      context: 'IconScoreContext',
                                      tx_hash: bytes) -> Optional['Address']:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         tx_params = self.get_deploy_tx_params(context, tx_hash)
         if tx_params:
             return tx_params.score_address

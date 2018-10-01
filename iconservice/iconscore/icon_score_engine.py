@@ -64,9 +64,11 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
-        assert icon_score_address is not None
-        assert icon_score_address is not ZERO_SCORE_ADDRESS
-        assert icon_score_address.is_contract
+
+        if icon_score_address is None or \
+                icon_score_address is ZERO_SCORE_ADDRESS or \
+                not icon_score_address.is_contract:
+            raise InvalidParamsException(f"invalid score address: ({icon_score_address})")
 
         context.validate_score_blacklist(icon_score_address)
 
@@ -84,9 +86,10 @@ class IconScoreEngine(object):
 
         Handles messagecall of icx_call
         """
-        assert icon_score_address is not None
-        assert icon_score_address is not ZERO_SCORE_ADDRESS
-        assert icon_score_address.is_contract
+        if icon_score_address is None or \
+                icon_score_address is ZERO_SCORE_ADDRESS or \
+                not icon_score_address.is_contract:
+            raise InvalidParamsException(f"invalid score address: ({icon_score_address})")
 
         context.validate_score_blacklist(icon_score_address)
 

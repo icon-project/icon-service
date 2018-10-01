@@ -59,4 +59,4 @@ class IconBuiltinScoreLoader(object):
 
     @classmethod
     def is_builtin_score(cls, score_address: 'Address') -> bool:
-        return score_address in cls._BUILTIN_SCORE_ADDRESS_MAPPER
+        return score_address in cls._BUILTIN_SCORE_ADDRESS_MAPPER.values()

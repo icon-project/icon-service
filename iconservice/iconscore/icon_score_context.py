@@ -13,32 +13,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import operator
-from enum import IntEnum, unique
+import warnings
 
 import threading
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Tuple
 
 from .icon_score_trace import Trace
 from .internal_call import InternalCall
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.block import Block
 from ..base.exception import ServerErrorException, InvalidParamsException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icon_constant import DEFAULT_BYTE_SIZE
+from ..icon_constant import IconScoreContextType, IconScoreFuncType, DEFAULT_BYTE_SIZE
 from ..icon_constant import IconServiceFlag
 from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
-    from .icon_score_base import IconScoreBase
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
-    from ..deploy.icon_score_manager import IconScoreManager
-    from ..builtin_scores.governance.governance import Governance
+    from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
+    from .icon_score_base import IconScoreBase
+    from ..base.address import Address
 
 _thread_local_data = threading.local()
 
@@ -97,41 +95,21 @@ class ContextGetter(object):
         return ContextContainer._get_context()
 
 
-@unique
-class IconScoreContextType(IntEnum):
-    # Write data to db directly
-    DIRECT = 0
-    # Record data to cache and after confirming the block, write them to db
-    INVOKE = 1
-    # Not possible to write data to db
-    QUERY = 2
-
-
-@unique
-class IconScoreFuncType(IntEnum):
-    # ReadOnly function
-    READONLY = 0
-    # Writable function
-    WRITABLE = 1
-
-
 class IconScoreContext(object):
-    """Contains the useful information to process user's jsonrpc request
-    """
     icon_score_mapper: 'IconScoreMapper' = None
-    icon_score_manager: 'IconScoreManager' = None
+    icon_score_deploy_engine: 'IconScoreDeployEngine'
     icon_service_flag: int = 0
     legacy_tbears_mode = False
 
     def __init__(self,
-                 context_type: IconScoreContextType = IconScoreContextType.QUERY,
-                 func_type: IconScoreFuncType = IconScoreFuncType.WRITABLE,
+                 context_type: 'IconScoreContextType' = IconScoreContextType.QUERY,
+                 func_type: 'IconScoreFuncType' = IconScoreFuncType.WRITABLE,
                  block: 'Block' = None,
                  tx: 'Transaction' = None,
                  msg: 'Message' = None,
                  block_batch: 'BlockBatch' = None,
                  tx_batch: 'TransactionBatch' = None,
-                 new_icon_score_mapper: 'icon_score_mapper' = None) -> None:
+                 new_icon_score_mapper: 'IconScoreMapper' = None) -> None:
         """Constructor
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
@@ -184,6 +162,19 @@ class IconScoreContext(object):
 
         self.msg_stack.clear()
 
+    def is_score_active(self,
+                        context: Optional['IconScoreContext'],
+                        icon_score_address: 'Address') -> bool:
+        return self.icon_score_deploy_engine.icon_deploy_storage.is_score_active(context, icon_score_address)
+
+    def get_owner(self,
+                  context: Optional['IconScoreContext'],
+                  icon_score_address: 'Address') -> Optional['Address']:
+        return self.icon_score_deploy_engine.icon_deploy_storage.get_score_owner(context, icon_score_address)
+
+    def deploy(self, tx_hash: bytes) -> None:
+        self.icon_score_deploy_engine.deploy(self, tx_hash)
+
     def get_icon_score(self, address: 'Address') -> Optional['IconScoreBase']:
         score = None
 
@@ -196,12 +187,16 @@ class IconScoreContext(object):
         return score
 
     def _get_icon_score(self, address: 'Address') -> Optional['IconScoreBase']:
-        is_score_active = self.icon_score_manager.is_score_active(self, address)
-        current_tx_hash, _ = self.icon_score_manager.get_tx_hashes_by_score_address(self, address)
+        is_score_active = self.icon_score_deploy_engine.icon_deploy_storage.is_score_active(self, address)
 
         if not is_score_active:
             raise InvalidParamsException(f'SCORE is inactive: {address}')
 
+        deploy_info = self.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(self, address)
+        if deploy_info is None:
+            current_tx_hash = None
+        else:
+            current_tx_hash = deploy_info.current_tx_hash
         if current_tx_hash is None:
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
@@ -219,7 +214,7 @@ class IconScoreContext(object):
             raise ServerErrorException(f'Invalid SCORE address: {score_address}')
 
         # Gets the governance SCORE
-        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -232,7 +227,7 @@ class IconScoreContext(object):
         :param deployer: EOA address to deploy a SCORE
         """
         # Gets the governance SCORE
-        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -248,7 +243,7 @@ class IconScoreContext(object):
         return src_flag & dst_flag == dst_flag
 
     def _get_service_flag(self) -> int:
-        governance_score: 'Governance' = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+        governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -258,6 +253,18 @@ class IconScoreContext(object):
         except AttributeError:
             pass
         return service_config
+
+    def get_tx_hashes_by_score_address(self,
+                                       context: 'IconScoreContext',
+                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        return self.icon_score_deploy_engine.icon_deploy_storage.get_tx_hashes_by_score_address(context, score_address)
+
+    def get_score_address_by_tx_hash(self,
+                                     context: 'IconScoreContext',
+                                     tx_hash: bytes) -> Optional['Address']:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        return self.icon_score_deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
 
 
 class IconScoreContextFactory(object):

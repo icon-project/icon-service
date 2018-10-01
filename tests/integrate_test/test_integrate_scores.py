@@ -252,6 +252,15 @@ class TestIntegrateScores(TestIntegrateBase):
         score_addr1 = tx_results[0].score_address
 
     def test_service_flag(self):
+        tx1 = self._make_deploy_tx("test_builtin",
+                                   "0_0_3/governance",
+                                   self._admin,
+                                   GOVERNANCE_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
         query_request = {
             "version": self._version,
             "from": self._admin,
@@ -264,7 +273,7 @@ class TestIntegrateScores(TestIntegrateBase):
         }
         response = self._query(query_request)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx2 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
@@ -275,17 +284,17 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(response, table)
 
         target_flag = IconServiceFlag.audit | IconServiceFlag.fee
-        tx2 = self._make_score_call_tx(self._admin,
+        tx3 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
                                        {"serviceFlag": hex(target_flag)})
 
-        tx3 = self._make_deploy_tx("test_deploy_scores/install",
+        tx4 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
                                    self._addr_array[1],
                                    ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
+        prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4])
 
         self._write_precommit_state(prev_block)
 
