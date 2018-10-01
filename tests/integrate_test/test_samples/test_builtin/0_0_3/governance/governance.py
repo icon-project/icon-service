@@ -323,9 +323,14 @@ class Governance(IconSystemScoreBase):
         # check txHash
         tx_params = self.get_deploy_tx_params(txHash)
         if tx_params is None:
-            self.revert('Invalid txHash')
+            self.revert('Invalid txHash: None')
 
-        self._deploy(txHash, tx_params.score_address)
+        deploy_score_addr = tx_params.score_address
+        deploy_info = self.get_deploy_info(deploy_score_addr)
+        if txHash != deploy_info.next_tx_hash:
+            self.revert('Invalid txHash: mismatch')
+
+        self._deploy(txHash, deploy_score_addr)
 
         Logger.debug(f'acceptScore: score_address = "{tx_params.score_address}"', TAG)
 
