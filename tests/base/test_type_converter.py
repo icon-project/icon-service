@@ -164,7 +164,7 @@ class TestTypeConverter(unittest.TestCase):
         self._test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
                                        content_type=content_type, content=content)
 
-    def test_transaction_convert_fail1(self):
+    def test_transaction_convert_malformed_address_success(self):
         method = "icx_sendTransaction"
         tx_hash = create_block_hash()
         from_addr = create_address()
@@ -177,10 +177,8 @@ class TestTypeConverter(unittest.TestCase):
         with self.assertRaises(BaseException) as e:
             self._test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
                                            content_type=content_type, content=content)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, "Invalid address")
 
-    def test_transaction_convert_fail2(self):
+    def test_transaction_convert_fail1(self):
         method = "icx_sendTransaction"
         tx_hash = create_block_hash()
         from_addr = create_address()
@@ -194,7 +192,8 @@ class TestTypeConverter(unittest.TestCase):
             self._test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
                                            content_type=content_type, content=content)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, "TypeConvert Exception None value, template: ValueType.ADDRESS")
+        self.assertEqual(e.exception.message,
+                         "TypeConvert Exception None value, template: ValueType.ADDRESS_OR_MALFORMED_ADDRESS")
 
     def _test_transaction_convert(self,
                                   method: str,
