@@ -118,7 +118,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                                        tx_hash,
                                                        deploy_data)
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f'already put deploy_params {tx_hash}')
+        self.assertEqual(e.exception.message, f'deploy_params already exists: {tx_hash}')
         self.storage._put_deploy_tx_params.assert_not_called()
 
         with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
@@ -241,7 +241,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         with self.assertRaises(ServerErrorException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f'deploy_info is None score_addr : {score_address}')
+        self.assertEqual(e.exception.message, f'deploy_info is None: {score_address}')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
         current_tx_hash = create_tx_hash()
@@ -255,7 +255,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         with self.assertRaises(ServerErrorException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f'invalid update tx_hash: '
+        self.assertEqual(e.exception.message, f'Invalid update tx_hash: '
                                               f'tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
@@ -272,7 +272,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         with self.assertRaises(ServerErrorException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f'tx_params is None {tx_hash}')
+        self.assertEqual(e.exception.message, f'tx_params is None: {tx_hash}')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
         self.storage._put_deploy_info.assert_called_once()
         ret_context, ret_deploy_info = self.storage._put_deploy_info.call_args[0]
