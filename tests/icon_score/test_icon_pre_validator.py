@@ -21,7 +21,6 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.icx.icx_engine import IcxEngine
@@ -31,8 +30,7 @@ from tests import create_address
 class TestTransactionValidator(unittest.TestCase):
 
     def setUp(self):
-        self.validator = IconPreValidator(Mock(spec=IcxEngine), Mock(spec=IconScoreManager),
-                                          Mock(spec=IconScoreDeployStorage))
+        self.validator = IconPreValidator(Mock(spec=IcxEngine), Mock(spec=IconScoreDeployStorage))
 
     def test_excute_v2(self):
         self.validator._check_data_size = Mock()
@@ -526,33 +524,31 @@ class TestTransactionValidator(unittest.TestCase):
 
     def test_is_inactive_score(self):
         address = create_address()
-        self.validator._score_manager.is_score_active = Mock(return_value=True)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = create_address()
-        self.validator._score_manager.is_score_active = Mock(return_value=False)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = ZERO_SCORE_ADDRESS
-        self.validator._score_manager.is_score_active = Mock(return_value=True)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = ZERO_SCORE_ADDRESS
-        self.validator._score_manager.is_score_active = Mock(return_value=False)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = create_address(1)
-        self.validator._score_manager.is_score_active = Mock(return_value=True)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = create_address(1)
-        self.validator._score_manager.is_score_active = Mock(return_value=False)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
         self.assertTrue(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
-
-
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
