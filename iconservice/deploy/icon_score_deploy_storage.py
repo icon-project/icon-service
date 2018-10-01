@@ -261,9 +261,8 @@ class IconScoreDeployStorage(object):
             raise ServerErrorException(f'deploy_info is None: {score_address}')
 
         next_tx_hash = deploy_info.next_tx_hash
-        if next_tx_hash is None:
-            next_tx_hash = tx_hash
-
+        # have to match next_tx_hash and tx_hash
+        # tx_hash is None -> builtin install
         if tx_hash is not None and tx_hash != next_tx_hash:
             raise ServerErrorException('Invalid update tx_hash: '
                                        f'tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
