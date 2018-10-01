@@ -94,77 +94,45 @@ class StepCosts:
             yield (step_type, self._step_costs[step_type])
 
 
-class Governance(IconSystemScoreBase):
-    _SCORE_STATUS = 'score_status'  # legacy
+class Governance(IconScoreBase):
+
+    _SCORE_STATUS = 'score_status'
     _AUDITOR_LIST = 'auditor_list'
     _DEPLOYER_LIST = 'deployer_list'
     _SCORE_BLACK_LIST = 'score_black_list'
     _STEP_PRICE = 'step_price'
     _MAX_STEP_LIMITS = 'max_step_limits'
-    _VERSION = 'version'
-    _IMPORT_WHITE_LIST = 'import_white_list'
-    _IMPORT_WHITE_LIST_KEYS = 'import_white_list_keys'
-    _SERVICE_CONFIG = 'service_config'
-    _AUDIT_STATUS = 'audit_status'
-    _REJECT_STATUS = 'reject_status'
 
     @eventlog(indexed=1)
-    def Accepted(self, txHash: str):
+    def Accepted(self, tx_hash: str):
         pass
 
     @eventlog(indexed=1)
-    def Rejected(self, txHash: str, reason: str):
+    def Rejected(self, tx_hash: str, reason: str):
         pass
 
     @eventlog(indexed=1)
-    def StepPriceChanged(self, stepPrice: int):
+    def StepPriceChanged(self, step_price: int):
         pass
 
     @eventlog(indexed=1)
-    def StepCostChanged(self, stepType: str, cost: int):
+    def StepCostChanged(self, step_type: str, cost: int):
         pass
-
-    @eventlog(indexed=1)
-    def MaxStepLimitChanged(self, contextType: str, value: int):
-        pass
-
-    @eventlog(indexed=0)
-    def AddImportWhiteListLog(self, addList: str, addCount: int):
-        pass
-
-    @eventlog(indexed=0)
-    def RemoveImportWhiteListLog(self, removeList: str, removeCount: int):
-        pass
-
-    @eventlog(indexed=0)
-    def UpdateServiceConfigLog(self, serviceFlag: int):
-        pass
-
-    @property
-    def import_white_list_cache(self):
-        return self._get_import_white_list()
-
-    @property
-    def service_config(self):
-        return self._service_config.get()
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        # self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
+        self._score_status = DictDB(self._SCORE_STATUS, db, value_type=bytes, depth=3)
         self._auditor_list = ArrayDB(self._AUDITOR_LIST, db, value_type=Address)
         self._deployer_list = ArrayDB(self._DEPLOYER_LIST, db, value_type=Address)
         self._score_black_list = ArrayDB(self._SCORE_BLACK_LIST, db, value_type=Address)
         self._step_price = VarDB(self._STEP_PRICE, db, value_type=int)
         self._step_costs = StepCosts(db)
         self._max_step_limits = DictDB(self._MAX_STEP_LIMITS, db, value_type=int)
-        self._version = VarDB(self._VERSION, db, value_type=str)
-        self._import_white_list = DictDB(self._IMPORT_WHITE_LIST, db, value_type=str)
-        self._import_white_list_keys = ArrayDB(self._IMPORT_WHITE_LIST_KEYS, db, value_type=str)
-        self._service_config = VarDB(self._SERVICE_CONFIG, db, value_type=int)
-        self._audit_status = DictDB(self._AUDIT_STATUS, db, value_type=bytes)
-        self._reject_status = DictDB(self._REJECT_STATUS, db, value_type=bytes)
 
-    def on_install(self, stepPrice: int = 10 ** 10) -> None:
+    def on_install(self,
+                   stepPrice: int = 10 ** 10,
+                   maxInvokeStepLimit: int = 0x78000000,
+                   maxQueryStepLimit: int = 0x780000) -> None:
         super().on_install()
         # add owner into initial auditor list
         Logger.debug(f'on_install: owner = "{self.owner}"', TAG)
@@ -176,128 +144,91 @@ class Governance(IconSystemScoreBase):
         # set initial step costs
         self._set_initial_step_costs()
         # set initial max step limits
-        self._set_initial_max_step_limits()
-        # set initial import white list
-        self._set_initial_import_white_list()
-        # set initial service config
-        self._set_initial_service_config()
+        self._max_step_limits[CONTEXT_TYPE_INVOKE] = maxInvokeStepLimit
+        self._max_step_limits[CONTEXT_TYPE_QUERY] = maxQueryStepLimit
 
     def on_update(self) -> None:
         super().on_update()
 
-        if self.is_less_than_target_version('0.0.2'):
-            self._migrate_v0_0_2()
-        if self.is_less_than_target_version('0.0.3'):
-            self._migrate_v0_0_3()
-
-        self._version.set('0.0.3')
-
-    def is_less_than_target_version(self, target_version: str) -> bool:
-        last_version = self._version.get()
-        return self._versions(last_version) < self._versions(target_version)
-
-    def _migrate_v0_0_2(self):
-        """
-        This migration updates the step costs and max step limits
-        """
         if len(self._step_costs) == 0:
             # migrates from old DB of step_costs.
             for step_type in INITIAL_STEP_COST_KEYS:
                 if step_type in self._step_costs:
                     self._step_costs._step_types.put(step_type)
 
-        self._set_initial_step_costs()
-        self._set_initial_max_step_limits()
+    def _get_current_status(self, score_address: Address):
+        return self._score_status[score_address][CURRENT]
 
-    def _migrate_v0_0_3(self):
-        # set initial import white list
-        self._set_initial_import_white_list()
-        self._set_initial_service_config()
+    def _get_next_status(self, score_address: Address):
+        return self._score_status[score_address][NEXT]
 
     @staticmethod
-    def _versions(version: str):
-        parts = []
-        if version is not None:
-            for part in version.split("."):
-                try:
-                    parts.append(int(part))
-                except ValueError:
-                    pass
-        return tuple(parts)
+    def _fill_status_with_str(db: DictDB):
+        count = 0
+        status = {}
+        for key in VALID_STATUS_KEYS:
+            value: bytes = db[key]
+            if value:
+                if key == STATUS:
+                    status[key] = value.decode()
+                else:
+                    status[key] = value
+                count += 1
+        return count, status
+
+    @staticmethod
+    def _save_status(db: DictDB, status: dict) -> None:
+        for key in VALID_STATUS_KEYS:
+            value: bytes = status[key]
+            if value:
+                db[key] = value
+
+    @staticmethod
+    def _remove_status(db: DictDB) -> None:
+        for key in VALID_STATUS_KEYS:
+            value = db[key]
+            if value:
+                del db[key]
 
     @external(readonly=True)
     def getScoreStatus(self, address: Address) -> dict:
-        # Governance
-        if self.is_builtin_score(address):
-            result = {
-                CURRENT: {
-                    STATUS: STATUS_ACTIVE
-                }}
-            return result
-
-        deploy_info = self.get_deploy_info(address)
-        if deploy_info is None:
+        # check score address
+        current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
+        if current_tx_hash is None and next_tx_hash is None:
             self.revert('SCORE not found')
-
-        current_tx_hash = deploy_info.current_tx_hash
-        next_tx_hash = deploy_info.next_tx_hash
-        active = self.is_score_active(address)
-
-        # install audit
-        if current_tx_hash is None and next_tx_hash and active is False:
-            reject_tx_hash = self._reject_status[next_tx_hash]
-            if reject_tx_hash:
-                result = {
-                    NEXT: {
-                        STATUS: STATUS_REJECTED,
-                        DEPLOY_TX_HASH: next_tx_hash,
-                        AUDIT_TX_HASH: reject_tx_hash
-                    }}
+        result = {}
+        build_initial_status = False
+        # get current status
+        _current = self._get_current_status(address)
+        count1, status = self._fill_status_with_str(_current)
+        if count1 > 0:
+            if current_tx_hash is None:
+                self.revert('current_tx_hash is None')
+            if current_tx_hash != status[DEPLOY_TX_HASH]:
+                self.revert('Current deploy tx mismatch')
+            # audit has been performed (accepted)
+            result[CURRENT] = status
+        # get next status
+        _next = self._get_next_status(address)
+        count2, status = self._fill_status_with_str(_next)
+        if count2 > 0:
+            # check if another pending tx has been arrived
+            if next_tx_hash is not None and \
+                    next_tx_hash != status[DEPLOY_TX_HASH]:
+                build_initial_status = True
             else:
-                result = {
-                    NEXT: {
-                        STATUS: STATUS_PENDING,
-                        DEPLOY_TX_HASH: next_tx_hash
-                    }}
-        elif current_tx_hash and next_tx_hash is None and active is True:
-            audit_tx_hash = self._audit_status[current_tx_hash]
-            result = {
-                CURRENT: {
-                    STATUS: STATUS_ACTIVE,
-                    DEPLOY_TX_HASH: current_tx_hash
-                }}
-            if audit_tx_hash:
-                result[CURRENT][AUDIT_TX_HASH] = audit_tx_hash
+                # audit has been performed (rejected)
+                result[NEXT] = status
         else:
-            # update audit
-            if current_tx_hash and next_tx_hash and active is True:
-                current_audit_tx_hash = self._audit_status[current_tx_hash]
-                next_reject_tx_hash = self._reject_status[next_tx_hash]
-                if next_reject_tx_hash:
-                    result = {
-                        CURRENT: {
-                            STATUS: STATUS_ACTIVE,
-                            DEPLOY_TX_HASH: current_tx_hash,
-                            AUDIT_TX_HASH: current_audit_tx_hash
-                        },
-                        NEXT: {
-                            STATUS: STATUS_REJECTED,
-                            DEPLOY_TX_HASH: next_tx_hash,
-                            AUDIT_TX_HASH: next_reject_tx_hash
-                        }}
-                else:
-                    result = {
-                        CURRENT: {
-                            STATUS: STATUS_ACTIVE,
-                            DEPLOY_TX_HASH: current_tx_hash,
-                            AUDIT_TX_HASH: current_audit_tx_hash
-                        },
-                        NEXT: {
-                            STATUS: STATUS_PENDING,
-                            DEPLOY_TX_HASH: next_tx_hash
-                        }}
-            else:
-                result = {}
+            if next_tx_hash is not None:
+                build_initial_status = True
+        # there is no information, build initial status
+        if build_initial_status:
+            status = {
+                STATUS: STATUS_PENDING,
+                DEPLOY_TX_HASH: next_tx_hash
+            }
+            result[NEXT] = status
         return result
 
     @external(readonly=True)
@@ -319,28 +250,32 @@ class Governance(IconSystemScoreBase):
         Logger.debug(f'acceptScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
             self.revert('Invalid sender: no permission')
-
         # check txHash
-        tx_params = self.get_deploy_tx_params(txHash)
-        if tx_params is None:
+        score_address = self.get_score_address_by_tx_hash(txHash)
+        if score_address is None:
             self.revert('Invalid txHash')
-
-        self._deploy(txHash, tx_params.score_address)
-
-        Logger.debug(f'acceptScore: score_address = "{tx_params.score_address}"', TAG)
-
-        self._audit_status[txHash] = self.tx.hash
-
-        self.Accepted('0x' + txHash.hex())
-
-    def _deploy(self, tx_hash: bytes, score_addr: Address):
-        owner = self.get_owner(score_addr)
-        tmp_sender = self.msg.sender
-        self.msg.sender = owner
+        Logger.debug(f'acceptScore: score_address = "{score_address}"', TAG)
+        # check next: it should be 'pending'
+        result = self.getScoreStatus(score_address)
         try:
-            self._context.deploy(tx_hash)
-        finally:
-            self.msg.sender = tmp_sender
+            next_status = result[NEXT][STATUS]
+            if next_status != STATUS_PENDING:
+                self.revert(f'Invalid status: next is {next_status}')
+        except KeyError:
+            self.revert('Invalid status: no next status')
+        # next: pending -> null
+        _next = self._get_next_status(score_address)
+        self._remove_status(_next)
+        # current: null -> active
+        _current = self._get_current_status(score_address)
+        status = {
+            STATUS: STATUS_ACTIVE,
+            DEPLOY_TX_HASH: txHash,
+            AUDIT_TX_HASH: self.tx.hash
+        }
+        self._save_status(_current, status)
+        self.deploy(txHash)
+        self.Accepted('0x' + txHash.hex())
 
     @external
     def rejectScore(self, txHash: bytes, reason: str):
@@ -348,16 +283,27 @@ class Governance(IconSystemScoreBase):
         Logger.debug(f'rejectScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
             self.revert('Invalid sender: no permission')
-
         # check txHash
-        tx_params = self.get_deploy_tx_params(txHash)
-        if tx_params is None:
+        score_address = self.get_score_address_by_tx_hash(txHash)
+        if score_address is None:
             self.revert('Invalid txHash')
-
-        Logger.debug(f'rejectScore: score_address = "{tx_params.score_address}", reason = {reason}', TAG)
-
-        self._reject_status[txHash] = self.tx.hash
-
+        Logger.debug(f'rejectScore: score_address = "{score_address}", reason = {reason}', TAG)
+        # check next: it should be 'pending'
+        result = self.getScoreStatus(score_address)
+        try:
+            next_status = result[NEXT][STATUS]
+            if next_status != STATUS_PENDING:
+                self.revert(f'Invalid status: next is {next_status}')
+        except KeyError:
+            self.revert('Invalid status: no next status')
+        # next: pending -> rejected
+        _next = self._get_next_status(score_address)
+        status = {
+            STATUS: STATUS_REJECTED,
+            DEPLOY_TX_HASH: txHash,
+            AUDIT_TX_HASH: self.tx.hash
+        }
+        self._save_status(_next, status)
         self.Rejected('0x' + txHash.hex(), reason)
 
     @external
@@ -471,26 +417,22 @@ class Governance(IconSystemScoreBase):
 
     def _set_initial_step_costs(self):
         initial_costs = {
-            STEP_TYPE_DEFAULT: 100_000,
-            STEP_TYPE_CONTRACT_CALL: 25_000,
-            STEP_TYPE_CONTRACT_CREATE: 1_000_000_000,
-            STEP_TYPE_CONTRACT_UPDATE: 1_600_000_000,
+            STEP_TYPE_DEFAULT: 1_000_000,
+            STEP_TYPE_CONTRACT_CALL: 15_000,
+            STEP_TYPE_CONTRACT_CREATE: 200_000,
+            STEP_TYPE_CONTRACT_UPDATE: 80_000,
             STEP_TYPE_CONTRACT_DESTRUCT: -70_000,
             STEP_TYPE_CONTRACT_SET: 30_000,
             STEP_TYPE_GET: 0,
-            STEP_TYPE_SET: 320,
-            STEP_TYPE_REPLACE: 80,
-            STEP_TYPE_DELETE: -240,
+            STEP_TYPE_SET: 200,
+            STEP_TYPE_REPLACE: 50,
+            STEP_TYPE_DELETE: -150,
             STEP_TYPE_INPUT: 200,
             STEP_TYPE_EVENT_LOG: 100,
             STEP_TYPE_API_CALL: 0
         }
         for key, value in initial_costs.items():
             self._step_costs[key] = value
-
-    def _set_initial_max_step_limits(self):
-        self._max_step_limits[CONTEXT_TYPE_INVOKE] = 2_500_000_000
-        self._max_step_limits[CONTEXT_TYPE_QUERY] = 2_500_000
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:
@@ -512,245 +454,5 @@ class Governance(IconSystemScoreBase):
         self.StepCostChanged(stepType, cost)
 
     @external(readonly=True)
-    def getMaxStepLimit(self, contextType: str) -> int:
-        return self._max_step_limits[contextType]
-
-    @external
-    def setMaxStepLimit(self, contextType: str, value: int):
-        # only owner can set new context type value
-        if self.msg.sender != self.owner:
-            self.revert('Invalid sender: not owner')
-        if value < 0:
-            self.revert('Invalid value: negative number')
-        if contextType == CONTEXT_TYPE_INVOKE or contextType == CONTEXT_TYPE_QUERY:
-            self._max_step_limits[contextType] = value
-            self.MaxStepLimitChanged(contextType, value)
-        else:
-            self.revert("Invalid context type")
-
-    @external(readonly=True)
-    def getVersion(self) -> str:
-        return self._version.get()
-
-    def _set_initial_import_white_list(self):
-        key = "iconservice"
-        # if iconsevice has no value set ALL
-        if self._import_white_list[key] == "":
-            self._import_white_list[key] = "*"
-            self._import_white_list_keys.put(key)
-
-    @external
-    def addImportWhiteList(self, import_stmt: str):
-        # only owner can add import white list
-        if self.msg.sender != self.owner:
-            self.revert('Invalid sender: not owner')
-        import_stmt_dict = {}
-        try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
-        except Exception as e:
-            self.revert(f'Invalid import statement: {e}')
-        # add to import white list
-        log_entry = []
-        for key, value in import_stmt_dict.items():
-            old_value: str = self._import_white_list[key]
-            if old_value == "*":
-                # no need to add
-                continue
-
-            if len(value) == 0:
-                # set import white list as ALL
-                self._import_white_list[key] = "*"
-
-                # add to import white list keys
-                if old_value == "":
-                    self._import_white_list_keys.put(key)
-
-                # make added item list for eventlog
-                log_entry.append((key, value))
-            elif old_value == "":
-                # set import white list
-                self._import_white_list[key] = ','.join(value)
-                # add to import white list keys
-                self._import_white_list_keys.put(key)
-                # make added item list for eventlog
-                log_entry.append((key, value))
-            else:
-                old_value_list = old_value.split(',')
-                new_value = []
-                for v in value:
-                    if v not in old_value_list:
-                        new_value.append(v)
-
-                # set import white list
-                self._import_white_list[key] = f'{old_value},{",".join(new_value)}'
-
-                # make added item list for eventlog
-                log_entry.append((key, new_value))
-
-        # make eventlog
-        if len(log_entry):
-            self.AddImportWhiteListLog(str(log_entry), len(log_entry))
-
-        if DEBUG is True:
-            Logger.debug(f'checking added item ({import_stmt}): {self.isInImportWhiteList(import_stmt)}')
-
-    @external
-    def removeImportWhiteList(self, import_stmt: str):
-        # only owner can add import white list
-        if self.msg.sender != self.owner:
-            self.revert('Invalid sender: not owner')
-
-        import_stmt_dict = {}
-        try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
-        except Exception as e:
-            self.revert(f'Invalid import statement: {e}')
-
-        # remove from import white list
-        log_entry = []
-        for key, value in import_stmt_dict.items():
-            old_value: str = self._import_white_list[key]
-            if old_value == "*":
-                if len(value) == 0:
-                    # remove import white list
-                    self._remove_import_white_list(key)
-
-                    # make added item list for eventlog
-                    log_entry.append((key, value))
-                continue
-
-            if len(value) == 0:
-                # remove import white list
-                self._remove_import_white_list(key)
-
-                # make added item list for eventlog
-                log_entry.append((key, value))
-
-                # add to import white list keys
-                self._import_white_list_keys.put(key)
-            else:
-                old_value_list = old_value.split(',')
-                remove_value = []
-                new_value = []
-                for v in old_value_list:
-                    if v in value:
-                        remove_value.append(v)
-                    else:
-                        new_value.append(v)
-
-                # set import white list
-                if len(new_value):
-                    self._import_white_list[key] = f'{",".join(new_value)}'
-                else:
-                    self._remove_import_white_list(key)
-
-                # make added item list for eventlog
-                log_entry.append((key, remove_value))
-
-        if len(log_entry):
-            # make eventlog
-            self.AddImportWhiteListLog(str(log_entry), len(log_entry))
-
-        if DEBUG is True:
-            Logger.debug(f'checking removed item ({import_stmt}): {self.isInImportWhiteList(import_stmt)}')
-
-    @external(readonly=True)
-    def isInImportWhiteList(self, import_stmt: str) -> bool:
-        try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
-        except Exception as e:
-            raise ValueError(f'{e}')
-
-        cache_import_white_list = self._get_import_white_list()
-        for key, value in import_stmt_dict.items():
-            old_value: list = cache_import_white_list.get(key, None)
-            if old_value is None:
-                return False
-
-            if old_value[0] == "*":
-                # import white list has ALL. See next key
-                continue
-
-            if len(value) == 0:
-                # input is ALL
-                return False
-
-            for v in value:
-                if v not in old_value:
-                    return False
-
-        if DEBUG is True:
-            Logger.debug(f'({import_stmt}) is in import white list')
-        return True
-
-    @staticmethod
-    def _check_import_stmt(import_stmt: str) -> dict:
-        Logger.debug(f'check_import_stmt: {import_stmt}')
-        import_stmt_dict: dict = json_loads(import_stmt.replace("\'", "\""))
-        for key, value in import_stmt_dict.items():
-            if not isinstance(key, str):
-                raise TypeError("Key must be of type `str`")
-
-            if not isinstance(value, list):
-                raise TypeError("Value must be of type `list`")
-            else:
-                for v in value:
-                    if not isinstance(v, str):
-                        raise TypeError("Element of value must be of type `str`")
-
-        Logger.debug(f'check_import_stmt_dict: {import_stmt_dict}')
-        return import_stmt_dict
-
-    def _get_import_white_list(self) -> dict:
-        whitelist = {}
-        for v in self._import_white_list_keys:
-            values: str = self._import_white_list[v]
-            whitelist[v] = values.split(',')
-
-        return whitelist
-
-    def _remove_import_white_list(self, key: str):
-        # remove from import white list
-        self._import_white_list.remove(key)
-
-        # remove from import white list keys
-        top = self._import_white_list_keys.pop()
-        if top != key:
-            for i in range(len(self._import_white_list_keys)):
-                if self._import_white_list_keys[i] == key:
-                    self._import_white_list_keys[i] = top
-
-    def _set_initial_service_config(self):
-        self._service_config.set(self.get_icon_service_flag())
-
-    @external
-    def updateServiceConfig(self, serviceFlag: int):
-        max_flag = 0
-        for flag in IconServiceFlag:
-            max_flag |= flag
-
-        if serviceFlag > max_flag:
-            self.revert(f'updateServiceConfig: serviceFlag({serviceFlag}) > max_flag({max_flag})')
-
-        prev_service_config = self._service_config.get()
-        if prev_service_config != serviceFlag:
-            self._service_config.set(serviceFlag)
-            self.UpdateServiceConfigLog(serviceFlag)
-            if DEBUG is True:
-                Logger.debug(f'updateServiceConfig (prev: {prev_service_config} flag: {serviceFlag})')
-        else:
-            if DEBUG is True:
-                Logger.debug(f'updateServiceConfig not update ({serviceFlag})')
-
-    @external(readonly=True)
-    def getServiceConfig(self) -> dict:
-        table = {}
-        service_flag = self._service_config.get()
-
-        for flag in IconServiceFlag:
-            if service_flag & flag == flag:
-                table[flag.name] = True
-            else:
-                table[flag.name] = False
-        return table
-
+    def getMaxStepLimit(self, context_type: str) -> int:
+        return self._max_step_limits[context_type]

@@ -36,10 +36,11 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateBase(TestCase):
+
     @staticmethod
     def mock_pre_builtin_score_root_path():
         root_path = os.path.abspath(os.path.dirname(__file__))
-        return os.path.join(root_path, 'test_builtin_scores')
+        return os.path.join(root_path, f"test_builtin_scores")
 
     @classmethod
     def setUpClass(cls):
@@ -58,11 +59,10 @@ class TestIntegrateBase(TestCase):
 
         cls._addr_array = [create_address() for _ in range(10)]
 
-        IconBuiltinScoreLoader._pre_builtin_score_root_path = TestIntegrateBase.mock_pre_builtin_score_root_path
-
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path)
 
+        IconBuiltinScoreLoader._pre_builtin_score_root_path = TestIntegrateBase.mock_pre_builtin_score_root_path
         self._block_height = 0
         self._prev_block_hash = None
 

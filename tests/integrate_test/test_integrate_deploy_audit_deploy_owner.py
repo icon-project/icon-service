@@ -154,6 +154,15 @@ class TestIntegrateDeployAuditDeployOwner(TestIntegrateBase):
                         and "auditTxHash" in response["current"]
                         and response["current"]["status"] == "active")
 
+        tx3 = self._make_deploy_tx("test_builtin",
+                                   "0_0_3/governance",
+                                   self._admin,
+                                   GOVERNANCE_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx3])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
         # case when governance
         query_request = {
             "version": self._version,
