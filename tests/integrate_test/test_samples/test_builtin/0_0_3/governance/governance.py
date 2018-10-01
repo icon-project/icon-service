@@ -725,6 +725,10 @@ class Governance(IconSystemScoreBase):
 
     @external
     def updateServiceConfig(self, serviceFlag: int):
+        # only owner can add import white list
+        if self.msg.sender != self.owner:
+            self.revert('Invalid sender: not owner')
+
         max_flag = 0
         for flag in IconServiceFlag:
             max_flag |= flag
