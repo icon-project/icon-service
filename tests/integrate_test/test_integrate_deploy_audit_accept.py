@@ -361,8 +361,10 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                                        {"txHash": f'0x{bytes.hex(tx_hash4)}'})
 
         prev_block, tx_results = self._make_and_req_block([tx8])
+        raise_exception_start_tag("Next is Rejected")
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        raise_exception_start_tag("Next is Rejected")
+        self.assertEqual(tx_results[0].status, int(False))
 
     def test_normal_score_non_exist_deploy_tx_0_0_3_governance(self):
         self.update_0_0_3_governance()
