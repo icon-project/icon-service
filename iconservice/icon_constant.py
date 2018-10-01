@@ -44,6 +44,8 @@ ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
 
+BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': "cx0000000000000000000000000000000000000001"}
+
 
 class ConfigKey:
     BUILTIN_SCORE_OWNER = 'builtinScoreOwner'

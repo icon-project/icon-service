@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Optional
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ScoreErrorException
 from ..iconscore.icon_score_base import IconScoreBase
+from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase
@@ -48,7 +49,7 @@ class IconSystemScoreBase(IconScoreBase):
     @abstractmethod
     def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
-        if not self.is_builtin_score(self.address):
+        if not is_builtin_score(str(self.address)):
             raise ScoreErrorException(f"is not system SCORE ({self.address}")
 
     def is_builtin_score(self, score_address: 'Address') -> bool:
