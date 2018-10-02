@@ -750,6 +750,9 @@ class Governance(IconSystemScoreBase):
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
 
+        if serviceFlag < 0:
+            self.revert(f'updateServiceConfig: serviceFlag({serviceFlag}) < 0')
+
         max_flag = 0
         for flag in IconServiceFlag:
             max_flag |= flag
