@@ -69,6 +69,44 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, value2)
 
+    def test_fake_system_score(self):
+        value1 = 1 * self._icx_factor
+
+        tx1 = self._make_deploy_tx("test_deploy_scores",
+                                   "install/fake_system_score",
+                                   self._admin,
+                                   ZERO_SCORE_ADDRESS,
+                                   deploy_params={'value': hex(value1)})
+
+        raise_exception_start_tag("test_fake_system_score")
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        raise_exception_end_tag("test_fake_system_score")
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertIn(f'is not system SCORE', tx_results[0].failure.message)
+
+    def test_fake_system_score_wrong_owner(self):
+        value1 = 1 * self._icx_factor
+
+        tx1 = self._make_deploy_tx("test_deploy_scores",
+                                   "install/fake_system_score",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
+                                   deploy_params={'value': hex(value1)})
+
+        raise_exception_start_tag("test_fake_system_score_wrong_owner")
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        raise_exception_end_tag("test_fake_system_score_wrong_owner")
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertIn(f'is not system SCORE', tx_results[0].failure.message)
+
     def test_score_address_already_in_use(self):
         timestamp = 1
         value1 = 1 * self._icx_factor

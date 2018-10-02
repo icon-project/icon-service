@@ -20,11 +20,12 @@
 Functions and classes in this module don't have any external dependencies.
 """
 
-import re
-import os
-import signal
 import hashlib
+
+import re
 from typing import Any, Union
+
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
 
 
 def int_to_bytes(n: int) -> bytes:
@@ -81,3 +82,7 @@ def get_main_type_from_annotations_type(annotations_type: type) -> type:
     else:
         main_type = annotations_type
     return main_type
+
+
+def is_builtin_score(score_address: str) -> bool:
+    return score_address in BUILTIN_SCORE_ADDRESS_MAPPER.values()

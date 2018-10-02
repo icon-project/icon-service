@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Callable
 
 from iconcommons import Logger
 from . import DeployType
-from .icon_builtin_score_loader import IconBuiltinScoreLoader
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
 from ..base.address import Address
@@ -29,6 +28,7 @@ from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
+from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -100,7 +100,7 @@ class IconScoreDeployEngine(object):
             raise e
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
-        is_built_score = IconBuiltinScoreLoader.is_builtin_score(icon_score_address)
+        is_built_score = is_builtin_score(str(icon_score_address))
         is_owner = context.tx.origin == self._icon_score_deploy_storage.get_score_owner(context, icon_score_address)
         is_audit_enabled = context.is_service_flag_on(IconServiceFlag.audit)
         return not is_audit_enabled or all((is_built_score, is_owner))

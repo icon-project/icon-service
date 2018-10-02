@@ -19,9 +19,9 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Optional
 
 
-from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ScoreErrorException
 from ..iconscore.icon_score_base import IconScoreBase
+from ..utils import is_builtin_score as util_is_builtin_score
 
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase
@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 
 
 class IconSystemScoreBase(IconScoreBase):
-    SYSTEM_SCORE_ADDRESS = [GOVERNANCE_SCORE_ADDRESS]
 
     @abstractmethod
     def on_install(self, **kwargs) -> None:
@@ -48,11 +47,11 @@ class IconSystemScoreBase(IconScoreBase):
     @abstractmethod
     def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
-        if not self.is_builtin_score(self.address):
+        if not util_is_builtin_score(str(self.address)):
             raise ScoreErrorException(f"is not system SCORE ({self.address}")
 
     def is_builtin_score(self, score_address: 'Address') -> bool:
-        return score_address in self.SYSTEM_SCORE_ADDRESS
+        return util_is_builtin_score(str(score_address))
 
     def get_deploy_tx_params(self, tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
         return self._context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_tx_params(self._context, tx_hash)
