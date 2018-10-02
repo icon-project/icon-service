@@ -153,7 +153,6 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         # 4. accept SCORE : tx_hash3
         tx_result = self._accept_score(tx_hash3)
         self.assertEqual(tx_result.status, int(True))
-        tx_hash4 = tx_result.tx_hash
 
         # 5. assert get value: value1 + value2
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1 + value2)

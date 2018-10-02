@@ -454,7 +454,6 @@ class Governance(IconSystemScoreBase):
     def addToScoreBlackList(self, address: Address):
         if not address.is_contract:
             self.revert(f'Invalid SCORE Address: {address}')
-
         # check message sender, only owner can add new blacklist
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
@@ -465,12 +464,13 @@ class Governance(IconSystemScoreBase):
 
     @external
     def removeFromScoreBlackList(self, address: Address):
-        if address not in self._score_black_list:
-            self.revert('Invalid address: not in list')
-
+        if not address.is_contract:
+            self.revert(f'Invalid SCORE Address: {address}')
         # check message sender, only owner can remove from blacklist
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
+        if address not in self._score_black_list:
+            self.revert('Invalid address: not in list')
         # get the topmost value
         top = self._score_black_list.pop()
         if top != address:
