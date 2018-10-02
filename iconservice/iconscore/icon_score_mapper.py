@@ -159,9 +159,10 @@ class IconScoreMapper(object):
             raise InvalidParamsException(f'score_wrapper load Fail {address}')
         return score_wrapper
 
-    def _clear_garbage_score(self):
+    def clear_garbage_score(self):
         if self.icon_score_loader is None:
             return
+
         score_root_path = self.icon_score_loader.score_root_path
         try:
             dir_list = os.listdir(score_root_path)

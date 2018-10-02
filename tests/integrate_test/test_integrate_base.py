@@ -16,7 +16,6 @@
 
 """IconServiceEngine testcase
 """
-import os
 from unittest import TestCase
 
 from typing import TYPE_CHECKING, Union, Optional, Any

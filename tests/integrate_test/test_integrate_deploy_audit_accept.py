@@ -32,6 +32,10 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateDeployAuditAccept(TestIntegrateBase):
+    """
+    audit on
+    test governance deploy audit accept, reject
+    """
 
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
@@ -111,7 +115,15 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(e.exception.message, "SCORE not found")
 
-    def test_builtin_score_update_0_0_3_governance(self):
+    def test_builtin_score_update_governance(self):
+        """
+        Test calling getScoreStatus() for governance SCORE in the case that audit is on
+
+        - A return value of Normal SCORE and Governance has the same format.
+        - For example, the return value of Governance should be
+            {"current": {"status": "active"}}.
+        """
+
         self._update_0_0_3_governance()
 
         expect_ret = {
@@ -148,7 +160,7 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                 'auditTxHash': tx_hash2}}
         self._assert_get_score_status(score_addr1, expect_ret)
 
-    def test_normal_score_update_0_0_3_governance(self):
+    def test_normal_score_update_governance(self):
         self._update_0_0_3_governance()
 
         # 1. deploy (wait audit)
@@ -200,7 +212,7 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         raise_exception_end_tag("Invalid txHash")
         self.assertEqual(tx_result.status, int(False))
 
-    def test_normal_score_fail1_fix_update_0_0_3_governance(self):
+    def test_normal_score_fail1_fix_update_governance(self):
         self._update_0_0_3_governance()
 
         # 1. deploy (wait audit)
@@ -292,7 +304,7 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         raise_exception_end_tag("Invalid update tx_hash")
         self.assertEqual(tx_result.status, int(False))
 
-    def test_normal_score_fail2_fix_update_0_0_3_governance(self):
+    def test_normal_score_fail2_fix_update_governance(self):
         self._update_0_0_3_governance()
 
         # 1. deploy (wait audit)
@@ -397,7 +409,7 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         raise_exception_start_tag("Invalid status: no next status")
         self.assertEqual(tx_result.status, int(False))
 
-    def test_normal_score_fail3_fix_update_0_0_3_governance(self):
+    def test_normal_score_fail3_fix_update_governance(self):
         self._update_0_0_3_governance()
 
         tx_result = self._deploy_score("install/test_score", 1)
@@ -509,7 +521,7 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         raise_exception_end_tag("wrong case")
         self.assertEqual(tx_result.status, int(False))
 
-    def test_normal_score_fail4_fix_update_0_0_3_governance(self):
+    def test_normal_score_fail4_fix_update_governance(self):
         self._update_0_0_3_governance()
 
         # 1. deploy (wait audit)
@@ -655,7 +667,7 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(False))
         raise_exception_end_tag("Invalid status: next is rejected")
 
-    def test_normal_score_fail5_fix_update_0_0_3_governance(self):
+    def test_normal_score_fail5_fix_update_governance(self):
         self._update_0_0_3_governance()
 
         # 1. deploy (wait audit)
