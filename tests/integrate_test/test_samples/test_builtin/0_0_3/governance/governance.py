@@ -330,6 +330,14 @@ class Governance(IconSystemScoreBase):
         if txHash != deploy_info.next_tx_hash:
             self.revert('Invalid txHash: mismatch')
 
+        next_audit_tx_hash = self._audit_status[txHash]
+        if next_audit_tx_hash:
+            self.revert('Invalid txHash: already accepted')
+
+        next_reject_tx_hash = self._reject_status[txHash]
+        if next_reject_tx_hash:
+            self.revert('Invalid txHash: already rejected')
+
         self._deploy(txHash, deploy_score_addr)
 
         Logger.debug(f'acceptScore: score_address = "{tx_params.score_address}"', TAG)
@@ -358,6 +366,14 @@ class Governance(IconSystemScoreBase):
         tx_params = self.get_deploy_tx_params(txHash)
         if tx_params is None:
             self.revert('Invalid txHash')
+
+        next_audit_tx_hash = self._audit_status[txHash]
+        if next_audit_tx_hash:
+            self.revert('Invalid txHash: already accepted')
+
+        next_reject_tx_hash = self._reject_status[txHash]
+        if next_reject_tx_hash:
+            self.revert('Invalid txHash: already rejected')
 
         Logger.debug(f'rejectScore: score_address = "{tx_params.score_address}", reason = {reason}', TAG)
 

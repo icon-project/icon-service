@@ -20,11 +20,15 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import RevertException, ExceptionCode
 from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-from tests import create_tx_hash
+
+from typing import TYPE_CHECKING, Any, Union
+
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
 
 
 class TestIntegrateDeployAuditAccept(TestIntegrateBase):
@@ -32,17 +36,15 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
 
-    def update_0_0_3_governance(self):
-        tx1 = self._make_deploy_tx("test_builtin",
-                                   "0_0_3/governance",
-                                   self._admin,
-                                   GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx1])
+    def _update_0_0_3_governance(self):
+        tx = self._make_deploy_tx("test_builtin",
+                                  "0_0_3/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def test_builtin_score(self):
-        self.update_0_0_3_governance()
-
+    def _assert_get_score_status(self, target_addr: 'Address', expect_status: dict):
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
@@ -50,207 +52,212 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "getScoreStatus",
-                "params": {"address": str(GOVERNANCE_SCORE_ADDRESS)}
+                "params": {"address": str(target_addr)}
             }
         }
         response = self._query(query_request)
+        self.assertEqual(response, expect_status)
+
+    def _deploy_score(self, score_path: str, value: int, update_score_addr: 'Address' = None) -> Any:
+        address = ZERO_SCORE_ADDRESS
+        if update_score_addr:
+            address = update_score_addr
+
+        tx = self._make_deploy_tx("test_deploy_scores",
+                                  score_path,
+                                  self._addr_array[0],
+                                  address,
+                                  deploy_params={'value': hex(value * self._icx_factor)})
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
+    def _accept_score(self, tx_hash: Union[bytes, str]):
+        if isinstance(tx_hash, bytes):
+            tx_hash_str = f'0x{bytes.hex(tx_hash)}'
+        else:
+            tx_hash_str = tx_hash
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'acceptScore',
+                                      {"txHash": tx_hash_str})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
+    def _reject_score(self, tx_hash: Union[bytes, str], reason: str):
+        if isinstance(tx_hash, bytes):
+            tx_hash_str = f'0x{bytes.hex(tx_hash)}'
+        else:
+            tx_hash_str = tx_hash
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'rejectScore',
+                                      {"txHash": tx_hash_str,
+                                       "reason": reason})
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
+    def test_builtin_score(self):
         expect_ret = {
             'current': {
                 'status': 'active'}
         }
-        self.assertEqual(response, expect_ret)
+        with self.assertRaises(RevertException) as e:
+            self._assert_get_score_status(GOVERNANCE_SCORE_ADDRESS, expect_ret)
+        self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(e.exception.message, "SCORE not found")
+
+    def test_builtin_score_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
+
+        expect_ret = {
+            'current': {
+                'status': 'active'}
+        }
+        self._assert_get_score_status(GOVERNANCE_SCORE_ADDRESS, expect_ret)
 
     def test_normal_score(self):
-        value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        tx_hash1 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
         expect_ret = {
             'next': {
                 'status': 'pending',
                 'deployTxHash': tx_hash1}}
-        self.assertEqual(response, expect_ret)
 
-        tx2 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash1)}'})
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        prev_block, tx_results = self._make_and_req_block([tx2])
+        # 2. accpt SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
                 'deployTxHash': tx_hash1,
                 'auditTxHash': tx_hash2}}
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-    def test_normal_score_non_exist_deploy_tx(self):
-        value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
+    def test_normal_score_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        tx_hash1 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
         expect_ret = {
             'next': {
                 'status': 'pending',
                 'deployTxHash': tx_hash1}}
-        self.assertEqual(response, expect_ret)
 
-        tx2 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": ""})
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        prev_block, tx_results = self._make_and_req_block([tx2])
+        # 2. accpt SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
-
-    def test_normal_score_second_latest_pending_deploy_tx(self):
-        value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        tx_hash1 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
-        expect_ret = {
-            'next': {
-                'status': 'pending',
-                'deployTxHash': tx_hash1}}
-        self.assertEqual(response, expect_ret)
-
-        tx2 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash1)}'})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
                 'deployTxHash': tx_hash1,
                 'auditTxHash': tx_hash2}}
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        # update
-        value2 = 2 * self._icx_factor
-        tx3 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value2)})
+    # call acceptScore with non - existing deploy txHash
+    def test_normal_score_fail1(self):
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx3])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash3 = tx_results[0].tx_hash
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accpt SCORE : empty str
+        raise_exception_start_tag("Invalid txHash")
+        tx_result = self._accept_score("")
+        raise_exception_end_tag("Invalid txHash")
+        self.assertEqual(tx_result.status, int(False))
+
+    def test_normal_score_fail1_fix_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
+
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accpt SCORE : empty str
+        raise_exception_start_tag("Invalid txHash")
+        tx_result = self._accept_score("")
+        raise_exception_end_tag("Invalid txHash")
+        self.assertEqual(tx_result.status, int(False))
+
+    # call acceptScore with the second latest pending deploy txHash
+    def test_normal_score_fail2(self):
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. update (wait audit)
+        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
@@ -260,32 +267,14 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                 'status': 'pending',
                 'deployTxHash': tx_hash3}
         }
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        # overwrite
-        value3 = 3 * self._icx_factor
-        tx4 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value3)})
+        # 4. overwrite
+        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx4])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash4 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
@@ -295,208 +284,50 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                 'status': 'pending',
                 'deployTxHash': tx_hash4}
         }
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        # wrong pass! -> Bug!!
-        # tx5 = self._make_score_call_tx(self._admin,
-        #                                GOVERNANCE_SCORE_ADDRESS,
-        #                                'acceptScore',
-        #                                {"txHash": f'0x{bytes.hex(tx_hash1)}'})
-        # prev_block, tx_results = self._make_and_req_block([tx5])
-        # self._write_precommit_state(prev_block)
+        # 5. accept SCORE : tx_hash4
+        raise_exception_start_tag("Invalid update tx_hash")
+        tx_result = self._accept_score(tx_hash3)
+        raise_exception_end_tag("Invalid update tx_hash")
+        self.assertEqual(tx_result.status, int(False))
 
-        tx5 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash2)}'})
-        tx6 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash3)}'})
+    def test_normal_score_fail2_fix_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
 
-        raise_exception_start_tag("test_normal_score_second_latest_pending_deploy_tx")
-        prev_block, tx_results = self._make_and_req_block([tx5, tx6])
-        raise_exception_end_tag("test_normal_score_second_latest_pending_deploy_tx")
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[1].status, int(False))
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
 
-        tx7 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'rejectScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash4)}',
-                                        "reason": "hello"})
-
-        prev_block, tx_results = self._make_and_req_block([tx7])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash5 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
-        expect_ret = {
-            'current': {
-                'status': 'active',
-                'deployTxHash': tx_hash1,
-                'auditTxHash': tx_hash2},
-            'next': {
-                'status': 'rejected',
-                'deployTxHash': tx_hash4,
-                'auditTxHash': tx_hash5}
-        }
-        self.assertEqual(response, expect_ret)
-
-        tx8 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash4)}'})
-
-        prev_block, tx_results = self._make_and_req_block([tx8])
-        raise_exception_start_tag("Next is Rejected")
-        self._write_precommit_state(prev_block)
-        raise_exception_start_tag("Next is Rejected")
-        self.assertEqual(tx_results[0].status, int(False))
-
-    def test_normal_score_non_exist_deploy_tx_0_0_3_governance(self):
-        self.update_0_0_3_governance()
-
-        value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        tx_hash1 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
         expect_ret = {
             'next': {
                 'status': 'pending',
                 'deployTxHash': tx_hash1}}
-        self.assertEqual(response, expect_ret)
 
-        tx2 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": ""})
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        prev_block, tx_results = self._make_and_req_block([tx2])
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
 
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(False))
-
-    def test_normal_score_second_latest_pending_deploy_tx_0_0_3_governance(self):
-        self.update_0_0_3_governance()
-        value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS,
-                                   deploy_params={'value': hex(value1)})
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-        tx_hash1 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
-        expect_ret = {
-            'next': {
-                'status': 'pending',
-                'deployTxHash': tx_hash1}}
-        self.assertEqual(response, expect_ret)
-
-        tx2 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash1)}'})
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash2 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
                 'deployTxHash': tx_hash1,
                 'auditTxHash': tx_hash2}}
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        # update
-        value2 = 2 * self._icx_factor
-        tx3 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value2)})
+        # 3. update (wait audit)
+        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx3])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash3 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
@@ -506,32 +337,14 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                 'status': 'pending',
                 'deployTxHash': tx_hash3}
         }
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        # overwrite
-        value3 = 3 * self._icx_factor
-        tx4 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
-                                   self._addr_array[0],
-                                   score_addr1,
-                                   deploy_params={'value': hex(value3)})
+        # 4. overwrite
+        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
 
-        prev_block, tx_results = self._make_and_req_block([tx4])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash4 = tx_results[0].tx_hash
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
-        }
-        response = self._query(query_request)
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
@@ -541,55 +354,289 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                 'status': 'pending',
                 'deployTxHash': tx_hash4}
         }
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        # wrong pass! -> Bug Fix!!
-        tx5 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash1)}'})
-        prev_block, tx_results = self._make_and_req_block([tx5])
-        self._write_precommit_state(prev_block)
+        # 5. accept SCORE : tx_hash4
+        raise_exception_start_tag("Invalid update tx_hash")
+        tx_result = self._accept_score(tx_hash3)
+        raise_exception_end_tag("Invalid update tx_hash")
+        self.assertEqual(tx_result.status, int(False))
 
-        tx6 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash2)}'})
-        tx7 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash3)}'})
+    # call acceptScore with the deploy txHash of active SCORE
+    def test_normal_score_fail3(self):
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
 
-        raise_exception_start_tag("test_normal_score_second_latest_pending_deploy_tx")
-        prev_block, tx_results = self._make_and_req_block([tx5, tx6, tx7])
-        raise_exception_end_tag("test_normal_score_second_latest_pending_deploy_tx")
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[2].status, int(False))
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
 
-        tx8 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'rejectScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash4)}',
-                                        "reason": "hello"})
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        prev_block, tx_results = self._make_and_req_block([tx8])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        tx_hash5 = tx_results[0].tx_hash
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": GOVERNANCE_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getScoreStatus",
-                "params": {"address": str(score_addr1)}
-            }
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. duplicated accpt SCORE : tx_hash1
+        raise_exception_start_tag("Invalid status: no next status")
+        tx_result = self._accept_score(tx_hash1)
+        raise_exception_start_tag("Invalid status: no next status")
+        self.assertEqual(tx_result.status, int(False))
+
+    def test_normal_score_fail3_fix_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
+
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. duplicated accpt SCORE : tx_hash1
+        raise_exception_start_tag("Invalid status: no next status")
+        tx_result = self._accept_score(tx_hash1)
+        raise_exception_start_tag("Invalid status: no next status")
+        self.assertEqual(tx_result.status, int(False))
+
+    # call acceptScore with the deploy txHash of SCORE which was active
+    def test_normal_score_fail4(self):
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. update (wait audit)
+        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash3}
         }
-        response = self._query(query_request)
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 4. overwrite
+        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash4}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # wrong Pass! -> Bug!
+        # 5. accept SCORE : tx_hash1
+        raise_exception_start_tag("Invalid update tx_hash")
+        tx_result = self._accept_score(tx_hash1)
+        raise_exception_end_tag("Invalid update tx_hash")
+        self.assertEqual(tx_result.status, int(False))
+
+        # Error due to above effect
+        # 6. accept SCORE : tx_hash4
+        raise_exception_start_tag("wrong case")
+        tx_result = self._accept_score(tx_hash4)
+        raise_exception_end_tag("wrong case")
+        self.assertEqual(tx_result.status, int(False))
+
+    def test_normal_score_fail4_fix_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
+
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. update (wait audit)
+        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash3}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 4. overwrite
+        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash4}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # wrong Pass! -> Bug!
+        # 5. accept SCORE : tx_hash1
+        raise_exception_start_tag("Invalid update tx_hash")
+        tx_result = self._accept_score(tx_hash1)
+        raise_exception_end_tag("Invalid update tx_hash")
+        self.assertEqual(tx_result.status, int(False))
+
+        # Fix
+        # 6. accept SCORE : tx_hash4
+        tx_result = self._accept_score(tx_hash4)
+        self.assertEqual(tx_result.status, int(True))
+
+    # call acceptScore with the already rejected deploy txHash
+    def test_normal_score_fail5(self):
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accpt SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. update (wait audit)
+        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash3}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 4. reject SCORE : tx_hash3
+        tx_result = self._reject_score(tx_hash3, "hello!")
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
+
+        # assert SCORE status
         expect_ret = {
             'current': {
                 'status': 'active',
@@ -597,19 +644,87 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
                 'auditTxHash': tx_hash2},
             'next': {
                 'status': 'rejected',
-                'deployTxHash': tx_hash4,
-                'auditTxHash': tx_hash5}
+                'deployTxHash': tx_hash3,
+                'auditTxHash': tx_hash4}
         }
-        self.assertEqual(response, expect_ret)
+        self._assert_get_score_status(score_addr1, expect_ret)
 
-        tx9 = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'acceptScore',
-                                       {"txHash": f'0x{bytes.hex(tx_hash4)}'})
+        # 5. accpt SCORE : tx_hash3
+        raise_exception_start_tag("Invalid status: next is rejected")
+        tx_result = self._accept_score(tx_hash3)
+        self.assertEqual(tx_result.status, int(False))
+        raise_exception_end_tag("Invalid status: next is rejected")
 
-        prev_block, tx_results = self._make_and_req_block([tx9])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+    def test_normal_score_fail5_fix_update_0_0_3_governance(self):
+        self._update_0_0_3_governance()
+
+        # 1. deploy (wait audit)
+        tx_result = self._deploy_score("install/test_score", 1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        expect_ret = {
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash1}}
+
+        # assert SCORE status
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 2. accpt SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash2 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2}}
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 3. update (wait audit)
+        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'pending',
+                'deployTxHash': tx_hash3}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 4. reject SCORE : tx_hash3
+        tx_result = self._reject_score(tx_hash3, "hello!")
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
+
+        # assert SCORE status
+        expect_ret = {
+            'current': {
+                'status': 'active',
+                'deployTxHash': tx_hash1,
+                'auditTxHash': tx_hash2},
+            'next': {
+                'status': 'rejected',
+                'deployTxHash': tx_hash3,
+                'auditTxHash': tx_hash4}
+        }
+        self._assert_get_score_status(score_addr1, expect_ret)
+
+        # 5. accpt SCORE : tx_hash3
+        raise_exception_start_tag("Invalid status: next is rejected")
+        tx_result = self._accept_score(tx_hash3)
+        self.assertEqual(tx_result.status, int(False))
+        raise_exception_end_tag("Invalid status: next is rejected")
 
 
 if __name__ == '__main__':
