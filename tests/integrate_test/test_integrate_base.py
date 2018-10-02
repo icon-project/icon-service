@@ -105,6 +105,11 @@ class TestIntegrateBase(TestCase):
                         "name": "fee_treasury",
                         "address": self._fee_treasury,
                         "balance": 0
+                    },
+                    {
+                        "name": "_admin",
+                        "address": self._admin,
+                        "balance": 1_000_000 * self._icx_factor
                     }
                 ]
             },
