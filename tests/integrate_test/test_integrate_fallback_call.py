@@ -394,7 +394,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[1].failure.message, "fallback!!")
+        self.assertEqual(tx_results[1].failure.message, "This is not payable")
 
         query_request = {
             "address": score_addr1

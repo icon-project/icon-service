@@ -27,7 +27,6 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import IconScoreContextType, IconScoreFuncType, DEFAULT_BYTE_SIZE, IconServiceFlag
-from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper

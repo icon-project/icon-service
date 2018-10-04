@@ -1,8 +1,7 @@
 from iconservice import *
 
 
-class TestLinkScoreSend(IconScoreBase):
-    _SCORE_ADDR = 'score_addr'
+class TestScoreRevert(IconScoreBase):
 
     @eventlog(indexed=1)
     def Changed(self, value: int):
@@ -11,7 +10,6 @@ class TestLinkScoreSend(IconScoreBase):
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
         self._value = VarDB('value', db, value_type=int)
-        self._addr_score = VarDB(self._SCORE_ADDR, db, value_type=Address)
 
     def on_install(self, value: int=0) -> None:
         super().on_install()
@@ -20,13 +18,10 @@ class TestLinkScoreSend(IconScoreBase):
     def on_update(self) -> None:
         super().on_update()
 
-    @external(readonly=False)
-    def add_score_func(self, score_addr: Address) -> None:
-        self._addr_score.set(score_addr)
+    @external(readonly=True)
+    def get_value(self) -> int:
+        return self._value.get()
 
     @payable
     def fallback(self) -> None:
-        amount = self.msg.value
-        addr = self._addr_score.get()
-        if not self.icx.send(addr, amount):
-            self.revert('This is not payable')
+        self.revert("fallback!!")
