@@ -272,6 +272,7 @@ class IconServiceEngine(ContextContainer):
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
         """
+        self._icon_score_mapper.clear_garbage_score()
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         self._push_context(context)
         try:
