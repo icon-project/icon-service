@@ -20,9 +20,15 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import IconServiceFlag
-from tests import raise_exception_start_tag, raise_exception_end_tag
+from iconservice.base.exception import ExceptionCode
+from iconservice.icon_constant import ConfigKey, IconServiceFlag
+from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
 
 
 class TestIntegrateImportWhiteList(TestIntegrateBase):
@@ -43,6 +49,12 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
 
         return query_request
 
+    def _external_call(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
+        tx = self._make_score_call_tx(from_addr, score_addr, func_name, params)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
     def import_white_list_enable(self):
         tx1 = self._make_deploy_tx("test_builtin",
                                    "0_0_3/governance",
@@ -59,6 +71,46 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(True))
+
+    def test_governance_call_about_add_remove_import_white_list_no_owner(self):
+        self.import_white_list_enable()
+
+        tx_result = self._external_call(self._addr_array[0],
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addImportWhiteList',
+                                        {"import_stmt": "{ 'json': [] }"})
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, "Invalid sender: not owner")
+
+        tx_result = self._external_call(self._addr_array[0],
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeImportWhiteList',
+                                        {"import_stmt": "{ 'json': [] }"})
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, "Invalid sender: not owner")
+
+    def test_governance_call_about_add_remove_import_white_list_invalid_params(self):
+        self.import_white_list_enable()
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addImportWhiteList',
+                                        {"import_stmt": ""})
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message,
+                         "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeImportWhiteList',
+                                        {"import_stmt": ""})
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message,
+                         "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
 
     def test_score_import_white_list(self):
         self.import_white_list_enable()
