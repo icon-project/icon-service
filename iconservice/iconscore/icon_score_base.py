@@ -156,6 +156,10 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
     :return: an ordered list of arguments
     """
     arguments = []
+    if len(parameters) - 1 < len(args) + len(kwargs):
+        raise EventLogException(
+            f"exceed the maximum number of arguments which event log method({function_name}) can accept")
+
     for i, parameter in enumerate(parameters, -1):
         if i < 0:
             # pass the self parameter

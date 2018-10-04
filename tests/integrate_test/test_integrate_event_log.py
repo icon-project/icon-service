@@ -110,6 +110,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
         score_addr = tx_result.score_address
 
+        #todo: if event log define index, raise error 'index exceeds the number of params', this should be fixed
         # failure case: event log which self is not defined treat as invalid event log
         tx_results = self._call_score(score_addr, "call_event_log_self_is_not_defined", {})
         self.assertEqual(tx_results[0].status, int(False))
