@@ -33,7 +33,6 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.utils.bloom import BloomFilter
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -116,7 +115,6 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
         self._context.event_logs = Mock(spec=list)
-        self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
 
     @staticmethod

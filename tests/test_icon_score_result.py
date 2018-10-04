@@ -66,7 +66,6 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.block = Mock(spec=Block)
         self._mock_context.readonly = False
         self._mock_context.event_logs = []
-        self._mock_context.logs_bloom = BloomFilter()
         self._mock_context.traces = []
         self._mock_context.cumulative_step_used = Mock(spec=int)
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")

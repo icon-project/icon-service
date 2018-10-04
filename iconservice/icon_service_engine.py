@@ -38,6 +38,7 @@ from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, C
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
@@ -424,10 +425,10 @@ class IconServiceEngine(ContextContainer):
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
         context.event_logs: List['EventLog'] = []
-        context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter = self._step_counter_factory.create(step_limit)
         context.msg_stack.clear()
+        context.event_log_stack.clear()
 
         return self._call(context, method, params)
 
@@ -611,7 +612,6 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
             context.traces.append(trace)
             context.event_logs.clear()
-            context.logs_bloom.value = 0
         finally:
             # Revert func_type to IconScoreFuncType.WRITABLE
             # to avoid DatabaseException in self._charge_transaction_fee()
@@ -631,7 +631,7 @@ class IconServiceEngine(ContextContainer):
             tx_result.step_price = final_step_price
             tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
-            tx_result.logs_bloom = context.logs_bloom
+            tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
             tx_result.traces = context.traces
 
         return tx_result
@@ -815,6 +815,22 @@ class IconServiceEngine(ContextContainer):
             [e.code, e.message] if isinstance(e, IconServiceBaseException) else
             [ExceptionCode.SERVER_ERROR, str(e)]
         )
+
+    @staticmethod
+    def _generate_logs_bloom(event_logs: List['EventLog']) -> BloomFilter:
+        """
+        Generates the bloom data from the event logs
+        :param event_logs: The event logs
+        :return: Bloom data
+        """
+        logs_bloom = BloomFilter()
+
+        for event_log in event_logs:
+            for i, indexed_item in enumerate(event_log.indexed):
+                bloom_data = EventLogEmitter.get_bloom_data(i, indexed_item)
+                logs_bloom.add(bloom_data)
+
+        return logs_bloom
 
     def _handle_icx_get_score_api(self,
                                   context: 'IconScoreContext',

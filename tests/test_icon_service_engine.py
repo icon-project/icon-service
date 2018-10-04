@@ -41,7 +41,6 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
-from iconservice.utils.bloom import BloomFilter
 from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
     raise_exception_start_tag, raise_exception_end_tag
 
@@ -179,6 +178,7 @@ class TestIconServiceEngine(unittest.TestCase):
                                  nonce=params.get('nonce', None))
 
         context.block = Mock(spec=Block)
+        context.event_logs = []
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter: IconScoreStepCounter = self._engine. \
@@ -648,8 +648,7 @@ class TestIconServiceEngine(unittest.TestCase):
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter = Mock(spec=IconScoreStepCounter)
-        context.event_logs = Mock(spec=list)
-        context.logs_bloom = Mock(spec=BloomFilter)
+        context.event_logs = []
         context.traces = Mock(spec=list)
 
         raise_exception_start_tag("test_score_invoke_failure")

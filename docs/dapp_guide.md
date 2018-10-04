@@ -394,6 +394,11 @@ def func1(arg1: int, arg2: str) -> int:
     return 100
 ```
 
+Possible data types for function parameters are `int`, `str`, `bytes`, `bool`, `Address`.
+`List` and `Dict` type parameters are not supported yet.
+
+Returning types can be `int`, `str`, `bytes`, `bool`, `Address`, `List`, `Dict`.
+
 #### Exception handling
 When you handle exceptions in your contract, it is recommended to inherit `IconServiceBaseException`.
 

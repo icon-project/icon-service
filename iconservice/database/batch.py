@@ -18,9 +18,24 @@
 import hashlib
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional
+from collections.abc import MutableMapping
+
+from ..base.exception import ServerErrorException
 
 if TYPE_CHECKING:
     from ..base.block import Block
+
+
+def digest(ordered_dict: OrderedDict):
+    # items in data MUST be byte-like objects
+    data = []
+
+    for key, value in ordered_dict.items():
+        data.append(key)
+        if value is not None:
+            data.append(value)
+
+    return hashlib.sha3_256(b'|'.join(data)).digest()
 
 
 class Batch(OrderedDict):
@@ -42,17 +57,10 @@ class Batch(OrderedDict):
         :return: sha3_256 hash value
         """
         # items in data MUST be byte-like objects
-        data = []
-
-        for key, value in self.items():
-            data.append(key)
-            if value is not None:
-                data.append(value)
-
-        return hashlib.sha3_256(b'|'.join(data)).digest()
+        return digest(self)
 
 
-class TransactionBatch(Batch):
+class TransactionBatch(MutableMapping):
     """Contains the states changed by a transaction.
 
     key: Score Address
@@ -65,10 +73,68 @@ class TransactionBatch(Batch):
         """
         super().__init__()
         self.hash = tx_hash
+        self._call_batches = [OrderedDict()]
+
+    def __getitem__(self, item):
+        for call_batch in reversed(self._call_batches):
+            if item in call_batch:
+                return call_batch[item]
+
+        return None
+
+    def __setitem__(self, key, value):
+        call_batch: OrderedDict = self._call_batches[-1]
+        call_batch[key] = value
+
+    def __delitem__(self, key):
+        raise ServerErrorException('To delete item is not allowed')
+
+    def __contains__(self, item):
+        for call_batch in self._call_batches:
+            if item in call_batch:
+                return True
+
+        return False
+
+    def __iter__(self):
+        for call_batch in self._call_batches:
+            for key in call_batch:
+                yield key
+
+    def __len__(self):
+        length = 0
+
+        for call_batch in self._call_batches:
+            length += len(call_batch)
+
+        return length
+
+    def enter_call(self):
+        self._call_batches.append(OrderedDict())
+
+    def revert_call(self):
+        call_batch: OrderedDict = self._call_batches[-1]
+        call_batch.clear()
+
+    def leave_call(self):
+        call_batch: OrderedDict = self._call_batches.pop()
+
+        if call_batch:
+            self._call_batches[-1].update(call_batch)
+
+    def digest(self) -> bytes:
+        if len(self._call_batches) != 1:
+            raise ServerErrorException(f'Wrong call_batch count: {len(self._call_batches)}')
+
+        return digest(self._call_batches[0])
+
+    @property
+    def call_count(self) -> int:
+        return len(self._call_batches)
 
     def clear(self):
         self.hash = None
-        super().clear()
+        self._call_batches = [OrderedDict()]
 
 
 class BlockBatch(Batch):
