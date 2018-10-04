@@ -34,6 +34,10 @@ class SampleToken(IconScoreBase):
     def total_supply(self) -> int:
         return self.__total_supply.get()
 
+    @external
+    def mint(self):
+        self.__total_supply.set(self.__total_supply.get()+1)
+
     @external(readonly=True)
     def balance_of(self, addr_from: Address) -> int:
         return self.__balances[addr_from]
