@@ -152,20 +152,21 @@ class InternalCall(object):
 
         self.__context.msg = Message(sender=addr_from, value=amount)
         self.current_address = addr_to
-        icon_score = self.__context.get_icon_score(addr_to)
 
-        if func_name is None:
-            fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
-            fallback_func()
-            ret = True
-        else:
-            external_func = getattr(icon_score, '_IconScoreBase__external_call')
-            ret = external_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
-
-        self.current_address = addr_from
-        self.__context.msg = self.__context.msg_stack.pop()
-
-        return ret
+        try:
+            icon_score = self.__context.get_icon_score(addr_to)
+            if func_name is None:
+                fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
+                fallback_func()
+                return None
+            else:
+                external_func = getattr(icon_score, '_IconScoreBase__external_call')
+                return external_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
+        except BaseException as e:
+            raise e
+        finally:
+            self.current_address = addr_from
+            self.__context.msg = self.__context.msg_stack.pop()
 
     def emit_event_log_for_icx_transfer(self, from_: 'Address', to: 'Address', value: int):
         event_signature = ICX_TRANSFER_EVENT_LOG
