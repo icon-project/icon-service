@@ -44,6 +44,8 @@ if TYPE_CHECKING:
     from ..base.message import Message
     from ..base.block import Block
 
+MAX_INDEX = 3
+
 
 def interface(func):
     cls_name, func_name = str(func.__qualname__).split('.')
@@ -88,10 +90,13 @@ def eventlog(func=None, *, indexed=0):
         raise EventLogException(
             FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
-    parameters = signature(func).parameters.values()
-    if indexed > 3:
+    if not list(signature(func).parameters.keys())[0] == 'self':
+        raise EventLogException("define 'self' as the first parameter in the event log")
+    if indexed > MAX_INDEX:
         raise EventLogException("index can't exceed 3")
-    if len(parameters)-1 < indexed:
+
+    parameters = signature(func).parameters.values()
+    if len(parameters) -1 < indexed:
         raise EventLogException("index exceeds the number of parameters")
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:

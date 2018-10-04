@@ -10,10 +10,6 @@ class TestEventLogScore(IconScoreBase):
     def EventLogWithOutParams(self):
         pass
 
-    @eventlog
-    def EventLogWithOutSelf(value: str):
-        pass
-
     @eventlog(indexed=1)
     def EventLogHavingBody(self, value: str):
         self.set_value(value)
@@ -52,10 +48,6 @@ class TestEventLogScore(IconScoreBase):
     @external
     def call_event_log_params_are_not_defined(self):
         self.EventLogWithOutParams()
-
-    @external
-    def call_event_log_self_is_not_defined(self):
-        self.EventLogWithOutSelf("test1")
 
     @external
     def call_event_log_having_body(self):
