@@ -22,7 +22,7 @@ import unittest
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import RevertException, ExceptionCode
 from iconservice.icon_constant import ConfigKey
-from tests import raise_exception_start_tag, raise_exception_end_tag
+from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 from typing import TYPE_CHECKING, Any, Union
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from iconservice.base.address import Address
 
 
-class TestIntegrateDeployAuditAccept(TestIntegrateBase):
+class TestIntegrateDeployAudit(TestIntegrateBase):
     """
     audit on
     test governance deploy audit accept, reject
@@ -104,6 +104,179 @@ class TestIntegrateDeployAuditAccept(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         return tx_results[0]
+
+    def _external_call(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
+        tx = self._make_score_call_tx(from_addr, score_addr, func_name, params)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
+    def test_governance_call_about_add_auditor_already_auditor(self):
+        eoa_addr = create_address()
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(eoa_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(eoa_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+    def test_governance_call_about_add_auditor_already_auditor_update_governance(self):
+        self._update_0_0_3_governance()
+
+        eoa_addr = create_address()
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(eoa_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(eoa_addr)})
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, "Invalid address: already auditor")
+
+    def test_governance_call_about_add_remove_auditor_invalid_address(self):
+        self._update_0_0_3_governance()
+
+        raise_exception_start_tag("addAuditor")
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str("")})
+        raise_exception_end_tag("addAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.message, "Invalid address")
+
+        raise_exception_start_tag("removeAuditor")
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeAuditor',
+                                        {"address": str("")})
+        raise_exception_end_tag("removeAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.message, "Invalid address")
+
+    def test_governance_call_about_add_remove_auditor_score_addr(self):
+        # Wrong pass!
+        # have to deny into SCORE Address
+
+        score_addr = create_address(1)
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(score_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeAuditor',
+                                        {"address": str(score_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+    def test_governance_call_about_add_remove_auditor_score_addr_update_governance(self):
+        self._update_0_0_3_governance()
+
+        score_addr = create_address(1)
+
+        raise_exception_start_tag("addAuditor")
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(score_addr)})
+        raise_exception_end_tag("addAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid EOA Address: {str(score_addr)}")
+
+        raise_exception_start_tag("removeAuditor")
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeAuditor',
+                                        {"address": str(score_addr)})
+        raise_exception_end_tag("removeAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid EOA Address: {str(score_addr)}")
+
+    def test_governance_call_about_add_remove_auditor_not_owner(self):
+        eoa_addr = create_address()
+
+        raise_exception_start_tag("addAuditor")
+        tx_result = self._external_call(self._addr_array[0],
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(eoa_addr)})
+        raise_exception_end_tag("addAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid sender: not owner")
+
+        raise_exception_start_tag("removeAuditor")
+        tx_result = self._external_call(self._addr_array[0],
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeAuditor',
+                                        {"address": str(eoa_addr)})
+        raise_exception_end_tag("removeAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
+
+    def test_governance_call_about_add_remove_auditor_not_owner_update_governance(self):
+        self._update_0_0_3_governance()
+
+        eoa_addr = create_address()
+
+        raise_exception_start_tag("addAuditor")
+        tx_result = self._external_call(self._addr_array[0],
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(eoa_addr)})
+        raise_exception_end_tag("addAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid sender: not owner")
+
+        raise_exception_start_tag("removeAuditor")
+        tx_result = self._external_call(self._addr_array[0],
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeAuditor',
+                                        {"address": str(eoa_addr)})
+        raise_exception_end_tag("removeAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
+
+    def test_governance_call_about_remove_auditor_not_yourself(self):
+        self._update_0_0_3_governance()
+
+        eoa_addr = create_address()
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addAuditor',
+                                        {"address": str(self._addr_array[0])})
+        self.assertEqual(tx_result.status, int(True))
+
+        raise_exception_start_tag("removeAuditor")
+        tx_result = self._external_call(eoa_addr,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'removeAuditor',
+                                        {"address": str(self._addr_array[0])})
+        raise_exception_end_tag("removeAuditor")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, f"Invalid sender: not yourself")
 
     def test_builtin_score(self):
         expect_ret = {

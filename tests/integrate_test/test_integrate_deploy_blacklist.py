@@ -21,11 +21,10 @@ import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -56,6 +55,38 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         return tx_results[0]
+
+    def test_governance_call_about_add_blacklist_already_blacklist(self):
+        score_addr = create_address(1)
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addToScoreBlackList',
+                                        {"address": str(score_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addToScoreBlackList',
+                                        {"address": str(score_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+    def test_governance_call_about_add_blacklist_already_blacklist_update_governance(self):
+        self._update_0_0_3_governance()
+
+        score_addr = create_address(1)
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addToScoreBlackList',
+                                        {"address": str(score_addr)})
+        self.assertEqual(tx_result.status, int(True))
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addToScoreBlackList',
+                                        {"address": str(score_addr)})
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_result.failure.message, "Invalid address: already SCORE blacklist")
 
     def test_governance_call_about_blacklist_invalid_address(self):
         self._update_0_0_3_governance()

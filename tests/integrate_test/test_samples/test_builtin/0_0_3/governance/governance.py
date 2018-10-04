@@ -383,16 +383,22 @@ class Governance(IconSystemScoreBase):
 
     @external
     def addAuditor(self, address: Address):
+        if address.is_contract:
+            self.revert(f'Invalid EOA Address: {address}')
         # check message sender, only owner can add new auditor
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
         if address not in self._auditor_list:
             self._auditor_list.put(address)
+        else:
+            self.revert(f'Invalid address: already auditor')
         if DEBUG is True:
             self._print_auditor_list('addAuditor')
 
     @external
     def removeAuditor(self, address: Address):
+        if address.is_contract:
+            self.revert(f'Invalid EOA Address: {address}')
         if address not in self._auditor_list:
             self.revert('Invalid address: not in list')
         # check message sender
@@ -415,16 +421,22 @@ class Governance(IconSystemScoreBase):
 
     @external
     def addDeployer(self, address: Address):
+        if address.is_contract:
+            self.revert(f'Invalid EOA Address: {address}')
         # check message sender, only owner can add new deployer
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
         if address not in self._deployer_list:
             self._deployer_list.put(address)
+        else:
+            self.revert(f'Invalid address: already deployer')
         if DEBUG is True:
             self._print_deployer_list('addDeployer')
 
     @external
     def removeDeployer(self, address: Address):
+        if address.is_contract:
+            self.revert(f'Invalid EOA Address: {address}')
         if address not in self._deployer_list:
             self.revert('Invalid address: not in list')
         # check message sender
@@ -459,6 +471,8 @@ class Governance(IconSystemScoreBase):
             self.revert('Invalid sender: not owner')
         if address not in self._score_black_list:
             self._score_black_list.put(address)
+        else:
+            self.revert('Invalid address: already SCORE blacklist')
         if DEBUG is True:
             self._print_black_list('addScoreToBlackList')
 
