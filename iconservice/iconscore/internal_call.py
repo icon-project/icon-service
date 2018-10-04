@@ -21,7 +21,6 @@ from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
 from ..base.address import Address
-from ..base.exception import ServerErrorException
 from ..base.message import Message
 
 if TYPE_CHECKING:
@@ -38,17 +37,7 @@ class InternalCall(object):
     def get_icx_balance(self, address: 'Address') -> int:
         return self.icx_engine.get_balance(self.__context, address)
 
-    def icx_send_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
-        """transfer icx to the given 'addr_to'
-
-        :param addr_from: icx sender address
-        :param addr_to: icx receiver address
-        :param amount: icx amount
-        :return: True(success) False(failed)
-        """
-        return self._call(addr_from, addr_to, None, (), {}, amount, True)
-
-    def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> bool:
+    def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int):
         """transfer icx to the given 'addr_to'
         If failed, an exception will be raised
 
@@ -57,7 +46,7 @@ class InternalCall(object):
         :param amount: the amount of icx to transfer
         :return: True(success) False(failed)
         """
-        return self._call(addr_from, addr_to, None, (), {}, amount)
+        self._call(addr_from, addr_to, None, (), {}, amount)
 
     def other_external_call(self,
                             addr_from: 'Address',
@@ -74,8 +63,7 @@ class InternalCall(object):
               func_name: Optional[str],
               arg_params: tuple,
               kw_params: dict,
-              amount: int,
-              is_exc_handling: bool = False) -> Any:
+              amount: int) -> Any:
 
         self.__context.enter_call()
 
@@ -84,16 +72,15 @@ class InternalCall(object):
 
             self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
-            is_success_icx_transfer: bool = self._icx_transfer(addr_from, addr_to, amount, is_exc_handling)
+            self.icx_engine.transfer(self.__context, addr_from, addr_to, amount)
 
-            ret = is_success_icx_transfer
-            if is_success_icx_transfer:
-                if amount > 0:
-                    self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
-                if addr_to.is_contract:
-                    ret = self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+            if amount > 0:
+                self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
 
-            return ret
+            if addr_to.is_contract:
+                return self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+
+            return None
         except BaseException as e:
             self.__context.revert_call()
             raise e
@@ -121,21 +108,13 @@ class InternalCall(object):
         trace = Trace(_from, TraceType.CALL, [_to, func_name, arg_data, amount])
         self.__context.traces.append(trace)
 
-    def _icx_transfer(self, addr_from: 'Address', addr_to: 'Address', icx_value: int, is_exc_handling: bool) -> bool:
-        try:
-            return self.icx_engine.transfer(self.__context, addr_from, addr_to, icx_value)
-        except BaseException as e:
-            if not is_exc_handling:
-                raise e
-        return False
-
     def _other_score_call(self,
                           addr_from: Address,
                           addr_to: 'Address',
                           func_name: Optional[str],
                           arg_params: tuple,
                           kw_params: dict,
-                          amount: int) -> object:
+                          amount: int) -> Any:
         """Call the functions provided by other icon scores.
 
         :param addr_from:
