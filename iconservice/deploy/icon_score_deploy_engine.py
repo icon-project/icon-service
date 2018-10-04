@@ -15,7 +15,6 @@
 
 from os import path, symlink, makedirs
 
-import operator
 from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
@@ -101,7 +100,7 @@ class IconScoreDeployEngine(object):
             raise e
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
-        if context.compare_current_revision_to_target_revision(3, operator.ge):
+        if context.get_revision() >= 3:
             is_system_score = is_builtin_score(str(icon_score_address))
         else:
             is_system_score = False
