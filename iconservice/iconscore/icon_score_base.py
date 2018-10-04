@@ -525,7 +525,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
-        if score_address:
+        if not score_address:
             score_address = self.address
         return self._context.get_owner(self._context, score_address)
 
