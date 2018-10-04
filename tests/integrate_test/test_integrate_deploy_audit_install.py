@@ -43,6 +43,8 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
+        tx_hash1 = tx_results[0].tx_hash
+        self._accept_score(tx_hash1)
 
     def _assert_get_score_status(self, target_addr: 'Address', expect_status: dict):
         query_request = {

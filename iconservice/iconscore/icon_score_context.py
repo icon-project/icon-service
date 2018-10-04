@@ -255,6 +255,18 @@ class IconScoreContext(object):
             pass
         return service_config
 
+    def compare_current_revision_to_target_revision(self, target_revision: int, oper: callable) -> bool:
+        try:
+            governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            if governance_score is not None:
+                if hasattr(governance_score, 'revision'):
+                    current_revision = governance_score.revision
+                    return oper(current_revision, target_revision)
+        except:
+            pass
+
+        return False
+
     def get_tx_hashes_by_score_address(self,
                                        context: 'IconScoreContext',
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
