@@ -28,9 +28,6 @@ class TestScore(IconScoreBase):
 
     @external
     def set_value(self, value: int):
+        eval('import os')
         self._value.set(value)
         self.Changed(value)
-
-
-def import_os_using_exec():
-    exec("import os")

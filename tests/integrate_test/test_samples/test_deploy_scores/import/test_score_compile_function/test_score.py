@@ -32,5 +32,5 @@ class TestScore(IconScoreBase):
         self.Changed(value)
 
 
-def import_os_using_exec():
-    exec("import os")
+def import_os_using_compile():
+    compile("import os", "<string>", "single")
