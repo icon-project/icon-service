@@ -30,7 +30,7 @@ LOAD_BUILD_CLASS = 71
 CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
 
-BLACKLIST_RESERVED_KEYWORD = ['exec']
+BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
 
 
 class ScorePackageValidator(object):
