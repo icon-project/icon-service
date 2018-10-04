@@ -156,12 +156,15 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(len(event_log.indexed), 1)
 
         # failure case: setting index more than 4(should raise an error)
-        tx_results = self._call_score(score_addr, "call_event_log_index_exceed_limit", {})
-        self.assertEqual(tx_results[0].status, int(False))
+        tx_result = self._deploy_score("test_exceed_max_index_event_log_score")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.message, "index can't exceed 3")
 
         # failure case: setting index more than event log's parameter total count(should raise an error)
-        tx_results = self._call_score(score_addr, "call_event_log_index_exceed_params_number", {})
-        self.assertEqual(tx_results[0].status, int(False))
+        tx_result = self._deploy_score("test_index_exceed_params_event_log_score")
+        self.assertEqual(tx_result.status, int(False))
+        self.assertEqual(tx_result.failure.message, "index exceeds the number of parameters")
+
 
     def test_event_log_index_on_execute(self):
         pass

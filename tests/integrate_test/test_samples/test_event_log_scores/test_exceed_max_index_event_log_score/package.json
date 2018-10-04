@@ -1,0 +1,5 @@
+{
+    "version": "0.0.2",
+    "main_file": "test_invalid_index_event_log_score",
+    "main_score": "TestInvalidIndexEventLogScore"
+}

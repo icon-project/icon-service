@@ -88,6 +88,12 @@ def eventlog(func=None, *, indexed=0):
         raise EventLogException(
             FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
+    parameters = signature(func).parameters.values()
+    if indexed > 3:
+        raise EventLogException("index can't exceed 3")
+    if len(parameters)-1 < indexed:
+        raise EventLogException("index exceeds the number of parameters")
+
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
         raise IconScoreException(
             FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
@@ -96,7 +102,6 @@ def eventlog(func=None, *, indexed=0):
     setattr(func, CONST_BIT_FLAG, bit_flag)
     setattr(func, CONST_INDEXED_ARGS_COUNT, indexed)
 
-    parameters = signature(func).parameters.values()
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)

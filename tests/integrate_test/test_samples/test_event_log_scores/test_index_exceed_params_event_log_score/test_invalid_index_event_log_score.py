@@ -1,9 +1,9 @@
 from iconservice import *
 
 
-class TestInvalidEventLogScore(IconScoreBase):
-    @eventlog
-    def EventLogInvalidParamsType(self, value):
+class TestInvalidIndexEventLogScore(IconScoreBase):
+    @eventlog(indexed=2)
+    def EventLogIndexExceedParams(self, value: str):
         pass
 
     def __init__(self, db: IconScoreDatabase) -> None:
@@ -26,10 +26,5 @@ class TestInvalidEventLogScore(IconScoreBase):
         self._value.set(value)
 
     @external
-    def call_event_log_having_body(self):
-        self.EventLogHavingBody("call event log having body")
-
-    @external
-    def call_event_log_when_error(self):
-        self._value.set("set data before event log raise error")
-        self.EventLogIndexExceedParams("raise event error")
+    def call_event_log_index_exceed_params_number(self):
+        self.EventLogIndexExceedParams("index exceed param's number")

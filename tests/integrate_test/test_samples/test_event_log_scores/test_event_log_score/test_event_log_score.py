@@ -18,14 +18,6 @@ class TestEventLogScore(IconScoreBase):
     def EventLogHavingBody(self, value: str):
         self.set_value(value)
 
-    @eventlog(indexed=2)
-    def EventLogIndexExceedParams(self, value: str):
-        pass
-
-    @eventlog(indexed=4)
-    def EventLogIndexExceedLimit(self, value1: str, value2: str, value3: str, value4: str):
-        pass
-
     @eventlog
     def EventLogForCheckingParamsType(self, integer: int, string: str, boolean: bool, bytes: bytes, address: Address):
         pass
@@ -72,15 +64,8 @@ class TestEventLogScore(IconScoreBase):
     @external
     def call_event_log_raising_error(self):
         self._value.set("set data before event log raise error")
-        self.EventLogIndexExceedParams("raise event error")
-
-    @external
-    def call_event_log_index_exceed_params_number(self):
-        self.EventLogIndexExceedParams("index exceed param's number")
-
-    @external
-    def call_event_log_index_exceed_limit(self):
-        self.EventLogIndexExceedLimit("1", "2", "3", "4")
+        # raise error as input less params
+        self.NormalEventLog("1", "2")
 
     @external
     def call_event_log_index_under_zero(self):
