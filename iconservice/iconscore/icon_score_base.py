@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from ..base.message import Message
     from ..base.block import Block
 
-MAX_INDEX = 3
+INDEXED_ARGS_LIMIT = 3
 
 
 def interface(func):
@@ -92,8 +92,9 @@ def eventlog(func=None, *, indexed=0):
 
     if not list(signature(func).parameters.keys())[0] == 'self':
         raise EventLogException("define 'self' as the first parameter in the event log")
-    if indexed > MAX_INDEX:
-        raise EventLogException("index can't exceed 3")
+    if indexed > INDEXED_ARGS_LIMIT:
+        raise EventLogException(
+            f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
 
     parameters = signature(func).parameters.values()
     if len(parameters) -1 < indexed:

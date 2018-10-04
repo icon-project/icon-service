@@ -27,9 +27,6 @@ if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
 
 
-INDEXED_ARGS_LIMIT = 3
-
-
 class EventLog(object):
     """ A DataClass of a event log.
     """
@@ -90,10 +87,6 @@ class EventLogEmitter(object):
         if context.readonly:
             raise EventLogException(
                 'The event log can not be recorded on readonly context')
-
-        if indexed_args_count > INDEXED_ARGS_LIMIT:
-            raise EventLogException(
-                f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
 
         if indexed_args_count > len(arguments):
             raise EventLogException(

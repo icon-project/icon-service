@@ -155,7 +155,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         # failure case: setting index more than 4(should raise an error)
         tx_result = self._deploy_score("test_exceed_max_index_event_log_score")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.message, "index can't exceed 3")
+        self.assertEqual(tx_result.failure.message, "indexed arguments are overflow: limit=3")
 
         # failure case: setting index more than event log's parameter total count(should raise an error)
         tx_result = self._deploy_score("test_index_exceed_params_event_log_score")
