@@ -18,17 +18,13 @@
 """
 
 import unittest
+from typing import Any
 
-from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import RevertException, ExceptionCode
+from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, Address, AddressPrefix
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IconServiceFlag
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any, Union
-
-if TYPE_CHECKING:
-    from iconservice.base.address import Address
 
 
 class TestIntegrateServiceConfiguration(TestIntegrateBase):
@@ -50,9 +46,9 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
             'serviceFlag': service_flag
         }
         tx = self._make_score_call_tx(self._admin,
-                                       GOVERNANCE_SCORE_ADDRESS,
-                                       'updateServiceConfig',
-                                       params=params)
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'updateServiceConfig',
+                                      params=params)
 
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
@@ -77,6 +73,25 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
 
         response = self._query(query_request)
         self.assertEqual(response, expect_ret)
+
+    def test_invalid_owner(self):
+        params = {
+            'serviceFlag': hex(IconServiceFlag.audit)
+        }
+        tx = self._make_score_call_tx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 2),
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'updateServiceConfig',
+                                      params=params)
+
+        raise_exception_start_tag("test_invalid_owner")
+        prev_block, tx_results = self._make_and_req_block([tx])
+        raise_exception_end_tag("test_invalid_owner")
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, f'Invalid sender: not owner')
 
     def test_set_service_configuration(self):
         max_flag = 0
