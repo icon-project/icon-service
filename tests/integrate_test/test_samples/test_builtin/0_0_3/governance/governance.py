@@ -828,5 +828,5 @@ class Governance(IconSystemScoreBase):
 
     @external(readonly=True)
     def getRevision(self) -> dict:
-        return {REVISION_CODE: self._revision_debug.get(), REVISION_DEBUG: self._revision_debug}
+        return {REVISION_CODE: self._revision_code.get(), REVISION_DEBUG: self._revision_debug.get()}
 
