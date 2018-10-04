@@ -37,14 +37,13 @@ class InternalCall(object):
     def get_icx_balance(self, address: 'Address') -> int:
         return self.icx_engine.get_balance(self.__context, address)
 
-    def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int):
+    def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> None:
         """transfer icx to the given 'addr_to'
         If failed, an exception will be raised
 
         :param addr_from: icx sender address
         :param addr_to: icx receiver address
         :param amount: the amount of icx to transfer
-        :return: True(success) False(failed)
         """
         self._call(addr_from, addr_to, None, (), {}, amount)
 
@@ -149,7 +148,6 @@ class InternalCall(object):
 
     def emit_event_log_for_icx_transfer(self, from_: 'Address', to: 'Address', value: int):
         event_signature = ICX_TRANSFER_EVENT_LOG
-        print(from_, to, value)
         arguments = [from_, to, value]
         indexed_args_count = 3
         EventLogEmitter.emit_event_log(

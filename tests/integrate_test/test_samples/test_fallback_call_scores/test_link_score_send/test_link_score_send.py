@@ -28,4 +28,5 @@ class TestLinkScoreSend(IconScoreBase):
     def fallback(self) -> None:
         amount = self.msg.value
         addr = self._addr_score.get()
-        self.icx.transfer(addr, amount)
+        if not self.icx.send(addr, amount):
+            self.revert('This is not payable')

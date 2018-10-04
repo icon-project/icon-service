@@ -30,13 +30,12 @@ class Icx(object):
         self._context = context
         self._address = address
 
-    def transfer(self, addr_to: 'Address', amount: int):
+    def transfer(self, addr_to: 'Address', amount: int) -> None:
         """transfer the amount of icx to the given 'addr_to'
         If failed, an exception will be raised
 
         :param addr_to: receiver address
         :param amount: the amount of icx to transfer
-        :return: True(success)
         """
         self._context.internal_call.icx_transfer_call(self._address, addr_to, amount)
 
