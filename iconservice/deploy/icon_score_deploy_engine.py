@@ -27,7 +27,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
@@ -100,7 +100,7 @@ class IconScoreDeployEngine(object):
             raise e
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
-        if context.get_revision() >= 3:
+        if context.get_revision() >= REVISION_2:
             is_system_score = is_builtin_score(str(icon_score_address))
         else:
             is_system_score = False

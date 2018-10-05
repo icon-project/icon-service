@@ -189,6 +189,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
             self.storage._put_deploy_info = Mock()
             self.storage._db.delete = Mock()
             context = Mock(spec=IconScoreContext)
+            context.get_revision = Mock(return_value=0)
             score_address = create_address(1)
             deploy_type = DeployType.INSTALL
             owner = create_address()
