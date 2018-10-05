@@ -124,6 +124,15 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(event_log.indexed[2], "default2")
         self.assertEqual(event_log.data[0], "default3")
 
+        # success case: input empty string("") and empty bytes(b'') as event log's parameter
+        tx_results = self._call_score(score_addr,
+                                      "call_event_log_input_empty_bytes_and_string_data",
+                                      {})
+        self.assertEqual(tx_results[0].status, int(True))
+        event_log = tx_results[0].event_logs[0]
+        self.assertEqual(event_log.data[0], "")
+        self.assertEqual(event_log.data[1], b'')
+
     def test_call_event_log_in_read_only_method(self):
         # failure case: if call event log on read_only method, should raise error
         tx_result = self._deploy_score("test_event_log_score")
@@ -225,7 +234,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
         # failure case: input non-matching type parameter to event log(raise error)
-        type_list = ["integer", "string", "boolean", "bytes", "address"]
+        type_list = ["integer", "string", "boolean", "bytes", "address", "none"]
 
         # case1: defined parameter=integer
         for params_type in type_list:
@@ -265,6 +274,14 @@ class TestIntegrateEventLog(TestIntegrateBase):
                 continue
             tx_params =  {"test_type": "address", "input_params_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
+            self.assertEqual(tx_results[0].status, int(False))
+
+        # failure case: event_log's parameters default is none(should be error)
+        type_list = ["integer", "string", "boolean", "bytes", "address"]
+
+        for params_type in type_list:
+            tx_params = {"test_type": params_type}
+            tx_results = self._call_score(score_addr, "call_event_log_default_is_none", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
     def test_event_log_internal_call(self):

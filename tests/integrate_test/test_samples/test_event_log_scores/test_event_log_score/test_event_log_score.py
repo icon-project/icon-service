@@ -11,6 +11,14 @@ class TestEventLogScore(IconScoreBase):
         pass
 
     @eventlog
+    def EventLogTestingBytesString(self, string: str, bytes: bytes):
+        pass
+
+    @eventlog
+    def EventLogWithNoneDefault(self, integer: int=None, string: str=None, boolean: bool=None, address: Address=None, bytes: bytes=None):
+        pass
+
+    @eventlog
     def EventLogWithOutParams(self):
         pass
 
@@ -63,6 +71,24 @@ class TestEventLogScore(IconScoreBase):
         self.NormalEventLogWithDefault(value1)
 
     @external
+    def call_event_log_default_is_none(self, test_type: str):
+        integer = 0x00
+        string = "test"
+        boolean = True
+        bytes = b'0'
+        address = Address.from_string("cx0000000000000000000000000000000000000000")
+        if (test_type == "integer"):
+            self.EventLogWithNoneDefault(string=string, boolean=boolean, bytes=bytes, address=address)
+        elif (test_type == "string"):
+            self.EventLogWithNoneDefault(integer=integer, boolean=boolean, bytes=bytes, address=address)
+        elif (test_type == "boolean"):
+            self.EventLogWithNoneDefault(integer=integer, string=string, bytes=bytes, address=address)
+        elif (test_type == "bytes"):
+            self.EventLogWithNoneDefault(integer=integer, string=string, boolean=boolean, address=address)
+        elif (test_type == "address"):
+            self.EventLogWithNoneDefault(integer=integer, string=string, boolean=boolean, bytes=bytes)
+
+    @external
     def call_event_log_params_are_not_defined(self):
         self.EventLogWithOutParams()
 
@@ -93,12 +119,17 @@ class TestEventLogScore(IconScoreBase):
         self.NormalEventLog("1", "2", "3", "4", "5")
 
     @external
-    def call_event_log_for_checking_params_type(self, test_type:str, input_params_type:str):
+    def call_event_log_input_empty_bytes_and_string_data(self):
+        self.EventLogTestingBytesString(string="", bytes=b'')
+
+    @external
+    def call_event_log_for_checking_params_type(self, test_type: str, input_params_type: str):
         integer = 0x00
         string = ""
         boolean= True
         bytes = b'0'
         address = Address.from_string("cx0000000000000000000000000000000000000000")
+        none = None
 
         if(test_type == "integer"):
             integer = locals()[input_params_type]
