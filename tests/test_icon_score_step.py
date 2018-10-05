@@ -73,7 +73,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         ])
 
         # for StepType.CONTRACT_CREATE
-        result = self._inner_task._invoke(request1)
+        result = self._inner_task_invoke(request1)
         self.assertEqual(result['txResults'][tx_hash1]['status'], '0x1')
 
         # for StepType.CONTRACT_UPDATE
@@ -84,7 +84,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ReqData(tx_hash2, from_, to_, 'deploy', data),
         ])
 
-        result = self._inner_task._invoke(request2)
+        result = self._inner_task_invoke(request2)
         self.assertEqual(result['txResults'][tx_hash2]['status'], '0x1')
 
         deploy_engine_invoke.assert_called()
@@ -127,7 +127,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ReqData(tx_hash, from_, to_, "", ""),
         ])
 
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
         self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
@@ -163,7 +163,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _icon_score_engine.invoke = score_engine_invoke
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         score_engine_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -203,10 +203,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         # for StepType.SET
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
         # for StepType.REPLACE
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
         score_engine_invoke.assert_called()
 
@@ -258,7 +258,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _icon_score_engine.invoke = score_engine_invoke
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         score_engine_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -340,7 +340,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _icon_score_engine.invoke = score_engine_invoke
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         score_engine_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -393,7 +393,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         score_engine_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -437,7 +437,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _icon_score_engine.invoke = score_engine_invoke
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         score_engine_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -478,7 +478,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _icon_score_engine.invoke = score_engine_invoke
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         score_engine_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -545,7 +545,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         factory.create = Mock(return_value=self.step_counter)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
-        result = self._inner_task._invoke(request)
+        result = self._inner_task_invoke(request)
         self.assertTrue(result['txResults'][tx_hash]['failure']['message'].startswith("Out of step"))
 
     def test_set_step_costs(self):
@@ -642,11 +642,16 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.step_counter = IconScoreStepCounter(self.step_cost_dict, 5000000, 0)
         factory = self._inner_task._icon_service_engine._step_counter_factory
         factory.create = Mock(return_value=self.step_counter)
-        results = self._inner_task._invoke(request)
+
+        results = self._inner_task_invoke(request)
         result = results['txResults'][tx_hash]
         self.assertEqual(result['status'], '0x1')
         self.assertEqual(result['stepUsed'], hex(step_used))
 
+    def _inner_task_invoke(self, request) -> dict:
+        # Clear cached precommit data before calling inner_task._invoke
+        self._inner_task._icon_service_engine._precommit_data_manager.clear()
+        return self._inner_task._invoke(request)
 
 # noinspection PyPep8Naming
 class SampleScore(IconScoreBase):
