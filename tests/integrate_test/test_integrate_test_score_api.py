@@ -18,12 +18,12 @@
 import unittest
 import hashlib
 import json
-from iconservice.base.exception import RevertException
+from iconservice.base.exception import RevertException, ServerErrorException
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 from tests import create_tx_hash, create_address
-from tests.integrate_test.test_samples.test_score_api.test_score_base.test_score_base import TestScoreBaseInterface
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -140,71 +140,105 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
 
     def test_revert(self):
         """Checks if the method `revert` raises RevertException successfully."""
-        # When readonly is True
+        # Successful case - readonly
         self.assertRaises(RevertException, self._get_value, self._addr_array[0], self.score_addr1, "test_revert_readonly")
 
-        # When readonly is False
+        # not readonly
         failure = self._set_value_fail(self._addr_array[0], self.score_addr1, "test_revert", {"value": hex(10**18)})
         self.assertEqual(failure.code, 32100)
         self.assertEqual(failure.message, "revert message!!")
 
     def test_sha3_256(self):
         """Checks if the method `sha3_256` returns digest successfully."""
-        # Successful case
+        # Successful case - readonly
         data = b'1234'
         value3 = hashlib.sha3_256(data).digest()
         data = f'0x{bytes.hex(data)}'
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_sha3_256", {'data': data}, value3)
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_sha3_256_readonly", {'data': data}, value3)
+
+        # Successful case - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_sha3_256", {'data': data})
 
     def test_json_dumps(self):
         """Checks if the method `json_dumps` returns a string of json.dumps data successfully."""
-        # Successful case.
+        # Successful case - readonly
         data = {"key1": 1, "key2": 2, "key3": "value3"}
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_dumps", {}, json.dumps(data))
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_dumps_readonly", {}, json.dumps(data))
 
-        # Successful case with none.
+        # Successful case - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_json_dumps", {})
+
+        # Successful case with none
         data = {"key1": None, "key2": 2, "key3": "value3"}
         self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_dumps_none", {}, json.dumps(data))
 
     def test_json_loads(self):
         """Checks if the method `json_dumps` returns a dictionary of json.load data successfully."""
+        # Successful case - readonly
         data = {"key1": 1, "key2": 2, "key3": "value3"}
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_loads", {}, data)
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_loads_readonly", {}, data)
+
+        # Successful case - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_json_loads", {})
 
     def test_is_score_active(self):
         """Checks if the method `is_score_active` returns a bool rightly."""
-        # When address is active.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_is_score_active",
-                              {'address': str(self.score_addr1)}, True)
+        # Successful case 1 - readonly : When address is active
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_is_score_active_readonly",
+                               {'address': str(self.score_addr1)}, True)
 
-        # When address is inactive.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_is_score_active",
+        # Successful case 2 - readonly : When address is inactive
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_is_score_active_readonly",
                                {'address': "cx"+"b"*40}, False)
+
+        # Successful case - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_is_score_active",
+                        {'address': str(self.score_addr1)})
 
     def test_get_owner(self):
         """Checks if the method `get_owner` returns the SCORE owner's address."""
-        # Successful case.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner",
+        # Successful case 1 - readonly
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner_readonly",
                                {'address': str(self.score_addr1)}, self._addr_array[0])
 
-        # When the SCORE does not exist, returns None.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner",
-                                   {'address': "cx"+"b"*40}, None)
+        # Successful case 2 - readonly : When the SCORE does not exist, returns None.
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner_readonly",
+                               {'address': "cx"+"b"*40}, None)
 
-        # When the address is EOS address not SCORE address.
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner",
-                                   {'address': str(create_address())}, None)
+        # Successful case 3 - readonly : When the address is EOS address not SCORE address.
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_get_owner_readonly",
+                               {'address': str(create_address())}, None)
+
+        # Successful case - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_get_owner",
+                        {'address': str(self.score_addr1)})
 
     def test_create_interface_score(self):
         """Checks if the method `create_interface_score` create the interface score and returns it."""
-        return_value = self._get_value(self._addr_array[0], self.score_addr1, "test_create_interface_score",
-                               {'address': str(self.score_addr1)})
-        self.assertTrue(type(type(return_value)) is type(TestScoreBaseInterface))
+        # Successful case - readonly
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_create_interface_score_readonly",
+                               {'address': str(self.score_addr1)}, True)
+
+        # Successful case 1 - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_create_interface_score",
+                        {'address': str(self.score_addr1)})
+
+        # Successful case 2 - not readonly
+        # If the SCORE does not exist, it can pass the test.
+        # Creating an interface SCORE means mapping the interface with the SCORE.
+        self._set_value(self._addr_array[0], self.score_addr1, "test_create_interface_score",
+                        {'address': "cx"+"b"*40})
 
     def test_deploy(self):
         """Checks if deploys unsuccessfully with the wrong tx_hash."""
         tx_hash = create_tx_hash()
         tx_hash = f'0x{bytes.hex(tx_hash)}'
+
+        # Failure case - readonly
+        self.assertRaises(ServerErrorException, self._get_value, self._addr_array[0], self.score_addr1,
+                          "test_deploy_readonly", {'tx_hash': tx_hash})
+
+        # Failure case - not readonly
         failure = self._set_value_fail(self._addr_array[0], self.score_addr1, "test_deploy",
                                        {'tx_hash': tx_hash})
         self.assertEqual(failure.code, 32000)
@@ -212,34 +246,57 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
 
     def test_get_tx_hashes_by_score_address(self):
         """Checks if gets tx_hashes by score address successfully."""
-        # When the right SCORE address.
-        return_value = self._get_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
+        # Successful case 1 - readonly : When the right SCORE address.
+        return_value = self._get_value(self._addr_array[0], self.score_addr1,
+                                       "test_get_tx_hashes_by_score_address_readonly",
                                        {'address': str(self.score_addr1)})
         self.assertEqual(return_value[0], self.tx_result.tx_hash)
 
-        # When the wrong SCORE address.
-        return_value = self._get_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
+        # Successful case 2 - readonly : When the wrong SCORE address.
+        return_value = self._get_value(self._addr_array[0], self.score_addr1,
+                                       "test_get_tx_hashes_by_score_address_readonly",
                                        {'address': "cx"+"0"*40})
         self.assertEqual(return_value, (None, None))
 
-        # When the wrong EOS address.
-        return_value = self._get_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
+        # Successful case 3 - readonly : When the wrong EOS address.
+        return_value = self._get_value(self._addr_array[0], self.score_addr1,
+                                       "test_get_tx_hashes_by_score_address_readonly",
                                        {'address': str(create_address())})
         self.assertEqual(return_value, (None, None))
 
+        # Successful case 1 - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
+                        {'address': str(self.score_addr1)})
+
+        # Successful case 2 - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",
+                        {'address': "cx" + "b" * 40})
+
     def test_get_score_address_by_tx_hash(self):
         """Checks if gets score addresses by tx hash successfully."""
-        # Successful case.
-        tx_hash = f'0x{bytes.hex(self.tx_result.tx_hash)}'
-        score_address = self._get_value(self._addr_array[0], self.score_addr1, "test_get_score_address_by_tx_hash",
-                                       {'tx_hash': tx_hash})
+        # Successful case 1 - readonly
+        tx_hash_right = f'0x{bytes.hex(self.tx_result.tx_hash)}'
+        score_address = self._get_value(self._addr_array[0], self.score_addr1,
+                                        "test_get_score_address_by_tx_hash_readonly",
+                                        {'tx_hash': tx_hash_right})
         self.assertEqual(score_address, self.score_addr1)
 
-        # When the wrong tx_hash.
-        tx_hash = f'0x{bytes.hex(create_tx_hash())}'
-        score_address = self._get_value(self._addr_array[0], self.score_addr1, "test_get_score_address_by_tx_hash",
-                                        {'tx_hash': tx_hash})
+        # Successful case 2 - readonly : When the wrong tx_hash.
+        tx_hash_wrong = f'0x{bytes.hex(create_tx_hash())}'
+        score_address = self._get_value(self._addr_array[0], self.score_addr1,
+                                        "test_get_score_address_by_tx_hash_readonly",
+                                        {'tx_hash': tx_hash_wrong})
         self.assertEqual(score_address, None)
+
+        # Successful case 1 - not readonly
+        self._set_value(self._addr_array[0], self.score_addr1,
+                        "test_get_score_address_by_tx_hash",
+                        {'tx_hash': tx_hash_right})
+
+        # Successful case 2 - not readonly : When the wrong tx_hash.
+        self._set_value(self._addr_array[0], self.score_addr1,
+                        "test_get_score_address_by_tx_hash",
+                        {'tx_hash': tx_hash_wrong})
 
 
 if __name__ == '__main__':
