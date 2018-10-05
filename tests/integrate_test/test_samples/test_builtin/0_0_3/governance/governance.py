@@ -539,7 +539,7 @@ class Governance(IconSystemScoreBase):
 
     def _set_initial_max_step_limits(self):
         self._max_step_limits[CONTEXT_TYPE_INVOKE] = 2_500_000_000
-        self._max_step_limits[CONTEXT_TYPE_QUERY] = 2_500_000
+        self._max_step_limits[CONTEXT_TYPE_QUERY] = 50_000_000
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:

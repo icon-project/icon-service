@@ -567,6 +567,7 @@ class IconServiceEngine(ContextContainer):
         data_type = params.get('dataType', None)
         data = params.get('data', None)
 
+        context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
         return self._icon_score_engine.query(context,
                                              icon_score_address,
                                              data_type,

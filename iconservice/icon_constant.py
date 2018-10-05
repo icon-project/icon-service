@@ -33,6 +33,12 @@ FIXED_FEE = 10 ** 16
 # Max data field size
 MAX_DATA_SIZE = 512 * 1024
 
+# Max external call count(1 is default SCORE call, 1024 is external call in the SCORE)
+MAX_EXTERNAL_CALL_COUNT = 1 + 1024
+
+# Max call stack size
+MAX_CALL_STACK_SIZE = 64
+
 ICON_DEX_DB_NAME = 'icon_dex'
 
 ICX_TRANSFER_EVENT_LOG = 'ICXTransfer(Address,Address,int)'
