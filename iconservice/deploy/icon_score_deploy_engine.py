@@ -257,13 +257,7 @@ class IconScoreDeployEngine(object):
             except FileExistsError:
                 pass
         else:
-            version = None
-            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
-            if governance_score is not None:
-                if hasattr(governance_score, 'getVersion'):
-                    version = governance_score.getVersion()
-
-            if version == '0.0.3':
+            if context.get_revision() >= REVISION_2:
                 self._icon_score_deployer.deploy(
                     address=score_address,
                     data=content,
