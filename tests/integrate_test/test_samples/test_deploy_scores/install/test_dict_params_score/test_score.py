@@ -23,14 +23,10 @@ class TestScore(IconScoreBase):
         return "Hello"
 
     @external(readonly=True)
-    def get_value(self) -> int:
+    def get_value(self, dict_param: dict={}) -> int:
         return self._value.get()
 
     @external
     def set_value(self, value: int):
         self._value.set(value)
         self.Changed(value)
-
-    @external
-    def increase_value(self):
-        self._value.set(self._value.get()+1)
