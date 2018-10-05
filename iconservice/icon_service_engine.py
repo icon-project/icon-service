@@ -711,7 +711,15 @@ class IconServiceEngine(ContextContainer):
 
         # Charge a fee to from account
         fee: int = step_used * step_price
-        self._icx_engine.charge_fee(context, from_, fee)
+        try:
+            self._icx_engine.charge_fee(context, from_, fee)
+        except BaseException as e:
+            if hasattr(e, 'message'):
+                message = e.message
+            else:
+                message = str(e)
+            Logger.exception(message, ICON_SERVICE_LOG_TAG)
+            step_used = 0
 
         # final step_used and step_price
         return step_used, step_price

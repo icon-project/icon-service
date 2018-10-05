@@ -22,7 +22,7 @@ from iconcommons import Logger
 from . import DeployType
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
-from ..base.address import Address
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
@@ -257,10 +257,22 @@ class IconScoreDeployEngine(object):
             except FileExistsError:
                 pass
         else:
-            self._icon_score_deployer.deploy(
-                address=score_address,
-                data=content,
-                tx_hash=next_tx_hash)
+            version = None
+            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            if governance_score is not None:
+                if hasattr(governance_score, 'getVersion'):
+                    version = governance_score.getVersion()
+
+            if version == '0.0.3':
+                self._icon_score_deployer.deploy(
+                    address=score_address,
+                    data=content,
+                    tx_hash=next_tx_hash)
+            else:
+                self._icon_score_deployer.deploy_legacy(
+                    address=score_address,
+                    data=content,
+                    tx_hash=next_tx_hash)
 
         backup_msg = context.msg
         backup_tx = context.tx
