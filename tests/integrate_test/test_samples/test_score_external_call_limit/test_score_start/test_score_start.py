@@ -21,12 +21,12 @@ class TestScoreStart(IconScoreBase):
         super().on_update()
 
     @external
-    def invokeCircular(self, _to: Address, _name: str) -> None:
+    def invokeRecursive(self, _to: Address, _name: str) -> None:
         self.call(_to, _name, {'index': 0})
 
     @external(readonly=True)
-    def queryCircular(self, _to: Address, _name: str) -> int:
-        ret = self.call(_to, _name, {})
+    def queryRecursive(self, _to: Address, _name: str) -> int:
+        return self.call(_to, _name, {'index': 0})
 
     @external
     def invoke(self, index: int) -> None:
@@ -34,8 +34,8 @@ class TestScoreStart(IconScoreBase):
         self.call(self.msg.sender, 'invoke', {'index': index + 1})
 
     @external(readonly=True)
-    def query(self) -> int:
-        ret = self.call(self.msg.sender, 'query', {})
+    def query(self, index: int) -> int:
+        return self.call(self.msg.sender, 'query', {'index': index + 1})
 
 
     @external

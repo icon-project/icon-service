@@ -312,7 +312,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertIsNotNone(result)
 
         args_list = self.step_counter.apply_step.call_args_list
-        self.assertEqual(args_list[0][0],(StepType.GET, 100))
+        self.assertEqual(args_list[0][0],(StepType.CONTRACT_CALL, 1))
+        self.assertEqual(args_list[1][0],(StepType.GET, 100))
 
     def test_remove_db(self):
         tx_hash = bytes.hex(create_tx_hash())

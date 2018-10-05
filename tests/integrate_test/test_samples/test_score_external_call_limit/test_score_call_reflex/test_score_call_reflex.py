@@ -18,6 +18,5 @@ class TestScoreCallReflex(IconScoreBase):
         self.call(self.msg.sender, 'invoke', {'index': index + 1})
 
     @external(readonly=True)
-    def query(self) -> int:
-        self.call(self.msg.sender, 'query', {})
-        return 1
+    def query(self, index: int) -> int:
+        return self.call(self.msg.sender, 'query', {'index': index + 1})

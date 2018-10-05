@@ -16,7 +16,8 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG
+from iconservice.base.exception import InvalidRequestException
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
@@ -126,6 +127,10 @@ class InternalCall(object):
         """
 
         self.__context.validate_score_blacklist(addr_to)
+
+        if len(self.__context.msg_stack) == MAX_CALL_STACK_SIZE:
+            raise InvalidRequestException('Max call stack size exceeded')
+
         self.__context.msg_stack.append(self.__context.msg)
 
         self.__context.msg = Message(sender=addr_from, value=amount)

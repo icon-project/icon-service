@@ -16,7 +16,6 @@
 
 """IconScoreEngine testcase
 """
-import sys
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
@@ -260,8 +259,7 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
 
         self.assertEqual(context.exception.message, 'Too many external calls')
 
-    """
-    def test_invoke_circular(self):
+    def test_invoke_recursive(self):
 
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
@@ -284,25 +282,85 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
             self._make_score_call_tx(
                 self._genesis,
                 start_score,
-                'invokeCircular',
+                'invokeRecursive',
                 {'_to': str(reflex_score), '_name': 'invoke'},
                 0)
         ])
 
         self._write_precommit_state(prev_block)
 
-        # Checks if the result is successful
         self.assertEqual(tx_results[0].status, 0)
+        self.assertEqual(tx_results[0].failure.message, 'Max call stack size exceeded')
 
-        # response = self._query(
-        #     {
-        #         'to': reflex_score,
-        #         'dataType': 'call',
-        #         'data': {'method': 'getValue'}
-        #     }
-        # )
-        # self.assertEqual(response, loop_count)
-    """
+    def test_invoke_query_recursive(self):
+
+        # Deploys SCORE
+        prev_block, tx_results = self._make_and_req_block([
+            self._make_deploy_tx("test_score_external_call_limit",
+                                 "test_score_start",
+                                 self._addr_array[0],
+                                 ZERO_SCORE_ADDRESS),
+            self._make_deploy_tx("test_score_external_call_limit",
+                                 "test_score_call_reflex",
+                                 self._addr_array[0],
+                                 ZERO_SCORE_ADDRESS)
+        ])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        start_score = tx_results[0].score_address
+        self.assertEqual(tx_results[1].status, int(True))
+        reflex_score = tx_results[1].score_address
+
+        prev_block, tx_results = self._make_and_req_block([
+            self._make_score_call_tx(
+                self._genesis,
+                start_score,
+                'invokeRecursive',
+                {'_to': str(reflex_score), '_name': 'query'},
+                0)
+        ])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, 0)
+        self.assertEqual(tx_results[0].failure.message, 'Max call stack size exceeded')
+
+    def test_query_recursive(self):
+        # Deploys SCORE
+        prev_block, tx_results = self._make_and_req_block([
+            self._make_deploy_tx("test_score_external_call_limit",
+                                 "test_score_start",
+                                 self._addr_array[0],
+                                 ZERO_SCORE_ADDRESS),
+            self._make_deploy_tx("test_score_external_call_limit",
+                                 "test_score_call_reflex",
+                                 self._addr_array[0],
+                                 ZERO_SCORE_ADDRESS)
+        ])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        start_score = tx_results[0].score_address
+        self.assertEqual(tx_results[1].status, int(True))
+        reflex_score = tx_results[1].score_address
+
+        with self.assertRaises(BaseException) as context:
+            response = self._query(
+                {
+                    'to': start_score,
+                    'stepLimit': 0x999999999,
+                    'dataType': 'call',
+                    'data': {
+                        'method': 'queryRecursive',
+                        'params': {
+                            '_to': str(reflex_score),
+                            '_name': 'query'
+                        }
+                    }
+                }
+            )
+
+        self.assertEqual(context.exception.message, 'Max call stack size exceeded')
+
 
 if __name__ == '__main__':
     unittest.main()
