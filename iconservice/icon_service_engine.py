@@ -294,6 +294,15 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
+        # If the block has already been processed,
+        # return the result from PrecommitDataManager
+        precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
+        if precommit_data is not None:
+            Logger.info(
+                f'The result of block(0x{block.hash.hex()} already exists',
+                ICON_SERVICE_LOG_TAG)
+            return precommit_data.block_result, precommit_data.state_root_hash
+
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
@@ -327,7 +336,7 @@ class IconServiceEngine(ContextContainer):
 
         self._context_factory.destroy(context)
 
-        return block_result, precommit_data.block_batch.digest()
+        return block_result, precommit_data.state_root_hash
 
     @staticmethod
     def _is_genesis_block(
