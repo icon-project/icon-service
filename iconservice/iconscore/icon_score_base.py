@@ -183,8 +183,11 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             try:
                 value = kwargs[name]
             except KeyError:
-                raise IconTypeError(
-                    f"Missing argument value for '{function_name}': {name}")
+                if not parameter.default == Parameter.empty:
+                    value = parameter.default
+                else:
+                    raise IconTypeError(
+                        f"Missing argument value for '{function_name}': {name}")
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if annotation is Parameter.empty:

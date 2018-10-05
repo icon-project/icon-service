@@ -6,6 +6,10 @@ class TestEventLogScore(IconScoreBase):
     def NormalEventLog(self, value1: str, value2: str, value3: str):
         pass
 
+    @eventlog(indexed=2)
+    def NormalEventLogWithDefault(self, value1: str, value2: str="default2", value3: str="default3"):
+        pass
+
     @eventlog
     def EventLogWithOutParams(self):
         pass
@@ -41,9 +45,22 @@ class TestEventLogScore(IconScoreBase):
     def set_value(self, value: str):
         self._value.set(value)
 
+    @external(readonly=True)
+    def call_even_log_in_read_only_method(self) -> str:
+        self.NormalEventLog("1", "2", "3")
+        return "test"
+
     @external
-    def call_valid_event_log(self, value1:str, value2:str, value3:str):
+    def call_valid_event_log(self, value1: str, value2: str, value3: str):
         self.NormalEventLog(value1, value2, value3)
+
+    @external
+    def call_valid_event_log_keyword(self, value1: str, value2: str, value3: str):
+        self.NormalEventLog(value1, value2=value2, value3=value3)
+
+    @external
+    def call_valid_event_log_with_default(self, value1: str):
+        self.NormalEventLogWithDefault(value1)
 
     @external
     def call_event_log_params_are_not_defined(self):

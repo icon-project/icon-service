@@ -105,6 +105,35 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(event_log.data, [])
         self.assertEqual(event_log.indexed[0], "EventLogWithOutParams()")
 
+        # success case: input keyword arguments to event log
+        method_params ={"value1": "positional1", "value2": "keyword2", "value3": "keyword3"}
+        tx_results = self._call_score(score_addr, "call_valid_event_log_keyword", method_params)
+        self.assertEqual(tx_results[0].status, int(True))
+        event_log = tx_results[0].event_logs[0]
+        self.assertEqual(event_log.indexed[0], "NormalEventLog(str,str,str)")
+        self.assertEqual(event_log.indexed[1], "positional1")
+        self.assertEqual(event_log.indexed[2], "keyword2")
+        self.assertEqual(event_log.data[0], "keyword3")
+
+        # success case: call event log which's parameters are set default value
+        tx_results = self._call_score(score_addr, "call_valid_event_log_with_default", {"value1": "non_default"})
+        self.assertEqual(tx_results[0].status, int(True))
+        event_log = tx_results[0].event_logs[0]
+        self.assertEqual(event_log.indexed[0], "NormalEventLogWithDefault(str,str,str)")
+        self.assertEqual(event_log.indexed[1], "non_default")
+        self.assertEqual(event_log.indexed[2], "default2")
+        self.assertEqual(event_log.data[0], "default3")
+
+    def test_call_event_log_in_read_only_method(self):
+        # failure case: if call event log on read_only method, should raise error
+        tx_result = self._deploy_score("test_event_log_score")
+        self.assertEqual(tx_result.status, int(True))
+        score_addr = tx_result.score_address
+
+        tx_results = self._call_score(score_addr, "call_even_log_in_read_only_method", {})
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.message, "The event log can not be recorded on readonly context")
+
     def test_event_log_self_is_not_defined(self):
         # failure case: event log which self is not defined treat as invalid event log
         tx_result = self._deploy_score("test_self_is_not_defined_event_log_score")
