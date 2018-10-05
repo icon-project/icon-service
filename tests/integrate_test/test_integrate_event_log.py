@@ -238,3 +238,45 @@ class TestIntegrateEventLog(TestIntegrateBase):
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
+    def test_event_log_internal_call(self):
+        tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_a")
+        self.assertEqual(tx_result.status, int(True))
+        score_addr_a = tx_result.score_address
+
+        tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_b")
+        self.assertEqual(tx_result.status, int(True))
+        score_addr_b = tx_result.score_address
+
+        tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_c")
+        self.assertEqual(tx_result.status, int(True))
+        score_addr_c = tx_result.score_address
+
+        # success case: score A(emit) -> score B(emit): both A and B's eventlog should be recorded
+        # call score B method using interface
+        tx_results = self._call_score(score_addr_a, "call_score_b_event_log_interface_call", {"addr": str(score_addr_b)})
+        self.assertEqual(tx_results[0].status, int(True))
+        event_log = tx_results[0].event_logs
+        self.assertEqual(event_log[0].data[0], "A")
+        self.assertEqual(event_log[1].data[0], "B")
+
+        # call score B method using 'call' method
+        tx_results = self._call_score(score_addr_a, "call_score_b_event_log_call", {"addr": str(score_addr_b)})
+        self.assertEqual(tx_results[0].status, int(True))
+        event_log = tx_results[0].event_logs
+        self.assertEqual(event_log[0].data[0], "A")
+        self.assertEqual(event_log[1].data[0], "B")
+
+        # failure case: A(emit) -> B(read only, emit): if score B method is read only, should raise error
+        tx_results = self._call_score(score_addr_a, "call_score_b_read_only_method", {"addr": str(score_addr_b)})
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.message, "The event log can not be recorded on readonly context")
+
+        # success case: A(emit) -> B(read only) -> C(emit): both A and C's eventlog should be recorded
+        tx_results = self._call_score(score_addr_a,
+                                      "call_score_b_to_score_c_event_log",
+                                      {"score_addr_b": str(score_addr_b), "score_addr_c": str(score_addr_c)})
+        self.assertEqual(tx_results[0].status, int(True))
+        event_log = tx_results[0].event_logs
+        self.assertEqual(event_log[0].data[0], "A")
+        self.assertEqual(event_log[1].data[0], "C")
+
