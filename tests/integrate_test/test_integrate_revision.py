@@ -21,7 +21,7 @@ import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import RevertException, ExceptionCode
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, REVISION_2
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -71,7 +71,7 @@ class TestIntegrateRevision(TestIntegrateBase):
         self._update_0_0_3_governance()
 
         expect_status = {
-            "revisionCode": 3,
+            "revisionCode": REVISION_2,
             "revisionDebug": "1.1.0"
         }
 
@@ -88,14 +88,16 @@ class TestIntegrateRevision(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, expect_status)
 
+        next_revision = REVISION_2 + 1
+
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
                                         'setRevision',
-                                        {"code": hex(4), "debug": "1.1.1"})
+                                        {"code": hex(next_revision), "debug": "1.1.1"})
         self.assertEqual(tx_result.status, int(True))
 
         expect_status = {
-            "revisionCode": 4,
+            "revisionCode": next_revision,
             "revisionDebug": "1.1.1"
         }
         response = self._query(query_request)
