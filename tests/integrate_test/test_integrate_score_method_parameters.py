@@ -16,7 +16,7 @@
 
 """score method parameters testcase"""
 
-from iconservice import ZERO_SCORE_ADDRESS
+from iconservice import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.exception import InvalidParamsException
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -50,13 +50,13 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 1000*10**18)
+        self.assertEqual(response, 1000 * 10 ** 18)
 
         # transfer test
         tx2 = self._make_score_call_tx(self._addr_array[0],
                                        score_addr1,
                                        'transfer',
-                                       {"addr_to": str(self._addr_array[1]), "value": hex(100*10**18)})
+                                       {"addr_to": str(self._addr_array[1]), "value": hex(100 * 10 ** 18)})
 
         prev_block, tx_results = self._make_and_req_block([tx2])
 
@@ -76,11 +76,11 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 900*10**18)
+        self.assertEqual(response, 900 * 10 ** 18)
 
         query_request['data']['params']['addr_from'] = str(self._addr_array[1])
         response = self._query(query_request)
-        self.assertEqual(response, 100*10**18)
+        self.assertEqual(response, 100 * 10 ** 18)
 
     def test_more_parameters_query(self):
         tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
@@ -233,7 +233,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
                                        score_addr1,
                                        'transfer',
                                        {"value": hex(100 * 10 ** 18)})
-        
+
         prev_block, tx_results = self._make_and_req_block([tx2])
 
         self.assertEqual(tx_results[0].failure.code, 32000)
@@ -323,6 +323,54 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         }
         response = self._query(query_request)
         self.assertEqual(response, 1000 * 10 ** 18)
+
+    def test_default_parameters(self):
+        tx1 = self._make_deploy_tx("test_scores", "test_db_returns_default_value", self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
+                                   deploy_params={})
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        val1 = 3
+        val2 = "string"
+        val3 = b'bytestring'
+        val4 = Address.from_string(f"hx{'0'*40}")
+        val5 = False
+        val6 = Address.from_string(f"hx{'abcd1234'*5}")
+
+        query_request = {
+            "from": self._admin,
+            "to": score_addr1,
+            "dataType": "call",
+            "data": {
+                "method": "get_value1",
+                "params": {}
+            }
+        }
+        response = self._query(query_request)
+        self.assertEqual(response, val1)
+
+        query_request['data']['method'] = 'get_value2'
+        response = self._query(query_request)
+        self.assertEqual(response, val2)
+
+        query_request['data']['method'] = 'get_value3'
+        response = self._query(query_request)
+        self.assertEqual(response, val3)
+
+        query_request['data']['method'] = 'get_value4'
+        response = self._query(query_request)
+        self.assertEqual(response, val4)
+
+        query_request['data']['method'] = 'get_value5'
+        response = self._query(query_request)
+        self.assertEqual(response, val5)
+
+        query_request['data']['method'] = 'get_value6'
+        response = self._query(query_request)
+        self.assertEqual(response, val6)
 
     def test_primitive_type_parameters_methods(self):
         tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0], ZERO_SCORE_ADDRESS,
@@ -453,14 +501,10 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     # test for empty parameter invoke method
     def test_empty_parameter_invoke(self):
         tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_score", self._addr_array[0], ZERO_SCORE_ADDRESS)
-
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
-
         query_request = {
             "from": self._admin,
             "to": score_addr1,
@@ -474,23 +518,18 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 1000)
 
         tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value', params={"value": "0x12"})
-
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(True))
-
         response = self._query(query_request)
         self.assertEqual(response, 18)
 
         # token test
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
                                    deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
@@ -504,28 +543,21 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, 10**21)
-
+        self.assertEqual(response, 10 ** 21)
         tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'mint', params={})
-
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(True))
-
         response = self._query(query_request)
-        self.assertEqual(response, 10**21+1)
+        self.assertEqual(response, 10 ** 21 + 1)
 
     # unsupported parameter type testcase
     def test_kwargs_parameter_method(self):
         tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_kwargs_score", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"value": str(self._addr_array[1]),
                                                                       "value1": str(self._addr_array[1])})
-
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(False))
 
     # unsupported parameter type testcase
@@ -533,15 +565,10 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         # deploy
         tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_list_params_score", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
-
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(False))
-
         self.assertEqual(tx_results[0].failure.code, 32000)
-
         self.assertTrue(tx_results[0].failure.message.find("'Unsupported type for 'list_param: <class 'list'>'") != -1)
 
     def test_dict_parameters_query(self):
@@ -550,11 +577,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(False))
-
         self.assertEqual(tx_results[0].failure.code, 32000)
-
         self.assertTrue(tx_results[0].failure.message.find("'Unsupported type for 'dict_param: <class 'dict'>'") != -1)
