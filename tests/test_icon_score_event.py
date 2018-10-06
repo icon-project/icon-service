@@ -97,15 +97,6 @@ class TestEventlog(unittest.TestCase):
         name_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + name.encode('utf-8')
         self.assertIn(name_bloom_data, logs_bloom)
 
-        # This event is declared 3 indexed_count,
-        # but it accept only 2 arguments.
-        self.assertRaises(EventLogException, self._mock_score.ThreeIndexEvent,
-                          name, address)
-
-        # This event is declared 4 indexed_count
-        self.assertRaises(EventLogException, self._mock_score.FourIndexEvent,
-                          name, address, age, phone_number)
-
     def test_call_event_kwarg(self):
         context = ContextContainer._get_context()
 
@@ -322,15 +313,6 @@ class EventlogScore(IconScoreBase):
 
     @eventlog(indexed=1)
     def OneIndexEvent(self, name: str, address: Address, age: int):
-        pass
-
-    @eventlog(indexed=3)
-    def ThreeIndexEvent(self, name: str, address: Address):
-        pass
-
-    @eventlog(indexed=4)
-    def FourIndexEvent(
-            self, name: str, address: Address, age: int, phone_number: str):
         pass
 
     @eventlog(indexed=1)
