@@ -81,15 +81,15 @@ class TestEventLogScore(IconScoreBase):
         boolean = True
         bytes = b'0'
         address = Address.from_string("cx0000000000000000000000000000000000000000")
-        if (test_type == "integer"):
+        if test_type == "integer":
             self.EventLogWithNoneDefault(string=string, boolean=boolean, bytes=bytes, address=address)
-        elif (test_type == "string"):
+        elif test_type == "string":
             self.EventLogWithNoneDefault(integer=integer, boolean=boolean, bytes=bytes, address=address)
-        elif (test_type == "boolean"):
+        elif test_type == "boolean":
             self.EventLogWithNoneDefault(integer=integer, string=string, bytes=bytes, address=address)
-        elif (test_type == "bytes"):
+        elif test_type == "bytes":
             self.EventLogWithNoneDefault(integer=integer, string=string, boolean=boolean, address=address)
-        elif (test_type == "address"):
+        elif test_type == "address":
             self.EventLogWithNoneDefault(integer=integer, string=string, boolean=boolean, bytes=bytes)
 
     @external
@@ -130,19 +130,19 @@ class TestEventLogScore(IconScoreBase):
     def call_event_log_for_checking_params_type(self, test_type: str, input_params_type: str):
         integer = 0x00
         string = ""
-        boolean= True
+        boolean = True
         bytes = b'0'
         address = Address.from_string("cx0000000000000000000000000000000000000000")
         none = None
 
-        if(test_type == "integer"):
+        if test_type == "integer":
             integer = locals()[input_params_type]
-        elif(test_type == "string"):
+        elif test_type == "string":
             string = locals()[input_params_type]
-        elif(test_type == "boolean"):
+        elif test_type == "boolean":
             boolean = locals()[input_params_type]
-        elif(test_type == "bytes"):
+        elif test_type == "bytes":
             bytes = locals()[input_params_type]
-        elif(test_type == "address"):
+        elif test_type == "address":
             address = locals()[input_params_type]
         self.EventLogForCheckingParamsType(integer, string, boolean, bytes, address)
