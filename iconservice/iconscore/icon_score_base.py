@@ -28,7 +28,7 @@ from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTIO
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T
 from .icon_score_base2 import InterfaceScore, revert
 from .icon_score_context import ContextGetter
-from .icon_score_context import IconScoreContextType, IconScoreFuncType
+from .icon_score_context import IconScoreContextType
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
@@ -365,12 +365,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
-        prev_func_type = self._context.func_type
-        self.__set_func_type(func_name)
-
         score_func = getattr(self, func_name)
         ret = score_func(*arg_params, **kw_params)
-        self._context.func_type = prev_func_type
 
         return ret
 
@@ -385,13 +381,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if func_name not in payable_dict:
             if self.msg.value > 0:
                 raise PayableException(f"This is not payable", func_name, type(self).__name__)
-
-    def __set_func_type(self, func_name: str):
-        readonly = self.__is_func_readonly(func_name)
-        if readonly:
-            self._context.func_type = IconScoreFuncType.READONLY
-        else:
-            self._context.func_type = IconScoreFuncType.WRITABLE
 
     def __is_func_readonly(self, func_name: str) -> bool:
         func = getattr(self, func_name)

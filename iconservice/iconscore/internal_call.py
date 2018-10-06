@@ -17,7 +17,7 @@
 from typing import TYPE_CHECKING, Optional, Any
 
 from iconservice.base.exception import InvalidRequestException
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreFuncType
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
@@ -136,8 +136,15 @@ class InternalCall(object):
         self.__context.msg = Message(sender=addr_from, value=amount)
         self.current_address = addr_to
 
+        prev_func_type = self.__context.func_type
         try:
             icon_score = self.__context.get_icon_score(addr_to)
+            is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
+            if func_name is not None and is_func_readonly(func_name):
+                self.__context.func_type = IconScoreFuncType.READONLY
+            else:
+                self.__context.func_type = IconScoreFuncType.WRITABLE
+
             if func_name is None:
                 fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
                 fallback_func()
@@ -148,6 +155,7 @@ class InternalCall(object):
         except BaseException as e:
             raise e
         finally:
+            self.__context.func_type = prev_func_type
             self.current_address = addr_from
             self.__context.msg = self.__context.msg_stack.pop()
 
