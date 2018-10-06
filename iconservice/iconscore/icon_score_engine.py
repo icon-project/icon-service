@@ -18,7 +18,7 @@
 
 from typing import TYPE_CHECKING
 
-from .icon_score_context import IconScoreContext
+from .icon_score_context import IconScoreContext, IconScoreFuncType
 from .icon_score_mapper import IconScoreMapper
 from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
@@ -124,6 +124,12 @@ class IconScoreEngine(object):
         kw_params: dict = data.get('params', {})
 
         icon_score = self._get_icon_score(context, icon_score_address)
+
+        is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
+        if func_name is not None and is_func_readonly(func_name):
+            context.func_type = IconScoreFuncType.READONLY
+        else:
+            context.func_type = IconScoreFuncType.WRITABLE
 
         converted_params = self._convert_score_params_by_annotations(icon_score, func_name, kw_params)
         external_func = getattr(icon_score, '_IconScoreBase__external_call')

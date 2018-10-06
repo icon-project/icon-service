@@ -227,7 +227,7 @@ class IconServiceEngine(ContextContainer):
 
         self._context_factory.destroy(context)
 
-    def _validate_deploy_whitelist(
+    def _validate_deployer_whitelist(
             self, context: 'IconScoreContext', params: dict):
         data_type = params.get('dataType')
 
@@ -508,7 +508,7 @@ class IconServiceEngine(ContextContainer):
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
         if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
-            self._validate_deploy_whitelist(context, params)
+            self._validate_deployer_whitelist(context, params)
         self._context_factory.destroy(context)
 
     def _call(self,

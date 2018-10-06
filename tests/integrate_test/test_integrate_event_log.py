@@ -136,12 +136,16 @@ class TestIntegrateEventLog(TestIntegrateBase):
     def test_call_event_log_in_read_only_method(self):
         # failure case: if call event log on read_only method, should raise error
         tx_result = self._deploy_score("test_event_log_score")
-        self.assertEqual(tx_result.status, int(True))
-        score_addr = tx_result.score_address
+        self.assertEqual(int(True), tx_result.status)
+        score_address: 'Address' = tx_result.score_address
 
-        tx_results = self._call_score(score_addr, "call_even_log_in_read_only_method", {})
-        self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.message, "The event log can not be recorded on readonly context")
+        tx_results = self._call_score(score_address, "call_even_log_in_read_only_method", {})
+        self.assertEqual(1, len(tx_results))
+
+        tx_result: 'TransactionResult' = tx_results[0]
+        self.assertEqual(int(False), tx_result.status)
+        self.assertEqual("The event log can not be recorded on readonly context", tx_result.failure.message)
+        self.assertEqual(0, len(tx_result.event_logs))
 
     def test_event_log_self_is_not_defined(self):
         # failure case: event log which self is not defined treat as invalid event log

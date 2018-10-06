@@ -48,6 +48,11 @@ INDEXED_ARGS_LIMIT = 3
 
 
 def interface(func):
+    """interface decorator
+
+    :param func:
+    :return:
+    """
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
@@ -82,6 +87,12 @@ def interface(func):
 
 
 def eventlog(func=None, *, indexed=0):
+    """eventlog decorator
+
+    :param func:
+    :param indexed:
+    :return:
+    """
     if func is None:
         return partial(eventlog, indexed=indexed)
 
