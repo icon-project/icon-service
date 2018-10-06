@@ -203,7 +203,7 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
         if main_type == 'Address':
             main_type = Address
 
-        if not isinstance(value, main_type):
+        if value is not None and not isinstance(value, main_type):
             raise IconTypeError(f"Mismatch type type of '{name}': "
                                 f"{type(value)}, expected: {main_type}")
         arguments.append(value)

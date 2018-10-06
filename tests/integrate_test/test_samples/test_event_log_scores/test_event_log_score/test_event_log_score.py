@@ -63,6 +63,10 @@ class TestEventLogScore(IconScoreBase):
         self.NormalEventLog(value1, value2, value3)
 
     @external
+    def call_valid_event_log_with_none(self):
+        self.NormalEventLog(None, None, None)
+
+    @external
     def call_valid_event_log_keyword(self, value1: str, value2: str, value3: str):
         self.NormalEventLog(value1, value2=value2, value3=value3)
 

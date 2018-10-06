@@ -114,7 +114,9 @@ class EventLogEmitter(object):
 
     @staticmethod
     def __get_byte_length(data: 'BaseType') -> int:
-        if isinstance(data, int):
+        if data is None:
+            return 0
+        elif isinstance(data, int):
             return byte_length_of_int(data)
         else:
             return len(EventLogEmitter.__base_type_to_bytes(data))
@@ -132,5 +134,7 @@ class EventLogEmitter(object):
 
     @staticmethod
     def get_bloom_data(index: int, data: 'BaseType') -> bytes:
-        return index.to_bytes(1, DATA_BYTE_ORDER) + \
-               EventLogEmitter.__base_type_to_bytes(data)
+        bloom_data = index.to_bytes(1, DATA_BYTE_ORDER)
+        if data is not None:
+            bloom_data += EventLogEmitter.__base_type_to_bytes(data)
+        return bloom_data
