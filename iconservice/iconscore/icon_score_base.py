@@ -44,6 +44,8 @@ if TYPE_CHECKING:
     from ..base.message import Message
     from ..base.block import Block
 
+INDEXED_ARGS_LIMIT = 3
+
 
 def interface(func):
     cls_name, func_name = str(func.__qualname__).split('.')
@@ -88,6 +90,16 @@ def eventlog(func=None, *, indexed=0):
         raise EventLogException(
             FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
 
+    if not list(signature(func).parameters.keys())[0] == 'self':
+        raise EventLogException("define 'self' as the first parameter in the event log")
+    if indexed > INDEXED_ARGS_LIMIT:
+        raise EventLogException(
+            f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
+
+    parameters = signature(func).parameters.values()
+    if len(parameters) -1 < indexed:
+        raise EventLogException("index exceeds the number of parameters")
+
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
         raise IconScoreException(
             FORMAT_DECORATOR_DUPLICATED.format('eventlog', func_name, cls_name))
@@ -96,7 +108,6 @@ def eventlog(func=None, *, indexed=0):
     setattr(func, CONST_BIT_FLAG, bit_flag)
     setattr(func, CONST_INDEXED_ARGS_COUNT, indexed)
 
-    parameters = signature(func).parameters.values()
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
@@ -151,6 +162,10 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
     :return: an ordered list of arguments
     """
     arguments = []
+    if len(parameters) - 1 < len(args) + len(kwargs):
+        raise EventLogException(
+            f"exceed the maximum number of arguments which event log method({function_name}) can accept")
+
     for i, parameter in enumerate(parameters, -1):
         if i < 0:
             # pass the self parameter
@@ -168,8 +183,11 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             try:
                 value = kwargs[name]
             except KeyError:
-                raise IconTypeError(
-                    f"Missing argument value for '{function_name}': {name}")
+                if not parameter.default == Parameter.empty:
+                    value = parameter.default
+                else:
+                    raise IconTypeError(
+                        f"Missing argument value for '{function_name}': {name}")
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if annotation is Parameter.empty:
