@@ -207,15 +207,15 @@ class TestIntegrateEventLog(TestIntegrateBase):
     def test_event_log_parameters_on_deploy(self):
         # failure case: define dict type parameter
         tx_result = self._deploy_score("test_invalid_params_type_event_log_score_dict")
-        self.assertEqual(tx_result.failure.message, "'Unsupported type for 'value: <class 'dict'>'")
+        self.assertEqual(tx_result.failure.message, "Unsupported type for 'value: <class 'dict'>'")
 
         # failure case: define list type parameter
         tx_result = self._deploy_score("test_invalid_params_type_event_log_score_array")
-        self.assertEqual(tx_result.failure.message, "'Unsupported type for 'value: <class 'list'>'")
+        self.assertEqual(tx_result.failure.message, "Unsupported type for 'value: <class 'list'>'")
 
         # failure case: omit type hint
         tx_result = self._deploy_score("test_invalid_params_type_hint_event_log_score")
-        self.assertEqual(tx_result.failure.message, "Missing argument hint for 'value'")
+        self.assertEqual(tx_result.failure.message, "Missing argument hint for 'EventLogInvalidParamsType': 'value'")
 
     def test_event_log_parameters_on_execute(self):
         tx_result = self._deploy_score("test_event_log_score")
