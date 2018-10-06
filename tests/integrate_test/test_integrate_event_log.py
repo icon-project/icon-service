@@ -17,10 +17,10 @@
 """IconScoreEngine testcase
 """
 
+from typing import TYPE_CHECKING, Any
+
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -54,7 +54,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
-    def _query_score(self, target_addr: 'Address', method: str, params: dict={}):
+    def _query_score(self, target_addr: 'Address', method: str, params: dict=None):
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
@@ -62,7 +62,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": method,
-                "params": params
+                "params": {} if params is None else params
             }
         }
         return self._query(query_request)
@@ -86,7 +86,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
 
         # success case: call valid event log and check log data
         # event log which defined parameter's number is zero also treat as valid event log
-        method_params ={"value1": "test1", "value2": "test2", "value3": "test3"}
+        method_params = {"value1": "test1", "value2": "test2", "value3": "test3"}
         tx_results = self._call_score(score_addr, "call_valid_event_log", method_params)
         self.assertEqual(tx_results[0].status, int(True))
 
@@ -97,6 +97,18 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(event_log.indexed[2], "test2")
         self.assertEqual(event_log.data[0], "test3")
 
+        # success case: call valid event log with None
+        # event log which defined parameter's number is zero also treat as valid event log
+        tx_results = self._call_score(score_addr, "call_valid_event_log_with_none", {})
+        self.assertEqual(tx_results[0].status, int(True))
+
+        # indexed params and non_indexed params should be separately stored in txresult(indexed, data)
+        event_log = tx_results[0].event_logs[0]
+        self.assertEqual(event_log.indexed[0], "NormalEventLog(str,str,str)")
+        self.assertEqual(event_log.indexed[1], None)
+        self.assertEqual(event_log.indexed[2], None)
+        self.assertEqual(event_log.data[0], None)
+
         # success case: event log which params are not defined also treat as valid event log
         tx_results = self._call_score(score_addr, "call_event_log_params_are_not_defined", {})
         self.assertEqual(tx_results[0].status, int(True))
@@ -106,7 +118,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(event_log.indexed[0], "EventLogWithOutParams()")
 
         # success case: input keyword arguments to event log
-        method_params ={"value1": "positional1", "value2": "keyword2", "value3": "keyword3"}
+        method_params = {"value1": "positional1", "value2": "keyword2", "value3": "keyword3"}
         tx_results = self._call_score(score_addr, "call_valid_event_log_keyword", method_params)
         self.assertEqual(tx_results[0].status, int(True))
         event_log = tx_results[0].event_logs[0]
@@ -204,22 +216,21 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.message, "index exceeds the number of parameters")
 
-
     def test_event_log_index_on_execute(self):
         pass
 
     def test_event_log_parameters_on_deploy(self):
         # failure case: define dict type parameter
         tx_result = self._deploy_score("test_invalid_params_type_event_log_score_dict")
-        self.assertEqual(tx_result.failure.message, "'Unsupported type for 'value: <class 'dict'>'")
+        self.assertEqual(tx_result.failure.message, "Unsupported type for 'value: <class 'dict'>'")
 
         # failure case: define list type parameter
         tx_result = self._deploy_score("test_invalid_params_type_event_log_score_array")
-        self.assertEqual(tx_result.failure.message, "'Unsupported type for 'value: <class 'list'>'")
+        self.assertEqual(tx_result.failure.message, "Unsupported type for 'value: <class 'list'>'")
 
         # failure case: omit type hint
         tx_result = self._deploy_score("test_invalid_params_type_hint_event_log_score")
-        self.assertEqual(tx_result.failure.message, "Missing argument hint for 'value'")
+        self.assertEqual(tx_result.failure.message, "Missing argument hint for 'EventLogInvalidParamsType': 'value'")
 
     def test_event_log_parameters_on_execute(self):
         tx_result = self._deploy_score("test_event_log_score")
@@ -238,13 +249,13 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
         # failure case: input non-matching type parameter to event log(raise error)
-        type_list = ["integer", "string", "boolean", "bytes", "address", "none"]
+        type_list = ["integer", "string", "boolean", "bytes", "address"]
 
         # case1: defined parameter=integer
         for params_type in type_list:
             if params_type == "integer" or params_type == "boolean":
                 continue
-            tx_params =  {"test_type": "integer", "input_params_type": params_type}
+            tx_params = {"test_type": "integer", "input_params_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
@@ -252,7 +263,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         for params_type in type_list:
             if params_type == "string":
                 continue
-            tx_params =  {"test_type": "string", "input_params_type": params_type}
+            tx_params = {"test_type": "string", "input_params_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
@@ -260,7 +271,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         for params_type in type_list:
             if params_type == "boolean":
                 continue
-            tx_params =  {"test_type": "boolean", "input_params_type": params_type}
+            tx_params = {"test_type": "boolean", "input_params_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
@@ -268,7 +279,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         for params_type in type_list:
             if params_type == "bytes":
                 continue
-            tx_params =  {"test_type": "bytes", "input_params_type": params_type}
+            tx_params = {"test_type": "bytes", "input_params_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
@@ -276,17 +287,17 @@ class TestIntegrateEventLog(TestIntegrateBase):
         for params_type in type_list:
             if params_type == "address":
                 continue
-            tx_params =  {"test_type": "address", "input_params_type": params_type}
+            tx_params = {"test_type": "address", "input_params_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_for_checking_params_type", tx_params)
             self.assertEqual(tx_results[0].status, int(False))
 
-        # failure case: event_log's parameters default is none(should be error)
+        # Success case: event_log's parameters default is none(None value is supported)
         type_list = ["integer", "string", "boolean", "bytes", "address"]
 
         for params_type in type_list:
             tx_params = {"test_type": params_type}
             tx_results = self._call_score(score_addr, "call_event_log_default_is_none", tx_params)
-            self.assertEqual(tx_results[0].status, int(False))
+            self.assertEqual(tx_results[0].status, int(True))
 
     def test_event_log_internal_call(self):
         tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_a")
@@ -303,7 +314,8 @@ class TestIntegrateEventLog(TestIntegrateBase):
 
         # success case: score A(emit) -> score B(emit): both A and B's eventlog should be recorded
         # call score B method using interface
-        tx_results = self._call_score(score_addr_a, "call_score_b_event_log_interface_call", {"addr": str(score_addr_b)})
+        tx_results = self._call_score(
+            score_addr_a, "call_score_b_event_log_interface_call", {"addr": str(score_addr_b)})
         self.assertEqual(tx_results[0].status, int(True))
         event_log = tx_results[0].event_logs
         self.assertEqual(event_log[0].data[0], "A")
@@ -329,4 +341,3 @@ class TestIntegrateEventLog(TestIntegrateBase):
         event_log = tx_results[0].event_logs
         self.assertEqual(event_log[0].data[0], "A")
         self.assertEqual(event_log[1].data[0], "C")
-

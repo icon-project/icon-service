@@ -25,7 +25,7 @@ from ..icon_constant import ICX_TRANSFER_EVENT_LOG
 from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, T
+    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
 from .icon_score_base2 import InterfaceScore, revert
 from .icon_score_context import ContextGetter
 from .icon_score_context import IconScoreContextType
@@ -108,7 +108,7 @@ def eventlog(func=None, *, indexed=0):
             f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
 
     parameters = signature(func).parameters.values()
-    if len(parameters) -1 < indexed:
+    if len(parameters) - 1 < indexed:
         raise EventLogException("index exceeds the number of parameters")
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
@@ -152,13 +152,22 @@ def __retrieve_event_signature(function_name, parameters) -> str:
     type_names: List[str] = []
     for i, param in enumerate(parameters):
         if i > 0:
+            # If there's no hint of argument in the function declaration,
+            # raise an exception
+            if param.annotation is Parameter.empty:
+                raise IconTypeError(
+                    f"Missing argument hint for '{function_name}': '{param.name}'")
+
+            main_type = None
             if isinstance(param.annotation, type):
                 main_type = param.annotation
             elif param.annotation == 'Address':
                 main_type = Address
-            else:
+
+            # Raises an exception if the types are not supported
+            if main_type is None or not issubclass(main_type, BaseType.__constraints__):
                 raise IconTypeError(
-                    f"Unsupported argument type: '{type(param.annotation)}'")
+                    f"Unsupported type for '{param.name}: {param.annotation}'")
 
             type_names.append(str(main_type.__name__))
     return f"{function_name}({','.join(type_names)})"
@@ -199,22 +208,13 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
                 else:
                     raise IconTypeError(
                         f"Missing argument value for '{function_name}': {name}")
-        # If there's no hint of argument in the function declaration,
-        # raise an exception
-        if annotation is Parameter.empty:
-            raise IconTypeError(
-                f"Missing argument hint for '{function_name}': '{name}'")
 
         main_type = get_main_type_from_annotations_type(annotation)
 
-        if not isinstance(main_type, type):
-            if main_type == 'Address':
-                main_type = Address
-            else:
-                raise IconTypeError(
-                    f"Unsupported argument type: '{type(main_type)}'")
+        if main_type == 'Address':
+            main_type = Address
 
-        if not isinstance(value, main_type):
+        if value is not None and not isinstance(value, main_type):
             raise IconTypeError(f"Mismatch type type of '{name}': "
                                 f"{type(value)}, expected: {main_type}")
         arguments.append(value)
