@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
 from inspect import isfunction, getmembers, signature, Parameter
@@ -24,17 +23,18 @@ from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG
 from .icon_score_api_generator import ScoreApiGenerator
-from .icon_score_base2 import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, ConstBitFlag, \
-    FORMAT_DECORATOR_DUPLICATED, InterfaceScore, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, T
-from .icon_score_context import ContextGetter, ContextContainer
-from .icon_score_context import IconScoreContextType, IconScoreFuncType
+from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
+    ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
+    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
+from .icon_score_base2 import InterfaceScore, revert
+from .icon_score_context import ContextGetter
+from .icon_score_context import IconScoreContextType
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
-from ..base.address import Address
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
-    EventLogException, ExternalException, RevertException
+    EventLogException, ExternalException, ServerErrorException
 from ..database.db import IconScoreDatabase, DatabaseObserver
 from ..utils import get_main_type_from_annotations_type
 
@@ -44,8 +44,15 @@ if TYPE_CHECKING:
     from ..base.message import Message
     from ..base.block import Block
 
+INDEXED_ARGS_LIMIT = 3
+
 
 def interface(func):
+    """interface decorator
+
+    :param func:
+    :return:
+    """
     cls_name, func_name = str(func.__qualname__).split('.')
     if not isfunction(func):
         raise InterfaceException(FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
@@ -64,6 +71,9 @@ def interface(func):
         score = calling_obj.from_score
         addr_to = calling_obj.addr_to
 
+        if addr_to is None:
+            raise InterfaceException('Can\'t create an interface SCORE with None address')
+
         # icx_value = kwargs.get(ICX_VALUE_KEY)
         # if icx_value is None:
         #     icx_value = 0
@@ -77,6 +87,12 @@ def interface(func):
 
 
 def eventlog(func=None, *, indexed=0):
+    """eventlog decorator
+
+    :param func:
+    :param indexed:
+    :return:
+    """
     if func is None:
         return partial(eventlog, indexed=indexed)
 
@@ -84,6 +100,16 @@ def eventlog(func=None, *, indexed=0):
     if not isfunction(func):
         raise EventLogException(
             FORMAT_IS_NOT_FUNCTION_OBJECT.format(func, cls_name))
+
+    if not list(signature(func).parameters.keys())[0] == 'self':
+        raise EventLogException("define 'self' as the first parameter in the event log")
+    if indexed > INDEXED_ARGS_LIMIT:
+        raise EventLogException(
+            f'indexed arguments are overflow: limit={INDEXED_ARGS_LIMIT}')
+
+    parameters = signature(func).parameters.values()
+    if len(parameters) - 1 < indexed:
+        raise EventLogException("index exceeds the number of parameters")
 
     if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog:
         raise IconScoreException(
@@ -93,7 +119,6 @@ def eventlog(func=None, *, indexed=0):
     setattr(func, CONST_BIT_FLAG, bit_flag)
     setattr(func, CONST_INDEXED_ARGS_COUNT, indexed)
 
-    parameters = signature(func).parameters.values()
     event_signature = __retrieve_event_signature(func_name, parameters)
 
     @wraps(func)
@@ -127,13 +152,22 @@ def __retrieve_event_signature(function_name, parameters) -> str:
     type_names: List[str] = []
     for i, param in enumerate(parameters):
         if i > 0:
+            # If there's no hint of argument in the function declaration,
+            # raise an exception
+            if param.annotation is Parameter.empty:
+                raise IconTypeError(
+                    f"Missing argument hint for '{function_name}': '{param.name}'")
+
+            main_type = None
             if isinstance(param.annotation, type):
                 main_type = param.annotation
             elif param.annotation == 'Address':
                 main_type = Address
-            else:
+
+            # Raises an exception if the types are not supported
+            if main_type is None or not issubclass(main_type, BaseType.__constraints__):
                 raise IconTypeError(
-                    f"Unsupported argument type: '{type(param.annotation)}'")
+                    f"Unsupported type for '{param.name}: {param.annotation}'")
 
             type_names.append(str(main_type.__name__))
     return f"{function_name}({','.join(type_names)})"
@@ -148,6 +182,10 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
     :return: an ordered list of arguments
     """
     arguments = []
+    if len(parameters) - 1 < len(args) + len(kwargs):
+        raise EventLogException(
+            f"exceed the maximum number of arguments which event log method({function_name}) can accept")
+
     for i, parameter in enumerate(parameters, -1):
         if i < 0:
             # pass the self parameter
@@ -165,24 +203,18 @@ def __resolve_arguments(function_name, parameters, args, kwargs) -> List[Any]:
             try:
                 value = kwargs[name]
             except KeyError:
-                raise IconTypeError(
-                    f"Missing argument value for '{function_name}': {name}")
-        # If there's no hint of argument in the function declaration,
-        # raise an exception
-        if annotation is Parameter.empty:
-            raise IconTypeError(
-                f"Missing argument hint for '{function_name}': '{name}'")
+                if not parameter.default == Parameter.empty:
+                    value = parameter.default
+                else:
+                    raise IconTypeError(
+                        f"Missing argument value for '{function_name}': {name}")
 
         main_type = get_main_type_from_annotations_type(annotation)
 
-        if not isinstance(main_type, type):
-            if main_type == 'Address':
-                main_type = Address
-            else:
-                raise IconTypeError(
-                    f"Unsupported argument type: '{type(main_type)}'")
+        if main_type == 'Address':
+            main_type = Address
 
-        if not isinstance(value, main_type):
+        if value is not None and not isinstance(value, main_type):
             raise IconTypeError(f"Mismatch type type of '{name}': "
                                 f"{type(value)}, expected: {main_type}")
         arguments.append(value)
@@ -238,34 +270,6 @@ def payable(func):
         return res
 
     return __wrapper
-
-
-def revert(message: Optional[str] = None,
-           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
-    """
-    Reverts the transaction and breaks.
-    All the changes of state DB will be reverted.
-
-    :param message: revert message
-    :param code: code
-    """
-    raise RevertException(message, code)
-
-
-def sha3_256(data: bytes) -> bytes:
-    """
-    Computes hash using the input data
-    :param data: input data
-    :return: hashed data in bytes
-    """
-    context = ContextContainer._get_context()
-    if context.step_counter:
-        step_count = 1
-        if data:
-            step_count += len(data)
-        context.step_counter.apply_step(StepType.API_CALL, step_count)
-
-    return hashlib.sha3_256(data).digest()
 
 
 class IconScoreObject(ABC):
@@ -390,12 +394,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
-        prev_func_type = self._context.func_type
-        self.__set_func_type(func_name)
-
         score_func = getattr(self, func_name)
         ret = score_func(*arg_params, **kw_params)
-        self._context.func_type = prev_func_type
+
         return ret
 
     def __fallback_call(self) -> None:
@@ -409,13 +410,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if func_name not in payable_dict:
             if self.msg.value > 0:
                 raise PayableException(f"This is not payable", func_name, type(self).__name__)
-
-    def __set_func_type(self, func_name: str):
-        readonly = self.__is_func_readonly(func_name)
-        if readonly:
-            self._context.func_type = IconScoreFuncType.READONLY
-        else:
-            self._context.func_type = IconScoreFuncType.WRITABLE
 
     def __is_func_readonly(self, func_name: str) -> bool:
         func = getattr(self, func_name)
@@ -545,24 +539,13 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         revert(message, code)
 
-    def deploy(self, tx_hash: bytes):
-        self._context.icon_score_manager.deploy(self._context, self.address, tx_hash)
-
-    def is_score_active(self, score_address: 'Address'):
-        self._context.icon_score_manager.is_score_active(self._context, score_address)
+    def is_score_active(self, score_address: 'Address')-> bool:
+        return self._context.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
-        if score_address:
+        if not score_address:
             score_address = self.address
-        return self._context.icon_score_manager.get_owner(self._context, score_address)
-
-    def get_tx_hashes_by_score_address(self,
-                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
-        return self._context.icon_score_manager.get_tx_hashes_by_score_address(self._context, score_address)
-
-    def get_score_address_by_tx_hash(self,
-                                     tx_hash: bytes) -> Optional['Address']:
-        return self._context.icon_score_manager.get_score_address_by_tx_hash(self._context, tx_hash)
+        return self._context.get_owner(self._context, score_address)
 
     def create_interface_score(self,
                                addr_to: 'Address',
@@ -570,3 +553,28 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self)
+
+    def deploy(self, tx_hash: bytes):
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        if self.address == GOVERNANCE_SCORE_ADDRESS:
+            # switch
+            score_addr = self.get_score_address_by_tx_hash(tx_hash)
+            owner = self.get_owner(score_addr)
+            tmp_sender = self._context.msg.sender
+            self._context.msg.sender = owner
+            try:
+                self._context.deploy(tx_hash)
+            finally:
+                self._context.msg = tmp_sender
+        else:
+            raise ServerErrorException('Permission Error')
+
+    def get_tx_hashes_by_score_address(self,
+                                       score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        return self._context.get_tx_hashes_by_score_address(self._context, score_address)
+
+    def get_score_address_by_tx_hash(self,
+                                     tx_hash: bytes) -> Optional['Address']:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
+        return self._context.get_score_address_by_tx_hash(self._context, tx_hash)

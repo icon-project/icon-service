@@ -15,9 +15,11 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING
+
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
-    from ..base.address import Address
 
 
 class Icx(object):
@@ -30,15 +32,14 @@ class Icx(object):
         self._context = context
         self._address = address
 
-    def transfer(self, addr_to: 'Address', amount: int) -> bool:
+    def transfer(self, addr_to: 'Address', amount: int) -> None:
         """transfer the amount of icx to the given 'addr_to'
         If failed, an exception will be raised
 
         :param addr_to: receiver address
         :param amount: the amount of icx to transfer
-        :return: True(success)
         """
-        return self._context.internal_call.icx_transfer_call(self._address, addr_to, amount)
+        self._context.internal_call.icx_transfer_call(self._address, addr_to, amount)
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
         """transfer the amount of icx to the given 'addr_to'
@@ -47,7 +48,26 @@ class Icx(object):
         :param amount: the amount of icx to transfer
         :return: True(success) False(failed)
         """
-        return self._context.internal_call.icx_send_call(self._address, addr_to, amount)
+        try:
+            self.transfer(addr_to, amount)
+            if not addr_to.is_contract and self._is_icx_send_defective():
+                return False
+            return True
+        except:
+            return False
 
     def get_balance(self, address: 'Address') -> int:
         return self._context.internal_call.get_icx_balance(address)
+
+    # noinspection PyBroadException
+    def _is_icx_send_defective(self) -> bool:
+        try:
+            governance_score = self._context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            if governance_score is not None:
+                if hasattr(governance_score, 'getVersion'):
+                    version = governance_score.getVersion()
+                    return version == '0.0.2'
+        except BaseException:
+            pass
+
+        return False

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag
+from enum import IntFlag, unique, IntEnum
 
 ICON_SERVICE_LOG_TAG = 'IconService'
 ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
@@ -33,6 +33,12 @@ FIXED_FEE = 10 ** 16
 # Max data field size
 MAX_DATA_SIZE = 512 * 1024
 
+# Max external call count(1 is default SCORE call, 1024 is external call in the SCORE)
+MAX_EXTERNAL_CALL_COUNT = 1 + 1024
+
+# Max call stack size
+MAX_CALL_STACK_SIZE = 64
+
 ICON_DEX_DB_NAME = 'icon_dex'
 
 ICX_TRANSFER_EVENT_LOG = 'ICXTransfer(Address,Address,int)'
@@ -43,6 +49,10 @@ ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{stateDbRootPath}." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
+
+BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': "cx0000000000000000000000000000000000000001"}
+
+REVISION_2 = 2
 
 
 class ConfigKey:
@@ -62,33 +72,34 @@ class ConfigKey:
 
 
 class EnableThreadFlag(IntFlag):
-    NonFlag = 0
     Invoke = 1
     Query = 2
     Validate = 4
 
 
 class IconServiceFlag(IntFlag):
-    none = 0
     fee = 1
     audit = 2
     deployerWhiteList = 4
     scorePackageValidator = 8
 
 
-class IconDeployFlag(IntFlag):
-    NONE = 0
-    # To complete to install or update a SCORE,
-    # some specified address owner like genesis address owner
-    # MUST approve install or update SCORE transactions.
-    ENABLE_DEPLOY_AUDIT = 1
-    ENABLE_DEPLOY_WHITELIST = 2
-    ENABLE_TBEARS_MODE = 4
+@unique
+class IconScoreContextType(IntEnum):
+    # Write data to db directly
+    DIRECT = 0
+    # Record data to cache and after confirming the block, write them to db
+    INVOKE = 1
+    # Not possible to write data to db
+    QUERY = 2
 
 
-class IconScoreLoaderFlag(IntFlag):
-    NONE = 0
-    ENABLE_SCORE_PACKAGE_VALIDATOR = 1
+@unique
+class IconScoreFuncType(IntEnum):
+    # ReadOnly function
+    READONLY = 0
+    # Writable function
+    WRITABLE = 1
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate

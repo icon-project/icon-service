@@ -30,31 +30,46 @@ LOAD_BUILD_CLASS = 71
 CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
 
-ICONSERVICE = 'iconservice'
-
-WHITELIST_IMPORT = \
-    {
-        ICONSERVICE: []
-    }
-
-BLACKLIST_RESERVED_KEYWORD = ['exec']
+BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
 
 
 class ScorePackageValidator(object):
     PREV_IMPORT_NAME = None
     PREV_LOAD_BUILD_CLASS = None
+    WHITELIST_IMPORT = {}
     CUSTOM_IMPORT_LIST = []
 
     @staticmethod
-    def validator(pkg_root_path: str, pkg_import_root: str) -> callable:
+    def execute(whitelist_table: dict, pkg_root_path: str, pkg_import_root: str) -> callable:
         ScorePackageValidator.PREV_IMPORT_NAME = None
-
+        ScorePackageValidator.WHITELIST_IMPORT = whitelist_table
         ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(pkg_root_path)
 
         for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
             full_name = ''.join((pkg_import_root, '.', imp))
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
+
+            # using Test AST Module
+            # have to sandbox environment
+            # because call compile function that codes
+
+            # import ast
+            # source = spec.loader.get_source(full_name)
+            # mode = ast.parse(source)
+            # for node in ast.walk(mode):
+            #     if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+            #         if not ScorePackageValidator._is_contain_custom_import(node.module):
+            #             if node.module not in ScorePackageValidator.WHITELIST_IMPORT:
+            #                 raise ServerErrorException(f'invalid import '
+            #                                            f'import_name: {node.module}')
+            #     elif isinstance(node, ast.Name):
+            #         if node.id in BLACKLIST_RESERVED_KEYWORD:
+            #             raise ServerErrorException(f'invalid import '
+            #                                        f'import_name: {node.module}')
+            #     else:
+            #         pass
+
             ScorePackageValidator._validate_import_from_code(code)
             ScorePackageValidator._validate_import_from_const(code.co_consts)
             ScorePackageValidator._validate_blacklist_keyword_from_names(code.co_names)
@@ -111,18 +126,18 @@ class ScorePackageValidator(object):
         if key == IMPORT_NAME:
             import_name = co_names[value]
             ScorePackageValidator.PREV_IMPORT_NAME = import_name
-            if import_name not in WHITELIST_IMPORT:
+            if import_name not in ScorePackageValidator.WHITELIST_IMPORT:
                 if not ScorePackageValidator._is_contain_custom_import(import_name):
                     raise ServerErrorException(f'invalid import '
                                                f'import_name: {import_name}')
         elif key == IMPORT_STAR:
-            if ScorePackageValidator.PREV_IMPORT_NAME not in WHITELIST_IMPORT:
+            if ScorePackageValidator.PREV_IMPORT_NAME not in ScorePackageValidator.WHITELIST_IMPORT:
                 if not ScorePackageValidator._is_contain_custom_import(ScorePackageValidator.PREV_IMPORT_NAME):
                     raise ServerErrorException(f'invalid import '
                                                f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
         elif key == IMPORT_FROM:
-            if ScorePackageValidator.PREV_IMPORT_NAME in WHITELIST_IMPORT:
-                from_list = WHITELIST_IMPORT[ScorePackageValidator.PREV_IMPORT_NAME]
+            if ScorePackageValidator.PREV_IMPORT_NAME in ScorePackageValidator.WHITELIST_IMPORT:
+                from_list = ScorePackageValidator.WHITELIST_IMPORT[ScorePackageValidator.PREV_IMPORT_NAME]
                 if co_names[value] not in from_list:
                     raise ServerErrorException(f'invalid import '
                                                f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
@@ -144,3 +159,4 @@ class ScorePackageValidator(object):
                         if import_name == imp:
                             return True
         return False
+

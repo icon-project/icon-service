@@ -20,8 +20,7 @@ from typing import Any, Optional
 from ..utils import get_main_type_from_annotations_type
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
-from .icon_score_base2 import ConstBitFlag, CONST_BIT_FLAG, \
-    CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
+from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
 from ..base.type_converter import TypeConverter
 
 

@@ -36,7 +36,6 @@ from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_tx_hash, create_block_hash
 
@@ -68,10 +67,9 @@ class TestIconScoreEngine(unittest.TestCase):
         self.icx_storage = IcxStorage(icx_db)
         deploy_storage = IconScoreDeployStorage(self.icx_storage.db)
         deploy_engine = IconScoreDeployEngine()
-        deploy_engine.open(self._ROOT_SCORE_PATH, 0, deploy_storage)
-        IconScoreContext.icon_score_manager = IconScoreManager(deploy_engine)
+        deploy_engine.open(self._ROOT_SCORE_PATH, deploy_storage)
 
-        self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH, 0)
+        self.icon_score_loader = IconScoreLoader(self._ROOT_SCORE_PATH)
 
         IconScoreMapper.icon_score_loader = self.icon_score_loader
         IconScoreMapper.deploy_storage = deploy_storage
@@ -86,7 +84,7 @@ class TestIconScoreEngine(unittest.TestCase):
         self._icon_score_address = create_address(AddressPrefix.CONTRACT)
 
         self.factory = IconScoreContextFactory(max_size=1)
-        IconScoreContext.icon_score_mapper = self.icon_score_mapper
+        IconScoreContext.icon_score_deploy_engine = deploy_engine
         self._context = self.factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash()

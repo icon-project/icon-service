@@ -22,7 +22,6 @@ from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE
 
 
 if TYPE_CHECKING:
-    from ..deploy.icon_score_manager import IconScoreManager
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
     from ..icx.icx_engine import IcxEngine
 
@@ -34,14 +33,12 @@ class IconPreValidator:
     """
 
     def __init__(self, icx_engine: 'IcxEngine',
-                 score_manager: 'IconScoreManager',
                  deploy_storage: 'IconScoreDeployStorage') -> None:
         """Constructor
 
         :param icx_engine: icx engine
         """
         self._icx = icx_engine
-        self._score_manager = score_manager
         self._deploy_storage = deploy_storage
 
     def execute(self, params: dict, step_price: int, minimum_step: int) -> None:
@@ -259,6 +256,6 @@ class IconPreValidator:
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract
         is_zero_score_address = address == ZERO_SCORE_ADDRESS
-        is_score_active = self._score_manager.is_score_active(None, address)
+        is_score_active = self._deploy_storage.is_score_active(None, address)
         _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
         return _is_inactive_score

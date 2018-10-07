@@ -197,7 +197,10 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
             }
         }
 
-        self.assertRaises(RecursionError, self._query, query_request)
+        with self.assertRaises(BaseException) as context:
+            self._query(query_request)
+
+        self.assertEqual(context.exception.message, 'Max call stack size exceeded')
 
         value2 = 1 * self._icx_factor
         tx4 = self._make_score_call_tx(self._addr_array[0],
@@ -212,7 +215,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.message, 'Max call stack size exceeded')
 
 
 if __name__ == '__main__':

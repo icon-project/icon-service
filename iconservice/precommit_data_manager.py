@@ -38,6 +38,7 @@ class PrecommitData(object):
         self.block_result = block_result
         self.score_mapper = score_mapper
         self.block = block_batch.block
+        self.state_root_hash: bytes = self.block_batch.digest()
 
 
 class PrecommitDataManager(object):
@@ -86,6 +87,13 @@ class PrecommitDataManager(object):
 
     def empty(self) -> bool:
         return len(self._precommit_data_mapper) == 0
+
+    def clear(self):
+        """Clear precommit data
+
+        :return:
+        """
+        self._precommit_data_mapper.clear()
 
     def validate_block_to_invoke(self, block: 'Block'):
         """Check if the block to invoke is valid before invoking it

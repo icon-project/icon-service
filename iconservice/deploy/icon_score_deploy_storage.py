@@ -14,13 +14,14 @@
 # limitations under the License.
 
 import json
+import warnings
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from . import DeployType, DeployState
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
-from ..icon_constant import DEFAULT_BYTE_SIZE
+from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -239,7 +240,11 @@ class IconScoreDeployStorage(object):
             if deploy_info.owner != owner:
                 raise ServerErrorException(f'invalid owner: {deploy_info.owner} != {owner}')
             if deploy_info.next_tx_hash is not None:
-                self._db.delete(context, deploy_info.next_tx_hash)
+                if context.get_revision() >= REVISION_2:
+                    self._db.delete(context, self._create_db_key(
+                        self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_info.next_tx_hash))
+                else:
+                    self._db.delete(context, deploy_info.next_tx_hash)
             deploy_info.next_tx_hash = tx_hash
             self._put_deploy_info(context, deploy_info)
 
@@ -260,9 +265,8 @@ class IconScoreDeployStorage(object):
             raise ServerErrorException(f'deploy_info is None: {score_address}')
 
         next_tx_hash = deploy_info.next_tx_hash
-        if next_tx_hash is None:
-            next_tx_hash = tx_hash
-
+        # have to match next_tx_hash and tx_hash
+        # tx_hash is None -> builtin install
         if tx_hash is not None and tx_hash != next_tx_hash:
             raise ServerErrorException('Invalid update tx_hash: '
                                        f'tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
@@ -322,7 +326,7 @@ class IconScoreDeployStorage(object):
         return prefix + src_key
 
     def is_score_active(self,
-                        context: 'IconScoreContext',
+                        context: Optional['IconScoreContext'],
                         score_address: 'Address') -> bool:
         """Returns whether IconScore is active or not
 
@@ -355,6 +359,7 @@ class IconScoreDeployStorage(object):
     def get_tx_hashes_by_score_address(self,
                                        context: 'IconScoreContext',
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info:
             return deploy_info.current_tx_hash, deploy_info.next_tx_hash
@@ -364,6 +369,7 @@ class IconScoreDeployStorage(object):
     def get_score_address_by_tx_hash(self,
                                      context: 'IconScoreContext',
                                      tx_hash: bytes) -> Optional['Address']:
+        warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         tx_params = self.get_deploy_tx_params(context, tx_hash)
         if tx_params:
             return tx_params.score_address

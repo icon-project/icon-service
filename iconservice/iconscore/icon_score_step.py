@@ -16,8 +16,9 @@
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
+from iconservice.icon_constant import MAX_EXTERNAL_CALL_COUNT
 from iconservice.utils import to_camel_case
-from ..base.exception import IconServiceBaseException, ExceptionCode
+from ..base.exception import IconServiceBaseException, ExceptionCode, InvalidRequestException
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -184,6 +185,7 @@ class IconScoreStepCounter(object):
         self._step_limit: int = step_limit
         self._step_price = step_price
         self._step_used: int = 0
+        self._external_call_count: int = 0
 
     @property
     def step_used(self) -> int:
@@ -213,6 +215,12 @@ class IconScoreStepCounter(object):
     def apply_step(self, step_type: StepType, count: int) -> int:
         """ Increases steps for given step cost
         """
+
+        if step_type == StepType.CONTRACT_CALL:
+            self._external_call_count += 1
+            if self._external_call_count > MAX_EXTERNAL_CALL_COUNT:
+                raise InvalidRequestException('Too many external calls')
+
         step_to_apply = self._step_cost_dict.get(step_type, 0) * count
         if step_to_apply + self._step_used > self._step_limit:
             step_used = self._step_used

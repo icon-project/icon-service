@@ -19,7 +19,9 @@
 
 import unittest
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice import IconServiceFlag
+from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import InvalidParamsException
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -248,6 +250,81 @@ class TestIntegrateScores(TestIntegrateBase):
 
         self.assertEqual(tx_results[0].status, int(False))
         score_addr1 = tx_results[0].score_address
+
+    def test_service_flag(self):
+        tx1 = self._make_deploy_tx("test_builtin",
+                                   "0_0_3/governance",
+                                   self._admin,
+                                   GOVERNANCE_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getServiceConfig",
+                "params": {}
+            }
+        }
+        response = self._query(query_request)
+
+        tx2 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "test_score",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        table = {}
+        for flag in IconServiceFlag:
+            table[flag.name] = False
+        self.assertEqual(response, table)
+
+        target_flag = IconServiceFlag.audit | IconServiceFlag.fee
+        tx3 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'updateServiceConfig',
+                                       {"serviceFlag": hex(target_flag)})
+
+        tx4 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "test_score",
+                                   self._addr_array[1],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(tx_results[1].status, int(True))
+        self.assertEqual(tx_results[2].status, int(True))
+
+        score_addr1 = tx_results[0].score_address
+        score_addr2 = tx_results[2].score_address
+
+        response = self._query(query_request)
+        table = {}
+        for flag in IconServiceFlag:
+            if target_flag & flag == flag:
+                table[flag.name] = True
+            else:
+                table[flag.name] = False
+        self.assertEqual(response, table)
+
+        query_request = {
+            "address": score_addr1
+        }
+        self._query(query_request, 'icx_getScoreApi')
+
+        query_request = {
+            "address": score_addr2
+        }
+        with self.assertRaises(InvalidParamsException) as e:
+            self._query(query_request, 'icx_getScoreApi')
+        self.assertEqual(e.exception.args[0], f"SCORE is inactive: {score_addr2}")
 
 
 if __name__ == '__main__':

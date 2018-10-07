@@ -21,7 +21,6 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.icx.icx_engine import IcxEngine
@@ -31,8 +30,7 @@ from tests import create_address
 class TestTransactionValidator(unittest.TestCase):
 
     def setUp(self):
-        self.validator = IconPreValidator(Mock(spec=IcxEngine), Mock(spec=IconScoreManager),
-                                          Mock(spec=IconScoreDeployStorage))
+        self.validator = IconPreValidator(Mock(spec=IcxEngine), Mock(spec=IconScoreDeployStorage))
 
     def test_excute_v2(self):
         self.validator._check_data_size = Mock()
@@ -192,7 +190,7 @@ class TestTransactionValidator(unittest.TestCase):
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._validate_transaction_v2(params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, "It is not allowed to transfer coin to SCORE on protocol v2")
+        self.assertEqual(e.exception.message, "Not allowed to transfer coin to SCORE on protocol v2")
         self.validator._check_from_can_charge_fee_v2.assert_called_once_with(params)
 
     def test_validate_transaction_v3(self):
@@ -346,7 +344,7 @@ class TestTransactionValidator(unittest.TestCase):
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._validate_deploy_transaction(params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, f'{to} is inactive SCORE')
+        self.assertEqual(e.exception.message, f'{to} is an inactive SCORE')
         self.validator._is_inactive_score.assert_called_once_with(to)
         self.validator._validate_new_score_address_on_deploy_transaction.assert_not_called()
 
@@ -402,32 +400,13 @@ class TestTransactionValidator(unittest.TestCase):
         params = {}
         with self.assertRaises(KeyError) as ke:
             self.validator._validate_new_score_address_on_deploy_transaction(params)
-        self.assertEqual(ke.exception.args[0], 'dataType')
-        generate_score_address.assert_not_called()
-        self.validator._deploy_storage.get_deploy_info.assert_not_called()
-
-        generate_score_address.reset_mock()
-        self.validator._deploy_storage.get_deploy_info.reset_mock()
-        params = {'dataType': 'call'}
-        with self.assertRaises(InvalidRequestException) as e:
-            self.validator._validate_new_score_address_on_deploy_transaction(params)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, f'dataType is not deploy')
-        generate_score_address.assert_not_called()
-        self.validator._deploy_storage.get_deploy_info.assert_not_called()
-
-        generate_score_address.reset_mock()
-        self.validator._deploy_storage.get_deploy_info.reset_mock()
-        params = {'dataType': 'deploy'}
-        with self.assertRaises(KeyError) as ke:
-            self.validator._validate_new_score_address_on_deploy_transaction(params)
         self.assertEqual(ke.exception.args[0], 'to')
         generate_score_address.assert_not_called()
         self.validator._deploy_storage.get_deploy_info.assert_not_called()
 
         generate_score_address.reset_mock()
         self.validator._deploy_storage.get_deploy_info.reset_mock()
-        params = {'dataType': 'deploy', 'to': create_address()}
+        params = {'to': create_address()}
         self.validator._validate_new_score_address_on_deploy_transaction(params)
         generate_score_address.assert_not_called()
         self.validator._deploy_storage.get_deploy_info.assert_not_called()
@@ -455,18 +434,18 @@ class TestTransactionValidator(unittest.TestCase):
         generate_score_address.reset_mock()
         self.validator._deploy_storage.get_deploy_info.reset_mock()
         content_type = 'invalid'
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
+        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, f'Invalid contentType {content_type}')
+        self.assertEqual(e.exception.message, f'Invalid contentType: {content_type}')
         generate_score_address.assert_not_called()
         self.validator._deploy_storage.get_deploy_info.assert_not_called()
 
         generate_score_address.reset_mock()
         self.validator._deploy_storage.get_deploy_info.reset_mock()
         content_type = 'application/tbears'
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
+        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
         self.validator._validate_new_score_address_on_deploy_transaction(params)
         generate_score_address.assert_not_called()
         self.validator._deploy_storage.get_deploy_info.assert_not_called()
@@ -474,7 +453,7 @@ class TestTransactionValidator(unittest.TestCase):
         generate_score_address.reset_mock()
         self.validator._deploy_storage.get_deploy_info.reset_mock()
         content_type = 'application/zip'
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
+        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}}
         with self.assertRaises(InvalidParamsException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
@@ -486,8 +465,7 @@ class TestTransactionValidator(unittest.TestCase):
         self.validator._deploy_storage.get_deploy_info.reset_mock()
         content_type = 'application/zip'
         _from = create_address()
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type},
-                  'from': _from}
+        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from}
         with self.assertRaises(InvalidParamsException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
@@ -503,8 +481,8 @@ class TestTransactionValidator(unittest.TestCase):
         content_type = 'application/zip'
         _from = create_address()
         timestamp = 12345
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type},
-                  'from': _from, 'timestamp': timestamp}
+        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from,
+                  'timestamp': timestamp}
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._validate_new_score_address_on_deploy_transaction(params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
@@ -520,8 +498,8 @@ class TestTransactionValidator(unittest.TestCase):
         content_type = 'application/zip'
         _from = create_address()
         timestamp = 12345
-        params = {'dataType': 'deploy', 'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type},
-                  'from': _from, 'timestamp': timestamp}
+        params = {'to': ZERO_SCORE_ADDRESS, 'data': {'contentType': content_type}, 'from': _from,
+                  'timestamp': timestamp}
         self.validator._validate_new_score_address_on_deploy_transaction(params)
         generate_score_address.assert_called_once_with(_from, timestamp, ANY)
         self.validator._deploy_storage.get_deploy_info.assert_called_once_with(None, score_address)
@@ -542,37 +520,35 @@ class TestTransactionValidator(unittest.TestCase):
         with self.assertRaises(InvalidRequestException) as e:
             self.validator._check_balance(_from, value, fee)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, 'Out of balance')
+        self.assertEqual(e.exception.message, f"Out of balance: balance({balance}) < value({value}) + fee({fee})")
 
     def test_is_inactive_score(self):
         address = create_address()
-        self.validator._score_manager.is_score_active = Mock(return_value=True)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = create_address()
-        self.validator._score_manager.is_score_active = Mock(return_value=False)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = ZERO_SCORE_ADDRESS
-        self.validator._score_manager.is_score_active = Mock(return_value=True)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = ZERO_SCORE_ADDRESS
-        self.validator._score_manager.is_score_active = Mock(return_value=False)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = create_address(1)
-        self.validator._score_manager.is_score_active = Mock(return_value=True)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
 
         address = create_address(1)
-        self.validator._score_manager.is_score_active = Mock(return_value=False)
+        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
         self.assertTrue(self.validator._is_inactive_score(address))
-        self.validator._score_manager.is_score_active.assert_called_once_with(None, address)
-
-
+        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)

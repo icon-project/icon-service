@@ -25,7 +25,6 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
@@ -34,7 +33,6 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.utils.bloom import BloomFilter
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -76,7 +74,6 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._score_deploy_engine = IconScoreDeployEngine()
         self._deploy_storage = IconScoreDeployStorage(self._icx_db)
 
-        icon_score_manager = IconScoreManager(self._score_deploy_engine)
         self._icon_score_loader = IconScoreLoader(score_path)
         self._icon_score_mapper = IconScoreMapper(
             icon_score_manager, self._icon_score_loader)
@@ -118,7 +115,6 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._context.step_counter = self._step_counter
         self._context.icx.open(self._icx_storage)
         self._context.event_logs = Mock(spec=list)
-        self._context.logs_bloom = Mock(spec=BloomFilter)
         self._context.traces = Mock(spec=list)
 
     @staticmethod

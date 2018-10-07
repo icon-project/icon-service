@@ -21,9 +21,7 @@ from os import path
 
 from typing import TYPE_CHECKING
 
-from iconcommons import Logger
 from .score_package_validator import ScorePackageValidator
-from ..icon_constant import IconScoreLoaderFlag
 
 if TYPE_CHECKING:
     from ..base.address import Address
@@ -34,14 +32,10 @@ class IconScoreLoader(object):
     _MAIN_SCORE = 'main_score'
     _MAIN_FILE = 'main_file'
 
-    def __init__(self, score_root_path: str, flag: int):
+    def __init__(self, score_root_path: str):
         self._score_root_path = score_root_path
-        self._flag = flag
         if score_root_path not in sys.path:
             sys.path.append(score_root_path)
-
-    def _is_flag_on(self, flag: 'IconScoreLoaderFlag') -> bool:
-        return (self._flag & flag) == flag
 
     @property
     def score_root_path(self):
@@ -57,21 +51,17 @@ class IconScoreLoader(object):
         converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
         return path.join(self._score_root_path, score_addr.to_bytes().hex(), converted_tx_hash)
 
+    def try_score_package_validate(self, whitelist_table: dict, score_path: str):
+        pkg_root_import: str = self._make_pkg_root_import(score_path)
+        ScorePackageValidator().execute(whitelist_table, score_path, pkg_root_import)
+
     def load_score(self, score_path: str) -> callable:
         score_package_info = self._load_json(score_path)
         pkg_root_import: str = self._make_pkg_root_import(score_path)
 
-        if self._is_flag_on(IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR):
-            ScorePackageValidator().validator(score_path, pkg_root_import)
-
-        # don't remove code until fix hidden bug! it's like magic number!
-        # I think creating file stream like write log fix the hidden bug Temporarily
-        Logger.debug("== load_score ==")
-        Logger.debug(f'sys_module: {sys.modules}')
-
-        spec = importlib.util.find_spec(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        # in order for the new module to be noticed by the import system
+        importlib.invalidate_caches()
+        mod = importlib.import_module(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
 
         return getattr(mod, score_package_info[self._MAIN_SCORE])
 

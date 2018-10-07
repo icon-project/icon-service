@@ -30,3 +30,7 @@ class TestScore(IconScoreBase):
     def set_value(self, value: int):
         self._value.set(value)
         self.Changed(value)
+
+    @external
+    def increase_value(self):
+        self._value.set(self._value.get()+1)

@@ -83,7 +83,6 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.assertIsInstance(e.exception, PermissionError)
 
         # Case when the user try to install scores without directories.
-
         tx_hash3 = create_tx_hash()
         converted_tx_hash = f'0x{bytes.hex(tx_hash3)}'
         self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path3), tx_hash3)
@@ -97,6 +96,38 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash)
         self.deployer.remove_existing_score(install_path)
         self.assertFalse(os.path.exists(install_path))
+
+    def test_deploy_when_score_depth_is_different(self):
+        """
+        Reads all files from the depth lower than where the file 'package.json' is
+        and test deploying successfully.
+        """
+        zip_list = ["valid.zip", "sample_token.zip", "sample_token01.zip", 'test_score01.zip',
+                    'test_score02.zip', 'test_score02_2.zip']
+        for zip in zip_list:
+            self.deployer = IconScoreDeployer('./')
+            self.address = create_address(AddressPrefix.CONTRACT)
+            self.archive_path = os.path.join(DIRECTORY_PATH, 'sample', zip)
+            self.score_root_path = os.path.join(self.deployer.score_root_path, str(self.address.to_bytes().hex()))
+            tx_hash1 = create_tx_hash()
+            self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
+            converted_tx_hash = f'0x{bytes.hex(tx_hash1)}'
+            install_path = os.path.join(self.score_root_path, converted_tx_hash)
+            zip_file_info_gen = self.deployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
+            file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
+
+            installed_contents = []
+            for directory, dirs, filename in os.walk(install_path):
+                parent_directory_index = directory.rfind('/')
+                parent_dir_name = directory[parent_directory_index + 1:]
+                for file in filename:
+                    if parent_dir_name == f'0x{bytes.hex(tx_hash1)}':
+                        installed_contents.append(file)
+                    else:
+                        installed_contents.append(f'{parent_dir_name}/{file}')
+            self.assertEqual(True, os.path.exists(install_path))
+            self.assertTrue(installed_contents.sort() == file_path_list.sort())
+            IconScoreDeployer.remove_existing_score(self.score_root_path)
 
     def tearDown(self):
         IconScoreDeployer.remove_existing_score(self.score_root_path)

@@ -32,7 +32,6 @@ from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.icon_score_manager import IconScoreManager
 from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -75,16 +74,15 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
 
         self._engine = IconScoreDeployEngine()
-        self._icon_score_loader = IconScoreLoader(score_path, 0)
+        self._icon_score_loader = IconScoreLoader(score_path)
         IconScoreMapper.icon_score_loader = self._icon_score_loader
         IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()
 
-        IconScoreContext.icon_score_manager = Mock(spec=IconScoreManager)
+        IconScoreContext.get_owner = Mock()
 
         self._engine.open(
             score_root_path=score_path,
-            flag=0,
             icon_deploy_storage=self._icon_deploy_storage)
 
         self.from_address = create_address(AddressPrefix.EOA)
@@ -115,6 +113,7 @@ class TestIconZipDeploy(unittest.TestCase):
         ContextContainer._push_context(self._context)
         self._context.validate_deployer = Mock()
         self._context.validate_score_blacklist = Mock()
+        self._context.is_service_flag_on = Mock(return_value=False)
 
     def tearDown(self):
         self._engine = None

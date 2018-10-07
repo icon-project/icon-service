@@ -16,13 +16,12 @@
 
 from math import ceil
 from os import makedirs
+
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from .base.address import Address, generate_score_address, \
-    generate_score_address_for_tbears
-from .base.address import ZERO_SCORE_ADDRESS, \
-    GOVERNANCE_SCORE_ADDRESS
+from .base.address import Address, generate_score_address, generate_score_address_for_tbears
+from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, RevertException, ScoreErrorException
 from .base.exception import IconServiceBaseException, ServerErrorException
@@ -33,14 +32,13 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from .deploy.icon_score_manager import IconScoreManager
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, \
-    IconServiceFlag, IconDeployFlag, ConfigKey, IconScoreLoaderFlag
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
@@ -100,9 +98,6 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager = PrecommitDataManager()
 
-    def _is_flag_on(self, flag: 'IconServiceFlag') -> bool:
-        return (self._flag & flag) == flag
-
     def open(self, conf: 'IconConfig') -> None:
         """Get necessary parameters and initialize diverse objects
 
@@ -110,7 +105,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         self._conf = conf
-        self._flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
+        service_config_flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
         score_root_path: str = self._conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         state_db_root_path: str = self._conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
 
@@ -122,17 +117,11 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._context_factory = IconScoreContextFactory(max_size=5)
-
-        icon_score_loader_flags = IconScoreLoaderFlag.NONE
-        if self._is_flag_on(IconServiceFlag.scorePackageValidator):
-            icon_score_loader_flags |= IconScoreLoaderFlag.ENABLE_SCORE_PACKAGE_VALIDATOR
-        self._icon_score_loader = IconScoreLoader(score_root_path, flag=icon_score_loader_flags)
+        self._icon_score_loader = IconScoreLoader(score_root_path)
 
         self._icx_engine = IcxEngine()
         self._icon_score_engine = IconScoreEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
-
-        icon_score_manger = IconScoreManager(self._icon_score_deploy_engine)
 
         self._icx_context_db = \
             ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
@@ -147,12 +136,13 @@ class IconServiceEngine(ContextContainer):
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._icon_pre_validator = IconPreValidator(self._icx_engine,
-                                                    icon_score_manger,
                                                     self._icon_score_deploy_storage)
 
         InternalCall.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
-        IconScoreContext.icon_score_manager = icon_score_manger
+        IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
+        IconScoreContext.icon_service_flag = service_config_flag
+        IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
         self._icon_score_engine.open(
@@ -160,7 +150,6 @@ class IconServiceEngine(ContextContainer):
 
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
-            flag=self._make_deploy_engine_flag(),
             icon_deploy_storage=self._icon_score_deploy_storage)
 
         self._load_builtin_scores()
@@ -168,29 +157,14 @@ class IconServiceEngine(ContextContainer):
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
 
-    def _make_deploy_engine_flag(self) -> int:
-        flags = IconDeployFlag.NONE.value
-        if self._is_flag_on(IconServiceFlag.audit):
-            flags |= IconDeployFlag.ENABLE_DEPLOY_AUDIT.value
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            flags |= IconDeployFlag.ENABLE_DEPLOY_WHITELIST.value
-
-        if self._conf.get(ConfigKey.TBEARS_MODE, True):
-            flags |= IconDeployFlag.ENABLE_TBEARS_MODE.value
-        return flags
-
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
-        key_table = [ConfigKey.SERVICE_FEE,
-                     ConfigKey.SERVICE_AUDIT,
-                     ConfigKey.SERVICE_DEPLOYER_WHITELIST,
-                     ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR]
-        flag = 0
-        for key in key_table:
-            is_enable = flag_table.get(key, False)
+        make_flag = 0
+        for flag in IconServiceFlag:
+            is_enable = flag_table.get(flag.name, False)
             if is_enable:
-                flag |= IconServiceFlag[key]
-        return flag
+                make_flag |= flag
+        return make_flag
 
     def _load_builtin_scores(self):
         context = self._context_factory.create(IconScoreContextType.DIRECT)
@@ -209,21 +183,20 @@ class IconServiceEngine(ContextContainer):
 
         :return:
         """
-        context = self._context_factory.create(IconScoreContextType.QUERY)
-
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         # Clarifies that This Context does not count steps
         context.step_counter = None
 
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
             # Gets the step price if the fee flag is on
             # and set to the counter factory
-            if self._is_flag_on(IconServiceFlag.fee):
+            if context.is_service_flag_on(IconServiceFlag.fee):
                 step_price = governance_score.getStepPrice()
             else:
                 step_price = 0
@@ -254,7 +227,7 @@ class IconServiceEngine(ContextContainer):
 
         self._context_factory.destroy(context)
 
-    def _validate_deploy_whitelist(
+    def _validate_deployer_whitelist(
             self, context: 'IconScoreContext', params: dict):
         data_type = params.get('dataType')
 
@@ -300,6 +273,7 @@ class IconServiceEngine(ContextContainer):
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
         """
+        self._icon_score_mapper.clear_garbage_score()
         context = self._context_factory.create(IconScoreContextType.DIRECT)
         self._push_context(context)
         try:
@@ -320,6 +294,15 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :return: (TransactionResult[], bytes)
         """
+        # If the block has already been processed,
+        # return the result from PrecommitDataManager
+        precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
+        if precommit_data is not None:
+            Logger.info(
+                f'The result of block(0x{block.hash.hex()} already exists',
+                ICON_SERVICE_LOG_TAG)
+            return precommit_data.block_result, precommit_data.state_root_hash
+
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
@@ -353,7 +336,7 @@ class IconServiceEngine(ContextContainer):
 
         self._context_factory.destroy(context)
 
-        return block_result, precommit_data.block_batch.digest()
+        return block_result, precommit_data.state_root_hash
 
     @staticmethod
     def _is_genesis_block(
@@ -451,10 +434,10 @@ class IconServiceEngine(ContextContainer):
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
         context.event_logs: List['EventLog'] = []
-        context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
         context.step_counter = self._step_counter_factory.create(step_limit)
         context.msg_stack.clear()
+        context.event_log_stack.clear()
 
         return self._call(context, method, params)
 
@@ -522,10 +505,10 @@ class IconServiceEngine(ContextContainer):
 
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
-        context = self._context_factory.create(IconScoreContextType.QUERY)
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
-        if self._is_flag_on(IconServiceFlag.deployerWhiteList):
-            self._validate_deploy_whitelist(context, params)
+        if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
+            self._validate_deployer_whitelist(context, params)
         self._context_factory.destroy(context)
 
     def _call(self,
@@ -593,6 +576,7 @@ class IconServiceEngine(ContextContainer):
         data_type = params.get('dataType', None)
         data = params.get('data', None)
 
+        context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
         return self._icon_score_engine.query(context,
                                              icon_score_address,
                                              data_type,
@@ -638,7 +622,6 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
             context.traces.append(trace)
             context.event_logs.clear()
-            context.logs_bloom.value = 0
         finally:
             # Revert func_type to IconScoreFuncType.WRITABLE
             # to avoid DatabaseException in self._charge_transaction_fee()
@@ -658,7 +641,7 @@ class IconServiceEngine(ContextContainer):
             tx_result.step_price = final_step_price
             tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
-            tx_result.logs_bloom = context.logs_bloom
+            tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
             tx_result.traces = context.traces
 
         return tx_result
@@ -731,7 +714,7 @@ class IconServiceEngine(ContextContainer):
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
-            elif self._is_flag_on(IconServiceFlag.fee):
+            elif context.is_service_flag_on(IconServiceFlag.fee):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
                 step_price = 10 ** 10
@@ -741,7 +724,11 @@ class IconServiceEngine(ContextContainer):
         try:
             self._icx_engine.charge_fee(context, from_, fee)
         except BaseException as e:
-            Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+            if hasattr(e, 'message'):
+                message = e.message
+            else:
+                message = str(e)
+            Logger.exception(message, ICON_SERVICE_LOG_TAG)
             step_used = 0
 
         # final step_used and step_price
@@ -846,6 +833,22 @@ class IconServiceEngine(ContextContainer):
             [e.code, e.message] if isinstance(e, IconServiceBaseException) else
             [ExceptionCode.SERVER_ERROR, str(e)]
         )
+
+    @staticmethod
+    def _generate_logs_bloom(event_logs: List['EventLog']) -> BloomFilter:
+        """
+        Generates the bloom data from the event logs
+        :param event_logs: The event logs
+        :return: Bloom data
+        """
+        logs_bloom = BloomFilter()
+
+        for event_log in event_logs:
+            for i, indexed_item in enumerate(event_log.indexed):
+                bloom_data = EventLogEmitter.get_bloom_data(i, indexed_item)
+                logs_bloom.add(bloom_data)
+
+        return logs_bloom
 
     def _handle_icx_get_score_api(self,
                                   context: 'IconScoreContext',

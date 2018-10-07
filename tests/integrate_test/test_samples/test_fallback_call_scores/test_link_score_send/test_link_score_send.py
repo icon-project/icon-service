@@ -29,4 +29,4 @@ class TestLinkScoreSend(IconScoreBase):
         amount = self.msg.value
         addr = self._addr_score.get()
         if not self.icx.send(addr, amount):
-            self.revert('Fail icx.send!')
+            self.revert('This is not payable')
