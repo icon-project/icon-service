@@ -53,9 +53,6 @@ INITIAL_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
 
-REVISION_CODE = 'revisionCode'
-REVISION_DEBUG = 'revisionDebug'
-
 
 class StepCosts:
     """
@@ -110,8 +107,8 @@ class Governance(IconSystemScoreBase):
     _SERVICE_CONFIG = 'service_config'
     _AUDIT_STATUS = 'audit_status'
     _REJECT_STATUS = 'reject_status'
-    _REVISION = 'revision'
-    _REVISION_DEBUG = 'revision_debug'
+    _REVISION_CODE = 'revision_code'
+    _REVISION_NAME = 'revision_name'
 
     @eventlog(indexed=1)
     def Accepted(self, txHash: str):
@@ -154,7 +151,7 @@ class Governance(IconSystemScoreBase):
         return self._service_config.get()
 
     @property
-    def revision(self) -> int:
+    def revision_code(self) -> int:
         return self._revision_code.get()
 
     def __init__(self, db: IconScoreDatabase) -> None:
@@ -172,8 +169,8 @@ class Governance(IconSystemScoreBase):
         self._service_config = VarDB(self._SERVICE_CONFIG, db, value_type=int)
         self._audit_status = DictDB(self._AUDIT_STATUS, db, value_type=bytes)
         self._reject_status = DictDB(self._REJECT_STATUS, db, value_type=bytes)
-        self._revision_code = VarDB(self._REVISION, db, value_type=int)
-        self._revision_debug = VarDB(self._REVISION_DEBUG, db, value_type=str)
+        self._revision_code = VarDB(self._REVISION_CODE, db, value_type=int)
+        self._revision_name = VarDB(self._REVISION_NAME, db, value_type=str)
 
     def on_install(self, stepPrice: int = 10 ** 10) -> None:
         super().on_install()
@@ -204,7 +201,7 @@ class Governance(IconSystemScoreBase):
         self._version.set('0.0.3')
 
         self._revision_code.set(2)
-        self._revision_debug.set("1.1.0")
+        self._revision_name.set("1.1.0")
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -811,7 +808,7 @@ class Governance(IconSystemScoreBase):
         return table
 
     @external
-    def setRevision(self, code: int, debug: str):
+    def setRevision(self, code: int, name: str):
         # only owner can add import white list
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
@@ -820,14 +817,13 @@ class Governance(IconSystemScoreBase):
         if code <= prev_code:
             self.revert(f"can't decrease code")
 
-        prev_debug = self._revision_debug.get()
-        if self._versions(debug) <= self._versions(prev_debug):
+        prev_name = self._revision_name.get()
+        if self._versions(name) <= self._versions(prev_name):
             self.revert(f"can't decrease debug")
 
         self._revision_code.set(code)
-        self._revision_debug.set(debug)
+        self._revision_name.set(name)
 
     @external(readonly=True)
     def getRevision(self) -> dict:
-        return {REVISION_CODE: self._revision_code.get(), REVISION_DEBUG: self._revision_debug.get()}
-
+        return {'code': self._revision_code.get(), 'name': self._revision_name.get()}

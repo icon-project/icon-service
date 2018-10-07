@@ -259,8 +259,8 @@ class IconScoreContext(object):
         try:
             governance_score = self.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
             if governance_score is not None:
-                if hasattr(governance_score, 'revision'):
-                    return governance_score.revision
+                if hasattr(governance_score, 'revision_code'):
+                    return governance_score.revision_code
         except:
             pass
 

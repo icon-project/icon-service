@@ -100,6 +100,12 @@ class IconScoreDeployEngine(object):
             raise e
 
     def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
+        """Skip audit process for SystemSCORE update
+
+        :param context:
+        :param icon_score_address:
+        :return:
+        """
         if context.get_revision() >= REVISION_2:
             is_system_score = is_builtin_score(str(icon_score_address))
         else:

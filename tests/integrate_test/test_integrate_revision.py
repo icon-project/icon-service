@@ -18,14 +18,11 @@
 """
 
 import unittest
+from typing import TYPE_CHECKING, Any
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import RevertException, ExceptionCode
-from iconservice.icon_constant import ConfigKey, REVISION_2
-from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
+from iconservice.icon_constant import REVISION_2
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -70,9 +67,9 @@ class TestIntegrateRevision(TestIntegrateBase):
     def test_governance_call_about_set_revision(self):
         self._update_0_0_3_governance()
 
-        expect_status = {
-            "revisionCode": REVISION_2,
-            "revisionDebug": "1.1.0"
+        expected_status = {
+            "code": REVISION_2,
+            "name": "1.1.0"
         }
 
         query_request = {
@@ -86,22 +83,22 @@ class TestIntegrateRevision(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, expect_status)
+        self.assertEqual(expected_status, response)
 
         next_revision = REVISION_2 + 1
 
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
                                         'setRevision',
-                                        {"code": hex(next_revision), "debug": "1.1.1"})
+                                        {"code": hex(next_revision), "name": "1.1.1"})
         self.assertEqual(tx_result.status, int(True))
 
-        expect_status = {
-            "revisionCode": next_revision,
-            "revisionDebug": "1.1.1"
+        expected_status = {
+            "code": next_revision,
+            "name": "1.1.1"
         }
         response = self._query(query_request)
-        self.assertEqual(response, expect_status)
+        self.assertEqual(expected_status, response)
 
 
 if __name__ == '__main__':
