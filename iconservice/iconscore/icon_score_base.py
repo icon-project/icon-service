@@ -521,7 +521,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def block_height(self) -> int:
         return self._context.block.height
 
-    @property
     def now(self) -> int:
         return self._context.block.timestamp
 
