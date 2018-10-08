@@ -52,6 +52,26 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
         return self.__from_score
 
 
+class Block(object):
+    def __init__(self, block_height: int, timestamp: int) -> None:
+        """Constructor
+
+        :param block_height: block height
+        :param timestamp: block timestamp
+        """
+        self._height = block_height
+        # unit: microsecond
+        self._timestamp = timestamp
+
+    @property
+    def height(self) -> int:
+        return self._height
+
+    @property
+    def timestamp(self) -> int:
+        return self._timestamp
+
+
 def revert(message: Optional[str] = None,
            code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
     """

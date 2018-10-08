@@ -26,7 +26,7 @@ from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
-from .icon_score_base2 import InterfaceScore, revert
+from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_context import ContextGetter
 from .icon_score_context import IconScoreContextType
 from .icon_score_event_log import EventLogEmitter
@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
     from ..base.transaction import Transaction
     from ..base.message import Message
-    from ..base.block import Block
 
 INDEXED_ARGS_LIMIT = 3
 
@@ -495,6 +494,10 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     @property
     def tx(self) -> 'Transaction':
         return self._context.tx
+
+    @property
+    def block(self) -> 'Block':
+        return Block(self._context.block.height, self._context.block.timestamp)
 
     @property
     def db(self) -> 'IconScoreDatabase':
