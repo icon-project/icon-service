@@ -505,26 +505,26 @@ If msg.value (icx) is passed to non-payable function, the call will fail.
 #### eventlog decorator (@eventlog)
 Functions with `@eventlog` decorator will include logs in its TxResult as 'eventlogs'.
 It is recommended to declare a function without implementation body. Even if the function has a body, it does not be executed.
-When declaring a function, type hinting is a must. Without type hinting, transaction will fail.
-If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration
-will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed.
-Indexed parameters and non-indexed parameters are separately stored in TxResult.
+When declaring a function, type hinting is a must. Without type hinting, transaction will fail. The default value for the parameter can be set.
+
+If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed, And index can't exceed the number of parameters(will raise an error).
+Indexed parameters and non-indexed parameters are separately stored in TxResult. 
 
 Example)
 ```python
 # Declaration
 @eventlog
-def FundTransfer1(self, backer: Address, amount: int, is_contribution: bool): pass
+def FundTransfer1(self, _backer: Address, _amount: int, _isContribution: bool): pass
 
 @eventlog(indexed=1) # The first param (backer) will be indexed
-def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
+def FundTransfer2(self, _backer: Address, _amount: int, _isContribution: bool): pass
 
 # Execution
 self.FundTransfer1(self.msg.sender, amount, True)
 self.FundTransfer2(self.msg.sender, amount, True)
 ```
 Possible data types for function parameters are primitive types (int, str, bytes, bool, Address).
-Array type parameter is not supported.
+Array, Dictionary and None type parameter is not supported.
 
 #### fallback
 fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
