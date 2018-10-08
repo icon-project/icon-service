@@ -280,7 +280,10 @@ class TestIntegrateScores(TestIntegrateBase):
 
         table = {}
         for flag in IconServiceFlag:
-            table[flag.name] = False
+            if flag.name is 'scorePackageValidator':
+                table[flag.name] = True
+            else:
+                table[flag.name] = False
         self.assertEqual(response, table)
 
         target_flag = IconServiceFlag.audit | IconServiceFlag.fee

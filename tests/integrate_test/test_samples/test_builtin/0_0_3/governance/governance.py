@@ -225,6 +225,8 @@ class Governance(IconSystemScoreBase):
         self._set_initial_import_white_list()
         self._set_initial_service_config()
 
+        self._set_initial_max_step_limits()
+
     @staticmethod
     def _versions(version: str):
         parts = []
@@ -586,13 +588,13 @@ class Governance(IconSystemScoreBase):
             self._import_white_list_keys.put(key)
 
     @external
-    def addImportWhiteList(self, import_stmt: str):
+    def addImportWhiteList(self, importStmt: str):
         # only owner can add import white list
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
         import_stmt_dict = {}
         try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
+            import_stmt_dict: dict = self._check_import_stmt(importStmt)
         except Exception as e:
             self.revert(f'Invalid import statement: {e}')
         # add to import white list
@@ -638,17 +640,17 @@ class Governance(IconSystemScoreBase):
             self.AddImportWhiteListLog(str(log_entry), len(log_entry))
 
         if DEBUG is True:
-            Logger.debug(f'checking added item ({import_stmt}): {self.isInImportWhiteList(import_stmt)}')
+            Logger.debug(f'checking added item ({importStmt}): {self.isInImportWhiteList(importStmt)}')
 
     @external
-    def removeImportWhiteList(self, import_stmt: str):
+    def removeImportWhiteList(self, importStmt: str):
         # only owner can add import white list
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
 
         import_stmt_dict = {}
         try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
+            import_stmt_dict: dict = self._check_import_stmt(importStmt)
         except Exception as e:
             self.revert(f'Invalid import statement: {e}')
 
@@ -698,12 +700,12 @@ class Governance(IconSystemScoreBase):
             self.AddImportWhiteListLog(str(log_entry), len(log_entry))
 
         if DEBUG is True:
-            Logger.debug(f'checking removed item ({import_stmt}): {self.isInImportWhiteList(import_stmt)}')
+            Logger.debug(f'checking removed item ({importStmt}): {self.isInImportWhiteList(importStmt)}')
 
     @external(readonly=True)
-    def isInImportWhiteList(self, import_stmt: str) -> bool:
+    def isInImportWhiteList(self, importStmt: str) -> bool:
         try:
-            import_stmt_dict: dict = self._check_import_stmt(import_stmt)
+            import_stmt_dict: dict = self._check_import_stmt(importStmt)
         except Exception as e:
             raise ValueError(f'{e}')
 
@@ -726,7 +728,7 @@ class Governance(IconSystemScoreBase):
                     return False
 
         if DEBUG is True:
-            Logger.debug(f'({import_stmt}) is in import white list')
+            Logger.debug(f'({importStmt}) is in import white list')
         return True
 
     @staticmethod
@@ -767,7 +769,7 @@ class Governance(IconSystemScoreBase):
                     self._import_white_list_keys[i] = top
 
     def _set_initial_service_config(self):
-        self._service_config.set(self.get_icon_service_flag())
+        self._service_config.set(self.get_icon_service_flag() | 8)
 
     @external
     def updateServiceConfig(self, serviceFlag: int):
@@ -819,7 +821,7 @@ class Governance(IconSystemScoreBase):
 
         prev_name = self._revision_name.get()
         if self._versions(name) <= self._versions(prev_name):
-            self.revert(f"can't decrease debug")
+            self.revert(f"can't decrease name")
 
         self._revision_code.set(code)
         self._revision_name.set(name)

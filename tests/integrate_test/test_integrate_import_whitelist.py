@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateImportWhiteList(TestIntegrateBase):
-    def _import_query_request(self, import_stmt: str):
+    def _import_query_request(self, importStmt: str):
         query_request = {
             "version": self._version,
             "from": self._admin,
@@ -41,7 +41,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             "data": {
                 "method": "isInImportWhiteList",
                 "params": {
-                    "import_stmt": import_stmt,
+                    "importStmt": importStmt,
 
                 }
             }
@@ -78,7 +78,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx_result = self._external_call(self._addr_array[0],
                                         GOVERNANCE_SCORE_ADDRESS,
                                         'addImportWhiteList',
-                                        {"import_stmt": "{ 'json': [] }"})
+                                        {"importStmt": "{ 'json': [] }"})
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_result.failure.message, "Invalid sender: not owner")
@@ -86,7 +86,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx_result = self._external_call(self._addr_array[0],
                                         GOVERNANCE_SCORE_ADDRESS,
                                         'removeImportWhiteList',
-                                        {"import_stmt": "{ 'json': [] }"})
+                                        {"importStmt": "{ 'json': [] }"})
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_result.failure.message, "Invalid sender: not owner")
@@ -97,7 +97,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
                                         'addImportWhiteList',
-                                        {"import_stmt": ""})
+                                        {"importStmt": ""})
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_result.failure.message,
@@ -106,7 +106,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
                                         'removeImportWhiteList',
-                                        {"import_stmt": ""})
+                                        {"importStmt": ""})
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_result.failure.message,
@@ -129,7 +129,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx1 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'addImportWhiteList',
-                                       {"import_stmt": "{'json': [],'os': ['path'],'base.exception': "
+                                       {"importStmt": "{'json': [],'os': ['path'],'base.exception': "
                                                        "['ExceptionCode','RevertException']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
@@ -182,7 +182,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx1 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'removeImportWhiteList',
-                                       {"import_stmt": "{'json': [],'os': ['path'],"
+                                       {"importStmt": "{'json': [],'os': ['path'],"
                                                        "'base.exception': ['RevertException']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
@@ -229,7 +229,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx1 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'removeImportWhiteList',
-                                       {"import_stmt": "{'base.exception': ['ExceptionCode']}"})
+                                       {"importStmt": "{'base.exception': ['ExceptionCode']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
         # confirm block
@@ -258,7 +258,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx2 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'addImportWhiteList',
-                                       {"import_stmt": "{'os': []}"})
+                                       {"importStmt": "{'os': []}"})
 
         tx3 = self._make_deploy_tx("test_scores",
                                    "l_coin_0_5_0_using_import_os",
