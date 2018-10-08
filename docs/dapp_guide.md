@@ -505,26 +505,26 @@ If msg.value (icx) is passed to non-payable function, the call will fail.
 #### eventlog decorator (@eventlog)
 Functions with `@eventlog` decorator will include logs in its TxResult as 'eventlogs'.
 It is recommended to declare a function without implementation body. Even if the function has a body, it does not be executed.
-When declaring a function, type hinting is a must. Without type hinting, transaction will fail.
-If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration
-will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed.
-Indexed parameters and non-indexed parameters are separately stored in TxResult.
+When declaring a function, type hinting is a must. Without type hinting, transaction will fail. The default value for the parameter can be set.
+
+If `indexed` parameter is set in the decorator, designated number of parameters in the order of declaration will be indexed and included in the Bloom filter.  At most 3 parameters can be indexed, And index can't exceed the number of parameters(will raise an error).
+Indexed parameters and non-indexed parameters are separately stored in TxResult. 
 
 Example)
 ```python
 # Declaration
 @eventlog
-def FundTransfer1(self, backer: Address, amount: int, is_contribution: bool): pass
+def FundTransfer1(self, _backer: Address, _amount: int, _isContribution: bool): pass
 
 @eventlog(indexed=1) # The first param (backer) will be indexed
-def FundTransfer2(self, backer: Address, amount: int, is_contribution: bool): pass
+def FundTransfer2(self, _backer: Address, _amount: int, _isContribution: bool): pass
 
 # Execution
 self.FundTransfer1(self.msg.sender, amount, True)
 self.FundTransfer2(self.msg.sender, amount, True)
 ```
 Possible data types for function parameters are primitive types (int, str, bytes, bool, Address).
-Array type parameter is not supported.
+Array, Dictionary and None type parameter is not supported.
 
 #### fallback
 fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
@@ -560,35 +560,25 @@ Built-in functions
 #### create\_interface\_score('score address', 'interface class') -> interface class instance
 This function returns an object, through which you have an access to the designated SCORE's external functions.
 
-#### revert(message: str) -> None
-Developer can force a revert exception.
-
-If the exception is thrown, all the changes in the state DB in current transaction will be rolled back.
-
 
 Built-in properties
 --------------
 
-#### msg : Holds information of the account who called the SCORE.
+#### msg : Holds information of the account who called the SCORE
 * msg.sender :
 Address of the account who called this function.
 If other contact called this function, msg.sender points to the caller contract's address.
 * msg.value :
 Amount of icx that the sender attempts to transfer to the current SCORE.
 
-#### tx : Transaction info.
+#### tx : Transaction info
 * tx.origin : The account who created the transaction.
 * tx.index : Transaction index.
 * tx.hash : Transaction hash.
 * tx.timestamp : Transaction creation time.
 * tx.nonce : (optional) random value. 
 
-#### block : Block info that contains current transaction.
-* block.height : Block height.
-* block.hash : Block hash.
-* block.timestamp : Block creation time.
-
-#### icx : An object used to transfer icx coin.
+#### icx : An object used to transfer icx coin
 * icx.transfer(addr\_to(address), amount(integer)) -> bool
 Transfers designated amount of icx coin to `addr_to`.
 If exception occurs during execution, the exception will be escalated.
@@ -599,10 +589,48 @@ Sends designated amount of icx coin to `addr_to`.
 Basic behavior is same as transfer, the difference is that exception is caught inside the function.
 Returns True when coin transfer succeeded, False when failed.
 
-#### db : db instance used to access state DB.
+#### db : db instance used to access state DB
 
-#### address : SCORE address.
+#### address : SCORE address
 
-#### owner : Address of the account who deployed the contract.
+#### owner : Address of the account who deployed the contract
+
+#### block\_height : Current block height
 
 #### now : Wrapping function of block.timestamp.
+
+
+API functions
+--------------
+
+#### revert(message: str) -> None
+
+Developer can force a revert exception.
+If the exception is thrown, all the changes in the state DB in current transaction will be rolled back.
+
+#### sha3\_256(data: bytes) -> bytes
+
+Computes hash using the input `data`
+
+#### json\_dumps(obj: Any, **kwargs) -> str
+
+Converts a python object `obj` to a JSON string
+
+#### json\_loads(src: str, **kwargs) -> str
+
+Parses a JSON string `src` and converts to a python object
+
+
+Common classes
+--------------
+#### Address
+
+* prefix: AddressPrefix.EOA(0) or AddressPrefix.CONTRACT(1)
+* body: 20-byte address body part
+* is\_contract: Whether the address is SCORE
+* to\_bytes(self) -> bytes:
+  Returns data as bytes from the address object
+* from\_string(`address`: str) -> Address: 
+  A static method creates an address object from given 42-char string `address`
+* from\_data(prefix: AddressPrefix, data: bytes) -> Address: 
+  A static method creates an address object(type of `prefix`) using given bytes `data`

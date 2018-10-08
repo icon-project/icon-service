@@ -253,7 +253,7 @@ class TestIntegrateScores(TestIntegrateBase):
 
     def test_service_flag(self):
         tx1 = self._make_deploy_tx("test_builtin",
-                                   "0_0_3/governance",
+                                   "0_0_4/governance",
                                    self._admin,
                                    GOVERNANCE_SCORE_ADDRESS)
 
@@ -280,7 +280,10 @@ class TestIntegrateScores(TestIntegrateBase):
 
         table = {}
         for flag in IconServiceFlag:
-            table[flag.name] = False
+            if flag.name is 'scorePackageValidator':
+                table[flag.name] = True
+            else:
+                table[flag.name] = False
         self.assertEqual(response, table)
 
         target_flag = IconServiceFlag.audit | IconServiceFlag.fee

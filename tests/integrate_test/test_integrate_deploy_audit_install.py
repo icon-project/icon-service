@@ -36,9 +36,9 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -112,7 +112,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def test_score(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
@@ -210,7 +210,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value2)
 
     def test_score_address_already_in_use_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         timestamp = 1
@@ -277,7 +277,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value2)
 
     def test_score_no_zip(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
@@ -302,7 +302,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f'Bad zip file.')
 
     def test_score_no_scorebase(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
@@ -319,7 +319,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
 
     def test_score_on_install_error(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
@@ -336,7 +336,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "raise exception!")
 
     def test_score_no_external_func(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
@@ -353,7 +353,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "this score has no external functions")
 
     def test_score_with_korean_comments(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
@@ -369,7 +369,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
 
     def test_score_no_python(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor

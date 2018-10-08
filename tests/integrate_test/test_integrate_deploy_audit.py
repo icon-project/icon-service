@@ -40,15 +40,16 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self) -> bytes:
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         tx_hash1 = tx_results[0].tx_hash
         self._accept_score(tx_hash1)
+        return tx_hash1
 
     def _assert_get_score_status(self, target_addr: 'Address', expect_status: dict):
         query_request = {
@@ -128,7 +129,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
     def test_governance_call_about_add_auditor_already_auditor_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
         tx_result = self._external_call(self._admin,
@@ -146,7 +147,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "Invalid address: already auditor")
 
     def test_governance_call_about_add_remove_auditor_invalid_address(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         raise_exception_start_tag("addAuditor")
         tx_result = self._external_call(self._admin,
@@ -187,7 +188,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
     def test_governance_call_about_add_remove_auditor_score_addr_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         score_addr = create_address(1)
 
@@ -235,7 +236,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_add_remove_auditor_not_owner_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
 
@@ -260,7 +261,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_remove_auditor_not_yourself(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
 
@@ -299,11 +300,13 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
             {"current": {"status": "active"}}.
         """
 
-        self._update_0_0_3_governance()
+        tx_hash1 = self._update_governance()
 
         expect_ret = {
             'current': {
-                'status': 'active'}
+                'status': 'active',
+                'deployTxHash': tx_hash1
+            }
         }
         self._assert_get_score_status(GOVERNANCE_SCORE_ADDRESS, expect_ret)
 
@@ -336,7 +339,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
     def test_normal_score_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy (wait audit)
         tx_result = self._deploy_score("install/test_score", 1)
@@ -388,7 +391,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(False))
 
     def test_normal_score_fail1_fix_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy (wait audit)
         tx_result = self._deploy_score("install/test_score", 1)
@@ -480,7 +483,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(False))
 
     def test_normal_score_fail2_fix_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy (wait audit)
         tx_result = self._deploy_score("install/test_score", 1)
@@ -585,7 +588,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(False))
 
     def test_normal_score_fail3_fix_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         tx_result = self._deploy_score("install/test_score", 1)
         self.assertEqual(tx_result.status, int(True))
@@ -697,7 +700,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(False))
 
     def test_normal_score_fail4_fix_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy (wait audit)
         tx_result = self._deploy_score("install/test_score", 1)
@@ -843,7 +846,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         raise_exception_end_tag("Invalid status: next is rejected")
 
     def test_normal_score_fail5_fix_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy (wait audit)
         tx_result = self._deploy_score("install/test_score", 1)

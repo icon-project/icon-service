@@ -24,9 +24,10 @@ Score에서 Event Log의 적용 방법 및 Indexing Rule, TransactionResult에 �
 
 ```python
 @eventlog(indexed=2)
-def Transfer(self, from_: Address, to_: Address, amount: int):
+def Transfer(self, _from: Address, _to: Address, _amount: int):
     pass
 ```
+- 각 매개변수에는 default 값을 설정할 수 있다.
 
 
 
@@ -77,7 +78,7 @@ def Transfer(self, from_: Address, to_: Address, amount: int):
 
 ```python
 @eventlog(indexed=2)
-def Transfer(self, from_: Address, to_: Address, amount: int):
+def Transfer(self, _from: Address, _to: Address, _amount: int):
     pass
 
 ...
@@ -116,11 +117,11 @@ self.Transfer(
 }
 ```
 
-|  | indexed |   data  |
-| :------ | :--- | :--- |
-| 0 | **signature**: Transfer(Address,Address,int) | **amount**: 0x8ac7230489e80000 |
-| 1 | **from_**: hx4873b94352c8c1f3b2f09aaeccea31ce9e90bd31 |      |
-| 2 | **to_**: hx0000000000000000000000000000000000000000 |      |
+|      | indexed                                               | data                            |
+| :--- | :---------------------------------------------------- | :------------------------------ |
+| 0    | **signature**: Transfer(Address,Address,int)          | **_amount**: 0x8ac7230489e80000 |
+| 1    | **_from**: hx4873b94352c8c1f3b2f09aaeccea31ce9e90bd31 |                                 |
+| 2    | **_to**: hx0000000000000000000000000000000000000000   |                                 |
 
 
 

@@ -36,9 +36,9 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITELIST: True}}
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -99,7 +99,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
     def test_governance_call_about_add_deployer_already_deployer_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
         tx_result = self._external_call(self._admin,
@@ -117,7 +117,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "Invalid address: already deployer")
 
     def test_governance_call_about_add_remove_deployer_invalid_address(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         raise_exception_start_tag("addDeployer")
         tx_result = self._external_call(self._admin,
@@ -158,7 +158,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
     def test_governance_call_about_add_remove_deployer_score_addr_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         score_addr = create_address(1)
 
@@ -206,7 +206,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_add_remove_deployer_not_owner_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
 
@@ -231,7 +231,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_remove_auditor_not_yourself(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
 
@@ -280,7 +280,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
     def test_score_add_deployer_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         value = 1 * self._icx_factor
 
@@ -347,7 +347,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(e.exception.message, f"Invalid deployer: no permission (address: {self._addr_array[0]})")
 
     def test_score_remove_deployer_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         value = 1 * self._icx_factor
 
