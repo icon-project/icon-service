@@ -34,9 +34,9 @@ class TestIntegrateRevision(TestIntegrateBase):
     test governance deploy audit accept, reject
     """
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -65,7 +65,7 @@ class TestIntegrateRevision(TestIntegrateBase):
         return tx_results[0]
 
     def test_governance_call_about_set_revision(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         expected_status = {
             "code": REVISION_2,

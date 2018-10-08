@@ -253,7 +253,7 @@ class TestIntegrateScores(TestIntegrateBase):
 
     def test_service_flag(self):
         tx1 = self._make_deploy_tx("test_builtin",
-                                   "0_0_3/governance",
+                                   "0_0_4/governance",
                                    self._admin,
                                    GOVERNANCE_SCORE_ADDRESS)
 

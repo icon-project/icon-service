@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 
 
 class TestIntegrateDeployBlackList(TestIntegrateBase):
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -71,7 +71,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
     def test_governance_call_about_add_blacklist_already_blacklist_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         score_addr = create_address(1)
         tx_result = self._external_call(self._admin,
@@ -89,7 +89,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "Invalid address: already SCORE blacklist")
 
     def test_governance_call_about_blacklist_invalid_address(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         raise_exception_start_tag("addToScoreBlackList")
         tx_result = self._external_call(self._admin,
@@ -135,7 +135,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_blacklist_eoa_addr_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         eoa_addr = create_address()
 
@@ -183,7 +183,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid address: not in list")
 
     def test_governance_call_about_blacklist_not_owner_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         score_addr = create_address(1)
 
@@ -208,7 +208,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid sender: not owner")
 
     def test_score_add_blacklist(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # deploy normal SCORE
         value1 = 1 * self._icx_factor
@@ -274,7 +274,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
 
     def test_score_add_blacklist_not_version_field(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # deploy normal SCORE
         value1 = 1 * self._icx_factor
@@ -338,7 +338,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
 
     def test_score_remove_deployer(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # deploy normal SCORE
         value1 = 1 * self._icx_factor

@@ -32,9 +32,9 @@ if TYPE_CHECKING:
 
 class TestIntegrateDeployInstall(TestIntegrateBase):
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -116,7 +116,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
     def test_score_update_governance(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -142,7 +142,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
     def test_fake_system_score(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -155,7 +155,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertIn(f'is not system SCORE', tx_result.failure.message)
 
     def test_fake_system_score_wrong_owner(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -168,7 +168,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertIn(f'is not system SCORE', tx_result.failure.message)
 
     def test_score_address_already_in_use(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         timestamp = 1
@@ -212,7 +212,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value2)
 
     def test_score_no_zip(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -232,7 +232,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_results[0].failure.message, f'Bad zip file.')
 
     def test_score_no_scorebase(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -245,7 +245,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
 
     def test_score_on_install_error(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -258,7 +258,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "raise exception!")
 
     def test_score_no_external_func(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -271,7 +271,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, "this score has no external functions")
 
     def test_score_with_korean_comments(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -283,7 +283,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
 
     def test_score_no_python(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. deploy
         value1 = 1 * self._icx_factor
@@ -295,7 +295,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
 
     def test_score_tbears_mode(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
         # 1. deploy
         value1 = 1 * self._icx_factor
         tx1 = self._make_deploy_tx("test_deploy_scores",

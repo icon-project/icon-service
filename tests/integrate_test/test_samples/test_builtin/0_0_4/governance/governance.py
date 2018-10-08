@@ -197,11 +197,10 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_2()
         if self.is_less_than_target_version('0.0.3'):
             self._migrate_v0_0_3()
+        if self.is_less_than_target_version('0.0.4'):
+            self._migrate_v0_0_4()
 
-        self._version.set('0.0.3')
-
-        self._revision_code.set(2)
-        self._revision_name.set("1.1.0")
+        self._version.set('0.0.4')
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -226,6 +225,10 @@ class Governance(IconSystemScoreBase):
         self._set_initial_service_config()
 
         self._set_initial_max_step_limits()
+        self._set_initial_revision()
+
+    def _migrate_v0_0_4(self):
+        pass
 
     @staticmethod
     def _versions(version: str):
@@ -242,10 +245,14 @@ class Governance(IconSystemScoreBase):
     def getScoreStatus(self, address: Address) -> dict:
         # Governance
         if self.is_builtin_score(address):
+            deploy_info = self.get_deploy_info(address)
             result = {
                 CURRENT: {
                     STATUS: STATUS_ACTIVE
-                }}
+                }
+            }
+            if deploy_info.current_tx_hash is not None:
+                result[CURRENT][DEPLOY_TX_HASH] = deploy_info.current_tx_hash
             return result
 
         deploy_info = self.get_deploy_info(address)
@@ -539,6 +546,10 @@ class Governance(IconSystemScoreBase):
     def _set_initial_max_step_limits(self):
         self._max_step_limits[CONTEXT_TYPE_INVOKE] = 2_500_000_000
         self._max_step_limits[CONTEXT_TYPE_QUERY] = 50_000_000
+
+    def _set_initial_revision(self):
+        self._revision_code.set(2)
+        self._revision_name.set("1.1.0")
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:
