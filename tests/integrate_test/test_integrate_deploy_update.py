@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 
 class TestIntegrateDeployUpdate(TestIntegrateBase):
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -101,7 +101,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         return score_addr1, tx_hash1
 
     def test_score(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -135,7 +135,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", 2 * value2)
 
     def test_invalid_owner(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -170,7 +170,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_no_zip(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -205,7 +205,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_no_scorebase(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -239,7 +239,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_on_update_error(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -273,7 +273,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_no_external_func(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -307,7 +307,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_with_korean_comments(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -340,7 +340,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_no_python(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor
@@ -373,7 +373,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
 
     def test_score_tbears_mode(self):
-        self._update_0_0_3_governance()
+        self._update_governance()
 
         # 1. install done
         value1 = 1 * self._icx_factor

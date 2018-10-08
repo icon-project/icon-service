@@ -26,11 +26,11 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
 
     def setUp(self):
         super().setUp()
-        self._update_0_0_3_governance()
+        self._update_governance()
 
-    def _update_0_0_3_governance(self):
+    def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_3/governance",
+                                  "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
