@@ -497,10 +497,6 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.tx
 
     @property
-    def block(self) -> 'Block':
-        return self._context.block
-
-    @property
     def db(self) -> 'IconScoreDatabase':
         return self.__db
 
@@ -518,8 +514,13 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         return self.__icx
 
-    def now(self):
-        return self.block.timestamp
+    @property
+    def block_height(self) -> int:
+        return self._context.block.height
+
+    @property
+    def now(self) -> int:
+        return self._context.block.timestamp
 
     def call(self, addr_to: 'Address', func_name: str, kw_dict: dict, amount: int = 0):
 
