@@ -38,8 +38,6 @@ setup_options = {
             'iconservice=iconservice.icon_service_cli:main'
         ],
     },
-    'setup_requires': ['pytest-runner'],
-    'tests_requires': ['pytest'],
     'classifiers': [
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers', 
@@ -48,7 +46,8 @@ setup_options = {
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.6'
-    ]
+    ],
+    'test_suite': 'tests'
 }
 
 setup(**setup_options)
