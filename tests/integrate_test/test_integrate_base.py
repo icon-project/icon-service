@@ -16,13 +16,13 @@
 
 """IconServiceEngine testcase
 """
+
 from unittest import TestCase
 
 from typing import TYPE_CHECKING, Union, Optional, Any
 
 from iconcommons import IconConfig
 from iconservice.base.block import Block
-from iconservice.deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine

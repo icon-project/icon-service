@@ -95,9 +95,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._one_icx = 1 * 10 ** 18
         self._one_icx_to_token = 1
 
-    def tearDown(self):
-        ContextContainer._clear_context()
-
     def make_context(self):
         self._tx_index += 1
         self._context = self._factory.create(IconScoreContextType.DIRECT)

@@ -75,14 +75,11 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._deploy_storage = IconScoreDeployStorage(self._icx_db)
 
         self._icon_score_loader = IconScoreLoader(score_path)
-        self._icon_score_mapper = IconScoreMapper(
-            icon_score_manager, self._icon_score_loader)
+        self._icon_score_mapper = IconScoreMapper()
 
         self._addr1 = create_address(AddressPrefix.EOA)
         self._score_deploy_engine.open(
             score_root_path=score_path,
-            flags=IconScoreDeployEngine.Flag.ENABLE_DEPLOY_AUDIT,
-            icon_score_mapper=self._icon_score_mapper,
             icon_deploy_storage=self._deploy_storage)
 
         self._factory = IconScoreContextFactory(max_size=1)

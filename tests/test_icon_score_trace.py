@@ -48,6 +48,7 @@ class TestTrace(unittest.TestCase):
         db = Mock(spec=IconScoreDatabase)
         db.address = create_address(AddressPrefix.CONTRACT)
         context = IconScoreContext()
+        context.icon_score_deploy_engine = Mock()
         traces = Mock(spec=list)
 
         context.tx = Mock(spec=Transaction)
@@ -60,10 +61,6 @@ class TestTrace(unittest.TestCase):
         context.tx_batch = TransactionBatch()
 
         ContextContainer._push_context(context)
-        context.icon_score_manager = Mock()
-        context.icon_score_manager.get_owner = Mock(return_value=None)
-        context.icon_score_manager.get_tx_hashes_by_score_address = \
-            Mock(return_value=(create_tx_hash(), create_tx_hash()))
         context.internal_call = InternalCall(context)
         context.internal_call._other_score_call = Mock()
         context.internal_call.icx_engine = Mock(spec=IcxEngine)
