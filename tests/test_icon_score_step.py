@@ -653,6 +653,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine._precommit_data_manager.clear()
         return self._inner_task._invoke(request)
 
+
 # noinspection PyPep8Naming
 class SampleScore(IconScoreBase):
 

@@ -489,6 +489,8 @@ class Governance(IconSystemScoreBase):
         # check message sender, only owner can add new blacklist
         if self.msg.sender != self.owner:
             self.revert('Invalid sender: not owner')
+        if self.address == address:
+            self.revert("can't add myself")
         if address not in self._score_black_list:
             self._score_black_list.put(address)
         else:

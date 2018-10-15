@@ -23,7 +23,7 @@ from iconservice.base.block import Block
 from iconservice.base.transaction import Transaction
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests import create_block_hash, create_tx_hash, create_address
-from iconservice.icon_constant import IconServiceFlag
+
 
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):

@@ -56,6 +56,14 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
+    def test_governance_call_about_add_blacklist_myself(self):
+        self._update_governance()
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'addToScoreBlackList',
+                                        {"address": str(GOVERNANCE_SCORE_ADDRESS)})
+        self.assertEqual(tx_result.status, int(False))
+
     def test_governance_call_about_add_blacklist_already_blacklist(self):
         score_addr = create_address(1)
         tx_result = self._external_call(self._admin,

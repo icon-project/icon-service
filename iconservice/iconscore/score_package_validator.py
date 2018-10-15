@@ -45,6 +45,9 @@ class ScorePackageValidator(object):
         ScorePackageValidator.WHITELIST_IMPORT = whitelist_table
         ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(pkg_root_path)
 
+        # in order for the new module to be noticed by the import system
+        importlib.invalidate_caches()
+
         for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
             full_name = ''.join((pkg_import_root, '.', imp))
             spec = importlib.util.find_spec(full_name)

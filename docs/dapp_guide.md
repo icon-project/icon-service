@@ -406,7 +406,17 @@ When you handle exceptions in your contract, it is recommended to inherit `IconS
 Every classes must inherit `IconScoreBase`. Contracts not derived from `IconScoreBase` can not be deployed.
 
 #### \_\_init\_\_
-This is a python init function. This function is called when the contract is loaded at each node. Member variables should be declared here. 
+This is a python init function. This function is called when the contract is loaded at each node. 
+
+Member variables can be declared here, however, Declaring member variables which not managed by states is prohibited.<br />
+Utilities of DB such as VarDB, DictDB, ArrayDB can be declared here as a member variable as follows.
+
+Example)
+```python
+self._total_supply = VarDB(self._TOTAL_SUPPLY, db, value_type=int)
+self._decimals = VarDB(self._DECIMALS, db, value_type=int)
+self._balances = DictDB(self._BALANCES, db, value_type=int)
+```
 
 Also, parent's init function must be called as follows.
 
