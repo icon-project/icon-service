@@ -75,15 +75,19 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
-    def _accept_score(self, tx_hash: Union[bytes, str]):
+    def _accept_score(self, tx_hash: Union[bytes, str], warning: str = None):
         if isinstance(tx_hash, bytes):
             tx_hash_str = f'0x{bytes.hex(tx_hash)}'
         else:
             tx_hash_str = tx_hash
+        tx_params = {"txHash": tx_hash_str}
+        if warning is not None:
+            tx_params["warning"] = warning
+
         tx = self._make_score_call_tx(self._admin,
                                       GOVERNANCE_SCORE_ADDRESS,
                                       'acceptScore',
-                                      {"txHash": tx_hash_str})
+                                      tx_params)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         return tx_results[0]
@@ -121,9 +125,14 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
 
-        # 2. accpt SCORE : tx_hash1
+        # 2. accept SCORE : tx_hash1
         tx_result = self._accept_score(tx_hash1)
         self.assertEqual(tx_result.status, int(True))
+
+        # check warning message(as not input warning argument when call acceptScore, "" should be recorded)
+        expected_warning_message = ""
+        self.assertEqual(tx_result.event_logs[0].data[0], expected_warning_message)
+
         tx_hash2 = tx_result.tx_hash
 
         # assert SCORE status
@@ -143,6 +152,22 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 5. assert get value: value2
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value2)
+
+    def test_accept_score_with_warning_massage(self):
+        self._update_governance()
+
+        # 1. deploy (wait audit)
+        value1 = 1 * self._icx_factor
+        tx_result = self._deploy_score("install/test_score", value1)
+        self.assertEqual(tx_result.status, int(True))
+        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        # 2. accept SCORE with warning message: tx_hash1
+        expected_warning_message = "test_warning_message"
+        tx_result = self._accept_score(tx_hash1, expected_warning_message)
+        self.assertEqual(tx_result.status, int(True))
+        self.assertEqual(tx_result.event_logs[0].data[0], expected_warning_message)
 
     def test_score_address_already_in_use(self):
         # 1. deploy same SCORE address (wait audit)
