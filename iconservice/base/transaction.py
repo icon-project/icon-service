@@ -40,32 +40,39 @@ class Transaction(object):
 
     @property
     def origin(self) -> 'Address':
-        """transaction creator
+        """
+        The account who created the transaction.
         """
         return self._origin
 
     @property
     def index(self) -> int:
-        """tx index in a block
+        """
+        Transaction index in a block
         """
         return self._index
 
     @property
     def hash(self) -> bytes:
-        """transaction hash
+        """
+        Transaction hash
         """
         return self._hash
 
     @property
     def timestamp(self) -> int:
-        """timestamp of a transaction request
+        """
+        Timestamp of a transaction request in microseconds
         This is NOT a block timestamp
         """
         return self._timestamp
 
     @property
     def nonce(self) -> int:
-        """nonce of a transaction request
+        """
+        (optional)
+        nonce of a transaction request.
+        random value
         """
         return self._nonce
 

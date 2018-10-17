@@ -76,7 +76,7 @@ def revert(message: Optional[str] = None,
            code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
     """
     Reverts the transaction and breaks.
-    All the changes of state DB will be reverted.
+    All the changes of state DB in current transaction will be rolled back.
 
     :param message: revert message
     :param code: code
@@ -87,6 +87,7 @@ def revert(message: Optional[str] = None,
 def sha3_256(data: bytes) -> bytes:
     """
     Computes hash using the input data
+
     :param data: input data
     :return: hashed data in bytes
     """
@@ -101,8 +102,22 @@ def sha3_256(data: bytes) -> bytes:
 
 
 def json_dumps(obj: Any, **kwargs) -> str:
+    """
+    Converts a python object `obj` to a JSON string
+
+    :param obj: a python object to be converted
+    :param kwargs: json options (see https://docs.python.org/3/library/json.html#json.dumps)
+    :return: json string
+    """
     return json.dumps(obj, **kwargs)
 
 
 def json_loads(src: str, **kwargs) -> Any:
+    """
+    Parses a JSON string `src` and converts it to a python object
+
+    :param src: a JSON string to be converted
+    :param kwargs: kwargs: json options (see https://docs.python.org/3/library/json.html#json.loads)
+    :return: a python object
+    """
     return json.loads(src, **kwargs)

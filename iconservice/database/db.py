@@ -330,6 +330,12 @@ class IconScoreDatabase(ContextGetter):
         self._observer: DatabaseObserver = None
 
     def get(self, key: bytes) -> bytes:
+        """
+        Gets the value for the specified key
+
+        :param key: key to retrieve
+        :return: value for the specified key, or None if not found
+        """
         hashed_key = self._hash_key(key)
         value = self._context_db.get(self._context, hashed_key)
         if self._observer:
@@ -337,6 +343,12 @@ class IconScoreDatabase(ContextGetter):
         return value
 
     def put(self, key: bytes, value: bytes):
+        """
+        Sets a value for the specified key.
+
+        :param key: key to set
+        :param value: value to set
+        """
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
@@ -348,6 +360,12 @@ class IconScoreDatabase(ContextGetter):
         self._context_db.put(self._context, hashed_key, value)
 
     def get_sub_db(self, prefix: bytes) -> 'IconScoreDatabase':
+        """
+        Returns sub db with a prefix
+
+        :param prefix: The prefix used by this sub db.
+        :return: sub db
+        """
         if prefix is None:
             raise DatabaseException(
                 'Invalid params: '
@@ -364,6 +382,11 @@ class IconScoreDatabase(ContextGetter):
         return icon_score_database
 
     def delete(self, key: bytes):
+        """
+        Deletes the key/value pair for the specified key.
+
+        :param key: key to delete
+        """
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
