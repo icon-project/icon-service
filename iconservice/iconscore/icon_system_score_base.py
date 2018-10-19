@@ -53,9 +53,6 @@ class IconSystemScoreBase(IconScoreBase):
     def is_builtin_score(self, score_address: 'Address') -> bool:
         return util_is_builtin_score(str(score_address))
 
-    def get_icon_service_flag(self) -> int:
-        return IconScoreContextUtil.icon_service_flag
-
     def get_icon_score_context_util(self) -> Type['IconScoreContextUtil']:
         return IconScoreContextUtil
 

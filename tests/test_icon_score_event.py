@@ -20,6 +20,8 @@
 import unittest
 from unittest.mock import Mock
 
+from iconservice.iconscore.internal_call import InternalCall
+
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 
 from iconservice.icon_service_engine import IconServiceEngine
@@ -55,13 +57,14 @@ class TestEventlog(unittest.TestCase):
         context.traces = traces
         context.step_counter = step_counter
         context.get_owner = Mock()
-        context.internal_call.icx_engine = Mock(spec=IcxEngine)
+        InternalCall.icx_engine = Mock(spec=IcxEngine)
         ContextContainer._push_context(context)
 
         self._mock_score = EventlogScore(db)
 
     def tearDown(self):
         ContextContainer._clear_context()
+        self._mock_icon_score = None
 
     def test_call_event(self):
         context = ContextContainer._get_context()
@@ -295,9 +298,6 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(4, len(event_log.indexed))
         self.assertEqual(ICX_TRANSFER_EVENT_LOG, event_log.indexed[0])
         self.assertEqual(0, len(event_log.data))
-
-    def tearDown(self):
-        self._mock_icon_score = None
 
 
 class EventlogScore(IconScoreBase):

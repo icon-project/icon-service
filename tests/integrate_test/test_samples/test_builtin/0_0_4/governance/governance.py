@@ -782,7 +782,7 @@ class Governance(IconSystemScoreBase):
                     self._import_white_list_keys[i] = top
 
     def _set_initial_service_config(self):
-        self._service_config.set(self.get_icon_service_flag() | 8)
+        self._service_config.set(self.get_icon_score_context_util().icon_service_flag | 8)
 
     @external
     def updateServiceConfig(self, serviceFlag: int):

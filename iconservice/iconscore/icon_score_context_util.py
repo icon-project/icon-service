@@ -98,7 +98,7 @@ class IconScoreContextUtil(object):
             raise ServerErrorException(f'Invalid SCORE address: {score_address}')
 
         # Gets the governance SCORE
-        governance_score: 'Governance' = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -113,7 +113,7 @@ class IconScoreContextUtil(object):
         :param deployer: EOA address to deploy a SCORE
         """
         # Gets the governance SCORE
-        governance_score: 'Governance' = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -131,7 +131,7 @@ class IconScoreContextUtil(object):
 
     @classmethod
     def _get_service_flag(cls, context: 'IconScoreContext') -> int:
-        governance_score: 'Governance' = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -145,7 +145,7 @@ class IconScoreContextUtil(object):
     @classmethod
     def get_revision(cls, context: 'IconScoreContext') -> int:
         try:
-            governance_score: 'Governance' = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+            governance_score = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is not None:
                 if hasattr(governance_score, 'revision_code'):
                     return governance_score.revision_code
@@ -168,37 +168,3 @@ class IconScoreContextUtil(object):
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         return cls.icon_score_deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
 
-    @classmethod
-    def enter_call(cls, context: 'IconScoreContext'):
-        """Start to call external function provided by other SCORE
-        """
-        if context.type != IconScoreContextType.INVOKE:
-            return
-
-        context.tx_batch.enter_call()
-
-        context.event_log_stack.append(context.event_logs)
-        context.event_logs = []
-
-    @classmethod
-    def revert_call(cls, context: 'IconScoreContext'):
-        """An exception happens during calling an external function provided by other SCORE
-        Revert the states changed by this function call
-        """
-        if context.type != IconScoreContextType.INVOKE:
-            return
-
-        context.tx_batch.revert_call()
-        context.event_logs.clear()
-
-    @classmethod
-    def leave_call(cls, context: 'IconScoreContext'):
-        """Finish to call external function provided by other SCORE
-        """
-        if context.type != IconScoreContextType.INVOKE:
-            return
-
-        context.tx_batch.leave_call()
-
-        prev_event_logs = context.event_log_stack.pop()
-        context.event_logs = prev_event_logs + context.event_logs
