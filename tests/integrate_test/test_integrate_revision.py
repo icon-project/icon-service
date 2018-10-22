@@ -34,9 +34,18 @@ class TestIntegrateRevision(TestIntegrateBase):
     test governance deploy audit accept, reject
     """
 
-    def _update_governance(self):
+    def _update_governance_from_0_0_4(self):
         tx = self._make_deploy_tx("test_builtin",
                                   "0_0_4/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+    def _update_governance_from_0_0_5(self):
+        tx = self._make_deploy_tx("test_builtin",
+                                  "0_0_6/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -65,7 +74,7 @@ class TestIntegrateRevision(TestIntegrateBase):
         return tx_results[0]
 
     def test_governance_call_about_set_revision(self):
-        self._update_governance()
+        self._update_governance_from_0_0_4()
 
         expected_status = {
             "code": REVISION_2,
@@ -96,6 +105,42 @@ class TestIntegrateRevision(TestIntegrateBase):
         expected_status = {
             "code": next_revision,
             "name": "1.1.1"
+        }
+        response = self._query(query_request)
+        self.assertEqual(expected_status, response)
+
+    def test_governance_call_about_set_revision_fix_name(self):
+        self._update_governance_from_0_0_5()
+
+        expected_status = {
+            "code": REVISION_2,
+            "name": "1.1.2"
+        }
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getRevision",
+                "params": {}
+            }
+        }
+        response = self._query(query_request)
+        self.assertEqual(expected_status, response)
+
+        next_revision = REVISION_2 + 1
+
+        tx_result = self._external_call(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'setRevision',
+                                        {"code": hex(next_revision), "name": "1.1.3"})
+        self.assertEqual(tx_result.status, int(True))
+
+        expected_status = {
+            "code": next_revision,
+            "name": "1.1.3"
         }
         response = self._query(query_request)
         self.assertEqual(expected_status, response)

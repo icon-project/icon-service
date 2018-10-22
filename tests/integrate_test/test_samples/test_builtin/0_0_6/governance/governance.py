@@ -111,7 +111,7 @@ class Governance(IconSystemScoreBase):
     _REVISION_NAME = 'revision_name'
 
     @eventlog(indexed=1)
-    def Accepted(self, txHash: str):
+    def Accepted(self, txHash: str, warning: str):
         pass
 
     @eventlog(indexed=1)
@@ -199,8 +199,12 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_3()
         if self.is_less_than_target_version('0.0.4'):
             self._migrate_v0_0_4()
+        if self.is_less_than_target_version('0.0.5'):
+            self._migrate_v0_0_5()
+        if self.is_less_than_target_version('0.0.6'):
+            self._migrate_v0_0_6()
 
-        self._version.set('0.0.4')
+        self._version.set('0.0.6')
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -228,6 +232,12 @@ class Governance(IconSystemScoreBase):
         self._set_initial_revision()
 
     def _migrate_v0_0_4(self):
+        pass
+
+    def _migrate_v0_0_5(self):
+        self._set_initial_revision()
+
+    def _migrate_v0_0_6(self):
         pass
 
     @staticmethod
@@ -334,7 +344,7 @@ class Governance(IconSystemScoreBase):
             self.StepPriceChanged(stepPrice)
 
     @external
-    def acceptScore(self, txHash: bytes):
+    def acceptScore(self, txHash: bytes, warning: str =""):
         # check message sender
         Logger.debug(f'acceptScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
@@ -364,7 +374,7 @@ class Governance(IconSystemScoreBase):
 
         self._audit_status[txHash] = self.tx.hash
 
-        self.Accepted('0x' + txHash.hex())
+        self.Accepted('0x' + txHash.hex(), warning)
 
     def _deploy(self, tx_hash: bytes, score_addr: Address):
         owner = self.get_owner(score_addr)
@@ -551,7 +561,7 @@ class Governance(IconSystemScoreBase):
 
     def _set_initial_revision(self):
         self._revision_code.set(2)
-        self._revision_name.set("1.1.0")
+        self._revision_name.set("1.1.2")
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:
@@ -829,12 +839,8 @@ class Governance(IconSystemScoreBase):
             self.revert('Invalid sender: not owner')
 
         prev_code = self._revision_code.get()
-        if code <= prev_code:
+        if code < prev_code:
             self.revert(f"can't decrease code")
-
-        prev_name = self._revision_name.get()
-        if self._versions(name) <= self._versions(prev_name):
-            self.revert(f"can't decrease name")
 
         self._revision_code.set(code)
         self._revision_name.set(name)

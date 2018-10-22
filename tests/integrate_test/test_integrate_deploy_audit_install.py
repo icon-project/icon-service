@@ -38,7 +38,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_4/governance",
+                                  "0_0_6/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -129,10 +129,6 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         tx_result = self._accept_score(tx_hash1)
         self.assertEqual(tx_result.status, int(True))
 
-        # check warning message(as not input warning argument when call acceptScore, "" should be recorded)
-        expected_warning_message = ""
-        self.assertEqual(tx_result.event_logs[0].data[0], expected_warning_message)
-
         tx_hash2 = tx_result.tx_hash
 
         # assert SCORE status
@@ -153,20 +149,54 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         # 5. assert get value: value2
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value2)
 
-    def test_accept_score_with_warning_massage(self):
+    def test_accept_score_with_warning_message(self):
+        # inputting message when accepting score is available as of governance version 0.0.6
+        # previous version(below 0.0.5) raise error when trying this test
         self._update_governance()
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
         tx_result = self._deploy_score("install/test_score", value1)
         self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
+        tx_hash1 = tx_result.tx_hash
+
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+
+        # check warning message(as not input warning argument when call acceptScore, "" should be recorded)
+        expected_warning_message = ""
+        self.assertEqual(tx_result.event_logs[0].data[0], expected_warning_message)
+
+        # 1. deploy (wait audit)
+        value1 = 1 * self._icx_factor
+        tx_result = self._deploy_score("install/test_score", value1)
+        self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
         # 2. accept SCORE with warning message: tx_hash1
         expected_warning_message = "test_warning_message"
         tx_result = self._accept_score(tx_hash1, expected_warning_message)
         self.assertEqual(tx_result.status, int(True))
+        self.assertEqual(tx_result.event_logs[0].data[0], expected_warning_message)
+
+    def test_accept_score_without_warning_message(self):
+        # inputting message when accepting score is available as of governance version 0.0.6
+        # previous version(below 0.0.5) raise error when trying this test
+        self._update_governance()
+
+        # 1. deploy (wait audit)
+        value1 = 1 * self._icx_factor
+        tx_result = self._deploy_score("install/test_score", value1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash1 = tx_result.tx_hash
+
+        # 2. accept SCORE : tx_hash1
+        tx_result = self._accept_score(tx_hash1)
+        self.assertEqual(tx_result.status, int(True))
+
+        # check warning message(as not input warning argument when call acceptScore, "" should be recorded)
+        expected_warning_message = ""
         self.assertEqual(tx_result.event_logs[0].data[0], expected_warning_message)
 
     def test_score_address_already_in_use(self):

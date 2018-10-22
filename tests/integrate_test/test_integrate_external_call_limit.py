@@ -30,7 +30,7 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
 
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_4/governance",
+                                  "0_0_6/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
