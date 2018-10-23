@@ -38,6 +38,7 @@ from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
@@ -262,7 +263,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         step_price = self._engine._get_step_price()
 
-        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
         else:
@@ -443,7 +444,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_used MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
         else:
@@ -518,7 +519,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_cost)
 
         step_price = self._engine._get_step_price()
-        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(
                 step_price, self._engine._step_counter_factory.get_step_price())
@@ -600,7 +601,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.step_used, step_unit)
 
         step_price = self._engine._get_step_price()
-        if IconScoreContext._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.fee):
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(
                 step_price, self._engine._step_counter_factory.get_step_price())

@@ -16,9 +16,9 @@
 
 from abc import abstractmethod
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Type
 
-
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from ..base.exception import ScoreErrorException
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
@@ -53,11 +53,18 @@ class IconSystemScoreBase(IconScoreBase):
     def is_builtin_score(self, score_address: 'Address') -> bool:
         return util_is_builtin_score(str(score_address))
 
+    def get_icon_service_flag(self) -> int:
+        return IconScoreContextUtil.icon_service_flag
+
+    def get_icon_score_context_util(self) -> Type['IconScoreContextUtil']:
+        return IconScoreContextUtil
+
     def get_deploy_tx_params(self, tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
-        return self._context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_tx_params(self._context, tx_hash)
+        return IconScoreContextUtil.icon_score_deploy_engine.icon_deploy_storage.get_deploy_tx_params(self._context,
+                                                                                                      tx_hash)
 
     def get_deploy_info(self, address: 'Address') -> Optional['IconScoreDeployInfo']:
-        return self._context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(self._context, address)
+        return IconScoreContextUtil.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(self._context,
+                                                                                                 address)
 
-    def get_icon_service_flag(self) -> int:
-        return self._context.icon_service_flag
+

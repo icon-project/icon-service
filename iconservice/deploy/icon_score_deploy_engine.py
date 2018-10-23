@@ -19,10 +19,11 @@ from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
 from iconcommons import Logger
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from . import DeployType
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
@@ -86,10 +87,10 @@ class IconScoreDeployEngine(object):
             DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
 
         try:
-            context.validate_score_blacklist(icon_score_address)
+            IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
-            if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
-                context.validate_deployer(context.tx.origin)
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.deployerWhiteList):
+                IconScoreContextUtil.validate_deployer(context, context.tx.origin)
 
             self.write_deploy_info_and_tx_params(context, deploy_type, icon_score_address, data)
 
@@ -99,20 +100,21 @@ class IconScoreDeployEngine(object):
             Logger.warning('Failed to write deploy info and tx params', ICON_DEPLOY_LOG_TAG)
             raise e
 
-    def _check_audit_ignore(self, context: 'IconScoreContext', icon_score_address: Address):
+    @staticmethod
+    def _check_audit_ignore(context: 'IconScoreContext', icon_score_address: Address):
         """Skip audit process for SystemSCORE update
 
         :param context:
         :param icon_score_address:
         :return:
         """
-        if context.get_revision() >= REVISION_2:
+        if IconScoreContextUtil.get_revision(context) >= REVISION_2:
             is_system_score = is_builtin_score(str(icon_score_address))
         else:
             is_system_score = False
 
-        is_owner = context.tx.origin == self._icon_score_deploy_storage.get_score_owner(context, icon_score_address)
-        is_audit_enabled = context.is_service_flag_on(IconServiceFlag.audit)
+        is_owner = context.tx.origin == IconScoreContextUtil.get_owner(context, icon_score_address)
+        is_audit_enabled = IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.audit)
         return not is_audit_enabled or all((is_system_score, is_owner))
 
     def deploy(self, context: 'IconScoreContext', tx_hash: bytes) -> None:
@@ -145,7 +147,7 @@ class IconScoreDeployEngine(object):
         content_type = data.get('contentType')
 
         if content_type == 'application/tbears':
-            if not context.legacy_tbears_mode:
+            if not IconScoreContextUtil.legacy_tbears_mode:
                 raise InvalidParamsException(f"can't symlink deploy")
         elif content_type == 'application/zip':
             data['content'] = bytes.fromhex(data['content'][2:])
@@ -191,7 +193,7 @@ class IconScoreDeployEngine(object):
         """Install an icon score for builtin
         """
 
-        score_root_path = context.icon_score_mapper.score_root_path
+        score_root_path = IconScoreContextUtil.icon_score_mapper.score_root_path
         target_path = path.join(score_root_path,
                                 score_address.to_bytes().hex())
         makedirs(target_path, exist_ok=True)
@@ -213,7 +215,7 @@ class IconScoreDeployEngine(object):
             pass
 
         try:
-            score = context.icon_score_mapper.load_score(score_address, next_tx_hash)
+            score = IconScoreContextUtil.icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')
 
@@ -223,7 +225,7 @@ class IconScoreDeployEngine(object):
             Logger.warning('revert to add wait icon score', ICON_DEPLOY_LOG_TAG)
             raise e
 
-        context.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
+        IconScoreContextUtil.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
 
     def _on_deploy(self,
                    context: 'IconScoreContext',
@@ -252,7 +254,7 @@ class IconScoreDeployEngine(object):
             next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
         if content_type == 'application/tbears':
-            score_root_path = context.icon_score_mapper.score_root_path
+            score_root_path = IconScoreContextUtil.icon_score_mapper.score_root_path
             target_path = path.join(score_root_path,
                                     score_address.to_bytes().hex())
             makedirs(target_path, exist_ok=True)
@@ -263,7 +265,7 @@ class IconScoreDeployEngine(object):
             except FileExistsError:
                 pass
         else:
-            if context.get_revision() >= REVISION_2:
+            if IconScoreContextUtil.get_revision(context) >= REVISION_2:
                 self._icon_score_deployer.deploy(
                     address=score_address,
                     data=content,
@@ -278,8 +280,8 @@ class IconScoreDeployEngine(object):
         backup_tx = context.tx
 
         try:
-            if context.is_service_flag_on(IconServiceFlag.scorePackageValidator):
-                context.try_score_package_validate(score_address, next_tx_hash)
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.scorePackageValidator):
+                IconScoreContextUtil.try_score_package_validate(score_address, next_tx_hash)
             score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')
@@ -304,7 +306,7 @@ class IconScoreDeployEngine(object):
             context.msg = backup_msg
             context.tx = backup_tx
 
-        context.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
+        IconScoreContextUtil.icon_score_mapper.put_score_info(score_address, score, next_tx_hash)
 
     @staticmethod
     def _initialize_score(on_deploy: Callable[[dict], None],
