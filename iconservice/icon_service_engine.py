@@ -16,6 +16,7 @@
 
 from math import ceil
 from os import makedirs
+from hashlib import sha256
 
 from typing import TYPE_CHECKING, List, Any, Optional
 
@@ -445,41 +446,70 @@ class IconServiceEngine(ContextContainer):
     def estimate_step(self, request: dict) -> int:
         """
         Estimates the amount of step to process a specific transaction.
-        :return: amount of step
-        """
-        method = request['method']
-        params = request['params']
 
-        from_ = params['from']
-        to = params['to']
+        [Specific information of each step]
+        1. Transfer coin
+            1) When where to send coin is EOA: Default
+            2) when  where to send coin is SCORE: process and estimate steps without commit
+        2. Deploy
+            1) Installing SCORE: Default + INPUT + CONTRACT_CREATE + CONTRACT_SET
+            2) Update SCORE: Default + INPUT + CONTRACT_UPDATE + CONTRACT_SET
+        3. Call
+            - process and estimate steps without commit
+        4. Message
+            1) When where to send coin is EOA: Default + INPUT
+            2) when  where to send coin is SCORE: process and estimate steps without commit
+
+        :return: The amount of step
+        """
+        method: str = request.get('method')
+        params: dict = request.get('params')
+        data_type: str = params.get('dataType')
+        data: dict = params.get('data')
+        from_: Address = params.get('from')
+        to: Address = params.get('to')
 
         context = self._context_factory.create(IconScoreContextType.ESTIMATION)
-        context.block = self._precommit_data_manager.last_block
-        context.block_batch = BlockBatch(Block.from_block(context.block))
-        context.tx_batch = TransactionBatch()
-        context.new_icon_score_mapper = IconScoreMapper()
 
         # Fills the step_limit as the max step limit to proceed the transaction.
         step_limit = self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
-
-        context.tx = Transaction(origin=from_,
-                                 timestamp=params.get('timestamp', context.block.timestamp),
-                                 nonce=params.get('nonce', None))
-
-        context.msg = Message(sender=from_, value=params.get('value', 0))
-        context.current_address = to
-        context.event_logs: List['EventLog'] = []
-        context.logs_bloom: BloomFilter = BloomFilter()
-        context.traces: List['Trace'] = []
         context.step_counter = self._step_counter_factory.create(step_limit)
 
-        # Deposits virtual ICXs to the sender
-        # to prevent validation error due to 'out of balance'
-        account = self._icx_storage.get_account(context, from_)
-        account.deposit(step_limit * self._get_step_price() + params.get('value', 0))
-        self._icx_storage.put_account(context, from_, account)
+        if data_type == "deploy" or (not data_type == "call" and not to.is_contract):
+            context.step_counter.apply_step(StepType.DEFAULT, 1)
 
-        self._call(context, method, params)
+            input_size = self._get_byte_length(params.get('data', None))
+            context.step_counter.apply_step(StepType.INPUT, input_size)
+
+        if data_type == "deploy":
+            data_size = self._get_byte_length(data.get('content', None))
+            context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
+            # When installing SCORE.
+            if to == ZERO_SCORE_ADDRESS:
+                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
+            # When updating SCORE.
+            else:
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
+        else:
+            # Processes and estimates steps without commit.
+            if data_type == "call" or (not data_type == "call" and to.is_contract):
+                context.tx = Transaction(origin=from_)
+                context.msg = Message(sender=from_, value=params.get('value', 0))
+                context.current_address = to
+                context.event_logs: List['EventLog'] = []
+                context.logs_bloom: BloomFilter = BloomFilter()
+                context.traces: List['Trace'] = []
+
+                context.block = self._precommit_data_manager.last_block
+                context.block_batch = BlockBatch(Block.from_block(context.block))
+                context.tx_batch = TransactionBatch()
+                context.new_icon_score_mapper = IconScoreMapper()
+
+                # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
+                account = self._icx_storage.get_account(context, from_)
+                account.deposit(step_limit * self._get_step_price() + params.get('value', 0))
+                self._icx_storage.put_account(context, from_, account)
+                self._call(context, method, params)
 
         return context.step_counter.step_used
 
@@ -616,7 +646,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         icon_score_address: Address = params['to']
-        data_type = params.get('data¬Type', None)
+        data_type = params.get('dataType', None)
         data = params.get('data', None)
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
