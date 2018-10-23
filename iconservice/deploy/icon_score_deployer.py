@@ -15,10 +15,12 @@
 # limitations under the License.
 import io
 import os
-import zipfile
 import shutil
+import time
+import zipfile
+
 from iconservice.base.address import Address
-from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
+from iconservice.base.exception import ScoreInstallExtractException
 
 
 class IconScoreDeployer(object):
@@ -37,11 +39,9 @@ class IconScoreDeployer(object):
         converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
         install_path = os.path.join(score_root_path, converted_tx_hash)
         try:
-            if os.path.isfile(install_path):
-                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
-            if os.path.isdir(install_path):
-                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
-            if not os.path.exists(install_path):
+            if os.path.exists(install_path):
+                os.rename(install_path, f"{install_path}{int(time.time()*10**6)}_score_garbage")
+            else:
                 os.makedirs(install_path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen(data)
@@ -123,13 +123,9 @@ class IconScoreDeployer(object):
         install_path = os.path.join(score_root_path, converted_tx_hash)
 
         try:
-            if os.path.isfile(install_path):
-                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
-
-            if os.path.isdir(install_path):
-                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
-
-            if not os.path.exists(install_path):
+            if os.path.exists(install_path):
+                os.rename(install_path, f"{install_path}{int(time.time()*10**6)}_score_garbage")
+            else:
                 os.makedirs(install_path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen_legacy(data)

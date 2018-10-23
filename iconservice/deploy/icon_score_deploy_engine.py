@@ -12,17 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+import time
 from os import path, symlink, makedirs
-
 from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
 from iconcommons import Logger
+
 from . import DeployType
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
@@ -205,10 +206,13 @@ class IconScoreDeployEngine(object):
             next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
         converted_tx_hash: str = f'0x{bytes.hex(next_tx_hash)}'
-        target_path = path.join(target_path, converted_tx_hash)
+        score_path = path.join(target_path, converted_tx_hash)
+
+        if os.path.exists(score_path):
+            os.rename(score_path, f"{score_path}{int(time.time()*10**6)}_score_garbage")
 
         try:
-            copytree(src_score_path, target_path)
+            copytree(src_score_path, score_path)
         except FileExistsError:
             pass
 
