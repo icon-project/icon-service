@@ -37,6 +37,7 @@ from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.icx.icx_engine import IcxEngine
@@ -79,7 +80,11 @@ class TestIconZipDeploy(unittest.TestCase):
         IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()
 
-        IconScoreContext.get_owner = Mock()
+        IconScoreContextUtil.validate_score_blacklist = Mock()
+        IconScoreContextUtil.get_owner = Mock()
+        IconScoreContextUtil.get_icon_score = Mock()
+        IconScoreContextUtil.is_service_flag_on = Mock()
+        IconScoreContextUtil.get_revision = Mock(return_value=False)
 
         self._engine.open(
             score_root_path=score_path,

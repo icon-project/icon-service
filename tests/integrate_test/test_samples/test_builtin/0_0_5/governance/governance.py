@@ -111,7 +111,7 @@ class Governance(IconSystemScoreBase):
     _REVISION_NAME = 'revision_name'
 
     @eventlog(indexed=1)
-    def Accepted(self, txHash: str, warning: str):
+    def Accepted(self, txHash: str):
         pass
 
     @eventlog(indexed=1)
@@ -189,8 +189,6 @@ class Governance(IconSystemScoreBase):
         self._set_initial_import_white_list()
         # set initial service config
         self._set_initial_service_config()
-        # set initial revision
-        self._set_initial_revision()
 
     def on_update(self) -> None:
         super().on_update()
@@ -203,10 +201,8 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_4()
         if self.is_less_than_target_version('0.0.5'):
             self._migrate_v0_0_5()
-        if self.is_less_than_target_version('0.0.6'):
-            self._migrate_v0_0_6()
 
-        self._version.set('0.0.6')
+        self._version.set('0.0.5')
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -223,6 +219,7 @@ class Governance(IconSystemScoreBase):
                     self._step_costs._step_types.put(step_type)
 
         self._set_initial_step_costs()
+        self._set_initial_max_step_limits()
 
     def _migrate_v0_0_3(self):
         # set initial import white list
@@ -230,15 +227,13 @@ class Governance(IconSystemScoreBase):
         self._set_initial_service_config()
 
         self._set_initial_max_step_limits()
+        self._set_initial_revision()
 
     def _migrate_v0_0_4(self):
         pass
 
     def _migrate_v0_0_5(self):
         self._set_initial_revision()
-
-    def _migrate_v0_0_6(self):
-        pass
 
     @staticmethod
     def _versions(version: str):
@@ -344,7 +339,7 @@ class Governance(IconSystemScoreBase):
             self.StepPriceChanged(stepPrice)
 
     @external
-    def acceptScore(self, txHash: bytes, warning: str = ""):
+    def acceptScore(self, txHash: bytes):
         # check message sender
         Logger.debug(f'acceptScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
@@ -374,14 +369,14 @@ class Governance(IconSystemScoreBase):
 
         self._audit_status[txHash] = self.tx.hash
 
-        self.Accepted('0x' + txHash.hex(), warning)
+        self.Accepted('0x' + txHash.hex())
 
     def _deploy(self, tx_hash: bytes, score_addr: Address):
         owner = self.get_owner(score_addr)
         tmp_sender = self.msg.sender
         self.msg.sender = owner
         try:
-            self.get_icon_score_context_util().deploy(self._context, tx_hash)
+            self._context.deploy(tx_hash)
         finally:
             self.msg.sender = tmp_sender
 
@@ -561,7 +556,7 @@ class Governance(IconSystemScoreBase):
 
     def _set_initial_revision(self):
         self._revision_code.set(2)
-        self._revision_name.set("1.1.2")
+        self._revision_name.set("1.1.0")
 
     @external(readonly=True)
     def getStepCosts(self) -> dict:
@@ -605,7 +600,7 @@ class Governance(IconSystemScoreBase):
 
     def _set_initial_import_white_list(self):
         key = "iconservice"
-        # if iconservice has no value set ALL
+        # if iconsevice has no value set ALL
         if self._import_white_list[key] == "":
             self._import_white_list[key] = "*"
             self._import_white_list_keys.put(key)
@@ -792,7 +787,7 @@ class Governance(IconSystemScoreBase):
                     self._import_white_list_keys[i] = top
 
     def _set_initial_service_config(self):
-        self._service_config.set(self.get_icon_score_context_util().icon_service_flag | 8)
+        self._service_config.set(self.get_icon_service_flag() | 8)
 
     @external
     def updateServiceConfig(self, serviceFlag: int):

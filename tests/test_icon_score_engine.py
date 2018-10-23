@@ -21,6 +21,7 @@
 import unittest
 import os
 
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from tests import rmtree, create_address
 from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
@@ -84,7 +85,7 @@ class TestIconScoreEngine(unittest.TestCase):
         self._icon_score_address = create_address(AddressPrefix.CONTRACT)
 
         self.factory = IconScoreContextFactory(max_size=1)
-        IconScoreContext.icon_score_deploy_engine = deploy_engine
+        IconScoreContextUtil.icon_score_deploy_engine = deploy_engine
         self._context = self.factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash()

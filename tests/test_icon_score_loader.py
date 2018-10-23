@@ -25,6 +25,7 @@ from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from tests import create_address, create_tx_hash, rmtree
 
@@ -39,7 +40,7 @@ class TestIconScoreLoader(unittest.TestCase):
         self._loader = IconScoreLoader(self._score_path)
 
         self._factory = IconScoreContextFactory(max_size=1)
-        IconScoreContext.icon_score_deploy_engine = Mock()
+        IconScoreContextUtil.icon_score_deploy_engine = Mock()
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         ContextContainer._push_context(self._context)
 

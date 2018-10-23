@@ -20,6 +20,8 @@
 import unittest
 from unittest.mock import Mock
 
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+
 from iconservice.icon_service_engine import IconServiceEngine
 
 from iconservice.base.address import Address, AddressPrefix
@@ -29,6 +31,7 @@ from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.utils import int_to_bytes
@@ -44,6 +47,7 @@ class TestEventlog(unittest.TestCase):
         traces = Mock(spec=list)
         step_counter = Mock(spec=IconScoreStepCounter)
 
+        IconScoreContextUtil.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
         context.type = IconScoreContextType.INVOKE
         context.func_type = IconScoreFuncType.WRITABLE
         context.tx_batch = TransactionBatch()
