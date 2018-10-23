@@ -34,7 +34,7 @@ class TestIntegrateRevision(TestIntegrateBase):
     test governance deploy audit accept, reject
     """
 
-    def _update_governance(self):
+    def _update_governance_0_0_4(self):
         tx = self._make_deploy_tx("test_builtin",
                                   "0_0_4/governance",
                                   self._admin,
@@ -65,7 +65,9 @@ class TestIntegrateRevision(TestIntegrateBase):
         return tx_results[0]
 
     def test_governance_call_about_set_revision(self):
-        self._update_governance()
+        # this unit test's purpose is just for test getRevision and setRevision method,
+        # so don't need to add unit test whenever governance version is increased.
+        self._update_governance_0_0_4()
 
         expected_status = {
             "code": REVISION_2,

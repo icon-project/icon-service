@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class TestIntegrateDeployBlackList(TestIntegrateBase):
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "0_0_4/governance",
+                                  "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])

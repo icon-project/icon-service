@@ -57,7 +57,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
 
     def import_white_list_enable(self):
         tx1 = self._make_deploy_tx("test_builtin",
-                                   "0_0_4/governance",
+                                   "latest_version/governance",
                                    self._admin,
                                    GOVERNANCE_SCORE_ADDRESS)
 
