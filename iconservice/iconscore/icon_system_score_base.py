@@ -16,9 +16,9 @@
 
 from abc import abstractmethod
 
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional, Type, Any
 
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import ScoreErrorException
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
@@ -56,6 +56,9 @@ class IconSystemScoreBase(IconScoreBase):
     def get_icon_score_context_util(self) -> Type['IconScoreContextUtil']:
         return IconScoreContextUtil
 
+    def update_global_value_mapper(self, key: str, value: Any) -> None:
+        self._context.new_global_value_mapper[key] = value
+
     def get_deploy_tx_params(self, tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
         return IconScoreContextUtil.icon_score_deploy_engine.icon_deploy_storage.get_deploy_tx_params(self._context,
                                                                                                       tx_hash)
@@ -63,5 +66,3 @@ class IconSystemScoreBase(IconScoreBase):
     def get_deploy_info(self, address: 'Address') -> Optional['IconScoreDeployInfo']:
         return IconScoreContextUtil.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(self._context,
                                                                                                  address)
-
-

@@ -103,3 +103,13 @@ class IconScoreFuncType(IntEnum):
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
+
+
+class GlobalValueKey:
+    IMPORT_WHITE_LIST_CACHE = 'import_white_list_cache'
+    SERVICE_CONFIG = 'service_config'
+    REVISION_CODE = 'revision_code'
+    STEP_PRICE = 'step_price'
+    STEP_COSTS = 'step_costs'
+    MAX_STEP_LIMIT_QUERY = 'max_step_limit_query'
+    MAX_STEP_LIMIT_INVOKE = 'max_step_limit_invoke'

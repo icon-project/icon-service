@@ -34,7 +34,7 @@ ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
 
 
 # noinspection PyProtectedMember
-@patch(f'{SERVICE_ENGINE_PATH}._init_global_value_by_governance_score')
+@patch(f'{SERVICE_ENGINE_PATH}._init_global_value')
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
@@ -42,7 +42,7 @@ def generate_inner_task(
         db_factory_create_by_name,
         icx_engine_open,
         service_engine_load_builtin_scores,
-        service_engine_init_global_value_by_governance_score):
+        service_engine_init_global_value):
     memory_db = {}
 
     def put(self, key, value):
@@ -62,16 +62,15 @@ def generate_inner_task(
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
     service_engine_load_builtin_scores.assert_called()
-    service_engine_init_global_value_by_governance_score.assert_called()
+    service_engine_init_global_value.assert_called()
 
     # Mocks get_balance so, it returns always 100 icx
     inner_task._icon_service_engine._icx_engine.get_balance = \
         Mock(return_value=100 * 10 ** 18)
 
-    # Mocks _init_global_value_by_governance_score
+    # Mocks _init_global_value
     # to ignore initializing governance SCORE
-    inner_task._icon_service_engine._init_global_value_by_governance_score = \
-        service_engine_init_global_value_by_governance_score
+    inner_task._icon_service_engine._init_global_value = service_engine_init_global_value
 
     # Ignores icx transfer
     inner_task._icon_service_engine._icx_engine._transfer = Mock()
@@ -94,9 +93,9 @@ def generate_service_engine(
 
     service_engine._load_builtin_scores = Mock()
 
-    # Mocks _init_global_value_by_governance_score
+    # Mocks _init_global_value
     # to ignore initializing governance SCORE
-    service_engine._init_global_value_by_governance_score = Mock()
+    service_engine._init_global_value = Mock()
 
     service_engine.open(IconConfig("", default_icon_config))
 
@@ -105,7 +104,7 @@ def generate_service_engine(
     icx_engine_open.assert_called()
 
     service_engine._load_builtin_scores.assert_called()
-    service_engine._init_global_value_by_governance_score.assert_called()
+    service_engine._init_global_value.assert_called()
 
     # Ignores icx transfer
     service_engine._icx_engine._transfer = Mock()

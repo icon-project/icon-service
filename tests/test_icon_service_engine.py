@@ -33,7 +33,7 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import IconServiceFlag, ConfigKey
+from iconservice.icon_constant import IconServiceFlag, ConfigKey, GlobalValueKey
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextFactory
@@ -77,8 +77,7 @@ class TestIconServiceEngine(unittest.TestCase):
                 ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path
             }
         )
-        # engine._load_builtin_scores = Mock()
-        # engine._init_global_value_by_governance_score = Mock()
+
         engine.open(conf)
         self._engine = engine
 
@@ -167,11 +166,6 @@ class TestIconServiceEngine(unittest.TestCase):
             'txHash': create_tx_hash()
         }
 
-        step_limit: int = params.get('stepLimit', 0)
-        if params.get('version', 2) < 3:
-            step_limit = self._engine._step_counter_factory.get_max_step_limit(
-                context.type)
-
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=0,
                                  origin=from_,
@@ -182,8 +176,10 @@ class TestIconServiceEngine(unittest.TestCase):
         context.event_logs = []
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.step_counter: IconScoreStepCounter = self._engine. \
-            _step_counter_factory.create(step_limit)
+        context.step_counter = Mock(spec=IconScoreStepCounter)
+        step_used = 0
+        context.step_counter.step_used = step_used
+        self._engine._charge_transaction_fee = Mock(return_value=(step_used, 0))
         self._engine._call(context, method, params)
 
         # from(genesis), to
@@ -232,15 +228,15 @@ class TestIconServiceEngine(unittest.TestCase):
             # but there's a max step limit,
             # asserts max step limit is applied to step counting.
             self.assertNotEqual(step_limit, context.step_counter.step_limit)
-            self.assertEqual(
-                self._engine._step_counter_factory.get_max_step_limit(
-                    context.type),
-                context.step_counter.step_limit)
+
+            max_step_limit = context.new_global_value_mapper.get(GlobalValueKey.MAX_STEP_LIMIT_INVOKE)
+            self.assertEqual(max_step_limit, context.step_counter.step_limit)
             return ret
 
         self._engine._invoke_request = Mock(side_effect=intercept_invoke_req)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self._engine.commit(block)
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -256,21 +252,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        step_unit = self._engine._step_counter_factory.get_step_cost(
-            StepType.DEFAULT)
-
+        step_costs = self._engine._global_value_mapper.get(GlobalValueKey.STEP_COSTS)
+        step_unit = step_costs[StepType.DEFAULT.value]
         self.assertEqual(tx_result.step_used, step_unit)
 
-        step_price = self._engine._get_step_price()
-
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
         if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
         else:
-            self.assertEqual(step_price, 0)
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
-
-        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = \
@@ -304,6 +296,8 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
+        self._engine.commit(block)
+
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
@@ -320,20 +314,16 @@ class TestIconServiceEngine(unittest.TestCase):
         # step_used MUST BE 10 ** 6 on protocol v2
         self.assertEqual(tx_result.step_used, 10**6)
 
-        step_price = self._engine._get_step_price()
-        # if self._engine._is_flag_on(IconServiceFlag.fee):
-        #     # step_used MUST BE 10**10 on protocol v2
-        #     self.assertEqual(step_price, 10 ** 10)
-        # else:
-        #     self.assertEqual(step_price, 0)
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
+            # step_price MUST BE 10**10 on protocol v2
+            self.assertEqual(step_price, 10 ** 10)
+        else:
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
 
-        # Write updated states to levelDB
-        self._engine.commit(block)
-
         # Check whether fee charging works well
-        from_balance: int = self._engine._icx_engine.get_balance(
-            None, self.from_)
+        from_balance: int = self._engine._icx_engine.get_balance(None, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -365,6 +355,8 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
+        self._engine.commit(block)
+
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
@@ -381,11 +373,13 @@ class TestIconServiceEngine(unittest.TestCase):
         # step_used MUST BE 10**6 on protocol v2
         self.assertEqual(tx_result.step_used, 10**6)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
+            # step_price MUST BE 10**10 on protocol v2
+            self.assertEqual(step_price, 10 ** 10)
+        else:
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
-
-        # Write updated states to levelDB
-        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = self._engine._icx_engine.get_balance(
@@ -423,6 +417,8 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self._engine.commit(block)
+
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -437,21 +433,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
-        # step_used MUST BE 10**6 on protocol v2
-        step_unit = self._engine._step_counter_factory.get_step_cost(
-            StepType.DEFAULT)
-
+        step_costs = self._engine._global_value_mapper.get(GlobalValueKey.STEP_COSTS)
+        step_unit = step_costs[StepType.DEFAULT.value]
         self.assertEqual(tx_result.step_used, step_unit)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
         if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
-            # step_used MUST BE 10**10 on protocol v2
+            # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
         else:
-            self.assertEqual(step_price, 0)
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
-
-        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = \
@@ -498,6 +490,8 @@ class TestIconServiceEngine(unittest.TestCase):
             self._engine._icx_engine.get_balance(None, self.from_)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self._engine.commit(block)
+
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -513,21 +507,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        step_cost = self._engine._step_counter_factory.get_step_cost(
-            StepType.DEFAULT)
+        step_costs = self._engine._global_value_mapper.get(GlobalValueKey.STEP_COSTS)
+        step_unit = step_costs[StepType.DEFAULT.value]
+        self.assertEqual(tx_result.step_used, step_unit)
 
-        self.assertEqual(tx_result.step_used, step_cost)
-
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
         if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
-            self.assertEqual(
-                step_price, self._engine._step_counter_factory.get_step_price())
+            self.assertEqual(step_price, 10 ** 10)
         else:
-            self.assertEqual(step_price, 0)
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
-
-        self._engine.commit(block)
 
         # Check whether fee charging works well
         after_from_balance: int = \
@@ -579,6 +569,8 @@ class TestIconServiceEngine(unittest.TestCase):
 
         raise_exception_start_tag("test_score_invoke_with_revert")
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self._engine.commit(block)
+
         raise_exception_end_tag("test_score_invoke_with_revert")
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -595,21 +587,17 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
         # step_used MUST BE 10**6 on protocol v2
-        step_unit = self._engine._step_counter_factory.get_step_cost(
-            StepType.DEFAULT)
-
+        step_costs = self._engine._global_value_mapper.get(GlobalValueKey.STEP_COSTS)
+        step_unit = step_costs[StepType.DEFAULT.value]
         self.assertEqual(tx_result.step_used, step_unit)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
         if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
             # step_price MUST BE 10**10 on protocol v2
-            self.assertEqual(
-                step_price, self._engine._step_counter_factory.get_step_price())
+            self.assertEqual(step_price, 10 ** 10)
         else:
-            self.assertEqual(step_price, 0)
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
-
-        self._engine.commit(block)
 
         # Check whether fee charging works well
         after_from_balance: int = \
@@ -790,6 +778,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsInstance(transactions[0]['params']['to'], MalformedAddress)
 
         tx_results, state_root_hash = self._engine.invoke(block, transactions)
+        self._engine.commit(block)
+
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
@@ -806,11 +796,13 @@ class TestIconServiceEngine(unittest.TestCase):
         # step_used MUST BE 10**6 on protocol v2
         self.assertEqual(tx_result.step_used, 10**6)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._global_value_mapper.get(GlobalValueKey.STEP_PRICE)
+        if IconScoreContextUtil._is_flag_on(IconScoreContextUtil.icon_service_flag, IconServiceFlag.fee):
+            # step_price MUST BE 10**10 on protocol v2
+            self.assertEqual(step_price, 10 ** 10)
+        else:
+            step_price = 0
         self.assertEqual(tx_result.step_price, step_price)
-
-        # Write updated states to levelDB
-        self._engine.commit(block)
 
         # Check whether fee charging works well
         from_balance: int = self._engine._icx_engine.get_balance(

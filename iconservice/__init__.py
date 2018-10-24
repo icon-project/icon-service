@@ -15,7 +15,7 @@
 
 from .base.address import Address, ZERO_SCORE_ADDRESS
 from .base.exception import IconScoreException
-from .icon_constant import IconServiceFlag
+from .icon_constant import IconServiceFlag, GlobalValueKey
 from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
 from .iconscore.icon_score_base import interface, eventlog, external, payable, IconScoreBase, IconScoreDatabase
 from .iconscore.icon_score_base2 import InterfaceScore, revert, sha3_256, json_loads, json_dumps

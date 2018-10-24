@@ -16,7 +16,7 @@
 
 import unittest
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address
@@ -33,21 +33,24 @@ from tests.mock_generator import generate_inner_task, create_request, ReqData, c
 
 
 class TestIconScoreStepCounter(unittest.TestCase):
+    origin_create = IconScoreStepCounterFactory.create
 
     def setUp(self):
-        self._inner_task = generate_inner_task()
+        IconScoreStepCounterFactory.create = Mock()
 
-        factory = self._inner_task._icon_service_engine._step_counter_factory
+        self._inner_task = generate_inner_task()
+        self.step_cost_dict = self._init_step_cost()
+
         self.step_counter = Mock(spec=IconScoreStepCounter)
-        factory.create = Mock(return_value=self.step_counter)
+        IconScoreStepCounterFactory.create = Mock(return_value=self.step_counter)
         self.step_counter.step_used = 0
         self.step_counter.step_price = 0
         self.step_counter.step_limit = 5000000
-        self.step_cost_dict = self._init_step_cost()
 
     def tearDown(self):
         ContextContainer._clear_context()
         clear_inner_task()
+        IconScoreStepCounterFactory.create = self.origin_create
 
     def test_install_step(self):
         # Ignores deploy
@@ -126,6 +129,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         request = create_request([
             ReqData(tx_hash, from_, to_, "", ""),
         ])
+
+        self._inner_task._icon_service_engine._icon_pre_validator._check_from_can_charge_fee_v3 = Mock()
 
         result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -541,8 +546,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 pass
 
         self.step_counter = IconScoreStepCounter(step_costs, 100, 0)
-        factory = self._inner_task._icon_service_engine._step_counter_factory
-        factory.create = Mock(return_value=self.step_counter)
+        IconScoreStepCounterFactory.create = Mock(return_value=self.step_counter)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
@@ -565,40 +569,40 @@ class TestIconScoreStepCounter(unittest.TestCase):
             governance.STEP_TYPE_EVENT_LOG: 10
         })
 
-        step_counter_factory = IconScoreStepCounterFactory()
         step_costs = governance_score.getStepCosts()
 
+        ret_step_consts = {}
         for key, value in step_costs.items():
             try:
-                step_counter_factory.set_step_cost(StepType(key), value)
+                ret_step_consts[StepType(key)] = value
             except ValueError:
                 pass
 
         self.assertEqual(
-            4000, step_counter_factory.get_step_cost(StepType.DEFAULT))
+            4000, ret_step_consts[StepType.DEFAULT])
         self.assertEqual(
-            1500, step_counter_factory.get_step_cost(StepType.CONTRACT_CALL))
+            1500, ret_step_consts[StepType.CONTRACT_CALL])
         self.assertEqual(
-            20000, step_counter_factory.get_step_cost(StepType.CONTRACT_CREATE))
+            20000, ret_step_consts[StepType.CONTRACT_CREATE])
         self.assertEqual(
-            8000, step_counter_factory.get_step_cost(StepType.CONTRACT_UPDATE))
+            8000, ret_step_consts[StepType.CONTRACT_UPDATE])
         self.assertEqual(
             -7000,
-            step_counter_factory.get_step_cost(StepType.CONTRACT_DESTRUCT))
+            ret_step_consts[StepType.CONTRACT_DESTRUCT])
         self.assertEqual(
-            1000, step_counter_factory.get_step_cost(StepType.CONTRACT_SET))
+            1000, ret_step_consts[StepType.CONTRACT_SET])
         self.assertEqual(
-            5, step_counter_factory.get_step_cost(StepType.GET))
+            5, ret_step_consts[StepType.GET])
         self.assertEqual(
-            20, step_counter_factory.get_step_cost(StepType.SET))
+            20, ret_step_consts[StepType.SET])
         self.assertEqual(
-            5, step_counter_factory.get_step_cost(StepType.REPLACE))
+            5, ret_step_consts[StepType.REPLACE])
         self.assertEqual(
-            -15, step_counter_factory.get_step_cost(StepType.DELETE))
+            -15, ret_step_consts[StepType.DELETE])
         self.assertEqual(
-            20, step_counter_factory.get_step_cost(StepType.INPUT))
+            20, ret_step_consts[StepType.INPUT])
         self.assertEqual(
-            10, step_counter_factory.get_step_cost(StepType.EVENT_LOG))
+            10, ret_step_consts[StepType.EVENT_LOG])
 
     @staticmethod
     def _init_step_cost() -> dict:
@@ -626,7 +630,6 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 # Pass the unknown step type
                 pass
 
-        # return IconScoreStepCounter(step_costs, 5000000, 0)
         return step_costs
 
     def _calc_step_used(self, offset: int, count: int):
@@ -640,9 +643,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     def _assert_step_used(self, step_used: int, request: dict, tx_hash: bytes):
         self.step_counter = IconScoreStepCounter(self.step_cost_dict, 5000000, 0)
-        factory = self._inner_task._icon_service_engine._step_counter_factory
-        factory.create = Mock(return_value=self.step_counter)
-
+        IconScoreStepCounterFactory.create = Mock(return_value=self.step_counter)
         results = self._inner_task_invoke(request)
         result = results['txResults'][tx_hash]
         self.assertEqual(result['status'], '0x1')
@@ -705,5 +706,3 @@ class SampleScore(IconScoreBase):
     @external
     def hash_writable(self, data: bytes) -> bytes:
         return sha3_256(data)
-
-

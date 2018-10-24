@@ -191,6 +191,7 @@ class Governance(IconSystemScoreBase):
         self._set_initial_service_config()
         # set initial revision
         self._set_initial_revision()
+        self.update_global_value()
 
     def on_update(self) -> None:
         super().on_update()
@@ -207,6 +208,16 @@ class Governance(IconSystemScoreBase):
             self._migrate_v0_0_6()
 
         self._version.set('0.0.6')
+        self.update_global_value()
+
+    def update_global_value(self):
+        self.update_global_value_mapper(GlobalValueKey.SERVICE_CONFIG, self.service_config)
+        self.update_global_value_mapper(GlobalValueKey.REVISION_CODE, self.revision_code)
+        self.update_global_value_mapper(GlobalValueKey.IMPORT_WHITE_LIST_CACHE, self.import_white_list_cache)
+        self.update_global_value_mapper(GlobalValueKey.STEP_PRICE, self.getStepPrice())
+        self.update_global_value_mapper(GlobalValueKey.STEP_COSTS, self.getStepCosts())
+        self.update_global_value_mapper(GlobalValueKey.MAX_STEP_LIMIT_INVOKE, self.getMaxStepLimit(CONTEXT_TYPE_INVOKE))
+        self.update_global_value_mapper(GlobalValueKey.MAX_STEP_LIMIT_QUERY, self.getMaxStepLimit(CONTEXT_TYPE_QUERY))
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -342,6 +353,7 @@ class Governance(IconSystemScoreBase):
         if stepPrice > 0:
             self._step_price.set(stepPrice)
             self.StepPriceChanged(stepPrice)
+            self.update_global_value_mapper(GlobalValueKey.STEP_PRICE, stepPrice)
 
     @external
     def acceptScore(self, txHash: bytes, warning: str = ""):
@@ -581,6 +593,7 @@ class Governance(IconSystemScoreBase):
                 self.revert(f'Invalid step cost: {stepType}, {cost}')
         self._step_costs[stepType] = cost
         self.StepCostChanged(stepType, cost)
+        self.update_global_value_mapper(GlobalValueKey.STEP_COSTS, self.getStepCosts())
 
     @external(readonly=True)
     def getMaxStepLimit(self, contextType: str) -> int:
@@ -596,6 +609,10 @@ class Governance(IconSystemScoreBase):
         if contextType == CONTEXT_TYPE_INVOKE or contextType == CONTEXT_TYPE_QUERY:
             self._max_step_limits[contextType] = value
             self.MaxStepLimitChanged(contextType, value)
+            if contextType == CONTEXT_TYPE_INVOKE:
+                self.update_global_value_mapper(GlobalValueKey.MAX_STEP_LIMIT_INVOKE, value)
+            else:
+                self.update_global_value_mapper(GlobalValueKey.MAX_STEP_LIMIT_QUERY, value)
         else:
             self.revert("Invalid context type")
 
@@ -662,6 +679,8 @@ class Governance(IconSystemScoreBase):
         if len(log_entry):
             self.AddImportWhiteListLog(str(log_entry), len(log_entry))
 
+        self.update_global_value_mapper(GlobalValueKey.IMPORT_WHITE_LIST_CACHE, self.import_white_list_cache)
+
         if DEBUG is True:
             Logger.debug(f'checking added item ({importStmt}): {self.isInImportWhiteList(importStmt)}')
 
@@ -721,6 +740,8 @@ class Governance(IconSystemScoreBase):
         if len(log_entry):
             # make eventlog
             self.AddImportWhiteListLog(str(log_entry), len(log_entry))
+
+        self.update_global_value_mapper(GlobalValueKey.IMPORT_WHITE_LIST_CACHE, self.import_white_list_cache)
 
         if DEBUG is True:
             Logger.debug(f'checking removed item ({importStmt}): {self.isInImportWhiteList(importStmt)}')
@@ -814,6 +835,7 @@ class Governance(IconSystemScoreBase):
         if prev_service_config != serviceFlag:
             self._service_config.set(serviceFlag)
             self.UpdateServiceConfigLog(serviceFlag)
+            self.update_global_value_mapper(GlobalValueKey.SERVICE_CONFIG, serviceFlag)
             if DEBUG is True:
                 Logger.debug(f'updateServiceConfig (prev: {prev_service_config} flag: {serviceFlag})')
         else:
@@ -844,6 +866,7 @@ class Governance(IconSystemScoreBase):
 
         self._revision_code.set(code)
         self._revision_name.set(name)
+        self.update_global_value_mapper(GlobalValueKey.REVISION_CODE, code)
 
     @external(readonly=True)
     def getRevision(self) -> dict:

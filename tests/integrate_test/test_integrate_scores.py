@@ -261,6 +261,8 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
+        target_flag = IconServiceFlag.scorePackageValidator
+
         query_request = {
             "version": self._version,
             "from": self._admin,
@@ -272,6 +274,13 @@ class TestIntegrateScores(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
+        expect_ret = {}
+        for flag in IconServiceFlag:
+            if target_flag & flag == flag:
+                expect_ret[flag.name] = True
+            else:
+                expect_ret[flag.name] = False
+        self.assertEqual(response, expect_ret)
 
         tx2 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
@@ -286,7 +295,7 @@ class TestIntegrateScores(TestIntegrateBase):
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-        target_flag = IconServiceFlag.audit | IconServiceFlag.fee
+        target_flag = IconServiceFlag.audit
         tx3 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',

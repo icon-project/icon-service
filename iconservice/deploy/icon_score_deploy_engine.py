@@ -281,7 +281,7 @@ class IconScoreDeployEngine(object):
 
         try:
             if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.scorePackageValidator):
-                IconScoreContextUtil.try_score_package_validate(score_address, next_tx_hash)
+                IconScoreContextUtil.try_score_package_validate(context, score_address, next_tx_hash)
             score = context.new_icon_score_mapper.load_score(score_address, next_tx_hash)
             if score is None:
                 raise InvalidParamsException(f'score is None : {score_address}')

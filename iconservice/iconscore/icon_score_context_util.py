@@ -13,13 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
 
+import warnings
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from .global_value_mapper import GlobalValueMapper
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ServerErrorException, InvalidParamsException
-from ..icon_constant import IconScoreContextType, DEFAULT_BYTE_SIZE, IconServiceFlag
+from ..icon_constant import IconScoreContextType, DEFAULT_BYTE_SIZE, IconServiceFlag, GlobalValueKey
 
 if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper
@@ -33,6 +34,7 @@ class IconScoreContextUtil(object):
     """Contains the useful information to process user's jsonrpc request
     """
     icon_score_mapper: 'IconScoreMapper' = None
+    global_value_mapper: 'GlobalValueMapper' = None
     icon_score_deploy_engine: 'IconScoreDeployEngine'
     icon_service_flag: int = 0
     legacy_tbears_mode = False
@@ -84,8 +86,10 @@ class IconScoreContextUtil(object):
         return cls.icon_score_mapper.get_icon_score(address, current_tx_hash)
 
     @classmethod
-    def try_score_package_validate(cls, address: 'Address', tx_hash: bytes):
-        cls.icon_score_mapper.try_score_package_validate(address, tx_hash)
+    def try_score_package_validate(cls, context: 'IconScoreContext', address: 'Address', tx_hash: bytes) -> None:
+        import_white_list_cache = \
+            IconScoreContextUtil.get_global_value_mapper(context).get(GlobalValueKey.IMPORT_WHITE_LIST_CACHE)
+        cls.icon_score_mapper.try_score_package_validate(address, tx_hash, import_white_list_cache)
 
     @classmethod
     def validate_score_blacklist(cls, context: 'IconScoreContext', score_address: 'Address'):
@@ -131,28 +135,11 @@ class IconScoreContextUtil(object):
 
     @classmethod
     def _get_service_flag(cls, context: 'IconScoreContext') -> int:
-        governance_score = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-        if governance_score is None:
-            raise ServerErrorException(f'governance_score is None')
-
-        service_config = cls.icon_service_flag
-        try:
-            service_config = governance_score.service_config
-        except AttributeError:
-            pass
-        return service_config
+        return cls.get_global_value_mapper(context).get(GlobalValueKey.SERVICE_CONFIG)
 
     @classmethod
     def get_revision(cls, context: 'IconScoreContext') -> int:
-        try:
-            governance_score = cls.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-            if governance_score is not None:
-                if hasattr(governance_score, 'revision_code'):
-                    return governance_score.revision_code
-        except:
-            pass
-
-        return 0
+        return cls.get_global_value_mapper(context).get(GlobalValueKey.REVISION_CODE)
 
     @classmethod
     def get_tx_hashes_by_score_address(cls,
@@ -167,4 +154,12 @@ class IconScoreContextUtil(object):
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         return cls.icon_score_deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
+
+
+    @classmethod
+    def get_global_value_mapper(cls, context: 'IconScoreContext') -> 'GlobalValueMapper':
+        if context.type == IconScoreContextType.QUERY:
+            return cls.global_value_mapper
+        else:
+            return context.new_global_value_mapper
 

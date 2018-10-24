@@ -16,7 +16,7 @@
 import hashlib
 import unittest
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
@@ -27,6 +27,8 @@ from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.icon_constant import IconScoreContextType
+from iconservice.iconscore.global_value_mapper import GlobalValueMapper
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -34,7 +36,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext, \
     ContextContainer
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_event_log import EventLog
-from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
+from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, IconScoreStepCounter
 from iconservice.utils import to_camel_case
 from iconservice.utils.bloom import BloomFilter
 from tests import create_tx_hash, create_address, \
@@ -55,13 +57,12 @@ class TestTransactionResult(unittest.TestCase):
         self._icon_service_engine._charge_transaction_fee = \
             Mock(return_value=(0, 0))
 
-        step_counter_factory = IconScoreStepCounterFactory()
-        step_counter_factory.get_step_cost = Mock(return_value=6000)
-        self._icon_service_engine._step_counter_factory = step_counter_factory
         self._icon_service_engine._icon_pre_validator = \
             Mock(spec=IconPreValidator)
 
         self._mock_context = Mock(spec=IconScoreContext)
+        self._mock_context.type = IconScoreContextType.INVOKE
+        self._mock_context.new_global_value_mapper = Mock(spec=GlobalValueMapper)
         self._mock_context.tx = Mock(spec=Transaction)
         self._mock_context.block = Mock(spec=Block)
         self._mock_context.readonly = False
@@ -69,7 +70,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.traces = []
         self._mock_context.cumulative_step_used = Mock(spec=int)
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
-        self._mock_context.step_counter = step_counter_factory.create(5000000)
+        self._mock_context.step_counter = Mock(spec=IconScoreStepCounter)
         self._mock_context.current_address = Mock(spec=Address)
 
     def tearDown(self):
@@ -220,11 +221,16 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['status'].startswith('0x'))
 
     def test_request(self):
+        origin_create = IconScoreStepCounterFactory.create
+        IconScoreStepCounterFactory.create = Mock()
         inner_task = generate_inner_task()
+        inner_task._icon_service_engine._charge_transaction_fee = Mock(return_value=(0, 0))
+        inner_task._icon_service_engine._icon_pre_validator.execute_to_check_out_of_balance = Mock()
 
         # noinspection PyUnusedLocal
-        def intercept_invoke(*args, **kwargs):
-            ContextContainer._push_context(args[0])
+        def intercept_score_engine_invoke(*args, **kwargs):
+            context = args[0]
+            ContextContainer._push_context(context)
             context_db = inner_task._icon_service_engine._icx_context_db
 
             score_address = create_address(AddressPrefix.CONTRACT, b'address')
@@ -233,8 +239,7 @@ class TestTransactionResult(unittest.TestCase):
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
 
-        inner_task._icon_service_engine._icon_score_engine.invoke = \
-            Mock(side_effect=intercept_invoke)
+        inner_task._icon_service_engine._icon_score_engine.invoke = Mock(side_effect=intercept_score_engine_invoke)
         inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
         from_ = create_address(AddressPrefix.EOA, b'from')
@@ -244,6 +249,7 @@ class TestTransactionResult(unittest.TestCase):
             ReqData(bytes.hex(create_tx_hash(b'tx1')), from_, to_, 'call', {}),
             ReqData(bytes.hex(create_tx_hash(b'tx2')), from_, to_, 'call', {})
         ])
+
         response = inner_task._invoke(request)
 
         step_total = 0
@@ -262,6 +268,7 @@ class TestTransactionResult(unittest.TestCase):
             self.assertEqual(step_total, int(result['cumulativeStepUsed'], 16))
 
         clear_inner_task()
+        IconScoreStepCounterFactory.create = origin_create
 
 
 # noinspection PyPep8Naming

@@ -23,6 +23,7 @@ from iconservice.base.exception import ServerErrorException, ExceptionCode
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy.icon_score_deploy_storage import \
     IconScoreDeployTXParams, IconScoreDeployInfo, DeployType, DeployState, IconScoreDeployStorage
+from iconservice.icon_constant import IconScoreContextType, GlobalValueKey
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_tx_hash, create_address
 
@@ -105,6 +106,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.storage._put_deploy_tx_params = Mock()
         self.storage.get_deploy_tx_params = Mock(return_value=bytes())
         context = Mock(spec=IconScoreContext)
+        context.type = IconScoreContextType.INVOKE
         score_address = create_address(1)
         deploy_type = DeployType.INSTALL
         owner = create_address()
@@ -189,6 +191,8 @@ class TestIconScoreDeployStorage(unittest.TestCase):
             self.storage._put_deploy_info = Mock()
             self.storage._db.delete = Mock()
             context = Mock(spec=IconScoreContext)
+            context.type = IconScoreContextType.INVOKE
+            context.new_global_value_mapper = {GlobalValueKey.REVISION_CODE: 0}
             context.get_revision = Mock(return_value=0)
             score_address = create_address(1)
             deploy_type = DeployType.INSTALL

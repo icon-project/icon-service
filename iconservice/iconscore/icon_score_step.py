@@ -13,15 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import Enum, auto
-from typing import TYPE_CHECKING
 
-from iconservice.icon_constant import MAX_EXTERNAL_CALL_COUNT
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Optional
+
+from iconservice.icon_constant import MAX_EXTERNAL_CALL_COUNT, GlobalValueKey, IconServiceFlag
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.utils import to_camel_case
 from ..base.exception import IconServiceBaseException, ExceptionCode, InvalidRequestException
+from iconservice.iconscore.icon_score_context import IconScoreContextType
 
 if TYPE_CHECKING:
-    from iconservice.iconscore.icon_score_context import IconScoreContextType
+    from iconservice.iconscore.icon_score_context import IconScoreContext
 
 
 class AutoValueEnum(Enum):
@@ -51,64 +54,54 @@ class IconScoreStepCounterFactory(object):
     """Creates a step counter for the transaction
     """
 
-    def __init__(self) -> None:
-        self._step_cost_dict = {}
-        self._step_price = 0
-        self._max_step_limits = {}
-
-    def get_step_cost(self, step_type: 'StepType') -> int:
-        return self._step_cost_dict.get(step_type, 0)
-
-    def set_step_cost(self, step_type: 'StepType', value: int):
-        """Sets the step cost for specific action.
-
-        :param step_type: specific action
-        :param value: step cost
-        """
-        self._step_cost_dict[step_type] = value
-
-    def get_step_price(self):
-        """Returns the step price
-
-        :return: step price
-        """
-        return self._step_price
-
-    def set_step_price(self, step_price: int):
-        """Sets the step price
-
-        :param step_price: step price
-        """
-        self._step_price = step_price
-
-    def get_max_step_limit(self, context_type: 'IconScoreContextType'):
-        """Returns the max step limit
-
-        :return: the max step limit
-        """
-        return self._max_step_limits.get(context_type, 0)
-
-    def set_max_step_limit(
-            self, context_type: 'IconScoreContextType', max_step_limit: int):
-        """Sets the max step limit
-
-        :param context_type: context type
-        :param max_step_limit: the max step limit for the context type
-        """
-        self._max_step_limits[context_type] = max_step_limit
-
-    def create(self, step_limit: int) \
-            -> 'IconScoreStepCounter':
+    @classmethod
+    def create(cls, context: 'IconScoreContext', step_limit: Optional[int] = None) -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
+        :param context:
         :param step_limit: step limit of the transaction.
         :return: step counter
         """
 
-        # Copying a `dict` so as not to change step costs when processing a
-        # transaction.
-        return IconScoreStepCounter(
-            self._step_cost_dict.copy(), step_limit, self._step_price)
+        step_costs = cls._make_step_costs(context)
+
+        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.fee):
+            step_price = IconScoreContextUtil.get_global_value_mapper(context).get(GlobalValueKey.STEP_PRICE)
+        else:
+            step_price = 0
+
+        if context.type == IconScoreContextType.QUERY:
+            global_step_limit = \
+                IconScoreContextUtil.get_global_value_mapper(context).get(GlobalValueKey.MAX_STEP_LIMIT_QUERY)
+        else:
+            global_step_limit = \
+                IconScoreContextUtil.get_global_value_mapper(context).get(GlobalValueKey.MAX_STEP_LIMIT_INVOKE)
+
+        if step_limit is None:
+            step_limit = global_step_limit
+        else:
+            step_limit = min(step_limit, global_step_limit)
+
+        # Copying a `dict` so as not to change step costs when processing a transaction.
+        return IconScoreStepCounter(step_costs, step_limit, step_price)
+
+    @classmethod
+    def _make_step_costs(cls, context: 'IconScoreContext') -> dict:
+        tmp_step_costs = dict()
+        step_costs = IconScoreContextUtil.get_global_value_mapper(context).get(GlobalValueKey.STEP_COSTS)
+
+        for k, v in step_costs.items():
+            tmp_step_costs[StepType(k)] = v
+        return tmp_step_costs
+
+    @classmethod
+    def calculate_minimum_step(cls, context: 'IconScoreContext', input_size: Optional[str]) -> int:
+        step_costs = cls._make_step_costs(context)
+
+        tmp_minimum_step = step_costs[StepType.DEFAULT]
+        if input_size is not None:
+            tmp_minimum_step += input_size * step_costs[StepType.INPUT]
+        return tmp_minimum_step
 
 
 class OutOfStepException(IconServiceBaseException):

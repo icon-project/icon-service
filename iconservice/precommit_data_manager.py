@@ -15,28 +15,34 @@
 # limitations under the License.
 
 from threading import Lock
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from .base.block import Block
 from .base.exception import ServerErrorException
 from .database.batch import BlockBatch
-from .iconscore.icon_score_mapper import IconScoreMapper
+
+if TYPE_CHECKING:
+    from .iconscore.icon_score_mapper import IconScoreMapper
+    from .iconscore.global_value_mapper import GlobalValueMapper
 
 
 class PrecommitData(object):
     def __init__(self,
                  block_batch: 'BlockBatch',
                  block_result: list,
-                 score_mapper: Optional['IconScoreMapper']=None):
+                 score_mapper: Optional['IconScoreMapper']=None,
+                 global_value_mapper: Optional['GlobalValueMapper']=None):
         """
 
         :param block_batch: changed states for a block
         :param block_result: tx_results made from transactions in a block
         :param score_mapper: newly deployed scores in a block
+        :param global_value_mapper: newly global values in a block
         """
         self.block_batch = block_batch
         self.block_result = block_result
         self.score_mapper = score_mapper
+        self.globla_value_mapper = global_value_mapper
         self.block = block_batch.block
         self.state_root_hash: bytes = self.block_batch.digest()
 

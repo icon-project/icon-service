@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
     from .icon_score_base import IconScoreBase
+    from .global_value_mapper import GlobalValueMapper
 
 _thread_local_data = threading.local()
 
@@ -106,7 +107,8 @@ class IconScoreContext(object):
                  msg: 'Message' = None,
                  block_batch: 'BlockBatch' = None,
                  tx_batch: 'TransactionBatch' = None,
-                 new_icon_score_mapper: 'IconScoreMapper' = None) -> None:
+                 new_icon_score_mapper: 'IconScoreMapper' = None,
+                 new_global_value_mapper: 'GlobalValueMapper' = None) -> None:
         """Constructor
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
@@ -127,6 +129,7 @@ class IconScoreContext(object):
         self.block_batch = block_batch
         self.tx_batch = tx_batch
         self.new_icon_score_mapper = new_icon_score_mapper
+        self.new_global_value_mapper = new_global_value_mapper
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
@@ -150,6 +153,7 @@ class IconScoreContext(object):
         self.block_batch = None
         self.tx_batch = None
         self.new_icon_score_mapper = None
+        self.new_global_value_mapper = None
         self.cumulative_step_used = 0
         self.step_counter = None
         self.event_logs = None
