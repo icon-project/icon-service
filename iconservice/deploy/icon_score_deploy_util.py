@@ -21,5 +21,6 @@ class DirectoryNameConverter:
 
     @classmethod
     def rename_directory(cls, path: str):
-        cls.counter += 1
-        os.rename(path, f"{path}{int(time.time()*10**6)}{cls.counter}_garbage_score")
+        if os.path.exists(path):
+            cls.counter += 1
+            os.rename(path, f"{path}{int(time.time()*10**6)}{cls.counter}_garbage_score")

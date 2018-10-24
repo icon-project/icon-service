@@ -208,8 +208,7 @@ class IconScoreDeployEngine(object):
         converted_tx_hash: str = f'0x{bytes.hex(next_tx_hash)}'
         score_path = path.join(target_path, converted_tx_hash)
 
-        if os.path.exists(score_path):
-            DirectoryNameConverter.rename_directory(score_path)
+        DirectoryNameConverter.rename_directory(score_path)
 
         try:
             copytree(src_score_path, score_path)
@@ -267,7 +266,15 @@ class IconScoreDeployEngine(object):
             except FileExistsError:
                 pass
         else:
-            if context.get_revision() >= REVISION_2:
+            revision = context.get_revision()
+            if revision > REVISION_2:
+                score_root_path = os.path.join(self._icon_score_deployer.score_root_path,
+                                               score_address.to_bytes().hex())
+                converted_tx_hash = f'0x{bytes.hex(next_tx_hash)}'
+                install_path = os.path.join(score_root_path, converted_tx_hash)
+                DirectoryNameConverter.rename_directory(install_path)
+
+            if revision >= REVISION_2:
                 self._icon_score_deployer.deploy(
                     address=score_address,
                     data=content,

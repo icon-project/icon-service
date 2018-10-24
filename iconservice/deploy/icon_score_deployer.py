@@ -20,7 +20,6 @@ import zipfile
 
 from iconservice.base.address import Address
 from iconservice.base.exception import ScoreInstallExtractException, ScoreInstallException
-from iconservice.deploy.icon_score_deploy_util import DirectoryNameConverter
 
 
 class IconScoreDeployer(object):
@@ -39,9 +38,10 @@ class IconScoreDeployer(object):
         converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
         install_path = os.path.join(score_root_path, converted_tx_hash)
         try:
-            if os.path.exists(install_path):
-                DirectoryNameConverter.rename_directory(install_path)
-                os.makedirs(install_path)
+            if os.path.isfile(install_path):
+                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
+            if os.path.isdir(install_path):
+                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
             else:
                 os.makedirs(install_path)
 

@@ -24,7 +24,7 @@ from iconcommons import IconConfig
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.address import generate_score_address, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, BUILTIN_SCORE_ADDRESS_MAPPER
+from iconservice.icon_constant import ConfigKey, BUILTIN_SCORE_ADDRESS_MAPPER, REVISION_2
 from iconservice.icon_service_engine import IconServiceEngine
 from tests.integrate_test import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -102,7 +102,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         self.assertNotEqual(original_governance_api, updated_governance_api)
 
-    # test when revision < 2
+    # test when revision <= 2
     def test_exists_score(self):
         self._setUp()
 
@@ -119,18 +119,41 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
 
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
         self.assertEqual(tx_results[0].status, int(False))
 
-    # test when revision >= 2
+        self._update_governance_latest()
+        # deploy
+        timestamp = int(time.time() * 10 ** 6)
+        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "sample_token",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+                                   timestamp_us=timestamp)
+
+        score_address = generate_score_address(self._addr_array[0], timestamp, nonce=0)
+        tx_str = f"0x{bytes.hex(tx1['params']['txHash'])}"
+        os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
+        self.assertEqual(tx_results[0].status, int(False))
+
+    # test when revision > 2
     def test_exists_score_revision2(self):
         self._setUp()
 
         # update governance score
         self._update_governance_latest()
+        # set revision to 3
+        next_revision = REVISION_2 + 1
+        tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision', {"code": hex(next_revision), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
 
         # deploy
         timestamp = int(time.time()*10**6)
@@ -145,11 +168,8 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
 
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(True))
-
         score_addr1 = tx_results[0].score_address
 
         # balance_of test(1000)
@@ -172,11 +192,8 @@ class TestIntegrateExistentScores(TestIntegrateBase):
                                    "sample_token",
                                    self._addr_array[0],
                                    score_addr1, deploy_params={"update_supply": hex(3000), "decimal": "0x12"})
-
         prev_block, tx_results = self._make_and_req_block([tx1])
-
         self._write_precommit_state(prev_block)
-
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
@@ -195,11 +212,81 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, 3000 * 10 ** 18)
 
-    def test_exists_score_revision2_unnormal_scores(self):
+    def test_rolling_update_deploy(self):
+        # case revision 0
+        self._setUp()
+
+        # deploy (revision0 must be fail)
+        timestamp = int(time.time() * 10 ** 6)
+        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "sample_token",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+                                   timestamp_us=timestamp)
+
+        score_address = generate_score_address(self._addr_array[0], timestamp, nonce=0)
+        tx_str = f"0x{bytes.hex(tx1['params']['txHash'])}"
+        os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
+        self.assertEqual(tx_results[0].status, int(False))
+
+        # case revision 2
+        self._update_governance_latest()
+        # deploy (revision2 must be success)
+        timestamp = int(time.time() * 10 ** 6)
+        tx2 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "sample_token",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+                                   timestamp_us=timestamp)
+
+        score_address = generate_score_address(self._addr_array[0], timestamp, nonce=0)
+        tx_str = f"0x{bytes.hex(tx2['params']['txHash'])}"
+        os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
+        prev_block, tx_results = self._make_and_req_block([tx2])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+
+        # case revision 3
+        # set revision to 3
+        next_revision = REVISION_2 + 1
+        tx3 = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS,
+                                       'setRevision', {"code": hex(next_revision), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([tx3])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        # deploy (revision3 must be success)
+        timestamp = int(time.time() * 10 ** 6)
+        tx2 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "sample_token",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"},
+                                   timestamp_us=timestamp)
+
+        score_address = generate_score_address(self._addr_array[0], timestamp, nonce=0)
+        tx_str = f"0x{bytes.hex(tx2['params']['txHash'])}"
+        os.makedirs(os.path.join(self._score_root_path, f"01{str(score_address)[2:]}", tx_str))
+        prev_block, tx_results = self._make_and_req_block([tx2])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+    def test_exists_score_revision3_unnormal_scores(self):
         self._setUp()
 
         # update governance score
         self._update_governance_latest()
+
+        # set revision to 3
+        next_revision = REVISION_2 + 1
+        tx3 = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS,
+                                       'setRevision', {"code": hex(next_revision), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([tx3])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
 
         # deploy score not python
         timestamp = int(time.time()*10**6)
@@ -290,6 +377,3 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-
-    def tearDown(self):
-        pass

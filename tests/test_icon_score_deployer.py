@@ -63,9 +63,6 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.assertEqual(True, os.path.exists(install_path))
         self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
-        # Case when user install SCORE second time.(revision >=2)
-        self.deployer.deploy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
-
         # Case when the user install SCORE second time.(revision < 2)
         with self.assertRaises(BaseException) as e:
             self.deployer.deploy_legacy(self.address, self.read_zipfile_as_byte(self.archive_path), tx_hash1)
