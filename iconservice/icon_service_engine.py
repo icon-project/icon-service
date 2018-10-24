@@ -512,16 +512,16 @@ class IconServiceEngine(ContextContainer):
 
         [Specific information of each step]
         1. Transfer coin
-            1) When where to send coin is EOA: Default
-            2) when  where to send coin is SCORE: process and estimate steps without commit
+            1) When the destination is EOA: Default
+            2) when the destination is SCORE: process and estimate steps without commit
         2. Deploy
             1) Installing SCORE: Default + INPUT + CONTRACT_CREATE + CONTRACT_SET
             2) Update SCORE: Default + INPUT + CONTRACT_UPDATE + CONTRACT_SET
         3. Call
             - process and estimate steps without commit
         4. Message
-            1) When where to send coin is EOA: Default + INPUT
-            2) when  where to send coin is SCORE: process and estimate steps without commit
+            1) When the destination is EOA: Default + INPUT
+            2) when the destination is SCORE: process and estimate steps without commit
 
         :return: The amount of step
         """
