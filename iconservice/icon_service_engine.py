@@ -492,7 +492,6 @@ class IconServiceEngine(ContextContainer):
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
         context.event_logs: List['EventLog'] = []
-        context.logs_bloom: BloomFilter = BloomFilter()
         context.traces: List['Trace'] = []
 
         context.block = self._precommit_data_manager.last_block
