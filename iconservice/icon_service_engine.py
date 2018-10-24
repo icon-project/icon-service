@@ -457,7 +457,7 @@ class IconServiceEngine(ContextContainer):
 
         context.step_counter.apply_step(StepType.DEFAULT, 1)
 
-        input_size = self._get_byte_length(params.get('data', None))
+        input_size = self._get_byte_length(data)
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         if data_type == "deploy":
