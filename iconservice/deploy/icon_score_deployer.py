@@ -16,11 +16,11 @@
 import io
 import os
 import shutil
-import time
 import zipfile
 
 from iconservice.base.address import Address
-from iconservice.base.exception import ScoreInstallExtractException
+from iconservice.base.exception import ScoreInstallExtractException, ScoreInstallException
+from iconservice.deploy.icon_score_deploy_util import DirectoryNameConverter
 
 
 class IconScoreDeployer(object):
@@ -40,7 +40,8 @@ class IconScoreDeployer(object):
         install_path = os.path.join(score_root_path, converted_tx_hash)
         try:
             if os.path.exists(install_path):
-                os.rename(install_path, f"{install_path}{int(time.time()*10**6)}_score_garbage")
+                DirectoryNameConverter.rename_directory(install_path)
+                os.makedirs(install_path)
             else:
                 os.makedirs(install_path)
 
@@ -123,9 +124,11 @@ class IconScoreDeployer(object):
         install_path = os.path.join(score_root_path, converted_tx_hash)
 
         try:
-            if os.path.exists(install_path):
-                os.rename(install_path, f"{install_path}{int(time.time()*10**6)}_score_garbage")
-            else:
+            if os.path.isfile(install_path):
+                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
+            if os.path.isdir(install_path):
+                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
+            if not os.path.exists(install_path):
                 os.makedirs(install_path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen_legacy(data)

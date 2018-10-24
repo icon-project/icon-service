@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import time
 from os import path, symlink, makedirs
 from shutil import copytree
 from typing import TYPE_CHECKING, Callable
 
 from iconcommons import Logger
 
+from iconservice.deploy.icon_score_deploy_util import DirectoryNameConverter
 from . import DeployType
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
@@ -209,7 +209,7 @@ class IconScoreDeployEngine(object):
         score_path = path.join(target_path, converted_tx_hash)
 
         if os.path.exists(score_path):
-            os.rename(score_path, f"{score_path}{int(time.time()*10**6)}_score_garbage")
+            DirectoryNameConverter.rename_directory(score_path)
 
         try:
             copytree(src_score_path, score_path)
