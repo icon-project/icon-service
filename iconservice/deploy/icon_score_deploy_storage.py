@@ -18,11 +18,11 @@ import warnings
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from . import DeployType, DeployState
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
 from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2
+from ..iconscore.icon_score_context_util import IconScoreContextUtil
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext

@@ -20,7 +20,7 @@ from os import makedirs
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
