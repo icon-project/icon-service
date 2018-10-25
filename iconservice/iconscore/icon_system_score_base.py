@@ -18,7 +18,7 @@ from abc import abstractmethod
 
 from typing import TYPE_CHECKING, Optional, Type
 
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import ScoreErrorException
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
@@ -53,6 +53,7 @@ class IconSystemScoreBase(IconScoreBase):
     def is_builtin_score(self, score_address: 'Address') -> bool:
         return util_is_builtin_score(str(score_address))
 
+    # TODO remove after Update 0.0.6
     def get_icon_service_flag(self) -> int:
         return IconScoreContextUtil.icon_service_flag
 

@@ -18,7 +18,7 @@
 
 from typing import TYPE_CHECKING
 
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_context import IconScoreContext, IconScoreFuncType
 from .icon_score_mapper import IconScoreMapper
 from ..base.address import Address, ZERO_SCORE_ADDRESS

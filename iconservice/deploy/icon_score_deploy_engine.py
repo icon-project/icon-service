@@ -362,4 +362,3 @@ class DirectoryNameChanger:
         converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
         install_path = path.join(score_root_path, converted_tx_hash)
         return install_path
-

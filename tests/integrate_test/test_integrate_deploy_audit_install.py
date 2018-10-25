@@ -126,7 +126,6 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def test_score(self):
-        # self._update_governance_0_0_5()
         self._update_governance()
 
         # 1. deploy (wait audit)

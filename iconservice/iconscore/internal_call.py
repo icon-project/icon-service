@@ -16,14 +16,14 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
-from iconservice.base.exception import InvalidRequestException
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreFuncType
+from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
 from ..base.address import Address
+from ..base.exception import InvalidRequestException
 from ..base.message import Message
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreFuncType
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
