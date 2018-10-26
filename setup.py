@@ -3,13 +3,8 @@ import os
 
 from setuptools import setup, find_packages
 
-requires = [
-    'earlgrey',
-    'iconcommons',
-    'plyvel',
-    'jsonpickle',
-    'setproctitle'
-]
+with open('requirements.txt') as requirements:
+    requires = list(requirements)
 
 version = os.environ.get('VERSION')
 
