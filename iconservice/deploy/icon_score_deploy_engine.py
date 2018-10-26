@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 from os import path, symlink, makedirs
 from shutil import copytree
 from typing import TYPE_CHECKING, Callable
@@ -28,7 +27,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2, REVISION_3
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
@@ -267,14 +266,16 @@ class IconScoreDeployEngine(object):
                 pass
         else:
             revision = context.get_revision()
-            if revision > REVISION_2:
-                score_root_path = os.path.join(self._icon_score_deployer.score_root_path,
-                                               score_address.to_bytes().hex())
-                converted_tx_hash = f'0x{bytes.hex(next_tx_hash)}'
-                install_path = os.path.join(score_root_path, converted_tx_hash)
-                DirectoryNameConverter.rename_directory(install_path)
 
-            if revision >= REVISION_2:
+            if revision >= REVISION_3:
+                install_path = DirectoryNameConverter.get_score_path_by_address_and_tx_hash(
+                    self._icon_score_deployer.score_root_path, score_address, next_tx_hash)
+                DirectoryNameConverter.rename_directory(install_path)
+                self._icon_score_deployer.deploy(
+                    address=score_address,
+                    data=content,
+                    tx_hash=next_tx_hash)
+            elif revision == REVISION_2:
                 self._icon_score_deployer.deploy(
                     address=score_address,
                     data=content,

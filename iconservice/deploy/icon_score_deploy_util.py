@@ -15,6 +15,8 @@
 import os
 import time
 
+from iconservice import Address
+
 
 class DirectoryNameConverter:
     counter = 0
@@ -24,3 +26,10 @@ class DirectoryNameConverter:
         if os.path.exists(path):
             cls.counter += 1
             os.rename(path, f"{path}{int(time.time()*10**6)}{cls.counter}_garbage_score")
+
+    @staticmethod
+    def get_score_path_by_address_and_tx_hash(score_root: str, address: 'Address', tx_hash: bytes):
+        score_root_path = os.path.join(score_root, address.to_bytes().hex())
+        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+        install_path = os.path.join(score_root_path, converted_tx_hash)
+        return install_path
