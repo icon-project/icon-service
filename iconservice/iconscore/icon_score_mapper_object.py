@@ -91,7 +91,7 @@ class IconScoreMapperObject(dict):
                 f'{address} is not an icon score address.')
 
     @staticmethod
-    def _check_value_type(info: IconScoreInfo) -> None:
+    def _check_value_type(info: 'IconScoreInfo') -> None:
         if not isinstance(info, IconScoreInfo):
             raise InvalidParamsException(
                 f'{info} is not IconScoreInfo type.')

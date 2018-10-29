@@ -18,6 +18,7 @@
 
 from typing import TYPE_CHECKING
 
+from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_context import IconScoreContext, IconScoreFuncType
 from .icon_score_mapper import IconScoreMapper
 from ..base.address import Address, ZERO_SCORE_ADDRESS
@@ -70,7 +71,7 @@ class IconScoreEngine(object):
                 not icon_score_address.is_contract:
             raise InvalidParamsException(f"invalid score address: ({icon_score_address})")
 
-        context.validate_score_blacklist(icon_score_address)
+        IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
         if data_type == 'call':
             self._call(context, icon_score_address, data)
@@ -91,7 +92,7 @@ class IconScoreEngine(object):
                 not icon_score_address.is_contract:
             raise InvalidParamsException(f"invalid score address: ({icon_score_address})")
 
-        context.validate_score_blacklist(icon_score_address)
+        IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
         if data_type == 'call':
             return self._call(context, icon_score_address, data)
@@ -161,7 +162,7 @@ class IconScoreEngine(object):
 
     @staticmethod
     def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):
-        icon_score = context.get_icon_score(icon_score_address)
+        icon_score = IconScoreContextUtil.get_icon_score(context, icon_score_address)
         if icon_score is None:
             raise ServerErrorException(
                 f'SCORE not found: {icon_score_address}')

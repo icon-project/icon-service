@@ -21,6 +21,7 @@ from os import makedirs
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
+from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -193,13 +194,13 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
             # Gets the step price if the fee flag is on
             # and set to the counter factory
-            if context.is_service_flag_on(IconServiceFlag.fee):
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.fee):
                 step_price = governance_score.getStepPrice()
             else:
                 step_price = 0
@@ -244,7 +245,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
@@ -263,7 +264,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score: 'Governance' = context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is None:
                 raise ServerErrorException(f'governance_score is None')
 
@@ -609,7 +610,7 @@ class IconServiceEngine(ContextContainer):
 
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
-        if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
+        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.deployerWhiteList):
             self._validate_deployer_whitelist(context, params)
         self._context_factory.destroy(context)
 
@@ -852,7 +853,7 @@ class IconServiceEngine(ContextContainer):
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
-            elif context.is_service_flag_on(IconServiceFlag.fee):
+            elif IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.fee):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
                 step_price = 10 ** 10

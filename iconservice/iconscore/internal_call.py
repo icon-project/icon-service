@@ -16,13 +16,14 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
-from iconservice.base.exception import InvalidRequestException
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreFuncType
+from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
 from ..base.address import Address
+from ..base.exception import InvalidRequestException
 from ..base.message import Message
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreFuncType
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -65,7 +66,7 @@ class InternalCall(object):
               kw_params: dict,
               amount: int) -> Any:
 
-        self.__context.enter_call()
+        IconScoreContextUtil.enter_call(self.__context)
 
         try:
             self._make_trace(addr_from, addr_to, func_name, arg_params, kw_params, amount)
@@ -82,10 +83,10 @@ class InternalCall(object):
 
             return None
         except BaseException as e:
-            self.__context.revert_call()
+            IconScoreContextUtil.revert_call(self.__context)
             raise e
         finally:
-            self.__context.leave_call()
+            IconScoreContextUtil.leave_call(self.__context)
 
     def _make_trace(self,
                     _from: 'Address',
@@ -125,8 +126,7 @@ class InternalCall(object):
         :param amount:
         :return:
         """
-
-        self.__context.validate_score_blacklist(addr_to)
+        IconScoreContextUtil.validate_score_blacklist(self.__context, addr_to)
 
         if len(self.__context.msg_stack) == MAX_CALL_STACK_SIZE:
             raise InvalidRequestException('Max call stack size exceeded')
@@ -138,7 +138,7 @@ class InternalCall(object):
 
         prev_func_type = self.__context.func_type
         try:
-            icon_score = self.__context.get_icon_score(addr_to)
+            icon_score = IconScoreContextUtil.get_icon_score(self.__context, addr_to)
             is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
             if func_name is not None and is_func_readonly(func_name):
                 self.__context.func_type = IconScoreFuncType.READONLY

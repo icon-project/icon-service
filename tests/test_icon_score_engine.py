@@ -21,6 +21,7 @@
 import unittest
 import os
 
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from tests import rmtree, create_address
 from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block

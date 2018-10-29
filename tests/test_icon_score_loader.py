@@ -25,6 +25,7 @@ from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextFactory, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from tests import create_address, create_tx_hash, rmtree
 

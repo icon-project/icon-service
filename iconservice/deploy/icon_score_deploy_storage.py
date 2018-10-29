@@ -22,6 +22,7 @@ from . import DeployType, DeployState
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
 from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2
+from ..iconscore.icon_score_context_util import IconScoreContextUtil
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -240,7 +241,7 @@ class IconScoreDeployStorage(object):
             if deploy_info.owner != owner:
                 raise ServerErrorException(f'invalid owner: {deploy_info.owner} != {owner}')
             if deploy_info.next_tx_hash is not None:
-                if context.get_revision() >= REVISION_2:
+                if IconScoreContextUtil.get_revision(context) >= REVISION_2:
                     self._db.delete(context, self._create_db_key(
                         self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_info.next_tx_hash))
                 else:

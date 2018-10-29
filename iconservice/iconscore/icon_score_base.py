@@ -16,19 +16,18 @@
 
 import warnings
 from abc import abstractmethod, ABC, ABCMeta
-from inspect import isfunction, getmembers, signature, Parameter
-
 from functools import partial, wraps
+from inspect import isfunction, getmembers, signature, Parameter
 from typing import TYPE_CHECKING, Callable, Any, List, Tuple, Optional, Union
 
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG
 from .icon_score_api_generator import ScoreApiGenerator
+from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
     CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
-from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_context import ContextGetter
 from .icon_score_context import IconScoreContextType
+from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
@@ -36,6 +35,7 @@ from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException, ServerErrorException
 from ..database.db import IconScoreDatabase, DatabaseObserver
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -541,12 +541,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         revert(message, code)
 
     def is_score_active(self, score_address: 'Address')-> bool:
-        return self._context.is_score_active(self._context, score_address)
+        return IconScoreContextUtil.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         if not score_address:
             score_address = self.address
-        return self._context.get_owner(self._context, score_address)
+        return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def create_interface_score(self,
                                addr_to: 'Address',
@@ -564,7 +564,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             tmp_sender = self._context.msg.sender
             self._context.msg.sender = owner
             try:
-                self._context.deploy(tx_hash)
+                IconScoreContextUtil.deploy(self._context, tx_hash)
             finally:
                 self._context.msg = tmp_sender
         else:
@@ -573,9 +573,9 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_tx_hashes_by_score_address(self,
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        return self._context.get_tx_hashes_by_score_address(self._context, score_address)
+        return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
 
     def get_score_address_by_tx_hash(self,
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        return self._context.get_score_address_by_tx_hash(self._context, tx_hash)
+        return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
