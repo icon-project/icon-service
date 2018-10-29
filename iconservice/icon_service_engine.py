@@ -94,7 +94,7 @@ class IconServiceEngine(ContextContainer):
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
-            'icx_estimateStep': self._process_transaction,
+            'icx_estimateStep': self._handle_estimate_step,
             'icx_getScoreApi': self._handle_icx_get_score_api,
             'ise_getStatus': self._handle_ise_get_status
         }
@@ -444,7 +444,7 @@ class IconServiceEngine(ContextContainer):
 
         return self._call(context, method, params)
 
-    def _estimate_step_by_request(self, request, context):
+    def _estimate_step_by_request(self, request, context) -> int:
         """Calculates simply and estimates step with request data.
 
         :param request:
@@ -470,7 +470,9 @@ class IconServiceEngine(ContextContainer):
             else:
                 context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
-    def _estimate_step_by_execution(self, request, context, step_limit):
+        return context.step_counter.step_used
+
+    def _estimate_step_by_execution(self, request, context, step_limit) -> int:
         """Processes the transaction and estimates step.
 
         :param request:
@@ -503,7 +505,7 @@ class IconServiceEngine(ContextContainer):
         account = self._icx_storage.get_account(context, from_)
         account.deposit(step_limit * self._get_step_price() + params.get('value', 0))
         self._icx_storage.put_account(context, from_, account)
-        self._call(context, method, params)
+        return self._call(context, method, params)
 
     def estimate_step(self, request: dict) -> int:
         """
@@ -535,12 +537,10 @@ class IconServiceEngine(ContextContainer):
 
         if data_type == "deploy" or not to.is_contract:
             # Calculates simply and estimates step with request data.
-            self._estimate_step_by_request(request, context)
+            return self._estimate_step_by_request(request, context)
         else:
             # Processes the transaction and estimates step.
-            self._estimate_step_by_execution(request, context, step_limit)
-
-        return context.step_counter.step_used
+            return self._estimate_step_by_execution(request, context, step_limit)
 
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
@@ -735,6 +735,21 @@ class IconServiceEngine(ContextContainer):
             tx_result.traces = context.traces
 
         return tx_result
+
+    def _handle_estimate_step(self,
+                             context: 'IconScoreContext',
+                             params: dict) -> int:
+        """
+        Handles estimate step by execution of tx
+
+        :param context: context
+        :param params: parameters of tx
+        :return: estimated steps
+        """
+
+        self._process_transaction(context, params)
+
+        return context.step_counter.step_used
 
     def _process_transaction(self,
                              context: 'IconScoreContext',
