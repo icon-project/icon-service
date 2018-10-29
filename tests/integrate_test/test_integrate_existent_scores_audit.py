@@ -35,7 +35,7 @@ BUILTIN_SCORE_SRC_ROOT_PATH = os.path.join(PROJECT_ROOT_PATH, 'iconservice', 'bu
 GOVERNANCE_SCORE_PATH = os.path.join(BUILTIN_SCORE_SRC_ROOT_PATH, 'governance')
 
 
-class TestIntegrateExistentScores(TestIntegrateBase):
+class TestIntegrateExistentScoresAudit(TestIntegrateBase):
 
     # override setUp method for making directory before begin tests.
     def setUp(self):
@@ -50,8 +50,8 @@ class TestIntegrateExistentScores(TestIntegrateBase):
                                  ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
         self.config.update_conf(self._make_init_config())
 
-    def _setUp(self):
-        self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
+    def _setUp_audit(self):
+        self.config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True,
                                                      ConfigKey.SERVICE_FEE: False,
                                                      ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
                                                      ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}})
@@ -96,9 +96,9 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results
 
-    def test_existent_builtin_score(self):
+    def test_existent_builtin_score_audit(self):
         self._make_directories_in_builtin_score_path()
-        self._setUp()
+        self._setUp_audit()
 
         # original SCORE api
         query_request = {
@@ -106,44 +106,45 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         }
         original_governance_api = self._query(query_request, 'icx_getScoreApi')
 
-        # update governance(revision2)
-        self._update_governance('0_0_4')
+        # update governance SCORE(revision2)
+        tx = self._update_governance('0_0_4')
+        self._accept_score(tx)
 
         # updated SCORE api
         updated_governance_api = self._query(query_request, "icx_getScoreApi")
-
         self.assertNotEqual(original_governance_api, updated_governance_api)
 
     # test when revision <= 2
-    def test_existent_score(self):
-        self._setUp()
+    def test_existent_score_audit(self):
+        self._setUp_audit()
 
         # deploy SCORE
         tx1 = self._deploy_score('test_deploy_scores/install', 'sample_token', self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
-
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_results = self._accept_score(tx1['params']['txHash'])
+        self.assertTrue("is a directory. Check " in accept_results[0].failure.message)
+        self.assertEqual(accept_results[0].status, int(False))
 
         # update governance SCORE(revision2)
         self._update_governance('0_0_4')
         # deploy
         tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
-
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_results = self._accept_score(tx2['params']['txHash'])
+        self.assertTrue("is a directory. Check " in accept_results[0].failure.message)
+        self.assertEqual(accept_results[0].status, int(False))
 
     # test when revision > 2
-    def test_existent_score_revision3(self):
-        self._setUp()
+    def test_existent_score_revision3_audit(self):
+        self._setUp_audit()
 
-        # set revision to 3(revision3)
-        self._update_governance('0_0_4')
+        # set revision to 3
+        update_governance_tx = self._update_governance('0_0_4')
+        self._accept_score(update_governance_tx)
         self._set_revision()
 
         # deploy SCORE
@@ -154,6 +155,9 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
+
+        # accept SCORE
+        self._accept_score(tx1['params']['txHash'])
 
         # balance_of test(1000)
         query_request = {
@@ -177,88 +181,99 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
+        # accept SCORE
+        self._accept_score(tx2['params']['txHash'])
+
         # balance_of test(3000)
         query_request['data']['params']['addr_from'] = str(self._addr_array[0])
         response = self._query(query_request)
         self.assertEqual(response, 3000 * 10 ** 18)
 
-    def test_rolling_update_deploy(self):
+    def test_rolling_update_deploy_audit(self):
         # case revision 0
-        self._setUp()
+        self._setUp_audit()
 
         # deploy (revision0 must be fail)
         tx1 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
-
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
+        # accept SCORE
+        accept_result = self._accept_score(tx1['params']['txHash'])
+        self.assertTrue("is a directory." in accept_result[0].failure.message)
+        self.assertEqual(accept_result[0].status, int(False))
 
         # update governance SCORE(revision 2)
-        self._update_governance('0_0_4')
-        # deploy (revision2 must be fail)
+        tx2 = self._update_governance('0_0_4')
+        self._accept_score(tx2)
+        # deploy (revision2 must be success)
         tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
-
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_result = self._accept_score(tx2['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(False))
 
         # set revision to 3
         self._set_revision()
 
-        # deploy(revision3 must be success)
+        # deploy (revision3 must be success)
         tx4 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
 
         prev_block, tx_results = self._make_and_req_block([tx4])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+        accept_result = self._accept_score(tx4['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(True))
 
-    def test_exists_score_revision3_unnormal_scores(self):
-        self._setUp()
+    def test_exists_score_revision3_unnormal_scores_aduit(self):
+        self._setUp_audit()
 
         # set revision to 3
+        update_governance_tx = self._update_governance('0_0_4')
+        self._accept_score(update_governance_tx)
         self._set_revision()
-        sample_score_init_params = {"value": hex(1000)}
+        sample_score_params = {"value": hex(1000)}
 
-        # deploy unnormal SCORE(not python)
+        # deploy SCORE(not python)
         tx1 = self._deploy_score("test_deploy_scores/install", "test_score_no_python", self._addr_array[0],
-                                 ZERO_SCORE_ADDRESS, sample_score_init_params)
+                                 ZERO_SCORE_ADDRESS, sample_score_params)
 
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_result = self._accept_score(tx1['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(has no external function)
         tx2 = self._deploy_score("test_deploy_scores/install", "test_score_no_external_func", self._addr_array[0],
-                                 ZERO_SCORE_ADDRESS, sample_score_init_params)
+                                 ZERO_SCORE_ADDRESS, sample_score_params)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_result = self._accept_score(tx2['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(no scorebase)
         tx3 = self._deploy_score("test_deploy_scores/install", "test_score_no_scorebase", self._addr_array[0],
-                                 ZERO_SCORE_ADDRESS, sample_score_init_params)
+                                 ZERO_SCORE_ADDRESS, sample_score_params)
         prev_block, tx_results = self._make_and_req_block([tx3])
-
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_result = self._accept_score(tx3['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(on install error)
         tx4 = self._deploy_score("test_deploy_scores/install", "test_on_install_error", self._addr_array[0],
-                                 ZERO_SCORE_ADDRESS, sample_score_init_params)
+                                 ZERO_SCORE_ADDRESS, sample_score_params)
 
         prev_block, tx_results = self._make_and_req_block([tx4])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_result = self._accept_score(tx4['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(different encoding)
         tx5 = self._deploy_score("test_deploy_scores/install", "test_score_with_korean_comment", self._addr_array[0],
-                                 ZERO_SCORE_ADDRESS, sample_score_init_params)
+                                 ZERO_SCORE_ADDRESS, sample_score_params)
         prev_block, tx_results = self._make_and_req_block([tx5])
-
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        accept_result = self._accept_score(tx5['params']['txHash'])
+        self.assertEqual(accept_result[0].status, int(False))
