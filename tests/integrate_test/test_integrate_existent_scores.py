@@ -109,7 +109,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         original_governance_api = self._query(query_request, 'icx_getScoreApi')
 
         # update governance(revision2)
-        self._update_governance('revision2/governance')
+        self._update_governance('0_0_4')
 
         # updated SCORE api
         updated_governance_api = self._query(query_request, "icx_getScoreApi")
@@ -130,8 +130,8 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
         self.assertEqual(tx_results[0].status, int(False))
 
-        # update governance SCORE
-        self._update_governance('revision2/governance')
+        # update governance SCORE(revision2)
+        self._update_governance('0_0_4')
         # deploy
         timestamp = int(time.time() * 10 ** 6)
         tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
@@ -146,8 +146,12 @@ class TestIntegrateExistentScores(TestIntegrateBase):
     def test_existent_score_revision3(self):
         self._setUp()
 
-        # update governance SCORE(revision3)
-        self._update_governance('revision3/governance')
+        # set revision to 3(revision3)
+        self._update_governance('0_0_4')
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                      {"code": hex(3), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
 
         # deploy SCORE
         timestamp = int(time.time()*10**6)
@@ -201,7 +205,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
         # update governance SCORE(revision 2)
-        self._update_governance('revision2/governance')
+        self._update_governance('0_0_4')
         # deploy (revision2 must be fail)
         timestamp = int(time.time() * 10 ** 6)
         tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
@@ -211,10 +215,13 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
 
-        # update governance SCORE(revision3)
-        self._update_governance('revision3/governance')
+        # set revision to 3
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(3), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
 
-        # deploy (revision3 must be success)
+        # deploy(revision3 must be success)
         timestamp = int(time.time() * 10 ** 6)
         tx4 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  deploy_params={"init_supply": hex(1000), "decimal": "0x12"}, timestamp=timestamp)
@@ -226,8 +233,12 @@ class TestIntegrateExistentScores(TestIntegrateBase):
     def test_exists_score_revision3_unnormal_scores(self):
         self._setUp()
 
-        # update governance SCORE(revision3)
-        self._update_governance('revision3/governance')
+        # set revision to 3
+        self._update_governance('0_0_4')
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(3), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
 
         # deploy unnormal SCORE(not python)
         timestamp = int(time.time()*10**6)
@@ -284,8 +295,8 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         }
         original_governance_api = self._query(query_request, 'icx_getScoreApi')
 
-        # update governance SCORE
-        tx = self._update_governance('revision2/governance')
+        # update governance SCORE(revision2)
+        tx = self._update_governance('0_0_4')
         self._accept_score(tx)
 
         # updated SCORE api
@@ -307,7 +318,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(accept_results[0].status, int(False))
 
         # update governance SCORE(revision2)
-        self._update_governance('revision2/governance')
+        self._update_governance('0_0_4')
         # deploy
         timestamp = int(time.time() * 10 ** 6)
         tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
@@ -323,8 +334,12 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._setUp_audit()
 
         # set revision to 3
-        tx = self._update_governance('revision3/governance')
-        self._accept_score(tx)
+        update_governance_tx = self._update_governance('0_0_4')
+        self._accept_score(update_governance_tx)
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(3), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
 
         # deploy SCORE
         timestamp = int(time.time()*10**6)
@@ -385,7 +400,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(accept_result[0].status, int(False))
 
         # update governance SCORE(revision 2)
-        tx2 = self._update_governance('revision2/governance')
+        tx2 = self._update_governance('0_0_4')
         self._accept_score(tx2)
         # deploy (revision2 must be success)
         timestamp = int(time.time() * 10 ** 6)
@@ -396,8 +411,11 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         accept_result = self._accept_score(tx2['params']['txHash'])
         self.assertEqual(accept_result[0].status, int(False))
 
-        # update governance SCORE(revision 3)
-        self._update_governance('revision3/governance')
+        # set revision to 3
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(3), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
 
         # deploy (revision3 must be success)
         timestamp = int(time.time() * 10 ** 6)
@@ -412,9 +430,13 @@ class TestIntegrateExistentScores(TestIntegrateBase):
     def test_exists_score_revision3_unnormal_scores_aduit(self):
         self._setUp_audit()
 
-        # update governance SCORE(revision3)
-        tx = self._update_governance('revision3/governance')
-        self._accept_score(tx)
+        # set revision to 3
+        update_governance_tx = self._update_governance('0_0_4')
+        self._accept_score(update_governance_tx)
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(3), "name": "1.1.3"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
 
         # deploy SCORE(not python)
         timestamp = int(time.time()*10**6)
