@@ -134,10 +134,14 @@ class IconScoreInnerTask(object):
         response = None
 
         try:
-            converted_request = TypeConverter.convert(request, ParamType.QUERY)
+            method = request['method']
 
-            value = self._icon_service_engine.query(method=converted_request['method'],
-                                                    params=converted_request['params'])
+            if method == 'icx_estimateStep':
+                converted_request = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
+                value = self._icon_service_engine.estimate_step(converted_request)
+            else:
+                converted_request = TypeConverter.convert(request, ParamType.QUERY)
+                value = self._icon_service_engine.query(method, converted_request['params'])
 
             if isinstance(value, Address):
                 value = str(value)

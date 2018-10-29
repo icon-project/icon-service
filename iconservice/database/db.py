@@ -44,14 +44,9 @@ def _is_db_writable_on_context(context: 'IconScoreContext'):
     :return:
     """
     if context is None:
-        context_type = IconScoreContextType.DIRECT
-        func_type = IconScoreFuncType.WRITABLE
+        return True
     else:
-        context_type = context.type
-        func_type = context.func_type
-
-    return context_type != IconScoreContextType.QUERY and \
-        func_type != IconScoreFuncType.READONLY
+        return not context.readonly
 
 
 class KeyValueDatabase(object):
@@ -210,10 +205,10 @@ class ContextDatabase(object):
         """
         context_type = _get_context_type(context)
 
-        if context_type == IconScoreContextType.INVOKE:
-            return self.get_from_batch(context, key)
-        else:
+        if context_type in (IconScoreContextType.DIRECT, IconScoreContextType.QUERY):
             return self.key_value_db.get(key)
+        else:
+            return self.get_from_batch(context, key)
 
     def get_from_batch(self,
                        context: 'IconScoreContext',
@@ -259,10 +254,10 @@ class ContextDatabase(object):
 
         context_type = _get_context_type(context)
 
-        if context_type == IconScoreContextType.INVOKE:
-            context.tx_batch[key] = value
-        else:
+        if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.put(key, value)
+        else:
+            context.tx_batch[key] = value
 
     def delete(self, context: Optional['IconScoreContext'], key: bytes):
         """Delete key from db
@@ -275,10 +270,10 @@ class ContextDatabase(object):
 
         context_type = _get_context_type(context)
 
-        if context_type == IconScoreContextType.INVOKE:
-            context.tx_batch[key] = None
-        else:
+        if context_type == IconScoreContextType.DIRECT:
             self.key_value_db.delete(key)
+        else:
+            context.tx_batch[key] = None
 
     def close(self, context: 'IconScoreContext') -> None:
         """close db

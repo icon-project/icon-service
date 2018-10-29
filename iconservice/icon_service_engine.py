@@ -17,6 +17,7 @@
 from math import ceil
 from os import makedirs
 
+
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
@@ -52,6 +53,7 @@ from .precommit_data_manager import PrecommitData, PrecommitDataManager
 from .utils import byte_length_of_int
 from .utils import is_lowercase_hex_string
 from .utils.bloom import BloomFilter
+from .utils import sha3_256, int_to_bytes
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
@@ -92,6 +94,7 @@ class IconServiceEngine(ContextContainer):
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
+            'icx_estimateStep': self._handle_estimate_step,
             'icx_getScoreApi': self._handle_icx_get_score_api,
             'ise_getStatus': self._handle_ise_get_status
         }
@@ -441,6 +444,104 @@ class IconServiceEngine(ContextContainer):
 
         return self._call(context, method, params)
 
+    def _estimate_step_by_request(self, request, context) -> int:
+        """Calculates simply and estimates step with request data.
+
+        :param request:
+        :param context:
+        """
+        params: dict = request['params']
+        data_type: str = params.get('dataType')
+        data: dict = params.get('data')
+        to: Address = params['to']
+
+        context.step_counter.apply_step(StepType.DEFAULT, 1)
+
+        input_size = self._get_byte_length(data)
+        context.step_counter.apply_step(StepType.INPUT, input_size)
+
+        if data_type == "deploy":
+            data_size = self._get_byte_length(data.get('content', None))
+            context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
+            # When installing SCORE.
+            if to == ZERO_SCORE_ADDRESS:
+                context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
+            # When updating SCORE.
+            else:
+                context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
+
+        return context.step_counter.step_used
+
+    def _estimate_step_by_execution(self, request, context, step_limit) -> int:
+        """Processes the transaction and estimates step.
+
+        :param request:
+        :param context:
+        :param step_limit:
+        """
+        method: str = request['method']
+        params: dict = request['params']
+
+        from_: Address = params['from']
+        to: Address = params['to']
+
+        timestamp = params.get('timestamp', self._icx_storage.last_block.timestamp)
+        context.tx = Transaction(tx_hash=sha3_256(int_to_bytes(timestamp)),
+                                 index=0,
+                                 origin=from_,
+                                 timestamp=timestamp,
+                                 nonce=params.get('nonce', None))
+        context.msg = Message(sender=from_, value=params.get('value', 0))
+        context.current_address = to
+        context.event_logs: List['EventLog'] = []
+        context.traces: List['Trace'] = []
+
+        context.block = self._precommit_data_manager.last_block
+        context.block_batch = BlockBatch(Block.from_block(context.block))
+        context.tx_batch = TransactionBatch()
+        context.new_icon_score_mapper = IconScoreMapper()
+
+        # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
+        account = self._icx_storage.get_account(context, from_)
+        account.deposit(step_limit * self._get_step_price() + params.get('value', 0))
+        self._icx_storage.put_account(context, from_, account)
+        return self._call(context, method, params)
+
+    def estimate_step(self, request: dict) -> int:
+        """
+        Estimates the amount of step to process a specific transaction.
+
+        [Specific information of each step]
+        1. Transfer coin
+            1) When the destination is EOA: Default
+            2) when the destination is SCORE: process and estimate steps without commit
+        2. Deploy
+            1) Installing SCORE: Default + INPUT + CONTRACT_CREATE + CONTRACT_SET
+            2) Update SCORE: Default + INPUT + CONTRACT_UPDATE + CONTRACT_SET
+        3. Call
+            - process and estimate steps without commit
+        4. Message
+            1) When the destination is EOA: Default + INPUT
+            2) when the destination is SCORE: process and estimate steps without commit
+
+        :return: The amount of step
+        """
+        context = self._context_factory.create(IconScoreContextType.ESTIMATION)
+        # Fills the step_limit as the max step limit to proceed the transaction.
+        step_limit = self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
+        context.step_counter = self._step_counter_factory.create(step_limit)
+
+        params: dict = request['params']
+        data_type: str = params.get('dataType')
+        to: Address = params['to']
+
+        if data_type == "deploy" or not to.is_contract:
+            # Calculates simply and estimates step with request data.
+            return self._estimate_step_by_request(request, context)
+        else:
+            # Processes the transaction and estimates step.
+            return self._estimate_step_by_execution(request, context, step_limit)
+
     def query(self, method: str, params: dict) -> Any:
         """Process a query message call from outside
 
@@ -487,7 +588,8 @@ class IconServiceEngine(ContextContainer):
             in IconInnerService
         :return:
         """
-        assert request['method'] == 'icx_sendTransaction'
+        method = request['method']
+        assert method in ('icx_sendTransaction', 'icx_estimateStep')
         assert 'params' in request
 
         params: dict = request['params']
@@ -597,24 +699,12 @@ class IconServiceEngine(ContextContainer):
         tx_result = TransactionResult(context.tx, context.block)
 
         try:
-            to: Address = params['to']
-            tx_result.to = to
+            tx_result.to = params['to']
 
-            # Check if from account can charge a tx fee
-            self._icon_pre_validator.execute_to_check_out_of_balance(
-                params,
-                step_price=context.step_counter.step_price)
+            # process the transaction
+            score_address = self._process_transaction(context, params)
 
-            # Every send_transaction are calculated DEFAULT STEP at first
-            context.step_counter.apply_step(StepType.DEFAULT, 1)
-            input_size = self._get_byte_length(params.get('data', None))
-
-            context.step_counter.apply_step(StepType.INPUT, input_size)
-            self._transfer_coin(context, params)
-
-            if to.is_contract:
-                tx_result.score_address = self._handle_score_invoke(context, to, params)
-
+            tx_result.score_address = score_address
             tx_result.status = TransactionResult.SUCCESS
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
@@ -645,6 +735,54 @@ class IconServiceEngine(ContextContainer):
             tx_result.traces = context.traces
 
         return tx_result
+
+    def _handle_estimate_step(self,
+                             context: 'IconScoreContext',
+                             params: dict) -> int:
+        """
+        Handles estimate step by execution of tx
+
+        :param context: context
+        :param params: parameters of tx
+        :return: estimated steps
+        """
+
+        self._process_transaction(context, params)
+
+        return context.step_counter.step_used
+
+    def _process_transaction(self,
+                             context: 'IconScoreContext',
+                             params: dict) -> Optional['Address']:
+        """
+        Processes the transaction
+
+        :param params: JSON-RPC params
+        :return: SCORE address if 'deploy' command. otherwise None
+        """
+
+        to: Address = params['to']
+
+        # Checks the balance only on the invoke context(skip estimate context)
+        if context.type == IconScoreContextType.INVOKE:
+            # Check if from account can charge a tx fee
+            self._icon_pre_validator.execute_to_check_out_of_balance(
+                params,
+                step_price=context.step_counter.step_price)
+
+        # Every send_transaction are calculated DEFAULT STEP at first
+        context.step_counter.apply_step(StepType.DEFAULT, 1)
+
+        input_size = self._get_byte_length(params.get('data', None))
+        context.step_counter.apply_step(StepType.INPUT, input_size)
+
+        self._transfer_coin(context, params)
+
+        score_address = None
+        if to.is_contract:
+            score_address = self._handle_score_invoke(context, to, params)
+
+        return score_address
 
     def _get_byte_length(self, data) -> int:
         size = 0
