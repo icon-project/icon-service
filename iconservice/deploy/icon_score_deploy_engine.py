@@ -12,22 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from os import path, symlink, makedirs
-
+from os import path, symlink, makedirs, rename
 from shutil import copytree
+from time import time
 from typing import TYPE_CHECKING, Callable
 
 from iconcommons import Logger
+
 from . import DeployType
 from .icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_score_deployer import IconScoreDeployer
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2, REVISION_3
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
@@ -205,10 +205,12 @@ class IconScoreDeployEngine(object):
             next_tx_hash = bytes(DEFAULT_BYTE_SIZE)
 
         converted_tx_hash: str = f'0x{bytes.hex(next_tx_hash)}'
-        target_path = path.join(target_path, converted_tx_hash)
+        score_path = path.join(target_path, converted_tx_hash)
+
+        DirectoryNameChanger.rename_directory(score_path)
 
         try:
-            copytree(src_score_path, target_path)
+            copytree(src_score_path, score_path)
         except FileExistsError:
             pass
 
@@ -263,7 +265,17 @@ class IconScoreDeployEngine(object):
             except FileExistsError:
                 pass
         else:
-            if context.get_revision() >= REVISION_2:
+            revision = context.get_revision()
+
+            if revision >= REVISION_3:
+                install_path = DirectoryNameChanger.get_score_path_by_address_and_tx_hash(
+                    self._icon_score_deployer.score_root_path, score_address, next_tx_hash)
+                DirectoryNameChanger.rename_directory(install_path)
+                self._icon_score_deployer.deploy(
+                    address=score_address,
+                    data=content,
+                    tx_hash=next_tx_hash)
+            elif revision == REVISION_2:
                 self._icon_score_deployer.deploy(
                     address=score_address,
                     data=content,
@@ -319,3 +331,33 @@ class IconScoreDeployEngine(object):
         annotations = TypeConverter.make_annotations_from_method(on_deploy)
         TypeConverter.convert_data_params(annotations, params)
         on_deploy(**params)
+
+
+class DirectoryNameChanger:
+    """Rename file/directory existent in a path where SCORE will be deployed"""
+    counter = 0
+
+    @classmethod
+    def rename_directory(cls, score_path: str):
+        """Rename file/directory
+
+        :param score_path: Path where SCORE will be deployed
+        """
+        if path.exists(score_path):
+            cls.counter += 1
+            rename(score_path, f"{score_path}{int(time()*10**6)}{cls.counter}_garbage_score")
+
+    @staticmethod
+    def get_score_path_by_address_and_tx_hash(score_root: str, address: 'Address', tx_hash: bytes) -> str:
+        """Get SCORE's path by given parameters
+
+        :param score_root: The path where all SCOREs will be deployed
+        :param address: Address of SCORE
+        :param tx_hash: Hash value of the transaction that deploy SCORE
+        :return: The path where SCORE will be deployed
+        """
+        score_root_path = path.join(score_root, address.to_bytes().hex())
+        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
+        install_path = path.join(score_root_path, converted_tx_hash)
+        return install_path
+

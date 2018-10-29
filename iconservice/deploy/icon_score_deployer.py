@@ -15,10 +15,11 @@
 # limitations under the License.
 import io
 import os
-import zipfile
 import shutil
-from iconservice.base.address import Address
-from iconservice.base.exception import ScoreInstallException, ScoreInstallExtractException
+import zipfile
+
+from ..base.address import Address
+from ..base.exception import ScoreInstallExtractException, ScoreInstallException
 
 
 class IconScoreDeployer(object):
@@ -41,7 +42,7 @@ class IconScoreDeployer(object):
                 raise ScoreInstallException(f'{install_path} is a file. Check your path.')
             if os.path.isdir(install_path):
                 raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
-            if not os.path.exists(install_path):
+            else:
                 os.makedirs(install_path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen(data)
@@ -125,10 +126,8 @@ class IconScoreDeployer(object):
         try:
             if os.path.isfile(install_path):
                 raise ScoreInstallException(f'{install_path} is a file. Check your path.')
-
             if os.path.isdir(install_path):
                 raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
-
             if not os.path.exists(install_path):
                 os.makedirs(install_path)
 
