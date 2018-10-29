@@ -132,7 +132,7 @@ class IconScoreMapper(object):
     def put_score_info(self,
                        address: 'Address',
                        icon_score: 'IconScoreBase',
-                       tx_hash: bytes):
+                       tx_hash: bytes) -> None:
         self[address] = IconScoreInfo(icon_score, tx_hash)
 
     @staticmethod

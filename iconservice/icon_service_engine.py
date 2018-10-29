@@ -140,11 +140,10 @@ class IconServiceEngine(ContextContainer):
                                                     self._icon_score_deploy_storage)
 
         InternalCall.icx_engine = self._icx_engine
+        IconScoreContext.icon_score_mapper = self._icon_score_mapper
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
-        IconScoreContextUtil.icon_score_mapper = self._icon_score_mapper
-        IconScoreContextUtil.icon_score_deploy_engine = self._icon_score_deploy_engine
-        IconScoreContextUtil.icon_service_flag = service_config_flag
-        IconScoreContextUtil.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
+        IconScoreContext.icon_service_flag = service_config_flag
+        IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
         self._icon_score_engine.open(

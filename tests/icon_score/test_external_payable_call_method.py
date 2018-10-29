@@ -117,7 +117,7 @@ class ChildCallClass(BaseCallClass):
 class TestExternalPayableCall(unittest.TestCase):
 
     def setUp(self):
-        IconScoreContextUtil.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
+        IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
         self.context = Mock(spec=IconScoreContext)
         self.context.attach_mock(Mock(spec=Transaction), "tx")
         self.context.attach_mock(Mock(spec=Block), "block")

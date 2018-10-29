@@ -55,17 +55,14 @@ class IconSystemScoreBase(IconScoreBase):
 
     # TODO remove after Update 0.0.6
     def get_icon_service_flag(self) -> int:
-        return IconScoreContextUtil.icon_service_flag
+        return self._context.icon_service_flag
 
-    def get_icon_score_context_util(self) -> Type['IconScoreContextUtil']:
-        return IconScoreContextUtil
+    # TODO remove after Update 0.0.6
+    def deploy(self, tx_hash: bytes) -> None:
+        return IconScoreContextUtil.deploy(self._context, tx_hash)
 
     def get_deploy_tx_params(self, tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
-        return IconScoreContextUtil.icon_score_deploy_engine.icon_deploy_storage.get_deploy_tx_params(self._context,
-                                                                                                      tx_hash)
+        return IconScoreContextUtil.get_deploy_tx_params(self._context, tx_hash)
 
     def get_deploy_info(self, address: 'Address') -> Optional['IconScoreDeployInfo']:
-        return IconScoreContextUtil.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(self._context,
-                                                                                                 address)
-
-
+        return IconScoreContextUtil.get_deploy_info(self._context, address)

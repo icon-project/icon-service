@@ -85,7 +85,7 @@ class TestIconScoreEngine(unittest.TestCase):
         self._icon_score_address = create_address(AddressPrefix.CONTRACT)
 
         self.factory = IconScoreContextFactory(max_size=1)
-        IconScoreContextUtil.icon_score_deploy_engine = deploy_engine
+        IconScoreContext.icon_score_deploy_engine = deploy_engine
         self._context = self.factory.create(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash()

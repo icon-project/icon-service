@@ -40,7 +40,7 @@ class TestIconScoreLoader(unittest.TestCase):
         self._loader = IconScoreLoader(self._score_path)
 
         self._factory = IconScoreContextFactory(max_size=1)
-        IconScoreContextUtil.icon_score_deploy_engine = Mock()
+        IconScoreContext.icon_score_deploy_engine = Mock()
         self._context = self._factory.create(IconScoreContextType.DIRECT)
         ContextContainer._push_context(self._context)
 

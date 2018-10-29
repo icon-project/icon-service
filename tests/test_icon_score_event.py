@@ -47,7 +47,7 @@ class TestEventlog(unittest.TestCase):
         traces = Mock(spec=list)
         step_counter = Mock(spec=IconScoreStepCounter)
 
-        IconScoreContextUtil.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
+        IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
         context.type = IconScoreContextType.INVOKE
         context.func_type = IconScoreFuncType.WRITABLE
         context.tx_batch = TransactionBatch()

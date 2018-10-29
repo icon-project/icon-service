@@ -92,8 +92,11 @@ class ContextGetter(object):
 
 
 class IconScoreContext(object):
-    # TODO should remove after update GOVERNANCE 0.0.6 afterward
+
+    icon_score_mapper: 'IconScoreMapper' = None
     icon_score_deploy_engine: 'IconScoreDeployEngine' = None
+    icon_service_flag: int = 0
+    legacy_tbears_mode = False
 
     """Contains the useful information to process user's jsonrpc request
     """
