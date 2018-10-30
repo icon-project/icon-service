@@ -61,7 +61,7 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def _get_icon_score(context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreBase']:
-        deploy_info = context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(context, address)
+        deploy_info = IconScoreContextUtil.get_deploy_info(context, address)
         if deploy_info is None or deploy_info.deploy_state != DeployState.ACTIVE:
             raise InvalidParamsException(f'SCORE is inactive: {address}')
 
