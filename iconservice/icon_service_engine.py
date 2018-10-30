@@ -84,7 +84,6 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
-        self._icon_score_deploy_storage = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -125,15 +124,15 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_storage = IcxStorage(self._icx_context_db)
-        self._icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
+        icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
         IconScoreMapper.icon_score_loader = IconScoreLoader(score_root_path)
-        IconScoreMapper.deploy_storage = self._icon_score_deploy_storage
+        IconScoreMapper.deploy_storage = icon_score_deploy_storage
         self._icon_score_mapper = IconScoreMapper(is_lock=True)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._icon_pre_validator = IconPreValidator(self._icx_engine,
-                                                    self._icon_score_deploy_storage)
+                                                    icon_score_deploy_storage)
 
         InternalCall.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
@@ -146,7 +145,7 @@ class IconServiceEngine(ContextContainer):
             self._icx_storage, self._icon_score_mapper)
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
-            icon_deploy_storage=self._icon_score_deploy_storage)
+            icon_deploy_storage=icon_score_deploy_storage)
 
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
@@ -900,7 +899,7 @@ class IconServiceEngine(ContextContainer):
                         context.tx.origin,
                         context.tx.timestamp,
                         context.tx.nonce)
-                    deploy_info = self._icon_score_deploy_storage.get_deploy_info(context, score_address)
+                    deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
                     if deploy_info is not None:
                         raise ServerErrorException(f'SCORE address already in use: {score_address}')
                 context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
