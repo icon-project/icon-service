@@ -467,7 +467,8 @@ class TestIconServiceEngine(unittest.TestCase):
                  ConfigKey.SERVICE_AUDIT: False,
                  ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
                  ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
-        self._engine._flag = self._engine._make_service_flag(table)
+        # TODO: must apply the service flags to the engine
+        # self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
         block_hash = create_block_hash()
@@ -543,7 +544,8 @@ class TestIconServiceEngine(unittest.TestCase):
                  ConfigKey.SERVICE_AUDIT: False,
                  ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
                  ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
-        self._engine._flag = self._engine._make_service_flag(table)
+        # TODO: must apply the service flags to the engine
+        # self._engine._flag = self._engine._make_service_flag(table)
 
         block_height = 1
         block_hash = create_block_hash(b'block')

@@ -73,12 +73,9 @@ class IconServiceEngine(ContextContainer):
     def __init__(self) -> None:
         """Constructor
 
-        TODO: default flags?
         """
         self._conf = None
-        self._flag = None
         self._context_factory = None
-        self._icon_score_loader = None
         self._icx_context_db = None
         self._icx_storage = None
         self._icx_engine = None
@@ -121,20 +118,16 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._context_factory = IconScoreContextFactory(max_size=5)
-        self._icon_score_loader = IconScoreLoader(score_root_path)
 
         self._icx_engine = IcxEngine()
         self._icon_score_engine = IconScoreEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
 
-        self._icx_context_db = \
-            ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
-        # self._icx_context_db.address = ICX_ENGINE_ADDRESS
+        self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_storage = IcxStorage(self._icx_context_db)
-        self._icon_score_deploy_storage = IconScoreDeployStorage(
-            self._icx_context_db)
+        self._icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
-        IconScoreMapper.icon_score_loader = self._icon_score_loader
+        IconScoreMapper.icon_score_loader = IconScoreLoader(score_root_path)
         IconScoreMapper.deploy_storage = self._icon_score_deploy_storage
         self._icon_score_mapper = IconScoreMapper(is_lock=True)
 
@@ -151,7 +144,6 @@ class IconServiceEngine(ContextContainer):
         self._icx_engine.open(self._icx_storage)
         self._icon_score_engine.open(
             self._icx_storage, self._icon_score_mapper)
-
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
             icon_deploy_storage=self._icon_score_deploy_storage)

@@ -136,7 +136,6 @@ class TestTrace(unittest.TestCase):
         context = ContextContainer._get_context()
 
         self._icon_service_engine = IconServiceEngine()
-        self._icon_service_engine._flag = 0
         self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
@@ -184,7 +183,6 @@ class TestTrace(unittest.TestCase):
         context = ContextContainer._get_context()
 
         self._icon_service_engine = IconServiceEngine()
-        self._icon_service_engine._flag = 0
         self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
