@@ -89,7 +89,7 @@ class IconScoreDeployEngine(object):
         try:
             IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.deployerWhiteList):
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITELIST):
                 IconScoreContextUtil.validate_deployer(context, context.tx.origin)
 
             self.write_deploy_info_and_tx_params(context, deploy_type, icon_score_address, data)
@@ -114,7 +114,7 @@ class IconScoreDeployEngine(object):
             is_system_score = False
 
         is_owner = context.tx.origin == IconScoreContextUtil.get_owner(context, icon_score_address)
-        is_audit_enabled = IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.audit)
+        is_audit_enabled = IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.AUDIT)
         return not is_audit_enabled or all((is_system_score, is_owner))
 
     def deploy(self, context: 'IconScoreContext', tx_hash: bytes) -> None:
@@ -292,7 +292,7 @@ class IconScoreDeployEngine(object):
         backup_tx = context.tx
 
         try:
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.scorePackageValidator):
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.SCORE_PACKAGE_VALIDATOR):
                 IconScoreContextUtil.try_score_package_validate(context, score_address, next_tx_hash)
             score = IconScoreContextUtil.load_score(context, score_address, next_tx_hash)
             if score is None:

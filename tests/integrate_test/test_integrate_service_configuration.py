@@ -76,7 +76,7 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
 
     def test_invalid_owner(self):
         params = {
-            'serviceFlag': hex(IconServiceFlag.audit)
+            'serviceFlag': hex(IconServiceFlag.AUDIT)
         }
         tx = self._make_score_call_tx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 2),
                                       GOVERNANCE_SCORE_ADDRESS,

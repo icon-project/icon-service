@@ -79,7 +79,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def invoke(self, request: dict):
         Logger.info(f'invoke request with {request}', ICON_INNER_LOG_TAG)
-        if self._is_thread_flag_on(EnableThreadFlag.Invoke):
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
                                               self._invoke, request)
@@ -123,7 +123,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def query(self, request: dict):
         Logger.info(f'query request with {request}', ICON_INNER_LOG_TAG)
-        if self._is_thread_flag_on(EnableThreadFlag.Query):
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
                                               self._query, request)
@@ -159,7 +159,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def write_precommit_state(self, request: dict):
         Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
-        if self._is_thread_flag_on(EnableThreadFlag.Invoke):
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
                                               self._write_precommit_state, request)
@@ -187,7 +187,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def remove_precommit_state(self, request: dict):
         Logger.info(f'remove_precommit_state request with {request}', ICON_INNER_LOG_TAG)
-        if self._is_thread_flag_on(EnableThreadFlag.Invoke):
+        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_INVOKE],
                                               self._remove_precommit_state, request)
@@ -215,7 +215,7 @@ class IconScoreInnerTask(object):
     @message_queue_task
     async def validate_transaction(self, request: dict):
         Logger.info(f'pre_validate_check request with {request}', ICON_INNER_LOG_TAG)
-        if self._is_thread_flag_on(EnableThreadFlag.Validate):
+        if self._is_thread_flag_on(EnableThreadFlag.VALIDATE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_VALIDATE],
                                               self._validate_transaction, request)
