@@ -59,10 +59,10 @@ REVISION_3 = 3
 class ConfigKey:
     BUILTIN_SCORE_OWNER = 'builtinScoreOwner'
     SERVICE = 'service'
-    SERVICE_FEE = 'fee'
-    SERVICE_AUDIT = 'audit'
-    SERVICE_DEPLOYER_WHITELIST = 'deployerWhiteList'
-    SERVICE_SCORE_PACKAGE_VALIDATOR = 'scorePackageValidator'
+    SERVICE_FEE = 'FEE'
+    SERVICE_AUDIT = 'AUDIT'
+    SERVICE_DEPLOYER_WHITELIST = 'DEPLOYER_WHITELIST'
+    SERVICE_SCORE_PACKAGE_VALIDATOR = 'SCORE_PACKAGE_VALIDATOR'
     SCORE_ROOT_PATH = 'scoreRootPath'
     STATE_DB_ROOT_PATH = 'stateDbRootPath'
     CHANNEL = 'channel'
@@ -73,16 +73,16 @@ class ConfigKey:
 
 
 class EnableThreadFlag(IntFlag):
-    Invoke = 1
-    Query = 2
-    Validate = 4
+    INVOKE = 1
+    QUERY = 2
+    VALIDATE = 4
 
 
 class IconServiceFlag(IntFlag):
-    fee = 1
-    audit = 2
-    deployerWhiteList = 4
-    scorePackageValidator = 8
+    FEE = 1
+    AUDIT = 2
+    DEPLOYER_WHITELIST = 4
+    SCORE_PACKAGE_VALIDATOR = 8
 
 
 @unique
@@ -105,4 +105,4 @@ class IconScoreFuncType(IntEnum):
     WRITABLE = 1
 
 
-ENABLE_THREAD_FLAG = EnableThreadFlag.Invoke | EnableThreadFlag.Query | EnableThreadFlag.Validate
+ENABLE_THREAD_FLAG = EnableThreadFlag.INVOKE | EnableThreadFlag.QUERY | EnableThreadFlag.VALIDATE

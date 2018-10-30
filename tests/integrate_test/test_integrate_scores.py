@@ -280,13 +280,13 @@ class TestIntegrateScores(TestIntegrateBase):
 
         table = {}
         for flag in IconServiceFlag:
-            if flag.name is 'scorePackageValidator':
+            if flag.name is 'SCORE_PACKAGE_VALIDATOR':
                 table[flag.name] = True
             else:
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-        target_flag = IconServiceFlag.audit | IconServiceFlag.fee
+        target_flag = IconServiceFlag.AUDIT | IconServiceFlag.FEE
         tx3 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',

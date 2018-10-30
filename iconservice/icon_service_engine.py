@@ -191,7 +191,7 @@ class IconServiceEngine(ContextContainer):
 
             # Gets the step price if the fee flag is on
             # and set to the counter factory
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.fee):
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
                 step_price = governance_score.getStepPrice()
             else:
                 step_price = 0
@@ -601,7 +601,7 @@ class IconServiceEngine(ContextContainer):
 
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
-        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.deployerWhiteList):
+        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITELIST):
             self._validate_deployer_whitelist(context, params)
         self._context_factory.destroy(context)
 
@@ -844,7 +844,7 @@ class IconServiceEngine(ContextContainer):
             if status == TransactionResult.FAILURE:
                 # protocol v2 does not charge a fee for a failed tx
                 step_price = 0
-            elif IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.fee):
+            elif IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
                 # 0.01 icx == 10**16 loop
                 # FIXED_FEE(0.01 icx) == step_used(10**6) * step_price(10**10)
                 step_price = 10 ** 10
