@@ -20,7 +20,7 @@ blockchain.
 .. toctree::
     :caption: Contents
 
-    deep-into-the-score
-    syntax
+    score-by-example
+    writing-score
     limitation
     api-references

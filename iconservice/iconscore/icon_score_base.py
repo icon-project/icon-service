@@ -598,7 +598,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         """
         Call external function provided by other IconScore with arguments without fallback
 
-        :param addr_to: the address of other IconScore
+        :param addr_to: :class:`.Address` the address of other IconScore
         :param func_name: function name provided by other IconScore
         :param kw_dict: Arguments of the external function
         :param amount: ICX value to enclose with. in loop.

@@ -1,5 +1,5 @@
-Syntax
-======
+Writing SCORE
+=============
 
 Type hints
 ^^^^^^^^^^

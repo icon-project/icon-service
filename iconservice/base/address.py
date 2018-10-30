@@ -191,7 +191,8 @@ class Address(object):
     @staticmethod
     def from_data(prefix: AddressPrefix, data: bytes):
         """
-        creates an address objectusing given bytes
+        creates an address object using given bytes
+
         :param prefix:
         :param data:
         :return:

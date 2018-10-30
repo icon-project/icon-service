@@ -12,7 +12,7 @@ install:
 - pip install iconcommons plyvel
 
 script:
-- sphinx-build -b html docs/score-guide
+- sphinx-build -b html docs/score-guide out
 
 after_success:
 - git clone -b gh-pages "https://$GH_TOKEN@github.com/$GH_PAGES_REPO.git" gh-pages

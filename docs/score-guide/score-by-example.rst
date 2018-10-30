@@ -1,5 +1,5 @@
-Deep into the SCORE
-===================
+SCORE by example
+================
 
 Token & Crowdsale
 -----------------
