@@ -32,13 +32,14 @@ from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, interface
 from iconservice.iconscore.icon_score_base2 import InterfaceScore
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, IconScoreContextType
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
-from tests import create_tx_hash, create_address
+from tests import create_address
 from tests import raise_exception_start_tag, raise_exception_end_tag
 
 
@@ -61,12 +62,14 @@ class TestTrace(unittest.TestCase):
         context.tx_batch = TransactionBatch()
 
         ContextContainer._push_context(context)
-        context.internal_call = InternalCall(context)
-        context.internal_call._other_score_call = Mock()
-        context.internal_call.icx_engine = Mock(spec=IcxEngine)
+
+        InternalCall._other_score_call = Mock()
+        IconScoreContext.icx_engine = Mock(spec=IcxEngine)
+        IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
+        IconScoreContextUtil.validate_score_blacklist = Mock(return_value=False)
+
         context.icon_score_mapper = Mock()
         context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))
-        context.internal_call._validate_score_blacklist = Mock(return_value=False)
         self._score = TestScore(db)
 
     def tearDown(self):
@@ -77,7 +80,6 @@ class TestTrace(unittest.TestCase):
         context = ContextContainer._get_context()
         context.type = IconScoreContextType.INVOKE
         to_ = create_address(AddressPrefix.EOA)
-        context.internal_call.icx_engine = Mock(spec=IcxEngine)
         amount = 100
         self._score.icx.transfer(to_, amount)
         context.traces.append.assert_called()

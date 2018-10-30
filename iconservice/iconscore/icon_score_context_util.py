@@ -91,7 +91,7 @@ class IconScoreContextUtil(object):
             raise ServerErrorException(f'Invalid SCORE address: {score_address}')
 
         # Gets the governance SCORE
-        governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -106,7 +106,7 @@ class IconScoreContextUtil(object):
         :param deployer: EOA address to deploy a SCORE
         """
         # Gets the governance SCORE
-        governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -124,7 +124,7 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def _get_service_flag(context: 'IconScoreContext') -> int:
-        governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ServerErrorException(f'governance_score is None')
 
@@ -138,7 +138,7 @@ class IconScoreContextUtil(object):
     @staticmethod
     def get_revision(context: 'IconScoreContext') -> int:
         try:
-            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
+            governance_score = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is not None:
                 if hasattr(governance_score, 'revision_code'):
                     return governance_score.revision_code
@@ -159,41 +159,6 @@ class IconScoreContextUtil(object):
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         return context.icon_score_deploy_engine.icon_deploy_storage.get_score_address_by_tx_hash(context, tx_hash)
-
-    @staticmethod
-    def enter_call(context: 'IconScoreContext') -> None:
-        """Start to call external function provided by other SCORE
-        """
-        if context.type != IconScoreContextType.INVOKE:
-            return
-
-        context.tx_batch.enter_call()
-
-        context.event_log_stack.append(context.event_logs)
-        context.event_logs = []
-
-    @staticmethod
-    def revert_call(context: 'IconScoreContext') -> None:
-        """An exception happens during calling an external function provided by other SCORE
-        Revert the states changed by this function call
-        """
-        if context.type != IconScoreContextType.INVOKE:
-            return
-
-        context.tx_batch.revert_call()
-        context.event_logs.clear()
-
-    @staticmethod
-    def leave_call(context: 'IconScoreContext') -> None:
-        """Finish to call external function provided by other SCORE
-        """
-        if context.type != IconScoreContextType.INVOKE:
-            return
-
-        context.tx_batch.leave_call()
-
-        prev_event_logs = context.event_log_stack.pop()
-        context.event_logs = prev_event_logs + context.event_logs
 
     @staticmethod
     def load_score(context: 'IconScoreContext',

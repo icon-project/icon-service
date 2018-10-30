@@ -16,14 +16,13 @@
 
 import hashlib
 import json
-
-from typing import TYPE_CHECKING, Optional, Union, Any
 from abc import ABC, ABCMeta
+from typing import TYPE_CHECKING, Optional, Union, Any
 
+from ..base.address import Address
 from ..base.exception import RevertException, ExceptionCode
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
-from ..base.address import Address
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase

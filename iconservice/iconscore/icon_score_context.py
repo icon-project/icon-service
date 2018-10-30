@@ -19,7 +19,6 @@ import warnings
 from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
-from .internal_call import InternalCall
 from ..base.block import Block
 from ..base.exception import ServerErrorException
 from ..base.message import Message
@@ -33,6 +32,9 @@ if TYPE_CHECKING:
     from .icon_score_event_log import EventLog
     from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
+    from .icon_score_base import IconScoreBase
+    from ..icx.icx_engine import IcxEngine
+
 
 _thread_local_data = threading.local()
 
@@ -46,8 +48,7 @@ class ContextContainer(object):
 
     @staticmethod
     def _get_context() -> Optional['IconScoreContext']:
-        context_stack: List['IconScoreContext'] \
-            = getattr(_thread_local_data, 'context_stack', None)
+        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
 
         if context_stack is not None and len(context_stack) > 0:
             return context_stack[-1]
@@ -56,8 +57,7 @@ class ContextContainer(object):
 
     @staticmethod
     def _push_context(context: 'IconScoreContext') -> None:
-        context_stack: List['IconScoreContext'] \
-            = getattr(_thread_local_data, 'context_stack', None)
+        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
 
         if context_stack is None:
             context_stack = []
@@ -69,8 +69,7 @@ class ContextContainer(object):
     def _pop_context() -> 'IconScoreContext':
         """Delete the last pushed context of the current thread
         """
-        context_stack: List['IconScoreContext'] \
-            = getattr(_thread_local_data, 'context_stack', None)
+        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
 
         if context_stack is not None and len(context_stack) > 0:
             return context_stack.pop()
@@ -95,6 +94,7 @@ class IconScoreContext(object):
 
     icon_score_mapper: 'IconScoreMapper' = None
     icon_score_deploy_engine: 'IconScoreDeployEngine' = None
+    icx_engine: 'IcxEngine' = None
     icon_service_flag: int = 0
     legacy_tbears_mode = False
 
@@ -135,9 +135,9 @@ class IconScoreContext(object):
         self.event_logs: List['EventLog'] = None
         self.traces: List['Trace'] = None
 
-        self.internal_call = InternalCall(self)
         self.msg_stack = []
         self.event_log_stack = []
+        self.internal_call_current_address = None
 
     @property
     def readonly(self):
@@ -161,6 +161,14 @@ class IconScoreContext(object):
 
         self.msg_stack.clear()
         self.event_log_stack.clear()
+        self.internal_call_current_address = None
+
+    def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
+        is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
+        if func_name is not None and is_func_readonly(func_name):
+            self.func_type = IconScoreFuncType.READONLY
+        else:
+            self.func_type = IconScoreFuncType.WRITABLE
 
     # TODO should remove after update GOVERNANCE 0.0.6 afterward
     def deploy(self, tx_hash: bytes) -> None:

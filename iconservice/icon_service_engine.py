@@ -16,12 +16,9 @@
 
 from math import ceil
 from os import makedirs
-
-
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -39,6 +36,7 @@ from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
+from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_loader import IconScoreLoader
@@ -46,15 +44,14 @@ from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
 from .iconscore.icon_score_trace import Trace, TraceType
-from .iconscore.internal_call import InternalCall
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager
 from .utils import byte_length_of_int
 from .utils import is_lowercase_hex_string
-from .utils.bloom import BloomFilter
 from .utils import sha3_256, int_to_bytes
+from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_step import IconScoreStepCounter
@@ -142,7 +139,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = IconPreValidator(self._icx_engine,
                                                     self._icon_score_deploy_storage)
 
-        InternalCall.icx_engine = self._icx_engine
+        IconScoreContext.icx_engine = self._icx_engine
         IconScoreContext.icon_score_mapper = self._icon_score_mapper
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
