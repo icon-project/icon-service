@@ -56,8 +56,6 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         self._inner_task._icon_service_engine. \
             _icon_score_deploy_engine.invoke = deploy_engine_invoke
-        self._inner_task._icon_service_engine. \
-            _icon_score_deploy_engine._icon_score_deploy_storage.get_deploy_info = deploy_storage_get_deploy_info
 
         tx_hash1 = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
