@@ -139,8 +139,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
-        self._icon_score_engine.open(
-            self._icx_storage, self._icon_score_mapper)
+        self._icon_score_engine.open()
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
             icon_deploy_storage=icon_score_deploy_storage)

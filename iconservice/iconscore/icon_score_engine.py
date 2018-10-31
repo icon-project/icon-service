@@ -40,19 +40,9 @@ class IconScoreEngine(object):
         """
         super().__init__()
 
-        self.__icx_storage = None
-        self.__icon_score_mapper = None
-
-    def open(self,
-             icx_storage: 'IcxStorage',
-             icon_score_mapper: 'IconScoreMapper') -> None:
+    def open(self) -> None:
         """open
-
-        :param icx_storage: Get IconScore owner info from icx_storage
-        :param icon_score_mapper:
         """
-        self.__icx_storage = icx_storage
-        self.__icon_score_mapper = icon_score_mapper
 
     def invoke(self,
                context: 'IconScoreContext',
