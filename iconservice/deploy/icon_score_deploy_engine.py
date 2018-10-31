@@ -89,7 +89,7 @@ class IconScoreDeployEngine(object):
         try:
             IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITELIST):
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
                 IconScoreContextUtil.validate_deployer(context, context.tx.origin)
 
             self.write_deploy_info_and_tx_params(context, deploy_type, icon_score_address, data)
