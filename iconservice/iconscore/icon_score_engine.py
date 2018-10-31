@@ -19,15 +19,13 @@
 from typing import TYPE_CHECKING, Any
 
 from .icon_score_constant import STR_FALLBACK
-from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
-from .icon_score_mapper import IconScoreMapper
+from .icon_score_context import IconScoreContext
 from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
 
 if TYPE_CHECKING:
-    from ..icx.icx_storage import IcxStorage
     from ..iconscore.icon_score_base import IconScoreBase
 
 
@@ -35,17 +33,8 @@ class IconScoreEngine(object):
     """Calls external functions provided by each IconScore
     """
 
-    def __init__(self) -> None:
-        """Constructor
-        """
-        super().__init__()
-
-    def open(self) -> None:
-        """open
-        """
-
-    def invoke(self,
-               context: 'IconScoreContext',
+    @staticmethod
+    def invoke(context: 'IconScoreContext',
                icon_score_address: 'Address',
                data_type: str,
                data: dict) -> None:
@@ -65,12 +54,12 @@ class IconScoreEngine(object):
         IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
         if data_type == 'call':
-            self._call(context, icon_score_address, data)
+            IconScoreEngine._call(context, icon_score_address, data)
         else:
-            self._fallback(context, icon_score_address)
+            IconScoreEngine._fallback(context, icon_score_address)
 
-    def query(self,
-              context: IconScoreContext,
+    @staticmethod
+    def query(context: IconScoreContext,
               icon_score_address: Address,
               data_type: str,
               data: dict) -> object:
@@ -86,24 +75,23 @@ class IconScoreEngine(object):
         IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
         if data_type == 'call':
-            return self._call(context, icon_score_address, data)
+            return IconScoreEngine._call(context, icon_score_address, data)
         else:
             raise InvalidParamsException(f'Invalid dataType: ({data_type})')
 
-    def get_score_api(self,
-                      context: 'IconScoreContext',
-                      icon_score_address: 'Address') -> object:
+    @staticmethod
+    def get_score_api(context: 'IconScoreContext', icon_score_address: 'Address') -> object:
         """Handle get score api
 
         :param context:
         :param icon_score_address:
         """
 
-        icon_score = self._get_icon_score(context, icon_score_address)
+        icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
         return icon_score.get_api()
 
-    def _call(self,
-              context: 'IconScoreContext',
+    @staticmethod
+    def _call(context: 'IconScoreContext',
               icon_score_address: 'Address',
               data: dict) -> Any:
         """Handle jsonrpc including both invoke and query
@@ -115,9 +103,9 @@ class IconScoreEngine(object):
         func_name: str = data['method']
         kw_params: dict = data.get('params', {})
 
-        icon_score = self._get_icon_score(context, icon_score_address)
+        icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
 
-        converted_params = self._convert_score_params_by_annotations(icon_score, func_name, kw_params)
+        converted_params = IconScoreEngine._convert_score_params_by_annotations(icon_score, func_name, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
 
         score_func = getattr(icon_score, '_IconScoreBase__call')
@@ -134,15 +122,15 @@ class IconScoreEngine(object):
         TypeConverter.convert_data_params(annotation_params, tmp_params)
         return tmp_params
 
-    def _fallback(self,
-                  context: 'IconScoreContext',
+    @staticmethod
+    def _fallback(context: 'IconScoreContext',
                   score_address: 'Address'):
         """When an IconScore receives some coins and calldata is None,
         fallback function is called.
 
         :param score_address:
         """
-        icon_score = self._get_icon_score(context, score_address)
+        icon_score = IconScoreEngine._get_icon_score(context, score_address)
 
         score_func = getattr(icon_score, '_IconScoreBase__call')
         score_func(STR_FALLBACK)
