@@ -88,9 +88,8 @@ def interface(func):
 def eventlog(func=None, *, indexed=0):
     """eventlog decorator
 
-    :param func:
-    :param indexed:
-    :return:
+    :param func: function name
+    :param indexed: index args
     """
     if func is None:
         return partial(eventlog, indexed=indexed)
@@ -332,21 +331,31 @@ class IconScoreBaseMeta(ABCMeta):
 
 class IconScoreBase(IconScoreObject, ContextGetter,
                     metaclass=IconScoreBaseMeta):
+    """
+    A base class of SCOREs. this class provides facilities and environments to SCORE to run.
+    """
 
     @abstractmethod
     def on_install(self, **kwargs) -> None:
-        """DB initialization on score install
+        """
+        Invoked when the contract is deployed for the first time, and will not be called again on contract update or deletion afterward.
+        This is the place where you initialize the state DB.
         """
         super().on_install(**kwargs)
 
     @abstractmethod
     def on_update(self, **kwargs) -> None:
-        """DB initialization on score update
+        """
+        Invoked when the contract is deployed for update
+        This is the place where you migrate old states.
         """
         super().on_update(**kwargs)
 
     @abstractmethod
     def __init__(self, db: 'IconScoreDatabase') -> None:
+        """
+        A python init function. Invoked when the contract is loaded at each node.
+        """
         super().__init__(db)
         self.__db = db
         self.__address = db.address
@@ -359,6 +368,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         self.__db.set_observer(self.__create_db_observer())
 
     def fallback(self) -> None:
+        """
+        fallback function can not be decorated with `@external`. (i.e., fallback function is not allowed to be called by external contract or user.)
+        This fallback function is executed whenever the contract receives plain icx coins without data.
+        If the fallback function is not decorated with `@payable`, the icx coin transfers to the contract will fail.
+        """
         pass
 
     @classmethod
@@ -483,14 +497,34 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     @property
     def msg(self) -> 'Message':
+        """
+        Holds information of calling the SCORE
+
+        -  msg.sender : Address of the account who called this function. If
+           other contact called this function, msg.sender points to the caller
+           contract’s address.
+
+        -  msg.value : Amount of icx that the sender attempts to transfer to the
+           current SCORE.
+        """
         return self._context.msg
 
     @property
     def address(self) -> 'Address':
+        """
+        The current SCORE address
+
+        :return: :class:`.Address` current address
+        """
         return self.__address
 
     @property
     def tx(self) -> 'Transaction':
+        """
+        Holds information of the transaction
+
+        :return: :class:`.Transaction` transaction
+        """
         return self._context.tx
 
     @property
@@ -499,14 +533,40 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     @property
     def db(self) -> 'IconScoreDatabase':
+        """
+        An instance used to access state DB
+
+        :return: :class:`.IconScoreDatabase` db
+        """
         return self.__db
 
     @property
     def owner(self) -> 'Address':
+        """
+        Address of the account who deployed the contract
+
+        :return: :class:`.Address` owner address
+        """
         return self.__owner
 
     @property
     def icx(self) -> 'Icx':
+        """
+        An object used to transfer icx coin
+
+        -  icx.transfer(addr_to(address), amount(integer)) -> bool Transfers
+           designated amount of icx coin to ``addr_to``. If exception occurs
+           during execution, the exception will be escalated. Returns True if
+           coin transfer succeeds.
+
+        -  icx.send(addr_to(address), amount(integer)) -> bool Sends designated
+           amount of icx coin to ``addr_to``. Basic behavior is same as
+           transfer, the difference is that exception is caught inside the
+           function. Returns True when coin transfer succeeded, False when
+           failed.
+
+        :return: :class:`.Icx` instance of icx
+        """
         if self.__icx is None:
             self.__icx = Icx(self._context, self.__address)
         else:
@@ -517,23 +577,33 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     @property
     def block_height(self) -> int:
+        """
+         Current block height
+
+        :return: current block height
+        """
         return self._context.block.height
 
     def now(self) -> int:
+        """
+        Timestamp of current block in microseconds
+
+        :return: timestamp in microseconds
+        """
         return self._context.block.timestamp
 
     def call(self, addr_to: 'Address', func_name: str, kw_dict: dict, amount: int = 0):
+        """
+        Call external function provided by other IconScore with arguments without fallback
 
+        :param addr_to: :class:`.Address` the address of other IconScore
+        :param func_name: function name provided by other IconScore
+        :param kw_dict: Arguments of the external function
+        :param amount: ICX value to enclose with. in loop.
+        :return: returning value of the external function
+        """
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
 
-        """Call external function provided by other IconScore with arguments without fallback
-
-        :param addr_to: the address of other IconScore
-        :param func_name: function name provided by other IconScore
-        :param arg_list:
-        :param kw_dict:
-        :param amount:
-        """
         return self._context.internal_call.other_external_call(self.address, addr_to, func_name, (), kw_dict, amount)
 
     def revert(self, message: Optional[str] = None,
@@ -551,6 +621,14 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def create_interface_score(self,
                                addr_to: 'Address',
                                interface_cls: Callable[['Address', callable], T]) -> T:
+        """
+        Creates an object, through which you have an access to the designated SCORE’s external functions.
+
+        :param addr_to: SCORE address
+        :param interface_cls: interface class
+        :return: An instance of given class
+        """
+
         if interface_cls is InterfaceScore:
             raise InterfaceException(FORMAT_IS_NOT_DERIVED_OF_OBJECT.format(InterfaceScore.__name__))
         return interface_cls(addr_to, self)

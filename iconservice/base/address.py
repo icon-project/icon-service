@@ -73,7 +73,8 @@ class AddressPrefix(IntEnum):
 
     @staticmethod
     def from_string(prefix: str):
-        """Returns address prefix enumerator
+        """
+        Returns address prefix enumerator
 
         :param prefix: 2-byte address prefix (hx or cx)
         :return: (AddressPrefix) address prefix enumerator
@@ -162,7 +163,8 @@ class Address(object):
 
     @property
     def is_contract(self) -> bool:
-        """Is this a contract address?
+        """
+        Whether the address is SCORE
 
         :return: True(contract) False(Not contract)
         """
@@ -170,9 +172,10 @@ class Address(object):
 
     @staticmethod
     def from_string(address: str):
-        """Create Address object from 42-char address
+        """
+        creates an address object from given 42-char string `address`
 
-        :return: (Address)
+        :return: :class:`.Address`
         """
 
         if not is_icon_address_valid(address):
@@ -187,6 +190,13 @@ class Address(object):
 
     @staticmethod
     def from_data(prefix: AddressPrefix, data: bytes):
+        """
+        creates an address object using given bytes
+
+        :param prefix:
+        :param data:
+        :return:
+        """
         hash_value = hashlib.sha3_256(data).digest()
         return Address(prefix, hash_value[-20:])
 
@@ -194,8 +204,8 @@ class Address(object):
     def from_bytes(buf: bytes) -> 'Address':
         """Create Address object from bytes data
 
-        :param buf: (bytes) bytes data including Address information
-        :return: (Address) Address object
+        :param buf: :class:`.bytes` bytes data including Address information
+        :return: :class:`.Address`
         """
         buf_size = len(buf)
 
@@ -208,9 +218,10 @@ class Address(object):
         return Address(prefix, buf)
 
     def to_bytes(self) -> bytes:
-        """Convert Address object to bytes
+        """
+        Returns data as bytes from the address object
 
-        :return: data including information of Address object
+        :return: :class:`.bytes` data including information of Address object
         """
         body_bytes = self.body
         if self.prefix != AddressPrefix.EOA:
@@ -247,7 +258,7 @@ class MalformedAddress(Address):
     def from_string(address: str):
         """Create Address object from 42-char address
 
-        :return: (Address)
+        :return: :class:`.Address`
         """
 
         try:
