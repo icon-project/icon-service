@@ -80,7 +80,7 @@ def interface(func):
         # else:
         #     del kwargs[ICX_VALUE_KEY]
         amount = 0
-        ret = InternalCall.other_external_call(score._context, score.address, addr_to, func_name, amount, args, kwargs)
+        ret = InternalCall.other_external_call(score._context, score.address, addr_to, amount, func_name, args, kwargs)
         return ret
 
     return __wrapper
@@ -607,7 +607,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :return: returning value of the external function
         """
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
-        return InternalCall.other_external_call(self._context, self.address, addr_to, func_name, amount, (), kw_dict)
+        return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:

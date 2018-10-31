@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING
 
+from iconservice.iconscore.icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .internal_call import InternalCall
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
@@ -43,7 +44,7 @@ class Icx(object):
         :param addr_to: receiver address
         :param amount: the amount of icx to transfer
         """
-        InternalCall.icx_transfer_call(self._context, self._address, addr_to, amount)
+        InternalCall.other_external_call(self._context, self._address, addr_to, amount, STR_FALLBACK)
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
         """

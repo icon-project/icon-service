@@ -24,7 +24,6 @@ from ..base.address import Address
 from ..base.exception import InvalidRequestException
 from ..base.message import Message
 from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
-from ..iconscore.icon_score_constant import STR_FALLBACK
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -37,43 +36,28 @@ class InternalCall(object):
         return context.icx_engine.get_balance(context, address)
 
     @staticmethod
-    def icx_transfer_call(context: 'IconScoreContext',
-                          addr_from: 'Address',
-                          addr_to: 'Address',
-                          amount: int) -> None:
-        """transfer icx to the given 'addr_to'
-        If failed, an exception will be raised
-
-        :param context:
-        :param addr_from: icx sender address
-        :param addr_to: icx receiver address
-        :param amount: the amount of icx to transfer
-        """
-        InternalCall._call(context, addr_from, addr_to, STR_FALLBACK, amount, None, None)
-
-    @staticmethod
     def other_external_call(context: 'IconScoreContext',
                             addr_from: 'Address',
                             addr_to: 'Address',
-                            func_name: str,
                             amount: int,
+                            func_name: str,
                             arg_params: Optional[tuple] = None,
                             kw_params: Optional[dict] = None) -> Any:
-        return InternalCall._call(context, addr_from, addr_to, func_name, amount, arg_params, kw_params)
+        return InternalCall._call(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
     @staticmethod
     def _call(context: 'IconScoreContext',
               addr_from: 'Address',
               addr_to: 'Address',
-              func_name: str,
               amount: int,
+              func_name: str,
               arg_params: Optional[tuple],
               kw_params: Optional[dict]) -> Any:
 
         InternalCall.enter_call(context)
 
         try:
-            InternalCall._make_trace(context, addr_from, addr_to, func_name, amount, arg_params, kw_params)
+            InternalCall._make_trace(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
@@ -86,8 +70,8 @@ class InternalCall(object):
                 return InternalCall._other_score_call(context,
                                                       addr_from,
                                                       addr_to,
-                                                      func_name,
                                                       amount,
+                                                      func_name,
                                                       arg_params,
                                                       kw_params)
 
@@ -102,8 +86,8 @@ class InternalCall(object):
     def _make_trace(context: 'IconScoreContext',
                     _from: 'Address',
                     _to: 'Address',
-                    func_name: str,
                     amount: int,
+                    func_name: str,
                     arg_params: Optional[tuple],
                     kw_params: Optional[dict]) -> None:
         if arg_params is None:
@@ -124,8 +108,8 @@ class InternalCall(object):
     def _other_score_call(context: 'IconScoreContext',
                           addr_from: Address,
                           addr_to: 'Address',
-                          func_name: str,
                           amount: int,
+                          func_name: str,
                           arg_params: Optional[tuple],
                           kw_params: Optional[dict]) -> Any:
         """Call the functions provided by other icon scores.
