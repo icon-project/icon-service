@@ -64,7 +64,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         tx2 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
-                                       {"serviceFlag": hex(IconServiceFlag.scorePackageValidator)})
+                                       {"serviceFlag": hex(IconServiceFlag.SCORE_PACKAGE_VALIDATOR)})
 
         prev_block, tx_results = self._make_and_req_block([tx1, tx2])
 

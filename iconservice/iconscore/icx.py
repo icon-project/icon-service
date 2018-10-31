@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 
 
 class Icx(object):
-    """Class for handling ICX coin transfer
+    """
+    Class for handling ICX coin transfer
     """
 
     def __init__(self, context: 'IconScoreContext', address: 'Address') -> None:
@@ -35,7 +36,8 @@ class Icx(object):
         self._address = address
 
     def transfer(self, addr_to: 'Address', amount: int) -> None:
-        """transfer the amount of icx to the given 'addr_to'
+        """
+        transfer the amount of icx to the given 'addr_to'
         If failed, an exception will be raised
 
         :param addr_to: receiver address
@@ -44,7 +46,8 @@ class Icx(object):
         InternalCall.icx_transfer_call(self._context, self._address, addr_to, amount)
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
-        """transfer the amount of icx to the given 'addr_to'
+        """
+        transfer the amount of icx to the given 'addr_to'
 
         :param addr_to: receiver address
         :param amount: the amount of icx to transfer
@@ -59,6 +62,12 @@ class Icx(object):
             return False
 
     def get_balance(self, address: 'Address') -> int:
+        """
+        Returns the ICX balance of given address
+
+        :param address: address
+        :return: ICX balance of given address
+        """
         return InternalCall.icx_get_balance(self._context, address)
 
     # noinspection PyBroadException

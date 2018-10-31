@@ -17,6 +17,7 @@
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from ..deploy import DeployState
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import ServerErrorException, InvalidParamsException
 from ..icon_constant import IconScoreContextType, DEFAULT_BYTE_SIZE, IconServiceFlag
@@ -60,16 +61,11 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def _get_icon_score(context: 'IconScoreContext', address: 'Address') -> Optional['IconScoreBase']:
-        is_score_active = context.icon_score_deploy_engine.icon_deploy_storage.is_score_active(context, address)
-
-        if not is_score_active:
+        deploy_info: 'IconScoreDeployInfo' = IconScoreContextUtil.get_deploy_info(context, address)
+        if deploy_info is None or deploy_info.deploy_state != DeployState.ACTIVE:
             raise InvalidParamsException(f'SCORE is inactive: {address}')
 
-        deploy_info = context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(context, address)
-        if deploy_info is None:
-            current_tx_hash = None
-        else:
-            current_tx_hash = deploy_info.current_tx_hash
+        current_tx_hash = deploy_info.current_tx_hash
 
         if current_tx_hash is None:
             current_tx_hash = bytes(DEFAULT_BYTE_SIZE)

@@ -166,6 +166,10 @@ class ContainerUtil(object):
 
 
 class DictDB(object):
+    """
+    Utility classes wrapping the state DB.
+    DictDB behaves more like python dict. DictDB does not maintain order
+    """
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type, depth: int=1) -> None:
 
@@ -176,6 +180,11 @@ class DictDB(object):
         self.__depth = depth
 
     def remove(self, key: K) -> None:
+        """
+        Removes the value of given key
+
+        :param key: key
+        """
         self.__remove(key)
 
     def __setitem__(self, key: K, value: V) -> None:
@@ -209,6 +218,11 @@ class DictDB(object):
 
 
 class ArrayDB(Iterator):
+    """
+    Utility classes wrapping the state DB.
+    supports length and iterator, maintains order
+    """
+
     __SIZE = 'size'
     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
 
@@ -221,12 +235,22 @@ class ArrayDB(Iterator):
         self.__value_type = value_type
 
     def put(self, value: V) -> None:
+        """
+        Puts the value at the end of array
+
+        :param value: value to add
+        """
         byte_value = ContainerUtil.encode_value(value)
         self._db.put(ContainerUtil.encode_key(self.__size), byte_value)
         self.__size += 1
         self.__set_size()
 
     def pop(self) -> Optional[V]:
+        """
+        Gets and removes last added value
+
+        :return: last added value
+        """
         if self.__size == 0:
             return None
 
@@ -238,6 +262,12 @@ class ArrayDB(Iterator):
         return last_val
 
     def get(self, index: int=0) -> V:
+        """
+        Gets the value at index
+
+        :param index: index
+        :return: value at the index
+        """
         return self[index]
 
     def __iter__(self):
@@ -288,6 +318,9 @@ class ArrayDB(Iterator):
 
 
 class VarDB(object):
+    """
+    Utility classes wrapping the state DB. can be used to store simple key-value state
+    """
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
         # Use var_key as a db prefix in the case of VarDB
@@ -297,13 +330,26 @@ class VarDB(object):
         self.__value_type = value_type
 
     def set(self, value: V) -> None:
+        """
+        Sets the value
+
+        :param value: a value to be set
+        """
         byte_value = ContainerUtil.encode_value(value)
         self._db.put(self.__var_byte_key, byte_value)
 
     def get(self) -> Optional[V]:
+        """
+        Gets the value
+
+        :return: value of the var db
+        """
         return ContainerUtil.decode_object(self._db.get(self.__var_byte_key), self.__value_type)
 
     def remove(self) -> None:
+        """
+        Deletes the value
+        """
         self._db.delete(self.__var_byte_key)
 
 
