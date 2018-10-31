@@ -137,7 +137,6 @@ class IconScoreContext(object):
 
         self.msg_stack = []
         self.event_log_stack = []
-        self.internal_call_current_address = None
 
     @property
     def readonly(self):
@@ -150,6 +149,7 @@ class IconScoreContext(object):
         self.block = None
         self.tx = None
         self.msg = None
+        self.current_address: 'Address' = None
         self.block_batch = None
         self.tx_batch = None
         self.new_icon_score_mapper = None
@@ -161,7 +161,6 @@ class IconScoreContext(object):
 
         self.msg_stack.clear()
         self.event_log_stack.clear()
-        self.internal_call_current_address = None
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')

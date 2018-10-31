@@ -149,7 +149,7 @@ class InternalCall(object):
         context.msg_stack.append(context.msg)
 
         prev_func_type = context.func_type
-        context.internal_call_current_address = addr_to
+        context.current_address = addr_to
         context.msg = Message(sender=addr_from, value=amount)
 
         try:
@@ -159,7 +159,7 @@ class InternalCall(object):
             return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
         finally:
             context.func_type = prev_func_type
-            context.internal_call_current_address = addr_from
+            context.current_address = addr_from
             context.msg = context.msg_stack.pop()
 
     @staticmethod
