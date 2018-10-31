@@ -51,6 +51,7 @@ from .precommit_data_manager import PrecommitData, PrecommitDataManager
 from .utils import byte_length_of_int
 from .utils import is_lowercase_hex_string
 from .utils import sha3_256, int_to_bytes
+from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
@@ -153,7 +154,8 @@ class IconServiceEngine(ContextContainer):
     def _make_service_flag(flag_table: dict) -> int:
         make_flag = 0
         for flag in IconServiceFlag:
-            is_enable = flag_table.get(flag.name, False)
+            flag_name = to_camel_case(flag.name.lower())
+            is_enable = flag_table.get(flag_name, False)
             if is_enable:
                 make_flag |= flag
         return make_flag
@@ -598,7 +600,7 @@ class IconServiceEngine(ContextContainer):
 
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
-        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITELIST):
+        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
             self._validate_deployer_whitelist(context, params)
         self._context_factory.destroy(context)
 

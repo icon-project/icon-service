@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 class TestIntegrateDeployWhiteList(TestIntegrateBase):
 
     def _make_init_config(self) -> dict:
-        return {ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITELIST: True}}
+        return {ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: True}}
 
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
