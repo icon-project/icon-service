@@ -124,7 +124,7 @@ class TestIconServiceEngine(unittest.TestCase):
     def test_make_flag(self):
         table = {ConfigKey.SERVICE_FEE: True,
                  ConfigKey.SERVICE_AUDIT: False,
-                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
+                 ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                  ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         flag = self._engine._make_service_flag(table)
         self.assertEqual(flag, IconServiceFlag.FEE)
@@ -465,7 +465,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         table = {ConfigKey.SERVICE_FEE: True,
                  ConfigKey.SERVICE_AUDIT: False,
-                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
+                 ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                  ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         # TODO: must apply the service flags to the engine
         # self._engine._flag = self._engine._make_service_flag(table)
@@ -542,7 +542,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         table = {ConfigKey.SERVICE_FEE: True,
                  ConfigKey.SERVICE_AUDIT: False,
-                 ConfigKey.SERVICE_DEPLOYER_WHITELIST: False,
+                 ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
                  ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False}
         # TODO: must apply the service flags to the engine
         # self._engine._flag = self._engine._make_service_flag(table)
