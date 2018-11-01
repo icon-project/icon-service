@@ -16,10 +16,11 @@
 """IconScoreEngine module
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from .icon_score_constant import STR_FALLBACK
+from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
-from .icon_score_context import IconScoreContext, IconScoreFuncType
 from .icon_score_mapper import IconScoreMapper
 from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
@@ -114,7 +115,7 @@ class IconScoreEngine(object):
     def _call(self,
               context: 'IconScoreContext',
               icon_score_address: 'Address',
-              data: dict) -> object:
+              data: dict) -> Any:
         """Handle jsonrpc including both invoke and query
 
         :param context:
@@ -126,15 +127,11 @@ class IconScoreEngine(object):
 
         icon_score = self._get_icon_score(context, icon_score_address)
 
-        is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
-        if func_name is not None and is_func_readonly(func_name):
-            context.func_type = IconScoreFuncType.READONLY
-        else:
-            context.func_type = IconScoreFuncType.WRITABLE
-
         converted_params = self._convert_score_params_by_annotations(icon_score, func_name, kw_params)
-        external_func = getattr(icon_score, '_IconScoreBase__external_call')
-        return external_func(func_name=func_name, arg_params=[], kw_params=converted_params)
+        context.set_func_type_by_icon_score(icon_score, func_name)
+
+        score_func = getattr(icon_score, '_IconScoreBase__call')
+        return score_func(func_name=func_name, kw_params=converted_params)
 
     @staticmethod
     def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
@@ -157,8 +154,8 @@ class IconScoreEngine(object):
         """
         icon_score = self._get_icon_score(context, score_address)
 
-        fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
-        fallback_func()
+        score_func = getattr(icon_score, '_IconScoreBase__call')
+        score_func(STR_FALLBACK)
 
     @staticmethod
     def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):

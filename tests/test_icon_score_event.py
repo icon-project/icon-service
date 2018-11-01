@@ -20,18 +20,15 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-
-from iconservice.icon_service_engine import IconServiceEngine
-
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import EventLogException, ScoreErrorException
 from iconservice.database.batch import TransactionBatch
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
+from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.utils import int_to_bytes
@@ -48,6 +45,7 @@ class TestEventlog(unittest.TestCase):
         step_counter = Mock(spec=IconScoreStepCounter)
 
         IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
+        IconScoreContext.icx_engine = Mock(spec=IcxEngine)
         context.type = IconScoreContextType.INVOKE
         context.func_type = IconScoreFuncType.WRITABLE
         context.tx_batch = TransactionBatch()
@@ -55,13 +53,13 @@ class TestEventlog(unittest.TestCase):
         context.traces = traces
         context.step_counter = step_counter
         context.get_owner = Mock()
-        context.internal_call.icx_engine = Mock(spec=IcxEngine)
         ContextContainer._push_context(context)
 
         self._mock_score = EventlogScore(db)
 
     def tearDown(self):
         ContextContainer._clear_context()
+        self._mock_icon_score = None
 
     def test_call_event(self):
         context = ContextContainer._get_context()
@@ -295,9 +293,6 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(4, len(event_log.indexed))
         self.assertEqual(ICX_TRANSFER_EVENT_LOG, event_log.indexed[0])
         self.assertEqual(0, len(event_log.data))
-
-    def tearDown(self):
-        self._mock_icon_score = None
 
 
 class EventlogScore(IconScoreBase):

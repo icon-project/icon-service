@@ -16,6 +16,9 @@
 
 from typing import TYPE_CHECKING
 
+from iconservice.iconscore.icon_score_constant import STR_FALLBACK
+from .icon_score_context_util import IconScoreContextUtil
+from .internal_call import InternalCall
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 
 if TYPE_CHECKING:
@@ -41,7 +44,7 @@ class Icx(object):
         :param addr_to: receiver address
         :param amount: the amount of icx to transfer
         """
-        self._context.internal_call.icx_transfer_call(self._address, addr_to, amount)
+        InternalCall.other_external_call(self._context, self._address, addr_to, amount, STR_FALLBACK)
 
     def send(self, addr_to: 'Address', amount: int) -> bool:
         """
@@ -66,12 +69,12 @@ class Icx(object):
         :param address: address
         :return: ICX balance of given address
         """
-        return self._context.internal_call.get_icx_balance(address)
+        return InternalCall.icx_get_balance(self._context, address)
 
     # noinspection PyBroadException
     def _is_icx_send_defective(self) -> bool:
         try:
-            governance_score = self._context.get_icon_score(GOVERNANCE_SCORE_ADDRESS)
+            governance_score = IconScoreContextUtil.get_icon_score(self._context, GOVERNANCE_SCORE_ADDRESS)
             if governance_score is not None:
                 if hasattr(governance_score, 'getVersion'):
                     version = governance_score.getVersion()

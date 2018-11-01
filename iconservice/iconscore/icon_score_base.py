@@ -31,6 +31,7 @@ from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icx import Icx
+from .internal_call import InternalCall
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException, ServerErrorException
@@ -79,7 +80,7 @@ def interface(func):
         # else:
         #     del kwargs[ICX_VALUE_KEY]
         amount = 0
-        ret = score._context.internal_call.other_external_call(score.address, addr_to, func_name, args, kwargs, amount)
+        ret = InternalCall.other_external_call(score._context, score.address, addr_to, amount, func_name, args, kwargs)
         return ret
 
     return __wrapper
@@ -379,7 +380,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_api(cls) -> dict:
         return getattr(cls, CONST_CLASS_API, "")
 
-    def validate_external_method(self, func_name) -> None:
+    def validate_external_method(self, func_name: str) -> None:
         """Validate the method indicated by func_name is an external method
 
         :param func_name: name of method
@@ -399,25 +400,28 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return DatabaseObserver(
             self.__on_db_get, self.__on_db_put, self.__on_db_delete)
 
-    def __external_call(self,
-                        func_name: str,
-                        arg_params: list,
-                        kw_params: dict) -> Any:
-        self.validate_external_method(func_name)
+    def __call(self,
+               func_name: str,
+               arg_params: Optional[list] = None,
+               kw_params: Optional[dict] = None) -> Any:
+
+        if func_name != STR_FALLBACK:
+            self.validate_external_method(func_name)
 
         self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
 
         score_func = getattr(self, func_name)
-        ret = score_func(*arg_params, **kw_params)
+
+        if func_name == STR_FALLBACK:
+            ret = score_func()
+        else:
+            if arg_params is None:
+                arg_params = []
+            if kw_params is None:
+                kw_params = {}
+            ret = score_func(*arg_params, **kw_params)
 
         return ret
-
-    def __fallback_call(self) -> None:
-        payable_dict = self.__get_attr_dict(CONST_CLASS_PAYABLES)
-        self.__check_payable(STR_FALLBACK, payable_dict)
-
-        score_func = getattr(self, STR_FALLBACK)
-        score_func()
 
     def __check_payable(self, func_name: str, payable_dict: dict):
         if func_name not in payable_dict:
@@ -603,8 +607,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :return: returning value of the external function
         """
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
-
-        return self._context.internal_call.other_external_call(self.address, addr_to, func_name, (), kw_dict, amount)
+        return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
 
     def revert(self, message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:

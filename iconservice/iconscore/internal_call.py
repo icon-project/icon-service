@@ -23,78 +23,73 @@ from .icon_score_trace import Trace, TraceType
 from ..base.address import Address
 from ..base.exception import InvalidRequestException
 from ..base.message import Message
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreFuncType
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
-    from ..icx.icx_engine import IcxEngine
 
 
 class InternalCall(object):
-    icx_engine: 'IcxEngine' = None
 
-    def __init__(self, context: 'IconScoreContext'):
-        self.__context = context
+    @staticmethod
+    def icx_get_balance(context: 'IconScoreContext', address: 'Address') -> int:
+        return context.icx_engine.get_balance(context, address)
 
-    def get_icx_balance(self, address: 'Address') -> int:
-        return self.icx_engine.get_balance(self.__context, address)
-
-    def icx_transfer_call(self, addr_from: 'Address', addr_to: 'Address', amount: int) -> None:
-        """transfer icx to the given 'addr_to'
-        If failed, an exception will be raised
-
-        :param addr_from: icx sender address
-        :param addr_to: icx receiver address
-        :param amount: the amount of icx to transfer
-        """
-        self._call(addr_from, addr_to, None, (), {}, amount)
-
-    def other_external_call(self,
+    @staticmethod
+    def other_external_call(context: 'IconScoreContext',
                             addr_from: 'Address',
                             addr_to: 'Address',
+                            amount: int,
                             func_name: str,
-                            arg_params: tuple,
-                            kw_params: dict,
-                            amount: int) -> Any:
-        return self._call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+                            arg_params: Optional[tuple] = None,
+                            kw_params: Optional[dict] = None) -> Any:
+        return InternalCall._call(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
-    def _call(self,
+    @staticmethod
+    def _call(context: 'IconScoreContext',
               addr_from: 'Address',
               addr_to: 'Address',
-              func_name: Optional[str],
-              arg_params: tuple,
-              kw_params: dict,
-              amount: int) -> Any:
+              amount: int,
+              func_name: str,
+              arg_params: Optional[tuple],
+              kw_params: Optional[dict]) -> Any:
 
-        IconScoreContextUtil.enter_call(self.__context)
+        InternalCall.enter_call(context)
 
         try:
-            self._make_trace(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+            InternalCall._make_trace(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
-            self.__context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
-            self.icx_engine.transfer(self.__context, addr_from, addr_to, amount)
+            context.icx_engine.transfer(context, addr_from, addr_to, amount)
 
             if amount > 0:
-                self.emit_event_log_for_icx_transfer(addr_from, addr_to, amount)
+                InternalCall.emit_event_log_for_icx_transfer(context, addr_from, addr_to, amount)
 
             if addr_to.is_contract:
-                return self._other_score_call(addr_from, addr_to, func_name, arg_params, kw_params, amount)
+                return InternalCall._other_score_call(context,
+                                                      addr_from,
+                                                      addr_to,
+                                                      amount,
+                                                      func_name,
+                                                      arg_params,
+                                                      kw_params)
 
             return None
         except BaseException as e:
-            IconScoreContextUtil.revert_call(self.__context)
+            InternalCall.revert_call(context)
             raise e
         finally:
-            IconScoreContextUtil.leave_call(self.__context)
+            InternalCall.leave_call(context)
 
-    def _make_trace(self,
+    @staticmethod
+    def _make_trace(context: 'IconScoreContext',
                     _from: 'Address',
                     _to: 'Address',
-                    func_name: Optional[str],
-                    arg_params: tuple,
-                    kw_params: dict,
-                    amount: int) -> None:
+                    amount: int,
+                    func_name: str,
+                    arg_params: Optional[tuple],
+                    kw_params: Optional[dict]) -> None:
         if arg_params is None:
             arg_data1 = []
         else:
@@ -107,61 +102,91 @@ class InternalCall(object):
 
         arg_data = arg_data1 + arg_data2
         trace = Trace(_from, TraceType.CALL, [_to, func_name, arg_data, amount])
-        self.__context.traces.append(trace)
+        context.traces.append(trace)
 
-    def _other_score_call(self,
+    @staticmethod
+    def _other_score_call(context: 'IconScoreContext',
                           addr_from: Address,
                           addr_to: 'Address',
-                          func_name: Optional[str],
-                          arg_params: tuple,
-                          kw_params: dict,
-                          amount: int) -> Any:
+                          amount: int,
+                          func_name: str,
+                          arg_params: Optional[tuple],
+                          kw_params: Optional[dict]) -> Any:
         """Call the functions provided by other icon scores.
 
+        :param context:
         :param addr_from:
         :param addr_to:
         :param func_name:
+        :param amount:
         :param arg_params:
         :param kw_params:
-        :param amount:
+
         :return:
         """
-        IconScoreContextUtil.validate_score_blacklist(self.__context, addr_to)
 
-        if len(self.__context.msg_stack) == MAX_CALL_STACK_SIZE:
+        IconScoreContextUtil.validate_score_blacklist(context, addr_to)
+
+        if len(context.msg_stack) == MAX_CALL_STACK_SIZE:
             raise InvalidRequestException('Max call stack size exceeded')
 
-        self.__context.msg_stack.append(self.__context.msg)
+        context.msg_stack.append(context.msg)
 
-        self.__context.msg = Message(sender=addr_from, value=amount)
-        self.current_address = addr_to
+        prev_func_type = context.func_type
+        context.current_address = addr_to
+        context.msg = Message(sender=addr_from, value=amount)
 
-        prev_func_type = self.__context.func_type
         try:
-            icon_score = IconScoreContextUtil.get_icon_score(self.__context, addr_to)
-            is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
-            if func_name is not None and is_func_readonly(func_name):
-                self.__context.func_type = IconScoreFuncType.READONLY
-            else:
-                self.__context.func_type = IconScoreFuncType.WRITABLE
-
-            if func_name is None:
-                fallback_func = getattr(icon_score, '_IconScoreBase__fallback_call')
-                fallback_func()
-                return None
-            else:
-                external_func = getattr(icon_score, '_IconScoreBase__external_call')
-                return external_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
-        except BaseException as e:
-            raise e
+            icon_score = IconScoreContextUtil.get_icon_score(context, addr_to)
+            context.set_func_type_by_icon_score(icon_score, func_name)
+            score_func = getattr(icon_score, '_IconScoreBase__call')
+            return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
         finally:
-            self.__context.func_type = prev_func_type
-            self.current_address = addr_from
-            self.__context.msg = self.__context.msg_stack.pop()
+            context.func_type = prev_func_type
+            context.current_address = addr_from
+            context.msg = context.msg_stack.pop()
 
-    def emit_event_log_for_icx_transfer(self, from_: 'Address', to: 'Address', value: int):
+    @staticmethod
+    def emit_event_log_for_icx_transfer(context: 'IconScoreContext',
+                                        from_: 'Address',
+                                        to: 'Address',
+                                        value: int) -> None:
         event_signature = ICX_TRANSFER_EVENT_LOG
         arguments = [from_, to, value]
         indexed_args_count = 3
-        EventLogEmitter.emit_event_log(
-            self.__context, from_, event_signature, arguments, indexed_args_count)
+        EventLogEmitter.emit_event_log(context, from_, event_signature, arguments, indexed_args_count)
+
+    @staticmethod
+    def enter_call(context: 'IconScoreContext') -> None:
+        """Start to call external function provided by other SCORE
+        """
+        if context.type != IconScoreContextType.INVOKE:
+            return
+
+        context.tx_batch.enter_call()
+
+        context.event_log_stack.append(context.event_logs)
+        context.event_logs = []
+
+    @staticmethod
+    def revert_call(context: 'IconScoreContext') -> None:
+        """An exception happens during calling an external function provided by other SCORE
+        Revert the states changed by this function call
+        """
+        if context.type != IconScoreContextType.INVOKE:
+            return
+
+        context.tx_batch.revert_call()
+        context.event_logs.clear()
+
+    @staticmethod
+    def leave_call(context: 'IconScoreContext') -> None:
+        """Finish to call external function provided by other SCORE
+        """
+        if context.type != IconScoreContextType.INVOKE:
+            return
+
+        context.tx_batch.leave_call()
+
+        prev_event_logs = context.event_log_stack.pop()
+        context.event_logs = prev_event_logs + context.event_logs
