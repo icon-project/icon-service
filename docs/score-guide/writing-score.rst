@@ -173,9 +173,10 @@ raise IconScoreException on import time.
 payable decorator (@payable)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Only functions with ``@payable`` decorator are permitted to transfer icx
-coins. Transferring 0 icx is acceptable. If msg.value (icx) is passed to
-non-payable function, the call will fail.
+Only functions with ``@payable`` decorator are permitted to receive
+incoming ICX coins.  Transferring 0 icx is acceptable. If ICX coins
+(msg.value) are passed to a non-payable function, that transaction
+will fail.
 
 eventlog decorator (@eventlog)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
