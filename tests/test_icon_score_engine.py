@@ -77,9 +77,6 @@ class TestIconScoreEngine(unittest.TestCase):
         self.icon_score_mapper = IconScoreMapper()
 
         self.engine = IconScoreEngine()
-        self.engine.open(
-            self.icx_storage,
-            self.icon_score_mapper)
 
         self._from = create_address(AddressPrefix.EOA)
         self._icon_score_address = create_address(AddressPrefix.CONTRACT)

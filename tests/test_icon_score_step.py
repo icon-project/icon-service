@@ -18,6 +18,8 @@ import unittest
 from typing import Optional
 from unittest.mock import Mock
 
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
@@ -155,14 +157,13 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
+        IconScoreContextUtil.validate_score_blacklist = Mock()
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -194,10 +195,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.set_db(100)
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         # for StepType.SET
@@ -206,7 +205,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # for StepType.REPLACE
         result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
                          (StepType.DEFAULT, 1))
@@ -250,14 +249,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.get_db()
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -292,20 +289,18 @@ class TestIconScoreStepCounter(unittest.TestCase):
             _icx_context_db.get = Mock(return_value=b'1' * 100)
 
         # noinspection PyUnusedLocal
-        def intercept_invoke(*args, **kwargs):
+        def intercept_query(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             return score.query_db()
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.query = score_engine_invoke
+        IconScoreEngine.query = Mock(side_effect=intercept_query)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task._query(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.query.assert_called()
 
         self.assertIsNotNone(result)
 
@@ -332,14 +327,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.remove_db()
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -385,14 +378,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 len(data_param) + \
                 len(text_param.encode('utf-8'))
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
-
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
+        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -429,14 +420,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_readonly(data_to_hash)
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -470,14 +459,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(data_to_hash)
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
-        score_engine_invoke.assert_called()
+        IconScoreEngine.invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -509,10 +496,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(b'1234')
 
-        score_engine_invoke = Mock(side_effect=intercept_invoke)
         self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_engine.invoke = score_engine_invoke
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         raw_step_costs = {
             governance.STEP_TYPE_DEFAULT: 4000,

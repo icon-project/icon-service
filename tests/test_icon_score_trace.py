@@ -142,8 +142,6 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
 
-        self._icon_service_engine._icon_score_engine = Mock(
-            spec=IconScoreEngine)
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
@@ -163,8 +161,7 @@ class TestTrace(unittest.TestCase):
         reason = Mock(spec=str)
         code = ExceptionCode.SCORE_ERROR
         mock_revert = Mock(side_effect=RevertException(reason))
-        self._icon_service_engine._icon_score_engine.attach_mock(
-            mock_revert, "invoke")
+        IconScoreEngine.invoke = Mock(side_effect=mock_revert)
 
         raise_exception_start_tag("test_revert")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
@@ -189,8 +186,6 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
 
-        self._icon_service_engine._icon_score_engine = Mock(
-            spec=IconScoreEngine)
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
@@ -210,8 +205,7 @@ class TestTrace(unittest.TestCase):
         error = Mock(spec=str)
         code = ExceptionCode.SCORE_ERROR
         mock_exception = Mock(side_effect=IconScoreException(error, code))
-        self._icon_service_engine._icon_score_engine.attach_mock(
-            mock_exception, "invoke")
+        IconScoreEngine.invoke = Mock(side_effect=mock_exception)
 
         raise_exception_start_tag("test_throw")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(

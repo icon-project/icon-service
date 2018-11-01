@@ -49,9 +49,6 @@ class TestTransactionResult(unittest.TestCase):
         self._icon_service_engine._icon_score_deploy_engine = \
             Mock(spec=IconScoreDeployEngine)
 
-        self._icon_service_engine._icon_score_engine = \
-            Mock(spec=IconScoreEngine)
-
         self._icon_service_engine._charge_transaction_fee = \
             Mock(return_value=(0, 0))
 
@@ -93,6 +90,7 @@ class TestTransactionResult(unittest.TestCase):
             'timestamp': 1234567890,
             'nonce': 1
         }
+        self._icon_service_engine._process_transaction = Mock(return_value=None)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, params)
@@ -109,10 +107,7 @@ class TestTransactionResult(unittest.TestCase):
     def test_tx_failure(self):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
-
-        self._icon_service_engine._icon_score_engine. \
-            attach_mock(Mock(side_effect=IconServiceBaseException("error")),
-                        "invoke")
+        IconScoreEngine.invoke = Mock(side_effect=IconServiceBaseException("error"))
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
@@ -234,8 +229,7 @@ class TestTransactionResult(unittest.TestCase):
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
 
-        inner_task._icon_service_engine._icon_score_engine.invoke = \
-            Mock(side_effect=intercept_invoke)
+        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
         inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
         from_ = create_address(AddressPrefix.EOA, b'from')

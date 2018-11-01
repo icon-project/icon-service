@@ -78,7 +78,6 @@ class IconServiceEngine(ContextContainer):
         self._icx_storage = None
         self._icx_engine = None
         self._icon_score_mapper = None
-        self._icon_score_engine = None
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
@@ -117,7 +116,6 @@ class IconServiceEngine(ContextContainer):
         self._context_factory = IconScoreContextFactory(max_size=5)
 
         self._icx_engine = IcxEngine()
-        self._icon_score_engine = IconScoreEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
@@ -139,8 +137,6 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
-        self._icon_score_engine.open(
-            self._icx_storage, self._icon_score_mapper)
         self._icon_score_deploy_engine.open(
             score_root_path=score_root_path,
             icon_deploy_storage=icon_score_deploy_storage)
@@ -670,10 +666,10 @@ class IconServiceEngine(ContextContainer):
         data = params.get('data', None)
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        return self._icon_score_engine.query(context,
-                                             icon_score_address,
-                                             data_type,
-                                             data)
+        return IconScoreEngine.query(context,
+                                     icon_score_address,
+                                     data_type,
+                                     data)
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -728,8 +724,8 @@ class IconServiceEngine(ContextContainer):
         return tx_result
 
     def _handle_estimate_step(self,
-                             context: 'IconScoreContext',
-                             params: dict) -> int:
+                              context: 'IconScoreContext',
+                              params: dict) -> int:
         """
         Handles estimate step by execution of tx
 
@@ -918,7 +914,7 @@ class IconServiceEngine(ContextContainer):
             return score_address
         else:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-            self._icon_score_engine.invoke(context, to, data_type, data)
+            IconScoreEngine.invoke(context, to, data_type, data)
             return None
 
     @staticmethod
@@ -991,7 +987,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         icon_score_address: Address = params['address']
-        return self._icon_score_engine.get_score_api(
+        return IconScoreEngine.get_score_api(
             context, icon_score_address)
 
     def _handle_ise_get_status(self, context: 'IconScoreContext', params: dict) -> dict:
