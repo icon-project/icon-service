@@ -23,7 +23,6 @@ from iconservice.base.exception import DatabaseException
 from iconservice.icon_constant import ICON_DB_LOG_TAG
 from iconservice.iconscore.icon_score_context import ContextGetter
 from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.iconscore.icon_score_context import IconScoreFuncType
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContext
@@ -70,49 +69,49 @@ class KeyValueDatabase(object):
         self._db = db
 
     def get(self, key: bytes) -> bytes:
-        """Get value from db using key
+        """Get the value for the specified key.
 
-        :param key: db key
-        :return: value indicated by key otherwise None
+        :param key: (bytes): key to retrieve
+        :return: value for the specified key, or None if not found
         """
         return self._db.get(key)
 
     def put(self, key: bytes, value: bytes) -> None:
-        """Put value into db using key.
+        """Set a value for the specified key.
 
-        :param key: (bytes): db key
-        :param value: (bytes): db에 저장할 데이터
+        :param key: (bytes): key to set
+        :param value: (bytes): data to be stored
         """
         self._db.put(key, value)
 
     def delete(self, key: bytes) -> None:
-        """Delete a row
+        """Delete the key/value pair for the specified key.
 
-        :param key: delete the row indicated by key.
+        :param key: key to delete
         """
         self._db.delete(key)
 
     def close(self) -> None:
-        """Close db
+        """Close the database.
         """
         if self._db:
             self._db.close()
             self._db = None
 
-    def get_sub_db(self, key: bytes):
-        """Get Prefixed db
+    def get_sub_db(self, prefix: bytes) -> 'KeyValueDatabase':
+        """Return a new prefixed database.
 
-        :param key: (bytes): prefixed_db key
+        :param prefix: (bytes): prefix to use
         """
-        return KeyValueDatabase(self._db.prefixed_db(key))
+        return KeyValueDatabase(self._db.prefixed_db(prefix))
 
     def iterator(self) -> iter:
         return self._db.iterator()
 
     def write_batch(self, states: dict) -> None:
-        """bulk data modification
+        """Write a batch to the database for the specified states dict.
 
-        :param states: key:value pairs
+        :param states: key/value pairs
             key and value should be bytes type
         """
         if states is None or len(states) == 0:
@@ -183,7 +182,7 @@ class DatabaseObserver(object):
 class ContextDatabase(object):
     """Database for an IconScore only used in the inside of iconservice.
 
-    IconScore can't access this database directly.
+    IconScore cannot access this database directly.
     Cache + LevelDB
     """
 
@@ -243,7 +242,7 @@ class ContextDatabase(object):
             context: Optional['IconScoreContext'],
             key: bytes,
             value: Optional[bytes]) -> None:
-        """put value to StateDB or catch according to contex type
+        """Set the value to StateDB or cache it according to context type
 
         :param context:
         :param key:
