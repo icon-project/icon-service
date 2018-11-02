@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING
 
+from iconservice.utils import is_lowercase_hex_string
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..deploy import DeployState
@@ -55,7 +56,10 @@ class IconPreValidator:
         :param minimum_step: minimum step
         """
 
-        self._check_data_size(params)
+        if 'message' == params.get('dataType', None):
+            self._check_message_data(params.get('data', None))
+
+        self._check_input_size(params)
 
         value: int = params.get('value', 0)
         if value < 0:
@@ -79,10 +83,23 @@ class IconPreValidator:
         else:
             self._check_from_can_charge_fee_v3(context, params, step_price)
 
-    def _check_data_size(self, params: dict):
+    @staticmethod
+    def _check_message_data(data):
         """
-        Validates transaction data size whether total character length is less than MAX_DATA_SIZE
-        If the property is a key-value object, counts key length and value length.
+        Check if the message data is a lowercase hex string
+        :param data: input data of message type
+        """
+
+        if not isinstance(data, str) or \
+                data[:2] != '0x' or \
+                (not is_lowercase_hex_string(data[2:]) and len(data) % 2 == 0):
+            raise InvalidRequestException(
+                'The message data should be a lowercase hex string')
+
+    def _check_input_size(self, params: dict):
+        """
+        Validates transaction data whether total bytes is less than MAX_DATA_SIZE
+        If the property is a key-value object, counts key and value.
 
         Assume that values in params have already been converted
         to original format (string -> int, string -> Address, etc)
@@ -93,23 +110,23 @@ class IconPreValidator:
 
         if 'data' in params:
             data = params['data']
-            size = self._get_character_length(data)
+            size = self._get_data_size(data)
 
             if size > MAX_DATA_SIZE:
                 raise InvalidRequestException(f'The data field is too big')
 
-    def _get_character_length(self, data) -> int:
+    def _get_data_size(self, data) -> int:
         size = 0
         if data:
             if isinstance(data, dict):
                 for k, v in data.items():
-                    size += len(k)
-                    size += self._get_character_length(v)
+                    size += len(k.encode('utf-8'))
+                    size += self._get_data_size(v)
             elif isinstance(data, list):
                 for v in data:
-                    size += self._get_character_length(v)
+                    size += self._get_data_size(v)
             elif isinstance(data, str):
-                size += len(data)
+                size = len(data.encode('utf-8'))
 
         return size
 

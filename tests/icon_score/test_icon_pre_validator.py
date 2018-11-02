@@ -111,20 +111,38 @@ class TestTransactionValidator(unittest.TestCase):
         self.validator.execute_to_check_out_of_balance(None, {"version": 3}, ANY)
         self.validator._check_from_can_charge_fee_v3.assert_called_once()
 
-    def test_check_data_size(self):
-        self.validator._get_character_length = Mock()
-        self.validator._check_data_size({})
+    def test_check_message_data(self):
+        self.assert_message_input_raises(None)
+        self.assert_message_input_raises({})
+        self.assert_message_input_raises([])
+        self.assert_message_input_raises(1234)
+        self.assert_message_input_raises('message data')
+        self.assert_message_input_raises('0x1234ABCD')
+        self.validator._check_message_data('0x1234abcd')
 
-        self.validator._get_character_length = Mock(return_value=MAX_DATA_SIZE - 1)
-        self.validator._check_data_size({"data": ANY})
-
-        self.validator._get_character_length = Mock(return_value=MAX_DATA_SIZE + 1)
+    def assert_message_input_raises(self, data):
         with self.assertRaises(InvalidRequestException) as e:
-            self.validator._check_data_size({"data": ANY})
+            exception_code = ExceptionCode.INVALID_REQUEST
+            exception_message = 'The message data should be a lowercase hex string'
+            self.validator._check_message_data(data)
+
+        self.assertEqual(e.exception.code, exception_code)
+        self.assertEqual(e.exception.message, exception_message)
+
+    def test_check_input_data_size(self):
+        self.validator._get_get_data_size = Mock()
+        self.validator._check_input_size({})
+
+        self.validator._get_data_size = Mock(return_value=MAX_DATA_SIZE - 1)
+        self.validator._check_input_size({"data": ANY})
+
+        self.validator._get_data_size = Mock(return_value=MAX_DATA_SIZE + 1)
+        with self.assertRaises(InvalidRequestException) as e:
+            self.validator._check_input_size({"data": ANY})
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
         self.assertEqual(e.exception.message, "The data field is too big")
 
-    def test_get_character_length(self):
+    def test_get_data_size(self):
         KEYS = [f"key{i}" for i in range(8)]
         VALUES = [f"value{i}" for i in range(9)]
 
@@ -146,11 +164,11 @@ class TestTransactionValidator(unittest.TestCase):
 
         data_len = 0
         for key in KEYS:
-            data_len += len(key)
+            data_len += len(key.encode('utf-8'))
         for value in VALUES:
-            data_len += len(value)
+            data_len += len(value.encode('utf-8'))
 
-        ret = self.validator._get_character_length(data)
+        ret = self.validator._get_data_size(data)
         self.assertEqual(data_len, ret)
 
     def test_check_from_can_charge_fee_v2(self):
