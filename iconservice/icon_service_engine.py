@@ -94,7 +94,7 @@ class IconServiceEngine(ContextContainer):
             'icx_getTotalSupply': self._handle_icx_get_total_supply,
             'icx_call': self._handle_icx_call,
             'icx_sendTransaction': self._handle_icx_send_transaction,
-            'icx_estimateStep': self._handle_estimate_step,
+            'debug_estimateStep': self._handle_estimate_step,
             'icx_getScoreApi': self._handle_icx_get_score_api,
             'ise_getStatus': self._handle_ise_get_status
         }
@@ -589,7 +589,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         method = request['method']
-        assert method in ('icx_sendTransaction', 'icx_estimateStep')
+        assert method in ('icx_sendTransaction', 'debug_estimateStep')
         assert 'params' in request
 
         params: dict = request['params']
