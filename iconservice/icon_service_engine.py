@@ -296,8 +296,6 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        self._init_global_value_by_governance_score()
-
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
@@ -306,6 +304,7 @@ class IconServiceEngine(ContextContainer):
         block_result = []
 
         if block.height == 0:
+            self._init_global_value_by_governance_score()
             # Assume that there is only one tx in genesis_block
             tx_result = self._invoke_genesis(context, tx_requests[0], 0)
             block_result.append(tx_result)
@@ -313,6 +312,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
+                self._init_global_value_by_governance_score()
                 tx_result = self._invoke_request(context, tx_request, index)
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
@@ -514,6 +514,7 @@ class IconServiceEngine(ContextContainer):
         :return: The amount of step
         """
         context = self._context_factory.create(IconScoreContextType.ESTIMATION)
+        self._init_global_value_by_governance_score()
         # Fills the step_limit as the max step limit to proceed the transaction.
         step_limit = self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
         context.step_counter = self._step_counter_factory.create(step_limit)
@@ -543,6 +544,7 @@ class IconServiceEngine(ContextContainer):
         :return: the result of query
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
+        self._init_global_value_by_governance_score()
         context.block = self._icx_storage.last_block
         step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
@@ -580,6 +582,7 @@ class IconServiceEngine(ContextContainer):
         assert 'params' in request
 
         params: dict = request['params']
+        self._init_global_value_by_governance_score()
         step_price: int = self._get_step_price()
         minimum_step = \
             self._step_counter_factory.get_step_cost(StepType.DEFAULT)
