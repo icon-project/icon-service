@@ -488,11 +488,11 @@ class IconServiceEngine(ContextContainer):
 
         context.step_counter.apply_step(StepType.DEFAULT, 1)
 
-        input_size = self._get_byte_length(data)
+        input_size = self._get_data_size_in_bytes(context.revision, data)
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         if data_type == "deploy":
-            data_size = self._get_byte_length(data.get('content', None))
+            data_size = self._get_data_size_in_bytes(context.revision, data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
             # When installing SCORE.
             if to == ZERO_SCORE_ADDRESS:
@@ -638,7 +638,7 @@ class IconServiceEngine(ContextContainer):
             # minimum_step is the sum of
             # default STEP cost and input STEP costs if data field exists
             data = params['data']
-            input_size = self._get_byte_length(data)
+            input_size = self._get_data_size_in_bytes(context.revision, data)
             minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
         self._icon_pre_validator.execute(context, params, step_price, minimum_step)
@@ -818,7 +818,7 @@ class IconServiceEngine(ContextContainer):
         # Every send_transaction are calculated DEFAULT STEP at first
         context.step_counter.apply_step(StepType.DEFAULT, 1)
 
-        input_size = self._get_byte_length(params.get('data', None))
+        input_size = self._get_data_size_in_bytes(context.revision, params.get('data', None))
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         self._transfer_coin(context, params)
@@ -829,31 +829,49 @@ class IconServiceEngine(ContextContainer):
 
         return score_address
 
-    def _get_byte_length(self, data) -> int:
+    def _get_data_size_in_bytes(self, revision: int, data) -> int:
         size = 0
-        if data:
-            if isinstance(data, dict):
-                for v in data.values():
-                    size += self._get_byte_length(v)
-            elif isinstance(data, list):
-                for v in data:
-                    size += self._get_byte_length(v)
-            elif isinstance(data, str):
-                # If the value is hexstring, it is calculated as bytes otherwise
-                # string
-                data_body = data[2:] if data.startswith('0x') else data
-                if is_lowercase_hex_string(data_body):
-                    data_body_length = len(data_body)
-                    size += data_body_length // 2
-                    if data_body_length % 2 == 1:
-                        size += 1
-                else:
-                    size += len(data.encode('utf-8'))
-            else:
-                # int and bool
-                if isinstance(data, int):
-                    size += byte_length_of_int(data)
+        if isinstance(data, dict):
+            size = self._get_dict_size_in_bytes(revision, data)
+        elif isinstance(data, list):
+            for v in data:
+                size += self._get_data_size_in_bytes(revision, v)
+        elif isinstance(data, str):
+            size = self._get_string_size_in_bytes(revision, data)
+        else:
+            # int and bool
+            if isinstance(data, int):
+                size = byte_length_of_int(data)
         return size
+
+    def _get_dict_size_in_bytes(self, revision: int, data: 'dict') -> int:
+        size = 0
+        for k, v in data.items():
+            if revision >= REVISION_3:
+                # Revision 3 or after, counts keys of dict also
+                size += len(k.encode('utf-8'))
+            size += self._get_data_size_in_bytes(revision, v)
+        return size
+
+    @staticmethod
+    def _get_string_size_in_bytes(revision: int, data: 'str') -> int:
+        # If the value is a hex-string, it is calculated as bytes otherwise
+        # UTF-8 string
+        if revision >= REVISION_3:
+            # Revision 3 or after, Hex prefix can be '0x' or '-0x'
+            index_of_hex_body = 2 if data[:2] == '0x' else 3 if data[:3] == '-0x' else -1
+        else:
+            # Before revision 3, Hex prefix can be '0x' only
+            index_of_hex_body = 2 if data.startswith('0x') else 0
+
+        if index_of_hex_body >= 0 and is_lowercase_hex_string(data[index_of_hex_body:]):
+            data_body_length = len(data) - index_of_hex_body
+            size = data_body_length // 2
+            if data_body_length % 2 == 1:
+                size += 1
+            return size
+        else:
+            return len(data.encode('utf-8'))
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
@@ -957,7 +975,7 @@ class IconServiceEngine(ContextContainer):
                 score_address = to
                 context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
-            data_size = self._get_byte_length(data.get('content', None))
+            data_size = self._get_data_size_in_bytes(context.revision, data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
 
             self._icon_score_deploy_engine.invoke(

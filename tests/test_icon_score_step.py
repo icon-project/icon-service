@@ -116,6 +116,34 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check SCORE update stepUsed value
         self._assert_step_used(step_used_update, request2, tx_hash2)
 
+    def test_message_step(self):
+        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
+
+        tx_hash1 = bytes.hex(create_tx_hash())
+        from_ = create_address(AddressPrefix.EOA)
+        to_ = from_
+        # data size 25
+        data = '0x01234abcde01234abcde01234abcde01234abcde01234abcde'
+
+        request = create_request([
+            ReqData(tx_hash1, from_, to_, 'message', data),
+        ])
+
+        result = self._inner_task_invoke(request)
+        self.assertEqual(result['txResults'][tx_hash1]['status'], '0x1')
+
+        input_length = 25
+
+        self.assertEqual(self.step_counter.apply_step.call_args_list[0][0],
+                         (StepType.DEFAULT, 1))
+        self.assertEqual(self.step_counter.apply_step.call_args_list[1][0],
+                         (StepType.INPUT, input_length))
+        self.assertEqual(len(self.step_counter.apply_step.call_args_list), 2)
+
+        step_used = self._calc_step_used(0, 2)
+
+        self._assert_step_used(step_used, request, tx_hash1)
+
     def test_transfer_step(self):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
