@@ -19,6 +19,7 @@ from os import makedirs
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -47,7 +48,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
-from .precommit_data_manager import PrecommitData, PrecommitDataManager
+from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .utils import byte_length_of_int
 from .utils import is_lowercase_hex_string
 from .utils import sha3_256, int_to_bytes
@@ -180,42 +181,56 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-            if governance_score is None:
-                raise ServerErrorException(f'governance_score is None')
+            governance_score = self._get_governance_score(context)
 
-            # Gets the step price if the fee flag is on
-            # and set to the counter factory
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
-                step_price = governance_score.getStepPrice()
-            else:
-                step_price = 0
+            step_price = self._get_step_price_from_governance(context, governance_score)
+            step_costs = self._get_step_costs_from_governance(governance_score)
+            max_step_limits = self._get_step_max_limits_from_governance(governance_score)
 
-            self._step_counter_factory.set_step_price(step_price)
-
-            # Gets the step costs and set to the counter factory
-            step_costs = governance_score.getStepCosts()
-
-            for key, value in step_costs.items():
-                try:
-                    self._step_counter_factory.set_step_cost(
-                        StepType(key), value)
-                except ValueError:
-                    # Pass the unknown step type
-                    pass
-
-            # Gets the max step limit and keep into the counter factory
-            self._step_counter_factory.set_max_step_limit(
-                IconScoreContextType.INVOKE,
-                governance_score.getMaxStepLimit("invoke"))
-            self._step_counter_factory.set_max_step_limit(
-                IconScoreContextType.QUERY,
-                governance_score.getMaxStepLimit("query"))
+            # Keep properties into the counter factory
+            self._step_counter_factory.set_step_properties(
+                step_price, step_costs, max_step_limits)
 
         finally:
             self._pop_context()
 
         self._context_factory.destroy(context)
+
+    @staticmethod
+    def _get_governance_score(context):
+        governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(
+            context, GOVERNANCE_SCORE_ADDRESS)
+        if governance_score is None:
+            raise ServerErrorException(f'governance_score is None')
+        return governance_score
+
+    @staticmethod
+    def _get_step_price_from_governance(context: 'IconScoreContext', governance):
+        step_price = 0
+        # Gets the step price if the fee flag is on
+        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
+            step_price = governance.getStepPrice()
+
+        return step_price
+
+    @staticmethod
+    def _get_step_costs_from_governance(governance):
+        step_costs = {}
+        # Gets the step costs
+        for key, value in governance.getStepCosts().items():
+            try:
+                step_costs[StepType(key)] = value
+            except ValueError:
+                # Pass the unknown step type
+                pass
+
+        return step_costs
+
+    @staticmethod
+    def _get_step_max_limits_from_governance(governance):
+        # Gets the max step limit
+        return {IconScoreContextType.INVOKE: governance.getMaxStepLimit("invoke"),
+                IconScoreContextType.QUERY: governance.getMaxStepLimit("query")}
 
     def _validate_deployer_whitelist(
             self, context: 'IconScoreContext', params: dict):
@@ -231,9 +246,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-            if governance_score is None:
-                raise ServerErrorException(f'governance_score is None')
+            governance_score = self._get_governance_score(context)
 
             if not governance_score.isDeployer(_from):
                 raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
@@ -250,9 +263,7 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             # Gets the governance SCORE
-            governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-            if governance_score is None:
-                raise ServerErrorException(f'governance_score is None')
+            governance_score = self._get_governance_score(context)
 
             if governance_score.isInScoreBlackList(_to):
                 raise ServerErrorException(f'The Score is in Black List (address: {_to})')
@@ -299,11 +310,13 @@ class IconServiceEngine(ContextContainer):
         self._init_global_value_by_governance_score()
 
         context = self._context_factory.create(IconScoreContextType.INVOKE)
+        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
         block_result = []
+        precommit_flag = PrecommitFlag.NONE
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -317,16 +330,59 @@ class IconServiceEngine(ContextContainer):
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
                 context.tx_batch.clear()
+                precommit_flag = self._get_precommit_step_flag(precommit_flag, tx_result)
+
+                if precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
+                    self._update_step_properties(context, precommit_flag)
 
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
-            context.block_batch, block_result, context.new_icon_score_mapper)
+            context.block_batch, block_result, context.new_icon_score_mapper, precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         self._context_factory.destroy(context)
 
         return block_result, precommit_data.state_root_hash
+
+    @staticmethod
+    def _get_precommit_step_flag(precommit_flag, tx_result):
+        if tx_result.score_address == GOVERNANCE_SCORE_ADDRESS:
+            # Governance is updated last tx, Updates STEP properties
+            precommit_flag = PrecommitFlag.STEP_ALL_CHANGED
+        else:
+            for event_log in tx_result.event_logs:
+                if event_log.score_address == GOVERNANCE_SCORE_ADDRESS:
+                    if event_log.indexed[0] == 'StepPriceChanged(int)':
+                        precommit_flag |= PrecommitFlag.STEP_PRICE_CHANGED
+
+                    if event_log.indexed[0] == 'StepCostChanged(str,int)':
+                        precommit_flag |= PrecommitFlag.STEP_COST_CHANGED
+
+                    if event_log.indexed[0] == 'MaxStepLimitChanged(str,int)':
+                        precommit_flag |= PrecommitFlag.STEP_MAX_LIMIT_CHANGED
+
+        return precommit_flag
+
+    def _update_step_properties(self, context, precommit_flag):
+
+        governance_score = self._get_governance_score(context)
+
+        if precommit_flag & PrecommitFlag.STEP_PRICE_CHANGED \
+                == PrecommitFlag.STEP_PRICE_CHANGED:
+            step_price = self._get_step_price_from_governance(context, governance_score)
+            context.step_counter.set_step_price(step_price)
+
+        if precommit_flag & PrecommitFlag.STEP_COST_CHANGED \
+                == PrecommitFlag.STEP_COST_CHANGED:
+            step_costs = self._get_step_costs_from_governance(governance_score)
+            context.step_counter.set_step_costs(step_costs)
+
+        if precommit_flag & PrecommitFlag.STEP_MAX_LIMIT_CHANGED \
+                == PrecommitFlag.STEP_MAX_LIMIT_CHANGED:
+            max_step_limit = \
+                self._get_step_max_limits_from_governance(governance_score).get(context.type)
+            context.step_counter.set_max_step_limit(max_step_limit)
 
     @staticmethod
     def _is_genesis_block(
@@ -411,9 +467,7 @@ class IconServiceEngine(ContextContainer):
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
-        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
-        if 'stepLimit' in params:
-            step_limit = min(params['stepLimit'], step_limit)
+        step_limit = params.get('stepLimit', context.step_counter.max_step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -425,7 +479,7 @@ class IconServiceEngine(ContextContainer):
         context.current_address = to
         context.event_logs: List['EventLog'] = []
         context.traces: List['Trace'] = []
-        context.step_counter = self._step_counter_factory.create(step_limit)
+        context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
 
@@ -490,7 +544,7 @@ class IconServiceEngine(ContextContainer):
 
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = self._icx_storage.get_account(context, from_)
-        account.deposit(step_limit * self._get_step_price() + params.get('value', 0))
+        account.deposit(step_limit * context.step_counter.step_price + params.get('value', 0))
         self._icx_storage.put_account(context, from_, account)
         return self._call(context, method, params)
 
@@ -514,9 +568,10 @@ class IconServiceEngine(ContextContainer):
         :return: The amount of step
         """
         context = self._context_factory.create(IconScoreContextType.ESTIMATION)
+        context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
         # Fills the step_limit as the max step limit to proceed the transaction.
-        step_limit = self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
-        context.step_counter = self._step_counter_factory.create(step_limit)
+        step_limit = context.step_counter.max_step_limit
+        context.step_counter.reset(step_limit)
 
         params: dict = request['params']
         data_type: str = params.get('dataType')
@@ -544,17 +599,17 @@ class IconServiceEngine(ContextContainer):
         """
         context = self._context_factory.create(IconScoreContextType.QUERY)
         context.block = self._icx_storage.last_block
-        step_limit = self._step_counter_factory.get_max_step_limit(context.type)
+        context.step_counter: IconScoreStepCounter = \
+            self._step_counter_factory.create(IconScoreContextType.QUERY)
+        step_limit = context.step_counter.max_step_limit
 
         if params:
             from_: 'Address' = params.get('from', None)
             context.msg = Message(sender=from_)
-            if 'stepLimit' in params:
-                step_limit = min(params['stepLimit'], step_limit)
+            step_limit = params.get('stepLimit', step_limit)
 
         context.traces: List['Trace'] = []
-        context.step_counter: IconScoreStepCounter = \
-            self._step_counter_factory.create(step_limit)
+        context.step_counter.reset(step_limit)
 
         ret = self._call(context, method, params)
 
@@ -580,21 +635,23 @@ class IconServiceEngine(ContextContainer):
         assert 'params' in request
 
         params: dict = request['params']
-        step_price: int = self._get_step_price()
-        minimum_step = \
-            self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+
+        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
+        context.step_counter: IconScoreStepCounter = \
+            self._step_counter_factory.create(IconScoreContextType.QUERY)
+
+        step_price: int = context.step_counter.step_price
+        minimum_step = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
 
         if 'data' in params:
             # minimum_step is the sum of
             # default STEP cost and input STEP costs if data field exists
             data = params['data']
             input_size = self._get_byte_length(data)
-            minimum_step += input_size * \
-                self._step_counter_factory.get_step_cost(StepType.INPUT)
+            minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
-        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
             self._validate_deployer_whitelist(context, params)
@@ -859,13 +916,6 @@ class IconServiceEngine(ContextContainer):
         # final step_used and step_price
         return step_used, step_price
 
-    def _get_step_price(self):
-        """
-        Gets the step price
-        :return: step price in loop unit
-        """
-        return self._step_counter_factory.get_step_price()
-
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',
                              to: 'Address',
@@ -1048,6 +1098,9 @@ class IconServiceEngine(ContextContainer):
         self._icx_storage.put_block_info(context, block_batch.block)
         self._precommit_data_manager.commit(block_batch.block)
         self._context_factory.destroy(context)
+
+        if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
+            self._init_global_value_by_governance_score()
 
     def rollback(self, block: 'Block') -> None:
         """Throw away a precommit state

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from enum import Enum, auto
+from threading import Lock
 from typing import TYPE_CHECKING
 
 from iconservice.icon_constant import MAX_EXTERNAL_CALL_COUNT
@@ -52,12 +53,45 @@ class IconScoreStepCounterFactory(object):
     """
 
     def __init__(self) -> None:
-        self._step_cost_dict = {}
+        self._lock = Lock()
         self._step_price = 0
+        self._step_costs = {}
         self._max_step_limits = {}
 
+    def set_step_properties(self, step_price=None, step_costs=None, max_step_limits=None):
+        """Sets the STEP properties if exists
+
+        :param step_price: step price
+        :param step_costs: step cost dict
+        :param max_step_limits: max step limit dict
+        """
+        with self._lock:
+            if step_price is not None:
+                self._step_price = step_price
+            if step_costs is not None:
+                self._step_costs = step_costs
+            if max_step_limits is not None:
+                self._max_step_limits = max_step_limits
+
+    def get_step_price(self):
+        """Returns the step price
+
+        :return: step price
+        """
+        with self._lock:
+            return self._step_price
+
+    def set_step_price(self, step_price: int):
+        """Sets the step price
+
+        :param step_price: step price
+        """
+        with self._lock:
+            self._step_price = step_price
+
     def get_step_cost(self, step_type: 'StepType') -> int:
-        return self._step_cost_dict.get(step_type, 0)
+        with self._lock:
+            return self._step_costs.get(step_type, 0)
 
     def set_step_cost(self, step_type: 'StepType', value: int):
         """Sets the step cost for specific action.
@@ -65,28 +99,16 @@ class IconScoreStepCounterFactory(object):
         :param step_type: specific action
         :param value: step cost
         """
-        self._step_cost_dict[step_type] = value
-
-    def get_step_price(self):
-        """Returns the step price
-
-        :return: step price
-        """
-        return self._step_price
-
-    def set_step_price(self, step_price: int):
-        """Sets the step price
-
-        :param step_price: step price
-        """
-        self._step_price = step_price
+        with self._lock:
+            self._step_costs[step_type] = value
 
     def get_max_step_limit(self, context_type: 'IconScoreContextType'):
         """Returns the max step limit
 
         :return: the max step limit
         """
-        return self._max_step_limits.get(context_type, 0)
+        with self._lock:
+            return self._max_step_limits.get(context_type, 0)
 
     def set_max_step_limit(
             self, context_type: 'IconScoreContextType', max_step_limit: int):
@@ -95,20 +117,22 @@ class IconScoreStepCounterFactory(object):
         :param context_type: context type
         :param max_step_limit: the max step limit for the context type
         """
-        self._max_step_limits[context_type] = max_step_limit
+        with self._lock:
+            self._max_step_limits[context_type] = max_step_limit
 
-    def create(self, step_limit: int) \
-            -> 'IconScoreStepCounter':
+    def create(self, context_type: 'IconScoreContextType') -> 'IconScoreStepCounter':
         """Creates a step counter for the transaction
 
-        :param step_limit: step limit of the transaction.
+        :param context_type: context type
         :return: step counter
         """
 
-        # Copying a `dict` so as not to change step costs when processing a
-        # transaction.
-        return IconScoreStepCounter(
-            self._step_cost_dict.copy(), step_limit, self._step_price)
+        with self._lock:
+            max_step_limit = self._max_step_limits.get(context_type, 0)
+            # Copying a `dict` so as not to change step costs when processing a
+            # transaction.
+            return IconScoreStepCounter(
+                self._step_price, self._step_costs.copy(), max_step_limit)
 
 
 class OutOfStepException(IconServiceBaseException):
@@ -172,29 +196,37 @@ class IconScoreStepCounter(object):
     """
 
     def __init__(self,
-                 step_cost_dict: dict,
-                 step_limit: int,
-                 step_price: int) -> None:
+                 step_price: int,
+                 step_costs: dict,
+                 max_step_limit: int) -> None:
         """Constructor
 
-        :param step_cost_dict: a dict of base step costs
-        :param step_limit: step limit for the transaction
         :param step_price: step price
+        :param step_costs: a dict of base step costs
+        :param max_step_limit: max step limit for current context type
         """
-        self._step_cost_dict: dict = step_cost_dict
-        self._step_limit: int = step_limit
         self._step_price = step_price
+        self._step_costs: dict = step_costs
+        self._max_step_limit: int = max_step_limit
+        self._step_limit: int = 0
         self._step_used: int = 0
         self._external_call_count: int = 0
 
     @property
-    def step_used(self) -> int:
+    def step_price(self) -> int:
         """
-        Returns used steps in the transaction
-        :return: used steps in the transaction
+        Returns the step price
+        :return: step price
         """
-        return max(self._step_used,
-                   self._step_cost_dict.get(StepType.DEFAULT, 0))
+        return self._step_price
+
+    @property
+    def max_step_limit(self) -> int:
+        """
+        Returns max step limit for current context
+        :return: max step limit
+        """
+        return self._max_step_limit
 
     @property
     def step_limit(self) -> int:
@@ -205,12 +237,13 @@ class IconScoreStepCounter(object):
         return self._step_limit
 
     @property
-    def step_price(self) -> int:
+    def step_used(self) -> int:
         """
-        Returns the step price
-        :return: step price
+        Returns used steps in the transaction
+        :return: used steps in the transaction
         """
-        return self._step_price
+        return max(self._step_used,
+                   self._step_costs.get(StepType.DEFAULT, 0))
 
     def apply_step(self, step_type: StepType, count: int) -> int:
         """ Increases steps for given step cost
@@ -221,7 +254,7 @@ class IconScoreStepCounter(object):
             if self._external_call_count > MAX_EXTERNAL_CALL_COUNT:
                 raise InvalidRequestException('Too many external calls')
 
-        step_to_apply = self._step_cost_dict.get(step_type, 0) * count
+        step_to_apply = self._step_costs.get(step_type, 0) * count
         if step_to_apply + self._step_used > self._step_limit:
             step_used = self._step_used
             self._step_used = self._step_limit
@@ -231,3 +264,33 @@ class IconScoreStepCounter(object):
         self._step_used += step_to_apply
 
         return self.step_used
+
+    def reset(self, step_limit: int):
+        """
+
+        :return:
+        """
+        self._step_limit: int = min(step_limit, self._max_step_limit)
+        self._step_used: int = 0
+        self._external_call_count: int = 0
+
+    def set_step_price(self, step_price: int):
+        """Sets the step price
+
+        :param step_price: step price
+        """
+        self._step_price = step_price
+
+    def set_step_costs(self, step_costs: dict):
+        """Sets the step costs dict
+
+        :param step_costs: step costs dict
+        """
+        self._step_costs = step_costs
+
+    def set_max_step_limit(self, max_step_limit: int):
+        """Sets the max step limit for current context
+
+        :param max_step_limit: max step limit
+        """
+        self._max_step_limit = max_step_limit
