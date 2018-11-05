@@ -34,7 +34,6 @@ from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
-from .iconscore.icon_score_context import IconScoreContextFactory
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
@@ -73,7 +72,6 @@ class IconServiceEngine(ContextContainer):
 
         """
         self._conf = None
-        self._context_factory = None
         self._icx_context_db = None
         self._icx_storage = None
         self._icx_engine = None
@@ -112,8 +110,6 @@ class IconServiceEngine(ContextContainer):
         # Share one context db with all SCOREs
         ContextDatabaseFactory.open(
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
-
-        self._context_factory = IconScoreContextFactory(max_size=5)
 
         self._icx_engine = IcxEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
@@ -157,7 +153,7 @@ class IconServiceEngine(ContextContainer):
         return make_flag
 
     def _load_builtin_scores(self):
-        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
         try:
             self._push_context(context)
             icon_builtin_score_loader = \
@@ -173,7 +169,7 @@ class IconServiceEngine(ContextContainer):
 
         :return:
         """
-        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
+        context = IconScoreContext(IconScoreContextType.QUERY)
         # Clarifies that This Context does not count steps
         context.step_counter = None
 
@@ -214,8 +210,6 @@ class IconServiceEngine(ContextContainer):
 
         finally:
             self._pop_context()
-
-        self._context_factory.destroy(context)
 
     def _validate_deployer_whitelist(
             self, context: 'IconScoreContext', params: dict):
@@ -264,14 +258,13 @@ class IconServiceEngine(ContextContainer):
         including db, memory and so on
         """
         self._icon_score_mapper.clear_garbage_score()
-        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
         self._push_context(context)
         try:
             self._icx_engine.close()
             self._icon_score_mapper.close()
         finally:
             self._pop_context()
-            self._context_factory.destroy(context)
             ContextDatabaseFactory.close()
             self._clear_context()
 
@@ -298,7 +291,7 @@ class IconServiceEngine(ContextContainer):
 
         self._init_global_value_by_governance_score()
 
-        context = self._context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         context.block = block
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
@@ -323,8 +316,6 @@ class IconServiceEngine(ContextContainer):
         precommit_data = PrecommitData(
             context.block_batch, block_result, context.new_icon_score_mapper)
         self._precommit_data_manager.push(precommit_data)
-
-        self._context_factory.destroy(context)
 
         return block_result, precommit_data.state_root_hash
 
@@ -513,7 +504,7 @@ class IconServiceEngine(ContextContainer):
 
         :return: The amount of step
         """
-        context = self._context_factory.create(IconScoreContextType.ESTIMATION)
+        context = IconScoreContext(IconScoreContextType.ESTIMATION)
         # Fills the step_limit as the max step limit to proceed the transaction.
         step_limit = self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
         context.step_counter = self._step_counter_factory.create(step_limit)
@@ -542,7 +533,7 @@ class IconServiceEngine(ContextContainer):
         :param params:
         :return: the result of query
         """
-        context = self._context_factory.create(IconScoreContextType.QUERY)
+        context = IconScoreContext(IconScoreContextType.QUERY)
         context.block = self._icx_storage.last_block
         step_limit = self._step_counter_factory.get_max_step_limit(context.type)
 
@@ -557,8 +548,6 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.create(step_limit)
 
         ret = self._call(context, method, params)
-
-        self._context_factory.destroy(context)
 
         return ret
 
@@ -594,11 +583,10 @@ class IconServiceEngine(ContextContainer):
 
         self._icon_pre_validator.execute(params, step_price, minimum_step)
 
-        context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
+        context = IconScoreContext(IconScoreContextType.QUERY)
         self._validate_score_blacklist(context, params)
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
             self._validate_deployer_whitelist(context, params)
-        self._context_factory.destroy(context)
 
     def _call(self,
               context: 'IconScoreContext',
@@ -1033,7 +1021,7 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before commit
         self._precommit_data_manager.validate_precommit_block(block)
 
-        context = self._context_factory.create(IconScoreContextType.DIRECT)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
 
         precommit_data: 'PrecommitData' = \
             self._precommit_data_manager.get(block.hash)
@@ -1047,7 +1035,6 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_storage.put_block_info(context, block_batch.block)
         self._precommit_data_manager.commit(block_batch.block)
-        self._context_factory.destroy(context)
 
     def rollback(self, block: 'Block') -> None:
         """Throw away a precommit state
