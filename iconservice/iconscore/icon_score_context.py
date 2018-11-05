@@ -173,32 +173,3 @@ class IconScoreContext(object):
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         self.icon_score_deploy_engine.deploy(self, tx_hash)
-
-
-class IconScoreContextFactory(object):
-    """IconScoreContextFactory
-    """
-
-    def __init__(self, max_size: int) -> None:
-        """Constructor
-        """
-        self._lock = threading.Lock()
-        self._queue = []
-        self._max_size = max_size
-
-    def create(self,
-               context_type: 'IconScoreContextType') -> 'IconScoreContext':
-        with self._lock:
-            if len(self._queue) > 0:
-                context = self._queue.pop()
-                context.type = context_type
-            else:
-                context = IconScoreContext(context_type)
-
-        return context
-
-    def destroy(self, context: 'IconScoreContext') -> None:
-        with self._lock:
-            if len(self._queue) < self._max_size:
-                context.clear()
-                self._queue.append(context)

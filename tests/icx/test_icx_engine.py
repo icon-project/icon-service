@@ -20,8 +20,7 @@ import unittest
 
 from iconservice.base.address import Address, MalformedAddress
 from iconservice.database.db import ContextDatabase
-from iconservice.iconscore.icon_score_context import ContextContainer
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
+from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.icx.icx_account import AccountType
 from iconservice.icx.icx_engine import IcxEngine
@@ -40,8 +39,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.fee_treasury_address = Address.from_string('hx' + '1' * 40)
         self.total_supply = 10 ** 20  # 100 icx
 
-        self.factory = IconScoreContextFactory(max_size=1)
-        self.context = self.factory.create(IconScoreContextType.DIRECT)
+        self.context = IconScoreContext(IconScoreContextType.DIRECT)
 
         icx_storage = IcxStorage(db)
         self.engine.open(icx_storage)
@@ -56,7 +54,6 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
     def tearDown(self):
         self._clear_context()
         self.engine.close()
-        self.factory.destroy(self.context)
 
         # Remove a state db for test
         shutil.rmtree(self.db_name)
@@ -119,8 +116,7 @@ class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
         self.fee_treasury_address = Address.from_string('hx' + '1' * 40)
         self.total_supply = 10 ** 20  # 100 icx
 
-        self.factory = IconScoreContextFactory(max_size=1)
-        self.context = self.factory.create(IconScoreContextType.DIRECT)
+        self.context = IconScoreContext(IconScoreContextType.DIRECT)
 
         icx_storage = IcxStorage(db)
         self.engine.open(icx_storage)
@@ -135,7 +131,6 @@ class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
     def tearDown(self):
         self.engine.close()
         self.engine = None
-        self.factory.destroy(self.context)
 
         # Remove a state db for test
         shutil.rmtree(self.db_name)

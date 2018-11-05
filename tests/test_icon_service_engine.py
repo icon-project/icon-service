@@ -18,25 +18,25 @@
 """
 import hashlib
 import os
-import unittest
 import time
+import unittest
 from unittest.mock import Mock
 
 from iconcommons.icon_config import IconConfig
+
 from iconservice.base.address import Address, AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
-from iconservice.base.type_converter import TypeConverter
-from iconservice.base.type_converter_templates import ParamType
 from iconservice.base.exception import ExceptionCode, ServerErrorException, \
     RevertException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
+from iconservice.base.type_converter import TypeConverter
+from iconservice.base.type_converter_templates import ParamType
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import IconServiceFlag, ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_result import TransactionResult
@@ -45,12 +45,11 @@ from iconservice.iconscore.icon_score_step import StepType
 from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
     raise_exception_start_tag, raise_exception_end_tag
 
-context_factory = IconScoreContextFactory(max_size=1)
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
-    context = context_factory.create(context_type)
+    context = IconScoreContext(context_type)
 
     if context.type == IconScoreContextType.INVOKE:
         context.block_batch = BlockBatch()
@@ -138,7 +137,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(self._total_supply, balance)
 
     def test_call_on_query(self):
-        context = context_factory.create(IconScoreContextType.QUERY)
+        context = IconScoreContext(IconScoreContextType.QUERY)
 
         method = 'icx_getBalance'
         params = {'address': self.from_}
@@ -146,8 +145,6 @@ class TestIconServiceEngine(unittest.TestCase):
         balance = self._engine._call(context, method, params)
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
-
-        context_factory.destroy(context)
 
     def test_call_on_invoke(self):
         context = _create_context(IconScoreContextType.INVOKE)
@@ -191,8 +188,6 @@ class TestIconServiceEngine(unittest.TestCase):
         # no transfer to fee_treasury because fee charging is disabled
         tx_batch = context.tx_batch
         self.assertEqual(2, len(tx_batch))
-
-        context_factory.destroy(context)
 
     def test_invoke(self):
         block_height = 1
@@ -664,8 +659,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(tx_hash, tx_result.tx_hash)
         self.assertIsNone(tx_result.score_address)
         context.traces.append.assert_called()
-
-        context_factory.destroy(context)
 
     def test_score_invoke_failure_by_readonly_external_call(self):
         block_height = 1

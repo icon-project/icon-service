@@ -18,14 +18,12 @@
 import inspect
 import unittest
 from os import path, makedirs, symlink
-
 from unittest.mock import Mock
 
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import ContextContainer, \
-    IconScoreContextFactory, IconScoreContextType
+    IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from tests import create_address, create_tx_hash, rmtree
 
@@ -39,9 +37,8 @@ class TestIconScoreLoader(unittest.TestCase):
         self._score_path = self._ROOT_SCORE_PATH
         self._loader = IconScoreLoader(self._score_path)
 
-        self._factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_deploy_engine = Mock()
-        self._context = self._factory.create(IconScoreContextType.DIRECT)
+        self._context = IconScoreContext(IconScoreContextType.DIRECT)
         ContextContainer._push_context(self._context)
 
     def tearDown(self):
