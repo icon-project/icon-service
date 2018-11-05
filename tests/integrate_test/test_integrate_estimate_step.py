@@ -62,7 +62,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
     @staticmethod
     def _make_tx_for_estimating_step_from_origin_tx(tx: dict):
         tx = deepcopy(tx)
-        tx["method"] = "icx_estimateStep"
+        tx["method"] = "debug_estimateStep"
         del tx["params"]["nonce"]
         del tx["params"]["stepLimit"]
         del tx["params"]["timestamp"]
