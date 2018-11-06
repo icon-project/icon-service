@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import json
 import shutil
 import unittest
 
@@ -75,6 +75,26 @@ class TestIcxStorage(unittest.TestCase):
 
         ret = self.storage.is_address_present(context, self.address)
         self.assertFalse(ret)
+
+    def test_get_put_text(self):
+        context = self.context
+        key_name = 'test_genesis'
+        expected_text = json.dumps({'version': 0, 'address': str(create_address(AddressPrefix.EOA))})
+
+        self.storage.put_text(context, key_name, expected_text)
+
+        actual_stored_text = self.storage.get_text(context, key_name)
+        self.assertEqual(expected_text, actual_stored_text)
+
+    def test_get_put_total_supply(self):
+        context = self.context
+        current_total_supply = self.storage.get_total_supply(context)
+        self.assertEqual(0, current_total_supply)
+
+        putting_total_supply_amount = 1000
+        self.storage.put_total_supply(context, putting_total_supply_amount)
+        actual_stored_total_supply = self.storage.get_total_supply(context)
+        self.assertEqual(putting_total_supply_amount, actual_stored_total_supply)
 
 
 class TestIcxStorageForMalformedAddress(unittest.TestCase):
