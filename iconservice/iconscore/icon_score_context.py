@@ -18,10 +18,7 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
-from .icon_score_event_log import EventLog
-from .icon_score_step import IconScoreStepCounter
 from .icon_score_trace import Trace
-from ..base.address import Address
 from ..base.block import Block
 from ..base.exception import ServerErrorException
 from ..base.message import Message
@@ -31,10 +28,12 @@ from ..icon_constant import IconScoreContextType, IconScoreFuncType
 
 if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper
+    from .icon_score_event_log import EventLog
+    from .icon_score_step import IconScoreStepCounter
+    from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
     from .icon_score_base import IconScoreBase
     from ..icx.icx_engine import IcxEngine
-
 
 _thread_local_data = threading.local()
 
