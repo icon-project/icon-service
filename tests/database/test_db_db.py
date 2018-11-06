@@ -25,8 +25,7 @@ from iconservice.database.db import ContextDatabase
 from iconservice.database.db import IconScoreDatabase
 from iconservice.database.db import KeyValueDatabase
 from iconservice.icon_constant import DATA_BYTE_ORDER
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreFuncType
 from tests import rmtree
 
@@ -75,16 +74,14 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
         os.mkdir(state_db_root_path)
 
         address = Address.from_data(AddressPrefix.CONTRACT, b'score')
-        context_factory = IconScoreContextFactory(max_size=2)
 
-        context = context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         context.block_batch = BlockBatch()
         context.tx_batch = TransactionBatch()
 
         db_path = os.path.join(state_db_root_path, 'db')
         context_db = ContextDatabase.from_path(db_path, True)
 
-        self.context_factory = context_factory
         self.context_db = context_db
         self.address = address
         self.context = context
@@ -92,7 +89,6 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
     def tearDown(self):
         self.context.func_type = IconScoreFuncType.WRITABLE
         self.context_db.close(self.context)
-        self.context_factory.destroy(self.context)
         rmtree(self.state_db_root_path)
 
     def test_put_and_get(self):
@@ -215,14 +211,12 @@ class TestIconScoreDatabase(unittest.TestCase):
         os.mkdir(state_db_root_path)
 
         address = Address.from_data(AddressPrefix.CONTRACT, b'0')
-        context_factory = IconScoreContextFactory(max_size=2)
 
         db_path = os.path.join(state_db_root_path, 'db')
         context_db = ContextDatabase.from_path(db_path, True)
 
         self.db = IconScoreDatabase(address, context_db=context_db, prefix=b'')
         self.address = address
-        self.context_factory = context_factory
 
     def tearDown(self):
         self.db.close()
