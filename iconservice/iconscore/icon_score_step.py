@@ -102,7 +102,7 @@ class IconScoreStepCounterFactory(object):
         with self._lock:
             self._step_costs[step_type] = value
 
-    def get_max_step_limit(self, context_type: 'IconScoreContextType'):
+    def get_max_step_limit(self, context_type: 'IconScoreContextType') -> int:
         """Returns the max step limit
 
         :return: the max step limit
@@ -126,13 +126,13 @@ class IconScoreStepCounterFactory(object):
         :param context_type: context type
         :return: step counter
         """
-
         with self._lock:
-            max_step_limit = self._max_step_limits.get(context_type, 0)
-            # Copying a `dict` so as not to change step costs when processing a
-            # transaction.
-            return IconScoreStepCounter(
-                self._step_price, self._step_costs.copy(), max_step_limit)
+            step_price: int = self._step_price
+            # Copying a `dict` so as not to change step costs when processing a transaction.
+            step_costs: dict = self._step_costs.copy()
+            max_step_limit: int = self._max_step_limits.get(context_type, 0)
+
+        return IconScoreStepCounter(step_price, step_costs, max_step_limit)
 
 
 class OutOfStepException(IconServiceBaseException):

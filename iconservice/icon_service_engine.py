@@ -191,7 +191,7 @@ class IconServiceEngine(ContextContainer):
             self._pop_context()
 
     @staticmethod
-    def _get_governance_score(context):
+    def _get_governance_score(context) -> 'Governance':
         governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(
             context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
@@ -199,7 +199,7 @@ class IconServiceEngine(ContextContainer):
         return governance_score
 
     @staticmethod
-    def _get_step_price_from_governance(context: 'IconScoreContext', governance):
+    def _get_step_price_from_governance(context: 'IconScoreContext', governance) -> int:
         step_price = 0
         # Gets the step price if the fee flag is on
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.FEE):
@@ -208,7 +208,7 @@ class IconServiceEngine(ContextContainer):
         return step_price
 
     @staticmethod
-    def _get_step_costs_from_governance(governance):
+    def _get_step_costs_from_governance(governance) -> dict:
         step_costs = {}
         # Gets the step costs
         for key, value in governance.getStepCosts().items():
@@ -221,7 +221,7 @@ class IconServiceEngine(ContextContainer):
         return step_costs
 
     @staticmethod
-    def _get_step_max_limits_from_governance(governance):
+    def _get_step_max_limits_from_governance(governance) -> dict:
         # Gets the max step limit
         return {IconScoreContextType.INVOKE: governance.getMaxStepLimit("invoke"),
                 IconScoreContextType.QUERY: governance.getMaxStepLimit("query")}
@@ -363,13 +363,13 @@ class IconServiceEngine(ContextContainer):
             self._push_context(context)
             governance_score = self._get_governance_score(context)
 
-            step_price = self._get_step_price_from_governance(context, governance_score)
+            step_price: int = self._get_step_price_from_governance(context, governance_score)
             context.step_counter.set_step_price(step_price)
 
-            step_costs = self._get_step_costs_from_governance(governance_score)
+            step_costs: int = self._get_step_costs_from_governance(governance_score)
             context.step_counter.set_step_costs(step_costs)
 
-            max_step_limits = self._get_step_max_limits_from_governance(governance_score)
+            max_step_limits: dict = self._get_step_max_limits_from_governance(governance_score)
             context.step_counter.set_max_step_limit(max_step_limits.get(context.type, 0))
         finally:
             self._pop_context()
@@ -457,7 +457,7 @@ class IconServiceEngine(ContextContainer):
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
-        step_limit = params.get('stepLimit', context.step_counter.max_step_limit)
+        step_limit: int = params.get('stepLimit', context.step_counter.max_step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -560,7 +560,7 @@ class IconServiceEngine(ContextContainer):
         context = IconScoreContext(IconScoreContextType.ESTIMATION)
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
         # Fills the step_limit as the max step limit to proceed the transaction.
-        step_limit = context.step_counter.max_step_limit
+        step_limit: int = context.step_counter.max_step_limit
         context.step_counter.reset(step_limit)
 
         params: dict = request['params']
@@ -591,7 +591,7 @@ class IconServiceEngine(ContextContainer):
         context.block = self._icx_storage.last_block
         context.step_counter: IconScoreStepCounter = \
             self._step_counter_factory.create(IconScoreContextType.QUERY)
-        step_limit = context.step_counter.max_step_limit
+        step_limit: int = context.step_counter.max_step_limit
 
         if params:
             from_: 'Address' = params.get('from', None)
