@@ -15,20 +15,18 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import Mock
-
 from functools import wraps
-
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from unittest.mock import Mock
 
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode
+from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
+from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreFuncType
-from iconservice.iconscore.icon_score_context import Message, ContextContainer, IconScoreContext
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 
 
 def decorator(func):
