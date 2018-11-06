@@ -366,23 +366,27 @@ class IconServiceEngine(ContextContainer):
 
     def _update_step_properties(self, context, precommit_flag):
 
-        governance_score = self._get_governance_score(context)
+        try:
+            self._push_context(context)
+            governance_score = self._get_governance_score(context)
 
-        if precommit_flag & PrecommitFlag.STEP_PRICE_CHANGED \
-                == PrecommitFlag.STEP_PRICE_CHANGED:
-            step_price = self._get_step_price_from_governance(context, governance_score)
-            context.step_counter.set_step_price(step_price)
+            if precommit_flag & PrecommitFlag.STEP_PRICE_CHANGED \
+                    == PrecommitFlag.STEP_PRICE_CHANGED:
+                step_price = self._get_step_price_from_governance(context, governance_score)
+                context.step_counter.set_step_price(step_price)
 
-        if precommit_flag & PrecommitFlag.STEP_COST_CHANGED \
-                == PrecommitFlag.STEP_COST_CHANGED:
-            step_costs = self._get_step_costs_from_governance(governance_score)
-            context.step_counter.set_step_costs(step_costs)
+            if precommit_flag & PrecommitFlag.STEP_COST_CHANGED \
+                    == PrecommitFlag.STEP_COST_CHANGED:
+                step_costs = self._get_step_costs_from_governance(governance_score)
+                context.step_counter.set_step_costs(step_costs)
 
-        if precommit_flag & PrecommitFlag.STEP_MAX_LIMIT_CHANGED \
-                == PrecommitFlag.STEP_MAX_LIMIT_CHANGED:
-            max_step_limit = \
-                self._get_step_max_limits_from_governance(governance_score).get(context.type)
-            context.step_counter.set_max_step_limit(max_step_limit)
+            if precommit_flag & PrecommitFlag.STEP_MAX_LIMIT_CHANGED \
+                    == PrecommitFlag.STEP_MAX_LIMIT_CHANGED:
+                max_step_limit = \
+                    self._get_step_max_limits_from_governance(governance_score).get(context.type)
+                context.step_counter.set_max_step_limit(max_step_limit)
+        finally:
+            self._pop_context()
 
     @staticmethod
     def _is_genesis_block(
