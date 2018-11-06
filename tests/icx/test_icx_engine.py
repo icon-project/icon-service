@@ -133,7 +133,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.engine._init_special_account(self.context, treasury_account)
         self.engine.storage.put_text.assert_called()
 
-    def test_load_genesis_address_from_storage(self):
+    def test_load_address_from_storage(self):
         # success case: when stored genesis address is exist
         genesis_address = Address.from_string('hx' + 'f' * 40)
         expected_text = {'version': 0, 'address': str(genesis_address)}
@@ -159,8 +159,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
                                                self.engine._GENESIS_DB_KEY)
         self.assertEqual(None, self.engine._genesis_address)
 
-    def test_load_fee_treasury_address_from_storage(self):
-        # same logic as genesis.
+    def test_load_total_supply_amount_from_storage(self):
         pass
 
     def test_get_balance(self):
@@ -173,6 +172,12 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         total_supply = self.engine.get_total_supply(self.context)
 
         self.assertEqual(self.total_supply, total_supply)
+
+    def test_get_charge_fee(self):
+        pass
+
+    def test_get_account(self):
+        pass
 
     def test_transfer(self):
         context = self.context
