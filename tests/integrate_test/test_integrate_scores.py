@@ -286,24 +286,38 @@ class TestIntegrateScores(TestIntegrateBase):
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-        target_flag = IconServiceFlag.AUDIT | IconServiceFlag.FEE
+
         tx3 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
-                                       {"serviceFlag": hex(target_flag)})
+                                       {"serviceFlag": hex(IconServiceFlag.AUDIT)})
 
         tx4 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
                                    self._addr_array[1],
                                    ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4])
+        target_flag = IconServiceFlag.AUDIT | IconServiceFlag.FEE
+        tx5 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'updateServiceConfig',
+                                       {"serviceFlag": hex(target_flag)})
+
+        tx6 = self._make_deploy_tx("test_deploy_scores/install",
+                                   "test_score",
+                                   self._addr_array[1],
+                                   ZERO_SCORE_ADDRESS)
+
+
+        prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4, tx5, tx6])
 
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(True))
         self.assertEqual(tx_results[2].status, int(True))
+        self.assertEqual(tx_results[3].status, int(True))
+        self.assertEqual(tx_results[4].status, int(False))
 
         score_addr1 = tx_results[0].score_address
         score_addr2 = tx_results[2].score_address

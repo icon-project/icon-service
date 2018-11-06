@@ -321,8 +321,8 @@ class IconServiceEngine(ContextContainer):
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
                 context.tx_batch.clear()
-                tx_precommit_flag = self._get_precommit_step_flag(tx_result)
-                self._update_step_properties(context, tx_precommit_flag)
+                tx_precommit_flag = self._generate_precommit_flag(tx_result)
+                self._update_step_properties_if_necessary(context, tx_precommit_flag)
                 precommit_flag |= tx_precommit_flag
 
         # Save precommit data
@@ -334,27 +334,28 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash
 
     @staticmethod
-    def _get_precommit_step_flag(tx_result) -> PrecommitFlag:
+    def _generate_precommit_flag(tx_result) -> PrecommitFlag:
+        """
+        Generates pre-commit flag related in STEP properties from the transaction result
+
+        :param tx_result: transaction result
+        :return: pre-commit flag related in STEP properties
+        """
         precommit_flag = PrecommitFlag.NONE
 
-        if tx_result.score_address == GOVERNANCE_SCORE_ADDRESS:
-            # Governance is updated last tx, Updates STEP properties
+        if tx_result.to == GOVERNANCE_SCORE_ADDRESS and \
+                tx_result.status == TransactionResult.SUCCESS:
             precommit_flag = PrecommitFlag.STEP_ALL_CHANGED
-        else:
-            for event_log in tx_result.event_logs:
-                if event_log.score_address == GOVERNANCE_SCORE_ADDRESS:
-                    if event_log.indexed[0] == 'StepPriceChanged(int)':
-                        precommit_flag |= PrecommitFlag.STEP_PRICE_CHANGED
-
-                    if event_log.indexed[0] == 'StepCostChanged(str,int)':
-                        precommit_flag |= PrecommitFlag.STEP_COST_CHANGED
-
-                    if event_log.indexed[0] == 'MaxStepLimitChanged(str,int)':
-                        precommit_flag |= PrecommitFlag.STEP_MAX_LIMIT_CHANGED
 
         return precommit_flag
 
-    def _update_step_properties(self, context, precommit_flag):
+    def _update_step_properties_if_necessary(self, context, precommit_flag):
+        """
+        Updates step properties to the step counter if the pre-commit flag is set
+
+        :param context: current context
+        :param precommit_flag: pre-commit flag
+        """
         if precommit_flag & PrecommitFlag.STEP_ALL_CHANGED == PrecommitFlag.NONE:
             return
 
@@ -362,21 +363,14 @@ class IconServiceEngine(ContextContainer):
             self._push_context(context)
             governance_score = self._get_governance_score(context)
 
-            if precommit_flag & PrecommitFlag.STEP_PRICE_CHANGED \
-                    == PrecommitFlag.STEP_PRICE_CHANGED:
-                step_price = self._get_step_price_from_governance(context, governance_score)
-                context.step_counter.set_step_price(step_price)
+            step_price = self._get_step_price_from_governance(context, governance_score)
+            context.step_counter.set_step_price(step_price)
 
-            if precommit_flag & PrecommitFlag.STEP_COST_CHANGED \
-                    == PrecommitFlag.STEP_COST_CHANGED:
-                step_costs = self._get_step_costs_from_governance(governance_score)
-                context.step_counter.set_step_costs(step_costs)
+            step_costs = self._get_step_costs_from_governance(governance_score)
+            context.step_counter.set_step_costs(step_costs)
 
-            if precommit_flag & PrecommitFlag.STEP_MAX_LIMIT_CHANGED \
-                    == PrecommitFlag.STEP_MAX_LIMIT_CHANGED:
-                max_step_limit = \
-                    self._get_step_max_limits_from_governance(governance_score).get(context.type)
-                context.step_counter.set_max_step_limit(max_step_limit)
+            max_step_limits = self._get_step_max_limits_from_governance(governance_score)
+            context.step_counter.set_max_step_limit(max_step_limits.get(context.type, 0))
         finally:
             self._pop_context()
 
