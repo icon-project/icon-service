@@ -640,14 +640,15 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         if self.address == GOVERNANCE_SCORE_ADDRESS:
             # switch
-            score_addr = self.get_score_address_by_tx_hash(tx_hash)
-            owner = self.get_owner(score_addr)
-            tmp_sender = self._context.msg.sender
+            score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
+            owner: 'Address' = self.get_owner(score_addr)
+            tmp_sender: 'Address' = self._context.msg.sender
+
             self._context.msg.sender = owner
             try:
                 IconScoreContextUtil.deploy(self._context, tx_hash)
             finally:
-                self._context.msg = tmp_sender
+                self._context.msg.sender = tmp_sender
         else:
             raise ServerErrorException('Permission Error')
 
