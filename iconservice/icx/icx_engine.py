@@ -59,8 +59,8 @@ class IcxEngine(object):
 
         context = None
         self._storage.load_last_block_info(context)
-        self._load_genesis_address_from_storage(context, storage)
-        self._load_fee_treasury_address_from_storage(context, storage)
+        self._load_address_from_storage(context, storage, self._GENESIS_DB_KEY)
+        self._load_address_from_storage(context, storage, self._TREASURY_DB_KEY)
         self._load_total_supply_amount_from_storage(context, storage)
 
     @property
@@ -127,40 +127,18 @@ class IcxEngine(object):
 
         self._storage.put_text(context, db_key, text)
 
-    def _load_genesis_address_from_storage(
-            self,
-            context: Optional['IconScoreContext'],
-            storage: IcxStorage) -> None:
-        """Load genesis address info from state db
-
-        :param context:
-        :param storage: (IcxStorage) state db wrapper
-        """
-        Logger.debug('_load_genesis_address_from_storage() start', ICX_LOG_TAG)
-        text = storage.get_text(context, self._GENESIS_DB_KEY)
-        if text:
-            obj = json.loads(text)
-
-            # Support to load MainNet 1.0 db
-            address: str = obj['address']
-            if len(address) == 40:
-                address = f'hx{address}'
-
-            self._genesis_address = Address.from_string(address)
-            Logger.info(f'{self._GENESIS_DB_KEY}: {self._genesis_address}', ICX_LOG_TAG)
-        Logger.debug('_load_genesis_address_from_storage() end', ICX_LOG_TAG)
-
-    def _load_fee_treasury_address_from_storage(
-            self,
-            context: Optional['IconScoreContext'],
-            storage: IcxStorage) -> None:
-        """Load fee_treasury_address info from state db
+    def _load_address_from_storage(self,
+                                   context: Optional['IconScoreContext'],
+                                   storage: IcxStorage,
+                                   db_key: str) -> None:
+        """Load address info from state db according to db_key
 
         :param context:
         :param storage: state db manager
+        :param db_key: db key info
         """
-        Logger.debug('_load_fee_treasury_address_from_storage() start', ICX_LOG_TAG)
-        text = storage.get_text(context, self._TREASURY_DB_KEY)
+        Logger.debug(f'_load_address_from_storage() start(address type: {db_key})', ICX_LOG_TAG)
+        text = storage.get_text(context, db_key)
         if text:
             obj = json.loads(text)
 
@@ -169,9 +147,13 @@ class IcxEngine(object):
             if len(address) == 40:
                 address = f'hx{address}'
 
-            self._fee_treasury_address = Address.from_string(address)
-            Logger.info(f'{self._TREASURY_DB_KEY}: {self._fee_treasury_address}', ICX_LOG_TAG)
-        Logger.debug('_load_fee_treasury_address_from_storage() end', ICX_LOG_TAG)
+            address: Address = Address.from_string(address)
+            if db_key == self._GENESIS_DB_KEY:
+                self._genesis_address = address
+            elif db_key == self._TREASURY_DB_KEY:
+                self._fee_treasury_address = address
+            Logger.info(f'{db_key}: {address}', ICX_LOG_TAG)
+        Logger.debug(f'_load_address_from_storage() end(address type: {db_key})', ICX_LOG_TAG)
 
     def _load_total_supply_amount_from_storage(
             self,

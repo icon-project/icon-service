@@ -142,7 +142,9 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         icx_storage_mock = Mock(spec=IcxStorage)
         icx_storage_mock.get_text = Mock(return_value=json.dumps(expected_text))
 
-        self.engine._load_genesis_address_from_storage(self.context, icx_storage_mock)
+        self.engine._load_address_from_storage(self.context,
+                                               icx_storage_mock,
+                                               self.engine._GENESIS_DB_KEY)
 
         # check genesis_address
         self.assertEqual(genesis_address, self.engine._genesis_address)
@@ -152,7 +154,9 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.engine._genesis_address = None
         icx_storage_mock.get_text = Mock(return_value=None)
 
-        self.engine._load_genesis_address_from_storage(self.context, icx_storage_mock)
+        self.engine._load_address_from_storage(self.context,
+                                               icx_storage_mock,
+                                               self.engine._GENESIS_DB_KEY)
         self.assertEqual(None, self.engine._genesis_address)
 
     def test_load_fee_treasury_address_from_storage(self):
