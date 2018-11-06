@@ -22,8 +22,7 @@ import unittest
 from iconservice.base.address import AddressPrefix, MalformedAddress
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_address
@@ -38,8 +37,7 @@ class TestIcxStorage(unittest.TestCase):
 
         self.storage = IcxStorage(db)
 
-        self.factory = IconScoreContextFactory(max_size=1)
-        context = self.factory.create(IconScoreContextType.DIRECT)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
         context.tx_batch = TransactionBatch()
         context.block_batch = BlockBatch()
         self.context = context
@@ -97,8 +95,7 @@ class TestIcxStorageForMalformedAddress(unittest.TestCase):
 
         self.storage = IcxStorage(db)
 
-        self.factory = IconScoreContextFactory(max_size=1)
-        context = self.factory.create(IconScoreContextType.DIRECT)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
         self.context = context
 
     def tearDown(self):

@@ -20,7 +20,6 @@
 
 import os
 import unittest
-
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS
@@ -35,11 +34,10 @@ from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.icon_constant import DEFAULT_BYTE_SIZE
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
-from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_address, create_block_hash, create_tx_hash
@@ -94,7 +92,6 @@ class TestIconZipDeploy(unittest.TestCase):
 
         self.sample_token_address = create_address(AddressPrefix.CONTRACT)
 
-        self._factory = IconScoreContextFactory(max_size=1)
         self.make_context()
 
         self._one_icx = 1 * 10 ** 18
@@ -102,7 +99,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
     def make_context(self):
         self._tx_index += 1
-        self._context = self._factory.create(IconScoreContextType.DIRECT)
+        self._context = IconScoreContext(IconScoreContextType.DIRECT)
         self._context.msg = Message(self.from_address, 0)
 
         tx_hash = create_tx_hash()
@@ -121,7 +118,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._engine = None
         ContextContainer._pop_context()
         self._icon_score_mapper.close()
-        self._factory.destroy(self._context)
 
         remove_path = os.path.join(TEST_ROOT_PATH, 'tests')
         IconScoreDeployer.remove_existing_score(remove_path)

@@ -136,7 +136,7 @@ class IconScoreInnerTask(object):
         try:
             method = request['method']
 
-            if method == 'icx_estimateStep':
+            if method == 'debug_estimateStep':
                 converted_request = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
                 value = self._icon_service_engine.estimate_step(converted_request)
             else:

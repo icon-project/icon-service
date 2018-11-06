@@ -18,28 +18,26 @@
 """
 
 
-import unittest
 import os
+import unittest
 
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
-from tests import rmtree, create_address
 from iconservice.base.address import AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory, IconScoreContext
+from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.icon_score_deployer import IconScoreDeployer
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
-from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_tx_hash, create_block_hash
-
+from tests import rmtree, create_address
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -81,9 +79,8 @@ class TestIconScoreEngine(unittest.TestCase):
         self._from = create_address(AddressPrefix.EOA)
         self._icon_score_address = create_address(AddressPrefix.CONTRACT)
 
-        self.factory = IconScoreContextFactory(max_size=1)
         IconScoreContext.icon_score_deploy_engine = deploy_engine
-        self._context = self.factory.create(IconScoreContextType.DIRECT)
+        self._context = IconScoreContext(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._from, 0)
         tx_hash = create_tx_hash()
         self._context.tx = Transaction(
@@ -94,7 +91,6 @@ class TestIconScoreEngine(unittest.TestCase):
     def tearDown(self):
         self.engine = None
         self.icx_storage.close(self._context)
-        self.factory.destroy(self._context)
         ContextDatabaseFactory.close()
 
         remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
@@ -144,7 +140,7 @@ class TestIconScoreEngine(unittest.TestCase):
         # self._engine.invoke(
         #     self._context, self._icon_score_address, 'install', install_data)
         # self._engine.commit(self._context)
-        context = self.factory.create(IconScoreContextType.QUERY)
+        context = IconScoreContext(IconScoreContextType.QUERY)
 
         with self.assertRaises(InvalidParamsException) as cm:
             self.engine.query(
@@ -153,5 +149,3 @@ class TestIconScoreEngine(unittest.TestCase):
         e = cm.exception
         self.assertEqual(ExceptionCode.INVALID_PARAMS, e.code)
         print(e)
-
-        self.factory.destroy(context)

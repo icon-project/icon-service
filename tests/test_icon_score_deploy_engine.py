@@ -25,10 +25,9 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.iconscore.icon_score_context import IconScoreContextFactory
-from iconservice.iconscore.icon_score_context import IconScoreContextType
-from iconservice.iconscore.icon_score_mapper import IconScoreMapper
+from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.icx.icx_engine import IcxEngine
@@ -82,13 +81,11 @@ class TestScoreDeployEngine(unittest.TestCase):
             score_root_path=score_path,
             icon_deploy_storage=self._deploy_storage)
 
-        self._factory = IconScoreContextFactory(max_size=1)
         self.make_context()
 
     def tearDown(self):
         try:
-            self._context = self._factory.create(IconScoreContextType.DIRECT)
-            self._factory.destroy(self._context)
+            self._context = IconScoreContext(IconScoreContextType.DIRECT)
             self._icx_storage.close(self._context)
         finally:
             remove_path = os.path.join(TEST_ROOT_PATH, self._ROOT_SCORE_PATH)
@@ -98,7 +95,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
     def make_context(self):
         self._tx_index += 1
-        self._context = self._factory.create(IconScoreContextType.DIRECT)
+        self._context = IconScoreContext(IconScoreContextType.DIRECT)
         self._context.msg = Message(self._addr1, 0)
 
         self._context.tx = Transaction(

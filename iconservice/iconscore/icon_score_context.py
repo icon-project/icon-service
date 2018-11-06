@@ -28,13 +28,12 @@ from ..icon_constant import IconScoreContextType, IconScoreFuncType
 
 if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper
-    from .icon_score_step import IconScoreStepCounter
     from .icon_score_event_log import EventLog
+    from .icon_score_step import IconScoreStepCounter
     from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
     from .icon_score_base import IconScoreBase
     from ..icx.icx_engine import IcxEngine
-
 
 _thread_local_data = threading.local()
 
@@ -101,35 +100,21 @@ class IconScoreContext(object):
     """Contains the useful information to process user's jsonrpc request
     """
 
-    def __init__(self,
-                 context_type: 'IconScoreContextType' = IconScoreContextType.QUERY,
-                 func_type: 'IconScoreFuncType' = IconScoreFuncType.WRITABLE,
-                 block: 'Block' = None,
-                 tx: 'Transaction' = None,
-                 msg: 'Message' = None,
-                 block_batch: 'BlockBatch' = None,
-                 tx_batch: 'TransactionBatch' = None,
-                 new_icon_score_mapper: 'IconScoreMapper' = None) -> None:
+    def __init__(self, context_type: 'IconScoreContextType' = IconScoreContextType.QUERY) -> None:
         """Constructor
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
-        :param func_type: IconScoreFuncType (READONLY, WRITABLE)
-        :param block:
-        :param tx: initial transaction info
-        :param msg: message call info
-        :param block_batch:
-        :param tx_batch:
         """
         self.type: IconScoreContextType = context_type
         # The type of external function which is called latest
-        self.func_type: IconScoreFuncType = func_type
-        self.block = block
-        self.tx = tx
-        self.msg = msg
+        self.func_type: IconScoreFuncType = IconScoreFuncType.WRITABLE
+        self.block: 'Block' = None
+        self.tx: 'Transaction' = None
+        self.msg: 'Message' = None
         self.current_address: 'Address' = None
-        self.block_batch = block_batch
-        self.tx_batch = tx_batch
-        self.new_icon_score_mapper = new_icon_score_mapper
+        self.block_batch: 'BlockBatch' = None
+        self.tx_batch: 'TransactionBatch' = None
+        self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
@@ -143,25 +128,6 @@ class IconScoreContext(object):
         return self.type == IconScoreContextType.QUERY or \
                self.func_type == IconScoreFuncType.READONLY
 
-    def clear(self) -> None:
-        """Set instance member variables to None
-        """
-        self.block = None
-        self.tx = None
-        self.msg = None
-        self.current_address: 'Address' = None
-        self.block_batch = None
-        self.tx_batch = None
-        self.new_icon_score_mapper = None
-        self.cumulative_step_used = 0
-        self.step_counter = None
-        self.event_logs = None
-        self.traces = None
-        self.func_type = IconScoreFuncType.WRITABLE
-
-        self.msg_stack.clear()
-        self.event_log_stack.clear()
-
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
         if func_name is not None and is_func_readonly(func_name):
@@ -173,32 +139,3 @@ class IconScoreContext(object):
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         self.icon_score_deploy_engine.deploy(self, tx_hash)
-
-
-class IconScoreContextFactory(object):
-    """IconScoreContextFactory
-    """
-
-    def __init__(self, max_size: int) -> None:
-        """Constructor
-        """
-        self._lock = threading.Lock()
-        self._queue = []
-        self._max_size = max_size
-
-    def create(self,
-               context_type: 'IconScoreContextType') -> 'IconScoreContext':
-        with self._lock:
-            if len(self._queue) > 0:
-                context = self._queue.pop()
-                context.type = context_type
-            else:
-                context = IconScoreContext(context_type)
-
-        return context
-
-    def destroy(self, context: 'IconScoreContext') -> None:
-        with self._lock:
-            if len(self._queue) < self._max_size:
-                context.clear()
-                self._queue.append(context)
