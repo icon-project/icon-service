@@ -21,6 +21,7 @@ from iconcommons import IconConfig
 from iconservice.icon_constant import ConfigKey, IconScoreContextType
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.icon_constant import IconServiceFlag
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -44,7 +45,7 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
 
-        context = self.icon_service_engine._context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         self.assertEqual(context.icon_service_flag, IconServiceFlag.FEE)
 
     def test_service_configuration_audit_setting(self):
@@ -52,7 +53,7 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
 
-        context = self.icon_service_engine._context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         self.assertEqual(context.icon_service_flag, IconServiceFlag.AUDIT)
 
     def test_service_configuration_deployer_white_list_setting(self):
@@ -60,7 +61,7 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
 
-        context = self.icon_service_engine._context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         self.assertEqual(context.icon_service_flag, IconServiceFlag.DEPLOYER_WHITE_LIST)
 
     def test_service_configuration_score_package_validiator_setting(self):
@@ -68,7 +69,7 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
 
-        context = self.icon_service_engine._context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         self.assertEqual(context.icon_service_flag, IconServiceFlag.SCORE_PACKAGE_VALIDATOR)
 
     def test_service_configuration_multiple_setting(self):
@@ -80,7 +81,7 @@ class TestIntegrateServiceConfigurationInitial(TestIntegrateBase):
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(self.config)
 
-        context = self.icon_service_engine._context_factory.create(IconScoreContextType.INVOKE)
+        context = IconScoreContext(IconScoreContextType.INVOKE)
         expected_flag = IconServiceFlag.FEE | IconServiceFlag.AUDIT | \
                         IconServiceFlag.SCORE_PACKAGE_VALIDATOR | IconServiceFlag.DEPLOYER_WHITE_LIST
         self.assertEqual(context.icon_service_flag, expected_flag)
