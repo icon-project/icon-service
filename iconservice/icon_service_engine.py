@@ -328,10 +328,9 @@ class IconServiceEngine(ContextContainer):
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
                 context.tx_batch.clear()
-                precommit_flag = self._get_precommit_step_flag(precommit_flag, tx_result)
-
-                if precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
-                    self._update_step_properties(context, precommit_flag)
+                tx_precommit_flag = self._get_precommit_step_flag(tx_result)
+                self._update_step_properties(context, tx_precommit_flag)
+                precommit_flag |= tx_precommit_flag
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -344,7 +343,9 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash
 
     @staticmethod
-    def _get_precommit_step_flag(precommit_flag, tx_result):
+    def _get_precommit_step_flag(tx_result) -> PrecommitFlag:
+        precommit_flag = PrecommitFlag.NONE
+
         if tx_result.score_address == GOVERNANCE_SCORE_ADDRESS:
             # Governance is updated last tx, Updates STEP properties
             precommit_flag = PrecommitFlag.STEP_ALL_CHANGED
@@ -363,6 +364,8 @@ class IconServiceEngine(ContextContainer):
         return precommit_flag
 
     def _update_step_properties(self, context, precommit_flag):
+        if precommit_flag & PrecommitFlag.STEP_ALL_CHANGED == PrecommitFlag.NONE:
+            return
 
         try:
             self._push_context(context)
