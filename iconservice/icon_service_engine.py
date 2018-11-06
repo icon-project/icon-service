@@ -307,8 +307,6 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
 
-        self._init_global_value_by_governance_score()
-
         context = self._context_factory.create(IconScoreContextType.INVOKE)
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
         context.block = block
