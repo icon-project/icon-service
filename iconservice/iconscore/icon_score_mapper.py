@@ -119,7 +119,10 @@ class IconScoreMapper(object):
         governance_info = self.get(GOVERNANCE_SCORE_ADDRESS)
         if governance_info:
             governance: 'Governance' = governance_info.icon_score
-            return governance.import_white_list_cache
+            try:
+                return governance.import_white_list_cache
+            except AttributeError:
+                return {"iconservice": ['*']}
         else:
             return {"iconservice": ['*']}
 
