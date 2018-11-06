@@ -58,6 +58,13 @@ class TestTransactionValidator(unittest.TestCase):
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
         self.assertEqual(e.exception.message, "value < 0")
 
+        self.validator._validate_transaction_v2.reset_mock()
+        params = {"value": 256 * 10 ** 500}
+        with self.assertRaises(InvalidParamsException) as e:
+            self.validator.execute(params, ANY, ANY)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.message, "exceed ICX amount you can send at one time")
+
     def _test_excute_v3(self):
         self.validator._check_data_size = Mock()
         self.validator._validate_transaction_v3 = Mock()
@@ -78,6 +85,13 @@ class TestTransactionValidator(unittest.TestCase):
             self.validator.execute(params, ANY, ANY)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
         self.assertEqual(e.exception.message, "value < 0")
+
+        self.validator._validate_transaction_v2.reset_mock()
+        params = {"value": 256 * 10 ** 500}
+        with self.assertRaises(InvalidParamsException) as e:
+            self.validator.execute(params, ANY, ANY)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.message, "exceed ICX amount you can send at one time")
 
     def test_execute_to_check_out_of_balance_v2(self):
         self.validator._check_from_can_charge_fee_v2 = Mock()
