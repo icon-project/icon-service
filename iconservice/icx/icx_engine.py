@@ -21,7 +21,7 @@ from iconcommons.logger import Logger
 from .icx_account import Account, AccountType
 from .icx_storage import IcxStorage
 from ..base.address import Address
-from ..base.exception import InvalidParamsException, InvalidRequestException
+from ..base.exception import InvalidParamsException
 from ..icon_constant import ICX_LOG_TAG
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ class IcxEngine(object):
     def open(self, storage: 'IcxStorage') -> None:
         """Open engine
 
-        Get necessary parameters from caller and begin to use storage(leveldb)
+        Get necessary parameters from caller and begin to use storage (leveldb)
 
         :param storage: IcxStorage object to access state db
         """
