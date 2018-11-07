@@ -216,25 +216,26 @@ class ArrayDB(Iterator):
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
 
-        self.__size = self.__get_size()
         self.__index = 0
         self.__value_type = value_type
+        self.__size = 0
 
     def put(self, value: V) -> None:
+        size: int = self.__get_size()
+
         byte_value = ContainerUtil.encode_value(value)
-        self._db.put(ContainerUtil.encode_key(self.__size), byte_value)
-        self.__size += 1
-        self.__set_size()
+        self._db.put(ContainerUtil.encode_key(size), byte_value)
+        self.__set_size(size + 1)
 
     def pop(self) -> Optional[V]:
-        if self.__size == 0:
+        size: int = self.__get_size()
+        if size == 0:
             return None
 
-        index = self.__size - 1
+        index = size - 1
         last_val = self[index]
         self._db.delete(ContainerUtil.encode_key(index))
-        self.__size -= 1
-        self.__set_size()
+        self.__set_size(size - 1)
         return last_val
 
     def get(self, index: int=0) -> V:
@@ -242,6 +243,7 @@ class ArrayDB(Iterator):
 
     def __iter__(self):
         self.__index = 0
+        self.__size = self.__get_size()
         return self
 
     def __next__(self) -> V:
@@ -253,22 +255,21 @@ class ArrayDB(Iterator):
             raise StopIteration
 
     def __len__(self):
-        return self.__size
+        return self.__get_size()
 
     def __get_size(self) -> int:
         return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
 
-    def __set_size(self) -> None:
-        sub_db = self._db
-        byte_value = ContainerUtil.encode_value(self.__size)
-        sub_db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
+    def __set_size(self, size: int) -> None:
+        byte_value = ContainerUtil.encode_value(size)
+        self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
     def __setitem__(self, index: int, value: V) -> None:
-        if index >= self.__size:
+        size: int = self.__get_size()
+        if index >= size:
             raise ContainerDBException(f'ArrayDB out of range')
-        sub_db = self._db
         byte_value = ContainerUtil.encode_value(value)
-        sub_db.put(ContainerUtil.encode_key(index), byte_value)
+        self._db.put(ContainerUtil.encode_key(index), byte_value)
 
     def __getitem__(self, index: int) -> V:
         if isinstance(index, int):
