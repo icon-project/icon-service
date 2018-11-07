@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from enum import IntFlag
 from threading import Lock
 from typing import Optional
 
@@ -23,20 +23,37 @@ from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
 
 
+class PrecommitFlag(IntFlag):
+    # Empty
+    NONE = 0x0
+    # Set when STEP price changed on the block
+    STEP_PRICE_CHANGED = 0x10
+    # Set when STEP costs changed on the block
+    STEP_COST_CHANGED = 0x20
+    # Set when Max STEP limits changed on the block
+    STEP_MAX_LIMIT_CHANGED = 0x40
+    # STEP changed flag mask
+    STEP_ALL_CHANGED = 0xf0
+
+
 class PrecommitData(object):
     def __init__(self,
                  block_batch: 'BlockBatch',
                  block_result: list,
-                 score_mapper: Optional['IconScoreMapper']=None):
+                 score_mapper: Optional['IconScoreMapper']=None,
+                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
 
         :param block_batch: changed states for a block
         :param block_result: tx_results made from transactions in a block
         :param score_mapper: newly deployed scores in a block
+        :param precommit_flag: precommit flag
+
         """
         self.block_batch = block_batch
         self.block_result = block_result
         self.score_mapper = score_mapper
+        self.precommit_flag = precommit_flag
         self.block = block_batch.block
         self.state_root_hash: bytes = self.block_batch.digest()
 

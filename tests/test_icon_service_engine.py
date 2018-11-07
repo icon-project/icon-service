@@ -179,7 +179,9 @@ class TestIconServiceEngine(unittest.TestCase):
         context.event_logs = []
         context.cumulative_step_used = Mock(spec=int)
         context.cumulative_step_used.attach_mock(Mock(), '__add__')
-        context.step_counter: IconScoreStepCounter = self._engine._step_counter_factory.create(step_limit)
+        context.step_counter: IconScoreStepCounter = \
+            self._engine._step_counter_factory.create(context.type)
+        context.step_counter.reset(step_limit)
 
         IconScoreContextUtil._get_service_flag = Mock(return_value=IconScoreContext.icon_service_flag)
         self._engine._call(context, method, params)
@@ -257,7 +259,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         self.assertEqual(tx_result.step_used, step_unit)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
 
         if IconScoreContextUtil._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.FEE):
             # step_price MUST BE 10**10 on protocol v2
@@ -316,7 +318,7 @@ class TestIconServiceEngine(unittest.TestCase):
         # step_used MUST BE 10 ** 6 on protocol v2
         self.assertEqual(tx_result.step_used, 10**6)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
         # if self._engine._is_flag_on(IconServiceFlag.fee):
         #     # step_used MUST BE 10**10 on protocol v2
         #     self.assertEqual(step_price, 10 ** 10)
@@ -377,7 +379,7 @@ class TestIconServiceEngine(unittest.TestCase):
         # step_used MUST BE 10**6 on protocol v2
         self.assertEqual(tx_result.step_used, 10**6)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
         self.assertEqual(tx_result.step_price, step_price)
 
         # Write updated states to levelDB
@@ -439,7 +441,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         self.assertEqual(tx_result.step_used, step_unit)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
         if IconScoreContextUtil._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.FEE):
             # step_used MUST BE 10**10 on protocol v2
             self.assertEqual(step_price, 10 ** 10)
@@ -515,7 +517,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         self.assertEqual(tx_result.step_used, step_cost)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
         if IconScoreContextUtil._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.FEE):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(
@@ -598,7 +600,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         self.assertEqual(tx_result.step_used, step_unit)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
         if IconScoreContextUtil._is_flag_on(IconScoreContext.icon_service_flag, IconServiceFlag.FEE):
             # step_price MUST BE 10**10 on protocol v2
             self.assertEqual(
@@ -802,7 +804,7 @@ class TestIconServiceEngine(unittest.TestCase):
         # step_used MUST BE 10**6 on protocol v2
         self.assertEqual(tx_result.step_used, 10**6)
 
-        step_price = self._engine._get_step_price()
+        step_price = self._engine._step_counter_factory.get_step_price()
         self.assertEqual(tx_result.step_price, step_price)
 
         # Write updated states to levelDB

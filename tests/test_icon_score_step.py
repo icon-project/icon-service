@@ -523,7 +523,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 # Pass the unknown step type
                 pass
 
-        self.step_counter = IconScoreStepCounter(step_costs, 100, 0)
+        self.step_counter = IconScoreStepCounter(0, step_costs, 100)
+        self.step_counter.reset(step_limit=100)
         factory = self._inner_task._icon_service_engine._step_counter_factory
         factory.create = Mock(return_value=self.step_counter)
 
@@ -622,7 +623,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         return step_used
 
     def _assert_step_used(self, step_used: int, request: dict, tx_hash: bytes):
-        self.step_counter = IconScoreStepCounter(self.step_cost_dict, 5000000, 0)
+        self.step_counter = IconScoreStepCounter(0, self.step_cost_dict, 5_000_000)
+        self.step_counter.reset(step_limit=5_000_000)
         factory = self._inner_task._icon_service_engine._step_counter_factory
         factory.create = Mock(return_value=self.step_counter)
 

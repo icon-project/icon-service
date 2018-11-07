@@ -126,7 +126,7 @@ def create_request(requests: List[ReqData]):
                 'version': hex(3),
                 'from': str(request.from_),
                 'to': str(request.to_),
-                'stepLimit': hex(12345),
+                'stepLimit': hex(1234567),
                 'timestamp': hex(123456),
                 'dataType': request.data_type,
                 'data': request.data,
