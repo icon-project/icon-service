@@ -18,8 +18,7 @@ from typing import TYPE_CHECKING
 
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
-from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE
-
+from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
@@ -58,6 +57,10 @@ class IconPreValidator:
         value: int = params.get('value', 0)
         if value < 0:
             raise InvalidParamsException("value < 0")
+        try:
+            value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
+        except OverflowError:
+            raise InvalidParamsException("exceed ICX amount you can send at one time")
 
         version: int = params.get('version', 2)
         if version < 3:
