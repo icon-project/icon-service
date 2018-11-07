@@ -17,13 +17,12 @@
 """functions and classes to handle address
 """
 
-from abc import abstractmethod
 import hashlib
 from enum import IntEnum
 
-from .exception import InvalidParamsException
+from ..icon_constant import DATA_BYTE_ORDER, ICON_DEX_DB_NAME
 from ..utils import is_lowercase_hex_string, int_to_bytes
-from ..icon_constant import DATA_BYTE_ORDER
+from .exception import InvalidParamsException
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
@@ -278,7 +277,7 @@ class MalformedAddress(Address):
 ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
 # cx0000000000000000000000000000000000000001
 GOVERNANCE_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, b'icon_dex')
+ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, ICON_DEX_DB_NAME.encode())
 
 
 def generate_score_address_for_tbears(score_path: str) -> 'Address':
