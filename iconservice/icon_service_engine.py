@@ -596,7 +596,7 @@ class IconServiceEngine(ContextContainer):
         if params:
             from_: 'Address' = params.get('from', None)
             context.msg = Message(sender=from_)
-            step_limit = params.get('stepLimit', step_limit)
+            step_limit: int = params.get('stepLimit', step_limit)
 
         context.traces: List['Trace'] = []
         context.step_counter.reset(step_limit)
@@ -629,7 +629,7 @@ class IconServiceEngine(ContextContainer):
             self._step_counter_factory.create(IconScoreContextType.QUERY)
 
         step_price: int = context.step_counter.step_price
-        minimum_step = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+        minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
 
         if 'data' in params:
             # minimum_step is the sum of
