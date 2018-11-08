@@ -411,10 +411,6 @@ class Governance(IconSystemScoreBase):
 
         self.Rejected('0x' + txHash.hex(), reason)
 
-    @external(readonly=True)
-    def isAuditor(self, address: Address) -> bool:
-        return address in self._auditor_list
-
     @external
     def addAuditor(self, address: Address):
         if address.is_contract:
@@ -447,6 +443,10 @@ class Governance(IconSystemScoreBase):
                     self._auditor_list[i] = top
         if DEBUG is True:
             self._print_auditor_list('removeAuditor')
+
+    @external(readonly=True)
+    def isAuditor(self, address: Address) -> bool:
+        return address in self._auditor_list
 
     def _print_auditor_list(self, header: str):
         Logger.debug(f'{header}: list len = {len(self._auditor_list)}', TAG)
