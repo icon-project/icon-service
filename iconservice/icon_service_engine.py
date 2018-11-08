@@ -346,24 +346,15 @@ class IconServiceEngine(ContextContainer):
         return block_result, precommit_data.state_root_hash
 
     def _update_revision_if_necessary(self, context, tx_result):
-        revision_changed = False
-        if tx_result.score_address == GOVERNANCE_SCORE_ADDRESS:
-            # Governance is updated last tx, Updates revision
-            revision_changed = True
-        else:
-            if context.revision < REVISION_3:
-                # In the revision 2 or before, there is no event log for revision change
-                # If the tx is heading for Governance, refreshes revision
-                if tx_result.status == TransactionResult.SUCCESS \
-                        and tx_result.to == GOVERNANCE_SCORE_ADDRESS:
-                    revision_changed = True
-            else:
-                for event_log in tx_result.event_logs:
-                    if event_log.score_address == GOVERNANCE_SCORE_ADDRESS:
-                        if event_log.indexed[0] == 'RevisionChanged(int,str)':
-                            revision_changed = True
-
-        if revision_changed:
+        """
+        Updates the revision code of given context if governance or its states has been updated
+        :param context: current context
+        :param tx_result: transaction result
+        :return:
+        """
+        if tx_result.to == GOVERNANCE_SCORE_ADDRESS and \
+                tx_result.status == TransactionResult.SUCCESS:
+            # If the tx is heading for Governance, updates the revision
             self._set_revision_to_context(context)
 
     @staticmethod
