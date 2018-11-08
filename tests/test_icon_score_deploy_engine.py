@@ -25,6 +25,7 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.icon_constant import ICON_DEX_DB_NAME
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
@@ -67,7 +68,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._tx_index = 0
 
         self.__ensure_dir(db_path)
-        self._icx_db = ContextDatabaseFactory.create_by_name('icon_dex')
+        self._icx_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
         self._score_deploy_engine = IconScoreDeployEngine()

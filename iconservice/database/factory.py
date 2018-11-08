@@ -18,8 +18,9 @@
 import os
 from enum import IntEnum
 
-from .db import KeyValueDatabase, ContextDatabase
 from ..base.address import Address
+from ..icon_constant import ICON_DEX_DB_NAME
+from .db import KeyValueDatabase, ContextDatabase
 
 
 class ContextDatabaseFactory(object):
@@ -42,7 +43,7 @@ class ContextDatabaseFactory(object):
     @classmethod
     def get_shared_db(cls) -> ContextDatabase:
         if cls._shared_context_db is None:
-            path = os.path.join(cls._state_db_root_path, 'icon_dex')
+            path = os.path.join(cls._state_db_root_path, ICON_DEX_DB_NAME)
             key_value_db = KeyValueDatabase.from_path(path)
             cls._shared_context_db = ContextDatabase(
                 key_value_db, is_shared=True)
