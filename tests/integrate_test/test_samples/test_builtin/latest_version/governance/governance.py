@@ -411,6 +411,10 @@ class Governance(IconSystemScoreBase):
 
         self.Rejected('0x' + txHash.hex(), reason)
 
+    @external(readonly=True)
+    def isAuditor(self, address: Address) -> bool:
+        return address in self._auditor_list
+
     @external
     def addAuditor(self, address: Address):
         if address.is_contract:
@@ -753,6 +757,17 @@ class Governance(IconSystemScoreBase):
         if DEBUG is True:
             Logger.debug(f'({importStmt}) is in import white list')
         return True
+
+    @external(readonly=True)
+    def getImportWhiteList(self) -> list:
+        formatted_white_list = []
+
+        white_list: dict = self._get_import_white_list()
+
+        for key, value in white_list.items():
+            formatted_white_list.append({"package": key, "objects": value})
+
+        return formatted_white_list
 
     @staticmethod
     def _check_import_stmt(import_stmt: str) -> dict:

@@ -49,6 +49,34 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
 
         return query_request
 
+    def _get_import_white_list_request(self):
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getImportWhiteList",
+                "params": {}
+            }
+        }
+
+        return query_request
+
+    def _is_auditor_request(self, address: 'Address'):
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "isAuditor",
+                "params": {"address": str(address)}
+            }
+        }
+
+        return query_request
+
     def _external_call(self, from_addr: 'Address', score_addr: 'Address', func_name: str, params: dict):
         tx = self._make_score_call_tx(from_addr, score_addr, func_name, params)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -111,6 +139,94 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_result.failure.message,
                          "Invalid import statement: Expecting value: line 1 column 1 (char 0)")
+
+    def test_is_auditor(self):
+        self.import_white_list_enable()
+
+        # success case: check default auditor
+        query_request = self._is_auditor_request(self._admin)
+        response = self._query(query_request)
+        self.assertEqual(response, True)
+
+        # failure case: not registered address (should return False)
+        test_auditor_address = create_address()
+        query_request = self._is_auditor_request(test_auditor_address)
+        response = self._query(query_request)
+        self.assertEqual(response, False)
+
+        # success case: after register address to auditor list, check address (should return True)
+        tx1 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'addAuditor',
+                                       {"address": str(test_auditor_address)})
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        # confirm block
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        query_request = self._is_auditor_request(test_auditor_address)
+        response = self._query(query_request)
+        self.assertEqual(response, True)
+
+        # success case: after remove address from auditor list, check address (should return False)
+        tx1 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'removeAuditor',
+                                       {"address": str(test_auditor_address)})
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        # confirm block
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        query_request = self._is_auditor_request(test_auditor_address)
+        response = self._query(query_request)
+        self.assertEqual(response, False)
+
+    def test_get_import_white_list(self):
+        self.import_white_list_enable()
+
+        # default white list should be icon service
+        expected_list = [{'package': 'iconservice', 'objects': ['*']}]
+
+        query_request = self._get_import_white_list_request()
+        response = self._query(query_request)
+        self.assertEqual(response, expected_list)
+
+        # add json and os to white list
+        tx1 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'addImportWhiteList',
+                                       {"importStmt": "{'json': [],'os': ['path']}"})
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        # confirm block
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        expected_list = [{'package': 'iconservice', 'objects': ['*']},
+                         {'package': 'json', 'objects': ['*']},
+                         {'package': 'os', 'objects': ['path']}]
+        query_request = self._get_import_white_list_request()
+        response = self._query(query_request)
+        self.assertEqual(expected_list, response)
+
+        # remove import whitelist
+        tx1 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'removeImportWhiteList',
+                                       {"importStmt": "{'json': [],'os': ['path']}"})
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        # confirm block
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        expected_list = [{'package': 'iconservice', 'objects': ['*']}]
+        query_request = self._get_import_white_list_request()
+        response = self._query(query_request)
+        self.assertEqual(expected_list, response)
 
     def test_score_import_white_list(self):
         self.import_white_list_enable()
