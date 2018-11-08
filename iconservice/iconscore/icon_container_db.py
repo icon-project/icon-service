@@ -18,9 +18,10 @@
 from collections import Iterator
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
+from iconservice.iconscore.icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import ContainerDBException
-from ..icon_constant import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER, REVISION_3
 from ..utils import int_to_bytes
 
 if TYPE_CHECKING:
@@ -218,7 +219,7 @@ class ArrayDB(Iterator):
 
         self.__index = 0
         self.__value_type = value_type
-        self.__size = 0
+        self.__size = self.__get_size_from_db()
 
     def put(self, value: V) -> None:
         size: int = self.__get_size()
@@ -258,9 +259,16 @@ class ArrayDB(Iterator):
         return self.__get_size()
 
     def __get_size(self) -> int:
+        if self.__is_defective_revision():
+            return self.__size
+        else:
+            return self.__get_size_from_db()
+
+    def __get_size_from_db(self) -> int:
         return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
 
     def __set_size(self, size: int) -> None:
+        self.__size = size
         byte_value = ContainerUtil.encode_value(size)
         self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
@@ -286,6 +294,11 @@ class ArrayDB(Iterator):
             if e == item:
                 return True
         return False
+
+    def __is_defective_revision(self):
+        context = ContextContainer._get_context()
+        revision = context.get_revision() if context is not None else 0
+        return revision < REVISION_3
 
 
 class VarDB(object):
