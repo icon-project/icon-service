@@ -761,12 +761,9 @@ class Governance(IconSystemScoreBase):
     @external(readonly=True)
     def getImportWhiteList(self) -> list:
         formatted_white_list = []
-
         white_list: dict = self._get_import_white_list()
-
         for key, value in white_list.items():
             formatted_white_list.append({"package": key, "objects": value})
-
         return formatted_white_list
 
     @staticmethod
