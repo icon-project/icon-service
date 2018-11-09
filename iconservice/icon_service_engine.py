@@ -32,8 +32,7 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    REVISION_3
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextType
@@ -194,9 +193,8 @@ class IconServiceEngine(ContextContainer):
         try:
             self._push_context(context)
             governance_score = self._get_governance_score(context)
-            if governance_score is not None:
-                if hasattr(governance_score, 'revision_code'):
-                    context.revision = governance_score.revision_code
+            if hasattr(governance_score, 'revision_code'):
+                context.revision = governance_score.revision_code
         finally:
             self._pop_context()
 
