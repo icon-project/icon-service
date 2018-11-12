@@ -829,7 +829,7 @@ class IconServiceEngine(ContextContainer):
                 # string
                 data_body = data[2:] if data.startswith('0x') else data
                 if is_lowercase_hex_string(data_body):
-                    size += ceil(len(data_body) / 2)
+                    size += ceil(len(data_body) // 2)
                 else:
                     size += len(data.encode('utf-8'))
             else:
