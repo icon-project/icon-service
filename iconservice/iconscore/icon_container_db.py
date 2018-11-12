@@ -295,7 +295,8 @@ class ArrayDB(Iterator):
                 return True
         return False
 
-    def __is_defective_revision(self):
+    @staticmethod
+    def __is_defective_revision():
         context = ContextContainer._get_context()
         revision = context.get_revision() if context is not None else 0
         return revision < REVISION_3
