@@ -18,7 +18,7 @@
 from collections import Iterator
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
-from iconservice.iconscore.icon_score_context import ContextContainer
+from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import ContainerDBException
 from ..icon_constant import DATA_BYTE_ORDER, REVISION_3
