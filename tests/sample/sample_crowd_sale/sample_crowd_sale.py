@@ -79,7 +79,7 @@ class SampleCrowdSale(IconScoreBase):
         amount = self.msg.value
         self.__balances[self.msg.sender] = self.__balances[self.msg.sender] + amount
         self.__amount_raise.set(self.__amount_raise.get() + amount)
-        value = int(amount // self.__price.get())
+        value = amount // self.__price.get()
 
         self.__sample_token_score.transfer(self.msg.sender, value)
 
