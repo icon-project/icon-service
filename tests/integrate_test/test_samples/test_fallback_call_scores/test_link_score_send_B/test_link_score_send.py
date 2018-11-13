@@ -35,6 +35,6 @@ class TestLinkScoreSend(IconScoreBase):
         amount = self.msg.value
         target1 = self._addr_eoa1.get()
         target2 = self._addr_eoa2.get()
-        value = int(amount // 2)
+        value = amount // 2
         result1 = self.icx.send(target1, value)
         result2 = self.icx.send(target2, value)
