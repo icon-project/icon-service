@@ -250,7 +250,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.import_white_list_enable()
 
         tx1 = self._make_deploy_tx("test_scores",
-                                   "l_coin_0_5_0_using_import_os",
+                                   "test_score_using_import_os",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -261,7 +261,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                        {"importStmt": "{'os': []}"})
 
         tx3 = self._make_deploy_tx("test_scores",
-                                   "l_coin_0_5_0_using_import_os",
+                                   "test_score_using_import_os",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
