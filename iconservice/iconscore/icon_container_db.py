@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import threading
 from collections import Iterator
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
@@ -217,9 +216,11 @@ class ArrayDB(Iterator):
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
 
-        self.__index = 0
         self.__value_type = value_type
-        self.__size = self.__get_size_from_db()
+
+        self.__threading_local = threading.local()
+        self.__threading_local.__index = 0
+        self.__threading_local.__size = self.__get_size_from_db()
 
     def put(self, value: V) -> None:
         size: int = self.__get_size()
@@ -243,14 +244,17 @@ class ArrayDB(Iterator):
         return self[index]
 
     def __iter__(self):
-        self.__index = 0
-        self.__size = self.__get_size()
+        self.__threading_local.__index = 0
+        self.__threading_local.__size = self.__get_size()
         return self
 
     def __next__(self) -> V:
-        if self.__index < self.__size:
-            index = self.__index
-            self.__index += 1
+        index = self.__threading_local.__index
+        size = self.__threading_local.__size
+
+        if index < size:
+            index = index
+            self.__threading_local.__index += 1
             return self[index]
         else:
             raise StopIteration
@@ -260,7 +264,7 @@ class ArrayDB(Iterator):
 
     def __get_size(self) -> int:
         if self.__is_defective_revision():
-            return self.__size
+            return self.__threading_local.__size
         else:
             return self.__get_size_from_db()
 
@@ -268,7 +272,7 @@ class ArrayDB(Iterator):
         return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
 
     def __set_size(self, size: int) -> None:
-        self.__size = size
+        self.__threading_local.__size = size
         byte_value = ContainerUtil.encode_value(size)
         self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
