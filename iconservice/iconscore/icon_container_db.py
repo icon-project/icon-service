@@ -253,7 +253,6 @@ class ArrayDB(Iterator):
         size = self.__threading_local.__size
 
         if index < size:
-            index = index
             self.__threading_local.__index += 1
             return self[index]
         else:
