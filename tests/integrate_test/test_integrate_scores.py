@@ -28,19 +28,6 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 class TestIntegrateScores(TestIntegrateBase):
 
-    def test_l_coin(self):
-        tx1 = self._make_deploy_tx("test_scores",
-                                   "l_coin_0_5_0",
-                                   self._addr_array[0],
-                                   ZERO_SCORE_ADDRESS)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-
-        self._write_precommit_state(prev_block)
-
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
     def test_db_returns(self):
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_db_returns",

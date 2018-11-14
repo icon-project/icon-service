@@ -105,7 +105,10 @@ class TestIconContainerDB(unittest.TestCase):
         test_dict['a'] = 1
         test_dict['b'] = 2
 
+        test_dict['b'] += 1
+
         self.assertEqual(test_dict['a'], 1)
+        self.assertEqual(test_dict['b'], 3)
 
     def test_success_dict_other_Key(self):
         name = 'test_dict'
