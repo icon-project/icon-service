@@ -16,7 +16,6 @@ class TestThread(unittest.TestCase):
     def tearDown(self):
         logging.basicConfig(level=logging.DEBUG,
                             format=logging.BASIC_FORMAT, )
-        pass
 
     class MyClassThreadSafeUsingThreadLocal:
         class Data(threading.local):
