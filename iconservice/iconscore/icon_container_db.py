@@ -208,13 +208,12 @@ class DictDB(object):
         self._db.delete(ContainerUtil.encode_key(key))
 
 
-class ArrayDBThreadingLocal(threading.local):
-    def __init__(self, index: int, size: int):
-        self.index = index
-        self.size = size
-
-
 class ArrayDB(Iterator):
+    class ArrayDBThreadingLocal(threading.local):
+        def __init__(self, index: int, size: int):
+            self.index = index
+            self.size = size
+
     __SIZE = 'size'
     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
 
@@ -224,7 +223,7 @@ class ArrayDB(Iterator):
 
         self.__value_type = value_type
 
-        self.__threading_local = ArrayDBThreadingLocal(0, self.__get_size_from_db())
+        self.__threading_local = self.ArrayDBThreadingLocal(0, self.__get_size_from_db())
 
     def put(self, value: V) -> None:
         size: int = self.__get_size()
