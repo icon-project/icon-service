@@ -251,14 +251,14 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
         value2 = 2 * self._icx_factor
         tx1 = self._make_score_call_tx(addr_from=self._addr_array[0], addr_to=score_addr1, method="set_value",
-                                                     params={"value": hex(value2)})
+                                       params={"value": hex(value2)})
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
         # Compares estimate to the real step_used
         converted_tx = self._make_tx_for_estimating_step_from_origin_tx(tx1)
-        converted_tx['params']['data']['params']['value'] = hex(converted_tx['params']['data']['params']['value'])
+        converted_tx['params']['data']['params']['value'] = converted_tx['params']['data']['params']['value']
         estimate = self.icon_service_engine.estimate_step(request=converted_tx)
         self.assertEqual(tx_results[0].step_used, estimate)
 
