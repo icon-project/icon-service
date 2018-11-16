@@ -3,3 +3,4 @@ hypothesis
 pytest
 plyvel
 secp256k1
+cryptography
