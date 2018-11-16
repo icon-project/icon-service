@@ -305,7 +305,7 @@ class ArrayDB(Iterator):
     @staticmethod
     def __is_defective_revision():
         context = ContextContainer._get_context()
-        revision = context.get_revision() if context is not None else 0
+        revision = context.get_revision()
         return context.type == IconScoreContextType.INVOKE and revision < REVISION_3
 
 
