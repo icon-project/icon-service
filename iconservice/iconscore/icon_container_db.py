@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import threading
 from collections import Iterator
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
@@ -20,7 +21,7 @@ from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import ContainerDBException
-from ..icon_constant import DATA_BYTE_ORDER, REVISION_3
+from ..icon_constant import DATA_BYTE_ORDER, REVISION_3, IconScoreContextType
 from ..utils import int_to_bytes
 
 if TYPE_CHECKING:
@@ -305,7 +306,7 @@ class ArrayDB(Iterator):
     def __is_defective_revision():
         context = ContextContainer._get_context()
         revision = context.get_revision() if context is not None else 0
-        return revision < REVISION_3
+        return context.type == IconScoreContextType.INVOKE and revision < REVISION_3
 
 
 class VarDB(object):
