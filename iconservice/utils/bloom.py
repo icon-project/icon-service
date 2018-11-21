@@ -3,7 +3,6 @@
 #
 # changes
 #   hash function : keccak() -> sha256()
-#   chunk_to_bloom_bits() : convert type of chunk parameter from str to bytes with encode()
 
 from __future__ import absolute_import
 
