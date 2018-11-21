@@ -18,7 +18,7 @@ def get_chunks_for_bloom(value_hash):
 
 
 def chunk_to_bloom_bits(chunk):
-    high, low = chunk
+    high, low = bytearray(chunk)
     return 1 << ((low + (high << 8)) & 2047)
 
 
