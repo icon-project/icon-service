@@ -82,7 +82,7 @@ $ source venv/bin/activate    # Enter the virtual enviroment.
 (venv) $ pip install iconrpcserver
 (venv) $ pip install earlgrey
 # loopchain package has not been published on pypi.org yet.
-# Thus you need to build loopchain source code to create a python wheel package file.
+# Thus you need to build a python binary package from loopchain source code.
 # Refer to the loopchain github repository above
 (venv) $ pip install loopchain-x.x.x-py3-none-any.whl
 
