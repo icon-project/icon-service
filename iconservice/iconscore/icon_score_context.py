@@ -112,6 +112,7 @@ class IconScoreContext(object):
         self.tx: 'Transaction' = None
         self.msg: 'Message' = None
         self.current_address: 'Address' = None
+        self.revision: int = 0
         self.block_batch: 'BlockBatch' = None
         self.tx_batch: 'TransactionBatch' = None
         self.new_icon_score_mapper: 'IconScoreMapper' = None

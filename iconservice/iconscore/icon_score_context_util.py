@@ -133,15 +133,7 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def get_revision(context: 'IconScoreContext') -> int:
-        try:
-            governance_score = IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
-            if governance_score is not None:
-                if hasattr(governance_score, 'revision_code'):
-                    return governance_score.revision_code
-        except:
-            pass
-
-        return 0
+        return context.revision
 
     @staticmethod
     def get_tx_hashes_by_score_address(context: 'IconScoreContext',
