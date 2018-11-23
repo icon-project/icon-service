@@ -12,15 +12,15 @@
 
 Required libraries or services that are to be working with ICON Service
 
-* [LevelDB](https://github.com/google/leveldb): Key/Value DB used for saving blockchain data
-* [libsecp256k](https://github.com/bitcoin-core/secp256k1): ECDSA based signing/verification library
+* [LevelDB](https://github.com/google/leveldb): Key/Value DB for saving blockchain data
+* [libsecp256k](https://github.com/bitcoin-core/secp256k1): ECDSA-based signing/verification library
 * [RabbitMQ](https://www.rabbitmq.com/)
   * The most popular open source message broker
-  * Used for components such as loopchain, iconservice and iconrpcserver to communicate with each other.
+  * Used for message communication among components such as loopchain, iconservice and iconrpcserver
 
 ## Packages
 
-ICON node consists of 5 packages.
+ICON node consists of the following 5 packages.
 
 ### iconcommons
 
@@ -35,7 +35,7 @@ pypi: https://pypi.org/project/iconcommons/
 
 ICON Service component plays the following roles:
 * Base coin management
-* SCORE LifeCycle management
+* SCORE lifecycle management
 * Transaction processing
 * SCORE state management
 
@@ -45,7 +45,7 @@ pypi: https://pypi.org/project/iconservice/
 ### iconrpcserver
 
 ICON RPC Server component
-* Server handling JSON-RPC request and response.
+* Server handling JSON-RPC request and response
 * JSON-RPC message syntax check
 * Refer to the name of method in a JSON-RPC request and pass it to the appropriate component (loopchain or iconservice)
 
@@ -94,11 +94,11 @@ $ source venv/bin/activate    # Enter the virtual enviroment.
 (venv) $ iconrpcserver start -c ./iconrpcserver_config.json
 ```
 
-## Configuration File
+## Configuration Files
 
 ### iconservice_config.json
 
-Configuration file example of ICON Service
+Configuration file example of ICON Service.
 
 Once an ICON node starts with a specific configuration, you MUST NOT change it, because changing a configuration can cause the data inconsistency among ICON nodes.
 
@@ -161,7 +161,7 @@ If you want to use a new configuration, stop all nodes, clear their old block da
 
 ### iconrpcserver_config.json
 
-Configuration file example of ICON RPC Server
+Configuration file example of ICON RPC Server.
 
 ```json
 {
