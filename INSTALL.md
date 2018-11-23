@@ -10,7 +10,7 @@
 
 ## Prerequisites
 
-Base libraries or services for ICON Service to work well
+Required libraries or services that are to be working with ICON Service
 
 * [LevelDB](https://github.com/google/leveldb): Key/Value DB used for saving blockchain data
 * [libsecp256k](https://github.com/bitcoin-core/secp256k1): ECDSA based signing/verification library
@@ -24,8 +24,10 @@ ICON node consists of 5 packages.
 
 ### iconcommons
 
-Common utilities used in ICON Service
+Common utilities used in ICON Service and ICON RPC Server
+
 github: https://github.com/icon-project/icon-commons
+
 pypi: https://pypi.org/project/iconcommons/
 
 * Logging utils
@@ -34,7 +36,9 @@ pypi: https://pypi.org/project/iconcommons/
 ### iconservice
 
 ICON Service component
+
 github: https://github.com/icon-project/icon-service
+
 pypi: https://pypi.org/project/iconservice/
 
 ICON Service component plays the following roles:
@@ -46,7 +50,9 @@ ICON Service component plays the following roles:
 ### iconrpcserver
 
 ICON RPC Server component
+
 github: https://github.com/icon-project/icon-rpc-server
+
 pypi: https://pypi.org/project/iconrpcserver/
 
 * Server handling JSON-RPC request and response.
@@ -56,18 +62,22 @@ pypi: https://pypi.org/project/iconrpcserver/
 ### earlgrey
 
 Earlgrey is a python library which provides a convenient way to publish and consume messages between processes using RabbitMQ. It is abstracted to RPC pattern.
+
 github: https://github.com/icon-project/earlgrey
+
 pypi: https://pypi.org/project/earlgrey/
 
 ### loopchain
 
 Blockchain engine for icon foundation
+
 github: https://github.com/icon-project/loopchain
+
 pypi: N/A
 
 ## Installation
 
-Assume that prerequisites have been already installed.
+Assuming that the above prerequisites have been already installed.
 
 ```bash
 $ virtualenv venv             # Create a virtual environment.
@@ -85,24 +95,22 @@ $ source venv/bin/activate    # Enter the virtual enviroment.
 # Refer to the loopchain github repository above
 (venv) $ pip install loopchain-x.x.x-py3-none-any.whl
 
-# Execution order is important because of dependencies between each component.
-
 # Execute ICON Service
 (venv) $ iconservice start -c ./iconservice_config.json
 # Execute loopchain
-(venv) $ loop peer -d -r ${RADIO_STATION_IP}:${RADIO_STATION_PORT} -o ./loop_peer_conf_mainnet.json
+(venv) $ loop peer -d -r ${RADIO_STATION_IP}:${RADIO_STATION_PORT} -o ./peer_conf.json
 # Execute JSON-RPC Server
 (venv) $ iconrpcserver start -c ./iconrpcserver_config.json
-
-# Deploy the latest governance SCORE
 ```
 
 ## Configuration File
 
 ### iconservice_config.json
 
-config file example of ICON Service
-Once an  ICON node starts with a fixed configuration, you MUST NOT change it, because changing configuration can cause the data inconsistency among ICON nodes.
+Configuration file example of ICON Service
+
+Once an  ICON node starts with a specific configuration, you MUST NOT change it, because changing a configuration can cause the data inconsistency among ICON nodes.
+
 If you want to use a new configuration, stop all nodes, clear their old block data  and restart them with the new one.
 
 ```json
@@ -120,8 +128,8 @@ If you want to use a new configuration, stop all nodes, clear their old block da
             "maxBytes": 50000000
         }
     },
-    "scoreRootPath": "/work/.score",
-    "stateDbRootPath": "/work/.statedb",
+    "scoreRootPath": ".score",
+    "stateDbRootPath": ".statedb",
     "channel": "icon_dex",
     "amqpKey": "7100",
     "amqpTarget": "127.0.0.1",
@@ -162,7 +170,7 @@ If you want to use a new configuration, stop all nodes, clear their old block da
 
 ### iconrpcserver_config.json
 
-config file example of ICON RPC Server
+Configuration file example of ICON RPC Server
 
 ```json
 {
@@ -196,6 +204,3 @@ config file example of ICON RPC Server
 | amqpTarget | string | IP of RabbitMQ Server<br>ex) "127.0.0.1" |
 | port | integer | PRC Server port |
 | gunicornWorkerCount | integer | gunicorn worker count<br>default count  = 2 * cpu + 1 |
-
-### loopchain configuration file
-Refer to the additional document
