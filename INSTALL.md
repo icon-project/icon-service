@@ -1,4 +1,4 @@
-# How to install ICON Service
+# How to Install ICON Service
 
 ## Envirnoment
 
@@ -25,21 +25,13 @@ ICON node consists of 5 packages.
 ### iconcommons
 
 Common utilities used in ICON Service and ICON RPC Server
-
-github: https://github.com/icon-project/icon-commons
-
-pypi: https://pypi.org/project/iconcommons/
-
 * Logging utils
 * Configuration file management
 
+github: https://github.com/icon-project/icon-commons  
+pypi: https://pypi.org/project/iconcommons/
+
 ### iconservice
-
-ICON Service component
-
-github: https://github.com/icon-project/icon-service
-
-pypi: https://pypi.org/project/iconservice/
 
 ICON Service component plays the following roles:
 * Base coin management
@@ -47,32 +39,31 @@ ICON Service component plays the following roles:
 * Transaction processing
 * SCORE state management
 
+github: https://github.com/icon-project/icon-service  
+pypi: https://pypi.org/project/iconservice/
+
 ### iconrpcserver
 
 ICON RPC Server component
-
-github: https://github.com/icon-project/icon-rpc-server
-
-pypi: https://pypi.org/project/iconrpcserver/
-
 * Server handling JSON-RPC request and response.
 * JSON-RPC message syntax check
 * Refer to the name of method in a JSON-RPC request and pass it to the appropriate component (loopchain or iconservice)
+
+github: https://github.com/icon-project/icon-rpc-server  
+pypi: https://pypi.org/project/iconrpcserver/
 
 ### earlgrey
 
 Earlgrey is a python library which provides a convenient way to publish and consume messages between processes using RabbitMQ. It is abstracted to RPC pattern.
 
-github: https://github.com/icon-project/earlgrey
-
+github: https://github.com/icon-project/earlgrey  
 pypi: https://pypi.org/project/earlgrey/
 
 ### loopchain
 
-Blockchain engine for icon foundation
+Blockchain engine for ICON Foundation
 
-github: https://github.com/icon-project/loopchain
-
+github: https://github.com/icon-project/loopchain  
 pypi: N/A
 
 ## Installation
@@ -109,9 +100,9 @@ $ source venv/bin/activate    # Enter the virtual enviroment.
 
 Configuration file example of ICON Service
 
-Once an  ICON node starts with a specific configuration, you MUST NOT change it, because changing a configuration can cause the data inconsistency among ICON nodes.
+Once an ICON node starts with a specific configuration, you MUST NOT change it, because changing a configuration can cause the data inconsistency among ICON nodes.
 
-If you want to use a new configuration, stop all nodes, clear their old block data  and restart them with the new one.
+If you want to use a new configuration, stop all nodes, clear their old block data and restart them with the new one.
 
 ```json
 {
