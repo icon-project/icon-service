@@ -1,6 +1,6 @@
 # How to Install ICON Service
 
-## Envirnoment
+## Environment
 
 * OS: Ubuntu or MacOS
     - Windows is not supported yet.
