@@ -1,22 +1,12 @@
-# How to Install ICON Service
+# How to install ICON node
 
-## Envirnoment
+## Environment
 
 * OS: Ubuntu or MacOS
     - Windows is not supported yet.
 * Python: 3.6.5+
-    - virtualenv is required.
-    - Python 3.7 or higher is not supported.
-
-## Prerequisites
-
-Required libraries or services that are to be working with ICON Service
-
-* [LevelDB](https://github.com/google/leveldb): Key/Value DB for saving blockchain data
-* [libsecp256k](https://github.com/bitcoin-core/secp256k1): ECDSA-based signing/verification library
-* [RabbitMQ](https://www.rabbitmq.com/)
-  * The most popular open source message broker
-  * Used for message communication among components such as loopchain, iconservice and iconrpcserver
+	- virtualenv is required.
+	- Python 3.7 or higher is not supported.
 
 ## Packages
 
@@ -68,35 +58,369 @@ pypi: N/A
 
 ## Installation
 
-Assuming that the above prerequisites have been already installed.
+### Install third party tools
+automake, pkg-config, libtool, leveldb, rabbitmq, openssl
+
+### Setup RabbitMQ
+* increase number of file descriptors
+
+```
+$ ulimit -S -n {value: int}
+```
+
+- Add the above command to the `rabbitmq-env.conf` file to run the command each time rabbitmq starts.
+- You may find this file (/usr/local/etc/rabbitmq/rabbitmq-env.conf).
+- Recommended value is 2048 or more. (Local test case only)
+- You may need to adjust this value depending on your infrastructure environment.
+
+* start rabbitmq
+
+```
+$ brew services start rabbitmq
+$ rabbitmqctl list_queues
+```
+
+* enable rabbitmq web management
+
+```
+$ rabbitmq-plugins enable rabbitmq_management
+```
+
+### Setup virtualenv
+* check your python version
+
+```
+$ python3 -V
+```
+
+* make virtual env and apply
+
+```
+$ virtualenv -p python3 ./venv
+$ source ./venv/bin/activate
+```
+
+* check virtual env python version
+
+```
+(venv) $ python -V
+```
+
+### Install ICON packages
+
+If you have generated ssh key for github, you can install with below commands.
+```
+(venv) $ pip install git+ssh://git@github.com/icon-project/icon-service.git
+(venv) $ pip install git+ssh://git@github.com/icon-project/icon-commons.git
+(venv) $ pip install git+ssh://git@github.com/icon-project/icon-rpc-server.git
+```
+
+Also, you can install with below commands too.
+```
+(venv) $ pip install git+https://github.com/icon-project/icon-service.git
+(venv) $ pip install git+https://github.com/icon-project/icon-commons.git
+(venv) $ pip install git+https://github.com/icon-project/icon-rpc-server.git
+```
+
+It is possible to install packages from pypi.
+```
+(venv) $ pip install iconservice
+(venv) $ pip install iconcommons
+(venv) $ pip install iconrpcserver
+```
+
+### Install loopchain from source
 
 ```bash
-$ virtualenv venv             # Create a virtual environment.
-$ source venv/bin/activate    # Enter the virtual enviroment.
+# Get loopchain source code from github.
+(venv) $ git clone https://github.com/icon-project/loopchain.git
+(venv) $ cd loopchain
 
-# The processes below are executed under virtualenv environment.
+# Generate gRPC code
+(venv) loopchain$ ./generate_code.sh
 
-# Install python packages being comprised of a ICON node.
-(venv) $ pip install iconcommons
-(venv) $ pip install iconservice
-(venv) $ pip install iconrpcserver
-(venv) $ pip install earlgrey
-# loopchain package has not been published on pypi.org yet.
-# Thus you need to build a python binary package from loopchain source code.
-# Refer to the loopchain github repository above
-(venv) $ pip install loopchain-x.x.x-py3-none-any.whl
+(venv) loopchain$ mkdir -p resources/my_pki
+(venv) loopchain$ cd resources/my_pki
 
-# Execute ICON Service
+# generate private key
+(venv) loopchain$ openssl ecparam -genkey -name secp256k1 | openssl ec -aes-256-cbc -out my_private.pem
+# generate public key
+(venv) loopchain$ openssl ec -in my_private.pem -pubout -out my_public.pem                                
+(venv) loopchain$ export PW_icon_dex={ENTER_MY_PASSWORD}
+(venv) loopchain$ cd ../../..
+```
+
+### Write channel_manage_data.json for private loopchain network
+
+* It is necessary to execute loopchain privately.
+* Radiostation must have this file.
+* Peer does not need this.
+* It's quite simple.
+
+Format
+
+```json
+{
+  "[CHANNEL_NAME]": {
+    "score_package": "score/icx",
+    "peers": [
+      {
+        "peer_target": "[PEER_IP]:[PEER_PORT]"
+      },
+      ...
+    ]
+  },
+  ...
+}
+```
+
+Example for local test
+
+```json
+{
+  "icon_dex": {
+    "score_package": "score/icx",
+    "peers": [
+      {
+        "peer_target": "[local_ip]:7100"
+      },
+      {
+        "peer_target": "[local_ip]:7200"
+      },
+      {
+        "peer_target": "[local_ip]:7300"
+      },
+      {
+        "peer_target": "[local_ip]:7400"
+      }
+    ]
+  }
+}
+```
+
+### Write genesis.json
+
+Genesis block contents
+
+```json
+{
+  "transaction_data": {
+    "nid": "0xa",
+    "accounts": [
+      {
+        "name": "god",
+        "address": "hxebf3a409845cd09dcb5af31ed5be5e34e2af9433",
+        "balance": "0x2961fff8ca4a62327800000"
+      },
+      {
+        "name": "treasury",
+        "address": "hx1000000000000000000000000000000000000000",
+        "balance": "0x0"
+      }
+    ],
+    "message": "Any messages you want to record"
+```
+
+## Execution
+
+### Run loopchain as a RadioStation
+
+* Radiostation uses TCP ports 7102 and 9002 by default.
+* Make sure for every peer not to open ports that radiostation has already used.
+
+```bash
+(venv) $ ./loopchain.py rs
+```
+
+### Run loopchain as a Peer
+
+* A peer consists of iconservice, loopchain and iconrpcserver components.
+* Each component publishes and consumes messages via RabbitMQ.
+
+```bash
 (venv) $ iconservice start -c ./iconservice_config.json
-# Execute loopchain
-(venv) $ loop peer -d -r ${RADIO_STATION_IP}:${RADIO_STATION_PORT} -o ./peer_conf.json
-# Execute JSON-RPC Server
+(venv) $ ./loopchain.py peer -r {RADIOSTATION_IP:PORT} -o conf/{PEER_CONFIG}.json
 (venv) $ iconrpcserver start -c ./iconrpcserver_config.json
+```
+
+### Stop
+
+Refer to the shell script below.
+
+```bash
+#!/bin/bash
+  
+function stop_loopchain()
+{
+    OS=$(uname)
+    if [ $OS == "Linux" ]; then
+        kill $(ps aux | grep 'loop rs\|loop peer\|loopchain rest-rs\|loopchain channel' | grep -v grep | awk '{print $2}')
+    else
+        pgrep loop | xargs kill
+    fi
+}
+
+# Stop RadioStation and Peers
+stop_loopchain
+
+# Stop ICON Service
+iconservice stop -c ./conf/iconservice_config.json
+
+# Stop ICON RPC Server
+iconrpcserver stop -c ./conf/iconrpcserver_config.json
+```
+
+#### Clean Up (delete log / delete DB)
+
+```bash
+# Remove logs and storages of radiostation and ICON Service (scoreRootPath, stateDbRootPath)
+# Each path can be found in configuration files.
+
+(venv) $ rm -rf log/
+(venv) $ rm -rf .storage_test/
+(venv) $ rm -rf .storage/
+```
+
+### Example: Execute 1 RadioStation and 4 Peers on localhost
+
+* Be careful about TCP server port collision among processes.
+    * Peer, ICON RPC Server and RadioStation
+* Each peer SHOULD use distinct paths to avoid overwriting data of other peers.
+    * Data Storages: scoreRootPath, stateDbRootPath, DEFAULT_STORAGE_PATH
+    * Key files: public_path and private_path of each peer
+    * Log files
+* We assume that channel_data.json and genesis.json have been already written at working directory.
+* To make configuration files for each peer, refer to [Configuration Files](#Configuration Files) section below.
+
+```bash
+# Enter loopchain source directory.
+(venv) $ cd loopchain
+
+(venv) $ ls *.json
+channel_manage_data.json  genesis.json
+
+# Run a radiostation.
+(venv) $ ./loopchain.py rs
+
+# Run loopchain peer0.
+(venv) $ iconservice start -c ./conf/iconservice_0_config.json
+(venv) $ ./loopchain.py peer -r 127.0.0.1:7102 -o ./conf/test_0_conf.json
+(venv) $ iconrpcserver start -c ./conf/iconrpcserver_0_config.json
+
+# Run loopchain peer1.
+(venv) $ iconservice start -c ./conf/iconservice_1_config.json
+(venv) $ ./loopchain.py peer -r 127.0.0.1:7102 -o conf/test_1_conf.json
+(venv) $ iconrpcserver start -c ./conf/iconrpcserver_1_config.json
+
+# Run loopchain peer2.
+(venv) $ iconservice start -c ./conf/iconservice_2_config.json
+(venv) $ ./loopchain.py peer -r 127.0.0.1:7102 -o conf/test_2_conf.json
+(venv) $ iconrpcserver start -c ./conf/iconrpcserver_2_config.json
+
+# Run loopchain peer3.
+(venv) $ iconservice start -c ./conf/iconservice_3_config.json
+(venv) $ ./loopchain.py peer -r 127.0.0.1:7102 -o conf/test_3_conf.json
+(venv) $ iconrpcserver start -c ./conf/iconrpcserver_3_config.json
+
+# Call JSON-RPC method (icx_getTotalSupply) to check whether peer0 works.
+(venv) $ curl -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0", "method":"icx_getTotalSupply", "id":1}' 'http://127.0.0.1:9000/api/v3'
+{"jsonrpc": "2.0", "result": "0x296f3c1a8737310c8800000", "id": 1}
+```
+
+Example: bash script for a peer execution
+```bash
+#!/bin/bash -x
+  
+set -e
+
+if [ $# -ne 2 ]; then
+    printf "[Usage] $0 <start or stop> <Peer Number>\nex) $0 start 0\nex) $0 stop 0\n"
+    exit 1
+fi
+
+export PW_icon_dex="test"
+
+COMMAND=$1
+I=$2
+
+echo "#### [ $I ] ####"
+IS_CONF_FILE="./conf/is_conf_$I.json"
+PEER_CONF_FILE="./conf/peer_conf_$I.json"
+IRPC_CONF_FILE="./conf/irpc_conf_$I.json"
+
+iconservice $COMMAND -c "$IS_CONF_FILE"
+sleep 2
+
+iconrpcserver $COMMAND -c "$IRPC_CONF_FILE"
+sleep 2
+
+if [ $COMMAND == "start" ]; then
+    ./loopchain.py peer -d -r 127.0.0.1:7102 -o "$PEER_CONF_FILE"
+fi
 ```
 
 ## Configuration Files
 
-### iconservice_config.json
+### RadioStation
+
+Configuration file example of RadioStation
+
+```json
+{
+  "CHANNEL_MANAGE_DATA_PATH" : "channel_manage_data.json",
+  "ENABLE_CHANNEL_AUTH": true,
+  "CHANNEL_OPTION" : {
+    "loopchain_default": {
+      "store_valid_transaction_only": true,
+      "send_tx_type": 2,
+      "load_cert": false,
+      "consensus_cert_use": false,
+      "tx_cert_use": false,
+      "tx_hash_version": 1,
+      "genesis_tx_hash_version": 0,
+      "key_load_type": 0,
+      "public_path": "./resources/test_pkis/test_0_public.der",
+      "private_path": "./resources/test_pkis/test_0_private.der",
+      "private_password": "test"
+    }
+  }
+}
+```
+
+### Peer
+
+Configuration file example of Peer.
+
+```json
+{
+  "LOOPCHAIN_DEFAULT_CHANNEL": "icon_dex",
+  "CHANNEL_OPTION" : {
+    "icon_dex": {
+      "store_valid_transaction_only": true,
+      "send_tx_type": 2,
+      "load_cert": false,
+      "consensus_cert_use": false,
+      "tx_cert_use": false,
+      "tx_hash_version": 1,
+      "genesis_tx_hash_version": 0,
+      "key_load_type": 0,
+      "public_path": "./resources/my_pki/my_public.pem",
+      "private_path": "./resources/my_pki/my_private.pem",
+      "genesis_data_path": "./genesis.json"
+    }
+  },
+  "USE_EXTERNAL_SCORE": true,
+  "USE_EXTERNAL_REST": true,
+  "PORT_PEER": 7100,
+  "AMQP_KEY": "7100",
+  "DEFAULT_STORAGE_PATH": ".storage/",
+  "ALLOW_MAKE_EMPTY_BLOCK": false,
+  "SUBSCRIBE_USE_HTTPS": true,
+  "LOOPCHAIN_LOG_LEVEL": "INFO"
+}
+```
+
+### ICON Service
 
 Configuration file example of ICON Service.
 
@@ -159,7 +483,7 @@ If you want to use a new configuration, stop all nodes, clear their old block da
 | service.deployerWhiteList | boolean | when enabled, the only addresses in deployer whitelist can deploy a SCORE |
 | service.scorePackageValidator | boolean | when enabled, SCORE can only import limited packages that scorePackageValidator allows |
 
-### iconrpcserver_config.json
+### ICON RPC Server
 
 Configuration file example of ICON RPC Server.
 
