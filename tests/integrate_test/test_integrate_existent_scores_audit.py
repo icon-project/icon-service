@@ -67,7 +67,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         return tx['params']['txHash']
 
-    def _set_revision(self, revision=3):
+    def _set_revision(self, revision=4):
         set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                                    {"code": hex(revision), "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([set_revision_tx])
@@ -139,10 +139,10 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(accept_results[0].status, int(False))
 
     # test when revision > 2
-    def test_existent_score_revision3_audit(self):
+    def test_existent_score_revision4_audit(self):
         self._setUp_audit()
 
-        # set revision to 3
+        # set revision to 4
         update_governance_tx = self._update_governance('0_0_4')
         self._accept_score(update_governance_tx)
         self._set_revision()
@@ -214,10 +214,10 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         accept_result = self._accept_score(tx2['params']['txHash'])
         self.assertEqual(accept_result[0].status, int(False))
 
-        # set revision to 3
+        # set revision to 4
         self._set_revision()
 
-        # deploy (revision3 must be success)
+        # deploy (revision4 must be success)
         tx4 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
 
