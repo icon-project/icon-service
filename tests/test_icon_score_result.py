@@ -169,7 +169,7 @@ class TestTransactionResult(unittest.TestCase):
         from_ = Address.from_data(AddressPrefix.EOA, b'from')
         to_ = Address.from_data(AddressPrefix.CONTRACT, b'to')
         self._mock_context.tx.index = 1234
-        self._mock_context.tx.hash = hashlib.sha256(b'hash').digest()
+        self._mock_context.tx.hash = hashlib.sha3_256(b'hash').digest()
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
@@ -189,7 +189,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_result.logs_bloom.add(b'1')
         tx_result.logs_bloom.add(b'2')
         tx_result.logs_bloom.add(b'3')
-        tx_result.block = Block(123, hashlib.sha256(b'block').digest(), 1, None)
+        tx_result.block = Block(123, hashlib.sha3_256(b'block').digest(), 1, None)
 
         camel_dict = tx_result.to_dict(to_camel_case)
 
