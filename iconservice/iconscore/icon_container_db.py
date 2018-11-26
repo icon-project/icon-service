@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import threading
 from collections import Iterator
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
+from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import ContainerDBException
-from ..icon_constant import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER, REVISION_3, IconScoreContextType
 from ..utils import int_to_bytes
 
 if TYPE_CHECKING:
@@ -222,6 +223,10 @@ class ArrayDB(Iterator):
     Utility classes wrapping the state DB.
     supports length and iterator, maintains order
     """
+    class ArrayDBThreadingLocal(threading.local):
+        def __init__(self, index: int, size: int):
+            self.index = index
+            self.size = size
 
     __SIZE = 'size'
     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
@@ -230,9 +235,9 @@ class ArrayDB(Iterator):
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
 
-        self.__size = self.__get_size()
-        self.__index = 0
         self.__value_type = value_type
+
+        self.__threading_local = self.ArrayDBThreadingLocal(0, self.__get_size_from_db())
 
     def put(self, value: V) -> None:
         """
@@ -240,10 +245,10 @@ class ArrayDB(Iterator):
 
         :param value: value to add
         """
+        size: int = self.__get_size()
         byte_value = ContainerUtil.encode_value(value)
-        self._db.put(ContainerUtil.encode_key(self.__size), byte_value)
-        self.__size += 1
-        self.__set_size()
+        self._db.put(ContainerUtil.encode_key(size), byte_value)
+        self.__set_size(size + 1)
 
     def pop(self) -> Optional[V]:
         """
@@ -251,14 +256,14 @@ class ArrayDB(Iterator):
 
         :return: last added value
         """
-        if self.__size == 0:
+        size: int = self.__get_size()
+        if size == 0:
             return None
 
-        index = self.__size - 1
+        index = size - 1
         last_val = self[index]
         self._db.delete(ContainerUtil.encode_key(index))
-        self.__size -= 1
-        self.__set_size()
+        self.__set_size(size - 1)
         return last_val
 
     def get(self, index: int=0) -> V:
@@ -271,34 +276,43 @@ class ArrayDB(Iterator):
         return self[index]
 
     def __iter__(self):
-        self.__index = 0
+        self.__threading_local.index = 0
+        self.__threading_local.size = self.__get_size()
         return self
 
     def __next__(self) -> V:
-        if self.__index < self.__size:
-            index = self.__index
-            self.__index += 1
+        index = self.__threading_local.index
+        size = self.__threading_local.size
+
+        if index < size:
+            self.__threading_local.index += 1
             return self[index]
         else:
             raise StopIteration
 
     def __len__(self):
-        return self.__size
+        return self.__get_size()
 
     def __get_size(self) -> int:
+        if self.__is_defective_revision():
+            return self.__threading_local.size
+        else:
+            return self.__get_size_from_db()
+
+    def __get_size_from_db(self) -> int:
         return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
 
-    def __set_size(self) -> None:
-        sub_db = self._db
-        byte_value = ContainerUtil.encode_value(self.__size)
-        sub_db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
+    def __set_size(self, size: int) -> None:
+        self.__threading_local.size = size
+        byte_value = ContainerUtil.encode_value(size)
+        self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
     def __setitem__(self, index: int, value: V) -> None:
-        if index >= self.__size:
+        size: int = self.__get_size()
+        if index >= size:
             raise ContainerDBException(f'ArrayDB out of range')
-        sub_db = self._db
         byte_value = ContainerUtil.encode_value(value)
-        sub_db.put(ContainerUtil.encode_key(index), byte_value)
+        self._db.put(ContainerUtil.encode_key(index), byte_value)
 
     def __getitem__(self, index: int) -> V:
         if isinstance(index, int):
@@ -315,6 +329,12 @@ class ArrayDB(Iterator):
             if e == item:
                 return True
         return False
+
+    @staticmethod
+    def __is_defective_revision():
+        context = ContextContainer._get_context()
+        revision = context.get_revision()
+        return context.type == IconScoreContextType.INVOKE and revision < REVISION_3
 
 
 class VarDB(object):

@@ -237,3 +237,4 @@ class TestIconContainerDB(unittest.TestCase):
 
         with self.assertRaises(ContainerDBException):
             prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
+
