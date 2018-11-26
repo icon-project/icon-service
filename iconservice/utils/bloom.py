@@ -2,7 +2,7 @@
 #   https://github.com/ethereum/eth-bloom
 #
 # changes
-#   hash function : keccak() -> sha256()
+#   hash function : keccak() -> sha3_256()
 
 from __future__ import absolute_import
 
@@ -23,7 +23,7 @@ def chunk_to_bloom_bits(chunk):
 
 
 def get_bloom_bits(value):
-    value_hash = hashlib.sha256(value).digest()
+    value_hash = hashlib.sha3_256(value).digest()
     for chunk in get_chunks_for_bloom(value_hash):
         bloom_bits = chunk_to_bloom_bits(chunk)
         yield bloom_bits
