@@ -32,7 +32,7 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, REVISION_3
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextType
@@ -660,7 +660,7 @@ class IconServiceEngine(ContextContainer):
             input_size = self._get_byte_length(data)
             minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
-        self._icon_pre_validator.execute(params, step_price, minimum_step)
+        self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
         self._validate_score_blacklist(context, params)
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
@@ -818,10 +818,19 @@ class IconServiceEngine(ContextContainer):
 
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
-            # Check if from account can charge a tx fee
-            self._icon_pre_validator.execute_to_check_out_of_balance(
-                params,
-                step_price=context.step_counter.step_price)
+
+            if context.revision >= REVISION_3:
+                # Check if from account can charge a tx fee
+                self._icon_pre_validator.execute_to_check_out_of_balance(
+                    context,
+                    params,
+                    step_price=context.step_counter.step_price)
+            else:
+                # Check if from account can charge a tx fee
+                self._icon_pre_validator.execute_to_check_out_of_balance(
+                    None,
+                    params,
+                    step_price=context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first
         context.step_counter.apply_step(StepType.DEFAULT, 1)

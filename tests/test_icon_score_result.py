@@ -69,6 +69,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
         self._mock_context.step_counter = step_counter_factory.create(5000000)
         self._mock_context.current_address = Mock(spec=Address)
+        self._mock_context.revision = 0
 
     def tearDown(self):
         ContextContainer._clear_context()
@@ -168,12 +169,12 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.tx.hash = hashlib.sha3_256(b'hash').digest()
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
+        self._icon_service_engine._process_transaction = Mock(return_value=to_)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context, {'from': from_, 'to': to_})
 
-        tx_result.score_address = \
-            Address.from_data(AddressPrefix.CONTRACT, b'score_address')
+        tx_result.score_address = to_
         tx_result.event_logs = [
             EventLog(
                 Address.from_data(AddressPrefix.CONTRACT, b'addr_to'),
