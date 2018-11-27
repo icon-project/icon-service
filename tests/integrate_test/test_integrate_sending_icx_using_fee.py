@@ -85,7 +85,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, 1)
-        self.assertEqual(tx_results[0].step_used, 1000000)
+        self.assertEqual(tx_results[0].step_used, 1_000_000)
 
         self.assertEqual(tx_results[1].status, 0)
 
