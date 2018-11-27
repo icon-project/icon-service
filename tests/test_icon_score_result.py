@@ -71,6 +71,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
         self._mock_context.step_counter = step_counter_factory.create(5000000)
         self._mock_context.current_address = Mock(spec=Address)
+        self._mock_context.get_revision = Mock(return_value=0)
 
     def tearDown(self):
         ContextContainer._clear_context()

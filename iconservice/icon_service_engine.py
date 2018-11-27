@@ -501,11 +501,11 @@ class IconServiceEngine(ContextContainer):
             data = params['data']
             input_size = self._get_byte_length(data)
             minimum_step += input_size * \
-                self._step_counter_factory.get_step_cost(StepType.INPUT)
-
-        self._icon_pre_validator.execute(params, step_price, minimum_step)
+                            self._step_counter_factory.get_step_cost(StepType.INPUT)
 
         context: 'IconScoreContext' = self._context_factory.create(IconScoreContextType.QUERY)
+        self._icon_pre_validator.execute(context, params, step_price, minimum_step)
+
         self._validate_score_blacklist(context, params)
         if context.is_service_flag_on(IconServiceFlag.deployerWhiteList):
             self._validate_deployer_whitelist(context, params)
@@ -600,10 +600,14 @@ class IconServiceEngine(ContextContainer):
             to: Address = params['to']
             tx_result.to = to
 
-            # Check if from account can charge a tx fee
-            self._icon_pre_validator.execute_to_check_out_of_balance(
-                params,
-                step_price=context.step_counter.step_price)
+            if context.get_revision() >= 3:
+                # Check if from account can charge a tx fee
+                self._icon_pre_validator.execute_to_check_out_of_balance(context, params,
+                                                                         step_price=context.step_counter.step_price)
+            else:
+                # Check if from account can charge a tx fee
+                self._icon_pre_validator.execute_to_check_out_of_balance(None, params,
+                                                                         step_price=context.step_counter.step_price)
 
             # Every send_transaction are calculated DEFAULT STEP at first
             context.step_counter.apply_step(StepType.DEFAULT, 1)
