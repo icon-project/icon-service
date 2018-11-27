@@ -283,7 +283,7 @@ iconservice stop -c ./conf/iconservice_config.json
 iconrpcserver stop -c ./conf/iconrpcserver_config.json
 ```
 
-#### Clean Up (delete log / delete DB)
+### Clean Up (delete log / delete DB)
 
 ```bash
 # Remove logs and storages of radiostation and ICON Service (scoreRootPath, stateDbRootPath)
@@ -299,11 +299,11 @@ iconrpcserver stop -c ./conf/iconrpcserver_config.json
 * Be careful about TCP server port collision among processes.
     - Peer, ICON RPC Server and RadioStation
 * Each peer SHOULD use distinct paths to avoid overwriting data of other peers.
-    - Data Storages: scoreRootPath, stateDbRootPath, DEFAULT_STORAGE_PATH
+    - Data storage paths: scoreRootPath, stateDbRootPath, DEFAULT_STORAGE_PATH
     - Key files: public_path and private_path of each peer
     - Log files
 * We assume that channel_data.json and genesis.json have been already written at working directory.
-* To make configuration files for each peer, refer to [Configuration Files](#Configuration Files) section below.
+* To make configuration files for each peer, refer to [Configuration Files](#configuration-files) section below.
 
 ```bash
 # Enter loopchain source directory.
