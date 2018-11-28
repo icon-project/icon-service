@@ -41,9 +41,9 @@ class TransactionResult(object):
                 code = int(code)
             except:
                 code = ExceptionCode.SERVER_ERROR
-
-            self.code = int(code)
-            self.message = str(message)
+            finally:
+                self.code = code
+                self.message = message
 
     def __init__(
             self,

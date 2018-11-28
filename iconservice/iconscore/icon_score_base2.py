@@ -87,8 +87,8 @@ def revert(message: Optional[str] = None,
         code = int(code)
     except:
         raise IconScoreException(f"revert error: message: {message} code: {code}")
-
-    raise RevertException(message, code)
+    finally:
+        raise RevertException(message, code)
 
 
 def sha3_256(data: bytes) -> bytes:
