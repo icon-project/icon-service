@@ -20,7 +20,7 @@ import json
 from typing import TYPE_CHECKING, Optional, Union, Any
 from abc import ABC, ABCMeta
 
-from ..base.exception import RevertException, ExceptionCode
+from ..base.exception import RevertException, ExceptionCode, IconScoreException
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 from ..base.address import Address
@@ -81,6 +81,13 @@ def revert(message: Optional[str] = None,
     :param message: revert message
     :param code: code
     """
+    try:
+        if message:
+            message = str(message)
+        code = int(code)
+    except:
+        raise IconScoreException(f"revert error: message: {message} code: {code}")
+
     raise RevertException(message, code)
 
 

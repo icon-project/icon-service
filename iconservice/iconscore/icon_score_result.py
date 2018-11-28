@@ -15,6 +15,7 @@
 # limitations under the License.
 from typing import TYPE_CHECKING, List, Optional
 
+from ..base.exception import ExceptionCode
 from .icon_score_event_log import EventLog
 from ..utils.bloom import BloomFilter
 from ..base.address import Address
@@ -34,6 +35,13 @@ class TransactionResult(object):
 
     class Failure(object):
         def __init__(self, code: int, message: str):
+            try:
+                if message:
+                    message = str(message)
+                code = int(code)
+            except:
+                code = ExceptionCode.SERVER_ERROR
+
             self.code = int(code)
             self.message = str(message)
 
