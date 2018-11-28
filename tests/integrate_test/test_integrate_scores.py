@@ -21,7 +21,7 @@ import unittest
 
 from iconservice import IconServiceFlag
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -328,6 +328,29 @@ class TestIntegrateScores(TestIntegrateBase):
         with self.assertRaises(InvalidParamsException) as e:
             self._query(query_request, 'icx_getScoreApi')
         self.assertEqual(e.exception.args[0], f"SCORE is inactive: {score_addr2}")
+
+    def test_wrong_revert(self):
+        tx1 = self._make_deploy_tx("test_scores",
+                                   "test_wrong_revert",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        value = 1 * self._icx_factor
+        tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1', {"value": hex(value)})
+
+        prev_block, tx_results = self._make_and_req_block([tx2])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR.value)
 
 
 if __name__ == '__main__':
