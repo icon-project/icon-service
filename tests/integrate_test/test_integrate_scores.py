@@ -21,7 +21,7 @@ import unittest
 
 from iconservice import IconServiceFlag
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -350,6 +350,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR.value)
 
 
 if __name__ == '__main__':
