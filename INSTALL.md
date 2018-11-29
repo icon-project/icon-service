@@ -56,7 +56,7 @@ pypi: https://pypi.org/project/earlgrey/
 
 ### loopchain
 
-Blockchain engine for ICON Foundation
+Blockchain engine for ICON network
 
 github: https://github.com/icon-project/loopchain  
 pypi: N/A
