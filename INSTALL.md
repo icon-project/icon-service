@@ -1,5 +1,7 @@
 # How to install ICON node
-This document explains how to setup a private loopchain network. 
+
+This document explains how to setup a private loopchain network.
+
 ## Environment
 
 * OS: Ubuntu or MacOS
@@ -46,7 +48,8 @@ pypi: https://pypi.org/project/iconrpcserver/
 
 ### earlgrey
 
-Earlgrey is a python library which provides a convenient way to publish and consume messages between processes using RabbitMQ. It is abstracted to RPC pattern.
+Earlgrey is a python library which provides a convenient way to publish and consume messages between processes using RabbitMQ.
+It abstracts the implementation complexity of the RPC pattern.  
 
 github: https://github.com/icon-project/earlgrey  
 pypi: https://pypi.org/project/earlgrey/
@@ -66,18 +69,18 @@ automake, pkg-config, libtool, leveldb, rabbitmq, openssl
 
 ### Setup RabbitMQ
 
-* Increase the number of file descriptors.
+* Increase the maximum number of file descriptors.
 
 ```bash
 $ ulimit -S -n {value: int}
 ```
 
 * Add the above command to the `rabbitmq-env.conf` file to run the command each time rabbitmq starts.
-* You may find this file (/usr/local/etc/rabbitmq/rabbitmq-env.conf).
-* Recommended value is 2048 or more. (Local test case only)
+* You may find this file here (/usr/local/etc/rabbitmq/rabbitmq-env.conf).
+* Recommended value is 2048 or more.
 * You may need to adjust this value depending on your infrastructure environment.
 
-* start rabbitmq
+* Start rabbitmq
 
 ```bash
 # MacOS
@@ -103,42 +106,54 @@ $ rabbitmq-plugins enable rabbitmq_management
 
 ```bash
 $ python3 -V
+Python 3.6.7
 ```
 
-* Make virtual env and apply
+* Create an isolated environment and activate it
 
 ```bash
 $ virtualenv -p python3 ./venv
 $ source ./venv/bin/activate
+(venv) $
 ```
 
-* Check virtual env python version
+* Check python version in the virtualenv
 
 ```bash
 (venv) $ python -V
+Python 3.6.7
 ```
 
 ### Install ICON packages
 
-If you have generated ssh key for github, you can install with below commands.
-```bash
-(venv) $ pip install git+ssh://git@github.com/icon-project/icon-service.git
-(venv) $ pip install git+ssh://git@github.com/icon-project/icon-commons.git
-(venv) $ pip install git+ssh://git@github.com/icon-project/icon-rpc-server.git
-```
-
-Also, you can install with below commands too.
-```bash
-(venv) $ pip install git+https://github.com/icon-project/icon-service.git
-(venv) $ pip install git+https://github.com/icon-project/icon-commons.git
-(venv) $ pip install git+https://github.com/icon-project/icon-rpc-server.git
-```
+#### Stable version
 
 It is possible to install packages from pypi.org.
 ```bash
-(venv) $ pip install iconservice
+(venv) $ pip install earlgrey
 (venv) $ pip install iconcommons
+(venv) $ pip install iconservice
 (venv) $ pip install iconrpcserver
+```
+
+#### Development version
+
+Packages under development can be unstable.
+
+If you have generated SSH key for GitHub, you can install the packages with the commands below.
+```bash
+(venv) $ pip install git+ssh://git@github.com/icon-project/earlgrey.git
+(venv) $ pip install git+ssh://git@github.com/icon-project/icon-commons.git
+(venv) $ pip install git+ssh://git@github.com/icon-project/icon-service.git
+(venv) $ pip install git+ssh://git@github.com/icon-project/icon-rpc-server.git
+```
+
+Alternatively, you can install with the following commands.
+```bash
+(venv) $ pip install git+https://github.com/icon-project/earlgrey.git
+(venv) $ pip install git+https://github.com/icon-project/icon-commons.git
+(venv) $ pip install git+https://github.com/icon-project/icon-service.git
+(venv) $ pip install git+https://github.com/icon-project/icon-rpc-server.git
 ```
 
 ### Install loopchain from source
@@ -154,18 +169,18 @@ It is possible to install packages from pypi.org.
 (venv) $ mkdir -p resources/my_pki
 (venv) $ cd resources/my_pki
 
-# generate private key
+# Generate a private key
 (venv) $ openssl ecparam -genkey -name secp256k1 | openssl ec -aes-256-cbc -out my_private.pem
-# generate public key
+# Generate a public key
 (venv) $ openssl ec -in my_private.pem -pubout -out my_public.pem
-# Password entered to create my_private.pem.
+# Store the password of my_private.pem in the env variable
 (venv) $ export PW_icon_dex={ENTER_MY_PASSWORD}
 (venv) $ cd ../..
 ```
 
 ### Write channel_manage_data.json for private loopchain network
 
-* It is necessary to execute loopchain privately.
+* It is required to allow only permissioned nodes to join the network.
 * Radiostation must have this file.
 * Peer does not need this.
 * It's quite simple.
@@ -275,7 +290,7 @@ function stop_loopchain()
     fi
 }
 
-# Stop RadioStation and Peers
+# Stop loopchain on RadioStation and Peer
 stop_loopchain
 
 # Stop ICON Service
@@ -304,11 +319,11 @@ iconrpcserver stop -c ./conf/iconrpcserver_config.json
     - Data storage paths: scoreRootPath, stateDbRootPath, DEFAULT_STORAGE_PATH
     - Key files: public_path and private_path of each peer
     - Log files
-* We assume that channel_data.json and genesis.json have been already written at working directory.
+* We assume that channel_data.json and genesis.json have been already created in the working directory.
 * To make configuration files for each peer, refer to [Configuration Files](#configuration-files) section below.
 
 ```bash
-# Enter loopchain source directory.
+# Enter the loopchain source directory.
 (venv) $ cd loopchain
 
 (venv) $ ls *.json
@@ -531,7 +546,7 @@ Configuration file example of ICON RPC Server.
 |:------|------|:------------|
 | log | dict | Refer to the [Configuration Files > ICON Service](#icon-service) section |
 | channel | string | channel name to interact with loopchain |
-| amqpKey | string | used for part of a queue name of RabbitMQ |
+| amqpKey | string | used for a part of a queue name in RabbitMQ |
 | amqpTarget | string | IP of RabbitMQ Server<br>ex) "127.0.0.1" |
 | port | integer | TCP port for JSON-RPC Server |
 | gunicornWorkerCount | integer | gunicorn worker count<br>default count = 2 * CPU Cores + 1 |
