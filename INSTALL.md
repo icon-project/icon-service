@@ -232,6 +232,8 @@ Genesis block contents
       }
     ],
     "message": "Any messages you want to record"
+  }
+}
 ```
 
 ## Execution
