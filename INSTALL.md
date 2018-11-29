@@ -505,7 +505,7 @@ If you want to use a new configuration, stop all nodes, clear their old block da
 | scoreRootPath | string | root directory where SCORE will be installed |
 | scoreDbRootPath | string | root directory where state DB will be located |
 | channel | string | channel name to interact with loopchain |
-| amqpKey | string | used for a part of a queue name of RabbitMQ |
+| amqpKey | string | used for part of the name of a queue created in RabbitMQ |
 | amqpTarget | string | IP of RabbitMQ Server<br>ex) "127.0.0.1" |
 | builtinScoreOwner | address | owner address of built-in SCOREs |
 | service | dict | enable or disable several features of ICON Service |
@@ -546,7 +546,7 @@ Configuration file example of ICON RPC Server.
 |:------|------|:------------|
 | log | dict | Refer to the [Configuration Files > ICON Service](#icon-service) section |
 | channel | string | channel name to interact with loopchain |
-| amqpKey | string | used for a part of a queue name in RabbitMQ |
+| amqpKey | string | used for part of the name of a queue created in RabbitMQ |
 | amqpTarget | string | IP of RabbitMQ Server<br>ex) "127.0.0.1" |
 | port | integer | TCP port for JSON-RPC Server |
 | gunicornWorkerCount | integer | gunicorn worker count<br>default count = 2 * CPU Cores + 1 |
