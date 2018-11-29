@@ -18,8 +18,24 @@ class TestWrongRevert(IconScoreBase):
 
     @external(readonly=False)
     def set_value1(self, value: int) -> None:
-        revert(None, "wrong")
+        revert("hello world", 33000)
         self._value1.set(value)
+
+    @external(readonly=False)
+    def call_revert_with_invalid_code(self):
+        revert(message='call_revert_with_invalid_code', code='code')
+
+    @external(readonly=False)
+    def call_revert_with_none_message(self):
+        revert(message=None, code=33000)
+
+    @external(readonly=False)
+    def call_revert_with_none_message_and_none_code(self):
+        revert(message=None, code=None)
+
+    @external(readonly=False)
+    def call_exception(self):
+        raise KeyError('Intended exception')
 
     @payable
     def fallback(self) -> None:

@@ -805,20 +805,24 @@ class IconServiceEngine(ContextContainer):
         :return: a Failure
         """
 
-        if isinstance(e, IconServiceBaseException):
-            if e.code == ExceptionCode.SCORE_ERROR or isinstance(e, ScoreErrorException):
-                Logger.warning(e.message, ICON_SERVICE_LOG_TAG)
+        try:
+            if isinstance(e, IconServiceBaseException):
+                if e.code == ExceptionCode.SCORE_ERROR or isinstance(e, ScoreErrorException):
+                    Logger.warning(e.message, ICON_SERVICE_LOG_TAG)
+                else:
+                    Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+
+                code = int(e.code)
+                message = str(e.message)
             else:
-                Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
+                Logger.exception(e, ICON_SERVICE_LOG_TAG)
+                Logger.error(e, ICON_SERVICE_LOG_TAG)
 
-            code = e.code
-            message = e.message
-        else:
-            Logger.exception(e, ICON_SERVICE_LOG_TAG)
-            Logger.error(e, ICON_SERVICE_LOG_TAG)
-
-            code = ExceptionCode.SERVER_ERROR
-            message = str(e)
+                code: int = ExceptionCode.SERVER_ERROR.value
+                message = str(e)
+        except:
+            code: int = ExceptionCode.SERVER_ERROR.value
+            message = 'Invalid failure: code or message is invalid'
 
         return TransactionResult.Failure(code, message)
 
