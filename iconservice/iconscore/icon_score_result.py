@@ -35,15 +35,18 @@ class TransactionResult(object):
 
     class Failure(object):
         def __init__(self, code: int, message: str):
-            try:
-                if message:
-                    message = str(message)
-                code = int(code)
-            except:
-                code = ExceptionCode.SERVER_ERROR
-            finally:
-                self.code = code
-                self.message = message
+            """MUST check arguments type strictly
+
+            :param code: error code
+            :param message: error message
+            """
+            if type(code) != int:
+                code = ExceptionCode.SERVER_ERROR.value
+            if type(message) != str:
+                message = 'Invalid argument: message is not string'
+
+            self.code = code
+            self.message = message
 
     def __init__(
             self,
