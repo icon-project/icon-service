@@ -37,7 +37,7 @@ pypi: https://pypi.org/project/iconservice/
 
 ICON RPC Server component
 
-* Server handling JSON-RPC request and response.
+* A server that handles JSON-RPC request and response.
 * JSON-RPC message syntax check
 * Pass a JSON-RPC request to the appropriate components (loopchain or iconservice) according to its method name.
 
