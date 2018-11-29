@@ -1,5 +1,5 @@
 # How to install ICON node
-
+This document explains how to setup a private loopchain network. 
 ## Environment
 
 * OS: Ubuntu or MacOS
