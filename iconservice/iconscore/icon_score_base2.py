@@ -82,11 +82,15 @@ def revert(message: Optional[str] = None,
     :param code: code
     """
     try:
-        if message:
+        if not isinstance(code, (int, ExceptionCode)):
+            code = int(code)
+
+        if not isinstance(message, str):
             message = str(message)
-        code = int(code)
     except:
-        raise IconScoreException(f"Revert error: message: {message} code: {code}", ExceptionCode.SCORE_ERROR)
+        raise IconScoreException(
+            message=f"Revert error: code or message is invalid",
+            code=ExceptionCode.SCORE_ERROR)
     else:
         raise RevertException(message, code)
 

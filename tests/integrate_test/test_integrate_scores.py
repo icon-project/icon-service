@@ -329,7 +329,7 @@ class TestIntegrateScores(TestIntegrateBase):
             self._query(query_request, 'icx_getScoreApi')
         self.assertEqual(e.exception.args[0], f"SCORE is inactive: {score_addr2}")
 
-    def test_wrong_revert(self):
+    def test_revert(self):
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_wrong_revert",
                                    self._addr_array[0],
@@ -342,15 +342,59 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
-        value = 1 * self._icx_factor
-        tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1', {"value": hex(value)})
+        tx2 = self._make_score_call_tx(
+            self._addr_array[0], score_addr1, 'set_value1', {"value": hex(100)})
 
         prev_block, tx_results = self._make_and_req_block([tx2])
 
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, 33000)
+        self.assertEqual(tx_results[0].failure.message, 'hello world')
+
+        # Test call_revert_with_invalid_code
+        func_name = 'call_revert_with_invalid_code'
+        tx = self._make_score_call_tx(
+            self._addr_array[0], score_addr1, func_name, params={})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR.value)
+        self.assertIsInstance(tx_results[0].failure.message, str)
+
+        # Test call_revert_with_none_message
+        func_name = 'call_revert_with_none_message'
+        tx = self._make_score_call_tx(
+            self._addr_array[0], score_addr1, func_name, params={})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, 33000)
+
+        # Test call_revert_with_none_message_and_none_code()
+        func_name = 'call_revert_with_none_message_and_none_code'
+        tx = self._make_score_call_tx(
+            self._addr_array[0], score_addr1, func_name, params={})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR.value)
+        self.assertIsInstance(tx_results[0].failure.message, str)
+
+        # Test exception handling on call_exception()
+        func_name = 'call_exception'
+        tx = self._make_score_call_tx(
+            self._addr_array[0], score_addr1, func_name, params={})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertIsInstance(tx_results[0].failure.code, int)
+        self.assertIsInstance(tx_results[0].failure.message, str)
 
 
 if __name__ == '__main__':
