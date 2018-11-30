@@ -822,7 +822,7 @@ class IconServiceEngine(ContextContainer):
                 message = str(e)
         except:
             code: int = ExceptionCode.SERVER_ERROR.value
-            message = 'Invalid failure: code or message is invalid'
+            message = 'Invalid exception: code or message is invalid'
 
         return TransactionResult.Failure(code, message)
 
