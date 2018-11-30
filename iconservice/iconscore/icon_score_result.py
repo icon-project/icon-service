@@ -43,7 +43,7 @@ class TransactionResult(object):
             if type(code) != int:
                 code = ExceptionCode.SERVER_ERROR.value
             if type(message) != str:
-                message = 'Invalid argument: message is not string'
+                message = 'Invalid argument: message is not a string'
 
             self.code = code
             self.message = message
