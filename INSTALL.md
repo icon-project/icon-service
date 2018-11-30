@@ -138,7 +138,7 @@ It is possible to install packages from pypi.org.
 
 #### Development version
 
-Packages under development can be unstable.
+Packages under development could be unstable.
 
 If you have generated SSH key for GitHub, you can install the packages with the commands below.
 ```bash
