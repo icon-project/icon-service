@@ -282,15 +282,18 @@ class ArrayDB(object):
 
     @staticmethod
     def _get(db: 'IconScoreDatabase', size: int, index: int, value_type: type) -> V:
-        if isinstance(index, int):
-            if index < 0:
-                index += size
-            if index < 0 or index >= size:
-                raise ContainerDBException(f'ArrayDB out of range, {index}')
-            index_byte_key = ContainerUtil.encode_key(index)
-            return ContainerUtil.decode_object(db.get(index_byte_key), value_type)
-        else:
-            raise ContainerDBException(f'have to int_index')
+        if not isinstance(index, int):
+            raise ContainerDBException(f'Invalid type: index is not a integer')
+
+        # Negative index means that you count from the right instead of the left.
+        if index < 0:
+            index += size
+
+        if 0 <= index < size:
+            key: bytes = ContainerUtil.encode_key(index)
+            return ContainerUtil.decode_object(db.get(key), value_type)
+
+        raise ContainerDBException(f'Index out of range: index({index}) size({size})')
 
     @staticmethod
     def _get_generator(db: 'IconScoreDatabase', size: int, value_type: type):

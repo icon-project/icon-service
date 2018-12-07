@@ -148,9 +148,6 @@ class TestIconContainerDB(unittest.TestCase):
         for i in range(range_size):
             self.assertEqual(test_array[i], i)
 
-        for i in range(range_size, range_size):
-            self.assertRaises(ContainerDBException, test_array[i])
-
         cant_find_value = range_size
         self.assertFalse(cant_find_value in test_array)
         self.assertEqual(range_size, len(test_array))
@@ -202,6 +199,19 @@ class TestIconContainerDB(unittest.TestCase):
         with self.assertRaises(ContainerDBException):
             var = test_array[2]
             print(var)
+
+    def test_negative_index_access_in_array_db(self):
+        array = ArrayDB('array', self.db, value_type=int)
+
+        size = 10
+        for i in range(size):
+            array.put(i)
+
+        negative_index = -1
+        for _ in range(size):
+            index = size + negative_index
+            self.assertEqual(array[index], array[negative_index])
+            negative_index -= 1
 
     def test_success_variable(self):
         test_var = VarDB('test_var', self.db, value_type=int)
