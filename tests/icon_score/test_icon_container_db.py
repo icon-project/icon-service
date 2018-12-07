@@ -160,6 +160,49 @@ class TestIconContainerDB(unittest.TestCase):
 
         self.assertEqual(test_array[-1], range(range_size)[-1])
 
+    def test_success_array2(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        range_size = 3
+        expect_array = []
+
+        for i in range(range_size):
+            expect_array.append(i)
+            test_array.put(i)
+
+        for index, e in enumerate(test_array):
+            self.assertEqual(e, expect_array[index])
+
+    def test_success_array3(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        range_size = 3
+        expect_array = []
+
+        for i in range(range_size):
+            expect_array.append(i)
+            test_array.put(i)
+
+        if 0 in test_array:
+            pass
+        else:
+            raise Exception()
+
+        if "a" in test_array:
+            raise Exception()
+        else:
+            pass
+
+    def test_success_array4(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        test_array.put(1)
+        test_array.put(2)
+
+        with self.assertRaises(ContainerDBException):
+            var = test_array[2]
+            print(var)
+
     def test_success_variable(self):
         test_var = VarDB('test_var', self.db, value_type=int)
         self.assertNotEqual(test_var._db, self.db)
