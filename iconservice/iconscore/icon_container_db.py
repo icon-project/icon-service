@@ -266,10 +266,6 @@ class ArrayDB(object):
         self._db.put(ContainerUtil.encode_key(index), byte_value)
 
     def __getitem__(self, index: int) -> V:
-        if index < 0:
-            index += len(self)
-        if index < 0 or index >= len(self):
-            raise ContainerDBException(f'ArrayDB out of range, {index}')
         return ArrayDB._get(self._db, self.__get_size(), index, self.__value_type)
 
     def __contains__(self, item: V):
