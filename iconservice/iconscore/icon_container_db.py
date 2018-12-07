@@ -283,7 +283,7 @@ class ArrayDB(object):
     @staticmethod
     def _get(db: 'IconScoreDatabase', size: int, index: int, value_type: type) -> V:
         if not isinstance(index, int):
-            raise ContainerDBException(f'Invalid type: index is not a integer')
+            raise ContainerDBException(f'Invalid type: index is not an integer')
 
         # Negative index means that you count from the right instead of the left.
         if index < 0:
