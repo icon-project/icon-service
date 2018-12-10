@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
-from collections import Iterator
 from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 
 from .icon_score_context import ContextContainer
@@ -218,26 +216,15 @@ class DictDB(object):
         self._db.delete(ContainerUtil.encode_key(key))
 
 
-class ArrayDB(Iterator):
-    """
-    Utility classes wrapping the state DB.
-    supports length and iterator, maintains order
-    """
-    class ArrayDBThreadingLocal(threading.local):
-        def __init__(self, index: int, size: int):
-            self.index = index
-            self.size = size
-
+class ArrayDB(object):
     __SIZE = 'size'
     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
         self._db = db.get_sub_db(prefix)
-
         self.__value_type = value_type
-
-        self.__threading_local = self.ArrayDBThreadingLocal(0, self.__get_size_from_db())
+        self.__legacy_size = self.__get_size_from_db()
 
     def put(self, value: V) -> None:
         """
@@ -277,26 +264,14 @@ class ArrayDB(Iterator):
         return self[index]
 
     def __iter__(self):
-        self.__threading_local.index = 0
-        self.__threading_local.size = self.__get_size()
-        return self
-
-    def __next__(self) -> V:
-        index = self.__threading_local.index
-        size = self.__threading_local.size
-
-        if index < size:
-            self.__threading_local.index += 1
-            return self[index]
-        else:
-            raise StopIteration
+        return self._get_generator(self._db, self.__get_size(), self.__value_type)
 
     def __len__(self):
         return self.__get_size()
 
     def __get_size(self) -> int:
         if self.__is_defective_revision():
-            return self.__threading_local.size
+            return self.__legacy_size
         else:
             return self.__get_size_from_db()
 
@@ -304,7 +279,7 @@ class ArrayDB(Iterator):
         return ContainerUtil.decode_object(self._db.get(ArrayDB.__SIZE_BYTE_KEY), int)
 
     def __set_size(self, size: int) -> None:
-        self.__threading_local.size = size
+        self.__legacy_size = size
         byte_value = ContainerUtil.encode_value(size)
         self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
@@ -316,14 +291,7 @@ class ArrayDB(Iterator):
         self._db.put(ContainerUtil.encode_key(index), byte_value)
 
     def __getitem__(self, index: int) -> V:
-        if isinstance(index, int):
-            if index < 0:
-                index += len(self)
-            if index < 0 or index >= len(self):
-                raise ContainerDBException(f'ArrayDB out of range, {index}')
-            sub_db = self._db
-            index_byte_key = ContainerUtil.encode_key(index)
-            return ContainerUtil.decode_object(sub_db.get(index_byte_key), self.__value_type)
+        return ArrayDB._get(self._db, self.__get_size(), index, self.__value_type)
 
     def __contains__(self, item: V):
         for e in self:
@@ -336,6 +304,26 @@ class ArrayDB(Iterator):
         context = ContextContainer._get_context()
         revision = context.revision
         return context.type == IconScoreContextType.INVOKE and revision < REVISION_3
+
+    @staticmethod
+    def _get(db: 'IconScoreDatabase', size: int, index: int, value_type: type) -> V:
+        if not isinstance(index, int):
+            raise ContainerDBException(f'Invalid type: index is not an integer')
+
+        # Negative index means that you count from the right instead of the left.
+        if index < 0:
+            index += size
+
+        if 0 <= index < size:
+            key: bytes = ContainerUtil.encode_key(index)
+            return ContainerUtil.decode_object(db.get(key), value_type)
+
+        raise ContainerDBException(f'Index out of range: index({index}) size({size})')
+
+    @staticmethod
+    def _get_generator(db: 'IconScoreDatabase', size: int, value_type: type):
+        for index in range(size):
+            yield ArrayDB._get(db, size, index, value_type)
 
 
 class VarDB(object):
