@@ -134,7 +134,7 @@ def main():
 
 
 def run_in_foreground(conf: 'IconConfig'):
-    _run_async(_check_rabbitmq())
+    _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
     icon_service.serve(config=conf)
 
