@@ -17,12 +17,13 @@
 
 import unittest
 from copy import deepcopy
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from iconservice.base.exception import ServerErrorException, ExceptionCode
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy.icon_score_deploy_storage import \
     IconScoreDeployTXParams, IconScoreDeployInfo, DeployType, DeployState, IconScoreDeployStorage
+from iconservice.icon_constant import ZERO_TX_HASH
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_tx_hash, create_address
 
@@ -80,7 +81,7 @@ class TestIconScoreDeployInfo(unittest.TestCase):
         score_address = create_address(1)
         owner_address = create_address()
         tx_hash1 = create_tx_hash()
-        tx_hash2 = None
+        tx_hash2 = ZERO_TX_HASH
         deploy_state = DeployState.INACTIVE
 
         info1 = IconScoreDeployInfo(score_address, deploy_state, owner_address, tx_hash1, tx_hash2)
@@ -102,7 +103,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.storage = IconScoreDeployStorage(Mock(spec=ContextDatabase))
 
     def test_put_deploy_info_and_tx_params(self):
-        self.storage._put_deploy_tx_params = Mock()
+        self.storage.put_deploy_tx_params = Mock()
         self.storage.get_deploy_tx_params = Mock(return_value=bytes())
         context = Mock(spec=IconScoreContext)
         score_address = create_address(1)
@@ -119,15 +120,15 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                                        deploy_data)
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
         self.assertEqual(e.exception.message, f'deploy_params already exists: {tx_hash}')
-        self.storage._put_deploy_tx_params.assert_not_called()
+        self.storage.put_deploy_tx_params.assert_not_called()
 
         with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
             with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployInfo') as MockDeployInfos:
-                self.storage._put_deploy_tx_params.reset_mock()
+                self.storage.put_deploy_tx_params.reset_mock()
                 self.storage.get_deploy_tx_params.reset_mock()
                 self.storage.get_deploy_tx_params.return_value = None
                 self.storage.get_deploy_info = Mock(return_value=None)
-                self.storage._put_deploy_info = Mock()
+                self.storage.put_deploy_info = Mock()
                 context = Mock(spec=IconScoreContext)
                 score_address = create_address(1)
                 deploy_type = DeployType.INSTALL
@@ -136,7 +137,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                 deploy_data = {}
                 tx_params = IconScoreDeployTXParams(tx_hash, deploy_type, score_address, deploy_data)
                 MockTxParams.return_value = tx_params
-                deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, None, tx_hash)
+                deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, ZERO_TX_HASH, tx_hash)
                 MockDeployInfos.return_value = deploy_info
 
                 self.storage.put_deploy_info_and_tx_params(context,
@@ -146,22 +147,22 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                                            tx_hash,
                                                            deploy_data)
                 self.storage.get_deploy_tx_params.assert_called_once_with(context, tx_hash)
-                self.storage._put_deploy_tx_params.assert_called_once_with(context, tx_params)
+                self.storage.put_deploy_tx_params.assert_called_once_with(context, tx_params)
                 self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-                self.storage._put_deploy_info.assert_called_once_with(context, deploy_info)
+                self.storage.put_deploy_info.assert_called_once_with(context, deploy_info)
 
         with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
-            self.storage._put_deploy_tx_params.reset_mock()
+            self.storage.put_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.return_value = None
-            self.storage._put_deploy_info = Mock()
+            self.storage.put_deploy_info = Mock()
             context = Mock(spec=IconScoreContext)
             score_address = create_address(1)
             deploy_type = DeployType.INSTALL
             owner = create_address()
             tx_hash = create_tx_hash()
             deploy_data = {}
-            deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, None, tx_hash)
+            deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, ZERO_TX_HASH, tx_hash)
             tx_params = IconScoreDeployTXParams(tx_hash, deploy_type, score_address, deploy_data)
             self.storage.get_deploy_info = Mock(return_value=deploy_info)
             MockTxParams.return_value = tx_params
@@ -176,17 +177,17 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                                            tx_hash,
                                                            deploy_data)
             self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-            self.assertEqual(e.exception.message, f'invalid owner: {deploy_info.owner} != {other_owner}')
+            self.assertEqual(e.exception.message, f'Invalid owner: {deploy_info.owner} != {other_owner}')
 
             self.storage.get_deploy_tx_params.assert_called_once_with(context, tx_hash)
-            self.storage._put_deploy_tx_params.assert_called_once_with(context, tx_params)
+            self.storage.put_deploy_tx_params.assert_called_once_with(context, tx_params)
             self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
         with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
-            self.storage._put_deploy_tx_params.reset_mock()
+            self.storage.put_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.return_value = None
-            self.storage._put_deploy_info = Mock()
+            self.storage.put_deploy_info = Mock()
             self.storage._db.delete = Mock()
             context = Mock(spec=IconScoreContext)
             context.revision = 0
@@ -196,7 +197,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
             tx_hash = create_tx_hash()
             deploy_data = {}
             already_tx_hash = create_tx_hash()
-            deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, None, already_tx_hash)
+            deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, ZERO_TX_HASH, already_tx_hash)
             tx_params = IconScoreDeployTXParams(tx_hash, deploy_type, score_address, deploy_data)
             self.storage.get_deploy_info = Mock(return_value=deepcopy(deploy_info))
             self.storage._create_db_key = Mock(return_value=deploy_info.next_tx_hash)
@@ -209,29 +210,14 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                                        tx_hash,
                                                        deploy_data)
             self.storage.get_deploy_tx_params.assert_called_once_with(context, tx_hash)
-            self.storage._put_deploy_tx_params.assert_called_once_with(context, tx_params)
+            self.storage.put_deploy_tx_params.assert_called_once_with(context, tx_params)
             self.storage.get_deploy_info.assert_called_once_with(context, score_address)
             self.storage._db.delete.assert_called_once_with(context, deploy_info.next_tx_hash)
 
-            self.storage._put_deploy_info.assert_called_once()
-            ret_context, ret_deployinfo = self.storage._put_deploy_info.call_args[0]
+            self.storage.put_deploy_info.assert_called_once()
+            ret_context, ret_deployinfo = self.storage.put_deploy_info.call_args[0]
             self.assertEqual(ret_context, context)
             self.assertEqual(ret_deployinfo.next_tx_hash, tx_hash)
-
-    def test_put_deploy_info_and_tx_params_for_builtin(self):
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployInfo') as MockDeployInfos:
-            self.storage._put_deploy_info = Mock()
-            context = Mock(spec=IconScoreContext)
-            score_address = create_address(1)
-            owner = create_address()
-            deploy_info = IconScoreDeployInfo(score_address, DeployState.ACTIVE, owner, None, None)
-            MockDeployInfos.return_value = deploy_info
-
-            self.storage.put_deploy_info_and_tx_params_for_builtin(context,
-                                                                   score_address,
-                                                                   owner)
-
-            self.storage._put_deploy_info.assert_called_once_with(context, deploy_info)
 
     def test_update_score_info(self):
         context = Mock(spec=IconScoreContext)
@@ -268,47 +254,48 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                           current_tx_hash,
                                           tx_hash)
         self.storage.get_deploy_info = Mock(return_value=deepcopy(deploy_info))
-        self.storage._put_deploy_info = Mock()
+        self.storage.put_deploy_info = Mock()
         self.storage.get_deploy_tx_params = Mock(return_value=None)
         with self.assertRaises(ServerErrorException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
         self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
         self.assertEqual(e.exception.message, f'tx_params is None: {tx_hash}')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-        self.storage._put_deploy_info.assert_called_once()
-        ret_context, ret_deploy_info = self.storage._put_deploy_info.call_args[0]
+        self.storage.put_deploy_info.assert_called_once()
+        ret_context, ret_deploy_info = self.storage.put_deploy_info.call_args[0]
         self.assertEqual(ret_context, context)
         expected = IconScoreDeployInfo(score_address,
                                        DeployState.ACTIVE,
                                        owner,
                                        tx_hash,
-                                       None)
+                                       ZERO_TX_HASH)
         self.assertEqual(ret_deploy_info.to_bytes(), expected.to_bytes())
 
         self.storage.get_deploy_info = Mock(return_value=deepcopy(deploy_info))
-        self.storage._put_deploy_info = Mock()
+        self.storage.put_deploy_info = Mock()
         self.storage.get_deploy_tx_params = Mock(return_value=Mock(spec=IconScoreDeployTXParams))
         self.storage.update_score_info(context, score_address, tx_hash)
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-        self.storage._put_deploy_info.assert_called_once()
-        ret_context, ret_deploy_info = self.storage._put_deploy_info.call_args[0]
+        self.storage.put_deploy_info.assert_called_once()
+        ret_context, ret_deploy_info = self.storage.put_deploy_info.call_args[0]
         self.assertEqual(ret_context, context)
         expected = IconScoreDeployInfo(score_address,
                                        DeployState.ACTIVE,
                                        owner,
                                        tx_hash,
-                                       None)
+                                       ZERO_TX_HASH)
         self.assertEqual(ret_deploy_info.to_bytes(), expected.to_bytes())
         self.storage.get_deploy_tx_params.assert_called_once_with(context, tx_hash)
 
     def test_put_deploy_info(self):
         context = Mock(spec=IconScoreContext)
         score_address = create_address(1)
-        deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, create_address(), None, create_tx_hash())
+        deploy_info = IconScoreDeployInfo(
+            score_address, DeployState.INACTIVE, create_address(), ZERO_TX_HASH, create_tx_hash())
         self.storage._create_db_key = Mock(return_value=score_address.to_bytes())
         self.storage._db.put = Mock()
 
-        self.storage._put_deploy_info(context, deploy_info)
+        self.storage.put_deploy_info(context, deploy_info)
         self.storage._db.put.assert_called_once_with(context, score_address.to_bytes(), deploy_info.to_bytes())
 
     def test_get_deploy_info(self):
@@ -320,7 +307,8 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.assertEqual(None, self.storage.get_deploy_info(context, score_address))
 
         score_address = create_address(1)
-        deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, create_address(), None, create_tx_hash())
+        deploy_info = IconScoreDeployInfo(
+            score_address, DeployState.INACTIVE, create_address(), ZERO_TX_HASH, create_tx_hash())
         self.storage._create_db_key = Mock(return_value=score_address.to_bytes())
         self.storage._db.get = Mock(return_value=deploy_info.to_bytes())
         self.assertEqual(deploy_info.to_bytes(), self.storage.get_deploy_info(context, score_address).to_bytes())
@@ -332,7 +320,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.storage._create_db_key = Mock(return_value=tx_hash)
         self.storage._db.put = Mock()
 
-        self.storage._put_deploy_tx_params(context, tx_params)
+        self.storage.put_deploy_tx_params(context, tx_params)
         self.storage._db.put.assert_called_once_with(context, tx_params.tx_hash, tx_params.to_bytes())
 
     def test_get_deploy_tx_params(self):
@@ -358,40 +346,6 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         prefix = b''
         src_key = b''
         self.assertEqual(prefix + src_key, self.storage._create_db_key(prefix, src_key))
-
-    def test_is_score_active(self):
-        context = Mock(spec=IconScoreContext)
-        score_address = create_address(1)
-
-        self.storage.get_deploy_info = Mock(return_value=None)
-        self.assertEqual(False, self.storage.is_score_active(context, score_address))
-        self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-
-        deploy_info = Mock(spec=IconScoreDeployInfo)
-        deploy_info.deploy_state = DeployState.ACTIVE
-        self.storage.get_deploy_info = Mock(return_value=deploy_info)
-        self.assertEqual(True, self.storage.is_score_active(context, score_address))
-        self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-
-        deploy_info.reset_mock()
-        deploy_info.deploy_state = DeployState.INACTIVE
-        self.storage.get_deploy_info = Mock(return_value=deploy_info)
-        self.assertEqual(False, self.storage.is_score_active(context, score_address))
-        self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-
-    def test_get_score_owner(self):
-        context = Mock(spec=IconScoreContext)
-        score_address = create_address(1)
-
-        self.storage.get_deploy_info = Mock(return_value=None)
-        self.assertEqual(False, self.storage.is_score_active(context, score_address))
-        self.storage.get_deploy_info.assert_called_once_with(context, score_address)
-
-        deploy_info = Mock(spec=IconScoreDeployInfo)
-        deploy_info.attach_mock(Mock(), 'owner')
-        self.storage.get_deploy_info = Mock(return_value=deploy_info)
-        self.assertEqual(deploy_info.owner, self.storage.get_score_owner(context, score_address))
-        self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
     def test_get_tx_hashes_by_score_address(self):
         context = Mock(spec=IconScoreContext)

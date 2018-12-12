@@ -575,7 +575,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
         self._engine._handle_score_invoke = \
             Mock(return_value=None, side_effect=RevertException("force revert"))
-        self._engine._validate_score_blacklist = Mock()
 
         raise_exception_start_tag("test_score_invoke_with_revert")
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])

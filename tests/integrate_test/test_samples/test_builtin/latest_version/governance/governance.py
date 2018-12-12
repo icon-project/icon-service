@@ -53,6 +53,8 @@ INITIAL_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
 
+ZERO_TX_HASH = bytes(32)
+
 
 class StepCosts:
     """
@@ -270,7 +272,11 @@ class Governance(IconSystemScoreBase):
             self.revert('SCORE not found')
 
         current_tx_hash = deploy_info.current_tx_hash
+        if current_tx_hash == ZERO_TX_HASH:
+            current_tx_hash = None
         next_tx_hash = deploy_info.next_tx_hash
+        if next_tx_hash == ZERO_TX_HASH:
+            next_tx_hash = None
         active = self.is_score_active(address)
 
         # install audit

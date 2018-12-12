@@ -187,7 +187,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
         self.assertEqual(tx_results[0].failure.message,
-                         f'invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
+                         f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
         tx_hash2 = tx_results[0].tx_hash
 
         # 3. accept SCORE : tx_hash2
@@ -231,7 +231,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
         self.assertEqual(tx_results[0].failure.message,
-                         f'invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
+                         f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
         tx_hash2 = tx_results[0].tx_hash
 
         # 3. accept SCORE : tx_hash2
@@ -373,6 +373,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         # 1. install done
         value1 = 1 * self._icx_factor
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
+        print(f'tx_hash1: {tx_hash1.hex()}\ntx_hash2: {tx_hash2.hex()}')
 
         # 2. deploy update (wait audit)
         tx1 = self._make_deploy_tx("test_deploy_scores",
@@ -385,6 +386,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
         tx_hash2 = tx_results[0].tx_hash
+        print(f'tx_hash3: {tx_hash2.hex()}')
 
         # 3. accept SCORE : tx_hash2
         raise_exception_start_tag("test_score_no_external_func")

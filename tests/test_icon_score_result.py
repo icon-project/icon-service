@@ -231,7 +231,6 @@ class TestTransactionResult(unittest.TestCase):
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
-        inner_task._icon_service_engine._validate_score_blacklist = Mock()
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
