@@ -538,31 +538,31 @@ class TestTransactionValidator(unittest.TestCase):
 
     def test_is_inactive_score(self):
         address = create_address()
-        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
+        self.validator._is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
+        self.validator._is_score_active.assert_called_once_with(address)
 
         address = create_address()
-        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
+        self.validator._is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
+        self.validator._is_score_active.assert_called_once_with(address)
 
         address = ZERO_SCORE_ADDRESS
-        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
+        self.validator._is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
+        self.validator._is_score_active.assert_called_once_with(address)
 
         address = ZERO_SCORE_ADDRESS
-        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
+        self.validator._is_score_active = Mock(return_value=False)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
+        self.validator._is_score_active.assert_called_once_with(address)
 
         address = create_address(1)
-        self.validator._deploy_storage.is_score_active = Mock(return_value=True)
+        self.validator._is_score_active = Mock(return_value=True)
         self.assertFalse(self.validator._is_inactive_score(address))
-        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
+        self.validator._is_score_active.assert_called_once_with(address)
 
         address = create_address(1)
-        self.validator._deploy_storage.is_score_active = Mock(return_value=False)
+        self.validator._is_score_active = Mock(return_value=False)
         self.assertTrue(self.validator._is_inactive_score(address))
-        self.validator._deploy_storage.is_score_active.assert_called_once_with(None, address)
+        self.validator._is_score_active.assert_called_once_with(address)

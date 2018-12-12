@@ -13,48 +13,45 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import io
 import os
 import shutil
 import zipfile
 
-from ..base.address import Address
 from ..base.exception import ScoreInstallExtractException, ScoreInstallException
 
 
 class IconScoreDeployer(object):
-    """Deployer installing and deploying SCORE"""
-    def __init__(self, score_root_path: str):
-        self.score_root_path = score_root_path
 
-    def deploy(self, address: Address, data: bytes, tx_hash: bytes):
+    @staticmethod
+    def deploy(path: str, data: bytes):
         """Deploy SCORE; Stores SCORE on the root path
 
-        :param address: SCORE address
+        :param path: the path of directory where score is deployed
         :param data: Bytes of the zip file.
-        :param tx_hash: Transaction hash
         """
-        score_root_path = os.path.join(self.score_root_path, address.to_bytes().hex())
-        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
-        install_path = os.path.join(score_root_path, converted_tx_hash)
         try:
-            if os.path.isfile(install_path):
-                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
-            if os.path.isdir(install_path):
-                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
-            else:
-                os.makedirs(install_path)
+            IconScoreDeployer._check_score_deploy_path(path)
+            os.makedirs(path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen(data)
             for name, file_info, parent_dir in file_info_generator:
-                if not os.path.exists(os.path.join(install_path, parent_dir)):
-                    os.makedirs(os.path.join(install_path, parent_dir))
-                with file_info as file_info_context, open(os.path.join(install_path, name), 'wb') as dest:
+                if not os.path.exists(os.path.join(path, parent_dir)):
+                    os.makedirs(os.path.join(path, parent_dir))
+                with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
                     contents = file_info_context.read()
                     dest.write(contents)
         except BaseException as e:
-            shutil.rmtree(install_path, ignore_errors=True)
+            shutil.rmtree(path, ignore_errors=True)
             raise e
+
+    @staticmethod
+    def _check_score_deploy_path(path: str):
+        if os.path.isfile(path):
+            raise ScoreInstallException(f'{path} is a file. Check your path.')
+        if os.path.isdir(path):
+            raise ScoreInstallException(f'{path} is a directory. Check {path}')
 
     @staticmethod
     def _extract_files_gen(data: bytes):
@@ -97,49 +94,27 @@ class IconScoreDeployer(object):
             raise ScoreInstallExtractException(f'Error raising from extract_files_gen: {e}')
 
     @staticmethod
-    def remove_existing_score(archive_path: str):
-        """Remove SCORE
-
-        :param archive_path: The path of SCORE archive.
-        """
-        if os.path.isfile(archive_path):
-            os.remove(archive_path)
-        elif os.path.isdir(archive_path):
-            shutil.rmtree(archive_path)
-
-    def deploy_legacy(self,
-                      address: 'Address',
-                      data: bytes,
-                      tx_hash: bytes) -> None:
+    def deploy_legacy(path: str, data: bytes):
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
-        :param address: score address
+
+        :param path: the path of directory where score is deployed
         :param data: The byte value of the zip file.
-        :param tx_hash:
-        :return:
         """
-
-        score_root_path = os.path.join(self.score_root_path, address.to_bytes().hex())
-        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
-        install_path = os.path.join(score_root_path, converted_tx_hash)
-
         try:
-            if os.path.isfile(install_path):
-                raise ScoreInstallException(f'{install_path} is a file. Check your path.')
-            if os.path.isdir(install_path):
-                raise ScoreInstallException(f'{install_path} is a directory. Check {install_path}')
-            if not os.path.exists(install_path):
-                os.makedirs(install_path)
+            IconScoreDeployer._check_score_deploy_path(path)
+            if not os.path.exists(path):
+                os.makedirs(path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen_legacy(data)
             for name, file_info, parent_directory in file_info_generator:
-                if not os.path.exists(os.path.join(install_path, parent_directory)):
-                    os.makedirs(os.path.join(install_path, parent_directory))
-                with file_info as file_info_context, open(os.path.join(install_path, name), 'wb') as dest:
+                if not os.path.exists(os.path.join(path, parent_directory)):
+                    os.makedirs(os.path.join(path, parent_directory))
+                with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
                     contents = file_info_context.read()
                     dest.write(contents)
         except BaseException as e:
-            shutil.rmtree(install_path, ignore_errors=True)
+            shutil.rmtree(path, ignore_errors=True)
             raise e
 
     @staticmethod

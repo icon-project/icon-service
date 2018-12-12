@@ -14,12 +14,10 @@
 # limitations under the License.
 
 
-from math import ceil
-from os import makedirs
+import os
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -34,12 +32,12 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, REVISION_3
 from .iconscore.icon_pre_validator import IconPreValidator
+from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
 from .iconscore.icon_score_event_log import EventLogEmitter
-from .iconscore.icon_score_loader import IconScoreLoader
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
@@ -75,7 +73,6 @@ class IconServiceEngine(ContextContainer):
         self._icx_context_db = None
         self._icx_storage = None
         self._icx_engine = None
-        self._icon_score_mapper = None
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
@@ -102,10 +99,11 @@ class IconServiceEngine(ContextContainer):
         self._conf = conf
         service_config_flag = self._make_service_flag(self._conf[ConfigKey.SERVICE])
         score_root_path: str = self._conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
+        score_root_path = os.path.abspath(score_root_path)
         state_db_root_path: str = self._conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
 
-        makedirs(score_root_path, exist_ok=True)
-        makedirs(state_db_root_path, exist_ok=True)
+        os.makedirs(score_root_path, exist_ok=True)
+        os.makedirs(state_db_root_path, exist_ok=True)
 
         # Share one context db with all SCOREs
         ContextDatabaseFactory.open(
@@ -118,24 +116,20 @@ class IconServiceEngine(ContextContainer):
         self._icx_storage = IcxStorage(self._icx_context_db)
         icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
-        IconScoreMapper.icon_score_loader = IconScoreLoader(score_root_path)
-        IconScoreMapper.deploy_storage = icon_score_deploy_storage
-        self._icon_score_mapper = IconScoreMapper(is_lock=True)
-
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._icon_pre_validator = IconPreValidator(self._icx_engine,
-                                                    icon_score_deploy_storage)
+        self._icon_pre_validator =\
+            IconPreValidator(self._icx_engine, icon_score_deploy_storage)
 
+        IconScoreClassLoader.init(score_root_path)
+        IconScoreContext.score_root_path = score_root_path
         IconScoreContext.icx_engine = self._icx_engine
-        IconScoreContext.icon_score_mapper = self._icon_score_mapper
+        IconScoreContext.icon_score_mapper = IconScoreMapper(is_threadsafe=True)
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
 
         self._icx_engine.open(self._icx_storage)
-        self._icon_score_deploy_engine.open(
-            score_root_path=score_root_path,
-            icon_deploy_storage=icon_score_deploy_storage)
+        self._icon_score_deploy_engine.open(icon_score_deploy_storage)
 
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
@@ -156,9 +150,7 @@ class IconServiceEngine(ContextContainer):
         context = IconScoreContext(IconScoreContextType.DIRECT)
         try:
             self._push_context(context)
-            icon_builtin_score_loader = \
-                IconBuiltinScoreLoader(self._icon_score_deploy_engine)
-            icon_builtin_score_loader.load_builtin_scores(
+            IconBuiltinScoreLoader.load_builtin_scores(
                 context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
         finally:
             self._pop_context()
@@ -255,33 +247,29 @@ class IconServiceEngine(ContextContainer):
         finally:
             self._pop_context()
 
-    def _validate_score_blacklist(self, context: 'IconScoreContext', params: dict):
-        _to: 'Address' = params.get('to')
-        if _to is None or not _to.is_contract:
+    @staticmethod
+    def _validate_score_blacklist(context: 'IconScoreContext', params: dict):
+        to: 'Address' = params.get('to')
+        if to is None or not to.is_contract:
             return
-        if _to == ZERO_SCORE_ADDRESS:
+        if to == ZERO_SCORE_ADDRESS:
             return
 
-        try:
-            self._push_context(context)
-            # Gets the governance SCORE
-            governance_score = self._get_governance_score(context)
-
-            if governance_score.isInScoreBlackList(_to):
-                raise ServerErrorException(f'The Score is in Black List (address: {_to})')
-        finally:
-            self._pop_context()
+        IconScoreContextUtil.validate_score_blacklist(context, to)
 
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
         """
-        self._icon_score_mapper.clear_garbage_score()
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._push_context(context)
         try:
             self._icx_engine.close()
-            self._icon_score_mapper.close()
+
+            IconScoreContext.icon_score_mapper.close()
+            IconScoreContext.icon_score_mapper = None
+
+            IconScoreClassLoader.exit(context.score_root_path)
         finally:
             self._pop_context()
             ContextDatabaseFactory.close()
@@ -645,10 +633,13 @@ class IconServiceEngine(ContextContainer):
         assert 'params' in request
 
         params: dict = request['params']
+        to: 'Address' = params.get('to')
 
         context = IconScoreContext(IconScoreContextType.QUERY)
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
+
+        self._push_context(context)
 
         step_price: int = context.step_counter.step_price
         minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
@@ -662,9 +653,11 @@ class IconServiceEngine(ContextContainer):
 
         self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-        self._validate_score_blacklist(context, params)
+        IconScoreContextUtil.validate_score_blacklist(context, to)
         if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
             self._validate_deployer_whitelist(context, params)
+
+        self._pop_context()
 
     def _call(self,
               context: 'IconScoreContext',
@@ -1115,7 +1108,7 @@ class IconServiceEngine(ContextContainer):
         block_batch = precommit_data.block_batch
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
-            self._icon_score_mapper.update(new_icon_score_mapper)
+            context.icon_score_mapper.update(new_icon_score_mapper)
 
         self._icx_context_db.write_batch(
             context=context, states=block_batch)

@@ -27,7 +27,7 @@ from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.icon_constant import ICON_DEX_DB_NAME
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
-from iconservice.iconscore.icon_score_loader import IconScoreLoader
+from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
@@ -74,13 +74,13 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._score_deploy_engine = IconScoreDeployEngine()
         self._deploy_storage = IconScoreDeployStorage(self._icx_db)
 
-        self._icon_score_loader = IconScoreLoader(score_path)
+        self._icon_score_loader = IconScoreClassLoader(score_path)
         self._icon_score_mapper = IconScoreMapper()
 
         self._addr1 = create_address(AddressPrefix.EOA)
         self._score_deploy_engine.open(
             score_root_path=score_path,
-            icon_deploy_storage=self._deploy_storage)
+            score_deploy_storage=self._deploy_storage)
 
         self.make_context()
 

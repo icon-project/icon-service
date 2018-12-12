@@ -18,10 +18,11 @@ from typing import TYPE_CHECKING
 
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
+from ..deploy import DeployState
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
-    from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
+    from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
     from ..icx.icx_engine import IcxEngine
     from .icon_score_context import IconScoreContext
 
@@ -159,7 +160,8 @@ class IconPreValidator:
         elif data_type == 'deploy':
             self._validate_deploy_transaction(params)
 
-    def _check_minimum_step(self, params: dict, minimum_step: int):
+    @staticmethod
+    def _check_minimum_step(params: dict, minimum_step: int):
         step_limit = params.get('stepLimit', 0)
         if step_limit < minimum_step:
             raise InvalidRequestException('Step limit too low')
@@ -259,6 +261,14 @@ class IconPreValidator:
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract
         is_zero_score_address = address == ZERO_SCORE_ADDRESS
-        is_score_active = self._deploy_storage.is_score_active(None, address)
+        is_score_active = self._is_score_active(address)
         _is_inactive_score = is_contract and not is_zero_score_address and not is_score_active
         return _is_inactive_score
+
+    def _is_score_active(self, address: 'Address') -> bool:
+        deploy_info: 'IconScoreDeployInfo' = self._deploy_storage.get_deploy_info(None, address)
+
+        if deploy_info is None:
+            return False
+
+        return deploy_info.deploy_state == DeployState.ACTIVE

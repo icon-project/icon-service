@@ -312,7 +312,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(tx_results[0].failure.message, "can't symlink deploy")
+        self.assertIsInstance(tx_results[0].failure.message, str)
 
 
 if __name__ == '__main__':

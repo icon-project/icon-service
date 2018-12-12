@@ -157,7 +157,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
         self.assertEqual(tx_results[0].failure.message,
-                         f'invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
+                         f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
 
         # 3. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)

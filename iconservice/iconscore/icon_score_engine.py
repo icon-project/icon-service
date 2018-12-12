@@ -19,8 +19,8 @@
 from typing import TYPE_CHECKING, Any
 
 from .icon_score_constant import STR_FALLBACK
-from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_context import IconScoreContext
+from .icon_score_context_util import IconScoreContextUtil
 from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.type_converter import TypeConverter
@@ -45,13 +45,7 @@ class IconScoreEngine(object):
         :param data_type:
         :param data: calldata
         """
-
-        if icon_score_address is None or \
-                icon_score_address is ZERO_SCORE_ADDRESS or \
-                not icon_score_address.is_contract:
-            raise InvalidParamsException(f"invalid score address: ({icon_score_address})")
-
-        IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
+        IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
         if data_type == 'call':
             IconScoreEngine._call(context, icon_score_address, data)
@@ -67,12 +61,7 @@ class IconScoreEngine(object):
 
         Handles messagecall of icx_call
         """
-        if icon_score_address is None or \
-                icon_score_address is ZERO_SCORE_ADDRESS or \
-                not icon_score_address.is_contract:
-            raise InvalidParamsException(f"invalid score address: ({icon_score_address})")
-
-        IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
+        IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
         if data_type == 'call':
             return IconScoreEngine._call(context, icon_score_address, data)
@@ -86,9 +75,19 @@ class IconScoreEngine(object):
         :param context:
         :param icon_score_address:
         """
+        IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
         icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
         return icon_score.get_api()
+
+    @staticmethod
+    def _validate_score_blacklist(context: 'IconScoreContext', icon_score_address: 'Address'):
+        if icon_score_address is None or \
+                icon_score_address is ZERO_SCORE_ADDRESS or \
+                not icon_score_address.is_contract:
+            raise InvalidParamsException(f"Invalid score address: ({icon_score_address})")
+
+        IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
 
     @staticmethod
     def _call(context: 'IconScoreContext',
@@ -139,6 +138,6 @@ class IconScoreEngine(object):
     def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = IconScoreContextUtil.get_icon_score(context, icon_score_address)
         if icon_score is None:
-            raise ServerErrorException(
+            raise InvalidParamsException(
                 f'SCORE not found: {icon_score_address}')
         return icon_score
