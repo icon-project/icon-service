@@ -219,7 +219,7 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
                 }
             }
         )
-        self.assertEqual(response, loop_count)
+        self.assertEqual(response, str(loop_count))
 
     def test_query_loop_over(self):
         # Deploys SCORE

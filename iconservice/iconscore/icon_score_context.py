@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING, Optional, List
 
 from .icon_score_trace import Trace
 from ..base.block import Block
-from ..base.exception import ServerErrorException
+from ..base.exception import ServerErrorException, ScoreErrorException
+from ..base.address import Address
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
@@ -30,7 +31,6 @@ if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_event_log import EventLog
     from .icon_score_step import IconScoreStepCounter
-    from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
     from .icon_score_base import IconScoreBase
     from ..icx.icx_engine import IcxEngine
@@ -140,3 +140,10 @@ class IconScoreContext(object):
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         self.icon_score_deploy_engine.deploy(self, tx_hash)
+
+    def validate_readonly_method(self, return_value, return_type):
+        if self.readonly and not isinstance(return_value, return_type):
+            if return_value is None and return_type in (bytes, Address):
+                pass
+            else:
+                raise ScoreErrorException(f"return type mismatched. return type: {return_type}")

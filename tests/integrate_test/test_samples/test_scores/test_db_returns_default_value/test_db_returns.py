@@ -80,3 +80,103 @@ class TestDbReturns(IconScoreBase):
     @payable
     def fallback(self) -> None:
         print("fallback!!")
+
+    @external(readonly=True)
+    def get_int_value_none_type(self) -> int:
+        return None
+
+    @external(readonly=True)
+    def get_int_value_str_type(self) -> int:
+        return "string"
+
+    @external(readonly=True)
+    def get_int_value_bytes_type(self) -> int:
+        return bytes(1)
+
+    @external(readonly=True)
+    def get_int_value_address_type(self) -> int:
+        return self.owner
+
+    @external(readonly=True)
+    def get_int_value_bool_type(self) -> int:
+        return True
+
+    @external(readonly=True)
+    def get_bytes_value_none_type(self) -> bytes:
+        return None
+
+    @external(readonly=True)
+    def get_bytes_value_int_type(self) -> bytes:
+        return 3
+
+    @external(readonly=True)
+    def get_bytes_value_str_type(self) -> bytes:
+        return "string"
+
+    @external(readonly=True)
+    def get_bytes_value_address_type(self) -> bytes:
+        return self.owner
+
+    @external(readonly=True)
+    def get_bytes_value_bool_type(self) -> bytes:
+        return True
+
+    @external(readonly=True)
+    def get_str_value_none_type(self) -> str:
+        return None
+
+    @external(readonly=True)
+    def get_str_value_int_type(self) -> str:
+        return 3
+
+    @external(readonly=True)
+    def get_str_value_bytes_type(self) -> str:
+        return bytes(1)
+
+    @external(readonly=True)
+    def get_str_value_address_type(self) -> str:
+        return self.owner
+
+    @external(readonly=True)
+    def get_str_value_bool_type(self) -> str:
+        return True
+
+    @external(readonly=True)
+    def get_address_value_none_type(self) -> 'Address':
+        return None
+
+    @external(readonly=True)
+    def get_address_value_int_type(self) -> 'Address':
+        return 3
+
+    @external(readonly=True)
+    def get_address_value_bytes_type(self) -> 'Address':
+        return bytes(1)
+
+    @external(readonly=True)
+    def get_address_value_str_type(self) -> 'Address':
+        return "string"
+
+    @external(readonly=True)
+    def get_address_value_bool_type(self) -> 'Address':
+        return True
+
+    @external(readonly=True)
+    def get_bool_value_none_type(self) -> bool:
+        return None
+
+    @external(readonly=True)
+    def get_bool_value_int_type(self) -> bool:
+        return 3
+
+    @external(readonly=True)
+    def get_bool_value_bytes_type(self) -> bool:
+        return bytes(1)
+
+    @external(readonly=True)
+    def get_bool_value_str_type(self) -> bool:
+        return "string"
+
+    @external(readonly=True)
+    def get_bool_value_address_type(self) -> bool:
+        return self.owner

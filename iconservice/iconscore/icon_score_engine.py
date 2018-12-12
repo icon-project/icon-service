@@ -105,20 +105,24 @@ class IconScoreEngine(object):
 
         icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
 
-        converted_params = IconScoreEngine._convert_score_params_by_annotations(icon_score, func_name, kw_params)
+        icon_score.validate_external_method(func_name)
+
+        score_method = getattr(icon_score, func_name)
+        annotations = TypeConverter.get_annotations_form_method(score_method)
+        return_type = TypeConverter.pop_return_type_from_annotation(annotations)
+        converted_params = IconScoreEngine._convert_score_params_by_annotations(annotations, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
 
         score_func = getattr(icon_score, '_IconScoreBase__call')
-        return score_func(func_name=func_name, kw_params=converted_params)
+        result = score_func(func_name=func_name, kw_params=converted_params)
+
+        context.validate_readonly_method(result, return_type)
+        return result
 
     @staticmethod
-    def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
+    def _convert_score_params_by_annotations(annotation_params: dict, kw_params: dict) -> dict:
         tmp_params = kw_params
 
-        icon_score.validate_external_method(func_name)
-
-        score_func = getattr(icon_score, func_name)
-        annotation_params = TypeConverter.make_annotations_from_method(score_func)
         TypeConverter.convert_data_params(annotation_params, tmp_params)
         return tmp_params
 

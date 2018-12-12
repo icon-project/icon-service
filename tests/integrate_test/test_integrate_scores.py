@@ -21,7 +21,7 @@ import unittest
 
 from iconservice import IconServiceFlag
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import InvalidParamsException, ExceptionCode
+from iconservice.base.exception import InvalidParamsException, ScoreErrorException, ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -273,7 +273,6 @@ class TestIntegrateScores(TestIntegrateBase):
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-
         tx3 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
@@ -294,7 +293,6 @@ class TestIntegrateScores(TestIntegrateBase):
                                    "test_score",
                                    self._addr_array[1],
                                    ZERO_SCORE_ADDRESS)
-
 
         prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4, tx5, tx6])
 
@@ -396,6 +394,78 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
+    # case when readonly return type mismatched
+
+    def test_return_type(self):
+        tx1 = self._make_deploy_tx("test_scores",
+                                   "test_db_returns_default_value",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
+                                   deploy_params={})
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        method_format = "get_{}_value_{}_type"
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": score_addr1,
+            "dataType": "call",
+            "data": {
+                "method": "",
+                "params": {}
+            }
+        }
+
+        type_list_for_int_value = ['str', 'bytes', 'address', 'bool', 'none']
+        for t in type_list_for_int_value:
+            query_request['data']['method'] = method_format.format('int', t)
+            if t is 'bool':
+                result = self._query(query_request)
+                self.assertEqual(result, True)
+            else:
+                with self.assertRaises(ScoreErrorException)as e:
+                    self._query(query_request)
+                self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
+
+        type_list_for_bytes_value = ['int', 'str', 'address', 'bool', 'none']
+        for t in type_list_for_bytes_value:
+            query_request['data']['method'] = method_format.format('bytes', t)
+            if t is 'none':
+                result = self._query(query_request)
+                self.assertEqual(result, None)
+            else:
+                with self.assertRaises(ScoreErrorException)as e:
+                    self._query(query_request)
+                self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
+
+        type_list_for_address_value = ['int', 'str', 'bytes', 'bool', 'none']
+        for t in type_list_for_address_value:
+            query_request['data']['method'] = method_format.format('address', t)
+            if t is 'none':
+                result = self._query(query_request)
+                self.assertEqual(result, None)
+            else:
+                with self.assertRaises(ScoreErrorException)as e:
+                    self._query(query_request)
+                self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
+
+        for i in range(4, 6):
+            type_list = ['int', 'bytes', 'none', 'address', 'str', 'bool']
+            ret_type = type_list[i]
+            del type_list[i]
+            for t in type_list:
+                method = method_format.format(ret_type, t)
+                query_request['data']['method'] = method
+                with self.assertRaises(ScoreErrorException) as e:
+                    self._query(query_request)
+                self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
 
 
 if __name__ == '__main__':

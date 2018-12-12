@@ -84,7 +84,9 @@ class TestScoreBase(IconScoreBase):
     @external(readonly=True)
     def test_json_loads_readonly(self) -> str:
         data = json_dumps({"key1": 1, "key2": 2, "key3": "value3"})
-        return json_loads(data)
+        dict_data = json_loads(data)
+        dict_data['key3'] = "value_3"
+        return json_dumps(dict_data)
 
     @external
     def test_json_loads(self):
@@ -137,7 +139,7 @@ class TestScoreBase(IconScoreBase):
 
     @external(readonly=True)
     def test_get_tx_hashes_by_score_address_readonly(self, address: Address) -> bytes:
-        return self.get_tx_hashes_by_score_address(address)
+        return self.get_tx_hashes_by_score_address(address)[0]
 
     @external
     def test_get_tx_hashes_by_score_address(self, address: Address):

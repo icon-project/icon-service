@@ -175,8 +175,8 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
     def test_json_loads(self):
         """Checks if the method `json_dumps` returns a dictionary of json.load data successfully."""
         # Successful case - readonly
-        data = {"key1": 1, "key2": 2, "key3": "value3"}
-        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_loads_readonly", {}, data)
+        data = {"key1": 1, "key2": 2, "key3": "value_3"}
+        self._assert_get_value(self._addr_array[0], self.score_addr1, "test_json_loads_readonly", {}, json.dumps(data))
 
         # Successful case - not readonly
         self._set_value(self._addr_array[0], self.score_addr1, "test_json_loads", {})
@@ -250,19 +250,19 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         return_value = self._get_value(self._addr_array[0], self.score_addr1,
                                        "test_get_tx_hashes_by_score_address_readonly",
                                        {'address': str(self.score_addr1)})
-        self.assertEqual(return_value[0], self.tx_result.tx_hash)
+        self.assertEqual(return_value, self.tx_result.tx_hash)
 
         # Successful case 2 - readonly : When the wrong SCORE address.
         return_value = self._get_value(self._addr_array[0], self.score_addr1,
                                        "test_get_tx_hashes_by_score_address_readonly",
                                        {'address': "cx"+"0"*40})
-        self.assertEqual(return_value, (None, None))
+        self.assertEqual(return_value, None)
 
         # Successful case 3 - readonly : When the wrong EOS address.
         return_value = self._get_value(self._addr_array[0], self.score_addr1,
                                        "test_get_tx_hashes_by_score_address_readonly",
                                        {'address': str(create_address())})
-        self.assertEqual(return_value, (None, None))
+        self.assertEqual(return_value, None)
 
         # Successful case 1 - not readonly
         self._set_value(self._addr_array[0], self.score_addr1, "test_get_tx_hashes_by_score_address",

@@ -50,4 +50,4 @@ class TestScoreStart(IconScoreBase):
         for i in range(_count):
             result += self.call(_to, _name, {})
 
-        return result
+        return str(result)

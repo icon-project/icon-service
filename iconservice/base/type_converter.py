@@ -219,13 +219,20 @@ class TypeConverter:
 
     @staticmethod
     def make_annotations_from_method(func: callable) -> dict:
+        hints = TypeConverter.get_annotations_form_method(func)
+        TypeConverter.pop_return_type_from_annotation(hints)
+        return hints
+
+    @staticmethod
+    def get_annotations_form_method(func: callable) -> dict:
         # in python 3.7, get_type_hints method return _GenericAlias type object
         # (when parameter has 'NoneType' as a default)
+        return get_type_hints(func)
 
-        hints = get_type_hints(func)
+    @staticmethod
+    def pop_return_type_from_annotation(hints: dict):
         if hints.get('return') is not None:
-            del hints['return']
-        return hints
+            return hints.pop('return')
 
     @staticmethod
     def convert_data_params(annotation_params: dict, kw_params: dict) -> None:

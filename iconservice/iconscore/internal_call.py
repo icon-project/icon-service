@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
+from iconservice.base.type_converter import TypeConverter
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
@@ -138,9 +139,14 @@ class InternalCall(object):
 
         try:
             icon_score = IconScoreContextUtil.get_icon_score(context, addr_to)
+            score_method = getattr(icon_score, func_name)
+            annotations = TypeConverter.get_annotations_form_method(score_method)
+            return_type = TypeConverter.pop_return_type_from_annotation(annotations)
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, '_IconScoreBase__call')
-            return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
+            result = score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
+            context.validate_readonly_method(result, return_type)
+            return result
         finally:
             context.func_type = prev_func_type
             context.current_address = addr_from
