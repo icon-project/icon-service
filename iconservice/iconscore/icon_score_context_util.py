@@ -17,15 +17,14 @@
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.exception import ServerErrorException, InvalidParamsException, ScoreErrorException
 from ..deploy import DeployState
-from ..base.address import GOVERNANCE_SCORE_ADDRESS
-from ..base.exception import ServerErrorException, InvalidParamsException
-from ..icon_constant import IconScoreContextType, DEFAULT_BYTE_SIZE, IconServiceFlag
+from ..icon_constant import IconScoreContextType, DEFAULT_BYTE_SIZE, IconServiceFlag, REVISION_3
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
     from .icon_score_base import IconScoreBase
-    from ..base.address import Address
     from ..deploy.icon_score_deploy_storage import IconScoreDeployTXParams, IconScoreDeployInfo
 
 
@@ -178,3 +177,14 @@ class IconScoreContextUtil(object):
     @staticmethod
     def get_score_root_path(context: 'IconScoreContext') -> str:
         return context.icon_score_mapper.score_root_path
+
+    @staticmethod
+    def validate_readonly_method(context: 'IconScoreContext', return_value, return_type):
+        revision = IconScoreContextUtil.get_revision(context)
+        if revision < REVISION_3:
+            return
+        if context.readonly and not isinstance(return_value, return_type):
+            if return_value is None and return_type in (bytes, Address):
+                pass
+            else:
+                raise ScoreErrorException(f"return type mismatched. return type: {return_type}")

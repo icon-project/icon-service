@@ -218,12 +218,6 @@ class TypeConverter:
             raise InvalidParamsException(f'TypeConvert Exception bytes value :{value}, type: {type(value)}')
 
     @staticmethod
-    def make_annotations_from_method(func: callable) -> dict:
-        hints = TypeConverter.get_annotations_form_method(func)
-        TypeConverter.pop_return_type_from_annotation(hints)
-        return hints
-
-    @staticmethod
     def get_annotations_form_method(func: callable) -> dict:
         # in python 3.7, get_type_hints method return _GenericAlias type object
         # (when parameter has 'NoneType' as a default)

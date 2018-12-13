@@ -22,6 +22,7 @@ import unittest
 from iconservice import IconServiceFlag
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException, ScoreErrorException, ExceptionCode
+from iconservice.icon_constant import REVISION_3
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -466,6 +467,57 @@ class TestIntegrateScores(TestIntegrateBase):
                 with self.assertRaises(ScoreErrorException) as e:
                     self._query(query_request)
                 self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
+
+    def test_return_type_revision_3(self):
+        governance_update_tx = self._make_deploy_tx("test_builtin", "0_0_4/governance",
+                                                    self._admin, GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([governance_update_tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        tx0 = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS,
+                                       "setRevision", {"code": hex(REVISION_3), "name": "1.1.1"})
+        prev_block, tx_results = self._make_and_req_block([tx0])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+    # case when readonly return type mismatched
+    def test_return_type_revision_lt_3(self):
+        tx1 = self._make_deploy_tx("test_scores",
+                                   "test_db_returns_default_value",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
+                                   deploy_params={})
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        method_format = "get_{}_value_{}_type"
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": score_addr1,
+            "dataType": "call",
+            "data": {
+                "method": "",
+                "params": {}
+            }
+        }
+
+        for i in range(6):
+            type_list = ['int', 'bytes', 'none', 'address', 'str', 'bool']
+            ret_type = type_list[i]
+            if i is 2: continue
+            del type_list[i]
+            for t in type_list:
+                method = method_format.format(ret_type, t)
+                query_request['data']['method'] = method
+                self._query(query_request)
 
 
 if __name__ == '__main__':

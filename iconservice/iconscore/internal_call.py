@@ -145,7 +145,7 @@ class InternalCall(object):
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, '_IconScoreBase__call')
             result = score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
-            context.validate_readonly_method(result, return_type)
+            IconScoreContextUtil.validate_readonly_method(context, result, return_type)
             return result
         finally:
             context.func_type = prev_func_type
