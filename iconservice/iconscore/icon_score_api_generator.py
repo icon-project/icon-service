@@ -43,6 +43,8 @@ class ScoreApiGenerator:
     __API_TYPE_ON_INSTALL = 'on_install'
     __API_TYPE_ON_UPDATE = 'on_update'
 
+    __BASE_FALLBACK = "IconScoreBase.fallback"
+
     @staticmethod
     def generate(score_funcs: list) -> list:
         api = []
@@ -79,8 +81,11 @@ class ScoreApiGenerator:
                     src.append(ScoreApiGenerator.__generate_normal_function(
                         func.__name__, is_readonly, is_payable, signature(func)))
                 elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
-                    src.append(ScoreApiGenerator.__generate_fallback_function(
-                            func.__name__, is_payable, signature(func)))
+                    if func.__qualname__ != ScoreApiGenerator.__BASE_FALLBACK:
+                        res = ScoreApiGenerator.__generate_fallback_function(func.__name__, is_payable, signature(func))
+                        src.append(res)
+                    else:
+                        pass
             except IconTypeError as e:
                 raise IconScoreException(f"{e.message} at {func.__name__}")
 
@@ -109,7 +114,13 @@ class ScoreApiGenerator:
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_FALLBACK
         info[ScoreApiGenerator.__API_NAME] = func_name
-        info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
+
+        if len(sig_info.parameters) > 1:
+            raise InvalidParamsException("can't have params")
+
+        if sig_info.return_annotation is not None:
+            if sig_info.return_annotation is not Signature.empty:
+                raise InvalidParamsException("can't have return value")
 
         if is_payable:
             info[ScoreApiGenerator.__API_PAYABLE] = is_payable
