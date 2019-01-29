@@ -87,8 +87,10 @@ class ScorePackageValidator(object):
                     sub_pkg_path = root_path.replace(pkg_root_path, "")
                     if sub_pkg_path is not str():
                         sub_pkg_path = sub_pkg_path[1:]
+                        sub_pkg_path = sub_pkg_path.replace('/', '.')
                         pkg_path = ''.join((sub_pkg_path, '.', file_name))
                     else:
+                        file_name = file_name.replace('/', '.')
                         pkg_path = file_name
                     tmp_list.append(pkg_path)
         return tmp_list
@@ -141,9 +143,10 @@ class ScorePackageValidator(object):
         elif key == IMPORT_FROM:
             if ScorePackageValidator.PREV_IMPORT_NAME in ScorePackageValidator.WHITELIST_IMPORT:
                 from_list = ScorePackageValidator.WHITELIST_IMPORT[ScorePackageValidator.PREV_IMPORT_NAME]
-                if co_names[value] not in from_list:
-                    raise ServerErrorException(f'invalid import '
-                                               f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
+                if "*" not in from_list:
+                    if co_names[value] not in from_list:
+                        raise ServerErrorException(f'invalid import '
+                                                   f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
             elif ScorePackageValidator._is_contain_custom_import(ScorePackageValidator.PREV_IMPORT_NAME):
                 pass
             else:
