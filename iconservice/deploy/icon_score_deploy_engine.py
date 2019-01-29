@@ -51,7 +51,6 @@ class IconScoreDeployEngine(object):
 
     def open(self, score_deploy_storage: 'IconScoreDeployStorage') -> None:
         """open
-
         :param score_deploy_storage:
         """
         self._score_deploy_storage = score_deploy_storage
@@ -66,7 +65,6 @@ class IconScoreDeployEngine(object):
                icon_score_address: 'Address',
                data: dict) -> None:
         """Handle data contained in icx_sendTransaction message
-
         :param context:
         :param to:
         :param icon_score_address:
@@ -102,7 +100,6 @@ class IconScoreDeployEngine(object):
     @staticmethod
     def _is_audit_needed(context: 'IconScoreContext', score_address: Address) -> bool:
         """Check whether audit process is needed or not
-
         :param context:
         :param score_address:
         :return: True(needed) False(not needed)
@@ -126,12 +123,11 @@ class IconScoreDeployEngine(object):
         4. Create a SCORE instance from the code
         5. Run on_install() or on_update() method in the SCORE
         6. Update the deployed SCORE info to stateDB
-
         :param context:
         :param tx_hash:
         """
 
-        tx_params: IconScoreDeployTXParams =\
+        tx_params: 'IconScoreDeployTXParams' =\
             self._score_deploy_storage.get_deploy_tx_params(context, tx_hash)
         if tx_params is None:
             raise InvalidParamsException(f'tx_params is None: 0x{tx_hash.hex()}')
@@ -167,7 +163,6 @@ class IconScoreDeployEngine(object):
         Decompress a SCORE zip file and write them to file system
         Create a SCORE instance from SCORE class
         Call a SCORE initialization function (on_install or on_update)
-
         :param tx_params: use deploy_data, score_address, tx_hash, deploy_type from IconScoreDeployTxParams
         :return:
         """
@@ -227,7 +222,6 @@ class IconScoreDeployEngine(object):
     def _create_score_info(context: 'IconScoreContext',
                            score_address: 'Address', tx_hash: bytes) -> 'IconScoreInfo':
         """Create the score_info instance associated with the SCORE to deploy
-
         :param context:
         :param score_address:
         :param tx_hash:
@@ -260,7 +254,7 @@ class IconScoreDeployEngine(object):
     def _write_score_to_score_deploy_path(context: 'IconScoreContext',
                                           score_address: 'Address', tx_hash: bytes, content: bytes):
         """Write SCORE code to file system
-        
+
         :param context: IconScoreContext instance
         :param score_address: score address
         :param tx_hash: transaction hash
@@ -281,17 +275,14 @@ class IconScoreDeployEngine(object):
             remove_path(score_path)
 
         if revision >= REVISION_2:
-            deploy_method: callable = IconScoreDeployer.deploy
+            IconScoreDeployer.deploy(score_deploy_path, content, revision)
         else:
-            deploy_method: callable = IconScoreDeployer.deploy_legacy
-
-        deploy_method(score_deploy_path, content)
+            IconScoreDeployer.deploy_legacy(score_deploy_path, content)
 
     @staticmethod
     def _initialize_score(deploy_type: DeployType, score: 'IconScoreBase', params: dict):
         """Call on_install() or on_update() of a SCORE
         only once when installing or updating it
-
         :param deploy_type: DeployType.INSTALL or DeployType.UPDATE
         :param score: SCORE to install or update
         :param params: paramters passed to on_install or on_update()
