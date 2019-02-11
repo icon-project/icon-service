@@ -27,7 +27,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2, REVISION_3
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, DEFAULT_BYTE_SIZE, REVISION_2, REVISION_4
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..utils import is_builtin_score
 
@@ -269,7 +269,7 @@ class IconScoreDeployEngine(object):
         else:
             revision = IconScoreContextUtil.get_revision(context)
 
-            if revision >= REVISION_3:
+            if revision >= REVISION_4:
                 install_path = DirectoryNameChanger.get_score_path_by_address_and_tx_hash(
                     self._icon_score_deployer.score_root_path, score_address, next_tx_hash)
                 DirectoryNameChanger.rename_directory(install_path)
@@ -277,7 +277,7 @@ class IconScoreDeployEngine(object):
                     address=score_address,
                     data=content,
                     tx_hash=next_tx_hash)
-            elif revision == REVISION_2:
+            elif revision >= REVISION_2:
                 self._icon_score_deployer.deploy(
                     address=score_address,
                     data=content,

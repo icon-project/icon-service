@@ -140,7 +140,7 @@ def run_in_foreground(conf: 'IconConfig'):
 
 
 def _run_async(async_func):
-    loop = asyncio.new_event_loop()
+    loop = MessageQueueService.loop
     return loop.run_until_complete(async_func)
 
 

@@ -2,8 +2,7 @@
 #   https://github.com/ethereum/eth-bloom
 #
 # changes
-#   hash function : keccak() -> sha256()
-#   chunk_to_bloom_bits() : convert type of chunk parameter from str to bytes with encode()
+#   hash function : keccak() -> sha3_256()
 
 from __future__ import absolute_import
 
@@ -19,12 +18,12 @@ def get_chunks_for_bloom(value_hash):
 
 
 def chunk_to_bloom_bits(chunk):
-    high, low = bytearray(chunk.encode())
+    high, low = bytearray(chunk)
     return 1 << ((low + (high << 8)) & 2047)
 
 
 def get_bloom_bits(value):
-    value_hash = hashlib.sha256(value).hexdigest()
+    value_hash = hashlib.sha3_256(value).digest()
     for chunk in get_chunks_for_bloom(value_hash):
         bloom_bits = chunk_to_bloom_bits(chunk)
         yield bloom_bits

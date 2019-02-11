@@ -23,6 +23,7 @@ from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BY
 if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
     from ..icx.icx_engine import IcxEngine
+    from .icon_score_context import IconScoreContext
 
 
 class IconPreValidator:
@@ -40,13 +41,14 @@ class IconPreValidator:
         self._icx = icx_engine
         self._deploy_storage = deploy_storage
 
-    def execute(self, params: dict, step_price: int, minimum_step: int) -> None:
+    def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
         If failed to validate a tx, raise an exception
 
         Assume that values in params have already been converted
         to original format (string -> int, string -> Address, etc)
 
+        :param context:
         :param params: params of icx_sendTransaction JSON-RPC request
         :param step_price:
         :param minimum_step: minimum step
@@ -64,18 +66,17 @@ class IconPreValidator:
 
         version: int = params.get('version', 2)
         if version < 3:
-            self._validate_transaction_v2(params)
+            self._validate_transaction_v2(context, params)
         else:
-            self._validate_transaction_v3(params, step_price, minimum_step)
+            self._validate_transaction_v3(context, params, step_price, minimum_step)
 
-    def execute_to_check_out_of_balance(
-            self, params: dict, step_price: int) -> None:
+    def execute_to_check_out_of_balance(self, context: 'IconScoreContext', params: dict, step_price: int) -> None:
         version: int = params.get('version', 2)
 
         if version < 3:
-            self._check_from_can_charge_fee_v2(params)
+            self._check_from_can_charge_fee_v2(context, params)
         else:
-            self._check_from_can_charge_fee_v3(params, step_price)
+            self._check_from_can_charge_fee_v3(context, params, step_price)
 
     def _check_data_size(self, params: dict):
         """
@@ -111,7 +112,7 @@ class IconPreValidator:
 
         return size
 
-    def _check_from_can_charge_fee_v2(self, params: dict):
+    def _check_from_can_charge_fee_v2(self, context: 'IconScoreContext', params: dict):
         fee: int = params['fee']
         if fee != FIXED_FEE:
             raise InvalidRequestException(f'Invalid fee: {fee}')
@@ -119,16 +120,16 @@ class IconPreValidator:
         from_: 'Address' = params['from']
         value: int = params.get('value', 0)
 
-        self._check_balance(from_, value, fee)
+        self._check_balance(context, from_, value, fee)
 
-    def _validate_transaction_v2(self, params: dict):
+    def _validate_transaction_v2(self, context: 'IconScoreContext', params: dict):
         """Validate transfer transaction based on protocol v2
 
         :param params:
         :return:
         """
         # Check out of balance
-        self._check_from_can_charge_fee_v2(params)
+        self._check_from_can_charge_fee_v2(context, params)
 
         # Check 'to' is not a SCORE address
         to: 'Address' = params['to']
@@ -136,15 +137,14 @@ class IconPreValidator:
             raise InvalidRequestException(
                 'Not allowed to transfer coin to SCORE on protocol v2')
 
-    def _validate_transaction_v3(
-            self, params: dict, step_price: int, minimum_step: int):
+    def _validate_transaction_v3(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int):
         """Validate transfer transaction based on protocol v3
 
         :param params:
         :return:
         """
         self._check_minimum_step(params, minimum_step)
-        self._check_from_can_charge_fee_v3(params, step_price)
+        self._check_from_can_charge_fee_v3(context, params, step_price)
 
         # Check if "to" address is valid
         to: 'Address' = params['to']
@@ -164,14 +164,14 @@ class IconPreValidator:
         if step_limit < minimum_step:
             raise InvalidRequestException('Step limit too low')
 
-    def _check_from_can_charge_fee_v3(self, params: dict, step_price: int):
+    def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict, step_price: int):
         from_: 'Address' = params['from']
         value: int = params.get('value', 0)
 
         step_limit = params.get('stepLimit', 0)
         fee = step_limit * step_price
 
-        self._check_balance(from_, value, fee)
+        self._check_balance(context, from_, value, fee)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -250,8 +250,8 @@ class IconPreValidator:
         except BaseException as e:
             raise e
 
-    def _check_balance(self, from_: 'Address', value: int, fee: int):
-        balance = self._icx.get_balance(None, from_)
+    def _check_balance(self, context: 'IconScoreContext', from_: 'Address', value: int, fee: int):
+        balance = self._icx.get_balance(context, from_)
 
         if balance < value + fee:
             raise InvalidRequestException(f'Out of balance: balance({balance}) < value({value}) + fee({fee})')

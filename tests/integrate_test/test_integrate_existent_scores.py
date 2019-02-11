@@ -67,7 +67,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         return tx['params']['txHash']
 
-    def _set_revision(self, revision=3):
+    def _set_revision(self, revision=4):
         set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                                    {"code": hex(revision), "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([set_revision_tx])
@@ -139,10 +139,10 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
     # test when revision > 2
-    def test_existent_score_revision3(self):
+    def test_existent_score_revision4(self):
         self._setUp()
 
-        # set revision to 3(revision3)
+        # set revision to 4(revision4)
         self._update_governance('0_0_4')
         self._set_revision()
 
@@ -205,7 +205,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
 
-        # set revision to 3
+        # set revision to 4
         self._set_revision()
 
         # deploy(revision3 must be success)

@@ -98,7 +98,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "genesis",
                         "address": self._genesis,
-                        "balance": 100 * self._icx_factor
+                        "balance": 1_000_000 * self._icx_factor
                     },
                     {
                         "name": "fee_treasury",
@@ -219,16 +219,20 @@ class TestIntegrateBase(TestCase):
                           addr_from: Optional['Address'],
                           addr_to: Union['Address', 'MalformedAddress'],
                           value: int, disable_pre_validate: bool = False,
-                          support_v2: bool = False):
+                          support_v2: bool = False,
+                          step_limit: int = -1):
 
         timestamp_us = create_timestamp()
         nonce = 0
+
+        if step_limit < 0:
+            step_limit = self._step_limit
 
         request_params = {
             "from": addr_from,
             "to": addr_to,
             "value": value,
-            "stepLimit": self._step_limit,
+            "stepLimit": step_limit,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature
