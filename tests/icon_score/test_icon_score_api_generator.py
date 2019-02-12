@@ -156,8 +156,6 @@ class TestScoreApiGenerator(unittest.TestCase):
         api = ScoreApiGenerator.generate(functions)[0]
         self.assertEqual('fallback', api['type'])
         self.assertEqual(function_name, api['name'])
-        self.assertEqual(1, len(api['inputs']))
-        self.assertEqual('str', api['inputs'][0]['type'])
 
     def test_event(self):
         function_name = 'TestEvent'
@@ -262,7 +260,7 @@ class TestScore:
     def writable_unsupported_type_return(self) -> Decimal:
         pass
 
-    def fallback(self, name: str):
+    def fallback(self):
         pass
 
     @eventlog(indexed=2)

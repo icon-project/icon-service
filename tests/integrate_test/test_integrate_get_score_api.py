@@ -75,7 +75,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -128,7 +127,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -253,7 +251,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -322,7 +319,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
