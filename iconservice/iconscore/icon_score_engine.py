@@ -56,8 +56,7 @@ class IconScoreEngine(object):
         if data_type == 'call':
             IconScoreEngine._call(context, icon_score_address, data)
         else:
-            if context.msg.value > 0:
-                IconScoreEngine._fallback(context, icon_score_address)
+            IconScoreEngine._fallback(context, icon_score_address)
 
     @staticmethod
     def query(context: IconScoreContext,

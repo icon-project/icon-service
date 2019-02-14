@@ -413,14 +413,16 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         score_func = getattr(self, func_name)
 
         if func_name == STR_FALLBACK:
-            ret = score_func()
+            if self._context.msg.value > 0:
+                ret = score_func()
+            else:
+                ret = None
         else:
             if arg_params is None:
                 arg_params = []
             if kw_params is None:
                 kw_params = {}
             ret = score_func(*arg_params, **kw_params)
-
         return ret
 
     def __check_payable(self, func_name: str, payable_dict: dict):

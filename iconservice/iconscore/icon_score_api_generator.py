@@ -43,8 +43,6 @@ class ScoreApiGenerator:
     __API_TYPE_ON_INSTALL = 'on_install'
     __API_TYPE_ON_UPDATE = 'on_update'
 
-    __BASE_FALLBACK = "IconScoreBase.fallback"
-
     @staticmethod
     def generate(score_funcs: list) -> list:
         api = []
