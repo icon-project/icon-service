@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from iconservice.iconscore.icon_score_constant import STR_FALLBACK
+from .icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .internal_call import InternalCall
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
