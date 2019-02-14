@@ -21,7 +21,6 @@ from threading import Lock
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
-from iconservice.builtin_scores.governance.governance import Governance
 from .icon_score_mapper_object import IconScoreInfo, IconScoreMapperObject
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException

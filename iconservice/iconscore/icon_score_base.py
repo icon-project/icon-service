@@ -24,7 +24,7 @@ from .icon_score_api_generator import ScoreApiGenerator
 from .icon_score_base2 import InterfaceScore, revert, Block
 from .icon_score_constant import CONST_INDEXED_ARGS_COUNT, FORMAT_IS_NOT_FUNCTION_OBJECT, CONST_BIT_FLAG, \
     ConstBitFlag, FORMAT_DECORATOR_DUPLICATED, FORMAT_IS_NOT_DERIVED_OF_OBJECT, STR_FALLBACK, CONST_CLASS_EXTERNALS, \
-    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType
+    CONST_CLASS_PAYABLES, CONST_CLASS_API, T, BaseType, CONST_BASE_CLASS_ATTRIBUTE_LIST
 from .icon_score_context import ContextGetter
 from .icon_score_context import IconScoreContextType
 from .icon_score_context_util import IconScoreContextUtil
@@ -296,9 +296,15 @@ class IconScoreBaseMeta(ABCMeta):
 
     def __new__(mcs, name, bases, namespace, **kwargs):
         if IconScoreObject in bases:
-            return super().__new__(mcs, name, bases, namespace, **kwargs)
+            cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+            if name == "IconScoreBase":
+                mcs.__make_icon_score_base_func_list(cls, namespace)
+            return cls
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        if IconScoreBaseMeta.__is_validate(name, bases):
+            mcs.__validate_score_base_func_list(cls, namespace)
 
         if not isinstance(namespace, dict):
             raise IconScoreException('attr is not dict!')
@@ -326,8 +332,49 @@ class IconScoreBaseMeta(ABCMeta):
         ScoreApiGenerator.check_on_deploy(custom_funcs)
         api_list = ScoreApiGenerator.generate(custom_funcs)
         setattr(cls, CONST_CLASS_API, api_list)
-
         return cls
+
+    @staticmethod
+    def __make_icon_score_base_func_list(cls, namespace):
+        base_list = IconScoreBaseMeta.__filter_namespace(namespace)
+        setattr(cls, CONST_BASE_CLASS_ATTRIBUTE_LIST, base_list)
+
+    @staticmethod
+    def __validate_score_base_func_list(cls, namespace):
+        base_list = getattr(cls, CONST_BASE_CLASS_ATTRIBUTE_LIST, [])
+        target_list = IconScoreBaseMeta.__filter_namespace(namespace)
+
+        cls_name = cls.__name__
+        for target in target_list:
+            IconScoreBaseMeta.__validate_override(cls_name, target, base_list)
+
+    @staticmethod
+    def __validate_override(cls_name: str, target: str, src_list: list):
+        convert_constant_key = "IconScoreBase"
+
+        key = target.replace(cls_name, convert_constant_key, 1)
+
+        if key in src_list:
+            raise IconScoreException(f"can't override base function: {target}")
+
+    @staticmethod
+    def __filter_namespace(namespace):
+        tmp_list = []
+        for key, value in namespace.items():
+            if isfunction(value):
+                is_abstract_method = getattr(value, "__isabstractmethod__", False)
+                if not is_abstract_method and key != STR_FALLBACK:
+                    tmp_list.append(key)
+            elif type(value) in (staticmethod, classmethod, property):
+                tmp_list.append(key)
+        return tmp_list
+
+    @staticmethod
+    def __is_validate(name, bases) -> bool:
+        if name == "IconSystemScoreBase" or name == "Governance":
+            return False
+
+        return True
 
 
 class IconScoreBase(IconScoreObject, ContextGetter,
@@ -357,6 +404,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         """
         A python init function. Invoked when the contract is loaded at each node.
         """
+
         super().__init__(db)
         self.__db = db
         self.__address = db.address
@@ -613,7 +661,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         revert(message, code)
 
-    def is_score_active(self, score_address: 'Address')-> bool:
+    def is_score_active(self, score_address: 'Address') -> bool:
         return IconScoreContextUtil.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:

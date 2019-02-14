@@ -35,6 +35,7 @@ FORMAT_DECORATOR_DUPLICATED = "can't duplicated {} decorator func: {}, cls: {}"
 STR_IS_NOT_CALLABLE = 'is not callable'
 STR_FALLBACK = 'fallback'
 
+CONST_BASE_CLASS_ATTRIBUTE_LIST = "__attribute_list"
 
 @unique
 class ConstBitFlag(IntEnum):

@@ -225,6 +225,7 @@ class TestTransactionResult(unittest.TestCase):
             context_db = inner_task._icon_service_engine._icx_context_db
 
             score_address = create_address(AddressPrefix.CONTRACT, b'address')
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(score_address, context_db))
 
             address = create_address(AddressPrefix.EOA, b'address')
@@ -271,10 +272,6 @@ class SampleScore(IconScoreBase):
 
     def on_update(self) -> None:
         pass
-
-    def get_owner(self,
-                  score_address: Optional['Address']) -> Optional['Address']:
-        return None
 
     @eventlog(indexed=2)
     def SampleEvent(self, i_data: bytes, address: Address, amount: int,

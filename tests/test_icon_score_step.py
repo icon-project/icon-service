@@ -154,6 +154,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
 
@@ -192,6 +193,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.set_db(100)
 
@@ -239,13 +241,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ReqData(tx_hash, from_, to_, 'call', {})
         ])
 
-        self._inner_task._icon_service_engine.\
+        self._inner_task._icon_service_engine. \
             _icx_context_db.get = Mock(return_value=b'1' * 100)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.get_db()
 
@@ -305,8 +308,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertIsNotNone(result)
 
         args_list = self.step_counter.apply_step.call_args_list
-        self.assertEqual(args_list[0][0],(StepType.CONTRACT_CALL, 1))
-        self.assertEqual(args_list[1][0],(StepType.GET, 100))
+        self.assertEqual(args_list[0][0], (StepType.CONTRACT_CALL, 1))
+        self.assertEqual(args_list[1][0], (StepType.GET, 100))
 
     def test_remove_db(self):
         tx_hash = bytes.hex(create_tx_hash())
@@ -317,13 +320,14 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ReqData(tx_hash, from_, to_, 'call', {})
         ])
 
-        self._inner_task._icon_service_engine.\
+        self._inner_task._icon_service_engine. \
             _icx_context_db.get = Mock(return_value=b'1' * 100)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.remove_db()
 
@@ -365,6 +369,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             address = create_address(AddressPrefix.EOA)
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(address, context_db))
             i_data_param = b'i_data'
             data_param = b'data'
@@ -417,6 +422,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_readonly(data_to_hash)
 
@@ -456,6 +462,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(data_to_hash)
 
@@ -493,6 +500,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            SampleScore.get_owner = Mock(return_value = None)
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(b'1234')
 
@@ -614,7 +622,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         return step_costs
 
     def _calc_step_used(self, offset: int, count: int):
-        step_used : int = 0
+        step_used: int = 0
 
         for i in range(offset, offset + count):
             (type, val) = self.step_counter.apply_step.call_args_list[i][0]
@@ -652,10 +660,6 @@ class SampleScore(IconScoreBase):
     def on_update(self) -> None:
         pass
 
-    def get_owner(self,
-                  score_address: Optional['Address']) -> Optional['Address']:
-        return None
-
     @eventlog(indexed=2)
     def SampleEvent(
             self, i_data: bytes, address: Address, data: bytes, text: str):
@@ -690,5 +694,3 @@ class SampleScore(IconScoreBase):
     @external
     def hash_writable(self, data: bytes) -> bytes:
         return sha3_256(data)
-
-

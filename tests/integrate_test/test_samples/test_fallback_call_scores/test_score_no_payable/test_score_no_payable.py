@@ -21,6 +21,3 @@ class TestScoreNoPayable(IconScoreBase):
     @external(readonly=True)
     def get_value(self) -> int:
         return self._value.get()
-
-    def fallback(self) -> None:
-        print("fallback!!")
