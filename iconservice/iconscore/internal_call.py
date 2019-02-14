@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
+from .icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
@@ -140,7 +141,11 @@ class InternalCall(object):
             icon_score = IconScoreContextUtil.get_icon_score(context, addr_to)
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, '_IconScoreBase__call')
-            return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
+
+            is_base_fallback = context.msg.value == 0 and func_name == STR_FALLBACK
+
+            if is_base_fallback is False:
+                return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
         finally:
             context.func_type = prev_func_type
             context.current_address = addr_from
