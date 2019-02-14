@@ -61,7 +61,9 @@ class IconScoreLoader(object):
 
         # in order for the new module to be noticed by the import system
         importlib.invalidate_caches()
-        mod = importlib.import_module(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
+
+        convert_file_to_package = score_package_info[self._MAIN_FILE].replace('/', '.')
+        mod = importlib.import_module(f".{convert_file_to_package}", pkg_root_import)
 
         return getattr(mod, score_package_info[self._MAIN_SCORE])
 

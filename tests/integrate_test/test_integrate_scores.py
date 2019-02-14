@@ -397,6 +397,18 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
+    def test_sub_main(self):
+        tx1 = self._make_deploy_tx("test_scores",
+                                   "sub_main",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+
 
 if __name__ == '__main__':
     unittest.main()
