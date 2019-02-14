@@ -284,11 +284,20 @@ class ArrayDB(object):
         self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
     def __setitem__(self, index: int, value: V) -> None:
+        if not isinstance(index, int):
+            raise ContainerDBException(f'Invalid type: index is not an integer')
+
         size: int = self.__get_size()
-        if index >= size:
-            raise ContainerDBException(f'ArrayDB out of range')
-        byte_value = ContainerUtil.encode_value(value)
-        self._db.put(ContainerUtil.encode_key(index), byte_value)
+
+        # Negative index means that you count from the right instead of the left.
+        if index < 0:
+            index += size
+
+        if 0 <= index < size:
+            byte_value = ContainerUtil.encode_value(value)
+            self._db.put(ContainerUtil.encode_key(index), byte_value)
+        else:
+            raise ContainerDBException(f'Index out of range: index({index}) size({size})')
 
     def __getitem__(self, index: int) -> V:
         return ArrayDB._get(self._db, self.__get_size(), index, self.__value_type)
