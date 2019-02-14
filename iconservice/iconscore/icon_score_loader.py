@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.util
 import json
 import sys
+
+from importlib import invalidate_caches, import_module
 from os import path
 
 from typing import TYPE_CHECKING
@@ -52,17 +53,17 @@ class IconScoreLoader(object):
         return path.join(self._score_root_path, score_addr.to_bytes().hex(), converted_tx_hash)
 
     def try_score_package_validate(self, whitelist_table: dict, score_path: str):
-        pkg_root_import: str = self._make_pkg_root_import(score_path)
-        ScorePackageValidator().execute(whitelist_table, score_path, pkg_root_import)
+        pkg_import_root: str = self._make_pkg_root_import(score_path)
+        ScorePackageValidator().execute(whitelist_table, score_path, pkg_import_root)
 
     def load_score(self, score_path: str) -> callable:
+
         score_package_info = self._load_json(score_path)
-        pkg_root_import: str = self._make_pkg_root_import(score_path)
+        pkg_import_root: str = self._make_pkg_root_import(score_path)
 
         # in order for the new module to be noticed by the import system
-        importlib.invalidate_caches()
-        mod = importlib.import_module(f".{score_package_info[self._MAIN_FILE]}", pkg_root_import)
-
+        invalidate_caches()
+        mod = import_module(f".{score_package_info[self._MAIN_FILE]}", pkg_import_root)
         return getattr(mod, score_package_info[self._MAIN_SCORE])
 
     def _make_pkg_root_import(self, score_path: str) -> str:

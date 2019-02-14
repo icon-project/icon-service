@@ -19,6 +19,11 @@ from os import walk
 
 from ..base.exception import ServerErrorException
 
+CODE_ATTR = 'co_code'
+CODE_NAMES_ATTR = 'co_names'
+
+BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
+
 # cpython
 IMPORT_STAR = 84
 IMPORT_NAME = 108
@@ -27,20 +32,18 @@ IMPORT_TABLE = [IMPORT_STAR, IMPORT_NAME, IMPORT_FROM]
 
 LOAD_BUILD_CLASS = 71
 
-CODE_ATTR = 'co_code'
-CODE_NAMES_ATTR = 'co_names'
-
-BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
-
 
 class ScorePackageValidator(object):
-    PREV_IMPORT_NAME = None
-    PREV_LOAD_BUILD_CLASS = None
     WHITELIST_IMPORT = {}
     CUSTOM_IMPORT_LIST = []
+    PREV_IMPORT_NAME = None
+    PREV_LOAD_BUILD_CLASS = None
 
     @staticmethod
-    def execute(whitelist_table: dict, pkg_root_path: str, pkg_import_root: str) -> callable:
+    def execute(whitelist_table: dict,
+                pkg_root_path: str,
+                pkg_import_root: str) -> callable:
+
         ScorePackageValidator.PREV_IMPORT_NAME = None
         ScorePackageValidator.WHITELIST_IMPORT = whitelist_table
         ScorePackageValidator.CUSTOM_IMPORT_LIST = ScorePackageValidator._make_custom_import_list(pkg_root_path)
@@ -52,27 +55,6 @@ class ScorePackageValidator(object):
             full_name = ''.join((pkg_import_root, '.', imp))
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
-
-            # using Test AST Module
-            # have to sandbox environment
-            # because call compile function that codes
-
-            # import ast
-            # source = spec.loader.get_source(full_name)
-            # mode = ast.parse(source)
-            # for node in ast.walk(mode):
-            #     if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
-            #         if not ScorePackageValidator._is_contain_custom_import(node.module):
-            #             if node.module not in ScorePackageValidator.WHITELIST_IMPORT:
-            #                 raise ServerErrorException(f'invalid import '
-            #                                            f'import_name: {node.module}')
-            #     elif isinstance(node, ast.Name):
-            #         if node.id in BLACKLIST_RESERVED_KEYWORD:
-            #             raise ServerErrorException(f'invalid import '
-            #                                        f'import_name: {node.module}')
-            #     else:
-            #         pass
-
             ScorePackageValidator._validate_import_from_code(code)
             ScorePackageValidator._validate_import_from_const(code.co_consts)
             ScorePackageValidator._validate_blacklist_keyword_from_names(code.co_names)
@@ -108,10 +90,12 @@ class ScorePackageValidator(object):
 
         byte_code_list = [x for x in code.co_code]
 
-        for index in range(0, int(len(byte_code_list)), 2):
-            key = byte_code_list[index]
-            value = byte_code_list[index + 1]
-            ScorePackageValidator._validate_import(key, value, code.co_names)
+        tmp_stack = []
+        for index, code_index in enumerate(range(0, int(len(byte_code_list)), 2)):
+            key = byte_code_list[code_index]
+            value = byte_code_list[code_index + 1]
+            tmp_stack.append((key, value))
+            ScorePackageValidator._validate_import(index, tmp_stack, code.co_names, code.co_consts)
 
     @staticmethod
     def _validate_import_from_const(co_consts: tuple):
@@ -124,45 +108,51 @@ class ScorePackageValidator(object):
                 ScorePackageValidator._validate_blacklist_keyword_from_names(co_const.co_names)
 
     @staticmethod
-    def _validate_import(key: int, value: int, co_names: tuple):
+    def _validate_import(current_index: int, stack_list: list, co_names: tuple, co_consts: tuple):
+        key, value = stack_list[current_index]
         if key not in IMPORT_TABLE:
             return
 
+        # import name
         if key == IMPORT_NAME:
+            _, level_key = stack_list[current_index - 2]
+            level = co_consts[level_key]
+
+            if level > 0:
+                return
+
             import_name = co_names[value]
-            ScorePackageValidator.PREV_IMPORT_NAME = import_name
             if import_name not in ScorePackageValidator.WHITELIST_IMPORT:
-                if not ScorePackageValidator._is_contain_custom_import(import_name):
-                    raise ServerErrorException(f'invalid import '
-                                               f'import_name: {import_name}')
-        elif key == IMPORT_STAR:
-            if ScorePackageValidator.PREV_IMPORT_NAME not in ScorePackageValidator.WHITELIST_IMPORT:
-                if not ScorePackageValidator._is_contain_custom_import(ScorePackageValidator.PREV_IMPORT_NAME):
-                    raise ServerErrorException(f'invalid import '
-                                               f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
-        elif key == IMPORT_FROM:
-            if ScorePackageValidator.PREV_IMPORT_NAME in ScorePackageValidator.WHITELIST_IMPORT:
-                from_list = ScorePackageValidator.WHITELIST_IMPORT[ScorePackageValidator.PREV_IMPORT_NAME]
-                if "*" not in from_list:
-                    if co_names[value] not in from_list:
-                        raise ServerErrorException(f'invalid import '
-                                                   f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
-            elif ScorePackageValidator._is_contain_custom_import(ScorePackageValidator.PREV_IMPORT_NAME):
-                pass
-            else:
                 raise ServerErrorException(f'invalid import '
-                                           f'import_name: {ScorePackageValidator.PREV_IMPORT_NAME}')
+                                           f'import_name: {import_name}')
+        elif key == IMPORT_FROM:
+            _, level_key = stack_list[current_index - 3]
+            level = co_consts[level_key]
 
-    @staticmethod
-    def _is_contain_custom_import(import_name: str) -> bool:
-        for custom_import in ScorePackageValidator.CUSTOM_IMPORT_LIST:
-            if import_name == custom_import:
-                return True
-            else:
-                import_list = custom_import.split('.')
-                if import_list is not None:
-                    for imp in import_list:
-                        if import_name == imp:
-                            return True
-        return False
+            if level > 0:
+                return
 
+            _, import_from_index = stack_list[current_index - 1]
+            import_name = co_names[value]
+            import_from = co_names[import_from_index]
+
+            if import_from not in ScorePackageValidator.WHITELIST_IMPORT:
+                raise ServerErrorException(f'invalid import '
+                                           f'import_from: {import_from} import_name: {import_name}')
+            elif '*' not in ScorePackageValidator.WHITELIST_IMPORT[import_from] and \
+                    import_name not in ScorePackageValidator.WHITELIST_IMPORT[import_from]:
+                raise ServerErrorException(f'invalid import '
+                                           f'import_name: {import_name}')
+        elif key == IMPORT_STAR:
+            _, level_key = stack_list[current_index - 3]
+            level = co_consts[level_key]
+
+            if level > 0:
+                return
+
+            _, import_name_index = stack_list[current_index - 1]
+            import_from = co_names[import_name_index]
+
+            if import_from not in ScorePackageValidator.WHITELIST_IMPORT:
+                raise ServerErrorException(f'invalid import '
+                                           f'import_name: {import_from}')
