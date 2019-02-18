@@ -16,7 +16,6 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
-from .icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType

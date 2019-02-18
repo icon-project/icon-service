@@ -36,7 +36,7 @@ from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException, ServerErrorException
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_4
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -386,7 +386,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param func_name: name of method
         """
 
-        if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
+        if not self.__is_external_method(func_name):
             raise ExternalException(f"Invalid external method",
                                     func_name,
                                     type(self).__name__,
@@ -405,19 +405,22 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                arg_params: Optional[list] = None,
                kw_params: Optional[dict] = None) -> Any:
 
-        if func_name != STR_FALLBACK:
-            self.validate_external_method(func_name)
-
-        self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
-
-        score_func = getattr(self, func_name)
-
         if func_name == STR_FALLBACK:
-            if self._context.msg.value > 0:
-                ret = score_func()
+            if self._context.revision >= REVISION_4:
+                if not self.__is_payable_method(func_name):
+                    raise ExternalException(f"Method not found",
+                                            func_name,
+                                            type(self).__name__)
             else:
-                ret = None
+                if not self.__is_payable_method(func_name) and self.msg.value > 0:
+                    raise PayableException(f"This is not payable", func_name, type(self).__name__)
+
+            score_func = getattr(self, func_name)
+            ret = score_func()
         else:
+            self.validate_external_method(func_name)
+            self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
+            score_func = getattr(self, func_name)
             if arg_params is None:
                 arg_params = []
             if kw_params is None:
@@ -430,7 +433,16 @@ class IconScoreBase(IconScoreObject, ContextGetter,
             if self.msg.value > 0:
                 raise PayableException(f"This is not payable", func_name, type(self).__name__)
 
+    def __is_external_method(self, func_name) -> bool:
+        return func_name in self.__get_attr_dict(CONST_CLASS_EXTERNALS)
+
+    def __is_payable_method(self, func_name) -> bool:
+        return func_name in self.__get_attr_dict(CONST_CLASS_PAYABLES)
+
     def __is_func_readonly(self, func_name: str) -> bool:
+        if not self.__is_external_method(func_name):
+            return False
+
         func = getattr(self, func_name)
         return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
 

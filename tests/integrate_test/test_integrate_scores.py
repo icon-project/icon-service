@@ -273,7 +273,6 @@ class TestIntegrateScores(TestIntegrateBase):
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-
         tx3 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
@@ -294,7 +293,6 @@ class TestIntegrateScores(TestIntegrateBase):
                                    "test_score",
                                    self._addr_array[1],
                                    ZERO_SCORE_ADDRESS)
-
 
         prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4, tx5, tx6])
 
@@ -396,6 +394,8 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
+
+
 
 
 if __name__ == '__main__':
