@@ -63,6 +63,9 @@ TRY_SCORE_PACKAGE_VALIDATE_PATCHER = patch('iconservice.iconscore.icon_score_con
 IconScoreContextUtil.try_score_package_validate')
 RENAME_DIRECTORY_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.DirectoryNameChanger.rename_directory')
 SYMLINK_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.symlink')
+DEFAULT_BYTE_VALUE = bytes(DEFAULT_BYTE_SIZE)
+ZIP_TYPE = "application/zip"
+TBEARS_TYPE = "application/tbears"
 
 
 class MockScore(object):
@@ -166,13 +169,54 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
         self._context.event_logs = Mock(spec=list)
         self._context.traces = Mock(spec=list)
 
+    def _invoke_setUp(self, is_service_flag_on: bool, _check_audit_ignore: bool):
+        IconScoreContextUtil.is_service_flag_on.return_value = is_service_flag_on
+        self._score_deploy_engine._check_audit_ignore = Mock(return_value=_check_audit_ignore)
+        self._score_deploy_engine.deploy = Mock()
+        self._score_deploy_engine.write_deploy_info_and_tx_params = Mock()
+
+    @staticmethod
+    def _check_audit_ignore_setUp(get_revision: int, is_service_flag_on: bool, get_owner):
+        IconScoreContextUtil.get_revision.return_value = get_revision
+        IconScoreContextUtil.is_service_flag_on.return_value = is_service_flag_on
+        IconScoreContextUtil.get_owner.return_value = get_owner
+
+    def _deploy_setUp(self, get_deploy_tx_params=None):
+        self._score_deploy_engine._score_deploy = Mock()
+        self._score_deploy_engine._icon_score_deploy_storage.update_score_info = Mock()
+        IconScoreContextUtil.get_deploy_tx_params.return_value = get_deploy_tx_params
+
+    def _score_deploy_setUp(self, legacy_tbears_mode: bool=False):
+        self._score_deploy_engine._on_deploy = Mock()
+        self._context.legacy_tbears_mode = legacy_tbears_mode
+
+    def _on_deploy_for_builtin_setUp(self, get_deploy_info, score):
+        IconScoreContextUtil.get_score_root_path.return_value = self.score_path
+        IconScoreContextUtil.load_score.return_value = score
+        self._score_deploy_engine._initialize_score = Mock()
+        self.tmp_dir = 'tmp'
+        IconScoreContextUtil.get_deploy_info.return_value = get_deploy_info
+
+    def _on_deploy_setUp(self, content_type: str="application/zip", is_service_flag_on: bool=False,
+                         score=None, deploy_info=None, revision=2, score_root_path=""):
+        self.score_address = create_address(1)
+        self.deploy_content = b'deploy_mock_data'
+        self.deploy_data = {"contentType": content_type, "content": self.deploy_content}
+        self.tx_params = Mock(spec=IconScoreDeployTXParams)
+        self.tx_params.configure_mock(score_address=self.score_address, deploy_data=self.deploy_data)
+        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
+        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
+        self._score_deploy_engine._initialize_score = Mock()
+        IconScoreContextUtil.is_service_flag_on.return_value = is_service_flag_on
+        IconScoreContextUtil.load_score.return_value = score
+        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        IconScoreContextUtil.get_revision.return_value = revision
+        IconScoreContextUtil.get_score_root_path.return_value = score_root_path
+
     # case when icon_score_address is in (None, ZERO_ADDRESS)
     @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
     def test_invoke_case1(self):
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        self._score_deploy_engine._check_audit_ignore = Mock(return_value=True)
-        self._score_deploy_engine.deploy = Mock()
-        self._score_deploy_engine.write_deploy_info_and_tx_params = Mock()
+        self._invoke_setUp(True, True)
 
         with self.assertRaises(AssertionError):
             self._score_deploy_engine.invoke(self._context, GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS, {})
@@ -195,10 +239,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when deployer_white_list flag on, ignore audit
     @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
     def test_invoke_case2(self):
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        self._score_deploy_engine._check_audit_ignore = Mock(return_value=True)
-        self._score_deploy_engine.deploy = Mock()
-        self._score_deploy_engine.write_deploy_info_and_tx_params = Mock()
+        self._invoke_setUp(True, True)
 
         self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
@@ -210,10 +251,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when deployer_white_list flag on, audit
     @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
     def test_invoke_case3(self):
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        self._score_deploy_engine._check_audit_ignore = Mock(return_value=False)
-        self._score_deploy_engine.deploy = Mock()
-        self._score_deploy_engine.write_deploy_info_and_tx_params = Mock()
+        self._invoke_setUp(True, False)
 
         self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
@@ -225,10 +263,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when deployer_white_list flag off, audit
     @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
     def test_invoke_case4(self):
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._check_audit_ignore = Mock(return_value=False)
-        self._score_deploy_engine.deploy = Mock()
-        self._score_deploy_engine.write_deploy_info_and_tx_params = Mock()
+        self._invoke_setUp(False, False)
 
         self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
@@ -240,10 +275,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when deployer_white_list flag off, audit on
     @patch_several(VALIDATE_SCORE_BLACKLIST_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, VALIDATE_DEPLOYER)
     def test_invoke_case5(self):
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._check_audit_ignore = Mock(return_value=True)
-        self._score_deploy_engine.deploy = Mock()
-        self._score_deploy_engine.write_deploy_info_and_tx_params = Mock()
+        self._invoke_setUp(False, True)
 
         self._score_deploy_engine.invoke(self._context, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, {})
 
@@ -255,9 +287,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when audit disable
     @patch_several(GET_REVISION_PATCHER, GET_OWNER_PATCHER, IS_SERVICE_FLAG_ON_PATCHER)
     def test_check_audit_ignore_case1(self):
-        IconScoreContextUtil.get_revision.return_value = 0
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_owner.return_value = self._addr1
+        self._check_audit_ignore_setUp(0, False, self._addr1)
 
         result = self._score_deploy_engine._check_audit_ignore(self._context, GOVERNANCE_SCORE_ADDRESS)
         self.assertTrue(result)
@@ -265,9 +295,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when audit enable, revision2, transaction requested by owner
     @patch_several(GET_REVISION_PATCHER, GET_OWNER_PATCHER, IS_SERVICE_FLAG_ON_PATCHER)
     def test_check_audit_ignore_case2(self):
-        IconScoreContextUtil.get_revision.return_value = 2
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_owner.return_value = self._addr1
+        self._check_audit_ignore_setUp(2, True, self._addr1)
 
         result = self._score_deploy_engine._check_audit_ignore(self._context, GOVERNANCE_SCORE_ADDRESS)
 
@@ -276,9 +304,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when audit enable, revision2, transaction requested by stranger
     @patch_several(GET_REVISION_PATCHER, GET_OWNER_PATCHER, IS_SERVICE_FLAG_ON_PATCHER)
     def test_check_audit_ignore_case3(self):
-        IconScoreContextUtil.get_revision.return_value = 2
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_owner.return_value = create_address(0)
+        self._check_audit_ignore_setUp(2, True, create_address(0))
 
         result = self._score_deploy_engine._check_audit_ignore(self._context, GOVERNANCE_SCORE_ADDRESS)
 
@@ -287,9 +313,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when audit enable, revision0, transaction requested by stranger
     @patch_several(GET_REVISION_PATCHER, GET_OWNER_PATCHER, IS_SERVICE_FLAG_ON_PATCHER)
     def test_check_audit_ignore_case4(self):
-        IconScoreContextUtil.get_revision.return_value = 0
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_owner.return_value = self._addr1
+        self._check_audit_ignore_setUp(0, True, self._addr1)
 
         result = self._score_deploy_engine._check_audit_ignore(self._context, GOVERNANCE_SCORE_ADDRESS)
 
@@ -298,9 +322,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when audit enable, revision0, transaction requested by stranger
     @patch_several(GET_REVISION_PATCHER, GET_OWNER_PATCHER, IS_SERVICE_FLAG_ON_PATCHER)
     def test_check_audit_ignore_case5(self):
-        IconScoreContextUtil.get_revision.return_value = 0
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_owner.return_value = create_address(0)
+        self._check_audit_ignore_setUp(0, True, create_address(0))
 
         result = self._score_deploy_engine._check_audit_ignore(self._context, GOVERNANCE_SCORE_ADDRESS)
 
@@ -309,9 +331,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when tx_param is None
     @patch_several(GET_DEPLOY_TX_PARAMS_PATCHER)
     def test_deploy_case1(self):
-        self._score_deploy_engine._score_deploy = Mock()
-        self._score_deploy_engine._icon_score_deploy_storage.update_score_info = Mock()
-        IconScoreContextUtil.get_deploy_tx_params.return_value = None
+        self._deploy_setUp()
 
         with self.assertRaises(InvalidParamsException) as e:
             self._score_deploy_engine.deploy(self._context, self._context.tx.hash)
@@ -325,11 +345,9 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     # case when tx_param is not None
     @patch_several(GET_DEPLOY_TX_PARAMS_PATCHER)
     def test_deploy_case2(self):
-        self._score_deploy_engine._score_deploy = Mock()
-        self._score_deploy_engine._icon_score_deploy_storage.update_score_info = Mock()
         tx_params = Mock(spec=IconScoreDeployTXParams)
         tx_params.configure_mock(score_address=GOVERNANCE_SCORE_ADDRESS)
-        IconScoreContextUtil.get_deploy_tx_params.return_value = tx_params
+        self._deploy_setUp(tx_params)
 
         self._score_deploy_engine.deploy(self._context, self._context.tx.hash)
 
@@ -347,9 +365,8 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
 
     # test for tbears mode and legacy_tbears_mode is True
     def test_score_deploy_case1(self):
-        self._score_deploy_engine._on_deploy = Mock()
+        self._score_deploy_setUp(True)
         tx_params = Mock(spec=IconScoreDeployTXParams)
-        self._context.legacy_tbears_mode = True
         tx_params.configure_mock(deploy_data={'contentType': 'application/tbears', 'content': '0x1234'})
 
         self._score_deploy_engine._score_deploy(self._context, tx_params)
@@ -358,9 +375,9 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
 
     # test for tbears mode and legacy_tbears_mode is False
     def test_score_deploy_case2(self):
-        self._score_deploy_engine._on_deploy = Mock()
         tx_params = Mock(spec=IconScoreDeployTXParams)
         tx_params.configure_mock(deploy_data={'contentType': 'application/tbears', 'content': '0x1234'})
+        self._score_deploy_setUp()
 
         with self.assertRaises(InvalidParamsException) as e:
             self._score_deploy_engine._score_deploy(self._context, tx_params)
@@ -370,9 +387,9 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
 
     # test for zip mode
     def test_score_deploy_case3(self):
-        self._score_deploy_engine._on_deploy = Mock()
         tx_params = Mock(spec=IconScoreDeployTXParams)
         tx_params.configure_mock(deploy_data={'contentType': 'application/zip', 'content': '0x1234'})
+        self._score_deploy_setUp()
 
         self._score_deploy_engine._score_deploy(self._context, tx_params)
 
@@ -380,7 +397,7 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
 
     # test for wrong contentType
     def test_score_deploy_case4(self):
-        self._score_deploy_engine._on_deploy = Mock()
+        self._score_deploy_setUp()
         tx_params = Mock(spec=IconScoreDeployTXParams)
         tx_params.configure_mock(deploy_data={'contentType': 'wrong/content', 'content': '0x1234'})
 
@@ -416,25 +433,17 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
 
         self._deploy_storage.put_deploy_info_and_tx_params_for_builtin.\
             assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS, self._addr1)
-
     # Case when deploy_info is not none
     @patch_several(GET_DEPLOY_INFO_PATCHER, LOAD_SCORE_PATCHER, PUT_SCORE_INFO_PATCHER, GET_SCORE_ROOT_PATH_PATCHER,
                    COPY_TREE_PATCHER)
     def test_on_deploy_for_builtin_case1(self):
-
-        IconScoreContextUtil.get_score_root_path.return_value = self.score_path
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.load_score.return_value = MockScore(self)
-        self._score_deploy_engine._initialize_score = Mock()
-        tmp_dir = 'tmp'
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
-        mock_score = MockScore(self)
-        IconScoreContextUtil.load_score.return_value = mock_score
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        mock_score = MockScore(self)
+        self._on_deploy_for_builtin_setUp(deploy_info, mock_score)
 
-        self._score_deploy_engine._on_deploy_for_builtin(self._context, GOVERNANCE_SCORE_ADDRESS, tmp_dir)
+        self._score_deploy_engine._on_deploy_for_builtin(self._context, GOVERNANCE_SCORE_ADDRESS, self.tmp_dir)
 
         IconScoreContextUtil.get_score_root_path.assert_called_with(self._context)
         IconScoreContextUtil.get_deploy_info.assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS)
@@ -446,14 +455,10 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, LOAD_SCORE_PATCHER, PUT_SCORE_INFO_PATCHER, GET_SCORE_ROOT_PATH_PATCHER,
                    COPY_TREE_PATCHER)
     def test_on_deploy_for_builtin_case2(self):
-        IconScoreContextUtil.get_score_root_path.return_value = self.score_path
-        IconScoreContextUtil.get_deploy_info.return_value = None
         mock_score = MockScore(self)
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        tmp_dir = 'tmp'
+        self._on_deploy_for_builtin_setUp(None, mock_score)
 
-        self._score_deploy_engine._on_deploy_for_builtin(self._context, GOVERNANCE_SCORE_ADDRESS, tmp_dir)
+        self._score_deploy_engine._on_deploy_for_builtin(self._context, GOVERNANCE_SCORE_ADDRESS, self.tmp_dir)
 
         IconScoreContextUtil.get_score_root_path.assert_called_with(self._context)
         IconScoreContextUtil.get_deploy_info.assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS)
@@ -467,20 +472,13 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, LOAD_SCORE_PATCHER, PUT_SCORE_INFO_PATCHER, GET_SCORE_ROOT_PATH_PATCHER,
                    COPY_TREE_PATCHER)
     def test_on_deploy_for_builtin_case3(self):
-        IconScoreContextUtil.get_score_root_path.return_value = self.score_path
-        IconScoreContextUtil.load_score.return_value = MockScore(self)
-        self._score_deploy_engine._initialize_score = Mock()
-        tmp_dir = 'tmp'
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\01' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
-
-        # Case when score is None
-        IconScoreContextUtil.load_score.return_value = None
+        self._on_deploy_for_builtin_setUp(deploy_info, None)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy_for_builtin(self._context, GOVERNANCE_SCORE_ADDRESS, tmp_dir)
+            self._score_deploy_engine._on_deploy_for_builtin(self._context, GOVERNANCE_SCORE_ADDRESS, self.tmp_dir)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
         self.assertEqual(e.exception.message, f'score is None : {GOVERNANCE_SCORE_ADDRESS}')
         IconScoreContextUtil.get_score_root_path.assert_called_with(self._context)
@@ -492,53 +490,37 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case1(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\01' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy_legacy.assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
+            deploy_legacy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with(self._context, self.score_address,
+                                                               mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision0, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case2(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -549,54 +531,39 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case3(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
         IconScoreContextUtil.is_service_flag_on.return_value = True
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, deploy_info)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
-        IconScoreContextUtil.try_score_package_validate.assert_called_with(self._context, score_address, next_tx_hash)
+        IconScoreContextUtil.try_score_package_validate.assert_called_with(self._context,
+                                                                           self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy_legacy.assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+            deploy_legacy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision0, score validator flag True, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case4(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -608,57 +575,40 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case5(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
         IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
 
-        IconScoreContextUtil.get_deploy_info.assert_called_with(self._context, score_address)
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        IconScoreContextUtil.get_deploy_info.assert_called_with(self._context, self.score_address)
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision2, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case6(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
         self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info, 2)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -670,119 +620,87 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case7(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, deploy_info, 2)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
-        IconScoreContextUtil.try_score_package_validate.assert_called_with(self._context, score_address, next_tx_hash)
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.try_score_package_validate.assert_called_with\
+            (self._context, self.score_address, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision2, score validator flag True, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case8(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, deploy_info, 2)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
-        IconScoreContextUtil.try_score_package_validate.assert_called_with(self._context, score_address, next_tx_hash)
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.try_score_package_validate.assert_called_with\
+            (self._context, self.score_address, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision3, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case9(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 3
         self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info, 3)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.deploy.\
-            assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
+            assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
         DirectoryNameChanger.rename_directory.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision4, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case10(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 4
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info, 4)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -794,57 +712,40 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case11(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 4
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info, 4)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=next_tx_hash)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
         DirectoryNameChanger.rename_directory.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, zip, revision4, score validator flag True, SCORE None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case12(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 3
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info, 3)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -856,58 +757,38 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case13(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(TBEARS_TYPE, False, mock_score, deploy_info, score_root_path=self.score_path)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
         self._score_deploy_engine._icon_score_deployer.deploy_legacy.assert_not_called()
         self._score_deploy_engine._icon_score_deployer.deploy.assert_not_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, tbears, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case14(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(TBEARS_TYPE, False, None, deploy_info, score_root_path=self.score_path)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -920,54 +801,37 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case15(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(TBEARS_TYPE, True, mock_score, deploy_info, score_root_path=self.score_path)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, next_tx_hash)
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, next_tx_hash)
         self._score_deploy_engine._initialize_score.assert_called()
-        IconScoreContextUtil.try_score_package_validate.assert_called_with(self._context, score_address, next_tx_hash)
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address, mock_score, next_tx_hash)
+        IconScoreContextUtil.try_score_package_validate.assert_called_with\
+            (self._context, self.score_address, next_tx_hash)
+        IconScoreContextUtil.put_score_info.assert_called_with\
+            (self._context, self.score_address, mock_score, next_tx_hash)
 
     # Case when deploy_info is not None, tbears, score validator flag True, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case16(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         next_tx_hash = b'\00\0x' * 16
         deploy_info.configure_mock(next_tx_hash=next_tx_hash)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(TBEARS_TYPE, True, None, deploy_info, score_root_path=self.score_path)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         self._score_deploy_engine._icon_score_deployer.deploy_legacy.assert_not_called()
@@ -978,51 +842,32 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case17(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, None, score_root_path=self.score_path)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy_legacy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy_legacy.assert_called_with(address=self.score_address,
+                                             data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with(self._context,
-                                                               score_address, mock_score, default_byte_value)
+                                                               self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is None, zip, revision0, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER)
     def test_on_deploy_case18(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
+        self._on_deploy_setUp(ZIP_TYPE, False, None, None, 0)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         self._score_deploy_engine._icon_score_deployer.deploy_legacy.assert_called()
         self._score_deploy_engine._icon_score_deployer.deploy.assert_not_called()
         self._score_deploy_engine._initialize_score.assert_not_called()
@@ -1031,50 +876,32 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case19(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, None, 0)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.\
-            assert_called_with(self._context, score_address, default_byte_value)
+            assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy_legacy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
-        IconScoreContextUtil.put_score_info.assert_called_with(self._context, score_address,
-                                                               mock_score, default_byte_value)
+            deploy_legacy.assert_called_with\
+            (address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
+        IconScoreContextUtil.put_score_info.assert_called_with(self._context, self.score_address,
+                                                               mock_score, DEFAULT_BYTE_VALUE)
 
-    # Case when deploy_info is None, zip, revision0, score validator flag True, SCORE is None
+    # Case when deploy_info is None, zip, revision0, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case20(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._initialize_score = Mock()
+        self._on_deploy_setUp(ZIP_TYPE, False, None, None, 0)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1086,53 +913,32 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case21(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, None, 2)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with(self._context,
-                                                               score_address, mock_score, default_byte_value)
+                                                               self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is None, zip, revision2, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case22(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
-        IconScoreContextUtil.get_deploy_info.return_value = None
+        self._on_deploy_setUp(ZIP_TYPE, False, None, None, 2)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1144,177 +950,114 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case23(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
-        self._score_deploy_engine._initialize_score = Mock()
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, None, 2)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.\
-            assert_called_with(self._context, score_address, default_byte_value)
+            assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is None, zip, revision2, score validator flag True, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case24(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, None, 2)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, DEFAULT_BYTE_VALUE)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is None, zip, revision3, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case25(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 3
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, None, 3)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer.deploy. \
-            assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         DirectoryNameChanger.rename_directory.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is None, zip, revision4, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case26(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 4
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
-        IconScoreContextUtil.get_deploy_info.return_value = None
+        self._on_deploy_setUp(ZIP_TYPE, False, None, None, 4)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         self._score_deploy_engine._icon_score_deployer.deploy.assert_called()
         self._score_deploy_engine._initialize_score.assert_not_called()
 
-    # Case when deploy_info is None, zip, revision4, score validator flag True, SCORE is not None
+    # Case when deploy_info is None, zip, revision4, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case27(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 4
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
-        IconScoreContextUtil.get_deploy_info.return_value = None
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, None, 4)
+
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
 
         IconScoreContextUtil.load_score.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         DirectoryNameChanger.rename_directory.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
-    # Case when deploy_info is None, zip, revision4, score validator flag True, SCORE None
+    # Case when deploy_info is None, zip, revision4, score validator flag False, SCORE None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case28(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 3
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
-        IconScoreContextUtil.get_deploy_info.return_value = None
+        self._on_deploy_setUp(ZIP_TYPE, False, None, None, 4)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1326,50 +1069,30 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case29(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
-        IconScoreContextUtil.get_deploy_info.return_value = None
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(TBEARS_TYPE, False, mock_score, None, score_root_path=self.score_path)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is None, tbears, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case30(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
-        IconScoreContextUtil.get_deploy_info.return_value = None
+        self._on_deploy_setUp(TBEARS_TYPE, False, None, None, score_root_path=self.score_path)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1380,51 +1103,31 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case31(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
-        IconScoreContextUtil.get_deploy_info.return_value = None
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(TBEARS_TYPE, True, mock_score, None, score_root_path=self.score_path)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, DEFAULT_BYTE_VALUE)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is not None, tbears, score validator flag True, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case32(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
-        IconScoreContextUtil.get_deploy_info.return_value = None
+        self._on_deploy_setUp(TBEARS_TYPE, True, None, None, score_root_path=self.score_path)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         self._score_deploy_engine._initialize_score.assert_not_called()
@@ -1434,56 +1137,39 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case33(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info, 0)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, default_byte_value)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy_legacy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy_legacy.assert_called_with\
+            (address=self.score_address, data=self.deploy_content, tx_hash=default_byte_value)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, default_byte_value)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision0, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case34(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info, 0)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1491,61 +1177,43 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
         self._score_deploy_engine._initialize_score.assert_not_called()
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision0, score validator flag True, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case35(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, deploy_info, 0)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, default_byte_value)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, default_byte_value)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy_legacy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy_legacy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=default_byte_value)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, default_byte_value)
 
     # Case when deploy_info is not None, next_tx_hash is None,
     # zip, revision0, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER)
     def test_on_deploy_case36(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info, 0)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1553,63 +1221,43 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
         self._score_deploy_engine._initialize_score.assert_not_called()
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision2, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case37(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision2, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case38(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1617,133 +1265,92 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
         self._score_deploy_engine._initialize_score.assert_not_called()
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision2, score validator flag True, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case39(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, deploy_info, 2)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, default_byte_value)
         self._score_deploy_engine._icon_score_deployer. \
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=default_byte_value)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, default_byte_value)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, default_byte_value)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision2, score validator flag True, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER)
     def test_on_deploy_case40(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_revision.return_value = 2
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, True, mock_score, deploy_info)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, default_byte_value)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=default_byte_value)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, default_byte_value)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, default_byte_value)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision3, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case41(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 3
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
         self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info, 3)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer.deploy. \
-            assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         DirectoryNameChanger.rename_directory.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision4, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case42(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 4
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
-        deploy_info = Mock(spec=IconScoreDeployInfo)
-        deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+        self._on_deploy_setUp(ZIP_TYPE, False, None, None, 4)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1751,65 +1358,44 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
         self._score_deploy_engine._initialize_score.assert_not_called()
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision4, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case43(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 4
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(ZIP_TYPE, False, mock_score, deploy_info, 4)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._icon_score_deployer.\
-            deploy.assert_called_with(address=score_address, data=deploy_content, tx_hash=default_byte_value)
+            deploy.assert_called_with(address=self.score_address, data=self.deploy_content, tx_hash=DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         DirectoryNameChanger.rename_directory.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # zip, revision0, score validator flag False, SCORE is not None
+    # zip, revision3, score validator flag False, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_REVISION_PATCHER, RENAME_DIRECTORY_PATCHER)
     def test_on_deploy_case44(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/zip", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_revision.return_value = 3
-        self._score_deploy_engine._icon_score_deployer.deploy = Mock()
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(ZIP_TYPE, False, None, deploy_info, 3)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1822,56 +1408,36 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case45(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(TBEARS_TYPE, False, mock_score, deploy_info, score_root_path=self.score_path)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # tbears, revision0, score validator flag False, SCORE is not None
+    # tbears, revision0, score validator flag False, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case46(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = False
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
-        self._score_deploy_engine._icon_score_deployer.deploy_legacy = Mock()
+
+        self._on_deploy_setUp(TBEARS_TYPE, False, None, deploy_info, score_root_path=self.score_path)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_not_called()
@@ -1879,61 +1445,43 @@ class TestScoreDeployEngine(unittest.TestCase, ContextContainer):
         self._score_deploy_engine._initialize_score.assert_not_called()
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # tbears, revision0, score validator flag False, SCORE is not None
+    # tbears, revision0, score validator flag True, SCORE is not None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case47(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
         mock_score = MockScore(self)
         mock_score.owner = self._addr1
-        IconScoreContextUtil.load_score.return_value = mock_score
         self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
-        default_byte_value = bytes(DEFAULT_BYTE_SIZE)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
 
-        self._score_deploy_engine._on_deploy(self._context, tx_params)
+        self._on_deploy_setUp(TBEARS_TYPE, True, mock_score, deploy_info, score_root_path=self.score_path)
 
-        IconScoreContextUtil.load_score.assert_called_with(self._context, score_address, default_byte_value)
+        self._score_deploy_engine._on_deploy(self._context, self.tx_params)
+
+        IconScoreContextUtil.load_score.assert_called_with(self._context, self.score_address, DEFAULT_BYTE_VALUE)
         self._score_deploy_engine._initialize_score.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called_with\
-            (self._context, score_address, default_byte_value)
+            (self._context, self.score_address, DEFAULT_BYTE_VALUE)
         IconScoreContextUtil.put_score_info.assert_called_with\
-            (self._context, score_address, mock_score, default_byte_value)
+            (self._context, self.score_address, mock_score, DEFAULT_BYTE_VALUE)
 
     # Case when deploy_info is not None, next_tx_hash is None,
-    # tbears, revision0, score validator flag False, SCORE is not None
+    # tbears, revision0, score validator flag True, SCORE is None
     @patch_several(GET_DEPLOY_INFO_PATCHER, IS_SERVICE_FLAG_ON_PATCHER, LOAD_SCORE_PATCHER,
                    PUT_SCORE_INFO_PATCHER, TRY_SCORE_PACKAGE_VALIDATE_PATCHER,
                    GET_SCORE_ROOT_PATH_PATCHER, SYMLINK_PATCHER)
     def test_on_deploy_case48(self):
-        score_address = create_address(1)
-        deploy_content = b'deploy_mock_data'
-        deploy_data = {"contentType": "application/tbears", "content": deploy_content}
-        tx_params = Mock(spec=IconScoreDeployTXParams)
-        tx_params.configure_mock(score_address=score_address, deploy_data=deploy_data)
-        IconScoreContextUtil.get_deploy_info.return_value = None
-        IconScoreContextUtil.is_service_flag_on.return_value = True
-        IconScoreContextUtil.get_score_root_path.return_value = os.path.join(PROJECT_ROOT_PATH, self._ROOT_SCORE_PATH)
-        IconScoreContextUtil.load_score.return_value = None
-        self._score_deploy_engine._initialize_score = Mock()
         deploy_info = Mock(spec=IconScoreDeployInfo)
         deploy_info.configure_mock(next_tx_hash=None)
-        IconScoreContextUtil.get_deploy_info.return_value = deploy_info
+
+        self._on_deploy_setUp(TBEARS_TYPE, True, None, deploy_info, score_root_path=self.score_path)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._score_deploy_engine._on_deploy(self._context, tx_params)
+            self._score_deploy_engine._on_deploy(self._context, self.tx_params)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(e.exception.message, f'score is None : {score_address}')
+        self.assertEqual(e.exception.message, f'score is None : {self.score_address}')
         IconScoreContextUtil.get_deploy_info.assert_called()
         IconScoreContextUtil.is_service_flag_on.assert_called()
         IconScoreContextUtil.try_score_package_validate.assert_called()
