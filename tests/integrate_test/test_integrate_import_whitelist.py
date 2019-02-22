@@ -129,7 +129,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'addImportWhiteList',
                                        {"importStmt": "{'json': [],'os': ['path'],'base.exception': "
-                                                       "['ExceptionCode','RevertException']}"})
+                                                      "['ExceptionCode','RevertException']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
         # confirm block
@@ -182,7 +182,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'removeImportWhiteList',
                                        {"importStmt": "{'json': [],'os': ['path'],"
-                                                       "'base.exception': ['RevertException']}"})
+                                                      "'base.exception': ['RevertException']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
         # confirm block
