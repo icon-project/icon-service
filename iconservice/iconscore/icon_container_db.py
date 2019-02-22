@@ -217,6 +217,10 @@ class DictDB(object):
 
 
 class ArrayDB(object):
+    """
+    Utility classes wrapping the state DB.
+    supports length and iterator, maintains order
+    """
     __SIZE = 'size'
     __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
 
