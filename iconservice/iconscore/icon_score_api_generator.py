@@ -116,7 +116,7 @@ class ScoreApiGenerator:
 
         if sig_info.return_annotation is not None:
             if sig_info.return_annotation is not Signature.empty:
-                raise InvalidParamsException("can't have return value")
+                raise InvalidParamsException("Invalid fallback signature")
 
         info[ScoreApiGenerator.__API_PAYABLE] = is_payable
 
