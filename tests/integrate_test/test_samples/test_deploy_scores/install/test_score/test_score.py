@@ -34,3 +34,7 @@ class TestScore(IconScoreBase):
     @external
     def increase_value(self):
         self._value.set(self._value.get()+1)
+
+    @payable
+    def fallback(self):
+        pass

@@ -1,7 +1,7 @@
 from iconservice import *
 
 
-class TestScorePayable(IconScoreBase):
+class GetApi(IconScoreBase):
 
     @eventlog(indexed=1)
     def Changed(self, value: int):
@@ -9,19 +9,21 @@ class TestScorePayable(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
-        self._value = VarDB('value', db, value_type=int)
 
-    def on_install(self, value: int=0) -> None:
+    def on_install(self) -> None:
         super().on_install()
-        self._value.set(value)
 
     def on_update(self) -> None:
         super().on_update()
 
     @external(readonly=True)
-    def get_value(self) -> int:
-        return self._value.get()
+    def get_value(self, value1: int) -> int:
+        return value1
+
+    @external
+    def set_value(self, value1: int):
+        pass
 
     @payable
-    def fallback(self) -> None:
+    def fallback(self, num1: int) -> int:
         print("fallback!!")

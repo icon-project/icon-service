@@ -51,10 +51,13 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results[0].score_address
 
-    def _call_fallback(self, from_: 'Address', to: 'Address', step_limit=None):
-        tx = self._make_icx_send_tx(from_, to, 0)
+    def _call_set_value(self, from_: 'Address', to: 'Address', step_limit=None):
+        tx = self._make_score_call_tx(from_,
+                                      to,
+                                      'set_values', {})
+
         if step_limit:
-            tx['params']['stepLimit'] = 138519
+            tx['params']['stepLimit'] = step_limit
 
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
@@ -88,11 +91,11 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         self.assertEqual(expected_status, response)
 
         score_address = self._deploy_score()
-        tx_result = self._call_fallback(self._addr_array[0], score_address)
+        tx_result = self._call_set_value(self._addr_array[0], score_address)
         self.assertEqual(tx_result.status, int(True))
-        tx_result = self._call_fallback(self._addr_array[1], score_address, 138519)
+        tx_result = self._call_set_value(self._addr_array[1], score_address, 140519)
         self.assertEqual(tx_result.status, int(False))
-        tx_result = self._call_fallback(self._addr_array[2], score_address)
+        tx_result = self._call_set_value(self._addr_array[2], score_address)
         self.assertEqual(tx_result.status, int(True))
 
         response = self._query(
@@ -134,11 +137,11 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
         self.assertEqual(expected_status, response)
 
         score_address = self._deploy_score()
-        tx_result = self._call_fallback(self._addr_array[0], score_address)
+        tx_result = self._call_set_value(self._addr_array[0], score_address)
         self.assertEqual(tx_result.status, int(True))
-        tx_result = self._call_fallback(self._addr_array[1], score_address, 138519)
+        tx_result = self._call_set_value(self._addr_array[1], score_address, 140519)
         self.assertEqual(tx_result.status, int(False))
-        tx_result = self._call_fallback(self._addr_array[2], score_address)
+        tx_result = self._call_set_value(self._addr_array[2], score_address)
         self.assertEqual(tx_result.status, int(True))
 
         response = self._query(
