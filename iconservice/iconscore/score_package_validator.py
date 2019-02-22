@@ -115,6 +115,9 @@ class ScorePackageValidator(object):
 
         # import name
         if key == IMPORT_NAME:
+            # use 0, 2 indexed values
+            # 1 indexed valude is class_name
+            # <class 'list'>: [(100, 0), (100, 1), (108, 0)]
             _, level_key = stack_list[current_index - 2]
             level = co_consts[level_key]
 
@@ -126,6 +129,8 @@ class ScorePackageValidator(object):
                 raise ServerErrorException(f'invalid import '
                                            f'import_name: {import_name}')
         elif key == IMPORT_FROM:
+            # use 0, 2, 3 indexed values
+            # <class 'list'>: [(100, 0), (100, 1), (108, 0), (109, 1)]
             _, level_key = stack_list[current_index - 3]
             level = co_consts[level_key]
 
@@ -136,6 +141,8 @@ class ScorePackageValidator(object):
             import_name = co_names[value]
             import_from = co_names[import_from_index]
 
+            # duplicated function, but have to check
+            # we can't check about only import situation
             if import_from not in ScorePackageValidator.WHITELIST_IMPORT:
                 raise ServerErrorException(f'invalid import '
                                            f'import_from: {import_from} import_name: {import_name}')
@@ -144,6 +151,9 @@ class ScorePackageValidator(object):
                 raise ServerErrorException(f'invalid import '
                                            f'import_name: {import_name}')
         elif key == IMPORT_STAR:
+            # use 0, 2, 3 indexed values
+            # 1 indexed valude is *
+            # <class 'list'>: [(100, 0), (100, 1), (108, 0), (84, 0)]
             _, level_key = stack_list[current_index - 3]
             level = co_consts[level_key]
 
