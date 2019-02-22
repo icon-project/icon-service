@@ -52,7 +52,6 @@ INITIAL_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
 
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
-ZERO_TX_HASH = bytes(32)
 
 
 class StepCosts:
@@ -195,11 +194,6 @@ class Governance(IconScoreBase):
     def getScoreStatus(self, address: Address) -> dict:
         # check score address
         current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
-        if current_tx_hash == ZERO_TX_HASH:
-            current_tx_hash = None
-        if next_tx_hash == ZERO_TX_HASH:
-            next_tx_hash = None
-
         if current_tx_hash is None and next_tx_hash is None:
             self.revert('SCORE not found')
 
