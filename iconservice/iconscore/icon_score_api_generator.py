@@ -66,7 +66,7 @@ class ScoreApiGenerator:
             if param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
             else:
-                raise InvalidParamsException("can't use keyward argument like **kwargs")
+                raise InvalidParamsException("Keyword arguments not allowed")
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
