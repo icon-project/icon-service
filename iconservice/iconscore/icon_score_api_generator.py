@@ -112,7 +112,7 @@ class ScoreApiGenerator:
         info[ScoreApiGenerator.__API_NAME] = func_name
 
         if len(sig_info.parameters) > 1:
-            raise InvalidParamsException("can't have params")
+            raise InvalidParamsException("Invalid fallback signature")
 
         if sig_info.return_annotation is not None:
             if sig_info.return_annotation is not Signature.empty:
