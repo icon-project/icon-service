@@ -295,7 +295,7 @@ class IconScoreObject(ABC):
 class IconScoreBaseMeta(ABCMeta):
 
     def __new__(mcs, name, bases, namespace, **kwargs):
-        if IconScoreObject in bases:
+        if IconScoreObject in bases or name == "IconSystemScoreBase":
             return super().__new__(mcs, name, bases, namespace, **kwargs)
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
