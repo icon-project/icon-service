@@ -84,11 +84,11 @@ class TestIconScoreLoader(unittest.TestCase):
         expected_import_name: str = f'{address}.{tx_hash}'
 
         loader = IconScoreLoader(score_root_path)
-        import_name: str = loader._make_pkg_root_import(score_path)
+        import_name: str = loader._make_pkg_root_package(score_path)
         self.assertEqual(import_name, expected_import_name)
 
         score_root_path = '/haha/hoho/hehe/score/'
         score_path = f'{score_root_path}/{address}/{tx_hash}'
         loader = IconScoreLoader(score_root_path)
-        import_name: str = loader._make_pkg_root_import(score_path)
+        import_name: str = loader._make_pkg_root_package(score_path)
         self.assertEqual(import_name, expected_import_name)

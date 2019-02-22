@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import importlib.util
-from os import walk
+import os
 
 from ..base.exception import ServerErrorException
 
@@ -42,7 +42,7 @@ class ScorePackageValidator(object):
     @staticmethod
     def execute(whitelist_table: dict,
                 pkg_root_path: str,
-                pkg_import_root: str) -> callable:
+                pkg_root_package: str) -> callable:
 
         ScorePackageValidator.PREV_IMPORT_NAME = None
         ScorePackageValidator.WHITELIST_IMPORT = whitelist_table
@@ -52,7 +52,7 @@ class ScorePackageValidator(object):
         importlib.invalidate_caches()
 
         for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
-            full_name = ''.join((pkg_import_root, '.', imp))
+            full_name = ''.join((pkg_root_package, '.', imp))
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
             ScorePackageValidator._validate_import_from_code(code)
@@ -62,19 +62,19 @@ class ScorePackageValidator(object):
     @staticmethod
     def _make_custom_import_list(pkg_root_path: str) -> list:
         tmp_list = []
-        for root_path, _, files in walk(pkg_root_path):
+        for root_path, _, files in os.walk(pkg_root_path):
             for file in files:
-                if file.endswith('.py'):
-                    file_name = file.replace('.py', '')
-                    sub_pkg_path = root_path.replace(pkg_root_path, "")
-                    if sub_pkg_path is not str():
-                        sub_pkg_path = sub_pkg_path[1:]
-                        sub_pkg_path = sub_pkg_path.replace('/', '.')
-                        pkg_path = ''.join((sub_pkg_path, '.', file_name))
-                    else:
-                        file_name = file_name.replace('/', '.')
-                        pkg_path = file_name
-                    tmp_list.append(pkg_path)
+                file_name, extension = os.path.splitext(file)
+                if extension != '.py':
+                    continue
+                sub_pkg_path = os.path.relpath(root_path, pkg_root_path)
+                if sub_pkg_path == '.':
+                    pkg_path = file_name
+                else:
+                    # sub_package
+                    sub_pkg_path = sub_pkg_path.replace('/', '.')
+                    pkg_path = ''.join((sub_pkg_path, '.', file_name))
+                tmp_list.append(pkg_path)
         return tmp_list
 
     @staticmethod
