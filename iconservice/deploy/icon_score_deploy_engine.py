@@ -125,11 +125,10 @@ class IconScoreDeployEngine(object):
         3. Import the decompressed SCORE code
         4. Create a SCORE instance from the code
         5. Run on_install() or on_update() method in the SCORE
-        6. Update the deployed SCORE info to LevelDB
+        6. Update the deployed SCORE info to stateDB
 
         :param context:
         :param tx_hash:
-        :return:
         """
 
         tx_params: IconScoreDeployTXParams =\
@@ -175,38 +174,25 @@ class IconScoreDeployEngine(object):
 
         data = tx_params.deploy_data
         score_address = tx_params.score_address
-        content_type: str = data.get('contentType')
-        # content is a string on tbears mode, otherwise bytes
-        content = data.get('content')
         params: dict = data.get('params', {})
 
         deploy_info: 'IconScoreDeployInfo' =\
             self.icon_deploy_storage.get_deploy_info(context, tx_params.score_address)
-        if deploy_info is None:
-            next_tx_hash: bytes = ZERO_TX_HASH
-        else:
-            next_tx_hash: bytes = deploy_info.next_tx_hash
+        next_tx_hash: bytes = deploy_info.next_tx_hash
 
-        if content_type == 'application/tbears':
-            write_score_to_score_deploy_path: callable =\
-                self._write_score_to_score_deploy_path_on_tbears_mode
-        else:
-            write_score_to_score_deploy_path: callable =\
-                self._write_score_to_score_deploy_path
-        write_score_to_score_deploy_path(context, score_address, next_tx_hash, content)
+        self._write_score_to_filesystem(context, score_address, next_tx_hash, data)
 
         backup_msg = context.msg
         backup_tx = context.tx
         new_score_mapper: 'IconScoreMapper' = context.new_icon_score_mapper
 
         try:
-            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.SCORE_PACKAGE_VALIDATOR):
-                IconScoreContextUtil.validate_score_package(context, score_address, next_tx_hash)
+            IconScoreContextUtil.validate_score_package(context, score_address, next_tx_hash)
 
             score_info: 'IconScoreInfo' =\
                 self._create_score_info(context, score_address, next_tx_hash)
-            # score_info.get_score() returns the cached score instance or every time created score instance
-            # according to the revision.
+            # score_info.get_score() returns a cached or created score instance
+            # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)
 
             # owner is set in IconScoreBase.__init__()
@@ -221,6 +207,21 @@ class IconScoreDeployEngine(object):
         finally:
             context.msg = backup_msg
             context.tx = backup_tx
+
+    def _write_score_to_filesystem(self, context: 'IconScoreContext',
+                                   score_address: 'Address', tx_hash: bytes, deploy_data: dict):
+
+        content_type: str = deploy_data.get('contentType')
+        content = deploy_data.get('content')
+
+        if content_type == 'application/tbears':
+            write_score_to_score_deploy_path: callable =\
+                self._write_score_to_score_deploy_path_on_tbears_mode
+        else:
+            write_score_to_score_deploy_path: callable =\
+                self._write_score_to_score_deploy_path
+
+        write_score_to_score_deploy_path(context, score_address, tx_hash, content)
 
     @staticmethod
     def _create_score_info(context: 'IconScoreContext',

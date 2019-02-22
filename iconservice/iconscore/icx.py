@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 class Icx(object):
     """
     Class for handling ICX coin transfer
+    These functions are intended to be used for SCORE development.
     """
 
     def __init__(self, context: 'IconScoreContext', address: 'Address') -> None:
@@ -77,10 +78,9 @@ class Icx(object):
             governance_score = IconScoreContextUtil.get_builtin_score(
                 self._context, GOVERNANCE_SCORE_ADDRESS)
 
-            if governance_score is not None:
-                if hasattr(governance_score, 'getVersion'):
-                    version = governance_score.getVersion()
-                    return version == '0.0.2'
+            if hasattr(governance_score, 'getVersion'):
+                version = governance_score.getVersion()
+                return version == '0.0.2'
         except BaseException:
             pass
 

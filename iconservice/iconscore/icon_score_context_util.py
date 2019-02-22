@@ -42,6 +42,11 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def is_score_active(context: 'IconScoreContext', score_address: 'Address') -> bool:
+        if not score_address.is_contract:
+            return False
+        if score_address == ZERO_SCORE_ADDRESS:
+            return True
+
         deploy_info: 'IconScoreDeployInfo' = \
             context.icon_score_deploy_engine.icon_deploy_storage.get_deploy_info(context, score_address)
 
@@ -82,18 +87,12 @@ class IconScoreContextUtil(object):
         :param address:
         :return:
         """
-        score_info: 'IconScoreInfo' = None
-
-        if context.type == IconScoreContextType.INVOKE:
-            score_info = context.new_icon_score_mapper.get(address)
-
+        score_info: 'IconScoreInfo' = IconScoreContextUtil.get_score_info(context, address)
         if score_info is None:
-            score_info = IconScoreContextUtil.get_score_info(context, address)
-            if score_info is None:
-                return None
+            return None
 
         # Create a SCORE instance every time
-        # to prevent consensus failure from wrong member variable use in SCORE
+        # to prevent consensus failure by using wrong member variables in SCORE
         return score_info.get_score(context.revision)
 
     @staticmethod
@@ -150,6 +149,10 @@ class IconScoreContextUtil(object):
 
     @staticmethod
     def validate_score_package(context: 'IconScoreContext', address: 'Address', tx_hash: bytes) -> None:
+
+        if not IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.SCORE_PACKAGE_VALIDATOR):
+            return
+
         score_deploy_path: str = get_score_deploy_path(context.score_root_path, address, tx_hash)
         score_package_name: str = get_package_name_by_address_and_tx_hash(address, tx_hash)
         import_whitelist: dict = IconScoreContextUtil._get_import_whitelist(context)

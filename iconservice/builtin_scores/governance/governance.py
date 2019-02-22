@@ -196,7 +196,6 @@ class Governance(IconScoreBase):
         current_tx_hash, next_tx_hash = self.get_tx_hashes_by_score_address(address)
         if current_tx_hash is None and next_tx_hash is None:
             self.revert('SCORE not found')
-
         result = {}
         build_initial_status = False
         # get current status

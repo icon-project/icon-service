@@ -247,16 +247,6 @@ class IconServiceEngine(ContextContainer):
         finally:
             self._pop_context()
 
-    @staticmethod
-    def _validate_score_blacklist(context: 'IconScoreContext', params: dict):
-        to: 'Address' = params.get('to')
-        if to is None or not to.is_contract:
-            return
-        if to == ZERO_SCORE_ADDRESS:
-            return
-
-        IconScoreContextUtil.validate_score_blacklist(context, to)
-
     def close(self) -> None:
         """Free all resources occupied by IconServiceEngine
         including db, memory and so on
