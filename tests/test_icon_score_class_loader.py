@@ -17,25 +17,27 @@
 
 import inspect
 import unittest
-from os import path, makedirs, symlink
+import os
+import sys
 from unittest.mock import Mock
 
+from iconservice.deploy.utils import convert_path_to_package_name
 from iconservice.iconscore.icon_score_base import IconScoreBase
+from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iconscore.icon_score_loader import IconScoreLoader
 from tests import create_address, create_tx_hash, rmtree
 
-TEST_ROOT_PATH = path.abspath(path.join(path.dirname(__file__), '../'))
+TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
-class TestIconScoreLoader(unittest.TestCase):
-    _ROOT_SCORE_PATH = '.score'
+class TestIconScoreClassLoader(unittest.TestCase):
+    _SCORE_ROOT_PATH = '.score'
 
     def setUp(self):
-        self._score_path = self._ROOT_SCORE_PATH
-        self._loader = IconScoreLoader(self._score_path)
+        self._score_root_path = self._SCORE_ROOT_PATH
+        sys.path.append(self._score_root_path)
 
         IconScoreContext.icon_score_deploy_engine = Mock()
         self._context = IconScoreContext(IconScoreContextType.DIRECT)
@@ -43,28 +45,28 @@ class TestIconScoreLoader(unittest.TestCase):
 
     def tearDown(self):
         ContextContainer._pop_context()
-        rmtree(self._score_path)
+        rmtree(self._score_root_path)
+        sys.path.remove(self._score_root_path)
 
     @staticmethod
     def __ensure_dir(dir_path):
-        if not path.exists(dir_path):
-            makedirs(dir_path)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
 
     def load_proj(self, proj: str) -> callable:
-        addr_score = create_address(1, data=proj.encode())
-        target_path = path.join(self._score_path, addr_score.to_bytes().hex())
-        makedirs(target_path, exist_ok=True)
-        tx_hash = create_tx_hash()
-        converted_tx_hash = f'0x{bytes.hex(tx_hash)}'
-        target_path = path.join(target_path, converted_tx_hash)
+        score_address: 'Address' = create_address(1, data=proj.encode())
+        score_path = os.path.join(self._score_root_path, score_address.to_bytes().hex())
+        os.makedirs(score_path, exist_ok=True)
 
-        ref_path = path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
-        symlink(ref_path, target_path, target_is_directory=True)
-        score_path = self._loader.make_score_path(addr_score, tx_hash)
-        return self._loader.load_score(score_path)
+        tx_hash: bytes = create_tx_hash()
+        score_deploy_path: str = os.path.join(score_path, f'0x{tx_hash.hex()}')
+
+        ref_path = os.path.join(TEST_ROOT_PATH, 'tests/sample/{}'.format(proj))
+        os.symlink(ref_path, score_deploy_path, target_is_directory=True)
+        return IconScoreClassLoader.run(score_address, tx_hash, self._SCORE_ROOT_PATH)
 
     def test_install(self):
-        self.__ensure_dir(self._score_path)
+        self.__ensure_dir(self._score_root_path)
 
         score = self.load_proj('test_score01')
         print('test_score01', score.get_api())
@@ -82,13 +84,13 @@ class TestIconScoreLoader(unittest.TestCase):
         score_root_path = './.score'
         score_path = f'{score_root_path}/{address}/{tx_hash}'
         expected_import_name: str = f'{address}.{tx_hash}'
+        index: int = len(score_root_path)
 
-        loader = IconScoreLoader(score_root_path)
-        import_name: str = loader._make_pkg_root_import(score_path)
+        import_name: str = convert_path_to_package_name(score_path[index:])
         self.assertEqual(import_name, expected_import_name)
 
         score_root_path = '/haha/hoho/hehe/score/'
+        index: int = len(score_root_path)
         score_path = f'{score_root_path}/{address}/{tx_hash}'
-        loader = IconScoreLoader(score_root_path)
-        import_name: str = loader._make_pkg_root_import(score_path)
+        import_name: str = convert_path_to_package_name(score_path[index:])
         self.assertEqual(import_name, expected_import_name)

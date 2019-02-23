@@ -622,7 +622,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
         return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
 
-    def revert(self, message: Optional[str] = None,
+    @staticmethod
+    def revert(message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         revert(message, code)
 

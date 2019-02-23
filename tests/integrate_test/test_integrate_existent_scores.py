@@ -97,7 +97,6 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         return tx_results
 
     def test_existent_builtin_score(self):
-        self._make_directories_in_builtin_score_path()
         self._setUp()
 
         # original SCORE api
