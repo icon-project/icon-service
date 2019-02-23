@@ -292,7 +292,6 @@ class TestIntegrateScores(TestIntegrateBase):
                                    ZERO_SCORE_ADDRESS)
 
         prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3, tx4, tx5])
-
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(True))
@@ -386,6 +385,8 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
+
+
 
 
 if __name__ == '__main__':

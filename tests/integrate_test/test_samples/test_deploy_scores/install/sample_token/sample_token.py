@@ -56,6 +56,3 @@ class SampleToken(IconScoreBase):
     @external
     def transfer(self, addr_to: Address, value: int) -> bool:
         return self.__transfer(self.msg.sender, addr_to, value)
-
-    def fallback(self) -> None:
-        pass

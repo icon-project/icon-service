@@ -64,7 +64,9 @@ class ScoreApiGenerator:
             if param_name == 'self' or param_name == 'cls':
                 continue
             if param.kind != Parameter.VAR_KEYWORD:
-                ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
+                ScoreApiGenerator.__generate_input([], param, False)
+            else:
+                raise InvalidParamsException("Keyword arguments not allowed")
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
@@ -75,11 +77,12 @@ class ScoreApiGenerator:
             is_payable = const_bit_flag & ConstBitFlag.Payable == ConstBitFlag.Payable
 
             try:
-                if const_bit_flag & ConstBitFlag.External and func.__name__ != STR_FALLBACK:
+                if const_bit_flag & ConstBitFlag.External:
                     src.append(ScoreApiGenerator.__generate_normal_function(
                         func.__name__, is_readonly, is_payable, signature(func)))
                 elif func.__name__ == ScoreApiGenerator.__API_TYPE_FALLBACK:
-                    src.append(ScoreApiGenerator.__generate_fallback_function(
+                    if is_payable:
+                        src.append(ScoreApiGenerator.__generate_fallback_function(
                             func.__name__, is_payable, signature(func)))
             except IconTypeError as e:
                 raise IconScoreException(f"{e.message} at {func.__name__}")
@@ -109,10 +112,15 @@ class ScoreApiGenerator:
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = ScoreApiGenerator.__API_TYPE_FALLBACK
         info[ScoreApiGenerator.__API_NAME] = func_name
-        info[ScoreApiGenerator.__API_INPUTS] = ScoreApiGenerator.__generate_inputs(dict(sig_info.parameters))
 
-        if is_payable:
-            info[ScoreApiGenerator.__API_PAYABLE] = is_payable
+        if len(sig_info.parameters) > 1:
+            raise InvalidParamsException("Invalid fallback signature")
+
+        if sig_info.return_annotation is not None:
+            if sig_info.return_annotation is not Signature.empty:
+                raise InvalidParamsException("Invalid fallback signature")
+
+        info[ScoreApiGenerator.__API_PAYABLE] = is_payable
 
         return info
 

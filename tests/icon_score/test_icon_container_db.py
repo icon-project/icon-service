@@ -281,6 +281,54 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(5, testarray.pop())
         self.assertEqual(2, len(testarray))
 
+    def test_array_db2(self):
+        name = "TEST"
+        testarray = ArrayDB(name, self.db, value_type=int)
+        self.assertNotEqual(testarray._db, self.db)
+        self.assertEqual(
+            testarray._db._prefix,
+            ContainerUtil.create_db_prefix(ArrayDB, name))
+
+        testarray.put(1)
+        testarray.put(2)
+        testarray.put(3)
+        testarray.put(4)
+
+        self.assertEqual(1, testarray[0])
+        self.assertEqual(2, testarray[1])
+        self.assertEqual(3, testarray[2])
+        self.assertEqual(4, testarray[3])
+
+        self.assertEqual(4, testarray[-1])
+        self.assertEqual(3, testarray[-2])
+        self.assertEqual(2, testarray[-3])
+        self.assertEqual(1, testarray[-4])
+
+        testarray[0] = 5
+        testarray[1] = 6
+        testarray[2] = 7
+        testarray[3] = 8
+
+        self.assertEqual(5, testarray[0])
+        self.assertEqual(6, testarray[1])
+        self.assertEqual(7, testarray[2])
+        self.assertEqual(8, testarray[3])
+
+        testarray[-1] = 4
+        testarray[-2] = 3
+        testarray[-3] = 2
+        testarray[-4] = 1
+
+        self.assertEqual(4, testarray[-1])
+        self.assertEqual(3, testarray[-2])
+        self.assertEqual(2, testarray[-3])
+        self.assertEqual(1, testarray[-4])
+
+        with self.assertRaises(ContainerDBException):
+            testarray[5] = 1
+            a = testarray[5]
+
+
     def test_container_util(self):
         prefix: bytes = ContainerUtil.create_db_prefix(ArrayDB, 'a')
         self.assertEqual(b'\x00|a', prefix)
