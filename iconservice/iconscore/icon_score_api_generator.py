@@ -22,6 +22,8 @@ from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
 from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
 from ..base.type_converter import TypeConverter
+from .icon_score_context import ContextContainer
+from ..icon_constant import REVISION_2
 
 
 class ScoreApiGenerator:
@@ -66,7 +68,11 @@ class ScoreApiGenerator:
             if param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
             else:
-                raise InvalidParamsException("Keyword arguments not allowed")
+                context = ContextContainer._get_context()
+                if context.revision > REVISION_2:
+                    raise InvalidParamsException("Keyword arguments not allowed")
+                else:
+                    pass
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
