@@ -148,10 +148,12 @@ class ScorePackageValidator(object):
                 if from_list[0] != '*':
                     raise ServerErrorException(f'invalid star import '
                                                f'import_name: {import_name}')
-            else:
+            elif next_op_code_key == IMPORT_FROM:
                 # import from
                 for import_from in from_list:
                     if '*' not in ScorePackageValidator.WHITELIST_IMPORT[import_name] and \
                             import_from not in ScorePackageValidator.WHITELIST_IMPORT[import_name]:
                         raise ServerErrorException(f'invalid import '
                                                    f'import_name: {import_name}')
+            else:
+                raise ServerErrorException(f'invalid import OPCODE')
