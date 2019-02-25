@@ -26,7 +26,6 @@ from ..base.exception import InvalidParamsException, ServerErrorException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
-from ..icon_constant import ZERO_TX_HASH
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
 from ..utils import is_builtin_score
@@ -285,7 +284,7 @@ class IconScoreDeployEngine(object):
         only once when installing or updating it
         :param deploy_type: DeployType.INSTALL or DeployType.UPDATE
         :param score: SCORE to install or update
-        :param params: paramters passed to on_install or on_update()
+        :param params: parameters passed to on_install or on_update()
         """
         if deploy_type == DeployType.INSTALL:
             on_init = score.on_install

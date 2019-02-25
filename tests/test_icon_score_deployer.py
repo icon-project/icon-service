@@ -33,7 +33,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.address: 'Address' = create_address(AddressPrefix.CONTRACT)
         self.archive_path = os.path.join(DIRECTORY_PATH, 'sample','valid.zip')
         self.archive_path2 = os.path.join(DIRECTORY_PATH, 'sample', 'invalid.zip')
-        self.archive_path3 = os.path.join(DIRECTORY_PATH, 'sample', 'valid.zip')
+        self.archive_path3 = os.path.join(DIRECTORY_PATH, 'sample', 'sample_token01.zip')
         self.score_path = get_score_path(self.score_root_path, self.address)
 
     @staticmethod
@@ -77,7 +77,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
         self.assertFalse(os.path.exists(score_deploy_path))
 
-        # Case when The user specifies an installation path that does not have permission.
+        # Case when the user specifies an installation path that does not have permission.
         score_deploy_path: str = get_score_deploy_path('/', self.address, tx_hash1)
         with self.assertRaises(BaseException) as e:
             IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path))
