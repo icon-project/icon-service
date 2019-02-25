@@ -15,19 +15,20 @@
 # limitations under the License.
 
 import importlib.util
-import os
 
 from ..base.exception import ServerErrorException
+import os
+import dis
 
 CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
 
 BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
 
-# cpython
-IMPORT_STAR = 84
-IMPORT_NAME = 108
-IMPORT_FROM = 109
+IMPORT_STAR = "IMPORT_STAR"
+IMPORT_NAME = "IMPORT_NAME"
+IMPORT_FROM = "IMPORT_FROM"
+LOAD_CONST = "LOAD_CONST"
 
 
 class ScorePackageValidator(object):
@@ -46,7 +47,8 @@ class ScorePackageValidator(object):
         importlib.invalidate_caches()
 
         for imp in ScorePackageValidator.CUSTOM_IMPORT_LIST:
-            full_name = ''.join((pkg_root_package, '.', imp))
+            full_name = f'{pkg_root_package}.{imp}'
+
             spec = importlib.util.find_spec(full_name)
             code = spec.loader.get_code(full_name)
 
@@ -57,18 +59,18 @@ class ScorePackageValidator(object):
     @staticmethod
     def _make_custom_import_list(pkg_root_path: str) -> list:
         tmp_list = []
-        for root_path, _, files in os.walk(pkg_root_path):
-            for file in files:
+        for dirpath, _, filenames in os.walk(pkg_root_path):
+            for file in filenames:
                 file_name, extension = os.path.splitext(file)
                 if extension != '.py':
                     continue
-                sub_pkg_path = os.path.relpath(root_path, pkg_root_path)
+                sub_pkg_path = os.path.relpath(dirpath, pkg_root_path)
                 if sub_pkg_path == '.':
                     pkg_path = file_name
                 else:
                     # sub_package
                     sub_pkg_path = sub_pkg_path.replace('/', '.')
-                    pkg_path = ''.join((sub_pkg_path, '.', file_name))
+                    pkg_path = f'{sub_pkg_path}.{file_name}'
                 tmp_list.append(pkg_path)
         return tmp_list
 
@@ -88,7 +90,7 @@ class ScorePackageValidator(object):
         length_byte_code_list = len(byte_code_list)
         for code_index in range(0, length_byte_code_list, 2):
             key = byte_code_list[code_index]
-            if key == IMPORT_NAME:
+            if IMPORT_NAME is dis.opname[key]:
                 ScorePackageValidator._validate_import(code_index, byte_code_list, code.co_names, code.co_consts)
 
     @staticmethod
@@ -124,11 +126,19 @@ class ScorePackageValidator(object):
         30 STORE_NAME               3 (json)
         """
 
+        from_list_op_code_key = byte_code_list[current_index - 2]
+        if LOAD_CONST is not dis.opname[from_list_op_code_key]:
+            raise ServerErrorException(f'invalid import OPCODE')
+        level_op_code_key = byte_code_list[current_index - 4]
+        if LOAD_CONST is not dis.opname[level_op_code_key]:
+            raise ServerErrorException(f'invalid import OPCODE')
+
         import_name_index = byte_code_list[current_index + 1]
-        import_name = co_names[import_name_index]
         from_list_index = byte_code_list[current_index - 1]
-        from_list = co_consts[from_list_index]
         level_index = byte_code_list[current_index - 3]
+
+        import_name = co_names[import_name_index]
+        from_list = co_consts[from_list_index]
         level = co_consts[level_index]
 
         if level > 0:
@@ -143,12 +153,12 @@ class ScorePackageValidator(object):
             return
         else:
             next_op_code_key = byte_code_list[current_index + 2]
-            if next_op_code_key == IMPORT_STAR:
+            if IMPORT_STAR is dis.opname[next_op_code_key]:
                 # import_star
                 if from_list[0] != '*':
                     raise ServerErrorException(f'invalid star import '
                                                f'import_name: {import_name}')
-            elif next_op_code_key == IMPORT_FROM:
+            elif IMPORT_FROM is dis.opname[next_op_code_key]:
                 # import from
                 for import_from in from_list:
                     if '*' not in ScorePackageValidator.WHITELIST_IMPORT[import_name] and \
