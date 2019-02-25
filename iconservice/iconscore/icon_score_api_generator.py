@@ -17,13 +17,13 @@
 from inspect import signature, Signature, Parameter, isclass
 from typing import Any, Optional
 
-from ..utils import get_main_type_from_annotations_type
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
-from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
 from ..base.type_converter import TypeConverter
-from .icon_score_context import ContextContainer
 from ..icon_constant import REVISION_2
+from ..utils import get_main_type_from_annotations_type
+from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
+from .icon_score_context import ContextContainer
 
 
 class ScoreApiGenerator:
