@@ -387,7 +387,5 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertIsInstance(tx_results[0].failure.message, str)
 
 
-
-
 if __name__ == '__main__':
     unittest.main()
