@@ -274,6 +274,49 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.assertEqual(tx_results[1].status, int(True))
         self.assertEqual(tx_results[2].status, int(True))
 
+    def test_apply_score_multiply_import(self):
+        self.import_white_list_enable()
+
+        # add import whitelist
+        tx1 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'addImportWhiteList',
+                                       {"importStmt": "{'struct': ['pack', 'unpack']}"})
+
+        tx2 = self._make_deploy_tx("test_deploy_scores",
+                                   'import_test/import_multiply',
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        raise_exception_start_tag("test_apply_score_import_white_list")
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        raise_exception_end_tag("test_apply_score_import_white_list")
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(tx_results[1].status, int(True))
+
+    def test_normal(self):
+        self.import_white_list_enable()
+
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'addImportWhiteList',
+                                      {"importStmt": "{'os': ['path']}"})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        tx = self._make_deploy_tx("test_deploy_scores",
+                                  'import_test/import_normal',
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
     def test_deploy_invalid_score(self):
         self.import_white_list_enable()
 
@@ -298,9 +341,11 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/as_test/test_score_import_in_class',
             'import_test/as_test/test_score_import_in_method',
             'import_test/as_test/test_score_import_in_function',
-            'import_test/as_test/import_in_submodule',
-            'import_test/as_test/import_in_indirect_submodule',
-            'import_test/as_test/import_in_indirect_submodule_method'
+            'import_test/as_test/test_in_submodule',
+            'import_test/as_test/test_in_indirect_submodule',
+            'import_test/as_test/test_in_indirect_submodule_method',
+            'import_test/import_builtin',
+            'import_test/import_builtin2'
         ]
 
         tx_list = [self._make_deploy_tx('test_deploy_scores', deploy_name,
