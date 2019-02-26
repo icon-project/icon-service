@@ -27,42 +27,42 @@ class TestTypeConverterFunc(unittest.TestCase):
     def test_func_param_int(self):
         value = 1
         params = {"value": hex(value)}
-        annotations = TypeConverter.get_annotations_form_method(self.test_score.func_param_int)
+        annotations = TypeConverter.get_annotations_from_method(self.test_score.func_param_int)
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_int(**params))
 
     def test_func_param_str(self):
         value = 'a'
         params = {"value": value}
-        annotations = TypeConverter.get_annotations_form_method(self.test_score.func_param_str)
+        annotations = TypeConverter.get_annotations_from_method(self.test_score.func_param_str)
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_str(**params))
 
     def test_func_param_bytes(self):
         value = b'bytes'
         params = {"value": bytes.hex(value)}
-        annotations = TypeConverter.get_annotations_form_method(self.test_score.func_param_bytes)
+        annotations = TypeConverter.get_annotations_from_method(self.test_score.func_param_bytes)
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_bytes(**params))
 
     def test_func_param_bool(self):
         value = True
         params = {"value": hex(int(value))}
-        annotations = TypeConverter.get_annotations_form_method(self.test_score.func_param_bool)
+        annotations = TypeConverter.get_annotations_from_method(self.test_score.func_param_bool)
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_bool(**params))
 
     def test_func_param_address1(self):
         value = create_address()
         params = {"value": str(value)}
-        annotations = TypeConverter.get_annotations_form_method(self.test_score.func_param_address1)
+        annotations = TypeConverter.get_annotations_from_method(self.test_score.func_param_address1)
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_address1(**params))
 
     def test_func_param_address2(self):
         value = create_address()
         params = {"value": str(value)}
-        annotations = TypeConverter.get_annotations_form_method(self.test_score.func_param_address2)
+        annotations = TypeConverter.get_annotations_from_method(self.test_score.func_param_address2)
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_address2(**params))
 

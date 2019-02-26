@@ -140,7 +140,7 @@ class InternalCall(object):
         try:
             icon_score = IconScoreContextUtil.get_icon_score(context, addr_to)
             score_method = getattr(icon_score, func_name)
-            annotations = TypeConverter.get_annotations_form_method(score_method)
+            annotations = TypeConverter.get_annotations_from_method(score_method)
             return_type = TypeConverter.pop_return_type_from_annotation(annotations)
             context.set_func_type_by_icon_score(icon_score, func_name)
             score_func = getattr(icon_score, '_IconScoreBase__call')

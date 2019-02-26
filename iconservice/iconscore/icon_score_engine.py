@@ -105,7 +105,7 @@ class IconScoreEngine(object):
         icon_score.validate_external_method(func_name)
 
         score_method = getattr(icon_score, func_name)
-        annotations = TypeConverter.get_annotations_form_method(score_method)
+        annotations = TypeConverter.get_annotations_from_method(score_method)
         return_type = TypeConverter.pop_return_type_from_annotation(annotations)
         converted_params = IconScoreEngine._convert_score_params_by_annotations(annotations, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)

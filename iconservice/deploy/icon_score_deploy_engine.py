@@ -330,7 +330,7 @@ class IconScoreDeployEngine(object):
         :param params: paramters passed to on_install or on_update()
         """
 
-        annotations = TypeConverter.get_annotations_form_method(on_deploy)
+        annotations = TypeConverter.get_annotations_from_method(on_deploy)
         TypeConverter.pop_return_type_from_annotation(annotations)
         TypeConverter.convert_data_params(annotations, params)
         on_deploy(**params)

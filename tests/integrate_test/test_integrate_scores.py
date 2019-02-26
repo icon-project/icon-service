@@ -395,9 +395,21 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
-    # case when readonly return type mismatched
 
-    def test_return_type(self):
+    # case when readonly return type mismatched
+    def test_return_type_revision_3(self):
+        governance_update_tx = self._make_deploy_tx("test_builtin", "0_0_4/governance",
+                                                    self._admin, GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([governance_update_tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        tx0 = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS,
+                                       "setRevision", {"code": hex(REVISION_3), "name": "1.1.1"})
+        prev_block, tx_results = self._make_and_req_block([tx0])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_db_returns_default_value",
                                    self._addr_array[0],
@@ -468,20 +480,7 @@ class TestIntegrateScores(TestIntegrateBase):
                     self._query(query_request)
                 self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
 
-    def test_return_type_revision_3(self):
-        governance_update_tx = self._make_deploy_tx("test_builtin", "0_0_4/governance",
-                                                    self._admin, GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([governance_update_tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-        tx0 = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS,
-                                       "setRevision", {"code": hex(REVISION_3), "name": "1.1.1"})
-        prev_block, tx_results = self._make_and_req_block([tx0])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-    # case when readonly return type mismatched
+    # case when readonly return type mismatched when revision < 3
     def test_return_type_revision_lt_3(self):
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_db_returns_default_value",
