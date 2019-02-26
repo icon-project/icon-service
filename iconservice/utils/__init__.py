@@ -34,6 +34,9 @@ def int_to_bytes(n: int) -> bytes:
 
 
 def byte_length_of_int(n: int):
+    if n < 0:
+        # adds 1 because `bit_length()` always returns a bit length of absolute-value of `n`
+        n += 1
     return (n.bit_length() + 8) // 8
 
 
