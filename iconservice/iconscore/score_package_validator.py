@@ -18,17 +18,16 @@ import importlib.util
 
 from ..base.exception import ServerErrorException
 import os
-import dis
 
 CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
 
 BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
 
-IMPORT_STAR = "IMPORT_STAR"
-IMPORT_NAME = "IMPORT_NAME"
-IMPORT_FROM = "IMPORT_FROM"
-LOAD_CONST = "LOAD_CONST"
+LOAD_CONST = 100
+IMPORT_STAR = 84
+IMPORT_NAME = 108
+IMPORT_FROM = 109
 
 
 class ScorePackageValidator(object):
@@ -90,7 +89,7 @@ class ScorePackageValidator(object):
         length_byte_code_list = len(byte_code_list)
         for code_index in range(0, length_byte_code_list, 2):
             key = byte_code_list[code_index]
-            if IMPORT_NAME is dis.opname[key]:
+            if IMPORT_NAME == key:
                 ScorePackageValidator._validate_import(code_index, byte_code_list, code.co_names, code.co_consts)
 
     @staticmethod
@@ -127,10 +126,10 @@ class ScorePackageValidator(object):
         """
 
         from_list_op_code_key = byte_code_list[current_index - 2]
-        if LOAD_CONST is not dis.opname[from_list_op_code_key]:
+        if LOAD_CONST != from_list_op_code_key:
             raise ServerErrorException(f'invalid import OPCODE')
         level_op_code_key = byte_code_list[current_index - 4]
-        if LOAD_CONST is not dis.opname[level_op_code_key]:
+        if LOAD_CONST != level_op_code_key:
             raise ServerErrorException(f'invalid import OPCODE')
 
         import_name_index = byte_code_list[current_index + 1]
@@ -153,12 +152,12 @@ class ScorePackageValidator(object):
             return
         else:
             next_op_code_key = byte_code_list[current_index + 2]
-            if IMPORT_STAR is dis.opname[next_op_code_key]:
+            if IMPORT_STAR == next_op_code_key:
                 # import_star
                 if from_list[0] != '*':
                     raise ServerErrorException(f'invalid star import '
                                                f'import_name: {import_name}')
-            elif IMPORT_FROM is dis.opname[next_op_code_key]:
+            elif IMPORT_FROM == next_op_code_key:
                 # import from
                 for import_from in from_list:
                     if '*' not in ScorePackageValidator.WHITELIST_IMPORT[import_name] and \
