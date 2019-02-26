@@ -138,44 +138,43 @@ class TestIconScoreDeployer(unittest.TestCase):
         Test for replacing the first occurrence only of the path which is upper than package.json
         by using count on the function `replace`.
         """
-        revision_list = [3, 4]
+        revision_list = [2, 3, 4]
         for revision in revision_list:
             address: 'Address' = create_address(AddressPrefix.CONTRACT)
             self.archive_path = os.path.join(DIRECTORY_PATH, 'sample', 'score_registry.zip')
-            tx_hash1 = create_tx_hash()
-            score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
-
-            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path))
-
-            zip_file_info_gen = IconScoreDeployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path), revision)
+            zip_file_info_gen = IconScoreDeployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path),
+                                                                     revision)
             file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
 
-            installed_contents = []
-            for directory, dirs, filename in os.walk(score_deploy_path):
-                parent_directory_index = directory.rfind('/')
-                parent_dir_name = directory[parent_directory_index + 1:]
-                for file in filename:
-                    if parent_dir_name == f'0x{bytes.hex(tx_hash1)}':
-                        installed_contents.append(file)
-                    else:
-                        installed_contents.append(f'{parent_dir_name}/{file}')
-
-            self.assertEqual(True, os.path.exists(score_deploy_path))
-            self.assertTrue(installed_contents.sort() == file_path_list.sort())
-
-            file_path_list_only_for_revision_3 = ["score_registry.py", "__init__.py"]
+            file_path_list_only_for_revision_less_than_4 = ["score_registry.py", "__init__.py"]
             file_path_list_only_for_revision_4 = ["score_registry/score_registry.py", "score_registry/__init__.py"]
 
-            if revision == 3:
-                self.assertEqual(file_path_list_only_for_revision_3.sort(), [file_path for file_path in file_path_list if file_path in file_path_list_only_for_revision_3].sort())
-                self.assertEqual(file_path_list.sort(), [file_path for file_path in file_path_list
-                                                         if file_path not in file_path_list_only_for_revision_4].sort())
+            if revision < 4:
+                # Sorts the list at first
+                file_path_list_only_for_revision_less_than_4.sort()
+                target_file_path_list_only_for_revision_3 = [file_path for file_path in file_path_list
+                                                             if file_path in file_path_list_only_for_revision_less_than_4]
+                target_file_path_list_only_for_revision_3.sort()
+                self.assertEqual(file_path_list_only_for_revision_less_than_4, target_file_path_list_only_for_revision_3)
+
+                file_path_list.sort()
+                target_file_path_list = [file_path for file_path in file_path_list
+                                         if file_path not in file_path_list_only_for_revision_4]
+                target_file_path_list.sort()
+                self.assertEqual(file_path_list, target_file_path_list)
             elif revision == 4:
-                self.assertEqual(file_path_list_only_for_revision_4.sort(),
-                                 [file_path for file_path in file_path_list if
-                                  file_path in file_path_list_only_for_revision_4].sort())
-                self.assertEqual(file_path_list.sort(), [file_path for file_path in file_path_list
-                                                         if file_path not in file_path_list_only_for_revision_4].sort())
+                file_path_list_only_for_revision_4.sort()
+                target_file_path_list_only_for_revision_4 = [file_path for file_path in file_path_list
+                                                             if file_path in file_path_list_only_for_revision_4]
+                target_file_path_list_only_for_revision_4.sort()
+                self.assertEqual(file_path_list_only_for_revision_4, target_file_path_list_only_for_revision_4)
+
+                file_path_list.sort()
+                target_file_path_list = [file_path for file_path in file_path_list
+                                         if file_path not in file_path_list_only_for_revision_less_than_4]
+                target_file_path_list.sort()
+                self.assertEqual(file_path_list, target_file_path_list)
+
             score_path: str = get_score_path(self.score_root_path, address)
             remove_path(score_path)
 

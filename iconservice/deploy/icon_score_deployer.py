@@ -85,10 +85,10 @@ class IconScoreDeployer(object):
                                 and file_path.find('/.') < 0
                                 and file_path.find(matched_file_path) == 0
                         ):
-                            if revision >= 3:
+                            if revision >= 4:
                                 file_path = file_path.replace(matched_file_path, '', 1)
                             else:
-                                # legacy for revision 2
+                                # legacy for revision 2 to 3
                                 file_path = file_path.replace(matched_file_path, '')
                             parent_directory = os.path.dirname(file_path)
                             if file_path and file_path[-1] != '/':
@@ -101,7 +101,7 @@ class IconScoreDeployer(object):
             raise ScoreInstallExtractException(f'Error raising from extract_files_gen: {e}')
 
     @staticmethod
-    def deploy_legacy(path: str, data: bytes):
+    def deploy_legacy(path: str, data: bytes, *args):
         """Install score.
         Use 'address', 'block_height', and 'transaction_index' to specify the path where 'Score' will be installed.
 

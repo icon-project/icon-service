@@ -32,11 +32,11 @@ from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
     from .icon_score_deploy_storage import IconScoreDeployInfo
-    from .icon_score_deploy_storage import IconScoreDeployStorage
-    from .icon_score_deploy_storage import IconScoreDeployTXParams
-    from ..iconscore.icon_score_context import IconScoreContext
-    from ..iconscore.icon_score_mapper import IconScoreMapper
-    from ..iconscore.icon_score_base import IconScoreBase
+from .icon_score_deploy_storage import IconScoreDeployStorage
+from .icon_score_deploy_storage import IconScoreDeployTXParams
+from ..iconscore.icon_score_context import IconScoreContext
+from ..iconscore.icon_score_mapper import IconScoreMapper
+from ..iconscore.icon_score_base import IconScoreBase
 
 
 class IconScoreDeployEngine(object):
@@ -126,7 +126,7 @@ class IconScoreDeployEngine(object):
         :param tx_hash:
         """
 
-        tx_params: 'IconScoreDeployTXParams' =\
+        tx_params: IconScoreDeployTXParams = \
             self._score_deploy_storage.get_deploy_tx_params(context, tx_hash)
         if tx_params is None:
             raise InvalidParamsException(f'tx_params is None: 0x{tx_hash.hex()}')
@@ -170,7 +170,7 @@ class IconScoreDeployEngine(object):
         score_address = tx_params.score_address
         params: dict = data.get('params', {})
 
-        deploy_info: 'IconScoreDeployInfo' =\
+        deploy_info: 'IconScoreDeployInfo' = \
             self.icon_deploy_storage.get_deploy_info(context, tx_params.score_address)
         next_tx_hash: bytes = deploy_info.next_tx_hash
 
@@ -183,7 +183,7 @@ class IconScoreDeployEngine(object):
         try:
             IconScoreContextUtil.validate_score_package(context, score_address, next_tx_hash)
 
-            score_info: 'IconScoreInfo' =\
+            score_info: 'IconScoreInfo' = \
                 self._create_score_info(context, score_address, next_tx_hash)
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
@@ -209,10 +209,10 @@ class IconScoreDeployEngine(object):
         content = deploy_data.get('content')
 
         if content_type == 'application/tbears':
-            write_score_to_score_deploy_path: callable =\
+            write_score_to_score_deploy_path: callable = \
                 self._write_score_to_score_deploy_path_on_tbears_mode
         else:
-            write_score_to_score_deploy_path: callable =\
+            write_score_to_score_deploy_path: callable = \
                 self._write_score_to_score_deploy_path
 
         write_score_to_score_deploy_path(context, score_address, tx_hash, content)
@@ -226,7 +226,7 @@ class IconScoreDeployEngine(object):
         :param tx_hash:
         :return:
         """
-        current_score_info: 'IconScoreInfo' =\
+        current_score_info: 'IconScoreInfo' = \
             IconScoreContextUtil.get_score_info(context, score_address)
 
         # Reuse score_db if it has already existed.
@@ -269,7 +269,7 @@ class IconScoreDeployEngine(object):
         if revision >= REVISION_3:
             # If the path to deploy a score has been present, remove it before deploying.
             score_root_path: str = context.score_root_path
-            score_path: str =\
+            score_path: str = \
                 os.path.join(score_root_path, score_address.to_bytes().hex(), f'0x{tx_hash.hex()}')
             remove_path(score_path)
 
