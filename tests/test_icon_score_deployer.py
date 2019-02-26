@@ -132,7 +132,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
             score_path: str = get_score_path(self.score_root_path, address)
-            #remove_path(score_path)
+            remove_path(score_path)
 
     def test_deploy_replace_once(self):
         """
@@ -147,15 +147,17 @@ class TestIconScoreDeployer(unittest.TestCase):
             file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
             file_path_list.sort()
             file_path_list_for_revision_2 = ["__init__.py", "score_registry.py"]
-            file_path_list_for_revision_3_or_more = ["score_registry/__init__.py", "score_registry/score_registry.py"]
+            file_path_list_for_revision_3 = ["score_registry/__init__.py", "score_registry/score_registry.py"]
             if revision == REVISION_2:
-                target_file_path_list_only_for_revision_2 = [file_path for file_path in file_path_list if file_path in file_path_list_for_revision_2]
+                target_file_path_list_only_for_revision_2 = [file_path for file_path in file_path_list
+                                                             if file_path in file_path_list_for_revision_2]
                 self.assertEqual(file_path_list_for_revision_2, target_file_path_list_only_for_revision_2)
                 target_file_path_list = [file_path for file_path in file_path_list
-                                         if file_path not in file_path_list_for_revision_3_or_more]
+                                         if file_path not in file_path_list_for_revision_3]
             else:
-                target_file_path_list_only_for_revision_3_or_more = [file_path for file_path in file_path_list if file_path in file_path_list_for_revision_3_or_more]
-                self.assertEqual(file_path_list_for_revision_3_or_more, target_file_path_list_only_for_revision_3_or_more)
+                target_file_path_list_only_for_revision_3 = [file_path for file_path in file_path_list
+                                                             if file_path in file_path_list_for_revision_3]
+                self.assertEqual(file_path_list_for_revision_3, target_file_path_list_only_for_revision_3)
                 target_file_path_list = [file_path for file_path in file_path_list
                                          if file_path not in file_path_list_for_revision_2]
             self.assertEqual(file_path_list, target_file_path_list)
@@ -163,8 +165,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             remove_path(score_path)
 
     def tearDown(self):
-        pass
-        #remove_path(self.score_path)
+        remove_path(self.score_path)
 
 
 if __name__ == "__main__":
