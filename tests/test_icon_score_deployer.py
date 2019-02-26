@@ -105,7 +105,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         Reads all files from the depth lower than where the file 'package.json' is
         and test deploying successfully.
         """
-        zip_list = ['score_registry.zip', 'fakedir.zip']
+        zip_list = ['score_registry.zip', 'fakedir.zip', 'nodir.zip']
 
         for zip_item in zip_list:
             address: 'Address' = create_address(AddressPrefix.CONTRACT)
@@ -132,7 +132,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
             score_path: str = get_score_path(self.score_root_path, address)
-            remove_path(score_path)
+            #remove_path(score_path)
 
     def test_deploy_replace_once(self):
         """
@@ -163,7 +163,8 @@ class TestIconScoreDeployer(unittest.TestCase):
             remove_path(score_path)
 
     def tearDown(self):
-        remove_path(self.score_path)
+        pass
+        #remove_path(self.score_path)
 
 
 if __name__ == "__main__":
