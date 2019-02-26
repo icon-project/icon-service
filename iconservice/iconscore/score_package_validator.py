@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017-2018 theloop Inc.
+# Copyright 2018 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -126,10 +126,8 @@ class ScorePackageValidator(object):
         """
 
         from_list_op_code_key = byte_code_list[current_index - 2]
-        if LOAD_CONST != from_list_op_code_key:
-            raise ServerErrorException(f'invalid import OPCODE')
         level_op_code_key = byte_code_list[current_index - 4]
-        if LOAD_CONST != level_op_code_key:
+        if LOAD_CONST != from_list_op_code_key or LOAD_CONST != level_op_code_key:
             raise ServerErrorException(f'invalid import OPCODE')
 
         import_name_index = byte_code_list[current_index + 1]
