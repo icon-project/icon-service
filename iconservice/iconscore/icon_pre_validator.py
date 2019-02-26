@@ -16,11 +16,11 @@
 
 from typing import TYPE_CHECKING
 
-from iconservice.utils import is_lowercase_hex_string
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..deploy import DeployState
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..utils import is_lowercase_hex_string
 
 if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
