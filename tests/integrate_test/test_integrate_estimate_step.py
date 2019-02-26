@@ -395,7 +395,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
         input_size_rev2 = \
             self._get_str_size(content_type) + \
-            content_size + \
+            self._get_bin_size(content) + \
             self._get_str_size(data_param_values[0]) + \
             self._get_bin_size(data_param_values[1]) + \
             self._get_bin_size(data_param_values[2]) + \
@@ -427,13 +427,13 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
         input_size_rev3 = \
             self._get_str_size(key_content_type) + self._get_str_size(content_type) + \
-            self._get_str_size(key_content) + content_size + \
+            self._get_str_size(key_content) + self._get_str_size(content) + \
             self._get_str_size(key_data_params) + \
             self._get_str_size(data_param_keys[0]) + self._get_str_size(data_param_values[0]) + \
-            self._get_str_size(data_param_keys[1]) + self._get_bin_size(data_param_values[1]) + \
+            self._get_str_size(data_param_keys[1]) + self._get_str_size(data_param_values[1]) + \
             self._get_str_size(data_param_keys[2]) + self._get_str_size(data_param_values[2]) + \
             self._get_str_size(data_param_keys[3]) + self._get_str_size(data_param_values[3]) + \
-            self._get_str_size(data_param_keys[4]) + self._get_bin_size(data_param_values[4])
+            self._get_str_size(data_param_keys[4]) + self._get_str_size(data_param_values[4])
 
         expected_steps = self._get_expected_step_count(step_costs, input_size_rev3, content_size)
         self.assertEqual(expected_steps, estimated_steps)

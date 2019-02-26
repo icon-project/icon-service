@@ -492,8 +492,8 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         if data_type == "deploy":
-            data_size = self._get_data_size_in_bytes(context.revision, data.get('content', None))
-            context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
+            content_size = self._get_binary_hex_string_size_in_bytes(data.get('content', None))
+            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
             # When installing SCORE.
             if to == ZERO_SCORE_ADDRESS:
                 context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
@@ -856,15 +856,29 @@ class IconServiceEngine(ContextContainer):
     @staticmethod
     def _get_string_size_in_bytes(revision: int, data: 'str') -> int:
         if revision < REVISION_3:
-            # If the value is hexstring, it is calculated as bytes otherwise
-            # string
-            data_body = data[2:] if data.startswith('0x') else data
-            if is_lowercase_hex_string(data_body):
-                data_body_length = len(data_body)
-                size = data_body_length // 2
-                if data_body_length % 2 == 1:
-                    size += 1
-                return size
+            # Before revision 3, If the str value is regarded as a hex string,
+            # it is calculated as bytes otherwise string
+            return IconServiceEngine._get_binary_hex_string_size_in_bytes(data)
+
+        return len(data.encode('utf-8'))
+
+    @staticmethod
+    def _get_binary_hex_string_size_in_bytes(data: 'str') -> int:
+        """
+        Gets the binary size of the hex string data,
+        If the data can not be parse as hex, returns utf-8 encoded string size in bytes.
+        """
+
+        # hex string can have '0x' prefix or not
+        data_body = data[2:] if data.startswith('0x') else data
+
+        # hex string must only have lowercase hex digits otherwise it is string
+        if is_lowercase_hex_string(data_body):
+            data_body_length = len(data_body)
+            size = data_body_length // 2
+            if data_body_length % 2 == 1:
+                size += 1
+            return size
 
         return len(data.encode('utf-8'))
 
@@ -970,7 +984,7 @@ class IconServiceEngine(ContextContainer):
                 score_address = to
                 context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
-            data_size = self._get_data_size_in_bytes(context.revision, data.get('content', None))
+            data_size = self._get_binary_hex_string_size_in_bytes(data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
 
             self._icon_score_deploy_engine.invoke(
