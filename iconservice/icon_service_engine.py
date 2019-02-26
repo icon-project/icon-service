@@ -855,23 +855,18 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _get_string_size_in_bytes(revision: int, data: 'str') -> int:
-        # If the value is a hex-string, it is calculated as bytes otherwise
-        # UTF-8 string
-        if revision >= REVISION_3:
-            # Revision 3 or after, Hex prefix can be '0x' or '-0x'
-            index_of_hex_body = 2 if data[:2] == '0x' else 3 if data[:3] == '-0x' else -1
-        else:
-            # Before revision 3, Hex prefix can be '0x' only
-            index_of_hex_body = 2 if data.startswith('0x') else 0
+        if revision < REVISION_3:
+            # If the value is hexstring, it is calculated as bytes otherwise
+            # string
+            data_body = data[2:] if data.startswith('0x') else data
+            if is_lowercase_hex_string(data_body):
+                data_body_length = len(data_body)
+                size = data_body_length // 2
+                if data_body_length % 2 == 1:
+                    size += 1
+                return size
 
-        if index_of_hex_body >= 0 and is_lowercase_hex_string(data[index_of_hex_body:]):
-            data_body_length = len(data) - index_of_hex_body
-            size = data_body_length // 2
-            if data_body_length % 2 == 1:
-                size += 1
-            return size
-        else:
-            return len(data.encode('utf-8'))
+        return len(data.encode('utf-8'))
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
