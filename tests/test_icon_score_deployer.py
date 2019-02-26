@@ -153,7 +153,7 @@ class TestIconScoreDeployer(unittest.TestCase):
                 self.assertEqual(file_path_list_for_revision_2, target_file_path_list_only_for_revision_2)
                 target_file_path_list = [file_path for file_path in file_path_list
                                          if file_path not in file_path_list_for_revision_3_or_more]
-            elif revision > REVISION_2:
+            else:
                 target_file_path_list_only_for_revision_3_or_more = [file_path for file_path in file_path_list if file_path in file_path_list_for_revision_3_or_more]
                 self.assertEqual(file_path_list_for_revision_3_or_more, target_file_path_list_only_for_revision_3_or_more)
                 target_file_path_list = [file_path for file_path in file_path_list
