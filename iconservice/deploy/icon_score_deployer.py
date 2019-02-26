@@ -65,16 +65,21 @@ class IconScoreDeployer(object):
         :param data: Bytes of the zip file.
         :param revision: Revision num.
         """
+
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as memory_zip:
                 memory_zip_infolist = memory_zip.infolist()
-                matched_file_path = ""
+                common_prefix = ""
                 # Finds the depth having the file 'package.json'.
                 for zip_info in memory_zip_infolist:
                     file_path = zip_info.filename
-                    if "package.json" in file_path:
-                        matched_file_path = file_path[:len(file_path)-len("package.json")]
+                    file_name = os.path.basename(file_path)
+                    if "package.json" == file_name:
+                        common_prefix = os.path.dirname(file_path)
                         break
+
+                if revision >= REVISION_3 and common_prefix == "":
+                    raise ScoreInstallExtractException("No package.json")
 
                 for zip_info in memory_zip_infolist:
                     with memory_zip.open(zip_info) as file:
@@ -84,13 +89,14 @@ class IconScoreDeployer(object):
                                 and file_path.find('__pycache__') < 0
                                 and not file_path.startswith('.')
                                 and file_path.find('/.') < 0
-                                and file_path.find(matched_file_path) == 0
+                                and file_path.find(common_prefix) == 0
                         ):
                             if revision >= REVISION_3:
-                                file_path = file_path.replace(matched_file_path, '', 1)
+                                file_path = os.path.relpath(file_path, common_prefix)
                             else:
                                 # legacy for revision 2
-                                file_path = file_path.replace(matched_file_path, '')
+                                legacy_common_prefix = f"{common_prefix}/"
+                                file_path = file_path.replace(legacy_common_prefix, '')
                             parent_directory = os.path.dirname(file_path)
                             if file_path and file_path[-1] != '/':
                                 yield file_path, file, parent_directory
