@@ -19,6 +19,7 @@ import os
 import shutil
 import zipfile
 
+from ..icon_constant import REVISION_3
 from ..base.exception import ScoreInstallExtractException, ScoreInstallException
 
 
@@ -85,7 +86,7 @@ class IconScoreDeployer(object):
                                 and file_path.find('/.') < 0
                                 and file_path.find(matched_file_path) == 0
                         ):
-                            if revision >= 3:
+                            if revision >= REVISION_3:
                                 file_path = file_path.replace(matched_file_path, '', 1)
                             else:
                                 # legacy for revision 2

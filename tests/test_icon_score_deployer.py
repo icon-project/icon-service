@@ -21,6 +21,7 @@ from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ExceptionCode
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.utils import remove_path, get_score_path, get_score_deploy_path
+from iconservice.icon_constant import REVISION_2, REVISION_3
 from tests import create_address, create_tx_hash
 
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -40,7 +41,7 @@ class TestIconScoreDeployer(unittest.TestCase):
             return byte_data
 
     def test_install(self):
-        self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample','normal_score.zip')
+        self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample', 'normal_score.zip')
         self.badzipfile_path = os.path.join(DIRECTORY_PATH, 'sample', 'badzipfile.zip')
         self.innerdir_path = os.path.join(DIRECTORY_PATH, 'sample', 'innerdir.zip')
 
@@ -94,7 +95,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         tx_hash: bytes = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash)
 
-        self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample','normal_score.zip')
+        self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample', 'normal_score.zip')
         IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
         remove_path(score_deploy_path)
         self.assertFalse(os.path.exists(score_deploy_path))
@@ -138,7 +139,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         Test for replacing the first occurrence only of the path which is upper than package.json
         by using count on the function `replace`. It is supported on revision_3_or_more.
         """
-        revision_list = [2, 3, 4]
+        revision_list = [REVISION_2, REVISION_3]
         for revision in revision_list:
             address: 'Address' = create_address(AddressPrefix.CONTRACT)
             self.archive_path = os.path.join(DIRECTORY_PATH, 'sample', 'score_registry.zip')
@@ -147,12 +148,12 @@ class TestIconScoreDeployer(unittest.TestCase):
             file_path_list.sort()
             file_path_list_for_revision_2 = ["__init__.py", "score_registry.py"]
             file_path_list_for_revision_3_or_more = ["score_registry/__init__.py", "score_registry/score_registry.py"]
-            if revision == 2:
+            if revision == REVISION_2:
                 target_file_path_list_only_for_revision_2 = [file_path for file_path in file_path_list if file_path in file_path_list_for_revision_2]
                 self.assertEqual(file_path_list_for_revision_2, target_file_path_list_only_for_revision_2)
                 target_file_path_list = [file_path for file_path in file_path_list
                                          if file_path not in file_path_list_for_revision_3_or_more]
-            elif revision > 2:
+            elif revision > REVISION_2:
                 target_file_path_list_only_for_revision_3_or_more = [file_path for file_path in file_path_list if file_path in file_path_list_for_revision_3_or_more]
                 self.assertEqual(file_path_list_for_revision_3_or_more, target_file_path_list_only_for_revision_3_or_more)
                 target_file_path_list = [file_path for file_path in file_path_list
