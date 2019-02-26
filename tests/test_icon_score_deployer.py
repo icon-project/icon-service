@@ -21,6 +21,7 @@ from iconservice.base.address import AddressPrefix
 from iconservice.base.exception import ExceptionCode
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.utils import remove_path, get_score_path, get_score_deploy_path
+from iconservice.icon_constant import REVISION_2, REVISION_3
 from tests import create_address, create_tx_hash
 
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -31,9 +32,6 @@ class TestIconScoreDeployer(unittest.TestCase):
     def setUp(self):
         self.score_root_path = './'
         self.address: 'Address' = create_address(AddressPrefix.CONTRACT)
-        self.archive_path = os.path.join(DIRECTORY_PATH, 'sample','valid.zip')
-        self.archive_path2 = os.path.join(DIRECTORY_PATH, 'sample', 'invalid.zip')
-        self.archive_path3 = os.path.join(DIRECTORY_PATH, 'sample', 'valid.zip')
         self.score_path = get_score_path(self.score_root_path, self.address)
 
     @staticmethod
@@ -43,12 +41,16 @@ class TestIconScoreDeployer(unittest.TestCase):
             return byte_data
 
     def test_install(self):
+        self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample', 'normal_score.zip')
+        self.badzipfile_path = os.path.join(DIRECTORY_PATH, 'sample', 'badzipfile.zip')
+        self.innerdir_path = os.path.join(DIRECTORY_PATH, 'sample', 'innerdir.zip')
+
         # Case when the user install SCORE first time.
         tx_hash1 = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash1)
-        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path))
+        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
 
-        zip_file_info_gen = IconScoreDeployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path))
+        zip_file_info_gen = IconScoreDeployer._extract_files_gen(self.read_zipfile_as_byte(self.normal_score_path))
         file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
 
         installed_contents = []
@@ -65,7 +67,7 @@ class TestIconScoreDeployer(unittest.TestCase):
 
         # Case when the user install SCORE second time.(revision < 2)
         with self.assertRaises(BaseException) as e:
-            IconScoreDeployer.deploy_legacy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path))
+            IconScoreDeployer.deploy_legacy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
 
         # Case when installing SCORE with badzipfile Data.
@@ -73,27 +75,28 @@ class TestIconScoreDeployer(unittest.TestCase):
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash2)
 
         with self.assertRaises(BaseException) as e:
-            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path2))
+            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.badzipfile_path))
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
         self.assertFalse(os.path.exists(score_deploy_path))
 
-        # Case when The user specifies an installation path that does not have permission.
+        # Case when the user specifies an installation path that does not have permission.
         score_deploy_path: str = get_score_deploy_path('/', self.address, tx_hash1)
         with self.assertRaises(BaseException) as e:
-            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path))
+            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
         self.assertIsInstance(e.exception, PermissionError)
 
-        # Case when the user try to install scores without directories.
+        # Case when the user try to install scores inner directories.
         tx_hash3 = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash3)
-        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path3))
+        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.innerdir_path))
         self.assertEqual(True, os.path.exists(score_deploy_path))
 
     def test_remove_existing_score(self):
         tx_hash: bytes = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash)
 
-        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path))
+        self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample', 'normal_score.zip')
+        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
         remove_path(score_deploy_path)
         self.assertFalse(os.path.exists(score_deploy_path))
 
@@ -102,8 +105,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         Reads all files from the depth lower than where the file 'package.json' is
         and test deploying successfully.
         """
-        zip_list = ["valid.zip", "sample_token.zip", "sample_token01.zip", 'test_score01.zip',
-                    'test_score02.zip', 'test_score02_2.zip']
+        zip_list = ['score_registry.zip', 'fakedir.zip', 'nodir.zip']
 
         for zip_item in zip_list:
             address: 'Address' = create_address(AddressPrefix.CONTRACT)
@@ -129,6 +131,36 @@ class TestIconScoreDeployer(unittest.TestCase):
             self.assertEqual(True, os.path.exists(score_deploy_path))
             self.assertTrue(installed_contents.sort() == file_path_list.sort())
 
+            score_path: str = get_score_path(self.score_root_path, address)
+            remove_path(score_path)
+
+    def test_deploy_replace_once(self):
+        """
+        Test for replacing the first occurrence only of the path which is upper than package.json
+        by using count on the function `replace`. It is supported on revision_3_or_more.
+        """
+        revision_list = [REVISION_2, REVISION_3]
+        for revision in revision_list:
+            address: 'Address' = create_address(AddressPrefix.CONTRACT)
+            self.archive_path = os.path.join(DIRECTORY_PATH, 'sample', 'score_registry.zip')
+            zip_file_info_gen = IconScoreDeployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path), revision)
+            file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
+            file_path_list.sort()
+            file_path_list_for_revision_2 = ["__init__.py", "score_registry.py"]
+            file_path_list_for_revision_3 = ["score_registry/__init__.py", "score_registry/score_registry.py"]
+            if revision == REVISION_2:
+                target_file_path_list_only_for_revision_2 = [file_path for file_path in file_path_list
+                                                             if file_path in file_path_list_for_revision_2]
+                self.assertEqual(file_path_list_for_revision_2, target_file_path_list_only_for_revision_2)
+                target_file_path_list = [file_path for file_path in file_path_list
+                                         if file_path not in file_path_list_for_revision_3]
+            else:
+                target_file_path_list_only_for_revision_3 = [file_path for file_path in file_path_list
+                                                             if file_path in file_path_list_for_revision_3]
+                self.assertEqual(file_path_list_for_revision_3, target_file_path_list_only_for_revision_3)
+                target_file_path_list = [file_path for file_path in file_path_list
+                                         if file_path not in file_path_list_for_revision_2]
+            self.assertEqual(file_path_list, target_file_path_list)
             score_path: str = get_score_path(self.score_root_path, address)
             remove_path(score_path)
 

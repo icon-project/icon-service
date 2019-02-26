@@ -133,7 +133,7 @@ class TestIconZipDeploy(unittest.TestCase):
 
     def test_deploy(self):
         content: bytes = self.read_zipfile_as_byte(
-            os.path.join(TEST_ROOT_PATH, 'sample', 'valid.zip'))
+            os.path.join(TEST_ROOT_PATH, 'sample', 'normal_score.zip'))
 
         data = {
             "contentType": "application/zip",
