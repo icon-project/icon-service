@@ -164,6 +164,61 @@ class TestIconScoreDeployer(unittest.TestCase):
             score_path: str = get_score_path(self.score_root_path, address)
             remove_path(score_path)
 
+    def test_deploy_when_score_depth_is_different_above_revision3(self):
+        """
+        Reads all files from the depth lower than where the file 'package.json' is
+        and test deploying successfully.
+        """
+        zip_list = ['score_registry.zip', 'fakedir.zip', 'nodir.zip']
+
+        for zip_item in zip_list:
+            address: 'Address' = create_address(AddressPrefix.CONTRACT)
+            self.archive_path = os.path.join(DIRECTORY_PATH, 'sample', zip_item)
+            tx_hash1 = create_tx_hash()
+            score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
+
+            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION_3)
+
+            zip_file_info_gen = IconScoreDeployer._extract_files_gen(self.read_zipfile_as_byte(self.archive_path), REVISION_3)
+            file_path_list = [name for name, info, parent_dir in zip_file_info_gen]
+
+            installed_contents = []
+            for directory, dirs, filename in os.walk(score_deploy_path):
+                parent_directory_index = directory.rfind('/')
+                parent_dir_name = directory[parent_directory_index + 1:]
+                for file in filename:
+                    if parent_dir_name == f'0x{bytes.hex(tx_hash1)}':
+                        installed_contents.append(file)
+                    else:
+                        installed_contents.append(f'{parent_dir_name}/{file}')
+
+            self.assertEqual(True, os.path.exists(score_deploy_path))
+            self.assertTrue(installed_contents.sort() == file_path_list.sort())
+
+            score_path: str = get_score_path(self.score_root_path, address)
+            remove_path(score_path)
+
+    def test_deploy_raise_no_package_above_revision3(self):
+        """
+        if package doesn't contain package.json, raise exception(no package.json) above revision 3
+        """
+        zip_list = ['nodir_nopackage.zip', 'normal_nopackage.zip']
+
+        for zip_item in zip_list:
+            address: 'Address' = create_address(AddressPrefix.CONTRACT)
+            self.archive_path = os.path.join(DIRECTORY_PATH, 'sample', zip_item)
+            tx_hash1 = create_tx_hash()
+            score_deploy_path: str = get_score_deploy_path(self.score_root_path, address, tx_hash1)
+
+            with self.assertRaises(BaseException) as e:
+                IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION_3)
+            self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+            self.assertEqual(e.exception.message, "No package.json")
+            self.assertFalse(os.path.exists(score_deploy_path))
+
+            score_path: str = get_score_path(self.score_root_path, address)
+            remove_path(score_path)
+
     def tearDown(self):
         remove_path(self.score_path)
 
