@@ -17,9 +17,9 @@
 from typing import TYPE_CHECKING, List, Optional, Any
 
 from .icon_score_step import StepType
-from ..base.address import Address
+from ..base.address import Address, ICON_ADDRESS_BYTES_SIZE, ICON_ADDRESS_BODY_SIZE
 from ..base.exception import EventLogException
-from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
+from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG, REVISION_3
 from ..utils import int_to_bytes, byte_length_of_int
 
 if TYPE_CHECKING:
@@ -93,11 +93,11 @@ class EventLogEmitter(object):
                 f'declared indexed_args_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 
-        event_size = EventLogEmitter.__get_byte_length(event_signature)
+        event_size = EventLogEmitter.__get_byte_length(context, event_signature)
         indexed: List['BaseType'] = [event_signature]
         data: List['BaseType'] = []
         for i, argument in enumerate(arguments):
-            event_size += EventLogEmitter.__get_byte_length(argument)
+            event_size += EventLogEmitter.__get_byte_length(context, argument)
 
             # Separates indexed type and base type with keeping order.
             if i < indexed_args_count:
@@ -113,28 +113,33 @@ class EventLogEmitter(object):
         context.event_logs.append(event)
 
     @staticmethod
-    def __get_byte_length(data: 'BaseType') -> int:
+    def __get_byte_length(context: 'IconScoreContext', data: 'BaseType') -> int:
         if data is None:
             return 0
         elif isinstance(data, int):
             return byte_length_of_int(data)
-        else:
-            return len(EventLogEmitter.__base_type_to_bytes(data))
+        elif isinstance(data, Address):
+            if context.revision < REVISION_3:
+                return ICON_ADDRESS_BODY_SIZE
+            else:
+                return ICON_ADDRESS_BYTES_SIZE
+
+        return len(EventLogEmitter.get_bytes_from_base_type(data))
 
     @staticmethod
-    def __base_type_to_bytes(data: 'BaseType') -> bytes:
+    def get_bytes_from_base_type(data: 'BaseType') -> bytes:
         if isinstance(data, str):
             return data.encode('utf-8')
         elif isinstance(data, Address):
-            return data.body
+            return data.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + data.body
         elif isinstance(data, bytes):
             return data
         elif isinstance(data, int):
             return int_to_bytes(data)
 
     @staticmethod
-    def get_bloom_data(index: int, data: 'BaseType') -> bytes:
+    def get_ordered_bytes(index: int, data: 'BaseType') -> bytes:
         bloom_data = index.to_bytes(1, DATA_BYTE_ORDER)
         if data is not None:
-            bloom_data += EventLogEmitter.__base_type_to_bytes(data)
+            bloom_data += EventLogEmitter.get_bytes_from_base_type(data)
         return bloom_data
