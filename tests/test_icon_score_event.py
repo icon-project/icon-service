@@ -86,6 +86,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         zero_event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
@@ -126,6 +129,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         one_event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'OneIndexEvent(str,Address,int)'.encode('utf-8')
@@ -146,6 +152,9 @@ class TestEventlog(unittest.TestCase):
                           name, address, age)
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
+
+        # Asserts whether the SCORE address is not included in the bloom
+        self.assert_score_address_not_in_bloom(logs_bloom)
 
         one_event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
@@ -168,6 +177,9 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
+
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
 
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
@@ -193,6 +205,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'BoolIndexEvent(bool)'.encode('utf-8')
@@ -216,6 +231,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'IntIndexEvent(int)'.encode('utf-8')
@@ -238,6 +256,9 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
+
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
 
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
@@ -294,6 +315,20 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(4, len(event_log.indexed))
         self.assertEqual(ICX_TRANSFER_EVENT_LOG, event_log.indexed[0])
         self.assertEqual(0, len(event_log.data))
+
+    def assert_score_address_in_bloom(self, logs_bloom):
+        # Asserts whether the SCORE address is included in the bloom
+        address = self._mock_score.address
+        score_address_bytes = address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE, len(score_address_bytes))
+        self.assertIn(score_address_bytes, logs_bloom)
+
+    def assert_score_address_not_in_bloom(self, logs_bloom):
+        # Asserts whether the SCORE address is not included in the bloom
+        address = self._mock_score.address
+        score_address_bytes = address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE, len(score_address_bytes))
+        self.assertNotIn(score_address_bytes, logs_bloom)
 
 
 class EventlogScore(IconScoreBase):
