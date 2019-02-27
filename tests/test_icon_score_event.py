@@ -319,16 +319,16 @@ class TestEventlog(unittest.TestCase):
     def assert_score_address_in_bloom(self, logs_bloom):
         # Asserts whether the SCORE address is included in the bloom
         address = self._mock_score.address
-        score_address_bytes = address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
-        self.assertEqual(ICON_ADDRESS_BYTES_SIZE, len(score_address_bytes))
-        self.assertIn(score_address_bytes, logs_bloom)
+        address_bytes = b'\xff' + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(address_bytes))
+        self.assertIn(address_bytes, logs_bloom)
 
     def assert_score_address_not_in_bloom(self, logs_bloom):
         # Asserts whether the SCORE address is not included in the bloom
         address = self._mock_score.address
-        score_address_bytes = address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
-        self.assertEqual(ICON_ADDRESS_BYTES_SIZE, len(score_address_bytes))
-        self.assertNotIn(score_address_bytes, logs_bloom)
+        address_bytes = b'\xff' + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(address_bytes))
+        self.assertNotIn(address_bytes, logs_bloom)
 
 
 class EventlogScore(IconScoreBase):

@@ -124,10 +124,10 @@ class EventLogEmitter(object):
             else:
                 return ICON_ADDRESS_BYTES_SIZE
 
-        return len(EventLogEmitter.get_bytes_from_base_type(data))
+        return len(EventLogEmitter.__get_bytes_from_base_type(data))
 
     @staticmethod
-    def get_bytes_from_base_type(data: 'BaseType') -> bytes:
+    def __get_bytes_from_base_type(data: 'BaseType') -> bytes:
         if isinstance(data, str):
             return data.encode('utf-8')
         elif isinstance(data, Address):
@@ -141,5 +141,5 @@ class EventLogEmitter(object):
     def get_ordered_bytes(index: int, data: 'BaseType') -> bytes:
         bloom_data = index.to_bytes(1, DATA_BYTE_ORDER)
         if data is not None:
-            bloom_data += EventLogEmitter.get_bytes_from_base_type(data)
+            bloom_data += EventLogEmitter.__get_bytes_from_base_type(data)
         return bloom_data
