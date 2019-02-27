@@ -19,13 +19,39 @@ import json
 from abc import ABC, ABCMeta
 from typing import TYPE_CHECKING, Optional, Union, Any
 
-from ..base.address import Address
+from secp256k1 import PrivateKey, PublicKey
+
+from ..base.address import Address, AddressPrefix
 from ..base.exception import RevertException, ExceptionCode, IconScoreException
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
+    
+"""
+
+The comments from bitcoin-core/secp256k1/include/secp256k1.h
+
+Opaque data structure that holds context information (precomputed tables etc.).
+
+The purpose of context structures is to cache large precomputed data tables
+that are expensive to construct, and also to maintain the randomization data
+for blinding.
+
+Do not create a new context object for each operation, as construction is
+far slower than all other API calls (~100 times slower than an ECDSA
+verification).
+
+A constructed context can safely be used from multiple threads
+simultaneously, but API call that take a non-const pointer to a context
+need exclusive access to it. In particular this is the case for
+secp256k1_context_destroy and secp256k1_context_randomize.
+
+Regarding randomization, either do it once at creation time (in which case
+you do not need any locking for the other calls), or use a read-write lock.
+"""
+_private_key = PrivateKey()
 
 
 class InterfaceScoreMeta(ABCMeta):
@@ -131,3 +157,32 @@ def json_loads(src: str, **kwargs) -> Any:
     :return: a python object
     """
     return json.loads(src, **kwargs)
+
+
+def recover_key(msg_hash: bytes, signature: bytes) -> bytes:
+    if isinstance(msg_hash, bytes) \
+            and len(msg_hash) == 32 \
+            and isinstance(signature, bytes) \
+            and len(signature) == 65:
+        internal_recover_sig = _private_key.ecdsa_recoverable_deserialize(
+            ser_sig=signature[:64], rec_id=signature[64])
+        internal_pubkey = _private_key.ecdsa_recover(
+            msg_hash, internal_recover_sig, raw=True, digest=None)
+        
+        public_key = PublicKey(internal_pubkey, raw=False)
+        return public_key.serialize(compressed=False)
+
+
+def create_address_with_key(public_key: bytes) -> Optional['Address']:
+    """Create an address with a given public key
+    
+    :param public_key: Public key based on secp256k1
+    :return: Address created from a given public key
+    """
+    if isinstance(public_key, bytes) \
+            and len(public_key) == 65 \
+            and public_key[0] == 0x4:
+        body: bytes = hashlib.sha3_256(public_key[1:]).digest()[-20:]
+        return Address(AddressPrefix.EOA, body)
+    
+    return None
