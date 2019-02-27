@@ -207,7 +207,6 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        score_addr1 = tx_results[0].score_address
 
     def test_default_value_fail_update(self):
         tx1 = self._make_deploy_tx("test_scores",
@@ -222,7 +221,6 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        score_addr1 = tx_results[0].score_address
 
     def test_default_value_fail_external(self):
         tx1 = self._make_deploy_tx("test_scores",
@@ -237,15 +235,14 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        score_addr1 = tx_results[0].score_address
 
     def test_service_flag(self):
-        tx1 = self._make_deploy_tx("test_builtin",
+        tx0 = self._make_deploy_tx("test_builtin",
                                    "latest_version/governance",
                                    self._admin,
                                    GOVERNANCE_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx1])
+        prev_block, tx_results = self._make_and_req_block([tx0])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
@@ -261,7 +258,7 @@ class TestIntegrateScores(TestIntegrateBase):
         }
         response = self._query(query_request)
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
@@ -274,29 +271,28 @@ class TestIntegrateScores(TestIntegrateBase):
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-        tx3 = self._make_score_call_tx(self._admin,
+        tx2 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
                                        {"serviceFlag": hex(IconServiceFlag.AUDIT)})
 
-        tx4 = self._make_deploy_tx("test_deploy_scores/install",
+        tx3 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
                                    self._addr_array[1],
                                    ZERO_SCORE_ADDRESS)
 
         target_flag = IconServiceFlag.AUDIT | IconServiceFlag.FEE
-        tx5 = self._make_score_call_tx(self._admin,
+        tx4 = self._make_score_call_tx(self._admin,
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'updateServiceConfig',
                                        {"serviceFlag": hex(target_flag)})
 
-        tx6 = self._make_deploy_tx("test_deploy_scores/install",
+        tx5 = self._make_deploy_tx("test_deploy_scores/install",
                                    "test_score",
                                    self._addr_array[1],
                                    ZERO_SCORE_ADDRESS)
 
-        prev_block, tx_results = self._make_and_req_block([tx2, tx3, tx4, tx5, tx6])
-
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3, tx4, tx5])
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(True))
@@ -305,9 +301,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[3].status, int(True))
         self.assertEqual(tx_results[4].status, int(False))
 
-        score_addr1 = tx_results[0].score_address
-        score_addr2 = tx_results[2].score_address
-
+        score_address = tx_results[0].score_address
         response = self._query(query_request)
         table = {}
         for flag in IconServiceFlag:
@@ -317,17 +311,14 @@ class TestIntegrateScores(TestIntegrateBase):
                 table[flag.name] = False
         self.assertEqual(response, table)
 
-        query_request = {
-            "address": score_addr1
-        }
+        query_request = {"address": score_address}
         self._query(query_request, 'icx_getScoreApi')
 
-        query_request = {
-            "address": score_addr2
-        }
+        score_address = tx_results[2].score_address
+        query_request = {"address": score_address}
         with self.assertRaises(InvalidParamsException) as e:
             self._query(query_request, 'icx_getScoreApi')
-        self.assertEqual(e.exception.args[0], f"SCORE is inactive: {score_addr2}")
+        self.assertEqual(e.exception.args[0], f"SCORE not found: {score_address}")
 
     def test_revert(self):
         tx1 = self._make_deploy_tx("test_scores",

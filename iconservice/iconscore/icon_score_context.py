@@ -90,13 +90,14 @@ class ContextGetter(object):
 
 class IconScoreContext(object):
 
+    score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
     icon_score_deploy_engine: 'IconScoreDeployEngine' = None
     icx_engine: 'IcxEngine' = None
     icon_service_flag: int = 0
     legacy_tbears_mode = False
 
-    """Contains the useful information to process user's jsonrpc request
+    """Contains the useful information to process user's JSON-RPC request
     """
 
     def __init__(self, context_type: 'IconScoreContextType' = IconScoreContextType.QUERY) -> None:

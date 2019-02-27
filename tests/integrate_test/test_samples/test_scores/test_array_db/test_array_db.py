@@ -20,6 +20,7 @@ class TestArrayDB(IconScoreBase):
             ret.append(item)
         return ret
 
-    @payable
-    def fallback(self) -> None:
+    @external
+    def set_values(self) -> None:
         self._array_db.put(str(self.msg.sender))
+

@@ -19,12 +19,27 @@
 
 import unittest
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
+from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateFallbackCall(TestIntegrateBase):
+
+    def _update_governance(self, governance_path):
+        tx = self._make_deploy_tx("test_builtin", governance_path, self._admin, GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        return tx['params']['txHash']
+
+    def _set_revision(self, revision=4):
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
 
     def test_score_pass(self):
         tx1 = self._make_deploy_tx("test_fallback_call_scores",
@@ -141,6 +156,40 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[0].failure.message, "This is not payable")
+
+        query_request = {
+            "address": score_addr1
+        }
+
+        response = self._query(query_request, 'icx_getBalance')
+        self.assertEqual(response, 0)
+
+    def test_score_no_payable_revision_4(self):
+        # update governance SCORE(revision4)
+        self._update_governance('0_0_4')
+        self._set_revision()
+
+        tx1 = self._make_deploy_tx("test_fallback_call_scores",
+                                   "test_score_no_payable",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx1])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        value = 1 * self._icx_factor
+        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
+
+        prev_block, tx_results = self._make_and_req_block([tx2])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Method not found")
 
         query_request = {
             "address": score_addr1
@@ -266,6 +315,53 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(tx_results[1].failure.message, "This is not payable")
+
+        query_request = {
+            "address": score_addr1
+        }
+
+        response = self._query(query_request, 'icx_getBalance')
+        self.assertEqual(response, 0)
+
+    def test_score_no_payable_link_transfer_revision_4(self):
+        # update governance SCORE(revision4)
+        self._update_governance('0_0_4')
+        self._set_revision()
+
+        tx1 = self._make_deploy_tx("test_fallback_call_scores",
+                                   "test_score_no_payable",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+        tx2 = self._make_deploy_tx("test_fallback_call_scores",
+                                   "test_link_score_transfer",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+        self.assertEqual(tx_results[1].status, int(True))
+        score_addr2 = tx_results[1].score_address
+
+        tx3 = self._make_score_call_tx(self._addr_array[0],
+                                       score_addr2,
+                                       'add_score_func',
+                                       {"score_addr": str(score_addr1)})
+
+        value = 1 * self._icx_factor
+        tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
+
+        prev_block, tx_results = self._make_and_req_block([tx3, tx4])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(tx_results[1].status, int(False))
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[1].failure.message, "Method not found")
 
         query_request = {
             "address": score_addr1
@@ -526,6 +622,102 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         }
         response = self._query(query_request, 'icx_getBalance')
         self.assertEqual(response, 5 * self._icx_factor)
+
+    def test_base_fallback_send_0_and_1(self):
+        tx = self._make_deploy_tx("test_fallback_call_scores",
+                                  "test_base_fallback",
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS)
+
+        # update governance SCORE(revision4)
+        self._update_governance('0_0_4')
+        self._set_revision()
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr = tx_results[0].score_address
+
+        raise_exception_start_tag("test_base_fallback_send_0_and_1")
+        value = 0 * self._icx_factor
+        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Method not found")
+
+        value = 1 * self._icx_factor
+        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        raise_exception_end_tag("test_base_fallback_send_0_and_1")
+
+    def test_non_payable_fallback_send_0_and_1(self):
+        tx = self._make_deploy_tx("test_fallback_call_scores",
+                                  "test_non_payable_fallback",
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS)
+
+        # update governance SCORE(revision4)
+        self._update_governance('0_0_4')
+        self._set_revision()
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr = tx_results[0].score_address
+
+        raise_exception_start_tag("test_non_payable_fallback_send_0_and_1")
+        value = 0 * self._icx_factor
+        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Method not found")
+
+        value = 1 * self._icx_factor
+        tx = self._make_icx_send_tx(self._genesis, score_addr, value)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
+        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        raise_exception_end_tag("test_non_payable_fallback_send_0_and_1")
+
+    def test_payable_external_send_0_and_1(self):
+        tx = self._make_deploy_tx("test_fallback_call_scores",
+                                  "test_payable_external",
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS)
+
+        # update governance SCORE(revision4)
+        self._update_governance('0_0_4')
+        self._set_revision()
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr = tx_results[0].score_address
+
+        tx = self._make_score_call_tx(self._addr_array[0],
+                                      score_addr,
+                                      'set_value1', {})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        value = 1 * self._icx_factor
+        tx = self._make_score_call_tx(self._genesis,
+                                      score_addr,
+                                      'set_value1', {}, value)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
 
 
 if __name__ == '__main__':

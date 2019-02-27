@@ -24,4 +24,3 @@ class DeployType(IntEnum):
 class DeployState(IntEnum):
     INACTIVE = 0
     ACTIVE = 1
-

@@ -17,7 +17,7 @@
 
 import unittest
 
-from iconservice.utils import is_lowercase_hex_string
+from iconservice.utils import is_lowercase_hex_string, byte_length_of_int, int_to_bytes
 
 
 class TestUtils(unittest.TestCase):
@@ -35,6 +35,33 @@ class TestUtils(unittest.TestCase):
 
         a = '72917492AF'
         self.assertFalse(is_lowercase_hex_string(a))
+
+    def test_byte_length_of_int(self):
+        n = 0x80
+        for i in range(0, 32):
+            # 0x80, 0x8000, 0x800000, 0x80000000, ...
+            size = byte_length_of_int(-n)
+            self.assertEqual(1 + i, size)
+
+            # 0x0080, 0x008000, 0x00800000, 0x0080000000, ...
+            size = byte_length_of_int(n)
+            self.assertEqual(2 + i, size)
+
+            n <<= 8
+
+    def test_int_to_bytes(self):
+        n = 0x80
+        for i in range(0, 32):
+            # 0x80, 0x8000, 0x800000, 0x80000000, ...
+            data = int_to_bytes(-n)
+            self.assertEqual(0x80, data[0])
+
+            # 0x0080, 0x008000, 0x00800000, 0x0080000000, ...
+            data = int_to_bytes(n)
+            first, second = data[:2]
+            self.assertListEqual([0x00, 0x80], [first, second])
+
+            n <<= 8
 
 
 if __name__ == '__main__':

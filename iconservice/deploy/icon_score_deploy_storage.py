@@ -21,8 +21,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from . import DeployType, DeployState
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import ServerErrorException
-from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2
-from ..iconscore.icon_score_context_util import IconScoreContextUtil
+from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2, ZERO_TX_HASH
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -98,40 +97,48 @@ class IconScoreDeployTXParams(object):
         """
 
         # for extendability
-        json_str_deploy_data = json.dumps(self._deploy_data)
-        deploy_data_length = len(json_str_deploy_data.encode())
+        json_str_deploy_data: str = json.dumps(self._deploy_data)
+        deploy_data: bytes = json_str_deploy_data.encode(encoding='utf-8')
+        deploy_data_length: int = len(deploy_data)
 
         bytes_var1 = pack(
             IconScoreDeployTXParams._STRUCT_FMT,
             self._VERSION, self._deploy_type.value, deploy_data_length,
             self._score_address.to_bytes(), self._tx_hash)
-        bytes_var2 = pack(f'>{deploy_data_length}s', json_str_deploy_data.encode())
+        bytes_var2 = pack(f'>{deploy_data_length}s', deploy_data)
 
         return bytes_var1 + bytes_var2
 
 
 class IconScoreDeployInfo(object):
-    _VERSION = 0
-    _STRUCT_FMT = \
-        f'>BB{ICON_CONTRACT_ADDRESS_BYTES_SIZE}s{ICON_EOA_ADDRESS_BYTES_SIZE}' \
-        f's{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s'
+    """
+    leveldb IconScoreDeployInfo value structure
+    (bigendian, 1 + 1 + ICON_CONTRACT_ADDRESS_BYTES_SIZE + ICON_EOA_ADDRESS_BYTES_SIZE +
+    DEFAULT_BYTE_SIZE + DEFAULT_BYTE_SIZE bytes)
+    | version(1)
+    | deploystate(1)
+    | score_address(ICON_CONTRACT_ADDRESS_BYTES_SIZE)
+    | owner(ICON_EOA_ADDRESS_BYTES_SIZE)
+    | current_tx_hash(DEFAULT_BYTE_SIZE)
+    | next_tx_hash(DEFAULT_BYTE_SIZE)
+    """
 
-    # leveldb IconScoreDeployInfo value structure
-    # (bigendian, 1 + 1 + ICON_CONTRACT_ADDRESS_BYTES_SIZE + ICON_EOA_ADDRESS_BYTES_SIZE +
-    # DEFAULT_BYTE_SIZE + DEFAULT_BYTE_SIZE bytes)
-    # | version(1)
-    # | deploystate(1)
-    # | score_address(ICON_CONTRACT_ADDRESS_BYTES_SIZE)
-    # | owner(ICON_EOA_ADDRESS_BYTES_SIZE)
-    # | current_tx_hash(DEFAULT_BYTE_SIZE)
-    # | next_tx_hash(DEFAULT_BYTE_SIZE)
+    _VERSION = 0
+    _STRUCT_FMT = f'>BB' \
+        f'{ICON_CONTRACT_ADDRESS_BYTES_SIZE}s' \
+        f'{ICON_EOA_ADDRESS_BYTES_SIZE}s' \
+        f'{DEFAULT_BYTE_SIZE}s' \
+        f'{DEFAULT_BYTE_SIZE}s'
 
     def __init__(self,
                  score_address: 'Address',
                  deploy_state: 'DeployState',
                  owner: 'Address',
-                 current_tx_hash: Optional[bytes],
-                 next_tx_hash: Optional[bytes]):
+                 current_tx_hash: bytes,
+                 next_tx_hash: bytes):
+        assert isinstance(current_tx_hash, bytes) and len(current_tx_hash) == 32
+        assert isinstance(next_tx_hash, bytes) and len(next_tx_hash) == 32
+
         # key
         self._score_address = score_address
 
@@ -154,59 +161,35 @@ class IconScoreDeployInfo(object):
         """
 
         bytes_params = unpack(IconScoreDeployInfo._STRUCT_FMT, buf)
-        # version = bytes_params[0]
-        deploy_state = bytes_params[1]
-        score_address_bytes = bytes_params[2]
-        owner_address_bytes = bytes_params[3]
-        current_tx_hash = bytes_params[4]
-        next_tx_hash = bytes_params[5]
+        # version: int = bytes_params[0]
+        deploy_state: int = bytes_params[1]
+        score_address: 'Address' = Address.from_bytes(bytes_params[2])
+        owner_address: 'Address' = Address.from_bytes(bytes_params[3])
+        current_tx_hash: bytes = bytes_params[4]
+        next_tx_hash: bytes = bytes_params[5]
 
-        score_addr = Address.from_bytes(score_address_bytes)
-        owner_addr = Address.from_bytes(owner_address_bytes)
-
-        if int(bytes.hex(current_tx_hash), 16) == 0:
-            current_tx_hash = None
-        converted_current_tx_hash = current_tx_hash
-
-        if int(bytes.hex(next_tx_hash), 16) == 0:
-            next_tx_hash = None
-        converted_next_tx_hash = next_tx_hash
-
-        # MIGRATION
+        # DeployState 2 is deprecated, this code is needed for backward compatibility.
         if deploy_state == 2:
-            deploy_state = 1
+            deploy_state = DeployState.ACTIVE
 
-        info = IconScoreDeployInfo(score_addr, DeployState(deploy_state), owner_addr,
-                                   converted_current_tx_hash, converted_next_tx_hash)
-        return info
+        return IconScoreDeployInfo(
+            score_address, DeployState(deploy_state), owner_address, current_tx_hash, next_tx_hash)
 
     def to_bytes(self) -> bytes:
         """Convert IconScoreDeployInfo object to bytes
 
         :return: data including information of IconScoreDeployInfo object
         """
-
-        # for extendability
-
-        current_hash = self.current_tx_hash
-        if current_hash is None:
-            current_hash = bytes(DEFAULT_BYTE_SIZE)
-        converted_current_hash = current_hash
-
-        next_hash = self.next_tx_hash
-        if next_hash is None:
-            next_hash = bytes(DEFAULT_BYTE_SIZE)
-        converted_next_hash = next_hash
-
-        bytes_var = pack(self._STRUCT_FMT,
-                         self._VERSION,
-                         self.deploy_state.value,
-                         self._score_address.to_bytes(), self.owner.to_bytes(),
-                         converted_current_hash, converted_next_hash)
-        return bytes_var
+        return pack(
+            self._STRUCT_FMT, self._VERSION, self.deploy_state.value,
+            self._score_address.to_bytes(), self.owner.to_bytes(),
+            self.current_tx_hash, self.next_tx_hash)
 
 
 class IconScoreDeployStorage(object):
+    """Store deploy_int and tx_params on LevelDB.
+    """
+
     _DEPLOY_STORAGE_PREFIX = b'isds|'
     _DEPLOY_STORAGE_DEPLOY_INFO_PREFIX = _DEPLOY_STORAGE_PREFIX + b'di|'
     _DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX = _DEPLOY_STORAGE_PREFIX + b'dtp|'
@@ -227,34 +210,31 @@ class IconScoreDeployStorage(object):
                                       tx_hash: bytes,
                                       deploy_data: 'dict') -> None:
         prev_tx_params = self.get_deploy_tx_params(context, tx_hash)
-        if prev_tx_params is None:
-            tx_params = IconScoreDeployTXParams(tx_hash, deploy_type, score_address, deploy_data)
-            self._put_deploy_tx_params(context, tx_params)
-        else:
+        if prev_tx_params is not None:
             raise ServerErrorException(f'deploy_params already exists: {tx_hash}')
+
+        # Save DeployTXParams to stateDB
+        tx_params = IconScoreDeployTXParams(tx_hash, deploy_type, score_address, deploy_data)
+        self.put_deploy_tx_params(context, tx_params)
 
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info is None:
-            deploy_info = IconScoreDeployInfo(score_address, DeployState.INACTIVE, owner, None, tx_hash)
-            self._put_deploy_info(context, deploy_info)
+            # SCORE install case
+            deploy_info = IconScoreDeployInfo(
+                score_address, DeployState.INACTIVE, owner, ZERO_TX_HASH, tx_hash)
         else:
+            # SCORE update case
             if deploy_info.owner != owner:
-                raise ServerErrorException(f'invalid owner: {deploy_info.owner} != {owner}')
-            if deploy_info.next_tx_hash is not None:
-                if IconScoreContextUtil.get_revision(context) >= REVISION_2:
-                    self._db.delete(context, self._create_db_key(
-                        self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_info.next_tx_hash))
-                else:
-                    self._db.delete(context, deploy_info.next_tx_hash)
-            deploy_info.next_tx_hash = tx_hash
-            self._put_deploy_info(context, deploy_info)
+                raise ServerErrorException(f'Invalid owner: {deploy_info.owner} != {owner}')
 
-    def put_deploy_info_and_tx_params_for_builtin(self,
-                                                  context: 'IconScoreContext',
-                                                  score_address: 'Address',
-                                                  owner: 'Address') -> None:
-        deploy_info = IconScoreDeployInfo(score_address, DeployState.ACTIVE, owner, None, None)
-        self._put_deploy_info(context, deploy_info)
+            # If the previous DeployTXParams has exists, remove it before deploying
+            if deploy_info.next_tx_hash != ZERO_TX_HASH:
+                self.delete_deploy_tx_params(context, deploy_info.next_tx_hash)
+
+            deploy_info.next_tx_hash = tx_hash
+
+        # Save DeployInfo to stateDB
+        self.put_deploy_info(context, deploy_info)
 
     def update_score_info(self,
                           context: 'IconScoreContext',
@@ -273,15 +253,15 @@ class IconScoreDeployStorage(object):
                                        f'tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
 
         deploy_info.current_tx_hash = next_tx_hash
-        deploy_info.next_tx_hash = None
+        deploy_info.next_tx_hash = ZERO_TX_HASH
         deploy_info.deploy_state = DeployState.ACTIVE
-        self._put_deploy_info(context, deploy_info)
+        self.put_deploy_info(context, deploy_info)
 
         tx_params = self.get_deploy_tx_params(context, deploy_info.current_tx_hash)
         if tx_params is None:
             raise ServerErrorException(f'tx_params is None: {deploy_info.current_tx_hash}')
 
-    def _put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
+    def put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
         """
 
         :param context:
@@ -294,68 +274,54 @@ class IconScoreDeployStorage(object):
 
         self._db.put(context, key, value)
 
-    def get_deploy_info(self, context: Optional['IconScoreContext'], score_addr: 'Address') \
+    def get_deploy_info(self, context: Optional['IconScoreContext'], score_address: 'Address') \
             -> Optional['IconScoreDeployInfo']:
 
-        bytes_value = self._db.get(context, self._create_db_key(
-            self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_addr.to_bytes()))
-        if bytes_value:
-            return IconScoreDeployInfo.from_bytes(bytes_value)
-        else:
+        data: bytes = self._db.get(context, self._create_db_key(
+            self._DEPLOY_STORAGE_DEPLOY_INFO_PREFIX, score_address.to_bytes()))
+        if data is None:
             return None
 
-    def _put_deploy_tx_params(self, context: 'IconScoreContext', deploy_tx_params: 'IconScoreDeployTXParams') -> None:
+        return IconScoreDeployInfo.from_bytes(data)
+
+    def put_deploy_tx_params(self, context: 'IconScoreContext', deploy_tx_params: 'IconScoreDeployTXParams') -> None:
         """
 
         :param context:
         :param deploy_tx_params:
         :return:
         """
+        key: bytes = self._create_db_key(self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_tx_params.tx_hash)
         value = deploy_tx_params.to_bytes()
-        self._db.put(context, self._create_db_key(
-            self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, deploy_tx_params.tx_hash), value)
+        self._db.put(context, key, value)
 
     def get_deploy_tx_params(self, context: 'IconScoreContext', tx_hash: bytes) -> Optional['IconScoreDeployTXParams']:
-        bytes_value = self._db.get(context, self._create_db_key(self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, tx_hash))
-        if bytes_value:
-            return IconScoreDeployTXParams.from_bytes(bytes_value)
-        else:
+        key: bytes = self._create_db_key(self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, tx_hash)
+        value: bytes = self._db.get(context, key)
+
+        if value is None:
             return None
+
+        return IconScoreDeployTXParams.from_bytes(value)
+
+    def delete_deploy_tx_params(self, context: 'IconScoreContext', tx_hash: bytes):
+        """Delete DeployTXParams indicated by tx_hash from stateDB.
+
+        :param context:
+        :param tx_hash:
+        :return:
+        """
+        if context.revision >= REVISION_2:
+            key: bytes = self._create_db_key(
+                self._DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX, tx_hash)
+        else:
+            key: bytes = tx_hash
+
+        self._db.delete(context, key)
 
     @staticmethod
-    def _create_db_key(prefix: bytes, src_key: bytes):
+    def _create_db_key(prefix: bytes, src_key: bytes) -> bytes:
         return prefix + src_key
-
-    def is_score_active(self,
-                        context: Optional['IconScoreContext'],
-                        score_address: 'Address') -> bool:
-        """Returns whether IconScore is active or not
-
-        :param context:
-        :param score_address:
-        :return: True(deployed) False(not deployed)
-        """
-
-        deploy_info = self.get_deploy_info(context, score_address)
-        if deploy_info is None:
-            return False
-        else:
-            return deploy_info.deploy_state == DeployState.ACTIVE
-
-    def get_score_owner(self,
-                        context: 'IconScoreContext',
-                        score_address: 'Address') -> Optional['Address']:
-        """Returns whether IconScore is installed or not
-
-        :param context:
-        :param score_address:
-        :return: True(installed) False(not installed)
-        """
-        deploy_info = self.get_deploy_info(context, score_address)
-        if deploy_info is None:
-            return None
-
-        return deploy_info.owner
 
     def get_tx_hashes_by_score_address(self,
                                        context: 'IconScoreContext',
@@ -363,9 +329,19 @@ class IconScoreDeployStorage(object):
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info:
-            return deploy_info.current_tx_hash, deploy_info.next_tx_hash
-        else:
-            return None, None
+            current_tx_hash = deploy_info.current_tx_hash
+            if current_tx_hash == ZERO_TX_HASH:
+                # Keep compatibility for old blocks
+                current_tx_hash = None
+
+            next_tx_hash = deploy_info.next_tx_hash
+            if next_tx_hash == ZERO_TX_HASH:
+                # Keep compatibility for old blocks
+                next_tx_hash = None
+
+            return current_tx_hash, next_tx_hash
+
+        return None, None
 
     def get_score_address_by_tx_hash(self,
                                      context: 'IconScoreContext',
@@ -374,5 +350,5 @@ class IconScoreDeployStorage(object):
         tx_params = self.get_deploy_tx_params(context, tx_hash)
         if tx_params:
             return tx_params.score_address
-        else:
-            return None
+
+        return None

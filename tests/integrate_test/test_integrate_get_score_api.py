@@ -20,6 +20,7 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
+from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -74,7 +75,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -127,7 +127,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -252,7 +251,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -321,7 +319,6 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             {
                 'type': 'fallback',
                 'name': 'fallback',
-                'inputs': [],
                 'payable': True
             },
             {
@@ -364,6 +361,66 @@ class TestIntegrateGetScoreApi(TestIntegrateBase):
             }
         ]
         self.assertEqual(response2, expect_value2)
+
+    def test_get_score_no_fallback(self):
+        tx1 = self._make_deploy_tx("get_api",
+                                   "get_api3",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        query_request = {
+            "address": score_addr1
+        }
+        response1 = self._query(query_request, 'icx_getScoreApi')
+
+        expect_value1 = [
+            {
+                'type': 'function',
+                'name': 'get_value',
+                'inputs': [
+                    {
+                        'name': 'value1',
+                        'type': 'int'
+                    }
+                ],
+                'outputs': [
+                    {
+                        'type': 'int'
+                    }
+                ],
+                'readonly': True
+            },
+            {
+                'type': 'eventlog',
+                'name': 'Changed',
+                'inputs': [
+                    {
+                        'name': 'value',
+                        'type': 'int',
+                        'indexed': True
+                    }
+                ]
+            }
+        ]
+        self.assertEqual(response1, expect_value1)
+
+        tx2 = self._make_deploy_tx("get_api",
+                                   "get_api4",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        raise_exception_start_tag("test_get_score_no_fallback")
+        prev_block, tx_results = self._make_and_req_block([tx2])
+        raise_exception_end_tag("test_get_score_no_fallback")
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(False))
 
 
 if __name__ == '__main__':
