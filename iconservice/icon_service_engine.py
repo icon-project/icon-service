@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import os
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -30,7 +30,8 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, REVISION_3
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
+    REVISION_3
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -40,14 +41,13 @@ from .iconscore.icon_score_engine import IconScoreEngine
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
-from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
+from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, get_input_data_size, \
+    get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
-from .utils import byte_length_of_int
-from .utils import is_lowercase_hex_string
 from .utils import sha3_256, int_to_bytes
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
@@ -488,11 +488,11 @@ class IconServiceEngine(ContextContainer):
 
         context.step_counter.apply_step(StepType.DEFAULT, 1)
 
-        input_size = self._get_data_size_in_bytes(context.revision, data)
+        input_size = get_input_data_size(context.revision, data)
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         if data_type == "deploy":
-            content_size = self._get_binary_hex_string_size_in_bytes(data.get('content', None))
+            content_size = get_deploy_content_size(context.revision, data.get('content', None))
             context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
             # When installing SCORE.
             if to == ZERO_SCORE_ADDRESS:
@@ -638,7 +638,7 @@ class IconServiceEngine(ContextContainer):
             # minimum_step is the sum of
             # default STEP cost and input STEP costs if data field exists
             data = params['data']
-            input_size = self._get_data_size_in_bytes(context.revision, data)
+            input_size = get_input_data_size(context.revision, data)
             minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
         self._icon_pre_validator.execute(context, params, step_price, minimum_step)
@@ -818,7 +818,7 @@ class IconServiceEngine(ContextContainer):
         # Every send_transaction are calculated DEFAULT STEP at first
         context.step_counter.apply_step(StepType.DEFAULT, 1)
 
-        input_size = self._get_data_size_in_bytes(context.revision, params.get('data', None))
+        input_size = get_input_data_size(context.revision, params.get('data', None))
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         self._transfer_coin(context, params)
@@ -828,59 +828,6 @@ class IconServiceEngine(ContextContainer):
             score_address = self._handle_score_invoke(context, to, params)
 
         return score_address
-
-    def _get_data_size_in_bytes(self, revision: int, data) -> int:
-        size = 0
-        if isinstance(data, dict):
-            size = self._get_dict_size_in_bytes(revision, data)
-        elif isinstance(data, list):
-            for v in data:
-                size += self._get_data_size_in_bytes(revision, v)
-        elif isinstance(data, str):
-            size = self._get_string_size_in_bytes(revision, data)
-        else:
-            # int and bool
-            if isinstance(data, int):
-                size = byte_length_of_int(data)
-        return size
-
-    def _get_dict_size_in_bytes(self, revision: int, data: 'dict') -> int:
-        size = 0
-        for k, v in data.items():
-            if revision >= REVISION_3:
-                # Revision 3 or after, counts keys of dict also
-                size += len(k.encode('utf-8'))
-            size += self._get_data_size_in_bytes(revision, v)
-        return size
-
-    @staticmethod
-    def _get_string_size_in_bytes(revision: int, data: 'str') -> int:
-        if revision < REVISION_3:
-            # Before revision 3, If the str value is regarded as a hex string,
-            # it is calculated as bytes otherwise string
-            return IconServiceEngine._get_binary_hex_string_size_in_bytes(data)
-
-        return len(data.encode('utf-8'))
-
-    @staticmethod
-    def _get_binary_hex_string_size_in_bytes(data: 'str') -> int:
-        """
-        Gets the binary size of the hex string data,
-        If the data can not be parse as hex, returns utf-8 encoded string size in bytes.
-        """
-
-        # hex string can have '0x' prefix or not
-        data_body = data[2:] if data.startswith('0x') else data
-
-        # hex string must only have lowercase hex digits otherwise it is string
-        if is_lowercase_hex_string(data_body):
-            data_body_length = len(data_body)
-            size = data_body_length // 2
-            if data_body_length % 2 == 1:
-                size += 1
-            return size
-
-        return len(data.encode('utf-8'))
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
@@ -984,8 +931,8 @@ class IconServiceEngine(ContextContainer):
                 score_address = to
                 context.step_counter.apply_step(StepType.CONTRACT_UPDATE, 1)
 
-            data_size = self._get_binary_hex_string_size_in_bytes(data.get('content', None))
-            context.step_counter.apply_step(StepType.CONTRACT_SET, data_size)
+            content_size = get_deploy_content_size(context.revision, data.get('content', None))
+            context.step_counter.apply_step(StepType.CONTRACT_SET, content_size)
 
             self._icon_score_deploy_engine.invoke(
                 context=context,

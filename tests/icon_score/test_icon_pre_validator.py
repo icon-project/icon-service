@@ -123,7 +123,7 @@ class TestTransactionValidator(unittest.TestCase):
     def assert_message_input_raises(self, data):
         with self.assertRaises(InvalidRequestException) as e:
             exception_code = ExceptionCode.INVALID_REQUEST
-            exception_message = 'The message data should be a lowercase hex string'
+            exception_message = 'Invalid message data'
             self.validator._check_message_data(data)
 
         self.assertEqual(e.exception.code, exception_code)
@@ -131,45 +131,23 @@ class TestTransactionValidator(unittest.TestCase):
 
     def test_check_input_data_size(self):
         self.validator._get_get_data_size = Mock()
-        self.validator._check_input_size({})
+        self.validator._check_input_data_size({})
 
-        self.validator._get_data_size = Mock(return_value=MAX_DATA_SIZE - 1)
-        self.validator._check_input_size({"data": ANY})
+        with patch('iconservice.iconscore.icon_pre_validator.get_input_data_size') as mock:
+            mock.return_value = MAX_DATA_SIZE - 1
+            self.validator._check_input_data_size({"data": ANY})
 
-        self.validator._get_data_size = Mock(return_value=MAX_DATA_SIZE + 1)
-        with self.assertRaises(InvalidRequestException) as e:
-            self.validator._check_input_size({"data": ANY})
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, "The data field is too big")
+        with patch('iconservice.iconscore.icon_pre_validator.get_input_data_size') as mock:
+            mock.return_value = MAX_DATA_SIZE
+            self.validator._check_input_data_size({"data": ANY})
 
-    def test_get_data_size(self):
-        KEYS = [f"key{i}" for i in range(8)]
-        VALUES = [f"value{i}" for i in range(9)]
+        with patch('iconservice.iconscore.icon_pre_validator.get_input_data_size') as mock:
+            mock.return_value = MAX_DATA_SIZE + 1
+            with self.assertRaises(InvalidRequestException) as e:
+                self.validator._check_input_data_size({"data": ANY})
 
-        data = {
-            KEYS[0]: VALUES[0],
-            KEYS[1]: VALUES[1],
-            KEYS[2]: VALUES[2],
-            KEYS[3]: {
-                KEYS[4]: VALUES[3],
-                KEYS[5]: VALUES[4],
-                KEYS[6]: VALUES[5]
-            },
-            KEYS[7]: [
-                VALUES[6],
-                VALUES[7],
-                VALUES[8],
-            ]
-        }
-
-        data_len = 0
-        for key in KEYS:
-            data_len += len(key.encode('utf-8'))
-        for value in VALUES:
-            data_len += len(value.encode('utf-8'))
-
-        ret = self.validator._get_data_size(data)
-        self.assertEqual(data_len, ret)
+                self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
+                self.assertEqual(e.exception.message, "Invalid message length")
 
     def test_check_from_can_charge_fee_v2(self):
         self.validator._check_balance = Mock()

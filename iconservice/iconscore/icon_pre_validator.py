@@ -16,10 +16,12 @@
 
 from typing import TYPE_CHECKING
 
+from iconservice.iconscore.icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..deploy import DeployState
-from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, \
+    LATEST_REVISION
 from ..utils import is_lowercase_hex_string
 
 if TYPE_CHECKING:
@@ -59,7 +61,7 @@ class IconPreValidator:
         if 'message' == params.get('dataType', None):
             self._check_message_data(params.get('data', None))
 
-        self._check_input_size(params)
+        self._check_input_data_size(params)
 
         value: int = params.get('value', 0)
         if value < 0:
@@ -95,10 +97,10 @@ class IconPreValidator:
                 and len(data) % 2 == 0:
             return
 
-        raise InvalidRequestException(
-            'The message data should be a lowercase hex string')
+        raise InvalidRequestException('Invalid message data')
 
-    def _check_input_size(self, params: dict):
+    @staticmethod
+    def _check_input_data_size(params: dict):
         """
         Validates transaction data whether total bytes is less than MAX_DATA_SIZE
         If the property is a key-value object, counts key and value.
@@ -112,25 +114,10 @@ class IconPreValidator:
 
         if 'data' in params:
             data = params['data']
-            size = self._get_data_size(data)
+            size = get_input_data_size(LATEST_REVISION, data)
 
             if size > MAX_DATA_SIZE:
-                raise InvalidRequestException(f'The data field is too big')
-
-    def _get_data_size(self, data) -> int:
-        size = 0
-        if data:
-            if isinstance(data, dict):
-                for k, v in data.items():
-                    size += len(k.encode('utf-8'))
-                    size += self._get_data_size(v)
-            elif isinstance(data, list):
-                for v in data:
-                    size += self._get_data_size(v)
-            elif isinstance(data, str):
-                size = len(data.encode('utf-8'))
-
-        return size
+                raise InvalidRequestException(f'Invalid message length')
 
     def _check_from_can_charge_fee_v2(self, context: 'IconScoreContext', params: dict):
         fee: int = params['fee']
@@ -185,7 +172,8 @@ class IconPreValidator:
         if step_limit < minimum_step:
             raise InvalidRequestException('Step limit too low')
 
-    def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict, step_price: int):
+    def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict,
+                                      step_price: int):
         from_: 'Address' = params['from']
         value: int = params.get('value', 0)
 
@@ -275,7 +263,8 @@ class IconPreValidator:
         balance = self._icx.get_balance(context, from_)
 
         if balance < value + fee:
-            raise InvalidRequestException(f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
+            raise InvalidRequestException(
+                f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
 
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract

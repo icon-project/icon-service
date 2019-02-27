@@ -383,13 +383,13 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
                              '한국어',
                              '-0x1a2b3c']
 
-        estimated_steps = self.icon_service_engine.estimate_step(
-            self.generate_mock_request(
-                key_content, content,
-                key_content_type, content_type,
-                key_data_params,
-                data_param_keys, data_param_values)
-        )
+        request = self.generate_mock_request(
+            key_content, content,
+            key_content_type, content_type,
+            key_data_params,
+            data_param_keys, data_param_values)
+
+        estimated_steps = self.icon_service_engine.estimate_step(request)
 
         content_size = self._get_bin_size(content)
 
@@ -417,23 +417,21 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(3, self._query_revision())
 
-        estimated_steps = self.icon_service_engine.estimate_step(
-            self.generate_mock_request(
-                key_content, content,
-                key_content_type, content_type,
-                key_data_params,
-                data_param_keys, data_param_values)
-        )
+        estimated_steps = self.icon_service_engine.estimate_step(request)
 
-        input_size_rev3 = \
-            self._get_str_size(key_content_type) + self._get_str_size(content_type) + \
-            self._get_str_size(key_content) + self._get_str_size(content) + \
-            self._get_str_size(key_data_params) + \
-            self._get_str_size(data_param_keys[0]) + self._get_str_size(data_param_values[0]) + \
-            self._get_str_size(data_param_keys[1]) + self._get_str_size(data_param_values[1]) + \
-            self._get_str_size(data_param_keys[2]) + self._get_str_size(data_param_values[2]) + \
-            self._get_str_size(data_param_keys[3]) + self._get_str_size(data_param_values[3]) + \
-            self._get_str_size(data_param_keys[4]) + self._get_str_size(data_param_values[4])
+        input_size_rev3 = len(
+            '{'
+                f'"{key_content_type}":"{content_type}",'
+                f'"{key_content}":"{content}",'
+                f'"{key_data_params}":'
+                '{'
+                    f'"{data_param_keys[0]}":"{data_param_values[0]}",'
+                    f'"{data_param_keys[1]}":"{data_param_values[1]}",'
+                    f'"{data_param_keys[2]}":"{data_param_values[2]}",'
+                    f'"{data_param_keys[3]}":"{data_param_values[3]}",'
+                    f'"{data_param_keys[4]}":"{data_param_values[4]}"'
+                '}'
+            '}'.encode())
 
         expected_steps = self._get_expected_step_count(step_costs, input_size_rev3, content_size)
         self.assertEqual(expected_steps, estimated_steps)
