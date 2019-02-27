@@ -89,12 +89,14 @@ class IconPreValidator:
         Check if the message data is a lowercase hex string
         :param data: input data of message type
         """
+        if isinstance(data, str) \
+                and data.startswith('0x') \
+                and is_lowercase_hex_string(data[2:]) \
+                and len(data) % 2 == 0:
+            return
 
-        if not isinstance(data, str) or \
-                data[:2] != '0x' or \
-                (not is_lowercase_hex_string(data[2:]) and len(data) % 2 == 0):
-            raise InvalidRequestException(
-                'The message data should be a lowercase hex string')
+        raise InvalidRequestException(
+            'The message data should be a lowercase hex string')
 
     def _check_input_size(self, params: dict):
         """
