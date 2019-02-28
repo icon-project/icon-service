@@ -18,8 +18,8 @@ from enum import Enum, auto
 from threading import Lock
 from typing import TYPE_CHECKING, Any
 
-from iconservice.icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3
-from iconservice.utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
+from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3
+from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 from ..base.exception import IconServiceBaseException, ExceptionCode, InvalidRequestException
 
 if TYPE_CHECKING:

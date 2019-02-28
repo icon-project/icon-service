@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from iconservice.iconscore.icon_score_step import get_input_data_size
+from .icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..deploy import DeployState
