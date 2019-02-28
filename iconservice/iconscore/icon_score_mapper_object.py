@@ -17,7 +17,7 @@
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..database.db import IconScoreDatabase
-from ..icon_constant import REVISION_3
+from ..icon_constant import REVISION_2
 
 
 class IconScoreInfo(object):
@@ -62,7 +62,7 @@ class IconScoreInfo(object):
         :param revision:
         :return:
         """
-        if revision <= REVISION_3 or self.address == GOVERNANCE_SCORE_ADDRESS:
+        if revision <= REVISION_2 or self.address == GOVERNANCE_SCORE_ADDRESS:
             if self._score is None:
                 self._score = self.create_score()
 
