@@ -19,7 +19,7 @@ import os
 import shutil
 import zipfile
 
-from ..icon_constant import REVISION_3
+from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
 from ..base.exception import ScoreInstallExtractException, ScoreInstallException
 
 
@@ -75,35 +75,30 @@ class IconScoreDeployer(object):
                 for zip_info in memory_zip_infolist:
                     file_path = zip_info.filename
                     file_name = os.path.basename(file_path)
-                    if "package.json" == file_name:
+                    if PACKAGE_JSON_FILE == file_name:
                         common_prefix = os.path.dirname(file_path)
                         has_package = True
                         break
 
-                if revision >= REVISION_3 and has_package == False:
-                    raise ScoreInstallExtractException("No package.json")
+                if revision >= REVISION_3 and has_package is False:
+                    raise ScoreInstallExtractException("package.json not found")
 
                 for zip_info in memory_zip_infolist:
                     with memory_zip.open(zip_info) as file:
                         file_path = zip_info.filename
                         if (
-                                file_path.find('__MACOSX') < 0
+                                file_path.startswith(common_prefix)
+                                and not zip_info.is_dir()
+                                and file_path.find('__MACOSX') < 0
                                 and file_path.find('__pycache__') < 0
                                 and not file_path.startswith('.')
                                 and file_path.find('/.') < 0
-                                and file_path.find(common_prefix) == 0
                         ):
                             if revision >= REVISION_3:
-                                root_path = f"{common_prefix}/"
-                                if zip_info.is_dir():
-                                    continue
-                                else:
-                                    file_path = os.path.relpath(file_path, root_path)
-                                    parent_directory = os.path.dirname(file_path)
-                                    if file_path == '.':
-                                        file_path = ''
-                                    if file_path:
-                                        yield file_path, file, parent_directory
+                                file_path = os.path.relpath(file_path, common_prefix)
+                                parent_directory = os.path.dirname(file_path)
+                                if file_path:
+                                    yield file_path, file, parent_directory
                             else:
                                 # legacy for revision 2
                                 legacy_common_prefix = f"{common_prefix}/"

@@ -19,17 +19,16 @@ import json
 import os
 import sys
 
+from ..base.address import Address
 from ..deploy.utils import get_package_name_by_address_and_tx_hash
 from ..deploy.utils import get_score_deploy_path
-from ..base.address import Address
+from ..icon_constant import PACKAGE_JSON_FILE
 
 
 class IconScoreClassLoader(object):
     """IconScoreBase subclass Loader
 
     """
-
-    _PACKAGE_JSON_FILE = 'package.json'
     _MAIN_SCORE = 'main_score'
     _MAIN_FILE = 'main_file'
 
@@ -49,7 +48,7 @@ class IconScoreClassLoader(object):
         :param score_deploy_path:
         :return:
         """
-        pkg_json_path = os.path.join(score_deploy_path, IconScoreClassLoader._PACKAGE_JSON_FILE)
+        pkg_json_path = os.path.join(score_deploy_path, PACKAGE_JSON_FILE)
         with open(pkg_json_path, 'r') as f:
             return json.load(f)
 
