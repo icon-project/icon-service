@@ -20,7 +20,7 @@ from typing import Optional, List, Dict
 
 from iconservice.iconscore.icon_score_api_generator import ScoreApiGenerator
 from iconservice.iconscore.icon_score_base import \
-    external, IconScoreException, eventlog, Address
+    external, IconScoreException, eventlog, Address, payable
 
 
 class TestScoreApiGenerator(unittest.TestCase):
@@ -154,10 +154,9 @@ class TestScoreApiGenerator(unittest.TestCase):
         functions = [value for key, value in self._members
                      if key == function_name]
         api = ScoreApiGenerator.generate(functions)[0]
-        self.assertEqual('fallback', api['type'])
+        self.assertEqual(function_name, api['type'])
+        self.assertEqual(True, api['payable'])
         self.assertEqual(function_name, api['name'])
-        self.assertEqual(1, len(api['inputs']))
-        self.assertEqual('str', api['inputs'][0]['type'])
 
     def test_event(self):
         function_name = 'TestEvent'
@@ -262,7 +261,8 @@ class TestScore:
     def writable_unsupported_type_return(self) -> Decimal:
         pass
 
-    def fallback(self, name: str):
+    @payable
+    def fallback(self):
         pass
 
     @eventlog(indexed=2)

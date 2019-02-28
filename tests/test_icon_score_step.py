@@ -18,8 +18,6 @@ import unittest
 from typing import Optional
 from unittest.mock import Mock
 
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
-from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.builtin_scores.governance import governance
@@ -28,6 +26,8 @@ from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
 from iconservice.iconscore.icon_score_base2 import sha3_256
 from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
 from tests import create_tx_hash, create_address
@@ -54,8 +54,6 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def test_install_step(self):
         # Ignores deploy
         deploy_engine_invoke = Mock()
-        deploy_storage_get_deploy_info = Mock(return_value=None)
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         self._inner_task._icon_service_engine. \
             _icon_score_deploy_engine.invoke = deploy_engine_invoke
 
@@ -157,11 +155,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
 
-        IconScoreContextUtil.validate_score_blacklist = Mock()
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
 
@@ -195,10 +190,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.set_db(100)
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         # for StepType.SET
         result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
@@ -249,10 +242,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.get_db()
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
 
@@ -295,10 +286,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             return score.query_db()
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.query = Mock(side_effect=intercept_query)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task._query(request)
         IconScoreEngine.query.assert_called()
 
@@ -327,10 +316,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.remove_db()
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
 
@@ -378,10 +365,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 len(data_param) + \
                 len(text_param.encode('utf-8'))
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
 
@@ -420,10 +405,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_readonly(data_to_hash)
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
 
@@ -459,10 +442,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(data_to_hash)
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
 
@@ -496,7 +477,6 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(b'1234')
 
-        self._inner_task._icon_service_engine._validate_score_blacklist = Mock()
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
         raw_step_costs = {
@@ -528,7 +508,6 @@ class TestIconScoreStepCounter(unittest.TestCase):
         factory = self._inner_task._icon_service_engine._step_counter_factory
         factory.create = Mock(return_value=self.step_counter)
 
-        self._inner_task._icon_service_engine._icon_score_mapper.get_icon_score = Mock(return_value=None)
         result = self._inner_task_invoke(request)
         self.assertTrue(result['txResults'][tx_hash]['failure']['message'].startswith("Out of step"))
 

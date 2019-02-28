@@ -18,14 +18,13 @@
 """
 
 import unittest
+from typing import TYPE_CHECKING, Any, Union
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import RevertException, ExceptionCode
 from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -63,7 +62,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(response, expect_status)
+        self.assertEqual(expect_status, response)
 
     def _deploy_score(self, score_path: str, value: int, update_score_addr: 'Address' = None) -> Any:
         address = ZERO_SCORE_ADDRESS
@@ -581,7 +580,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
                 'auditTxHash': tx_hash2}}
         self._assert_get_score_status(score_addr1, expect_ret)
 
-        # 3. duplicated accpt SCORE : tx_hash1
+        # 3. duplicated accept SCORE : tx_hash1
         raise_exception_start_tag("Invalid status: no next status")
         tx_result = self._accept_score(tx_hash1)
         raise_exception_start_tag("Invalid status: no next status")
