@@ -30,18 +30,15 @@ if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     
 """
-
-The comments from bitcoin-core/secp256k1/include/secp256k1.h
+The explanation below are quoted from https://github.com/bitcoin-core/secp256k1/blob/master/include/secp256k1.h
 
 Opaque data structure that holds context information (precomputed tables etc.).
 
 The purpose of context structures is to cache large precomputed data tables
-that are expensive to construct, and also to maintain the randomization data
-for blinding.
+that are expensive to construct, and also to maintain the randomization data for blinding.
 
 Do not create a new context object for each operation, as construction is
-far slower than all other API calls (~100 times slower than an ECDSA
-verification).
+far slower than all other API calls (~100 times slower than an ECDSA verification).
 
 A constructed context can safely be used from multiple threads
 simultaneously, but API call that take a non-const pointer to a context
@@ -159,7 +156,38 @@ def json_loads(src: str, **kwargs) -> Any:
     return json.loads(src, **kwargs)
 
 
-def recover_key(msg_hash: bytes, signature: bytes) -> bytes:
+def create_address_with_key(public_key: bytes) -> Optional['Address']:
+    # FIXME: Add step calculation code
+    return _create_address_with_key(public_key)
+
+
+def _create_address_with_key(public_key: bytes) -> Optional['Address']:
+    """Create an address with a given public key
+    
+    :param public_key: Public key based on secp256k1
+    :return: Address created from a given public key or None if failed
+    """
+    if isinstance(public_key, bytes) \
+            and len(public_key) == 65 \
+            and public_key[0] == 0x4:
+        body: bytes = hashlib.sha3_256(public_key[1:]).digest()[-20:]
+        return Address(AddressPrefix.EOA, body)
+    
+    return None
+
+
+def recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
+    # FIXME: Add step calculation code
+    return _recover_key(msg_hash, signature)
+
+
+def _recover_key(msg_hash: bytes, signature: bytes) -> bytes:
+    """Returns the public key from sha3_256 message hash and recoverable signature
+    
+    :param msg_hash: 32 byte length data
+    :param signature: secp256k1 based recoverable signature created from msg_hash
+    :return: 64 byte length uncompressed public key
+    """
     if isinstance(msg_hash, bytes) \
             and len(msg_hash) == 32 \
             and isinstance(signature, bytes) \
@@ -169,20 +197,5 @@ def recover_key(msg_hash: bytes, signature: bytes) -> bytes:
         internal_pubkey = _private_key.ecdsa_recover(
             msg_hash, internal_recover_sig, raw=True, digest=None)
         
-        public_key = PublicKey(internal_pubkey, raw=False)
+        public_key = PublicKey(internal_pubkey, raw=False, ctx=_private_key.ctx)
         return public_key.serialize(compressed=False)
-
-
-def create_address_with_key(public_key: bytes) -> Optional['Address']:
-    """Create an address with a given public key
-    
-    :param public_key: Public key based on secp256k1
-    :return: Address created from a given public key
-    """
-    if isinstance(public_key, bytes) \
-            and len(public_key) == 65 \
-            and public_key[0] == 0x4:
-        body: bytes = hashlib.sha3_256(public_key[1:]).digest()[-20:]
-        return Address(AddressPrefix.EOA, body)
-    
-    return None
