@@ -30,7 +30,8 @@ if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
     
 """
-The explanation below are quoted from https://github.com/bitcoin-core/secp256k1/blob/master/include/secp256k1.h
+The explanation below are extracted
+from https://github.com/bitcoin-core/secp256k1/blob/master/include/secp256k1.h
 
 Opaque data structure that holds context information (precomputed tables etc.).
 
@@ -178,14 +179,17 @@ def _create_address_with_key(public_key: bytes) -> Optional['Address']:
 
 def recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
     # FIXME: Add step calculation code
-    return _recover_key(msg_hash, signature)
+    try:
+        return _recover_key(msg_hash, signature)
+    except:
+        return None
 
 
-def _recover_key(msg_hash: bytes, signature: bytes) -> bytes:
+def _recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
     """Returns the public key from sha3_256 message hash and recoverable signature
     
     :param msg_hash: 32 byte length data
-    :param signature: secp256k1 based recoverable signature created from msg_hash
+    :param signature: signature_data(64) + recovery_id(1)
     :return: 64 byte length uncompressed public key
     """
     if isinstance(msg_hash, bytes) \
@@ -199,3 +203,5 @@ def _recover_key(msg_hash: bytes, signature: bytes) -> bytes:
         
         public_key = PublicKey(internal_pubkey, raw=False, ctx=_public_key.ctx)
         return public_key.serialize(compressed=False)
+
+    return None
