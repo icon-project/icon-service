@@ -91,9 +91,5 @@ class TestIconScoreApi(unittest.TestCase):
         self.assertEqual(self.tx_v3['from'], str(address))
 
 
-    def test_recover_key_failure(self):
-        signature: bytes = base64.b64decode(self.tx_v2['signature'])
-        _recover_key(None, signature)
-
 if __name__ == '__main__':
     unittest.main()

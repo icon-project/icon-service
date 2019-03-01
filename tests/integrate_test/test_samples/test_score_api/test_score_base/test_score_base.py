@@ -157,3 +157,4 @@ class TestScoreBase(IconScoreBase):
             assert type(score_address) == Address
         self._value.set(10 ** 18)
         self.Changed(10 ** 18)
+
