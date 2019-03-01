@@ -19,7 +19,7 @@ import json
 from abc import ABC, ABCMeta
 from typing import TYPE_CHECKING, Optional, Union, Any
 
-from secp256k1 import PrivateKey, PublicKey
+from secp256k1 import PublicKey, ALL_FLAGS
 
 from ..base.address import Address, AddressPrefix
 from ..base.exception import RevertException, ExceptionCode, IconScoreException
@@ -48,7 +48,7 @@ secp256k1_context_destroy and secp256k1_context_randomize.
 Regarding randomization, either do it once at creation time (in which case
 you do not need any locking for the other calls), or use a read-write lock.
 """
-_private_key = PrivateKey()
+_public_key = PublicKey(flags=ALL_FLAGS)
 
 
 class InterfaceScoreMeta(ABCMeta):
@@ -192,10 +192,10 @@ def _recover_key(msg_hash: bytes, signature: bytes) -> bytes:
             and len(msg_hash) == 32 \
             and isinstance(signature, bytes) \
             and len(signature) == 65:
-        internal_recover_sig = _private_key.ecdsa_recoverable_deserialize(
+        internal_recover_sig = _public_key.ecdsa_recoverable_deserialize(
             ser_sig=signature[:64], rec_id=signature[64])
-        internal_pubkey = _private_key.ecdsa_recover(
+        internal_pubkey = _public_key.ecdsa_recover(
             msg_hash, internal_recover_sig, raw=True, digest=None)
         
-        public_key = PublicKey(internal_pubkey, raw=False, ctx=_private_key.ctx)
+        public_key = PublicKey(internal_pubkey, raw=False, ctx=_public_key.ctx)
         return public_key.serialize(compressed=False)
