@@ -49,7 +49,7 @@ class TestScoreMemberVariable(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
-    def _set_revision(self, revision=3):
+    def _set_revision(self, revision):
         params = {
             "code": hex(revision),
             "name": f"1.1.{revision}"
@@ -87,7 +87,7 @@ class TestScoreMemberVariable(TestIntegrateBase):
 
     def test_use_every_time_created_score(self):
         self._update_governance()
-        self._set_revision(revision=4)
+        self._set_revision(3)
 
         _from: 'Address' = self._addr_array[0]
 

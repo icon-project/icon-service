@@ -67,7 +67,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         return tx['params']['txHash']
 
-    def _set_revision(self, revision=4):
+    def _set_revision(self, revision):
         set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                                    {"code": hex(revision), "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([set_revision_tx])
@@ -143,7 +143,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         # set revision to 4(revision4)
         self._update_governance('0_0_4')
-        self._set_revision()
+        self._set_revision(3)
 
         # deploy SCORE
         tx1 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
@@ -205,7 +205,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
         # set revision to 4
-        self._set_revision()
+        self._set_revision(3)
 
         # deploy(revision3 must be success)
         tx4 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
@@ -219,7 +219,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
         self._setUp()
 
         # set revision to 3
-        self._set_revision()
+        self._set_revision(3)
         sample_score_init_params = {"value": hex(1000)}
 
         # deploy unnormal SCORE(not python)

@@ -36,7 +36,7 @@ from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException, ServerErrorException
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_4
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_3
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -406,7 +406,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                kw_params: Optional[dict] = None) -> Any:
 
         if func_name == STR_FALLBACK:
-            if self._context.revision >= REVISION_4:
+            if self._context.revision >= REVISION_3:
                 if not self.__is_payable_method(func_name):
                     raise ExternalException(f"Method not found",
                                             func_name,
