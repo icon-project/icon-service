@@ -386,7 +386,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertIsInstance(tx_results[0].failure.code, int)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
-    def test_sub_main(self):
+    def test_bugfix_IS_346(self):
         tx1 = self._make_deploy_tx("test_scores",
                                    "sub_main",
                                    self._addr_array[0],
