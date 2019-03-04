@@ -1001,9 +1001,10 @@ class IconServiceEngine(ContextContainer):
         logs_bloom = BloomFilter()
 
         for event_log in event_logs:
+            logs_bloom.add(EventLogEmitter.get_ordered_bytes(0xff, event_log.score_address))
             for i, indexed_item in enumerate(event_log.indexed):
-                bloom_data = EventLogEmitter.get_bloom_data(i, indexed_item)
-                logs_bloom.add(bloom_data)
+                indexed_bytes = EventLogEmitter.get_ordered_bytes(i, indexed_item)
+                logs_bloom.add(indexed_bytes)
 
         return logs_bloom
 

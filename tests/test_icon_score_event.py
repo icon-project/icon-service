@@ -16,11 +16,11 @@
 
 """IconScoreEngine testcase
 """
-
+import os
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import Address, AddressPrefix, ICON_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import EventLogException, ScoreErrorException
 from iconservice.database.batch import TransactionBatch
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
@@ -37,7 +37,7 @@ from iconservice.utils import to_camel_case
 
 class TestEventlog(unittest.TestCase):
     def setUp(self):
-        address = Address.from_data(AddressPrefix.CONTRACT, b'address')
+        address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         db = Mock(spec=IconScoreDatabase)
         db.attach_mock(address, 'address')
         context = IconScoreContext()
@@ -65,7 +65,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         age = 10
         phone_number = "000"
 
@@ -86,6 +86,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         zero_event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'ZeroIndexEvent(str,Address,int)'.encode('utf-8')
@@ -103,7 +106,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         age = 10
 
         # Call with ordered arguments
@@ -126,6 +129,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         one_event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'OneIndexEvent(str,Address,int)'.encode('utf-8')
@@ -138,7 +144,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
 
         name = "name"
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
@@ -146,6 +152,9 @@ class TestEventlog(unittest.TestCase):
                           name, address, age)
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
+
+        # Asserts whether the SCORE address is not included in the bloom
+        self.assert_score_address_not_in_bloom(logs_bloom)
 
         one_event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
@@ -158,24 +167,28 @@ class TestEventlog(unittest.TestCase):
     def test_address_index_event(self):
         context = ContextContainer._get_context()
 
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
 
         # Tests simple event emit
         self._mock_score.AddressIndexEvent(address)
-        self.assertEqual(len(context.event_logs), 1)
+        self.assertEqual(1, len(context.event_logs))
         event_log = context.event_logs[0]
         self.assertEqual(2, len(event_log.indexed))
         self.assertEqual(0, len(event_log.data))
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'AddressIndexEvent(Address)'.encode('utf-8')
         self.assertIn(event_bloom_data, logs_bloom)
 
-        indexed_bloom_data = \
-            int(1).to_bytes(1, DATA_BYTE_ORDER) + address.body
+        indexed_bloom_data = int(1).to_bytes(1, DATA_BYTE_ORDER) + \
+                             address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(indexed_bloom_data))
         self.assertIn(indexed_bloom_data, logs_bloom)
 
     def test_bool_index_event(self):
@@ -191,6 +204,9 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(0, len(event_log.data))
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
+
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
 
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
@@ -215,6 +231,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'IntIndexEvent(int)'.encode('utf-8')
@@ -238,6 +257,9 @@ class TestEventlog(unittest.TestCase):
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
 
+        # Asserts whether the SCORE address is included in the bloom
+        self.assert_score_address_in_bloom(logs_bloom)
+
         event_bloom_data = \
             int(0).to_bytes(1, DATA_BYTE_ORDER) + \
             'BytesIndexEvent(bytes)'.encode('utf-8')
@@ -250,7 +272,7 @@ class TestEventlog(unittest.TestCase):
     def test_to_dict_camel(self):
         context = ContextContainer._get_context()
 
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         age = 10
         data = b'0123456789abc'
 
@@ -277,14 +299,14 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
         context.func_type = IconScoreFuncType.READONLY
 
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         with self.assertRaises(EventLogException):
             self._mock_score.ICXTransfer(address, address, 0)
 
     def test_icx_transfer_event(self):
         context = ContextContainer._get_context()
 
-        address = Address.from_data(AddressPrefix.EOA, b'address')
+        address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
 
         # Tests simple event emit
         self._mock_score.icx.send(address, 1)
@@ -293,6 +315,20 @@ class TestEventlog(unittest.TestCase):
         self.assertEqual(4, len(event_log.indexed))
         self.assertEqual(ICX_TRANSFER_EVENT_LOG, event_log.indexed[0])
         self.assertEqual(0, len(event_log.data))
+
+    def assert_score_address_in_bloom(self, logs_bloom):
+        # Asserts whether the SCORE address is included in the bloom
+        address = self._mock_score.address
+        address_bytes = b'\xff' + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(address_bytes))
+        self.assertIn(address_bytes, logs_bloom)
+
+    def assert_score_address_not_in_bloom(self, logs_bloom):
+        # Asserts whether the SCORE address is not included in the bloom
+        address = self._mock_score.address
+        address_bytes = b'\xff' + address.prefix.value.to_bytes(1, DATA_BYTE_ORDER) + address.body
+        self.assertEqual(ICON_ADDRESS_BYTES_SIZE + 1, len(address_bytes))
+        self.assertNotIn(address_bytes, logs_bloom)
 
 
 class EventlogScore(IconScoreBase):
