@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """Utilities
 
 Functions and classes in this module don't have any external dependencies.
@@ -31,6 +30,10 @@ from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
 def int_to_bytes(n: int) -> bytes:
     length = byte_length_of_int(n)
     return n.to_bytes(length, byteorder='big', signed=True)
+
+
+def bytes_to_int(v: bytes) -> int:
+    return int.from_bytes(v, "big", signed=True)
 
 
 def byte_length_of_int(n: int):
