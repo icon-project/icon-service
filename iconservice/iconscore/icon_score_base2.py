@@ -19,7 +19,7 @@ import json
 from abc import ABC, ABCMeta
 from typing import TYPE_CHECKING, Optional, Union, Any
 
-from secp256k1 import PublicKey, ALL_FLAGS
+from secp256k1 import PublicKey, ALL_FLAGS, FLAG_VERIFY
 
 from ..base.address import Address, AddressPrefix
 from ..base.exception import RevertException, ExceptionCode, IconScoreException
@@ -159,7 +159,10 @@ def json_loads(src: str, **kwargs) -> Any:
 
 def create_address_with_key(public_key: bytes) -> Optional['Address']:
     # FIXME: Add step calculation code
-    return _create_address_with_key(public_key)
+    try:
+        return _create_address_with_key(public_key)
+    except:
+        return None
 
 
 def _create_address_with_key(public_key: bytes) -> Optional['Address']:
@@ -168,13 +171,39 @@ def _create_address_with_key(public_key: bytes) -> Optional['Address']:
     :param public_key: Public key based on secp256k1
     :return: Address created from a given public key or None if failed
     """
-    if isinstance(public_key, bytes) \
-            and len(public_key) == 65 \
-            and public_key[0] == 0x4:
-        body: bytes = hashlib.sha3_256(public_key[1:]).digest()[-20:]
+    if isinstance(public_key, bytes):
+        size = len(public_key)
+        prefix: bytes = public_key[0]
+        
+        if size == 33 and prefix in (0x02, 0x03):
+            uncompressed_public_key: bytes = _convert_key(public_key)
+        elif size == 65 and prefix == 0x04:
+            uncompressed_public_key: bytes = public_key
+        else:
+            return None
+            
+        body: bytes = hashlib.sha3_256(uncompressed_public_key[1:]).digest()[-20:]
         return Address(AddressPrefix.EOA, body)
 
     return None
+
+
+def _convert_key(public_key: bytes) -> Optional[bytes]:
+    """Convert key between compressed and uncompressed keys
+    
+    :param public_key: compressed or uncompressed key
+    :return: the counterpart key of a given public_key
+    """
+    size = len(public_key)
+    if size == 33:
+        compressed = True
+    elif size == 65:
+        compressed = False
+    else:
+        return None
+
+    public_key = PublicKey(public_key, raw=True, flags=FLAG_VERIFY)
+    return public_key.serialize(compressed=not compressed)
 
 
 def recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
@@ -185,12 +214,14 @@ def recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
         return None
 
 
-def _recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
-    """Returns the public key from sha3_256 message hash and recoverable signature
+def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
+    """Returns the public key from message hash and recoverable signature
 
-    :param msg_hash: 32 byte length data
+    :param msg_hash: 32 bytes data
     :param signature: signature_data(64) + recovery_id(1)
-    :return: 64 byte length uncompressed public key
+    :param compressed: the type of public key to return
+    :return: public key recovered from msg_hash and signature
+        (compressed: 33 bytes key, uncompressed: 65 bytes key)
     """
     if isinstance(msg_hash, bytes) \
             and len(msg_hash) == 32 \
@@ -202,6 +233,6 @@ def _recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
             msg_hash, internal_recover_sig, raw=True, digest=None)
 
         public_key = PublicKey(internal_pubkey, raw=False, ctx=_public_key.ctx)
-        return public_key.serialize(compressed=False)
+        return public_key.serialize(compressed)
 
     return None
