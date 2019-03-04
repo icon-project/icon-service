@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2019 ICON Foundation Inc.
+# Copyright 2019 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _re
 def create_msg_hash(tx: dict, excluded_keys: tuple) -> bytes:
     keys = [key for key in tx if key not in excluded_keys]
     keys.sort()
-    
+
     msg = 'icx_sendTransaction'
     for key in keys:
         value: str = tx[key]
         msg += f'.{key}.{value}'
-        
+
     return hashlib.sha3_256(msg.encode('utf-8')).digest()
 
 

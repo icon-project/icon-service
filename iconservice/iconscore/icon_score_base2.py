@@ -28,7 +28,7 @@ from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
-    
+
 """
 The explanation below are extracted
 from https://github.com/bitcoin-core/secp256k1/blob/master/include/secp256k1.h
@@ -164,7 +164,7 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
 
 def _create_address_with_key(public_key: bytes) -> Optional['Address']:
     """Create an address with a given public key
-    
+
     :param public_key: Public key based on secp256k1
     :return: Address created from a given public key or None if failed
     """
@@ -173,7 +173,7 @@ def _create_address_with_key(public_key: bytes) -> Optional['Address']:
             and public_key[0] == 0x4:
         body: bytes = hashlib.sha3_256(public_key[1:]).digest()[-20:]
         return Address(AddressPrefix.EOA, body)
-    
+
     return None
 
 
@@ -187,7 +187,7 @@ def recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
 
 def _recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
     """Returns the public key from sha3_256 message hash and recoverable signature
-    
+
     :param msg_hash: 32 byte length data
     :param signature: signature_data(64) + recovery_id(1)
     :return: 64 byte length uncompressed public key
@@ -200,7 +200,7 @@ def _recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
             ser_sig=signature[:64], rec_id=signature[64])
         internal_pubkey = _public_key.ecdsa_recover(
             msg_hash, internal_recover_sig, raw=True, digest=None)
-        
+
         public_key = PublicKey(internal_pubkey, raw=False, ctx=_public_key.ctx)
         return public_key.serialize(compressed=False)
 
