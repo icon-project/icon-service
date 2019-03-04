@@ -40,6 +40,7 @@ MAX_EXTERNAL_CALL_COUNT = 1 + 1024
 MAX_CALL_STACK_SIZE = 64
 
 ICON_DEX_DB_NAME = 'icon_dex'
+PACKAGE_JSON_FILE = 'package.json'
 
 ICX_TRANSFER_EVENT_LOG = 'ICXTransfer(Address,Address,int)'
 

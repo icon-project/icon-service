@@ -19,7 +19,7 @@ import os
 import shutil
 import zipfile
 
-from ..icon_constant import REVISION_3
+from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
 from ..base.exception import ScoreInstallExtractException, ScoreInstallException
 
 
@@ -65,35 +65,47 @@ class IconScoreDeployer(object):
         :param data: Bytes of the zip file.
         :param revision: Revision num.
         """
+
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as memory_zip:
                 memory_zip_infolist = memory_zip.infolist()
-                matched_file_path = ""
+                common_prefix = ""
+                has_package = False
                 # Finds the depth having the file 'package.json'.
                 for zip_info in memory_zip_infolist:
                     file_path = zip_info.filename
-                    if "package.json" in file_path:
-                        matched_file_path = file_path[:len(file_path)-len("package.json")]
+                    file_name = os.path.basename(file_path)
+                    if PACKAGE_JSON_FILE == file_name:
+                        common_prefix = os.path.dirname(file_path)
+                        has_package = True
                         break
+
+                if revision >= REVISION_3 and has_package is False:
+                    raise ScoreInstallExtractException("package.json not found")
 
                 for zip_info in memory_zip_infolist:
                     with memory_zip.open(zip_info) as file:
                         file_path = zip_info.filename
                         if (
-                                file_path.find('__MACOSX') < 0
+                                file_path.startswith(common_prefix)
+                                and not zip_info.is_dir()
+                                and file_path.find('__MACOSX') < 0
                                 and file_path.find('__pycache__') < 0
                                 and not file_path.startswith('.')
                                 and file_path.find('/.') < 0
-                                and file_path.find(matched_file_path) == 0
                         ):
                             if revision >= REVISION_3:
-                                file_path = file_path.replace(matched_file_path, '', 1)
+                                file_path = os.path.relpath(file_path, common_prefix)
+                                parent_directory = os.path.dirname(file_path)
+                                if file_path:
+                                    yield file_path, file, parent_directory
                             else:
                                 # legacy for revision 2
-                                file_path = file_path.replace(matched_file_path, '')
-                            parent_directory = os.path.dirname(file_path)
-                            if file_path and file_path[-1] != '/':
-                                yield file_path, file, parent_directory
+                                legacy_common_prefix = f"{common_prefix}/"
+                                file_path = file_path.replace(legacy_common_prefix, '')
+                                parent_directory = os.path.dirname(file_path)
+                                if file_path and file_path[-1] != '/':
+                                    yield file_path, file, parent_directory
         except zipfile.BadZipFile:
             raise ScoreInstallExtractException("Bad zip file.")
         except zipfile.LargeZipFile:
