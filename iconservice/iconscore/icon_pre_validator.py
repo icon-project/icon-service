@@ -16,10 +16,13 @@
 
 from typing import TYPE_CHECKING
 
+from .icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..deploy import DeployState
-from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, \
+    LATEST_REVISION
+from ..utils import is_lowercase_hex_string
 
 if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
@@ -55,7 +58,10 @@ class IconPreValidator:
         :param minimum_step: minimum step
         """
 
-        self._check_data_size(params)
+        if 'message' == params.get('dataType', None):
+            self._check_message_data(params.get('data', None))
+
+        self._check_input_data_size(params)
 
         value: int = params.get('value', 0)
         if value < 0:
@@ -79,10 +85,25 @@ class IconPreValidator:
         else:
             self._check_from_can_charge_fee_v3(context, params, step_price)
 
-    def _check_data_size(self, params: dict):
+    @staticmethod
+    def _check_message_data(data):
         """
-        Validates transaction data size whether total character length is less than MAX_DATA_SIZE
-        If the property is a key-value object, counts key length and value length.
+        Check if the message data is a lowercase hex string
+        :param data: input data of message type
+        """
+        if isinstance(data, str) \
+                and data.startswith('0x') \
+                and is_lowercase_hex_string(data[2:]) \
+                and len(data) % 2 == 0:
+            return
+
+        raise InvalidRequestException('Invalid message data')
+
+    @staticmethod
+    def _check_input_data_size(params: dict):
+        """
+        Validates transaction data whether total bytes is less than MAX_DATA_SIZE
+        If the property is a key-value object, counts key and value.
 
         Assume that values in params have already been converted
         to original format (string -> int, string -> Address, etc)
@@ -93,25 +114,10 @@ class IconPreValidator:
 
         if 'data' in params:
             data = params['data']
-            size = self._get_character_length(data)
+            size = get_input_data_size(LATEST_REVISION, data)
 
             if size > MAX_DATA_SIZE:
-                raise InvalidRequestException(f'The data field is too big')
-
-    def _get_character_length(self, data) -> int:
-        size = 0
-        if data:
-            if isinstance(data, dict):
-                for k, v in data.items():
-                    size += len(k)
-                    size += self._get_character_length(v)
-            elif isinstance(data, list):
-                for v in data:
-                    size += self._get_character_length(v)
-            elif isinstance(data, str):
-                size += len(data)
-
-        return size
+                raise InvalidRequestException(f'Invalid message length')
 
     def _check_from_can_charge_fee_v2(self, context: 'IconScoreContext', params: dict):
         fee: int = params['fee']
@@ -166,7 +172,8 @@ class IconPreValidator:
         if step_limit < minimum_step:
             raise InvalidRequestException('Step limit too low')
 
-    def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict, step_price: int):
+    def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict,
+                                      step_price: int):
         from_: 'Address' = params['from']
         value: int = params.get('value', 0)
 
@@ -256,7 +263,8 @@ class IconPreValidator:
         balance = self._icx.get_balance(context, from_)
 
         if balance < value + fee:
-            raise InvalidRequestException(f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
+            raise InvalidRequestException(
+                f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
 
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract

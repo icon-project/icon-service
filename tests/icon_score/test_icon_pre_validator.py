@@ -111,47 +111,43 @@ class TestTransactionValidator(unittest.TestCase):
         self.validator.execute_to_check_out_of_balance(None, {"version": 3}, ANY)
         self.validator._check_from_can_charge_fee_v3.assert_called_once()
 
-    def test_check_data_size(self):
-        self.validator._get_character_length = Mock()
-        self.validator._check_data_size({})
+    def test_check_message_data(self):
+        self.assert_message_input_raises(None)
+        self.assert_message_input_raises({})
+        self.assert_message_input_raises([])
+        self.assert_message_input_raises(1234)
+        self.assert_message_input_raises('message data')
+        self.assert_message_input_raises('0x1234ABCD')
+        self.validator._check_message_data('0x1234abcd')
 
-        self.validator._get_character_length = Mock(return_value=MAX_DATA_SIZE - 1)
-        self.validator._check_data_size({"data": ANY})
-
-        self.validator._get_character_length = Mock(return_value=MAX_DATA_SIZE + 1)
+    def assert_message_input_raises(self, data):
         with self.assertRaises(InvalidRequestException) as e:
-            self.validator._check_data_size({"data": ANY})
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
-        self.assertEqual(e.exception.message, "The data field is too big")
+            exception_code = ExceptionCode.INVALID_REQUEST
+            exception_message = 'Invalid message data'
+            self.validator._check_message_data(data)
 
-    def test_get_character_length(self):
-        KEYS = [f"key{i}" for i in range(8)]
-        VALUES = [f"value{i}" for i in range(9)]
+        self.assertEqual(e.exception.code, exception_code)
+        self.assertEqual(e.exception.message, exception_message)
 
-        data = {
-            KEYS[0]: VALUES[0],
-            KEYS[1]: VALUES[1],
-            KEYS[2]: VALUES[2],
-            KEYS[3]: {
-                KEYS[4]: VALUES[3],
-                KEYS[5]: VALUES[4],
-                KEYS[6]: VALUES[5]
-            },
-            KEYS[7]: [
-                VALUES[6],
-                VALUES[7],
-                VALUES[8],
-            ]
-        }
+    def test_check_input_data_size(self):
+        self.validator._get_get_data_size = Mock()
+        self.validator._check_input_data_size({})
 
-        data_len = 0
-        for key in KEYS:
-            data_len += len(key)
-        for value in VALUES:
-            data_len += len(value)
+        with patch('iconservice.iconscore.icon_pre_validator.get_input_data_size') as mock:
+            mock.return_value = MAX_DATA_SIZE - 1
+            self.validator._check_input_data_size({"data": ANY})
 
-        ret = self.validator._get_character_length(data)
-        self.assertEqual(data_len, ret)
+        with patch('iconservice.iconscore.icon_pre_validator.get_input_data_size') as mock:
+            mock.return_value = MAX_DATA_SIZE
+            self.validator._check_input_data_size({"data": ANY})
+
+        with patch('iconservice.iconscore.icon_pre_validator.get_input_data_size') as mock:
+            mock.return_value = MAX_DATA_SIZE + 1
+            with self.assertRaises(InvalidRequestException) as e:
+                self.validator._check_input_data_size({"data": ANY})
+
+                self.assertEqual(e.exception.code, ExceptionCode.INVALID_REQUEST)
+                self.assertEqual(e.exception.message, "Invalid message length")
 
     def test_check_from_can_charge_fee_v2(self):
         self.validator._check_balance = Mock()

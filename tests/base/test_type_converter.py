@@ -16,7 +16,7 @@
 
 import unittest
 
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import ExceptionCode, InvalidParamsException
 from iconservice.base.type_converter import TypeConverter
 from iconservice.base.type_converter_templates import ParamType, ConstantKeys
 from tests import create_block_hash, create_address
@@ -715,3 +715,93 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(timestamp, params_params[ConstantKeys.TIMESTAMP])
         self.assertEqual(nonce, params_params[ConstantKeys.NONCE])
         self.assertEqual(signature, params_params[ConstantKeys.SIGNATURE])
+
+    def test_wrong_block_convert(self):
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: [],
+            ConstantKeys.BLOCK_HASH: {},
+            ConstantKeys.TIMESTAMP: [],
+            ConstantKeys.PREV_BLOCK_HASH: {}
+        }
+
+        ret_params = TypeConverter.convert(request, ParamType.BLOCK)
+
+        self.assertEqual([], ret_params[ConstantKeys.BLOCK_HEIGHT])
+        self.assertEqual({}, ret_params[ConstantKeys.BLOCK_HASH])
+        self.assertEqual([], ret_params[ConstantKeys.TIMESTAMP])
+        self.assertEqual({}, ret_params[ConstantKeys.PREV_BLOCK_HASH])
+
+        # wrong str 1
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: [1,2,3,4,5],
+            ConstantKeys.BLOCK_HASH: {},
+            ConstantKeys.TIMESTAMP: [],
+            ConstantKeys.PREV_BLOCK_HASH: {}
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            TypeConverter.convert(request, ParamType.BLOCK)
+
+        self.assertEqual("TypeConvert Exception int value :[1, 2, 3, 4, 5], type: <class 'list'>", e.exception.message)
+
+        # wrong str 2
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: [[], []],
+            ConstantKeys.BLOCK_HASH: {},
+            ConstantKeys.TIMESTAMP: [],
+            ConstantKeys.PREV_BLOCK_HASH: {}
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            TypeConverter.convert(request, ParamType.BLOCK)
+
+        self.assertEqual("TypeConvert Exception int value :[[], []], type: <class 'list'>", e.exception.message)
+
+        # wrong str 3
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: [],
+            ConstantKeys.BLOCK_HASH: {1:2},
+            ConstantKeys.TIMESTAMP: [],
+            ConstantKeys.PREV_BLOCK_HASH: {}
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            TypeConverter.convert(request, ParamType.BLOCK)
+
+        self.assertEqual("TypeConvert Exception bytes value :{1: 2}, type: <class 'dict'>", e.exception.message)
+
+        # wrong str 4
+        block_height = 1
+        block_hash = create_block_hash()
+        timestamp = 12345
+        prev_block_hash = create_block_hash()
+
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: block_height,
+            ConstantKeys.BLOCK_HASH: bytes.hex(block_hash),
+            ConstantKeys.TIMESTAMP: hex(timestamp),
+            ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
+        }
+
+        with self.assertRaises(InvalidParamsException) as e:
+            TypeConverter.convert(request, ParamType.BLOCK)
+
+        self.assertEqual("TypeConvert Exception int value :1, type: <class 'int'>", e.exception.message)
+
+        # wrong str 5
+        block_height = 1
+        block_hash = 1
+        timestamp = 12345
+        prev_block_hash = create_block_hash()
+
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: str(block_height),
+            ConstantKeys.BLOCK_HASH: block_hash,
+            ConstantKeys.TIMESTAMP: hex(timestamp),
+            ConstantKeys.PREV_BLOCK_HASH: bytes.hex(prev_block_hash)
+        }
+
+        with self.assertRaises(InvalidParamsException):
+            TypeConverter.convert(request, ParamType.BLOCK)
+
+        self.assertEqual("TypeConvert Exception int value :1, type: <class 'int'>", e.exception.message)
