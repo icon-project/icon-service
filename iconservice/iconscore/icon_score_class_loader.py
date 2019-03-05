@@ -68,7 +68,11 @@ class IconScoreClassLoader(object):
 
         # in order for the new module to be noticed by the import system
         importlib.invalidate_caches()
+
+        # IS-346 Fixed
+        convert_file_to_package_path = score_package_info[IconScoreClassLoader._MAIN_FILE].replace('/', '.')
+
         module = importlib.import_module(
-            f".{score_package_info[IconScoreClassLoader._MAIN_FILE]}", package_name)
+            f".{convert_file_to_package_path}", package_name)
 
         return getattr(module, score_package_info[IconScoreClassLoader._MAIN_SCORE])
