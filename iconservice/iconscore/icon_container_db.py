@@ -19,8 +19,8 @@ from typing import TypeVar, Optional, Any, Union, TYPE_CHECKING
 from .icon_score_context import ContextContainer
 from ..base.address import Address
 from ..base.exception import ContainerDBException
-from ..icon_constant import DATA_BYTE_ORDER, REVISION_3, IconScoreContextType
-from ..utils import int_to_bytes
+from ..icon_constant import REVISION_3, IconScoreContextType
+from ..utils import int_to_bytes, bytes_to_int
 
 if TYPE_CHECKING:
     from ..database.db import IconScoreDatabase
@@ -28,10 +28,13 @@ if TYPE_CHECKING:
 K = TypeVar('K', int, str, Address, bytes)
 V = TypeVar('V', int, str, Address, bytes, bool)
 
-
 ARRAY_DB_ID = b'\x00'
 DICT_DB_ID = b'\x01'
 VAR_DB_ID = b'\x02'
+
+
+def get_encoded_key(key: V) -> bytes:
+    return ContainerUtil.encode_key(key)
 
 
 class ContainerUtil(object):
@@ -45,9 +48,6 @@ class ContainerUtil(object):
         :param var_key:
         :return:
         """
-        if var_key is None:
-            raise ContainerDBException('key is None')
-
         if cls == ArrayDB:
             container_id = ARRAY_DB_ID
         elif cls == DictDB:
@@ -55,7 +55,7 @@ class ContainerUtil(object):
         else:
             raise ContainerDBException(f'Unsupported container class: {cls}')
 
-        encoded_key: bytes = ContainerUtil.__encode_key(var_key)
+        encoded_key: bytes = get_encoded_key(var_key)
         return b'|'.join([container_id, encoded_key])
 
     @staticmethod
@@ -68,14 +68,6 @@ class ContainerUtil(object):
         if key is None:
             raise ContainerDBException('key is None')
 
-        return ContainerUtil.__encode_key(key)
-
-    @staticmethod
-    def encode_value(value: V) -> bytes:
-        return ContainerUtil.__encode_value(value)
-
-    @staticmethod
-    def __encode_key(key: K) -> bytes:
         if isinstance(key, int):
             bytes_key = int_to_bytes(key)
         elif isinstance(key, str):
@@ -85,11 +77,11 @@ class ContainerUtil(object):
         elif isinstance(key, bytes):
             bytes_key = key
         else:
-            raise ContainerDBException(f"can't encode key: {key}")
+            raise ContainerDBException(f'Unsupported key type: {type(key)}')
         return bytes_key
 
     @staticmethod
-    def __encode_value(value: V) -> bytes:
+    def encode_value(value: V) -> bytes:
         if isinstance(value, int):
             byte_value = int_to_bytes(value)
         elif isinstance(value, str):
@@ -101,7 +93,7 @@ class ContainerUtil(object):
         elif isinstance(value, bytes):
             byte_value = value
         else:
-            raise ContainerDBException(f"can't encode value: {value}")
+            raise ContainerDBException(f'Unsupported value type: {type(value)}')
         return byte_value
 
     @staticmethod
@@ -111,13 +103,13 @@ class ContainerUtil(object):
 
         obj_value = None
         if value_type == int:
-            obj_value = int.from_bytes(value, "big", signed=True)
+            obj_value = bytes_to_int(value)
         elif value_type == str:
             obj_value = value.decode()
         elif value_type == Address:
             obj_value = Address.from_bytes(value)
         if value_type == bool:
-            obj_value = bool(int(int.from_bytes(value, DATA_BYTE_ORDER, signed=True)))
+            obj_value = bool(bytes_to_int(value))
         elif value_type == bytes:
             obj_value = value
         return obj_value
@@ -190,14 +182,15 @@ class DictDB(object):
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
 
-        encoded_key: bytes = ContainerUtil.encode_key(key)
+        encoded_key: bytes = get_encoded_key(key)
         encoded_value: bytes = ContainerUtil.encode_value(value)
 
         self._db.put(encoded_key, encoded_value)
 
     def __getitem__(self, key: K) -> Any:
         if self.__depth == 1:
-            return ContainerUtil.decode_object(self._db.get(ContainerUtil.encode_key(key)), self.__value_type)
+            encoded_key: bytes = get_encoded_key(key)
+            return ContainerUtil.decode_object(self._db.get(encoded_key), self.__value_type)
         else:
             return DictDB(key, self._db, self.__value_type, self.__depth - 1)
 
@@ -207,13 +200,13 @@ class DictDB(object):
     def __contains__(self, key: K):
         # Plyvel doesn't allow setting None value in the DB.
         # so there is no case of returning None value if the key exists.
-        value = self._db.get(ContainerUtil.encode_key(key))
+        value = self._db.get(get_encoded_key(key))
         return value is not None
 
     def __remove(self, key: K) -> None:
         if self.__depth != 1:
             raise ContainerDBException(f'DictDB depth mismatch')
-        self._db.delete(ContainerUtil.encode_key(key))
+        self._db.delete(get_encoded_key(key))
 
 
 class ArrayDB(object):
@@ -222,7 +215,7 @@ class ArrayDB(object):
     supports length and iterator, maintains order
     """
     __SIZE = 'size'
-    __SIZE_BYTE_KEY = ContainerUtil.encode_key(__SIZE)
+    __SIZE_BYTE_KEY = get_encoded_key(__SIZE)
 
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
         prefix: bytes = ContainerUtil.create_db_prefix(type(self), var_key)
@@ -237,9 +230,7 @@ class ArrayDB(object):
         :param value: value to add
         """
         size: int = self.__get_size()
-
-        byte_value = ContainerUtil.encode_value(value)
-        self._db.put(ContainerUtil.encode_key(size), byte_value)
+        self.__put(size, value)
         self.__set_size(size + 1)
 
     def pop(self) -> Optional[V]:
@@ -254,8 +245,8 @@ class ArrayDB(object):
 
         index = size - 1
         last_val = self[index]
-        self._db.delete(ContainerUtil.encode_key(index))
-        self.__set_size(size - 1)
+        self._db.delete(get_encoded_key(index))
+        self.__set_size(index)
         return last_val
 
     def get(self, index: int=0) -> V:
@@ -266,12 +257,6 @@ class ArrayDB(object):
         :return: value at the index
         """
         return self[index]
-
-    def __iter__(self):
-        return self._get_generator(self._db, self.__get_size(), self.__value_type)
-
-    def __len__(self):
-        return self.__get_size()
 
     def __get_size(self) -> int:
         if self.__is_defective_revision():
@@ -287,6 +272,16 @@ class ArrayDB(object):
         byte_value = ContainerUtil.encode_value(size)
         self._db.put(ArrayDB.__SIZE_BYTE_KEY, byte_value)
 
+    def __put(self, index: int, value: V) -> None:
+        byte_value = ContainerUtil.encode_value(value)
+        self._db.put(get_encoded_key(index), byte_value)
+
+    def __iter__(self):
+        return self._get_generator(self._db, self.__get_size(), self.__value_type)
+
+    def __len__(self):
+        return self.__get_size()
+
     def __setitem__(self, index: int, value: V) -> None:
         if not isinstance(index, int):
             raise ContainerDBException(f'Invalid type: index is not an integer')
@@ -298,8 +293,7 @@ class ArrayDB(object):
             index += size
 
         if 0 <= index < size:
-            byte_value = ContainerUtil.encode_value(value)
-            self._db.put(ContainerUtil.encode_key(index), byte_value)
+            self.__put(index, value)
         else:
             raise ContainerDBException(f'Index out of range: index({index}) size({size})')
 
@@ -328,7 +322,7 @@ class ArrayDB(object):
             index += size
 
         if 0 <= index < size:
-            key: bytes = ContainerUtil.encode_key(index)
+            key: bytes = get_encoded_key(index)
             return ContainerUtil.decode_object(db.get(key), value_type)
 
         raise ContainerDBException(f'Index out of range: index({index}) size({size})')
@@ -347,8 +341,7 @@ class VarDB(object):
     def __init__(self, var_key: str, db: 'IconScoreDatabase', value_type: type) -> None:
         # Use var_key as a db prefix in the case of VarDB
         self._db = db.get_sub_db(VAR_DB_ID)
-
-        self.__var_byte_key = ContainerUtil.encode_key(var_key)
+        self.__var_byte_key = get_encoded_key(var_key)
         self.__value_type = value_type
 
     def set(self, value: V) -> None:
