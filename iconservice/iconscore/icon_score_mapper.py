@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class IconScoreMapper(object):
     """Icon score information mapping table
 
-    This instance should be used as a singletone
+    This instance should be used as a singleton
 
     key: icon_score_address
     value: IconScoreInfo

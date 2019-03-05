@@ -53,13 +53,13 @@ class IconService(object):
         amqp_key = config[ConfigKey.AMQP_KEY]
         amqp_target = config[ConfigKey.AMQP_TARGET]
         score_root_path = config[ConfigKey.SCORE_ROOT_PATH]
-        db_root_patn = config[ConfigKey.STATE_DB_ROOT_PATH]
+        db_root_path = config[ConfigKey.STATE_DB_ROOT_PATH]
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
         Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
         Logger.info(f'score_root_path : {score_root_path}', ICON_SERVICE)
-        Logger.info(f'icon_score_state_db_root_path  : {db_root_patn}', ICON_SERVICE)
+        Logger.info(f'icon_score_state_db_root_path  : {db_root_path}', ICON_SERVICE)
         Logger.info(f'amqp_target  : {amqp_target}', ICON_SERVICE)
         Logger.info(f'amqp_key  :  {amqp_key}', ICON_SERVICE)
         Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE)
