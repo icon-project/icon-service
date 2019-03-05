@@ -310,7 +310,6 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
         return tx
 
     def _query_revision(self):

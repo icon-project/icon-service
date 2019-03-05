@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
@@ -58,10 +58,7 @@ class IconPreValidator:
         :param minimum_step: minimum step
         """
 
-        if 'message' == params.get('dataType', None):
-            self._check_message_data(params.get('data', None))
-
-        self._check_input_data_size(params)
+        self._check_input_data(params)
 
         value: int = params.get('value', 0)
         if value < 0:
@@ -86,9 +83,27 @@ class IconPreValidator:
             self._check_from_can_charge_fee_v3(context, params, step_price)
 
     @staticmethod
+    def _check_input_data(params):
+        """
+        Validates input data. It checks the input data type and the input data size.
+
+        :param params: params of icx_sendTransaction JSON-RPC request
+        :return:
+        """
+
+        input_data = params.get('data', None)
+        if 'message' == params.get('dataType', None):
+            IconPreValidator._check_message_data(input_data)
+        else:
+            IconPreValidator._check_input_data_type(input_data)
+
+        IconPreValidator._check_input_data_size(input_data)
+
+    @staticmethod
     def _check_message_data(data):
         """
         Check if the message data is a lowercase hex string
+
         :param data: input data of message type
         """
         if isinstance(data, str) \
@@ -100,7 +115,22 @@ class IconPreValidator:
         raise InvalidRequestException('Invalid message data')
 
     @staticmethod
-    def _check_input_data_size(params: dict):
+    def _check_input_data_type(data):
+        """
+        Validates transaction data types whether the leaf fields are str or None
+        """
+        if isinstance(data, dict):
+            for v in data.values():
+                IconPreValidator._check_input_data_type(v)
+        elif isinstance(data, list):
+            for v in data:
+                IconPreValidator._check_input_data_type(v)
+        elif data is not None and not isinstance(data, str):
+            # The leaf value should be None or str.
+            raise InvalidRequestException(f'Invalid data type')
+
+    @staticmethod
+    def _check_input_data_size(input_data: Any):
         """
         Validates transaction data whether total bytes is less than MAX_DATA_SIZE
         If the property is a key-value object, counts key and value.
@@ -109,12 +139,11 @@ class IconPreValidator:
         to original format (string -> int, string -> Address, etc)
         But the field of 'data' has not been converted (TypeConvert marks it as LATER)
 
-        :param params: params of icx_sendTransaction JSON-RPC request
+        :param input_data: data field of icx_sendTransaction JSON-RPC request
         """
 
-        if 'data' in params:
-            data = params['data']
-            size = get_input_data_size(LATEST_REVISION, data)
+        if input_data is not None:
+            size = get_input_data_size(LATEST_REVISION, input_data)
 
             if size > MAX_DATA_SIZE:
                 raise InvalidRequestException(f'Invalid message length')

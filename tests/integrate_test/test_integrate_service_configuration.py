@@ -48,7 +48,8 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
         tx = self._make_score_call_tx(self._admin,
                                       GOVERNANCE_SCORE_ADDRESS,
                                       'updateServiceConfig',
-                                      params=params)
+                                      params=params,
+                                      pre_validation_enabled=False)
 
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)

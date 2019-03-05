@@ -111,6 +111,78 @@ class TestTransactionValidator(unittest.TestCase):
         self.validator.execute_to_check_out_of_balance(None, {"version": 3}, ANY)
         self.validator._check_from_can_charge_fee_v3.assert_called_once()
 
+    def test_check_input_data_type(self):
+        # flat data with string
+        self.validator._check_input_data_type("plain text")
+
+        # flat data with int
+        with self.assertRaises(InvalidRequestException) as e:
+            self.validator._check_input_data_type(10000)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        # flat data with bool
+        with self.assertRaises(InvalidRequestException) as e:
+            self.validator._check_input_data_type(False)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        # flat data with float
+        with self.assertRaises(InvalidRequestException) as e:
+            self.validator._check_input_data_type(10.1)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        params = {
+            "method": "transfer",
+            "params": {
+                "to": "hxab2d8215eab14bc6bdd8bfb2c8151257032ecd8b",
+                "value": "0x1"
+            }
+
+        }
+
+        # dict data with string
+        self.validator._check_input_data_type(params)
+
+        # dict data with int
+        with self.assertRaises(InvalidRequestException) as e:
+            params['params']['value'] = 10000
+            self.validator._check_input_data_type(params)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        # dict data with bool
+        with self.assertRaises(InvalidRequestException) as e:
+            params['params']['value'] = False
+            self.validator._check_input_data_type(params)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        # dict data with float
+        with self.assertRaises(InvalidRequestException) as e:
+            params['params']['value'] = 10.1
+            self.validator._check_input_data_type(params)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        params['params']['value'] = ['one', 'two']
+
+        # list data with string
+        self.validator._check_input_data_type(params)
+
+        # list data with int
+        with self.assertRaises(InvalidRequestException) as e:
+            params['params']['value'][1] = 2
+            self.validator._check_input_data_type(params)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        # list data with bool
+        with self.assertRaises(InvalidRequestException) as e:
+            params['params']['value'][1] = False
+            self.validator._check_input_data_type(params)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
+        # list data with float
+        with self.assertRaises(InvalidRequestException) as e:
+            params['params']['value'][1] = 10.1
+            self.validator._check_input_data_type(params)
+            self.assertEqual(e.exception.message, 'Invalid data type')
+
     def test_check_message_data(self):
         self.assert_message_input_raises(None)
         self.assert_message_input_raises({})
