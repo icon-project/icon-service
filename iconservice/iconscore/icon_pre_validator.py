@@ -120,7 +120,7 @@ class IconPreValidator:
         Validates transaction data types whether the leaf fields are str or None
         """
         if isinstance(data, dict):
-            for k, v in data.items():
+            for v in data.values():
                 IconPreValidator._check_input_data_type(v)
         elif isinstance(data, list):
             for v in data:
