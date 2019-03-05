@@ -126,7 +126,7 @@ class IconPreValidator:
             for v in data:
                 IconPreValidator._check_input_data_type(v)
         elif data is not None and not isinstance(data, str):
-            # the leaf value can only be None and str.
+            # The leaf value should be None or str.
             raise InvalidRequestException(f'Invalid data type')
 
     @staticmethod
