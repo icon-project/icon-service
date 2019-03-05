@@ -46,7 +46,7 @@ class TestIconScoreApi(unittest.TestCase):
             'tx_hash': '1257b9ea76e716b145463f0350f534f973399898a18a50d391e7d2815e72c950',
             'signature': 'WiRTA/tUNGVByc8fsZ7+U9BSDX4BcBuv2OpAuOLLbzUiCcovLPDuFE+PBaT8ovmz5wg+Bjr7rmKiu7Rl8v0DUQE=',
         }
-        
+
         # The transaction in block 100000 of MainNet
         self.tx_v3 = {
             'version': '0x3',
@@ -80,10 +80,10 @@ class TestIconScoreApi(unittest.TestCase):
         self.assertIsInstance(compressed_public_key, bytes)
         self.assertEqual(33, len(compressed_public_key))
         self.assertIn(compressed_public_key[0], (0x02, 0x03))
-        
+
         address: Address = _create_address_with_key(compressed_public_key)
         self.assertEqual(self.tx_v2['from'], str(address))
-        
+
     def test_recover_key_v3_and_create_address_with_key(self):
         signature: bytes = base64.b64decode(self.tx_v3['signature'])
         self.assertIsInstance(signature, bytes)
@@ -99,15 +99,15 @@ class TestIconScoreApi(unittest.TestCase):
 
         address: Address = _create_address_with_key(uncompressed_public_key)
         self.assertEqual(self.tx_v3['from'], str(address))
-        
+
         compressed_public_key: bytes = _recover_key(msg_hash, signature, compressed=True)
         self.assertIsInstance(compressed_public_key, bytes)
         self.assertEqual(33, len(compressed_public_key))
         self.assertIn(compressed_public_key[0], (0x02, 0x03))
-        
+
         address: Address = _create_address_with_key(compressed_public_key)
         self.assertEqual(self.tx_v3['from'], str(address))
-        
-        
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -174,14 +174,14 @@ def _create_address_with_key(public_key: bytes) -> Optional['Address']:
     if isinstance(public_key, bytes):
         size = len(public_key)
         prefix: bytes = public_key[0]
-        
+
         if size == 33 and prefix in (0x02, 0x03):
             uncompressed_public_key: bytes = _convert_key(public_key)
         elif size == 65 and prefix == 0x04:
             uncompressed_public_key: bytes = public_key
         else:
             return None
-            
+
         body: bytes = hashlib.sha3_256(uncompressed_public_key[1:]).digest()[-20:]
         return Address(AddressPrefix.EOA, body)
 
@@ -190,7 +190,7 @@ def _create_address_with_key(public_key: bytes) -> Optional['Address']:
 
 def _convert_key(public_key: bytes) -> Optional[bytes]:
     """Convert key between compressed and uncompressed keys
-    
+
     :param public_key: compressed or uncompressed key
     :return: the counterpart key of a given public_key
     """
