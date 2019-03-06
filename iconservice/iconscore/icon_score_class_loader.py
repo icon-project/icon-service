@@ -22,6 +22,7 @@ import sys
 from ..base.address import Address
 from ..deploy.utils import get_package_name_by_address_and_tx_hash
 from ..deploy.utils import get_score_deploy_path
+from ..base.exception import ScoreErrorException
 from ..icon_constant import PACKAGE_JSON_FILE
 
 
@@ -29,9 +30,6 @@ class IconScoreClassLoader(object):
     """IconScoreBase subclass Loader
 
     """
-    _MAIN_SCORE = 'main_score'
-    _MAIN_FILE = 'main_file'
-
     @staticmethod
     def init(score_root_path: str):
         if score_root_path not in sys.path:
@@ -53,6 +51,22 @@ class IconScoreClassLoader(object):
             return json.load(f)
 
     @staticmethod
+    def _get_package_info(package_json: dict) -> tuple:
+        main_module: str = package_json.get('main_module')
+        if not isinstance(main_module, str):
+            # 'main_file' field will be deprecated soon.
+            # Use 'main_module" instead
+            main_module: str = package_json['main_file']
+
+        # Relative package name is not allowed
+        if main_module.startswith('.'):
+            raise ScoreErrorException('Invalid main_module')
+
+        main_score: str = package_json['main_score']
+
+        return main_module, main_score
+
+    @staticmethod
     def run(score_address: 'Address', tx_hash: bytes, score_root_path: str) -> type:
         """Load a IconScoreBase subclass and return it
 
@@ -61,14 +75,14 @@ class IconScoreClassLoader(object):
         :param score_root_path:
         :return: subclass derived from IconScoreBase
         """
-
         score_deploy_path: str = get_score_deploy_path(score_root_path, score_address, tx_hash)
-        score_package_info: dict = IconScoreClassLoader._load_package_json(score_deploy_path)
         package_name: str = get_package_name_by_address_and_tx_hash(score_address, tx_hash)
 
-        # in order for the new module to be noticed by the import system
-        importlib.invalidate_caches()
-        module = importlib.import_module(
-            f".{score_package_info[IconScoreClassLoader._MAIN_FILE]}", package_name)
+        package_json: dict = IconScoreClassLoader._load_package_json(score_deploy_path)
+        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
 
-        return getattr(module, score_package_info[IconScoreClassLoader._MAIN_SCORE])
+        # In order for the new module to be noticed by the import system
+        importlib.invalidate_caches()
+        module = importlib.import_module(f".{main_module}", package_name)
+
+        return getattr(module, main_score)
