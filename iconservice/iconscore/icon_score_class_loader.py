@@ -52,10 +52,15 @@ class IconScoreClassLoader(object):
 
     @staticmethod
     def _get_package_info(package_json: dict) -> tuple:
+        """Returns main_module and main_score
+
+        :param package_json: dict returned by _load_package_json()
+        :return: tuple containing main_module and main_score
+        """
         main_module: str = package_json.get('main_module')
         if not isinstance(main_module, str):
-            # 'main_file' field will be deprecated soon.
-            # Use 'main_module" instead
+            # "main_file" field will be deprecated soon.
+            # Use "main_module" instead
             main_module: str = package_json['main_file']
 
         # Relative package name is not allowed
