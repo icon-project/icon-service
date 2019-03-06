@@ -158,6 +158,11 @@ def json_loads(src: str, **kwargs) -> Any:
 
 
 def create_address_with_key(public_key: bytes) -> Optional['Address']:
+    """Create an address with a given public key, charging a fee
+
+    :param public_key: Public key based on secp256k1
+    :return: Address created from a given public key or None if failed
+    """
     # FIXME: Add step calculation code
     try:
         return _create_address_with_key(public_key)
@@ -206,15 +211,23 @@ def _convert_key(public_key: bytes) -> Optional[bytes]:
     return public_key.serialize(compressed=not compressed)
 
 
-def recover_key(msg_hash: bytes, signature: bytes) -> Optional[bytes]:
+def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
+    """Returns the public key from message hash and recoverable signature, charging a fee
+
+    :param msg_hash: 32 bytes data
+    :param signature: signature_data(64) + recovery_id(1)
+    :param compressed: the type of public key to return
+    :return: public key recovered from msg_hash and signature
+        (compressed: 33 bytes key, uncompressed: 65 bytes key)
+    """
     # FIXME: Add step calculation code
     try:
-        return _recover_key(msg_hash, signature)
+        return _recover_key(msg_hash, signature, compressed)
     except:
         return None
 
 
-def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
+def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optional[bytes]:
     """Returns the public key from message hash and recoverable signature
 
     :param msg_hash: 32 bytes data
