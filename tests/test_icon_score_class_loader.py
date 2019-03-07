@@ -94,3 +94,37 @@ class TestIconScoreClassLoader(unittest.TestCase):
         score_path = f'{score_root_path}/{address}/{tx_hash}'
         import_name: str = convert_path_to_package_name(score_path[index:])
         self.assertEqual(import_name, expected_import_name)
+
+    def test_get_package_info_0(self):
+        package_json = {
+            'version': '1.0.0',
+            'main_module': 'token',
+            'main_score': 'Token'
+        }
+
+        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
+        self.assertEqual('token', main_module)
+        self.assertEqual('Token', main_score)
+
+    def test_get_package_info_1(self):
+        package_json = {
+            'version': '1.0.0',
+            'main_file': 'token',
+            'main_score': 'Token'
+        }
+
+        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
+        self.assertEqual('token', main_module)
+        self.assertEqual('Token', main_score)
+
+    def test_get_package_info_2(self):
+        package_json = {
+            'version': '1.0.0',
+            'main_file': 'invalid.token',
+            'main_module': 'valid.token',
+            'main_score': 'Token'
+        }
+
+        main_module, main_score = IconScoreClassLoader._get_package_info(package_json)
+        self.assertEqual('valid.token', main_module)
+        self.assertEqual('Token', main_score)
