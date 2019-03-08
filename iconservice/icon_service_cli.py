@@ -16,6 +16,7 @@
 
 import argparse
 import asyncio
+import os
 import subprocess
 import sys
 from enum import IntEnum
@@ -109,7 +110,7 @@ def main():
 
 
 def _start(conf: 'IconConfig') -> int:
-    if not _is_running_icon_service(conf):
+    if not _check_if_process_running(conf):
         _start_process(conf)
     Logger.info(f'start_command done!', ICON_SERVICE_CLI)
     return ExitCode.SUCCEEDED
@@ -119,7 +120,7 @@ def _stop(conf: 'IconConfig') -> int:
     async def __stop():
         await stop_process(conf)
 
-    if _is_running_icon_service(conf):
+    if _check_if_process_running(conf):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(__stop())
 
@@ -162,28 +163,37 @@ async def stop_process(conf: 'IconConfig'):
     Logger.info(f'stop_process_icon_service!', ICON_SERVICE_CLI)
 
 
-def _is_running_icon_service(conf: 'IconConfig') -> bool:
-    return _check_service_running(conf)
-
-
-def _check_service_running(conf: 'IconConfig') -> bool:
-    Logger.info(f'check_serve_icon_service!', ICON_SERVICE_CLI)
+def _check_if_process_running(conf: 'IconConfig') -> bool:
     proc_title = ICON_SERVICE_PROCTITLE_FORMAT.format(**
                                                       {ConfigKey.SCORE_ROOT_PATH: conf[ConfigKey.SCORE_ROOT_PATH],
                                                        ConfigKey.STATE_DB_ROOT_PATH: conf[ConfigKey.STATE_DB_ROOT_PATH],
                                                        ConfigKey.CHANNEL: conf[ConfigKey.CHANNEL],
                                                        ConfigKey.AMQP_KEY: conf[ConfigKey.AMQP_KEY],
                                                        ConfigKey.AMQP_TARGET: conf[ConfigKey.AMQP_TARGET]})
-    return find_procs_by_params(proc_title)
+    cmd_lines = _get_process_command_list()
+    if cmd_lines:
+        for cmdline in cmd_lines:
+            if cmdline.startswith(b'icon_service.') and cmdline.decode() == proc_title:
+                return True
+    return False
 
 
-def find_procs_by_params(name) -> bool:
-    # Return a list of processes matching 'name'.
-    command = f"ps -ef | grep {name} | grep -v grep"
-    result = subprocess.run(command, stdout=subprocess.PIPE, shell=True)
-    if result.returncode == 1:
-        return False
-    return True
+def _get_process_command_list() -> list:
+    if os.path.exists('/proc'):
+        cmd_lines = []
+        pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+        for pid in pids:
+            try:
+                cmdpath = os.path.join('/proc', pid, 'cmdline')
+                cmdline = open(cmdpath, 'rb').read().rstrip(b'\x00')
+                cmd_lines.append(cmdline)
+            except IOError:
+                continue
+    else:
+        result = subprocess.run(['ps', '-eo', 'command'], stdout=subprocess.PIPE)
+        cmd_lines = result.stdout.split(b'\n')
+
+    return cmd_lines
 
 
 def _make_icon_score_queue_name(channel: str, amqp_key: str) -> str:
