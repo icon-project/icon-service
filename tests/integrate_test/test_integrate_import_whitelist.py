@@ -18,14 +18,13 @@
 """
 
 import unittest
+from typing import TYPE_CHECKING
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import ConfigKey, IconServiceFlag
-from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
+from iconservice.icon_constant import IconServiceFlag
+from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -130,7 +129,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'addImportWhiteList',
                                        {"importStmt": "{'json': [],'os': ['path'],'base.exception': "
-                                                       "['ExceptionCode','RevertException']}"})
+                                                      "['ExceptionCode','RevertException']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
         # confirm block
@@ -183,7 +182,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                        GOVERNANCE_SCORE_ADDRESS,
                                        'removeImportWhiteList',
                                        {"importStmt": "{'json': [],'os': ['path'],"
-                                                       "'base.exception': ['RevertException']}"})
+                                                      "'base.exception': ['RevertException']}"})
         prev_block, tx_results = self._make_and_req_block([tx1])
 
         # confirm block
@@ -250,7 +249,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.import_white_list_enable()
 
         tx1 = self._make_deploy_tx("test_scores",
-                                   "l_coin_0_5_0_using_import_os",
+                                   "test_score_using_import_os",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -261,7 +260,7 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
                                        {"importStmt": "{'os': []}"})
 
         tx3 = self._make_deploy_tx("test_scores",
-                                   "l_coin_0_5_0_using_import_os",
+                                   "test_score_using_import_os",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -275,6 +274,49 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
         self.assertEqual(tx_results[1].status, int(True))
         self.assertEqual(tx_results[2].status, int(True))
 
+    def test_apply_score_multiply_import(self):
+        self.import_white_list_enable()
+
+        # add import whitelist
+        tx1 = self._make_score_call_tx(self._admin,
+                                       GOVERNANCE_SCORE_ADDRESS,
+                                       'addImportWhiteList',
+                                       {"importStmt": "{'struct': ['pack', 'unpack']}"})
+
+        tx2 = self._make_deploy_tx("test_deploy_scores",
+                                   'import_test/import_multiply',
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        raise_exception_start_tag("test_apply_score_import_white_list")
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        raise_exception_end_tag("test_apply_score_import_white_list")
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(tx_results[1].status, int(True))
+
+    def test_normal(self):
+        self.import_white_list_enable()
+
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'addImportWhiteList',
+                                      {"importStmt": "{'os': ['path']}"})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        tx = self._make_deploy_tx("test_deploy_scores",
+                                  'import_test/import_normal',
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
     def test_deploy_invalid_score(self):
         self.import_white_list_enable()
 
@@ -283,9 +325,9 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/test_score_import_in_method',
             'import_test/test_score_import_in_function',
             'import_test/test_score_import_in_class',
-            'import_test/linkcoin_import_in_submodule',
-            'import_test/linkcoin_import_in_indirect_submodule',
-            'import_test/linkcoin_import_in_indirect_submodule_method',
+            'import_test/import_in_submodule',
+            'import_test/import_in_indirect_submodule',
+            'import_test/import_in_indirect_submodule_method',
             'import_test/test_score_exec_top_level',
             'import_test/test_score_exec_function',
             'import_test/test_score_exec_method',
@@ -293,15 +335,17 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/test_score_eval_method',
             'import_test/test_score_compile_function',
             'import_test/test_score_compile_method',
-            'import_test/linkcoin_exec_in_submodule',
-            'import_test/linkcoin_exec_in_indirect_submodule',
+            'import_test/exec_in_submodule',
+            'import_test/exec_in_indirect_submodule',
             'import_test/as_test/test_score_import_in_top_level',
             'import_test/as_test/test_score_import_in_class',
             'import_test/as_test/test_score_import_in_method',
             'import_test/as_test/test_score_import_in_function',
-            'import_test/as_test/linkcoin_import_in_submodule',
-            'import_test/as_test/linkcoin_import_in_indirect_submodule',
-            'import_test/as_test/linkcoin_import_in_indirect_submodule_method'
+            'import_test/as_test/test_in_submodule',
+            'import_test/as_test/test_in_indirect_submodule',
+            'import_test/as_test/test_in_indirect_submodule_method',
+            'import_test/import_builtin',
+            'import_test/import_builtin2'
         ]
 
         tx_list = [self._make_deploy_tx('test_deploy_scores', deploy_name,

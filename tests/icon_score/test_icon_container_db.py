@@ -105,7 +105,10 @@ class TestIconContainerDB(unittest.TestCase):
         test_dict['a'] = 1
         test_dict['b'] = 2
 
+        test_dict['b'] += 1
+
         self.assertEqual(test_dict['a'], 1)
+        self.assertEqual(test_dict['b'], 3)
 
     def test_success_dict_other_Key(self):
         name = 'test_dict'
@@ -147,9 +150,6 @@ class TestIconContainerDB(unittest.TestCase):
         for i in range(range_size):
             self.assertEqual(test_array[i], i)
 
-        for i in range(range_size, range_size):
-            self.assertRaises(ContainerDBException, test_array[i])
-
         cant_find_value = range_size
         self.assertFalse(cant_find_value in test_array)
         self.assertEqual(range_size, len(test_array))
@@ -158,6 +158,62 @@ class TestIconContainerDB(unittest.TestCase):
             self.assertEqual(e, i)
 
         self.assertEqual(test_array[-1], range(range_size)[-1])
+
+    def test_success_array2(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        range_size = 3
+        expect_array = []
+
+        for i in range(range_size):
+            expect_array.append(i)
+            test_array.put(i)
+
+        for index, e in enumerate(test_array):
+            self.assertEqual(e, expect_array[index])
+
+    def test_success_array3(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        range_size = 3
+        expect_array = []
+
+        for i in range(range_size):
+            expect_array.append(i)
+            test_array.put(i)
+
+        if 0 in test_array:
+            pass
+        else:
+            raise Exception()
+
+        if "a" in test_array:
+            raise Exception()
+        else:
+            pass
+
+    def test_success_array4(self):
+        test_array = ArrayDB('test_array', self.db, value_type=int)
+
+        test_array.put(1)
+        test_array.put(2)
+
+        with self.assertRaises(ContainerDBException):
+            var = test_array[2]
+            print(var)
+
+    def test_negative_index_access_in_array_db(self):
+        array = ArrayDB('array', self.db, value_type=int)
+
+        size = 10
+        for i in range(size):
+            array.put(i)
+
+        negative_index = -1
+        for _ in range(size):
+            index = size + negative_index
+            self.assertEqual(array[index], array[negative_index])
+            negative_index -= 1
 
     def test_success_variable(self):
         test_var = VarDB('test_var', self.db, value_type=int)
@@ -225,6 +281,54 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(5, testarray.pop())
         self.assertEqual(2, len(testarray))
 
+    def test_array_db2(self):
+        name = "TEST"
+        testarray = ArrayDB(name, self.db, value_type=int)
+        self.assertNotEqual(testarray._db, self.db)
+        self.assertEqual(
+            testarray._db._prefix,
+            ContainerUtil.create_db_prefix(ArrayDB, name))
+
+        testarray.put(1)
+        testarray.put(2)
+        testarray.put(3)
+        testarray.put(4)
+
+        self.assertEqual(1, testarray[0])
+        self.assertEqual(2, testarray[1])
+        self.assertEqual(3, testarray[2])
+        self.assertEqual(4, testarray[3])
+
+        self.assertEqual(4, testarray[-1])
+        self.assertEqual(3, testarray[-2])
+        self.assertEqual(2, testarray[-3])
+        self.assertEqual(1, testarray[-4])
+
+        testarray[0] = 5
+        testarray[1] = 6
+        testarray[2] = 7
+        testarray[3] = 8
+
+        self.assertEqual(5, testarray[0])
+        self.assertEqual(6, testarray[1])
+        self.assertEqual(7, testarray[2])
+        self.assertEqual(8, testarray[3])
+
+        testarray[-1] = 4
+        testarray[-2] = 3
+        testarray[-3] = 2
+        testarray[-4] = 1
+
+        self.assertEqual(4, testarray[-1])
+        self.assertEqual(3, testarray[-2])
+        self.assertEqual(2, testarray[-3])
+        self.assertEqual(1, testarray[-4])
+
+        with self.assertRaises(ContainerDBException):
+            testarray[5] = 1
+            a = testarray[5]
+
+
     def test_container_util(self):
         prefix: bytes = ContainerUtil.create_db_prefix(ArrayDB, 'a')
         self.assertEqual(b'\x00|a', prefix)
@@ -234,3 +338,4 @@ class TestIconContainerDB(unittest.TestCase):
 
         with self.assertRaises(ContainerDBException):
             prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
+

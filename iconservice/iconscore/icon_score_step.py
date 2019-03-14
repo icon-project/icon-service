@@ -13,16 +13,89 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from enum import Enum, auto
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from iconservice.icon_constant import MAX_EXTERNAL_CALL_COUNT
-from iconservice.utils import to_camel_case
+from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3
+from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 from ..base.exception import IconServiceBaseException, ExceptionCode, InvalidRequestException
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContextType
+
+
+def get_input_data_size(revision: int, input_data: Any) -> int:
+    """
+    Returns size of input data of a transaction
+
+    :param revision: current revision
+    :param input_data: input data of transaction
+    :return: size of input data
+    """
+    if revision < REVISION_3:
+        return get_data_size_recursively(input_data)
+
+    data = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
+    return len(data.encode())
+
+
+def get_deploy_content_size(revision: int, content: str) -> int:
+    """
+    Returns size of deploying content.
+
+    If the content is not binary hex string, it raises an exception.
+
+    :param revision: current revision
+    :param content: deploying content of transaction
+    :return: size of input content
+    """
+    if revision < REVISION_3:
+        return get_data_size_recursively(content)
+
+    if isinstance(content, str) \
+            and content.startswith('0x') \
+            and is_lowercase_hex_string(content[2:]) \
+            and len(content) % 2 == 0:
+
+        return len(content[2:]) // 2
+    else:
+        raise InvalidRequestException('Invalid content data')
+
+
+def get_data_size_recursively(data) -> int:
+    """
+    Deprecated (Only for revision 2 and below).
+    Returns size of data(input data or deploying content) by recursive traversal
+
+    :param data: input data or deploying content
+    :return: size of data
+    """
+    size = 0
+    if data:
+        if isinstance(data, dict):
+            for v in data.values():
+                size += get_data_size_recursively(v)
+        elif isinstance(data, list):
+            for v in data:
+                size += get_data_size_recursively(v)
+        elif isinstance(data, str):
+            # If the value is hexstring, it is calculated as bytes otherwise
+            # string
+            data_body = data[2:] if data.startswith('0x') else data
+            if is_lowercase_hex_string(data_body):
+                data_body_length = len(data_body)
+                size = data_body_length // 2
+                if data_body_length % 2 == 1:
+                    size += 1
+            else:
+                size = len(data.encode('utf-8'))
+        else:
+            # int and bool
+            if isinstance(data, int):
+                size = byte_length_of_int(data)
+    return size
 
 
 class AutoValueEnum(Enum):

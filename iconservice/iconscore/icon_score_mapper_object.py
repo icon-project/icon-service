@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .icon_score_base import IconScoreBase
-from ..base.address import Address
+from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
+from ..database.db import IconScoreDatabase
+from ..icon_constant import REVISION_2
 
 
 class IconScoreInfo(object):
@@ -25,35 +26,52 @@ class IconScoreInfo(object):
     If this class is not necessary anymore, Remove it
     """
 
-    def __init__(self, icon_score: 'IconScoreBase', tx_hash: bytes) -> None:
+    def __init__(self, score_class: type, score_db: 'IconScoreDatabase', tx_hash: bytes) -> None:
         """Constructor
 
-        :param icon_score: icon score object
+        :param score_class:
+        :param score_db:
+        :param tx_hash:
         """
-        self._check_icon_score(icon_score)
-        self._icon_score = icon_score
         self._tx_hash = tx_hash
-
-    @property
-    def icon_score(self) -> 'IconScoreBase':
-        """Returns IconScoreBase object
-
-        If IconScoreBase object is None, Create it here.
-        """
-        return self._icon_score
+        self._score_class = score_class
+        self._score_db = score_db
+        self._score = None
 
     @property
     def tx_hash(self) -> bytes:
         return self._tx_hash
 
-    @staticmethod
-    def _check_icon_score(icon_score: 'IconScoreBase') -> None:
-        """Check if key type is an icon score address type or not.
+    @property
+    def score_class(self) -> type:
+        return self._score_class
 
-        :param icon_score: icon score base
+    @property
+    def score_db(self) -> 'IconScoreDatabase':
+        return self._score_db
+
+    @property
+    def address(self) -> 'Address':
+        return self._score_db.address
+
+    def get_score(self, revision: int) -> 'IconScoreBase':
+        """Provide a score instance according to the revision.
+        1. revision <= 3: Returns a cached score instance
+        2. revision > 3: Returns a newly created score instance
+
+        :param revision:
+        :return:
         """
-        if not isinstance(icon_score, IconScoreBase):
-            raise InvalidParamsException("score is not child from IconScoreBase")
+        if revision <= REVISION_2 or self.address == GOVERNANCE_SCORE_ADDRESS:
+            if self._score is None:
+                self._score = self.create_score()
+
+            return self._score
+
+        return self.create_score()
+
+    def create_score(self) -> 'IconScoreBase':
+        return self._score_class(self._score_db)
 
 
 class IconScoreMapperObject(dict):

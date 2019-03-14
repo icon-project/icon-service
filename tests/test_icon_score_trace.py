@@ -66,7 +66,6 @@ class TestTrace(unittest.TestCase):
         InternalCall._other_score_call = Mock()
         IconScoreContext.icx_engine = Mock(spec=IcxEngine)
         IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
-        IconScoreContextUtil.validate_score_blacklist = Mock(return_value=False)
 
         context.icon_score_mapper = Mock()
         context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))

@@ -14,45 +14,107 @@
 # limitations under the License.
 
 import os
+from shutil import copytree
 from typing import TYPE_CHECKING
 
+from iconcommons.logger import Logger
+from .icon_score_deploy_storage import IconScoreDeployInfo, DeployState
+from .utils import remove_path
 from ..base.address import Address
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
+from ..base.exception import ServerErrorException
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, ZERO_TX_HASH, ICON_DEPLOY_LOG_TAG
+from ..iconscore.icon_score_context_util import IconScoreContextUtil
 
 if TYPE_CHECKING:
-    from .icon_score_deploy_engine import IconScoreDeployEngine
+    from .icon_score_deploy_storage import IconScoreDeployStorage
+    from ..iconscore.icon_score_base import IconScoreBase
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..iconscore.icon_score_mapper_object import IconScoreInfo
 
 
 class IconBuiltinScoreLoader(object):
+    """Before activating icon_service_engine, deploy builtin scores which has never been deployed.
+    """
 
     @staticmethod
     def _pre_builtin_score_root_path():
         root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
         return os.path.join(root_path, 'builtin_scores')
 
-    def __init__(self,
-                 deploy_engine: 'IconScoreDeployEngine') -> None:
-        """Constructor
-        """
+    @staticmethod
+    def load_builtin_scores(context: 'IconScoreContext', builtin_score_owner_str: str):
+        builtin_score_owner = Address.from_string(builtin_score_owner_str)
+        for score_name, value in BUILTIN_SCORE_ADDRESS_MAPPER.items():
+            score_address = Address.from_string(value)
 
-        self._deploy_engine = deploy_engine
+            # If builtin score has been already deployed, exit.
+            if IconScoreContextUtil.is_score_active(context, score_address):
+                IconBuiltinScoreLoader._load_score(context, score_address, builtin_score_owner)
+            else:
+                IconBuiltinScoreLoader._deploy_score(
+                    context, score_name, score_address, builtin_score_owner)
 
-    def load_builtin_scores(self, context: 'IconScoreContext', admin_addr_str: str):
-        admin_owner = Address.from_string(admin_addr_str)
-        for key, value in BUILTIN_SCORE_ADDRESS_MAPPER.items():
-            addr = Address.from_string(value)
-            self._load_builtin_score(context, key, addr, admin_owner)
+    @staticmethod
+    def _load_score(context: 'IconScoreContext',
+                    score_address: 'Address', builtin_score_owner: 'Address'):
+        score: 'IconScoreBase' = IconScoreContextUtil.get_icon_score(context, score_address)
+        assert score is not None
 
-    def _load_builtin_score(self, context: 'IconScoreContext',
-                            score_name: str,
-                            icon_score_address: 'Address',
-                            builtin_score_owner: 'Address'):
-        if self._deploy_engine.icon_deploy_storage.is_score_active(context, icon_score_address):
-            return
+        if score.owner != builtin_score_owner:
+            raise ServerErrorException(
+                f'score.owner({score.owner}) != builtin_score_owner({builtin_score_owner})')
 
-        score_path = os.path.join(IconBuiltinScoreLoader._pre_builtin_score_root_path(), score_name)
+    @staticmethod
+    def _deploy_score(context: 'IconScoreContext',
+                      score_name: str,
+                      score_address: 'Address',
+                      builtin_score_owner: 'Address'):
+        score_deploy_storage: IconScoreDeployStorage = \
+            context.icon_score_deploy_engine.icon_deploy_storage
 
-        self._deploy_engine.\
-            write_deploy_info_and_tx_params_for_builtin(context, icon_score_address, builtin_score_owner)
-        self._deploy_engine.deploy_for_builtin(context, icon_score_address, score_path)
+        score_source_path_in_iconservice: str = os.path.join(
+            IconBuiltinScoreLoader._pre_builtin_score_root_path(), score_name)
+
+        # Save deploy_info for a builtin score to score_deploy_storage.
+        deploy_info = IconScoreDeployInfo(
+            score_address=score_address,
+            deploy_state=DeployState.ACTIVE,
+            owner=builtin_score_owner,
+            current_tx_hash=ZERO_TX_HASH,
+            next_tx_hash=ZERO_TX_HASH)
+        score_deploy_storage.put_deploy_info(context, deploy_info)
+
+        tx_hash: bytes = deploy_info.current_tx_hash
+
+        # score_path is score_root_path/score_address/ directory.
+        score_path: str = os.path.join(
+            context.score_root_path, score_address.to_bytes().hex())
+
+        # Make a directory for a builtin score with a given score_address.
+        os.makedirs(score_path, exist_ok=True)
+
+        try:
+            score_deploy_path: str = os.path.join(score_path, f'0x{tx_hash.hex()}')
+
+            # remove_path() supports directory as well as file.
+            remove_path(score_deploy_path)
+            # Copy builtin score source files from iconservice package to score_deploy_path.
+            copytree(score_source_path_in_iconservice, score_deploy_path)
+        except FileExistsError:
+            pass
+
+        try:
+            # Import score class from deployed builtin score sources
+            score_info: 'IconScoreInfo' =\
+                IconScoreContextUtil.create_score_info(context, score_address, tx_hash)
+
+            # Create a score instance from the imported score class.
+            score = score_info.create_score()
+
+            # Call on_install() to initialize the score database of the builtin score.
+            score.on_install()
+        except BaseException as e:
+            Logger.exception(
+                f'Failed to deploy a builtin score: {score_address}\n{str(e)}',
+                ICON_DEPLOY_LOG_TAG)
+            raise e

@@ -325,7 +325,7 @@ across nodes, thus it must not rely on clock time.
            amount = self.msg.value
            self._balances[self.msg.sender] = self._balances[self.msg.sender] + amount
            self._amount_raised.set(self._amount_raised.get() + amount)
-           value = int(amount / self._price.get())
+           value = amount // self._price.get()
            data = b'called from Crowdsale'
 
            # Gives tokens to the contributor as a reward

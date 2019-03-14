@@ -261,8 +261,11 @@ class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
     def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
-        Logger.error("MQ Connection lost.")
-        self.clean_close()
+        Logger.error("MQ Connection lost. [Service]")
+        # self.clean_close()
+
+    def _callback_connection_reconnect_callback(self, connection: 'RobustConnection'):
+        Logger.error("MQ Connection reconnect. [Service]")
 
     def clean_close(self):
         self._task._close()
@@ -272,5 +275,8 @@ class IconScoreInnerStub(MessageQueueStub[IconScoreInnerTask]):
     TaskType = IconScoreInnerTask
 
     def _callback_connection_lost_callback(self, connection: 'RobustConnection'):
-        Logger.error("MQ Connection lost.")
-        self._task._close()
+        Logger.error("MQ Connection lost. [Stub]")
+        # self._task._close()
+
+    def _callback_connection_reconnect_callback(self, connection: 'RobustConnection'):
+        Logger.error("MQ Connection reconnect. [Service]")

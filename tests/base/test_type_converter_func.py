@@ -66,12 +66,48 @@ class TestTypeConverterFunc(unittest.TestCase):
         TypeConverter.convert_data_params(annotations, params)
         self.assertEqual(value, self.test_score.func_param_address2(**params))
 
+    def test_func_param_int_none(self):
+        value = None
+        params = {"value": value}
+        annotations = TypeConverter.make_annotations_from_method(self.test_score.func_param_int)
+        TypeConverter.convert_data_params(annotations, params)
+        self.assertEqual(value, self.test_score.func_param_int(**params))
+
+    def test_func_param_str_none(self):
+        value = None
+        params = {"value": value}
+        annotations = TypeConverter.make_annotations_from_method(self.test_score.func_param_str)
+        TypeConverter.convert_data_params(annotations, params)
+        self.assertEqual(value, self.test_score.func_param_str(**params))
+
+    def test_func_param_bytes_none(self):
+        value = None
+        params = {"value": value}
+        annotations = TypeConverter.make_annotations_from_method(self.test_score.func_param_bytes)
+        TypeConverter.convert_data_params(annotations, params)
+        self.assertEqual(value, self.test_score.func_param_bytes(**params))
+
+    def test_func_param_bool_none(self):
+        value = None
+        params = {"value": value}
+        annotations = TypeConverter.make_annotations_from_method(self.test_score.func_param_bool)
+        TypeConverter.convert_data_params(annotations, params)
+        self.assertEqual(value, self.test_score.func_param_bool(**params))
+
+    def test_func_param_address_none(self):
+        value = None
+        params = {"value": value}
+        annotations = TypeConverter.make_annotations_from_method(self.test_score.func_param_address1)
+        TypeConverter.convert_data_params(annotations, params)
+        self.assertEqual(value, self.test_score.func_param_address1(**params))
+
 
 class TestScore:
     def func_param_int(self, value: int) -> int:
         return value
 
     def func_param_str(self, value: str) -> str:
+        print(value)
         return value
 
     def func_param_bytes(self, value: bytes) -> bytes:

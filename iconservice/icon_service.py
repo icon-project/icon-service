@@ -53,13 +53,13 @@ class IconService(object):
         amqp_key = config[ConfigKey.AMQP_KEY]
         amqp_target = config[ConfigKey.AMQP_TARGET]
         score_root_path = config[ConfigKey.SCORE_ROOT_PATH]
-        db_root_patn = config[ConfigKey.STATE_DB_ROOT_PATH]
+        db_root_path = config[ConfigKey.STATE_DB_ROOT_PATH]
 
         self._set_icon_score_stub_params(channel, amqp_key, amqp_target)
 
         Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
         Logger.info(f'score_root_path : {score_root_path}', ICON_SERVICE)
-        Logger.info(f'icon_score_state_db_root_path  : {db_root_patn}', ICON_SERVICE)
+        Logger.info(f'icon_score_state_db_root_path  : {db_root_path}', ICON_SERVICE)
         Logger.info(f'amqp_target  : {amqp_target}', ICON_SERVICE)
         Logger.info(f'amqp_key  :  {amqp_key}', ICON_SERVICE)
         Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE)
@@ -127,29 +127,29 @@ def main():
     Logger.load_config(conf)
     Logger.print_config(conf, ICON_SERVICE_CLI)
 
-    _run_async(_check_rabbitmq())
+    _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
     icon_service.serve(config=conf)
     Logger.info(f'==========IconService Done==========', ICON_SERVICE_CLI)
 
 
 def run_in_foreground(conf: 'IconConfig'):
-    _run_async(_check_rabbitmq())
+    _run_async(_check_rabbitmq(conf[ConfigKey.AMQP_TARGET]))
     icon_service = IconService()
     icon_service.serve(config=conf)
 
 
 def _run_async(async_func):
-    loop = asyncio.new_event_loop()
+    loop = MessageQueueService.loop
     return loop.run_until_complete(async_func)
 
 
-async def _check_rabbitmq():
+async def _check_rabbitmq(amqp_target: str):
     connection = None
     try:
         amqp_user_name = os.getenv("AMQP_USERNAME", "guest")
         amqp_password = os.getenv("AMQP_PASSWORD", "guest")
-        connection = await aio_pika.connect(login=amqp_user_name, password=amqp_password)
+        connection = await aio_pika.connect(host=amqp_target, login=amqp_user_name, password=amqp_password)
         connection.connect()
     except ConnectionRefusedError:
         Logger.error("rabbitmq-service disable", ICON_SERVICE_CLI)

@@ -36,7 +36,7 @@ from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import IconScoreException, IconTypeError, InterfaceException, PayableException, ExceptionCode, \
     EventLogException, ExternalException, ServerErrorException
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_3
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -295,7 +295,7 @@ class IconScoreObject(ABC):
 class IconScoreBaseMeta(ABCMeta):
 
     def __new__(mcs, name, bases, namespace, **kwargs):
-        if IconScoreObject in bases:
+        if IconScoreObject in bases or name == "IconSystemScoreBase":
             return super().__new__(mcs, name, bases, namespace, **kwargs)
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
@@ -386,7 +386,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         :param func_name: name of method
         """
 
-        if func_name not in self.__get_attr_dict(CONST_CLASS_EXTERNALS):
+        if not self.__is_external_method(func_name):
             raise ExternalException(f"Invalid external method",
                                     func_name,
                                     type(self).__name__,
@@ -405,30 +405,43 @@ class IconScoreBase(IconScoreObject, ContextGetter,
                arg_params: Optional[list] = None,
                kw_params: Optional[dict] = None) -> Any:
 
-        if func_name != STR_FALLBACK:
-            self.validate_external_method(func_name)
-
-        self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
-
-        score_func = getattr(self, func_name)
-
         if func_name == STR_FALLBACK:
+            if self._context.revision >= REVISION_3:
+                if not self.__is_payable_method(func_name):
+                    raise ExternalException(f"Method not found",
+                                            func_name,
+                                            type(self).__name__)
+            else:
+                if not self.__is_payable_method(func_name) and self.msg.value > 0:
+                    raise PayableException(f"This is not payable", func_name, type(self).__name__)
+
+            score_func = getattr(self, func_name)
             ret = score_func()
         else:
+            self.validate_external_method(func_name)
+            self.__check_payable(func_name, self.__get_attr_dict(CONST_CLASS_PAYABLES))
+            score_func = getattr(self, func_name)
             if arg_params is None:
                 arg_params = []
             if kw_params is None:
                 kw_params = {}
             ret = score_func(*arg_params, **kw_params)
-
         return ret
 
     def __check_payable(self, func_name: str, payable_dict: dict):
-        if func_name not in payable_dict:
-            if self.msg.value > 0:
-                raise PayableException(f"This is not payable", func_name, type(self).__name__)
+        if self.msg.value > 0 and func_name not in payable_dict:
+            raise PayableException(f"This is not payable", func_name, type(self).__name__)
+
+    def __is_external_method(self, func_name) -> bool:
+        return func_name in self.__get_attr_dict(CONST_CLASS_EXTERNALS)
+
+    def __is_payable_method(self, func_name) -> bool:
+        return func_name in self.__get_attr_dict(CONST_CLASS_PAYABLES)
 
     def __is_func_readonly(self, func_name: str) -> bool:
+        if not self.__is_external_method(func_name):
+            return False
+
         func = getattr(self, func_name)
         return bool(getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.ReadOnly)
 
@@ -609,7 +622,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         warnings.warn('Use create_interface_score() instead.', DeprecationWarning, stacklevel=2)
         return InternalCall.other_external_call(self._context, self.address, addr_to, amount, func_name, (), kw_dict)
 
-    def revert(self, message: Optional[str] = None,
+    @staticmethod
+    def revert(message: Optional[str] = None,
                code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
         revert(message, code)
 

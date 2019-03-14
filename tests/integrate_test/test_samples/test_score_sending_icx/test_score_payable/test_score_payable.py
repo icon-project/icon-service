@@ -23,6 +23,5 @@ class TestScorePayable(IconScoreBase):
         return self._value.get()
 
     @payable
-    def fallback(self) -> bool:
+    def fallback(self) -> None:
         print("fallback!!")
-        return False

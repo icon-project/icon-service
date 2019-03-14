@@ -21,7 +21,8 @@ import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from tests import raise_exception_start_tag, raise_exception_end_tag
+from tests import raise_exception_start_tag, raise_exception_end_tag, create_tx_hash
+from tests.integrate_test import create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 from typing import TYPE_CHECKING, Any
@@ -211,6 +212,119 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         # 4. assert get value: 2 * value2
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value2)
 
+    def test_deploy_invalid_content(self):
+        self._update_governance()
+
+        # Update revision
+        prev_block, tx_results = self._make_and_req_block([
+            self._make_score_call_tx(
+                self._admin,
+                GOVERNANCE_SCORE_ADDRESS,
+                'setRevision',
+                {"code": hex(3), "name": "1.1.1"},
+            )
+        ])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(3, self._query_revision())
+
+        # 1. deploy with str content
+        tx1 = self._make_invalid_deploy_tx(
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
+                                   'invalid')
+
+        raise_exception_start_tag("test_score_no_zip")
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        raise_exception_end_tag("test_score_no_zip")
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.message, f'Invalid content data')
+
+        # 2. deploy with int content
+        tx1 = self._make_invalid_deploy_tx(
+            self._addr_array[0],
+            ZERO_SCORE_ADDRESS,
+            1000)
+
+        raise_exception_start_tag("test_score_no_zip")
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        raise_exception_end_tag("test_score_no_zip")
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.message, f'Invalid content data')
+
+        # 3. deploy content with hex(no prefix)
+        tx1 = self._make_invalid_deploy_tx(
+            self._addr_array[0],
+            ZERO_SCORE_ADDRESS,
+            '1a2c3b')
+
+        raise_exception_start_tag("test_score_no_zip")
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        raise_exception_end_tag("test_score_no_zip")
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.message, f'Invalid content data')
+
+        # 3. deploy content with hex(upper case)
+        tx1 = self._make_invalid_deploy_tx(
+            self._addr_array[0],
+            ZERO_SCORE_ADDRESS,
+            '0x1A2c3b')
+
+        raise_exception_start_tag("test_score_no_zip")
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        raise_exception_end_tag("test_score_no_zip")
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].failure.message, f'Invalid content data')
+
+    def _make_invalid_deploy_tx(self,
+                        addr_from: 'Address',
+                        addr_to: 'Address',
+                        content: Any = None):
+
+        deploy_params = {}
+        deploy_data = {'contentType': 'application/zip', 'content': content, 'params': deploy_params}
+
+        timestamp_us = create_timestamp()
+        nonce = 0
+
+        request_params = {
+            "version": self._version,
+            "from": addr_from,
+            "to": addr_to,
+            "stepLimit": self._step_limit,
+            "timestamp": timestamp_us,
+            "nonce": nonce,
+            "signature": self._signature,
+            "dataType": "deploy",
+            "data": deploy_data
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        request_params['txHash'] = create_tx_hash()
+        tx = {
+            'method': method,
+            'params': request_params
+        }
+
+        return tx
+
+    def _query_revision(self):
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getRevision",
+                "params": {}
+            }
+        }
+        return self._query(query_request)['code']
+
     def test_score_no_zip(self):
         self._update_governance()
 
@@ -312,7 +426,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMS)
-        self.assertEqual(tx_results[0].failure.message, "can't symlink deploy")
+        self.assertIsInstance(tx_results[0].failure.message, str)
 
 
 if __name__ == '__main__':

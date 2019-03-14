@@ -15,6 +15,7 @@
 # limitations under the License.
 from typing import TYPE_CHECKING, List, Optional
 
+from ..base.exception import ExceptionCode
 from .icon_score_event_log import EventLog
 from ..utils.bloom import BloomFilter
 from ..base.address import Address
@@ -34,8 +35,18 @@ class TransactionResult(object):
 
     class Failure(object):
         def __init__(self, code: int, message: str):
-            self.code = int(code)
-            self.message = str(message)
+            """MUST check arguments type strictly
+
+            :param code: error code
+            :param message: error message
+            """
+            if type(code) != int:
+                code = ExceptionCode.SERVER_ERROR.value
+            if type(message) != str:
+                message = 'Invalid argument: message is not a string'
+
+            self.code = code
+            self.message = message
 
     def __init__(
             self,

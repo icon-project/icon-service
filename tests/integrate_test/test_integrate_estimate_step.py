@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from math import ceil
 
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
@@ -358,6 +359,159 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(estimate, tx_results[0].step_used)
 
+    def test_migration_input_step(self):
+        self._update_governance_0_0_4()
+        self.assertEqual(2, self._query_revision())
 
+        step_costs = self._query_step_costs()
 
+        key_content_type = 'contentType'
+        key_content = 'content'
+        key_data_params = 'params'
+        content_type = 'application/zip'
+        content = '0xabcde12345'
 
+        data_param_keys = ['upper_case_hex',
+                           'lower_case_hex',
+                           'no_prefix_hex',
+                           'korean',
+                           'negative_integer']
+
+        data_param_values = ['0xabcDe12345',
+                             '0xabcde12345',
+                             'abcde12345',
+                             '한국어',
+                             '-0x1a2b3c']
+
+        request = self.generate_mock_request(
+            key_content, content,
+            key_content_type, content_type,
+            key_data_params,
+            data_param_keys, data_param_values)
+
+        estimated_steps = self.icon_service_engine.estimate_step(request)
+
+        content_size = self._get_bin_size(content)
+
+        input_size_rev2 = \
+            self._get_str_size(content_type) + \
+            self._get_bin_size(content) + \
+            self._get_str_size(data_param_values[0]) + \
+            self._get_bin_size(data_param_values[1]) + \
+            self._get_bin_size(data_param_values[2]) + \
+            self._get_str_size(data_param_values[3]) + \
+            self._get_str_size(data_param_values[4])
+
+        expected_steps = self._get_expected_step_count(step_costs, input_size_rev2, content_size)
+        self.assertEqual(expected_steps, estimated_steps)
+
+        # Update revision
+        prev_block, tx_results = self._make_and_req_block([
+            self._make_score_call_tx(
+                self._admin,
+                GOVERNANCE_SCORE_ADDRESS,
+                'setRevision',
+                {"code": hex(3), "name": "1.1.1"},
+            )
+        ])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(3, self._query_revision())
+
+        estimated_steps = self.icon_service_engine.estimate_step(request)
+
+        input_size_rev3 = len(
+            '{'
+                f'"{key_content_type}":"{content_type}",'
+                f'"{key_content}":"{content}",'
+                f'"{key_data_params}":'
+                '{'
+                    f'"{data_param_keys[0]}":"{data_param_values[0]}",'
+                    f'"{data_param_keys[1]}":"{data_param_values[1]}",'
+                    f'"{data_param_keys[2]}":"{data_param_values[2]}",'
+                    f'"{data_param_keys[3]}":"{data_param_values[3]}",'
+                    f'"{data_param_keys[4]}":"{data_param_values[4]}"'
+                '}'
+            '}'.encode())
+
+        expected_steps = self._get_expected_step_count(step_costs, input_size_rev3, content_size)
+        self.assertEqual(expected_steps, estimated_steps)
+
+    def generate_mock_request(self,
+                              key_content, content,
+                              key_content_type, content_type,
+                              key_data_params,
+                              data_param_keys, data_param_values):
+        return {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'version': 3,
+                'from': self._genesis,
+                'to': ZERO_SCORE_ADDRESS,
+                'stepLimit': 1000000000000,
+                'timestamp': 1541753667870296,
+                'nonce': 0,
+                'dataType': 'deploy',
+                'data': {
+                    key_content_type: content_type,
+                    key_content: content,
+                    key_data_params: {
+                        data_param_keys[0]: data_param_values[0],
+                        data_param_keys[1]: data_param_values[1],
+                        data_param_keys[2]: data_param_values[2],
+                        data_param_keys[3]: data_param_values[3],
+                        data_param_keys[4]: data_param_values[4]
+                    }
+                }
+            }
+        }
+
+    def _update_governance_0_0_4(self):
+        tx = self._make_deploy_tx("test_builtin",
+                                  "0_0_4/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+    def _query_revision(self):
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getRevision",
+                "params": {}
+            }
+        }
+        return self._query(query_request)['code']
+
+    def _query_step_costs(self):
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": GOVERNANCE_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getStepCosts",
+                "params": {}
+            }
+        }
+        return self._query(query_request)
+
+    @staticmethod
+    def _get_expected_step_count(step_costs, input_size, content_size):
+        return step_costs['default'] + \
+               step_costs['input'] * input_size + \
+               step_costs['contractSet'] * content_size + \
+               step_costs['contractCreate']
+
+    @staticmethod
+    def _get_str_size(data):
+        return len(data.encode('utf-8'))
+
+    @staticmethod
+    def _get_bin_size(data):
+        index_of_hex_body = 2 if data[:2] == '0x' else 3 if data[:3] == '-0x' else 0
+        return ceil(len(data[index_of_hex_body:]) / 2)

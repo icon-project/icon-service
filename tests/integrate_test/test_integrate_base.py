@@ -98,7 +98,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "genesis",
                         "address": self._genesis,
-                        "balance": 100 * self._icx_factor
+                        "balance": 1_000_000 * self._icx_factor
                     },
                     {
                         "name": "fee_treasury",
@@ -133,7 +133,8 @@ class TestIntegrateBase(TestCase):
                         deploy_params: dict = None,
                         timestamp_us: int = None,
                         data: bytes = None,
-                        is_sys: bool = False):
+                        is_sys: bool = False,
+                        pre_validation_enabled: bool = True):
 
         if deploy_params is None:
             deploy_params = {}
@@ -175,7 +176,9 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        if pre_validation_enabled:
+            self.icon_service_engine.validate_transaction(tx)
+
         return tx
 
     def _make_score_call_tx(self,
@@ -183,7 +186,8 @@ class TestIntegrateBase(TestCase):
                             addr_to: 'Address',
                             method: str,
                             params: dict,
-                            value: int = 0):
+                            value: int = 0,
+                            pre_validation_enabled: bool = True):
 
         timestamp_us = create_timestamp()
         nonce = 0
@@ -212,23 +216,29 @@ class TestIntegrateBase(TestCase):
             'params': request_params
         }
 
-        self.icon_service_engine.validate_transaction(tx)
+        if pre_validation_enabled:
+            self.icon_service_engine.validate_transaction(tx)
+
         return tx
 
     def _make_icx_send_tx(self,
                           addr_from: Optional['Address'],
                           addr_to: Union['Address', 'MalformedAddress'],
                           value: int, disable_pre_validate: bool = False,
-                          support_v2: bool = False):
+                          support_v2: bool = False,
+                          step_limit: int = -1):
 
         timestamp_us = create_timestamp()
         nonce = 0
+
+        if step_limit < 0:
+            step_limit = self._step_limit
 
         request_params = {
             "from": addr_from,
             "to": addr_to,
             "value": value,
-            "stepLimit": self._step_limit,
+            "stepLimit": step_limit,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature

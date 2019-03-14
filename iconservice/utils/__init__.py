@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """Utilities
 
 Functions and classes in this module don't have any external dependencies.
@@ -33,7 +32,14 @@ def int_to_bytes(n: int) -> bytes:
     return n.to_bytes(length, byteorder='big', signed=True)
 
 
+def bytes_to_int(v: bytes) -> int:
+    return int.from_bytes(v, "big", signed=True)
+
+
 def byte_length_of_int(n: int):
+    if n < 0:
+        # adds 1 because `bit_length()` always returns a bit length of absolute-value of `n`
+        n += 1
     return (n.bit_length() + 8) // 8
 
 

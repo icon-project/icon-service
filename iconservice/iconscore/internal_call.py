@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
+from .icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
@@ -40,9 +41,11 @@ class InternalCall(object):
                             addr_from: 'Address',
                             addr_to: 'Address',
                             amount: int,
-                            func_name: str,
+                            func_name: Optional[str],
                             arg_params: Optional[tuple] = None,
                             kw_params: Optional[dict] = None) -> Any:
+        if func_name is None:
+            func_name = STR_FALLBACK
         return InternalCall._call(context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
     @staticmethod

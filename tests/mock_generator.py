@@ -76,6 +76,9 @@ def generate_inner_task(
     # Ignores icx transfer
     inner_task._icon_service_engine._icx_engine._transfer = Mock()
 
+    # Ignores revision
+    inner_task._icon_service_engine._set_revision_to_context = Mock()
+
     return inner_task
 
 
