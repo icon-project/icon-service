@@ -44,6 +44,7 @@ PROJECT_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../
 
 IS_SERVICE_FLAG_ON_PATCHER = patch('iconservice.iconscore.\
 icon_score_context_util.IconScoreContextUtil.is_service_flag_on')
+GET_OWNER_PATCHER = patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.get_owner')
 GET_DEPLOY_TX_PARAMS_PATCHER = patch('iconservice.iconscore.icon_score_context_util.\
 IconScoreContextUtil.get_deploy_tx_params')
 VALIDATE_SCORE_BLACKLIST_PATCHER = patch('iconservice.iconscore.icon_score_context_util.\
