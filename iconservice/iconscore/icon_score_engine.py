@@ -16,6 +16,7 @@
 """IconScoreEngine module
 """
 
+from copy import copy
 from typing import TYPE_CHECKING, Any
 
 from .icon_score_constant import STR_FALLBACK
@@ -112,7 +113,7 @@ class IconScoreEngine(object):
 
     @staticmethod
     def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
-        tmp_params = kw_params
+        tmp_params = copy(kw_params)
 
         icon_score.validate_external_method(func_name)
 
