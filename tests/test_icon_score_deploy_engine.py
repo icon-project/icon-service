@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import unittest
 from functools import wraps
 from unittest.mock import Mock, patch
@@ -23,10 +23,10 @@ from iconservice.base.block import Block
 from iconservice.base.exception import InvalidParamsException, ExceptionCode, ServerErrorException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
+from iconservice.base.type_converter import TypeConverter
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy import DeployType
 from iconservice.deploy import icon_score_deploy_engine as isde
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine, os, TypeConverter
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployTXParams, \
     IconScoreDeployInfo
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
@@ -126,7 +126,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._icx_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
-        self._score_deploy_engine = IconScoreDeployEngine()
+        self._score_deploy_engine = isde.IconScoreDeployEngine()
         self._deploy_storage = IconScoreDeployStorage(self._icx_db)
 
         self._icon_score_mapper = IconScoreMapper()
