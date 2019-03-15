@@ -170,15 +170,15 @@ def _check_if_process_running(conf: 'IconConfig') -> bool:
                                                        ConfigKey.CHANNEL: conf[ConfigKey.CHANNEL],
                                                        ConfigKey.AMQP_KEY: conf[ConfigKey.AMQP_KEY],
                                                        ConfigKey.AMQP_TARGET: conf[ConfigKey.AMQP_TARGET]})
-    cmd_lines = _get_process_command_list()
+    cmd_lines = _get_process_command_list(b'icon_service.')
     if cmd_lines:
         for cmdline in cmd_lines:
-            if cmdline.startswith(b'icon_service.') and cmdline.decode() == proc_title:
+            if cmdline == proc_title:
                 return True
     return False
 
 
-def _get_process_command_list() -> list:
+def _get_process_command_list(prefix: bytes) -> list:
     if os.path.exists('/proc'):
         cmd_lines = []
         pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
@@ -186,13 +186,15 @@ def _get_process_command_list() -> list:
             try:
                 cmdpath = os.path.join('/proc', pid, 'cmdline')
                 cmdline = open(cmdpath, 'rb').read().rstrip(b'\x00')
-                cmd_lines.append(cmdline)
+                if cmdline.startswith(prefix):
+                    cmd_lines.append(cmdline.decode())
             except IOError:
                 continue
     else:
         result = subprocess.run(['ps', '-eo', 'command'], stdout=subprocess.PIPE)
-        cmd_lines = result.stdout.split(b'\n')
-
+        cmd_lines = [cmdline.decode().rstrip()
+                     for cmdline in result.stdout.split(b'\n')
+                     if cmdline.startswith(prefix)]
     return cmd_lines
 
 
