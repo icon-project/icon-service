@@ -19,7 +19,7 @@ import json
 from abc import ABC, ABCMeta
 from typing import TYPE_CHECKING, Optional, Union, Any
 
-from secp256k1 import PublicKey, ALL_FLAGS, FLAG_VERIFY
+from secp256k1 import PublicKey, ALL_FLAGS, NO_FLAGS
 
 from ..base.address import Address, AddressPrefix
 from ..base.exception import RevertException, ExceptionCode, IconScoreException
@@ -158,7 +158,7 @@ def json_loads(src: str, **kwargs) -> Any:
 
 
 def create_address_with_key(public_key: bytes) -> Optional['Address']:
-    """Create an address with a given public key, charging a fee
+    """Create an address with a given public key
 
     :param public_key: Public key based on secp256k1
     :return: Address created from a given public key or None if failed
@@ -171,11 +171,6 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
 
 
 def _create_address_with_key(public_key: bytes) -> Optional['Address']:
-    """Create an address with a given public key
-
-    :param public_key: Public key based on secp256k1
-    :return: Address created from a given public key or None if failed
-    """
     if isinstance(public_key, bytes):
         size = len(public_key)
         prefix: bytes = public_key[0]
@@ -207,12 +202,12 @@ def _convert_key(public_key: bytes) -> Optional[bytes]:
     else:
         return None
 
-    public_key = PublicKey(public_key, raw=True, flags=FLAG_VERIFY)
+    public_key = PublicKey(public_key, raw=True, flags=NO_FLAGS, ctx=_public_key.ctx)
     return public_key.serialize(compressed=not compressed)
 
 
 def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
-    """Returns the public key from message hash and recoverable signature, charging a fee
+    """Returns the public key from message hash and recoverable signature
 
     :param msg_hash: 32 bytes data
     :param signature: signature_data(64) + recovery_id(1)
@@ -228,14 +223,6 @@ def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> O
 
 
 def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optional[bytes]:
-    """Returns the public key from message hash and recoverable signature
-
-    :param msg_hash: 32 bytes data
-    :param signature: signature_data(64) + recovery_id(1)
-    :param compressed: the type of public key to return
-    :return: public key recovered from msg_hash and signature
-        (compressed: 33 bytes key, uncompressed: 65 bytes key)
-    """
     if isinstance(msg_hash, bytes) \
             and len(msg_hash) == 32 \
             and isinstance(signature, bytes) \
