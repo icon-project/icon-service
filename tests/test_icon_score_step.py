@@ -176,6 +176,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -212,6 +213,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.set_db(100)
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -255,9 +257,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
+
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.get_db()
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -299,7 +304,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
-            return score.query_db()
+            ret = score.query_db()
+            ContextContainer._pop_context()
+            return ret
 
         IconScoreEngine.query = Mock(side_effect=intercept_query)
 
@@ -331,6 +338,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.remove_db()
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -378,6 +386,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 len(address.body) + \
                 len(data_param) + \
                 len(text_param.encode('utf-8'))
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -412,6 +421,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             args[0].revision = REVISION_3
             ContextContainer._push_context(args[0])
+
             context_db = self._inner_task._icon_service_engine._icx_context_db
             address = create_address(AddressPrefix.EOA)
             score = SampleScore(IconScoreDatabase(address, context_db))
@@ -426,6 +436,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 ICON_CONTRACT_ADDRESS_BYTES_SIZE + \
                 len(data_param) + \
                 len(text_param.encode('utf-8'))
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -461,9 +473,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
+
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_readonly(data_to_hash)
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -502,6 +517,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(data_to_hash)
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
