@@ -15,11 +15,11 @@
 # limitations under the License.
 
 from collections import namedtuple
+from typing import List
 from unittest.mock import Mock, patch
 
-from typing import List
-
 from iconcommons.icon_config import IconConfig
+
 from iconservice.database.db import ContextDatabase
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
@@ -34,21 +34,30 @@ ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
 
 
 # noinspection PyProtectedMember
+def generate_inner_task(revision=0):
+    inner_task = _create_inner_task()
+
+    _patch_service_engine(inner_task._icon_service_engine, revision)
+
+    return inner_task
+
+
+# noinspection PyProtectedMember
 @patch(f'{SERVICE_ENGINE_PATH}._init_global_value_by_governance_score')
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-def generate_inner_task(
+def _create_inner_task(
         db_factory_create_by_name,
         icx_engine_open,
         service_engine_load_builtin_scores,
         service_engine_init_global_value_by_governance_score):
     memory_db = {}
 
-    def put(self, key, value):
+    def put(context, key, value):
         memory_db[key] = value
 
-    def get(self, key):
+    def get(context, key):
         return memory_db.get(key)
 
     context_db = Mock(spec=ContextDatabase)
@@ -64,20 +73,10 @@ def generate_inner_task(
     service_engine_load_builtin_scores.assert_called()
     service_engine_init_global_value_by_governance_score.assert_called()
 
-    # Mocks get_balance so, it returns always 100 icx
-    inner_task._icon_service_engine._icx_engine.get_balance = \
-        Mock(return_value=100 * 10 ** 18)
-
     # Mocks _init_global_value_by_governance_score
     # to ignore initializing governance SCORE
     inner_task._icon_service_engine._init_global_value_by_governance_score = \
         service_engine_init_global_value_by_governance_score
-
-    # Ignores icx transfer
-    inner_task._icon_service_engine._icx_engine._transfer = Mock()
-
-    # Ignores revision
-    inner_task._icon_service_engine._set_revision_to_context = Mock()
 
     return inner_task
 
@@ -87,10 +86,18 @@ def clear_inner_task():
     rmtree(default_icon_config[ConfigKey.STATE_DB_ROOT_PATH])
 
 
-# noinspection PyProtectedMember
+def generate_service_engine(revision=0):
+    service_engine = _create_service_engine()
+
+    _patch_service_engine(service_engine, revision)
+
+    return service_engine
+
+
+# noinspection PyProtectedMember,PyUnresolvedReferences
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-def generate_service_engine(
+def _create_service_engine(
         db_factory_create_by_name,
         icx_engine_open):
     service_engine = IconServiceEngine()
@@ -117,6 +124,25 @@ def generate_service_engine(
     service_engine._icx_engine.get_balance = Mock(return_value=100 * 10 ** 18)
 
     return service_engine
+
+
+# noinspection PyProtectedMember
+def _patch_service_engine(icon_service_engine, revision):
+    # Mocks get_balance so, it returns always 100 icx
+    icon_service_engine._icx_engine.get_balance = \
+        Mock(return_value=100 * 10 ** 18)
+
+    # Ignores icx transfer
+    icon_service_engine._icx_engine._transfer = Mock()
+
+    # Patch revision
+    def set_revision_to_context(context):
+        context.revision = revision
+
+    icon_service_engine._set_revision_to_context = \
+        Mock(side_effect=set_revision_to_context)
+
+    return icon_service_engine
 
 
 def create_request(requests: List[ReqData]):
