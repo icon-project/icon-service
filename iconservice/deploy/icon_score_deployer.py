@@ -20,7 +20,7 @@ import shutil
 import zipfile
 
 from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
-from ..base.exception import ScoreInstallExtractException, ScoreInstallException
+from ..base.exception import InvalidParamsException, InvalidPackageException
 
 
 class IconScoreDeployer(object):
@@ -51,9 +51,9 @@ class IconScoreDeployer(object):
     @staticmethod
     def _check_score_deploy_path(path: str):
         if os.path.isfile(path):
-            raise ScoreInstallException(f'{path} is a file. Check your path.')
+            raise InvalidParamsException(f'{path} is a file. Check your path.')
         if os.path.isdir(path):
-            raise ScoreInstallException(f'{path} is a directory. Check {path}')
+            raise InvalidParamsException(f'{path} is a directory. Check {path}')
 
     @staticmethod
     def _extract_files_gen(data: bytes, revision: int = 0):
@@ -81,7 +81,7 @@ class IconScoreDeployer(object):
                         break
 
                 if revision >= REVISION_3 and has_package is False:
-                    raise ScoreInstallExtractException("package.json not found")
+                    raise InvalidPackageException("package.json not found")
 
                 for zip_info in memory_zip_infolist:
                     with memory_zip.open(zip_info) as file:
@@ -107,11 +107,11 @@ class IconScoreDeployer(object):
                                 if file_path and file_path[-1] != '/':
                                     yield file_path, file, parent_directory
         except zipfile.BadZipFile:
-            raise ScoreInstallExtractException("Bad zip file.")
+            raise InvalidPackageException("Bad zip file.")
         except zipfile.LargeZipFile:
-            raise ScoreInstallExtractException("Zip file is too Large.")
+            raise InvalidPackageException("Zip file is too Large.")
         except Exception as e:
-            raise ScoreInstallExtractException(f'Error raising from extract_files_gen: {e}')
+            raise InvalidPackageException(f'Error raised from extract_files_gen: {e}')
 
     @staticmethod
     def deploy_legacy(path: str, data: bytes):
@@ -173,8 +173,8 @@ class IconScoreDeployer(object):
                         else:
                             yield file_path, file, parent_directory
         except zipfile.BadZipFile:
-            raise ScoreInstallExtractException("Bad zip file.")
+            raise InvalidPackageException("Bad zip file.")
         except zipfile.LargeZipFile:
-            raise ScoreInstallExtractException("Large zip file.")
+            raise InvalidPackageException("Large zip file.")
         except Exception as e:
-            raise ScoreInstallExtractException(f'extract_files_gen error -> exception: {e}')
+            raise InvalidPackageException(f'extract_files_gen error -> exception: {e}')

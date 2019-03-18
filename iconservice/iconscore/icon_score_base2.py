@@ -17,12 +17,12 @@
 import hashlib
 import json
 from abc import ABC, ABCMeta
-from typing import TYPE_CHECKING, Optional, Union, Any
+from typing import TYPE_CHECKING, Optional, Any
 
 from secp256k1 import PublicKey, ALL_FLAGS, FLAG_VERIFY
 
 from ..base.address import Address, AddressPrefix
-from ..base.exception import RevertException, ExceptionCode, IconScoreException
+from ..base.exception import InvalidParamsException, IconScoreException
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 
@@ -95,8 +95,7 @@ class Block(object):
         return self._timestamp
 
 
-def revert(message: Optional[str] = None,
-           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+def revert(message: Optional[str] = None, code: int = 0) -> None:
     """
     Reverts the transaction and breaks.
     All the changes of state DB in current transaction will be rolled back.
@@ -105,17 +104,15 @@ def revert(message: Optional[str] = None,
     :param code: code
     """
     try:
-        if not isinstance(code, (int, ExceptionCode)):
+        if not isinstance(code, int):
             code = int(code)
 
         if not isinstance(message, str):
             message = str(message)
     except:
-        raise IconScoreException(
-            message=f"Revert error: code or message is invalid",
-            code=ExceptionCode.SCORE_ERROR)
+        raise InvalidParamsException("Revert error: code or message is invalid")
     else:
-        raise RevertException(message, code)
+        raise IconScoreException(message, code)
 
 
 def sha3_256(data: bytes) -> bytes:

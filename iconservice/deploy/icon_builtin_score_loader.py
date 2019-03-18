@@ -21,7 +21,7 @@ from iconcommons.logger import Logger
 from .icon_score_deploy_storage import IconScoreDeployInfo, DeployState
 from .utils import remove_path
 from ..base.address import Address
-from ..base.exception import ServerErrorException
+from ..base.exception import AccessDeniedException
 from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, ZERO_TX_HASH, ICON_DEPLOY_LOG_TAG
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 
@@ -61,7 +61,7 @@ class IconBuiltinScoreLoader(object):
         assert score is not None
 
         if score.owner != builtin_score_owner:
-            raise ServerErrorException(
+            raise AccessDeniedException(
                 f'score.owner({score.owner}) != builtin_score_owner({builtin_score_owner})')
 
     @staticmethod
