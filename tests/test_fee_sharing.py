@@ -20,7 +20,8 @@ import unittest
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
-from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData
+from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, create_query_request, \
+    QueryData
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -29,6 +30,9 @@ class TestFeeSharing(unittest.TestCase):
 
     def setUp(self):
         self._inner_task = generate_inner_task(LATEST_REVISION)
+        self.from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        self.to = Address.from_string('cx' + '0' * 40)
+        self.score = Address.from_string('cx' + '1' * 40)
 
     def tearDown(self):
         ContextContainer._clear_context()
@@ -39,63 +43,107 @@ class TestFeeSharing(unittest.TestCase):
         self._inner_task._icon_service_engine._precommit_data_manager.clear()
         return self._inner_task._invoke(request)
 
+    def _inner_task_query(self, request) -> dict:
+        return self._inner_task._query(request)
+
     def test_set_fee_share(self):
+        ratio = 50
         tx_hash = bytes.hex(os.urandom(32))
-        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        to = Address.from_string('cx' + '0' * 40)
-        score = Address.from_string('cx' + '1' * 40)
+
         data = {
             'method': 'setFeeShare',
             'params': {
-                '_score': str(score),
-                '_ratio': 50
+                '_score': str(self.score),
+                '_ratio': ratio
             }
         }
 
+        expected_event_log = {
+            "scoreAddress": str(self.to),
+            "indexed": [
+                "SetFeeShare(Address,int)",
+                str(self.score),
+            ],
+            "data": [
+                hex(ratio)
+            ]
+        }
+
         request = create_request([
-            ReqData(tx_hash, from_, to, 'call', data),
+            ReqData(tx_hash, self.from_, self.to, 'call', data),
         ])
 
         result = self._inner_task_invoke(request)
         tx_result = result['txResults'][tx_hash]
 
+        self.assertEqual(expected_event_log, tx_result['eventLogs'])
         self.assertEqual('0x1', tx_result['status'])
 
+        return ratio
+
     def test_get_fee_share(self):
-        pass
+        ratio = self.test_set_fee_share()
+
+        data = {
+            "method": "getFeeShare",
+            "params": {
+                "_score": str(self.score)
+            }
+        }
+
+        expected_response = {
+            "ratio": ratio
+        }
+
+        request = create_query_request(QueryData(self.from_, self.to, "call", data))
+        result = self._inner_task_query(request)
+
+        self.assertEqual(expected_response, result)
 
     def test_create_deposit(self):
         tx_hash = bytes.hex(os.urandom(32))
-        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        to = Address.from_string('cx' + '0' * 40)
-        score = Address.from_string('cx' + '1' * 40)
+        term, amount = 50, 5000
         data = {
             'method': 'createDeposit',
             'params': {
-                '_score': str(score),
-                '_term': 50
+                '_score': str(self.score),
+                '_term': term,
+                '_amount': amount
             }
         }
 
+        expected_event_log = {
+            "scoreAddress": str(self.to),
+            "indexed": [
+                "CreateDeposit(bytes,Address,Address,amount,term)",
+                tx_hash,
+                str(self.score),
+                str(self.from_)
+            ],
+            "data": [
+                hex(amount),
+                hex(term)
+            ]
+        }
+
         request = create_request([
-            ReqData(tx_hash, from_, to, 'call', data),
+            ReqData(tx_hash, self.from_, self.to, 'call', data),
         ])
 
         result = self._inner_task_invoke(request)
         tx_result = result['txResults'][tx_hash]
 
         self.assertEqual('0x1', tx_result['status'])
-        self.assertEqual()
+        self.assertEqual(expected_event_log, tx_result['eventLogs'])
 
         return tx_hash
 
     def test_destroy_deposit(self):
         deposit_id = self.test_create_deposit()
+        amount, penalty = 4700, 300
 
         tx_hash = bytes.hex(os.urandom(32))
-        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        to = Address.from_string('cx' + '0' * 40)
-        score = Address.from_string('cx' + '1' * 40)
+
         data = {
             'method': 'destroyDeposit',
             'params': {
@@ -103,26 +151,152 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
+        expected_event_log = {
+            "scoreAddress": str(self.to),
+            "indexed": [
+                "DepositDestroyed(bytes,Address,Address,int,int)",
+                deposit_id,
+                str(self.score),
+                str(self.from_)
+            ],
+            "data": [
+                hex(amount),
+                hex(penalty)
+            ]
+        }
+
         request = create_request([
-            ReqData(tx_hash, from_, to, 'call', data),
+            ReqData(tx_hash, self.from_, self.to, 'call', data),
         ])
 
         result = self._inner_task_invoke(request)
         tx_result = result['txResults'][tx_hash]
 
         self.assertEqual('0x1', tx_result['status'])
+        self.assertEqual(expected_event_log, tx_result['eventLogs'])
 
     def test_get_deposit(self):
-        pass
+        deposit_id = self.test_create_deposit()
+        current_block_height = 100
+
+        data = {
+            'method': 'getDeposit',
+            'params': {
+                '_id': deposit_id
+            }
+        }
+
+        expected_result = {
+            "_id": deposit_id,
+            "_score": str(self.score),
+            "_from": str(self.from_),
+            "amount": hex(5000),
+            "_createdAt": f"{hex(current_block_height)}",
+            "_expiresIn": f"{hex(current_block_height+50)}",
+            "_virtualStepIssued": "f(d,a)",
+            "_virtualStepUsed": "used vs"
+        }
+        request = create_query_request(QueryData(self.from_, self.to, "call", data))
+
+        result = self._inner_task_query(request)
+
+        self.assertEqual(expected_result, result)
 
     def test_get_score_info(self):
-        pass
+        self.test_set_fee_share()
+        deposit_id = self.test_create_deposit()
+        current_block_height = 100
+
+        data = {
+            'method': "getScoreInfo",
+            "params": {
+                "_score": str(self.score)
+            }
+        }
+
+        expected_result = {
+            "_address": str(self.score),
+            "_totalVirtualStepIssued": hex(5000),
+            "_totalVirtualStepUsed": hex(0),
+            "_deposits": [
+                {
+                    "_id": deposit_id,
+                    "_score": str(self.score),
+                    "_from": str(self.from_),
+                    "amount": hex(5000),
+                    "_createdAt": f"{current_block_height}",
+                    "_expiresIn": f"{current_block_height + 50}",
+                    "_virtualStepIssued": "f(d,a)",
+                    "_virtualStepUsed": "used vs"
+                 }
+            ]
+        }
+
+        request = create_query_request(QueryData(self.from_, self.to, "call", data))
+        result = self._inner_task_query(request)
+        self.assertEqual(expected_result, result)
 
     def test_available_steps(self):
-        pass
+        self.test_set_fee_share()
+        self.test_create_deposit()
 
-    def test_pre_validate_on_sharing_fee(self):
-        pass
+        data = {
+            'method': "availableStep",
+            "params": {
+                "_score": str(self.score)
+            }
+        }
+
+        expected_result = {
+            "availableStep": hex(5000)
+        }
+
+        request = create_query_request(QueryData(self.from_, self.to, "call", data))
+        result = self._inner_task_query(request)
+        self.assertEqual(expected_result, result)
 
     def test_transaction_result_on_sharing_fee(self):
-        pass
+        self.test_set_fee_share()
+        self.test_create_deposit()
+        tx_hash = bytes.hex(os.urandom(32))
+
+        data = {
+            "method": "transfer",
+            "params": {
+                "_to": f"hx{'2'*40}",
+                "_amount": hex(100)
+            }
+        }
+
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        result = self._inner_task_invoke(request)
+
+        expected_event_log = {
+            "scoreAddress": str(self.score),
+            "indexed": [
+                "Transfer(Address,Address,int)",
+                str(self.from_),
+                f"hx{'2'*40}"
+            ],
+            "data": [
+                hex(100)
+            ]
+        }
+
+        expected_detail_step_used = [
+            {
+                "address": str(self.from_),
+                "stepUsed": hex(9000)
+            },
+            {
+                "address": str(self.score),
+                "stepUsed": hex(9000)
+            }
+        ]
+
+        tx_result = result['txResults'][tx_hash]
+
+        self.assertEqual(expected_event_log, tx_result['eventLogs'])
+        self.assertEqual('0x1', tx_result['status'])
+        self.assertEqual(expected_detail_step_used, tx_result['detailStepUsed'])
+

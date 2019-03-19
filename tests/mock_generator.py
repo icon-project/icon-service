@@ -31,6 +31,7 @@ SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
 ICX_ENGINE_PATH = 'iconservice.icx.icx_engine.IcxEngine'
 DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
+QueryData = namedtuple("QueryData", "from_, to_, data_type, data")
 
 
 # noinspection PyProtectedMember
@@ -170,4 +171,16 @@ def create_request(requests: List[ReqData]):
             'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
         },
         'transactions': transactions
+    }
+
+
+def create_query_request(request: QueryData):
+    return {
+        "method": "icx_call",
+        "params": {
+            "from": str(request.from_),
+            "to": str(request.to_),
+            "dataType": request.data_type,
+            "data": request.data
+        }
     }
