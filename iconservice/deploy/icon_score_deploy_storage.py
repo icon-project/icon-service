@@ -259,7 +259,7 @@ class IconScoreDeployStorage(object):
 
         tx_params = self.get_deploy_tx_params(context, deploy_info.current_tx_hash)
         if tx_params is None:
-            raise AssertionError(f'tx_params is None: {deploy_info.current_tx_hash}')
+            raise InvalidParamsException(f'tx_params is None: {deploy_info.current_tx_hash}')
 
     def put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
         """

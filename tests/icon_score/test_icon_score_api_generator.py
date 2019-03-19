@@ -18,9 +18,9 @@ import unittest
 from inspect import isfunction, getmembers
 from typing import Optional, List, Dict
 
+from iconservice.base.exception import IllegalFormatException
 from iconservice.iconscore.icon_score_api_generator import ScoreApiGenerator
-from iconservice.iconscore.icon_score_base import \
-    external, IconScoreException, eventlog, Address, payable
+from iconservice.iconscore.icon_score_base import external, eventlog, Address, payable
 
 
 class TestScoreApiGenerator(unittest.TestCase):
@@ -118,28 +118,28 @@ class TestScoreApiGenerator(unittest.TestCase):
         function_name = 'list_param_empty_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+        self.assertRaises(IllegalFormatException, ScoreApiGenerator.generate,
                           functions)
 
     def test_function_unsupported_param_empty_return(self):
         function_name = 'unsupported_param_empty_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+        self.assertRaises(IllegalFormatException, ScoreApiGenerator.generate,
                           functions)
 
     def test_function_str_param_unsupported_return(self):
         function_name = 'str_param_unsupported_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+        self.assertRaises(IllegalFormatException, ScoreApiGenerator.generate,
                           functions)
 
     def test_function_empty_param_unsupported_optional_return(self):
         function_name = 'empty_param_unsupported_optional_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+        self.assertRaises(IllegalFormatException, ScoreApiGenerator.generate,
                           functions)
 
     def test_return_bool(self):
@@ -171,7 +171,7 @@ class TestScoreApiGenerator(unittest.TestCase):
         function_name = 'readonly_empty_return'
         functions = [value for key, value in self._members
                      if key == function_name]
-        self.assertRaises(IconScoreException, ScoreApiGenerator.generate,
+        self.assertRaises(IllegalFormatException, ScoreApiGenerator.generate,
                           functions)
 
     def test_writable_unsupported_typ_return(self):

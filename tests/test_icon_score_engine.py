@@ -22,7 +22,7 @@ from unittest.mock import Mock, patch
 
 from iconservice import *
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, Address
-from iconservice.base.exception import InvalidParamsException, ServerErrorException
+from iconservice.base.exception import ScoreNotFoundException, InvalidParamsException
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
@@ -139,7 +139,7 @@ class TestIconScoreEngine(unittest.TestCase):
         # failure case: should raise error if there is no SCORE
         score_address = create_address(AddressPrefix.CONTRACT)
         mocked_score_context_util_get_icon_score.return_value = None
-        self.assertRaises(InvalidParamsException, IconScoreEngine.get_score_api, context, score_address)
+        self.assertRaises(ScoreNotFoundException, IconScoreEngine.get_score_api, context, score_address)
         mocked_icon_score_engine_validate_score_blacklist.assert_called_with(context, score_address)
 
         # reset mock

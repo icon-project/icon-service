@@ -126,7 +126,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
                                         {"address": str("")})
         raise_exception_end_tag("addDeployer")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_result.failure.message, "Invalid address")
 
         raise_exception_start_tag("removeDeployer")
@@ -136,7 +136,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
                                         {"address": str("")})
         raise_exception_end_tag("removeDeployer")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_result.failure.message, "Invalid address")
 
     def test_governance_call_about_add_remove_deployer_score_addr(self):
@@ -259,8 +259,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
                                "test_deploy_scores",
                                "install/test_score",
                                value)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f"Invalid deployer: no permission (address: {self._addr_array[0]})")
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
+        self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
 
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
@@ -289,8 +289,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
                                "test_deploy_scores",
                                "install/test_score",
                                value)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f"Invalid deployer: no permission (address: {self._addr_array[0]})")
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
+        self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
 
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
@@ -343,8 +343,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
 
         with self.assertRaises(BaseException) as e:
             self._deploy_score(self._addr_array[0], "test_deploy_scores", "update/test_score", value, score_addr1)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f"Invalid deployer: no permission (address: {self._addr_array[0]})")
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
+        self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
 
     def test_score_remove_deployer_update_governance(self):
         self._update_governance()
@@ -382,8 +382,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
 
         with self.assertRaises(BaseException) as e:
             self._deploy_score(self._addr_array[0], "test_deploy_scores", "update/test_score", value, score_addr1)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f"Invalid deployer: no permission (address: {self._addr_array[0]})")
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
+        self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
 
 
 if __name__ == '__main__':

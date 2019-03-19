@@ -85,7 +85,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         # Case when the user install SCORE second time.(revision < 2)
         with self.assertRaises(BaseException) as e:
             IconScoreDeployer.deploy_legacy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
 
         # Case when installing SCORE with badzipfile Data.
         tx_hash2 = create_tx_hash()
@@ -93,7 +93,7 @@ class TestIconScoreDeployer(unittest.TestCase):
 
         with self.assertRaises(BaseException) as e:
             IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.badzipfile_path))
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
         self.assertFalse(os.path.exists(score_deploy_path))
 
         # Case when the user specifies an installation path that does not have permission.
@@ -229,7 +229,7 @@ class TestIconScoreDeployer(unittest.TestCase):
 
             with self.assertRaises(BaseException) as e:
                 IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION_3)
-            self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+            self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
             self.assertEqual(e.exception.message, "package.json not found")
             self.assertFalse(os.path.exists(score_deploy_path))
 

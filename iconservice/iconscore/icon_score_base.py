@@ -411,7 +411,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def __check_payable(self, func_name: str):
         if self.msg.value > 0 and not self.__is_payable_method(func_name):
             raise MethodNotPayableException(
-                f"Method not payable: {func_name}, {type(self).__name__}")
+                f"Method not payable: {type(self).__name__}.{func_name}")
 
     def __is_external_method(self, func_name) -> bool:
         return func_name in self.__get_attr_dict(CONST_CLASS_EXTERNALS)

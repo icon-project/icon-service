@@ -17,7 +17,7 @@
 """score method parameters testcase"""
 
 from iconservice import ZERO_SCORE_ADDRESS, Address
-from iconservice.base.exception import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -201,7 +201,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx2])
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("got an unexpected keyword argument") != -1)
 
         query_request = {
@@ -236,7 +236,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx2])
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("missing 1 required positional argument") != -1)
 
         query_request = {
@@ -271,7 +271,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx1])
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("invalid literal for int()") != -1)
 
         # check balance
@@ -307,7 +307,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx2])
 
-        self.assertEqual(tx_results[0].failure.code, 32602)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         # check balance
         query_request = {
@@ -568,7 +568,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertTrue(tx_results[0].failure.message.find("'Unsupported type for 'list_param: <class 'list'>'") != -1)
 
     def test_dict_parameters_query(self):
@@ -579,5 +579,5 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertTrue(tx_results[0].failure.message.find("'Unsupported type for 'dict_param: <class 'dict'>'") != -1)

@@ -18,7 +18,7 @@
 import unittest
 import hashlib
 import json
-from iconservice.base.exception import RevertException, ServerErrorException
+from iconservice.base.exception import ExceptionCode, AccessDeniedException, IconScoreException
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 from tests import create_tx_hash, create_address
@@ -139,13 +139,13 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         self.assertEqual(response, expect_status)
 
     def test_revert(self):
-        """Checks if the method `revert` raises RevertException successfully."""
+        """Checks if the method `revert` raises IconScoreException successfully."""
         # Successful case - readonly
-        self.assertRaises(RevertException, self._get_value, self._addr_array[0], self.score_addr1, "test_revert_readonly")
+        self.assertRaises(IconScoreException, self._get_value, self._addr_array[0], self.score_addr1, "test_revert_readonly")
 
         # not readonly
         failure = self._set_value_fail(self._addr_array[0], self.score_addr1, "test_revert", {"value": hex(10**18)})
-        self.assertEqual(failure.code, 32100)
+        self.assertEqual(failure.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(failure.message, "revert message!!")
 
     def test_sha3_256(self):
@@ -235,14 +235,14 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         tx_hash = f'0x{bytes.hex(tx_hash)}'
 
         # Failure case - readonly
-        self.assertRaises(ServerErrorException, self._get_value, self._addr_array[0], self.score_addr1,
+        self.assertRaises(AccessDeniedException, self._get_value, self._addr_array[0], self.score_addr1,
                           "test_deploy_readonly", {'tx_hash': tx_hash})
 
         # Failure case - not readonly
         failure = self._set_value_fail(self._addr_array[0], self.score_addr1, "test_deploy",
                                        {'tx_hash': tx_hash})
-        self.assertEqual(failure.code, 32000)
-        self.assertEqual(failure.message, "Permission Error")
+        self.assertEqual(failure.code, ExceptionCode.ACCESS_DENIED)
+        self.assertEqual(failure.message, "No permission")
 
     def test_get_tx_hashes_by_score_address(self):
         """Checks if gets tx_hashes by score address successfully."""

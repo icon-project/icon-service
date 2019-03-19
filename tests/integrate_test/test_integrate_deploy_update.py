@@ -155,7 +155,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[0].failure.message,
                          f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
 
@@ -191,7 +191,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PACKAGE)
         self.assertEqual(tx_results[0].failure.message, f'Bad zip file.')
 
         # 3. assert get value: value1
@@ -225,7 +225,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_results[0].failure.message, "'TestScore' object has no attribute 'owner'")
 
         # 3. assert get value: value1
@@ -293,8 +293,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "this score has no external functions")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
+        self.assertEqual(tx_results[0].failure.message, "There is no external method in the SCORE")
 
         # 3. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
@@ -327,7 +327,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         # 3. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
@@ -360,7 +360,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         # 3. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
@@ -394,7 +394,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
 
 
 if __name__ == '__main__':

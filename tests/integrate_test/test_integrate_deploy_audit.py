@@ -21,7 +21,7 @@ import unittest
 from typing import TYPE_CHECKING, Any, Union
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import RevertException, ExceptionCode
+from iconservice.base.exception import ExceptionCode, IconScoreException
 from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -155,7 +155,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
                                         {"address": str("")})
         raise_exception_end_tag("addAuditor")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_result.failure.message, "Invalid address")
 
         raise_exception_start_tag("removeAuditor")
@@ -165,7 +165,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
                                         {"address": str("")})
         raise_exception_end_tag("removeAuditor")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_result.failure.message, "Invalid address")
 
     def test_governance_call_about_add_remove_auditor_score_addr(self):
@@ -285,7 +285,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
             'current': {
                 'status': 'active'}
         }
-        with self.assertRaises(RevertException) as e:
+        with self.assertRaises(IconScoreException) as e:
             self._assert_get_score_status(GOVERNANCE_SCORE_ADDRESS, expect_ret)
         self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
         self.assertEqual(e.exception.message, "SCORE not found")
