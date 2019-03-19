@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter, isclass
-from typing import Any, Optional
+from inspect import signature, Signature, Parameter, isclass, getmembers, isfunction
+from typing import Any, Optional, TYPE_CHECKING
 
 from ..base.address import Address
 from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
@@ -23,7 +23,10 @@ from ..base.type_converter import TypeConverter
 from ..icon_constant import REVISION_2
 from ..utils import get_main_type_from_annotations_type
 from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
-from .icon_score_context import ContextContainer
+
+if TYPE_CHECKING:
+    from .icon_score_context import IconScoreContext
+    from .icon_score_base import IconScoreBase
 
 
 class ScoreApiGenerator:
@@ -45,6 +48,8 @@ class ScoreApiGenerator:
     __API_TYPE_ON_INSTALL = 'on_install'
     __API_TYPE_ON_UPDATE = 'on_update'
 
+    __on_deploy = [__API_TYPE_ON_INSTALL, __API_TYPE_ON_UPDATE]
+
     @staticmethod
     def generate(score_funcs: list) -> list:
         api = []
@@ -53,14 +58,14 @@ class ScoreApiGenerator:
         return api
 
     @staticmethod
-    def check_on_deploy(score_funcs: list) -> None:
-        for func in score_funcs:
-            if func.__name__ == ScoreApiGenerator.__API_TYPE_ON_INSTALL or \
-                    func.__name__ == ScoreApiGenerator.__API_TYPE_ON_UPDATE:
-                ScoreApiGenerator.__check_on_deploy_function(signature(func))
+    def check_on_deploy(context: 'IconScoreContext', score: 'IconScoreBase') -> None:
+        custom_funcs = [value for key, value in getmembers(score.__class__, predicate=isfunction)
+                        if key in ScoreApiGenerator.__on_deploy]
+        for func in custom_funcs:
+            ScoreApiGenerator.__check_on_deploy_function(context, signature(func))
 
     @staticmethod
-    def __check_on_deploy_function(sig_info: 'Signature') -> None:
+    def __check_on_deploy_function(context: 'IconScoreContext', sig_info: 'Signature') -> None:
         params = dict(sig_info.parameters)
         for param_name, param in params.items():
             if param_name == 'self' or param_name == 'cls':
@@ -68,7 +73,6 @@ class ScoreApiGenerator:
             if param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
             else:
-                context = ContextContainer._get_context()
                 if context.revision > REVISION_2:
                     raise InvalidParamsException("Keyword arguments not allowed")
                 else:

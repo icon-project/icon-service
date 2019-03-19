@@ -28,6 +28,7 @@ from ..base.type_converter import TypeConverter
 from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
+from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
@@ -194,6 +195,8 @@ class IconScoreDeployEngine(object):
             context.tx = None
 
             self._initialize_score(tx_params.deploy_type, score, params)
+
+            ScoreApiGenerator.check_on_deploy(context, score)
             new_score_mapper[score_address] = score_info
         except BaseException as e:
             Logger.warning(f'Failed to deploy a SCORE: {score_address}', ICON_DEPLOY_LOG_TAG)
