@@ -118,6 +118,7 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
@@ -154,6 +155,7 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
@@ -237,6 +239,7 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
         finally:
             Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task

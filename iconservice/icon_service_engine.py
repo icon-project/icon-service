@@ -252,8 +252,8 @@ class IconServiceEngine(ContextContainer):
         including db, memory and so on
         """
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        self._push_context(context)
         try:
+            self._push_context(context)
             self._icx_engine.close()
 
             IconScoreContext.icon_score_mapper.close()
@@ -618,6 +618,8 @@ class IconServiceEngine(ContextContainer):
             in IconInnerService
         :return:
         """
+        assert self._get_context_stack_size() == 0
+
         method = request['method']
         assert method in ('icx_sendTransaction', 'debug_estimateStep')
         assert 'params' in request
@@ -629,25 +631,26 @@ class IconServiceEngine(ContextContainer):
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
 
-        self._push_context(context)
+        try:
+            self._push_context(context)
 
-        step_price: int = context.step_counter.step_price
-        minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
+            step_price: int = context.step_counter.step_price
+            minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
 
-        if 'data' in params:
-            # minimum_step is the sum of
-            # default STEP cost and input STEP costs if data field exists
-            data = params['data']
-            input_size = get_input_data_size(context.revision, data)
-            minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
+            if 'data' in params:
+                # minimum_step is the sum of
+                # default STEP cost and input STEP costs if data field exists
+                data = params['data']
+                input_size = get_input_data_size(context.revision, data)
+                minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
-        self._icon_pre_validator.execute(context, params, step_price, minimum_step)
+            self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-        IconScoreContextUtil.validate_score_blacklist(context, to)
-        if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
-            self._validate_deployer_whitelist(context, params)
-
-        self._pop_context()
+            IconScoreContextUtil.validate_score_blacklist(context, to)
+            if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
+                self._validate_deployer_whitelist(context, params)
+        finally:
+            self._pop_context()
 
     def _call(self,
               context: 'IconScoreContext',
@@ -671,12 +674,17 @@ class IconServiceEngine(ContextContainer):
             icx_getBalance, icx_getTotalSupply, icx_call:
                 (dict) result or error object in jsonrpc response
         """
+        assert self._get_context_stack_size() == 0
 
-        self._push_context(context)
-        handler = self._handlers[method]
-        ret_val = handler(context, params)
-        self._pop_context()
-        return ret_val
+        try:
+            self._push_context(context)
+
+            handler = self._handlers[method]
+            ret = handler(context, params)
+        finally:
+            self._pop_context()
+
+        return ret
 
     def _handle_icx_get_balance(self,
                                 context: 'IconScoreContext',
@@ -1091,3 +1099,16 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before rollback
         self._precommit_data_manager.validate_precommit_block(block)
         self._precommit_data_manager.rollback(block)
+
+    def clear_context_stack(self):
+        """Clear IconScoreContext stacks
+        """
+        stack_size: int = self._get_context_stack_size()
+        assert stack_size == 0
+
+        if stack_size > 0:
+            Logger.error(
+                f'IconScoreContext leak is detected: {stack_size}',
+                ICON_SERVICE_LOG_TAG)
+
+        self._clear_context()

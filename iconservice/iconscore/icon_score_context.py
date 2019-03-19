@@ -79,6 +79,11 @@ class ContextContainer(object):
     def _clear_context() -> None:
         setattr(_thread_local_data, 'context_stack', None)
 
+    @staticmethod
+    def _get_context_stack_size() -> int:
+        context_stack: List['IconScoreContext'] = getattr(_thread_local_data, 'context_stack', None)
+        return 0 if context_stack is None else len(context_stack)
+
 
 class ContextGetter(object):
     """The class which refers to IconScoreContext should inherit ContextGetter
