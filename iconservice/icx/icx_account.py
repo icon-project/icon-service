@@ -17,7 +17,7 @@
 from enum import IntEnum, unique
 from struct import Struct
 
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, OutOfBalanceException
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 from typing import TYPE_CHECKING
@@ -184,7 +184,7 @@ class Account(object):
         """
         if not isinstance(value, int) or value < 0:
             raise InvalidParamsException(
-                'Failed to deposit:value is not int type or value < 0')
+                'Failed to deposit: value is not int type or value < 0')
 
         self._icx += value
 
@@ -197,7 +197,7 @@ class Account(object):
             raise InvalidParamsException(
                 'Failed to withdraw: value is not int type or value < 0')
         if self._icx < value:
-            raise InvalidParamsException('Out of balance')
+            raise OutOfBalanceException('Out of balance')
 
         self._icx -= value
 

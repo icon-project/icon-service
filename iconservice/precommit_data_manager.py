@@ -18,7 +18,7 @@ from threading import Lock
 from typing import Optional
 
 from .base.block import Block
-from .base.exception import ServerErrorException
+from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
 
@@ -124,7 +124,7 @@ class PrecommitDataManager(object):
                 block.height == self._last_block.height + 1:
             return
 
-        raise ServerErrorException(
+        raise InvalidParamsException(
             f'Failed to invoke a block: '
             f'last_block({self._last_block}) '
             f'block_to_invoke({block})')
@@ -139,7 +139,7 @@ class PrecommitDataManager(object):
 
         precommit_data = self._precommit_data_mapper.get(precommit_block.hash)
         if precommit_data is None:
-            raise ServerErrorException(
+            raise InvalidParamsException(
                 f'No precommit data: precommit_block({precommit_block})')
 
         if self._last_block is None:
@@ -149,5 +149,5 @@ class PrecommitDataManager(object):
 
         if self._last_block.hash != precommit_block.prev_hash or \
                 self._last_block.height + 1 != precommit_block.height:
-            raise ServerErrorException(
+            raise InvalidParamsException(
                 f'Invalid precommit block: last_block({self._last_block}) precommit_block({precommit_block})')
