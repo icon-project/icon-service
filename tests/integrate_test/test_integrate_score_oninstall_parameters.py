@@ -15,9 +15,8 @@
 # limitations under the License.
 
 """on_install parameters testcase"""
-from iconservice.base.exception import InvalidParamsException
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
+from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -107,7 +106,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[2].status, int(False))
 
-    def test_invalid_paramter_value_oninstall(self):
+    def test_invalid_parameter_value_oninstall(self):
         tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": str(self._addr_array[0]),
                                                                       "decimal": "0x12"})
@@ -134,7 +133,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.assertEqual(tx_results[1].status, int(False))
         self.assertEqual(tx_results[2].status, int(False))
 
-    def test_invalid_kwargs_paramter_value_oninstall(self):
+    def test_invalid_kwargs_parameter_value_oninstall(self):
         self._update_governance()
         self._set_revision(2)
 
@@ -157,7 +156,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
                 "method": "hello",
             }
         }
-        self._query(query_request)
+        self.assertEqual(self._query(query_request), "Hello")
 
         self._set_revision(3)
 
@@ -166,16 +165,8 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 
-        raise_exception_start_tag("test_invalid_kwargs_paramter_value_oninstall")
-        self._make_and_req_block([tx])
-        raise_exception_end_tag("test_invalid_kwargs_paramter_value_oninstall")
+        raise_exception_start_tag("test_invalid_kwargs_parameter_value_oninstall")
+        prev_block, tx_results = self._make_and_req_block([tx])
+        raise_exception_end_tag("test_invalid_kwargs_parameter_value_oninstall")
 
-        query_request = {
-            "from": self._admin,
-            "to": score_addr,
-            "dataType": "call",
-            "data": {
-                "method": "hello",
-            }
-        }
-        self._query(query_request)
+        self.assertEqual(tx_results[0].status, int(False))
