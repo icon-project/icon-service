@@ -177,26 +177,29 @@ class TestFeeManager(unittest.TestCase):
         ratio = 50
         self._manager.set_fee_sharing_ratio(score_address, ratio)
 
-        available_step = self._manager.get_available_step(score_address, sender_step_limit)
+        available_steps = self._manager.get_available_step(
+            self._sender_address, score_address, sender_step_limit)
         total_step = sender_step_limit * 100 // (100 - ratio)
-        self.assertEqual(total_step - sender_step_limit, available_step.receiver_step)
-        self.assertEqual(sender_step_limit, available_step.sender_step)
+        self.assertEqual(total_step - sender_step_limit, available_steps.get(score_address, 0))
+        self.assertEqual(sender_step_limit, available_steps.get(self._sender_address, 0))
 
         ratio = 30
         self._manager.set_fee_sharing_ratio(score_address, ratio)
 
-        available_step = self._manager.get_available_step(score_address, sender_step_limit)
+        available_steps = self._manager.get_available_step(
+            self._sender_address, score_address, sender_step_limit)
         total_step = sender_step_limit * 100 // (100 - ratio)
-        self.assertEqual(total_step - sender_step_limit, available_step.receiver_step)
-        self.assertEqual(sender_step_limit, available_step.sender_step)
+        self.assertEqual(total_step - sender_step_limit, available_steps.get(score_address, 0))
+        self.assertEqual(sender_step_limit, available_steps.get(self._sender_address, 0))
 
     def test_get_available_step_without_sharing(self):
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         sender_step_limit = 10000
 
-        available_step = self._manager.get_available_step(score_address, sender_step_limit)
-        self.assertEqual(0, available_step.receiver_step)
-        self.assertEqual(sender_step_limit, available_step.sender_step)
+        available_steps = self._manager.get_available_step(
+            self._sender_address, score_address, sender_step_limit)
+        self.assertEqual(0, available_steps.get(score_address, 0))
+        self.assertEqual(sender_step_limit, available_steps.get(self._sender_address, 0))
 
     def test_charge_transaction_fee_without_sharing(self):
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))

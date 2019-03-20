@@ -15,17 +15,13 @@
 # limitations under the License.
 
 import typing
-from collections import namedtuple
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 from ..icx.icx_engine import IcxEngine
 from ..icx.icx_storage import IcxStorage
 
 if typing.TYPE_CHECKING:
     from ..base.address import Address
-
-# Represents a number of available STEPs.
-AvailableStep = namedtuple('AvailableStep', 'sender_step receiver_step')
 
 
 class Deposit:
@@ -155,24 +151,28 @@ class FeeManager:
 
     # TODO : get_score_info_by_EOA
 
-    def get_available_step(self, to: 'Address', sender_step_limit: int) -> AvailableStep:
+    def get_available_step(
+            self, from_: 'Address', to: 'Address', sender_step_limit: int) -> Dict['Address', int]:
         """
         Gets the usable STEPs for the given step_limit from the sender.
-        The return value is a tuple of the sender's one and receiver's one.
+        The return value is a dict of the sender's one and receiver's one.
 
         :param to: msg receiver
         :param sender_step_limit: step_limit from sender
-        :return: (sender_step, receiver_step)
+        :return: Address-available_step dict
         """
 
         # Get the SCORE's ratio
         # Calculate ratio * SCORE and (1-ratio) * msg sender
         # Checks msg sender account
         # Checks SCORE owner account
-        return 0, 0
+        return {}
 
-    def charge_transaction_fee(
-            self, from_: 'Address', to: 'Address', step_price: int, used_step: int) -> None:
+    def charge_transaction_fee(self,
+                               from_: 'Address',
+                               to: 'Address',
+                               step_price: int,
+                               used_step: int) -> Dict[Address, int]:
         """
         Charges fees for the used STEPs.
         It can pay by shared if the msg receiver set to share fees.
@@ -181,5 +181,6 @@ class FeeManager:
         :param to: msg receiver
         :param step_price: current STEP price
         :param used_step: used STEPs
+        :return Address-used_step dict
         """
         pass
