@@ -27,6 +27,7 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateScores(TestIntegrateBase):
+
     def test_db_returns(self):
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_db_returns",

@@ -72,8 +72,6 @@ class ScoreApiGenerator:
                 continue
             if context.revision > REVISION_2 or param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
-            else:
-                pass
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
