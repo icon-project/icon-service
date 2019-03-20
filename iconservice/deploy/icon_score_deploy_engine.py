@@ -189,14 +189,13 @@ class IconScoreDeployEngine(object):
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)
+            ScoreApiGenerator.check_on_deploy(context, score)
 
             # owner is set in IconScoreBase.__init__()
             context.msg = Message(sender=score.owner)
             context.tx = None
 
             self._initialize_score(tx_params.deploy_type, score, params)
-
-            ScoreApiGenerator.check_on_deploy(context, score)
             new_score_mapper[score_address] = score_info
         except BaseException as e:
             Logger.warning(f'Failed to deploy a SCORE: {score_address}', ICON_DEPLOY_LOG_TAG)

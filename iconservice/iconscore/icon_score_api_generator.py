@@ -70,13 +70,10 @@ class ScoreApiGenerator:
         for param_name, param in params.items():
             if param_name == 'self' or param_name == 'cls':
                 continue
-            if param.kind != Parameter.VAR_KEYWORD:
+            if context.revision > REVISION_2:
                 ScoreApiGenerator.__generate_input([], param, False)
             else:
-                if context.revision > REVISION_2:
-                    raise InvalidParamsException("Keyword arguments not allowed")
-                else:
-                    pass
+                pass
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:

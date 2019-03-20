@@ -28,6 +28,21 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 class TestIntegrateScores(TestIntegrateBase):
 
+    def _update_governance(self):
+        tx = self._make_deploy_tx("test_builtin",
+                                  "latest_version/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+    def _set_revision(self, revision):
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
     def test_db_returns(self):
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_db_returns",
@@ -194,6 +209,9 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(response, value)
 
     def test_default_value_fail_install(self):
+        self._update_governance()
+        self._set_revision(3)
+
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_default_value_fail1",
                                    self._addr_array[0],
@@ -208,6 +226,9 @@ class TestIntegrateScores(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
     def test_default_value_fail_update(self):
+        self._update_governance()
+        self._set_revision(3)
+
         tx1 = self._make_deploy_tx("test_scores",
                                    "test_default_value_fail2",
                                    self._addr_array[0],
