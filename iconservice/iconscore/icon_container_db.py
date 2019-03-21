@@ -284,7 +284,7 @@ class ArrayDB(object):
 
     def __setitem__(self, index: int, value: V) -> None:
         if not isinstance(index, int):
-            raise InvalidParamsException(f'Invalid index type: not an integer')
+            raise InvalidParamsException('Invalid index type: not an integer')
 
         size: int = self.__get_size()
 
@@ -315,7 +315,7 @@ class ArrayDB(object):
     @staticmethod
     def _get(db: 'IconScoreDatabase', size: int, index: int, value_type: type) -> V:
         if not isinstance(index, int):
-            raise InvalidParamsException(f'Invalid index type: not an integer')
+            raise InvalidParamsException('Invalid index type: not an integer')
 
         # Negative index means that you count from the right instead of the left.
         if index < 0:

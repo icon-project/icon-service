@@ -19,7 +19,7 @@ from unittest.mock import Mock, ANY, patch, MagicMock
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
-    InvalidParamsException
+    InvalidParamsException, OutOfBalanceException
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
@@ -599,9 +599,9 @@ class TestTransactionValidator(unittest.TestCase):
         _from = create_address()
         value = 100
         fee = 10
-        with self.assertRaises(InvalidRequestException) as e:
+        with self.assertRaises(OutOfBalanceException) as e:
             self.validator._check_balance(None, _from, value, fee)
-        self.assertEqual(e.exception.code, ExceptionCode.ILLEGAL_FORMAT)
+        self.assertEqual(e.exception.code, ExceptionCode.OUT_OF_BALANCE)
         self.assertEqual(e.exception.message, f"Out of balance: balance({balance}) < value({value}) + fee({fee})")
 
     def test_is_inactive_score(self):

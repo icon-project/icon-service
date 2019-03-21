@@ -154,6 +154,8 @@ class InvalidPackageException(IconServiceBaseException):
 class IconScoreException(IconServiceBaseException):
     # All the user-defined exceptions should inherit from this exception including revert call
     def __init__(self, message: Optional[str], index: int = 0):
+        if not isinstance(index, int):
+            raise InvalidParamsException('Invalid index type: not an integer')
         code = ExceptionCode.SCORE_ERROR + index
         if code < ExceptionCode.SCORE_ERROR:
             code = ExceptionCode.SCORE_ERROR

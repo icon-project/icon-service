@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
-from ..base.exception import InvalidRequestException, InvalidParamsException
+from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
 from ..deploy import DeployState
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, \
     LATEST_REVISION
@@ -292,7 +292,7 @@ class IconPreValidator:
         balance = self._icx.get_balance(context, from_)
 
         if balance < value + fee:
-            raise InvalidRequestException(
+            raise OutOfBalanceException(
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
 
     def _is_inactive_score(self, address: 'Address') -> bool:
