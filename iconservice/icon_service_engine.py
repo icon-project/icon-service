@@ -195,7 +195,7 @@ class IconServiceEngine(ContextContainer):
         governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(
             context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
-            raise ScoreNotFoundException(f'Governance SCORE not found')
+            raise ScoreNotFoundException('Governance SCORE not found')
         return governance_score
 
     @staticmethod

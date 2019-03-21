@@ -53,7 +53,7 @@ class IconScoreDeployer(object):
         if os.path.isfile(path):
             raise InvalidParamsException(f'{path} is a file. Check your path.')
         if os.path.isdir(path):
-            raise InvalidParamsException(f'{path} is a directory. Check {path}')
+            raise InvalidParamsException(f'{path} is a directory. Check your path.')
 
     @staticmethod
     def _extract_files_gen(data: bytes, revision: int = 0):

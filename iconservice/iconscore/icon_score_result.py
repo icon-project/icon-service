@@ -15,12 +15,12 @@
 # limitations under the License.
 from typing import TYPE_CHECKING, List, Optional
 
+from .icon_score_event_log import EventLog
 from ..base.address import Address
 from ..base.block import Block
 from ..base.exception import ExceptionCode
 from ..icon_constant import DATA_BYTE_ORDER
 from ..utils.bloom import BloomFilter
-from .icon_score_event_log import EventLog
 
 if TYPE_CHECKING:
     from ..base.transaction import Transaction

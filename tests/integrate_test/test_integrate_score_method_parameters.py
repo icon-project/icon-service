@@ -569,7 +569,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
-        self.assertTrue(tx_results[0].failure.message.find("'Unsupported type for 'list_param: <class 'list'>'") != -1)
+        self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'list_param: <class 'list'>'") != -1)
 
     def test_dict_parameters_query(self):
         # deploy
@@ -580,4 +580,4 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.ILLEGAL_FORMAT)
-        self.assertTrue(tx_results[0].failure.message.find("'Unsupported type for 'dict_param: <class 'dict'>'") != -1)
+        self.assertTrue(tx_results[0].failure.message.find("Unsupported type for 'dict_param: <class 'dict'>'") != -1)
