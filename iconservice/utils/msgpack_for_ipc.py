@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Tuple, Any, Union
 
 import msgpack
 
-from .address import Address
-from .exception import InvalidParamsException
+from ..base.address import Address, AddressPrefix
+from ..base.exception import InvalidParamsException
 from ..icon_constant import CHARSET_ENCODING
-from ..utils import int_to_bytes, bytes_to_int
+from . import int_to_bytes, bytes_to_int
 
 
 class TypeTag(IntEnum):
@@ -36,18 +35,22 @@ class TypeTag(IntEnum):
     ADDRESS = CUSTOM
 
 
-class Codec(metaclass=ABCMeta):
-    @abstractmethod
-    def encode(self, o: Any) -> Tuple[int, bytes]:
-        pass
+class BaseCodec(object):
 
-    @abstractmethod
-    def decode(self, t: int, bs: bytes) -> Any:
-        pass
+    @staticmethod
+    def address_to_bytes(addr: 'Address') -> bytes:
+        prefix_byte = b''
+        addr_bytes = addr.to_bytes()
+        if addr.prefix == AddressPrefix.EOA:
+            prefix_byte = int_to_bytes(addr.prefix.value)
+        return prefix_byte + addr_bytes
 
+    @staticmethod
+    def bytes_to_address(data: bytes) -> 'Address':
+        prefix = AddressPrefix(data[0])
+        return Address(prefix, data[1:])
 
-class BaseCodec(Codec):
-    def encode(self, obj) -> Tuple[int, bytes]:
+    def encode(self, obj: Any) -> Tuple[int, bytes]:
         if isinstance(obj, Address):
             return TypeTag.ADDRESS, obj.to_bytes()
         raise InvalidParamsException(f"Invalid encode type: {type(obj)}")
@@ -59,8 +62,8 @@ class BaseCodec(Codec):
             raise InvalidParamsException(f"UnknownType: {type(t)}")
 
 
-class MsgPackConverter(object):
-    codec: 'Codec' = BaseCodec()
+class MsgPackForIpc(object):
+    codec: 'BaseCodec' = BaseCodec()
 
     @classmethod
     def decode(cls, tag: int, val: bytes) -> 'Any':
@@ -138,10 +141,10 @@ class MsgPackConverter(object):
         else:
             return cls.codec.encode(o)
 
-    @staticmethod
-    def dumps(data: Any) -> bytes:
+    @classmethod
+    def dumps(cls, data: Any) -> bytes:
         return msgpack.dumps(data)
 
-    @staticmethod
-    def loads(data: bytes) -> list:
+    @classmethod
+    def loads(cls, data: bytes) -> list:
         return msgpack.loads(data)
