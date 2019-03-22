@@ -21,8 +21,8 @@ from iconcommons.logger import Logger
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
-from .base.exception import ExceptionCode, RevertException, ScoreErrorException
-from .base.exception import IconServiceBaseException, ServerErrorException
+from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
+    AccessDeniedException, IconScoreException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -162,7 +162,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         context = IconScoreContext(IconScoreContextType.QUERY)
-        # Clarifies that This Context does not count steps
+        # Clarifies this context does not count steps
         context.step_counter = None
 
         try:
@@ -195,7 +195,7 @@ class IconServiceEngine(ContextContainer):
         governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(
             context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
-            raise ServerErrorException(f'governance_score is None')
+            raise ScoreNotFoundException('Governance SCORE not found')
         return governance_score
 
     @staticmethod
@@ -243,7 +243,7 @@ class IconServiceEngine(ContextContainer):
             governance_score = self._get_governance_score(context)
 
             if not governance_score.isDeployer(_from):
-                raise ServerErrorException(f'Invalid deployer: no permission (address: {_from})')
+                raise AccessDeniedException(f'Invalid deployer: no permission ({_from})')
         finally:
             self._pop_context()
 
@@ -932,7 +932,7 @@ class IconServiceEngine(ContextContainer):
                         context.tx.nonce)
                     deploy_info = IconScoreContextUtil.get_deploy_info(context, score_address)
                     if deploy_info is not None:
-                        raise ServerErrorException(f'SCORE address already in use: {score_address}')
+                        raise AccessDeniedException(f'SCORE address already in use: {score_address}')
                 context.step_counter.apply_step(StepType.CONTRACT_CREATE, 1)
             else:
                 # SCORE update
@@ -964,7 +964,7 @@ class IconServiceEngine(ContextContainer):
 
         try:
             if isinstance(e, IconServiceBaseException):
-                if e.code == ExceptionCode.SCORE_ERROR or isinstance(e, ScoreErrorException):
+                if e.code >= ExceptionCode.SCORE_ERROR or isinstance(e, IconScoreException):
                     Logger.warning(e.message, ICON_SERVICE_LOG_TAG)
                 else:
                     Logger.exception(e.message, ICON_SERVICE_LOG_TAG)
@@ -975,10 +975,10 @@ class IconServiceEngine(ContextContainer):
                 Logger.exception(e, ICON_SERVICE_LOG_TAG)
                 Logger.error(e, ICON_SERVICE_LOG_TAG)
 
-                code: int = ExceptionCode.SERVER_ERROR.value
+                code: int = ExceptionCode.SYSTEM_ERROR.value
                 message = str(e)
         except:
-            code: int = ExceptionCode.SERVER_ERROR.value
+            code: int = ExceptionCode.SYSTEM_ERROR.value
             message = 'Invalid exception: code or message is invalid'
 
         return TransactionResult.Failure(code, message)
@@ -993,10 +993,10 @@ class IconServiceEngine(ContextContainer):
         """
         return Trace(
             address,
-            TraceType.REVERT if isinstance(e, RevertException) else
+            TraceType.REVERT if isinstance(e, IconScoreException) else
             TraceType.THROW,
             [e.code, e.message] if isinstance(e, IconServiceBaseException) else
-            [ExceptionCode.SERVER_ERROR, str(e)]
+            [ExceptionCode.SYSTEM_ERROR, str(e)]
         )
 
     @staticmethod

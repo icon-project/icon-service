@@ -16,15 +16,15 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
+from ..base.address import Address
+from ..base.exception import StackOverflowException
+from ..base.message import Message
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
 from .icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
-from ..base.address import Address
-from ..base.exception import InvalidRequestException
-from ..base.message import Message
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -131,7 +131,7 @@ class InternalCall(object):
         IconScoreContextUtil.validate_score_blacklist(context, addr_to)
 
         if len(context.msg_stack) == MAX_CALL_STACK_SIZE:
-            raise InvalidRequestException('Max call stack size exceeded')
+            raise StackOverflowException('Max call stack size exceeded')
 
         context.msg_stack.append(context.msg)
 

@@ -163,7 +163,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         # failure case: event log which self is not defined treat as invalid event log
         tx_result = self._deploy_score("test_self_is_not_defined_event_log_score")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.message, "define 'self' as the first parameter in the event log")
+        self.assertEqual(tx_result.failure.message, "'self' is not declared as the first parameter")
 
     def test_event_log_when_error(self):
         tx_result = self._deploy_score("test_event_log_score")
@@ -209,12 +209,12 @@ class TestIntegrateEventLog(TestIntegrateBase):
         # failure case: setting index more than 4(should raise an error)
         tx_result = self._deploy_score("test_exceed_max_index_event_log_score")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.message, "indexed arguments are overflow: limit=3")
+        self.assertEqual(tx_result.failure.message, "Indexed arguments overflow: limit=3")
 
         # failure case: setting index more than event log's parameter total count(should raise an error)
         tx_result = self._deploy_score("test_index_exceed_params_event_log_score")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.message, "index exceeds the number of parameters")
+        self.assertEqual(tx_result.failure.message, "Index exceeds the number of parameters")
 
     def test_event_log_index_on_execute(self):
         pass

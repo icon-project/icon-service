@@ -18,9 +18,9 @@ from enum import Enum, auto
 from threading import Lock
 from typing import TYPE_CHECKING, Any
 
+from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
 from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
-from ..base.exception import IconServiceBaseException, ExceptionCode, InvalidRequestException
 
 if TYPE_CHECKING:
     from iconservice.iconscore.icon_score_context import IconScoreContextType
@@ -229,7 +229,7 @@ class OutOfStepException(IconServiceBaseException):
 
     @property
     def code(self) -> int:
-        return ExceptionCode.SCORE_ERROR
+        return ExceptionCode.OUT_OF_STEP
 
     @property
     def message(self) -> str:

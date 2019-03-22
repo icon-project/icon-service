@@ -18,6 +18,7 @@
 
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -74,7 +75,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("on_install() got an unexpected keyword argument "
                                                            "'additional_param'") != -1)
         self.assertEqual(tx_results[0].status, int(False))
@@ -91,9 +92,9 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
-        self.assertEqual(tx_results[1].failure.code, 32000)
-        self.assertEqual(tx_results[2].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[2].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         self.assertTrue(
             tx_results[0].failure.message.find("on_install() missing 1 required positional argument:") != -1)
@@ -125,9 +126,9 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
-        self.assertEqual(tx_results[1].failure.code, 32000)
-        self.assertEqual(tx_results[2].failure.code, 32602)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[2].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[1].status, int(False))

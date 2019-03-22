@@ -18,22 +18,21 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
-from .icon_score_trace import Trace
 from ..base.block import Block
-from ..base.exception import ServerErrorException
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import IconScoreContextType, IconScoreFuncType
+from .icon_score_trace import Trace
 
 if TYPE_CHECKING:
-    from .icon_score_mapper import IconScoreMapper
-    from .icon_score_event_log import EventLog
-    from .icon_score_step import IconScoreStepCounter
     from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
-    from .icon_score_base import IconScoreBase
     from ..icx.icx_engine import IcxEngine
+    from .icon_score_base import IconScoreBase
+    from .icon_score_event_log import EventLog
+    from .icon_score_mapper import IconScoreMapper
+    from .icon_score_step import IconScoreStepCounter
 
 _thread_local_data = threading.local()
 
@@ -73,7 +72,7 @@ class ContextContainer(object):
         if context_stack is not None and len(context_stack) > 0:
             return context_stack.pop()
         else:
-            raise ServerErrorException('Failed to pop a context out of context_stack')
+            raise AssertionError('Failed to pop a context out of context_stack')
 
     @staticmethod
     def _clear_context() -> None:

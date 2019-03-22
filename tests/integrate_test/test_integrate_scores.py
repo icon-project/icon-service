@@ -21,7 +21,7 @@ import unittest
 
 from iconservice import IconServiceFlag
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import InvalidParamsException, ExceptionCode
+from iconservice.base.exception import ExceptionCode, ScoreNotFoundException
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -315,7 +315,7 @@ class TestIntegrateScores(TestIntegrateBase):
 
         score_address = tx_results[2].score_address
         query_request = {"address": score_address}
-        with self.assertRaises(InvalidParamsException) as e:
+        with self.assertRaises(ScoreNotFoundException) as e:
             self._query(query_request, 'icx_getScoreApi')
         self.assertEqual(e.exception.args[0], f"SCORE not found: {score_address}")
 
@@ -340,7 +340,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, 33000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.END)
         self.assertEqual(tx_results[0].failure.message, 'hello world')
 
         # Test call_revert_with_invalid_code
@@ -351,7 +351,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR.value)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
         # Test call_revert_with_none_message
@@ -362,7 +362,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, 33000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.END)
 
         # Test call_revert_with_none_message_and_none_code()
         func_name = 'call_revert_with_none_message_and_none_code'
@@ -372,7 +372,7 @@ class TestIntegrateScores(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR.value)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
         # Test exception handling on call_exception()

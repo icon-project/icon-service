@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 from . import DeployType, DeployState
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
-from ..base.exception import ServerErrorException
+from ..base.exception import InvalidParamsException, AccessDeniedException
 from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2, ZERO_TX_HASH
 
 if TYPE_CHECKING:
@@ -211,7 +211,7 @@ class IconScoreDeployStorage(object):
                                       deploy_data: 'dict') -> None:
         prev_tx_params = self.get_deploy_tx_params(context, tx_hash)
         if prev_tx_params is not None:
-            raise ServerErrorException(f'deploy_params already exists: {tx_hash}')
+            raise InvalidParamsException(f'deploy_params already exists: {tx_hash}')
 
         # Save DeployTXParams to stateDB
         tx_params = IconScoreDeployTXParams(tx_hash, deploy_type, score_address, deploy_data)
@@ -225,7 +225,7 @@ class IconScoreDeployStorage(object):
         else:
             # SCORE update case
             if deploy_info.owner != owner:
-                raise ServerErrorException(f'Invalid owner: {deploy_info.owner} != {owner}')
+                raise AccessDeniedException(f'Invalid owner: {deploy_info.owner} != {owner}')
 
             # If the previous DeployTXParams has exists, remove it before deploying
             if deploy_info.next_tx_hash != ZERO_TX_HASH:
@@ -243,14 +243,14 @@ class IconScoreDeployStorage(object):
 
         deploy_info = self.get_deploy_info(context, score_address)
         if deploy_info is None:
-            raise ServerErrorException(f'deploy_info is None: {score_address}')
+            raise InvalidParamsException(f'deploy_info is None: {score_address}')
 
         next_tx_hash = deploy_info.next_tx_hash
         # have to match next_tx_hash and tx_hash
         # tx_hash is None -> builtin install
         if tx_hash is not None and tx_hash != next_tx_hash:
-            raise ServerErrorException('Invalid update tx_hash: '
-                                       f'tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
+            raise InvalidParamsException(
+                f'Invalid update: tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
 
         deploy_info.current_tx_hash = next_tx_hash
         deploy_info.next_tx_hash = ZERO_TX_HASH
@@ -259,7 +259,7 @@ class IconScoreDeployStorage(object):
 
         tx_params = self.get_deploy_tx_params(context, deploy_info.current_tx_hash)
         if tx_params is None:
-            raise ServerErrorException(f'tx_params is None: {deploy_info.current_tx_hash}')
+            raise InvalidParamsException(f'tx_params is None: {deploy_info.current_tx_hash}')
 
     def put_deploy_info(self, context: Optional['IconScoreContext'], deploy_info: 'IconScoreDeployInfo') -> None:
         """

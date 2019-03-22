@@ -185,7 +185,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[0].failure.message,
                          f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
         tx_hash2 = tx_results[0].tx_hash
@@ -229,7 +229,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[0].failure.message,
                          f'Invalid owner: {str(self._addr_array[0])} != {str(self._addr_array[1])}')
         tx_hash2 = tx_results[0].tx_hash
@@ -278,7 +278,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_zip")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PACKAGE)
         self.assertEqual(tx_result.failure.message, f'Bad zip file.')
 
         # 4. assert get value: value1
@@ -316,7 +316,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_scorebase")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
 
         # 4. assert get value: value1
@@ -394,8 +394,8 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_external_func")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, "this score has no external functions")
+        self.assertEqual(tx_result.failure.code, ExceptionCode.ILLEGAL_FORMAT)
+        self.assertEqual(tx_result.failure.message, "There is no external method in the SCORE")
 
         # 4. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
@@ -432,7 +432,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         raise_exception_end_tag("test_score_with_korean_comments")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
 
         # 4. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
@@ -469,7 +469,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_python")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
 
         # 4. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)

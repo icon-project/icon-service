@@ -15,9 +15,9 @@
 # limitations under the License.
 
 import importlib.util
-
-from ..base.exception import ServerErrorException
 import os
+
+from ..base.exception import IllegalFormatException
 
 CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
@@ -77,7 +77,7 @@ class ScorePackageValidator(object):
     def _validate_blacklist_keyword_from_names(co_names: tuple):
         for co_name in co_names:
             if co_name in BLACKLIST_RESERVED_KEYWORD:
-                raise ServerErrorException(f'invalid blacklist keyword: {co_name}')
+                raise IllegalFormatException(f'Blacklist keyword found: {co_name}')
 
     @staticmethod
     def _validate_import_from_code(code):
@@ -128,7 +128,7 @@ class ScorePackageValidator(object):
         from_list_op_code_key = byte_code_list[current_index - 2]
         level_op_code_key = byte_code_list[current_index - 4]
         if LOAD_CONST != from_list_op_code_key or LOAD_CONST != level_op_code_key:
-            raise ServerErrorException(f'invalid import OPCODE')
+            raise IllegalFormatException('Invalid import opcode')
 
         import_name_index = byte_code_list[current_index + 1]
         from_list_index = byte_code_list[current_index - 1]
@@ -142,8 +142,7 @@ class ScorePackageValidator(object):
             return
 
         if import_name not in ScorePackageValidator.WHITELIST_IMPORT:
-            raise ServerErrorException(f'invalid import '
-                                       f'import_name: {import_name}')
+            raise IllegalFormatException(f'Invalid import name: {import_name}')
 
         if from_list is None:
             # only using import
@@ -153,14 +152,12 @@ class ScorePackageValidator(object):
             if IMPORT_STAR == next_op_code_key:
                 # import_star
                 if from_list[0] != '*':
-                    raise ServerErrorException(f'invalid star import '
-                                               f'import_name: {import_name}')
+                    raise IllegalFormatException(f'Invalid star import: {import_name}')
             elif IMPORT_FROM == next_op_code_key:
                 # import from
                 for import_from in from_list:
                     if '*' not in ScorePackageValidator.WHITELIST_IMPORT[import_name] and \
                             import_from not in ScorePackageValidator.WHITELIST_IMPORT[import_name]:
-                        raise ServerErrorException(f'invalid import '
-                                                   f'import_name: {import_name}')
+                        raise IllegalFormatException(f'Invalid import name: {import_name}')
             else:
-                raise ServerErrorException(f'invalid import OPCODE')
+                raise IllegalFormatException('Invalid import opcode')
