@@ -15,15 +15,48 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING, Optional
+from struct import Struct
 
 from .icx_account import Account
 from ..base.address import Address
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..fee.deposit import Deposit
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
     from ..iconscore.icon_score_context import IconScoreContext
+
+
+class Fee(object):
+    """SCORE Fee Information"""
+
+    # Fee Structure for level db (big endian, 14 bytes)
+    # ratio(2) | head_id(4) | tail_id(4) | available_head_id(4)
+    # icx(DEFAULT_BYTE_SIZE)
+    _struct = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
+
+    def __init__(self, ratio: int = 0, head_id: bytes = None, tail_id: bytes = None, available_head_id: bytes = None):
+        self.ratio = ratio
+        self.head_id = head_id
+        self.tail_id = tail_id
+        self.available_head_id = available_head_id
+
+    @staticmethod
+    def from_bytes(buf: bytes):
+        """Converts Fee in bytes into Fee Object
+
+        :param buf: Fee in bytes
+        :return: Fee Object
+        """
+        return Fee
+
+    def to_bytes(self) -> bytes:
+        """Converts Fee object into bytes
+
+        :return: Fee in bytes
+        """
+        return Fee._struct.pack()
 
 
 class IcxStorage(object):
@@ -178,6 +211,63 @@ class IcxStorage(object):
         key = b'total_supply'
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
         self._db.put(context, key, value)
+
+    def get_score_fee(self, context: 'IconScoreContext', score_address: 'Address') -> Fee:
+        """Returns the contract fee
+
+        :param context: Object that contains the useful information to process user's JSON-RPC request
+        :param score_address: SCORE address
+        :return: Fee object
+        """
+        pass
+
+    def put_score_fee(self, context: 'IconScoreContext', score_address: 'Address', fee: Fee) -> None:
+        """Puts the contract fee data into db
+
+        :param context: Object that contains the useful information to process user's JSON-RPC request
+        :param score_address: SCORE address
+        :param fee: Fee object
+        :return: None
+        """
+        pass
+
+    def delete_score_fee(self, context: 'IconScoreContext', score_address: 'Address') -> None:
+        """Deletes the contract fee from db
+
+        :param context: Object that contains the useful information to process user's JSON-RPC request
+        :param score_address: SCORE address
+        :return: None
+        """
+        pass
+
+    # TODO : unpack 하고 deposit_id 주입해서 return
+    def get_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> Deposit:
+        """Returns the deposit
+
+        :param context: Object that contains the useful information to process user's JSON-RPC request
+        :param deposit_id: Deposit id
+        :return: Deposit Object
+        """
+        pass
+
+    def put_deposit(self, context: 'IconScoreContext', deposit_id: bytes, deposit: Deposit) -> None:
+        """Puts the deposit data into db
+
+        :param context: Object that contains the useful information to process user's JSON-RPC request
+        :param deposit_id: Deposit id
+        :param deposit: Deposit Object
+        :return: None
+        """
+        pass
+
+    def delete_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> None:
+        """Deletes the deposit from db
+
+        :param context: Object that contains the useful information to process user's JSON-RPC request
+        :param deposit_id: Deposit id
+        :return: None
+        """
+        pass
 
     def close(self,
               context: 'IconScoreContext') -> None:
