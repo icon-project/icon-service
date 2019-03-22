@@ -40,6 +40,22 @@ class ParamType(IntEnum):
 
     VALIDATE_TRANSACTION = 600
 
+    # IISS
+    IISS = 700
+    IISS_SET_STAKE = 701
+    IISS_GET_STAKE = 702
+    IISS_SET_DELEGATION = 703
+    IISS_GET_DELEGATION = 704
+    IISS_CLAIM_I_SCORE = 705
+    IISS_QUERY_I_SCORE = 706
+    IISS_REG_PREP_CANDIDATE = 707
+    IISS_UNREG_PREP_CANDIDATE = 708
+    IISS_SET_PREP_CANDIDATE = 709
+    IISS_GET_PREP_CANDIDATE = 710
+    IISS_GET_PREP_CANDIDATE_DELEGATION_INFO = 711
+    IISS_GET_PREP_LIST = 712
+    IISS_GET_PREP_CANDIDATE_LIST = 713
+
 
 class ValueType(IntEnum):
     IGNORE = 0
@@ -108,6 +124,16 @@ class ConstantKeys:
     ICX_GET_TOTAL_SUPPLY = "icx_getTotalSupply"
     ICX_GET_SCORE_API = "icx_getScoreApi"
     ISE_GET_STATUS = "ise_getStatus"
+
+    # IISS
+    DELEGATIONS = "delegations"
+    NETWORK_INFO = "networkInfo"
+    URL = 'url'
+    GOVERNANCE = "goveranance"
+    ICX_PRICE = "icxPrice"
+    INCENTIVE_REP = "incentiveRep"
+    START_RANK = "startRank"
+    END_RANK = "endRank"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -219,4 +245,53 @@ type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[Para
 type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.METHOD: ValueType.STRING,
     ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA]
+}
+
+
+# IISS
+type_convert_templates[ParamType.IISS_SET_STAKE] = {
+    ConstantKeys.VALUE: ValueType.INT
+}
+
+type_convert_templates[ParamType.IISS_GET_STAKE] = {
+    ConstantKeys.ADDRESS: ValueType.ADDRESS
+}
+
+type_convert_templates[ParamType.IISS_SET_DELEGATION] = {
+    ConstantKeys.DELEGATIONS: [{
+        ConstantKeys.ADDRESS: ValueType.ADDRESS,
+        ConstantKeys.VALUE: ValueType.INT
+    }]
+}
+
+type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
+
+type_convert_templates[ParamType.IISS_CLAIM_I_SCORE] = {
+}
+
+type_convert_templates[ParamType.IISS_QUERY_I_SCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
+
+type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
+    ConstantKeys.NETWORK_INFO: ValueType.STRING,
+    ConstantKeys.NAME: ValueType.STRING,
+    ConstantKeys.URL: ValueType.STRING,
+    ConstantKeys.GOVERNANCE: {
+        ConstantKeys.ICX_PRICE: ValueType.INT,
+        ConstantKeys.INCENTIVE_REP: ValueType.INT
+    }
+}
+
+type_convert_templates[ParamType.IISS_UNREG_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
+
+type_convert_templates[ParamType.IISS_SET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE]
+
+type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_GET_STAKE]
+
+type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO] = type_convert_templates[ParamType.IISS_GET_STAKE]
+
+type_convert_templates[ParamType.IISS_GET_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
+
+type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_LIST] = {
+    ConstantKeys.START_RANK: ValueType.INT,
+    ConstantKeys.END_RANK: ValueType.INT
 }
