@@ -28,6 +28,7 @@ from ..base.type_converter import TypeConverter
 from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
+from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
@@ -188,6 +189,7 @@ class IconScoreDeployEngine(object):
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)
+            ScoreApiGenerator.check_on_deploy(context, score)
 
             # owner is set in IconScoreBase.__init__()
             context.msg = Message(sender=score.owner)
