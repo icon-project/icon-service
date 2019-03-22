@@ -28,7 +28,7 @@ from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.icx import IcxEngine
 from iconservice.icx.icx_account import AccountType
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx.icx_storage import IcxStorage, Fee
 from tests.mock_generator import clear_inner_task
 
 
@@ -93,14 +93,17 @@ class TestFeeManager(unittest.TestCase):
 
     def test_set_fee_sharing_ratio(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
+        fee_info = Mock(spec=Fee)
+        self._icx_engine.storage.get_score_fee = Mock(return_value=fee_info)
+        self._icx_engine.storage.put_score_fee = Mock()
 
         ratio = 50
 
         self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        score_fee_info = self._manager.get_score_fee_info(context, self._score_address)
+        sharing_ratio = self._manager.get_fee_sharing_ratio(context, self._score_address)
 
-        self.assertEqual(ratio, score_fee_info.sharing_ratio)
+        self.assertEqual(ratio, sharing_ratio)
 
     def test_set_fee_sharing_ratio_invalid_request(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -155,7 +158,7 @@ class TestFeeManager(unittest.TestCase):
         self.assertEqual(tx_hash, deposit.id)
         self.assertEqual(self._sender, deposit.sender)
         self.assertEqual(score_address, deposit.score_address)
-        self.assertEqual(amount, deposit.amount)
+        self.assertEqual(amount, deposit.deposit_amount)
         self.assertEqual(block_number, deposit.created)
         self.assertEqual(block_number + period, deposit.expires)
 
@@ -221,7 +224,7 @@ class TestFeeManager(unittest.TestCase):
         self.assertEqual(tx_hash, deposit.id)
         self.assertEqual(score_address, deposit.score_address)
         self.assertEqual(self._sender, deposit.sender_address)
-        self.assertEqual(amount, deposit.amount)
+        self.assertEqual(amount, deposit.deposit_amount)
         self.assertEqual(block_number, deposit.created)
         self.assertEqual(block_number + period, deposit.expires)
 

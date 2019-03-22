@@ -1,5 +1,9 @@
+import typing
 from struct import Struct
 from ..icon_constant import DEFAULT_BYTE_SIZE
+
+if typing.TYPE_CHECKING:
+    from ..base.address import Address
 
 
 class Deposit(object):

@@ -15,44 +15,21 @@
 # limitations under the License.
 
 import typing
-from typing import List, Dict, Optional
+from typing import List, Dict
 
+from .deposit import Deposit
 from ..base.exception import InvalidRequestException
 from ..icx.icx_engine import IcxEngine
-from ..icx.icx_storage import IcxStorage
 
 if typing.TYPE_CHECKING:
     from ..base.address import Address
     from ..deploy.icon_score_deploy_storage import IconScoreDeployInfo
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..icx.icx_storage import IcxStorage, Fee
 
 
-class Deposit:
-    """
-    Deposit information
-    """
-
-    def __init__(self, deposit_id: bytes, sender: 'Address', score_address: 'Address'):
-        # deposit id, should be tx hash of deposit transaction
-        self.id: bytes = deposit_id
-        # sender address
-        self.sender: 'Address' = sender
-        # target SCORE address
-        self.score_address: 'Address' = score_address
-        # amount of ICXs in loop
-        self.amount: int = 0
-        # created time in block
-        self.created: int = 0
-        # expires time in block
-        self.expires: int = 0
-        # issued amount of virtual STEPs
-        self.virtual_step_issued: int = 0
-        # used amount of virtual STEPs
-        self.virtual_step_used: int = 0
-
-
-class ScoreFeeInfo:
+class ScoreInfo:
     """
     Fee information of a SCORE
     """
@@ -92,7 +69,7 @@ class FeeManager:
                               score_address: 'Address',
                               ratio: int) -> None:
         """
-        Sets fee sharing ratio that SCORE pays.
+        Sets the fee sharing ratio that SCORE pays.
 
         :param context: IconScoreContext
         :param sender: msg sender address
@@ -100,26 +77,37 @@ class FeeManager:
         :param ratio: sharing ratio in percent (0-100)
         """
 
-        deploy_info: 'IconScoreDeployInfo' = \
-            self._deploy_storage.get_deploy_info(context, score_address)
-
-        if deploy_info is None:
-            raise InvalidRequestException('Invalid SCORE')
-
-        if deploy_info.owner != sender:
-            raise InvalidRequestException('Invalid SCORE owner')
+        self._check_score_ownership(context, sender, score_address)
 
         if not (0 <= ratio <= 100):
             raise InvalidRequestException('Invalid ratio')
 
-        # TODO set information to storage
-        # self._icx_storage.
+        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+        score_fee_info.ratio = ratio
+
+        self._icx_storage.put_score_fee(context, score_address, score_fee_info)
+
+    def get_fee_sharing_ratio(self,
+                              context: 'IconScoreContext',
+                              score_address: 'Address') -> int:
+        """
+        Gets the fee sharing ratio from score info
+
+        :param context: IconScoreContext
+        :param score_address: SCORE address
+        :return: sharing ratio in percent (0-100)
+        """
+
+        self._check_score_valid(context, score_address)
+
+        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+        return score_fee_info.ratio
 
     def get_score_fee_info(self,
                            context: 'IconScoreContext',
-                           score_address: 'Address') -> ScoreFeeInfo:
+                           score_address: 'Address') -> ScoreInfo:
         """
-        Gets SCORE information
+        Gets the SCORE information
 
         :param context: IconScoreContext
         :param score_address: SCORE address
@@ -130,7 +118,21 @@ class FeeManager:
                 - contracts in list
         """
 
-        return ScoreFeeInfo(score_address)
+        self._check_score_valid(context, score_address)
+
+        score_fee_info_from_storage = self._icx_storage.get_score_fee(context, score_address)
+
+        score_fee_info = ScoreInfo(score_address)
+        score_fee_info.sharing_ratio = score_fee_info_from_storage.ratio
+        deposit_id = score_fee_info_from_storage.head_id
+
+        # Appends all deposits
+        while deposit_id is not None:
+            deposit = self._icx_storage.get_deposit(context, deposit_id)
+            score_fee_info.deposits.append(deposit)
+            deposit_id = deposit.next_id
+
+        return score_fee_info
 
     # TODO : naming (term or period)
     def deposit_fee(self,
@@ -141,6 +143,7 @@ class FeeManager:
                     amount: int,
                     block_number: int,
                     period: int) -> None:
+
         """
         Deposits ICXs for the SCORE.
         It may be issued the virtual STEPs for the SCORE to be able to pay share fees.
@@ -157,7 +160,38 @@ class FeeManager:
         # - Deposits ICX
         # - Calculates Virtual Step
         # - Updates Deposit Data
-        pass
+
+        self._check_score_ownership(context, sender, score_address)
+
+        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+
+        # Withdraws from sender's account
+        sender_account = self._icx_storage.get_account(context, sender)
+        sender_account.withdraw(amount)
+
+        deposit = Deposit(tx_hash, score_address, sender)
+        deposit.deposit_amount = amount
+        deposit.created = block_number
+        deposit.expires = block_number + period
+        deposit.virtual_step_issued = \
+            self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
+        deposit.prev_id = score_fee_info.tail_id
+        self._icx_storage.put_deposit(context, tx_hash, deposit)
+
+        # Link to old last item
+        prev_deposit = self._icx_storage.get_deposit(context, tx_hash)
+        prev_deposit.next = tx_hash
+        self._icx_storage.put_deposit(context, prev_deposit.id, prev_deposit)
+
+        # Update last info
+        if score_fee_info.head_id is None:
+            score_fee_info.head_id = tx_hash
+
+        if score_fee_info.available_head_id is None:
+            score_fee_info.available_head_id = tx_hash
+
+        score_fee_info.tail_id = tx_hash
+        self._icx_storage.put_score_fee(context, score_address, score_fee_info)
 
     def withdraw_fee(self,
                      context: 'IconScoreContext',
@@ -177,11 +211,12 @@ class FeeManager:
         # - Checks if the contract period is finished
         # - if the period is not finished, calculates and apply a penalty
         # - Update ICX
-        pass
+
+        self._check_deposit_id(deposit_id)
 
     def get_deposit_info_by_id(self,
                                context: 'IconScoreContext',
-                               deposit_id: bytes) -> Optional[Deposit]:
+                               deposit_id: bytes) -> Deposit:
         """
         Gets the deposit information. Returns None if the deposit from the given id does not exist.
 
@@ -189,8 +224,14 @@ class FeeManager:
         :param deposit_id: deposit id, should be tx hash of deposit transaction
         :return: deposit information
         """
+        self._check_deposit_id(deposit_id)
 
-        return None
+        deposit = self._icx_storage.get_deposit(context, deposit_id)
+
+        if deposit is None:
+            raise InvalidRequestException('Deposit info not found')
+
+        return deposit
 
     # TODO : get_score_info_by_EOA
 
@@ -198,7 +239,8 @@ class FeeManager:
                            context: 'IconScoreContext',
                            sender: 'Address',
                            to: 'Address',
-                           sender_step_limit: int) -> Dict['Address', int]:
+                           sender_step_limit: int,
+                           block_number: int) -> Dict['Address', int]:
         """
         Gets the usable STEPs for the given step_limit from the sender.
         The return value is a dict of the sender's one and receiver's one.
@@ -214,7 +256,58 @@ class FeeManager:
         # Calculate ratio * SCORE and (1-ratio) * msg sender
         # Checks msg sender account
         # Checks SCORE owner account
-        return {}
+
+        receiver_step = 0
+
+        if to.is_contract:
+            score_fee_info = self._icx_storage.get_score_fee(context, to)
+
+            if score_fee_info is not None:
+                total_step = sender_step_limit * 100 // (100 - score_fee_info.ratio)
+                receiver_step = total_step - sender_step_limit
+
+        return {sender: sender_step_limit, to: receiver_step}
+
+    def can_charge_fee_from_score(self):
+        pass
+
+    def _can_charge_fee_from_score_by_virtual_step(self,
+                                                   context: 'IconScoreContext',
+                                                   score_fee_info: 'Fee',
+                                                   step_required: int,
+                                                   block_number: int):
+
+        deposit_id = score_fee_info.available_head_id
+
+        while deposit_id is not None:
+            deposit = self._icx_storage.get_deposit(context, deposit_id)
+
+            if block_number < deposit.expires:
+                remains = deposit.virtual_step_issued - deposit.virtual_step_used
+                step_required -= remains
+                if step_required <= 0:
+                    return True
+
+        return False
+
+    def _can_charge_fee_from_score_by_deposit(self,
+                                              context: 'IconScoreContext',
+                                              score_fee_info: 'Fee',
+                                              step_required: int,
+                                              block_number: int):
+
+        deposit_id = score_fee_info.available_head_id
+
+        while deposit_id is not None:
+            deposit = self._icx_storage.get_deposit(context, deposit_id)
+
+            if block_number < deposit.expires:
+                remains = deposit.virtual_step_issued - deposit.virtual_step_used
+                step_required -= remains
+                if step_required <= 0:
+                    return True
+
+        return False
 
     def charge_transaction_fee(self,
                                context: 'IconScoreContext',
@@ -234,3 +327,43 @@ class FeeManager:
         :return Address-used_step dict
         """
         pass
+
+    def _get_score_deploy_info(self, context, score_address) -> 'IconScoreDeployInfo':
+        deploy_info: 'IconScoreDeployInfo' = \
+            self._deploy_storage.get_deploy_info(context, score_address)
+
+        if deploy_info is None:
+            raise InvalidRequestException('Invalid SCORE')
+
+        return deploy_info
+
+    def _check_score_valid(self, context, score_address):
+        deploy_info = self._get_score_deploy_info(context, score_address)
+
+        assert deploy_info is not None
+
+    def _check_score_ownership(self, context, sender, score_address) -> None:
+        deploy_info = self._get_score_deploy_info(context, score_address)
+
+        if deploy_info.owner != sender:
+            raise InvalidRequestException('Invalid SCORE owner')
+
+    @staticmethod
+    def _check_deposit_id(deposit_id):
+        if deposit_id is None or not isinstance(deposit_id, bytes) or len(deposit_id) != 32:
+            raise InvalidRequestException('Invalid deposit ID')
+
+    @staticmethod
+    def _calculate_virtual_step_issuance(deposit_amount: int,
+                                         created_at: int,
+                                         expires_in: int, ):
+        # TODO implement functionality
+        return 0
+
+    @staticmethod
+    def _calculate_penalty(deposit_amount: int,
+                           created_at: int,
+                           expires_in: int,
+                           block_number: int):
+        # TODO implement functionality
+        return 0
