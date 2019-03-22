@@ -198,8 +198,8 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.msg.value = 1
         with self.assertRaises(BaseException) as e:
             func('func2', (), {})
-        self.assertEqual(e.exception.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(e.exception.message, "This is not payable")
+        self.assertEqual(e.exception.code, ExceptionCode.METHOD_NOT_PAYABLE)
+        self.assertTrue(e.exception.message.startswith("Method not payable"))
 
     def test_inherit_call1(self):
         self.context.context_type = IconScoreContextType.INVOKE
@@ -220,4 +220,4 @@ class TestExternalPayableCall(unittest.TestCase):
         with self.assertRaises(BaseException) as e:
             func('func2', (), {})
         self.assertEqual(e.exception.code, ExceptionCode.METHOD_NOT_FOUND)
-        self.assertEqual(e.exception.message, "Invalid external method")
+        self.assertTrue(e.exception.message.startswith("Method not found"))

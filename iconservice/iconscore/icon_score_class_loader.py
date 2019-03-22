@@ -22,7 +22,7 @@ import sys
 from ..base.address import Address
 from ..deploy.utils import get_package_name_by_address_and_tx_hash
 from ..deploy.utils import get_score_deploy_path
-from ..base.exception import ScoreErrorException
+from ..base.exception import IllegalFormatException
 from ..icon_constant import PACKAGE_JSON_FILE
 
 
@@ -65,7 +65,7 @@ class IconScoreClassLoader(object):
 
         # Relative package name is not allowed
         if main_module.startswith('.'):
-            raise ScoreErrorException('Invalid main_module')
+            raise IllegalFormatException('Invalid main_module')
 
         main_score: str = package_json['main_score']
 

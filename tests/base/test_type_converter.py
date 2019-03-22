@@ -191,7 +191,7 @@ class TestTypeConverter(unittest.TestCase):
         with self.assertRaises(BaseException) as e:
             self._test_transaction_convert(method, tx_hash, from_addr, to_addr, value, data_type,
                                            content_type=content_type, content=content)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message,
                          "TypeConvert Exception None value, template: ValueType.ADDRESS_OR_MALFORMED_ADDRESS")
 

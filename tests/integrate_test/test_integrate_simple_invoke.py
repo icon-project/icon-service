@@ -97,14 +97,14 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
         with self.assertRaises(BaseException) as e:
             self._make_and_req_block([tx], block_height=0)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIn(f"Failed to invoke a block", e.exception.message)
 
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
         with self.assertRaises(BaseException) as e:
             self._make_and_req_block([tx], block_height=2)
-            self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-            self.assertIn(f"Failed to invoke a block", e.exception.message)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
+        self.assertIn(f"Failed to invoke a block", e.exception.message)
 
         query_request = {
             "address": self._addr_array[0]
@@ -123,7 +123,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         invalid_block = self._create_invalid_block(prev_block.height)
         with self.assertRaises(BaseException) as e:
             self._write_precommit_state(invalid_block)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIn("No precommit data:", e.exception.message)
 
         query_request = {

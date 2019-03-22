@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.address import ICX_ENGINE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import InvalidParamsException, ExceptionCode, ServerErrorException
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
@@ -391,7 +391,7 @@ class TestScoreDeployEngine(unittest.TestCase):
             self._score_deploy_engine.deploy(self._context, self._context.tx.hash)
 
         self._deploy_storage.get_deploy_tx_params.assert_called_with(self._context, self._context.tx.hash)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self._score_deploy_engine._score_deploy.assert_not_called()
         self._score_deploy_engine._score_deploy_storage.update_score_info.assert_not_called()
 
@@ -426,7 +426,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         with self.assertRaises(InvalidParamsException) as e:
             self._score_deploy_engine._score_deploy(self._context, tx_params)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f"Invalid contentType: application/tbears")
         self._score_deploy_engine._on_deploy.assert_not_called()
 
@@ -448,7 +448,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         with self.assertRaises(InvalidParamsException) as e:
             self._score_deploy_engine._score_deploy(self._context, tx_params)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f'Invalid contentType: wrong/content')
         self._score_deploy_engine._on_deploy.assert_not_called()
 
@@ -637,10 +637,10 @@ class TestScoreDeployEngine(unittest.TestCase):
         deploy_type = "strange"
         params = {"param1": '0x1', "param2": "string"}
 
-        with self.assertRaises(ServerErrorException) as e:
+        with self.assertRaises(InvalidParamsException) as e:
             self._score_deploy_engine._initialize_score(deploy_type, mock_score, params)
 
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f"Invalid deployType: {deploy_type}")
         TypeConverter.make_annotations_from_method.assert_not_called()
         TypeConverter.convert_data_params.assert_not_called()

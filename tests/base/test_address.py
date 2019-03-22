@@ -97,7 +97,7 @@ class TestAddress(unittest.TestCase):
         buf = bytes.hex(addr1.body)
         with self.assertRaises(BaseException) as e:
             Address.from_string(buf)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, 'Invalid address')
 
     def test_address_from_to_string_CONTRACT(self):
@@ -148,7 +148,7 @@ class TestAddress(unittest.TestCase):
         address: str = "hx123456"
         with self.assertRaises(BaseException) as e:
             Address.from_string(address)
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, "Invalid address")
 
 

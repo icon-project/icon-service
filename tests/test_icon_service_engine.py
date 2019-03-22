@@ -26,8 +26,7 @@ from iconcommons.icon_config import IconConfig
 
 from iconservice.base.address import Address, AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode, ServerErrorException, \
-    RevertException
+from iconservice.base.exception import ExceptionCode, InvalidParamsException, IconScoreException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
@@ -574,7 +573,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self._engine._icx_engine.get_balance(None, self.from_)
 
         self._engine._handle_score_invoke = \
-            Mock(return_value=None, side_effect=RevertException("force revert"))
+            Mock(return_value=None, side_effect=IconScoreException("force revert"))
 
         raise_exception_start_tag("test_score_invoke_with_revert")
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
@@ -719,10 +718,10 @@ class TestIconServiceEngine(unittest.TestCase):
             timestamp=0,
             prev_hash=create_block_hash())
 
-        with self.assertRaises(ServerErrorException) as cm:
+        with self.assertRaises(InvalidParamsException) as cm:
             self._engine.commit(block)
         e = cm.exception
-        self.assertEqual(ExceptionCode.SERVER_ERROR, e.code)
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.code)
         self.assertTrue(e.message.startswith('No precommit data'))
 
     def test_rollback(self):

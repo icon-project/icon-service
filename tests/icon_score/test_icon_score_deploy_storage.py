@@ -19,7 +19,7 @@ import unittest
 from copy import deepcopy
 from unittest.mock import Mock, patch
 
-from iconservice.base.exception import ServerErrorException, ExceptionCode
+from iconservice.base.exception import ExceptionCode, AccessDeniedException, InvalidParamsException
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy.icon_score_deploy_storage import \
     IconScoreDeployTXParams, IconScoreDeployInfo, DeployType, DeployState, IconScoreDeployStorage
@@ -111,14 +111,14 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         owner = create_address()
         tx_hash = create_tx_hash()
         deploy_data = {}
-        with self.assertRaises(ServerErrorException) as e:
+        with self.assertRaises(InvalidParamsException) as e:
             self.storage.put_deploy_info_and_tx_params(context,
                                                        score_address,
                                                        deploy_type,
                                                        owner,
                                                        tx_hash,
                                                        deploy_data)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f'deploy_params already exists: {tx_hash}')
         self.storage.put_deploy_tx_params.assert_not_called()
 
@@ -169,14 +169,14 @@ class TestIconScoreDeployStorage(unittest.TestCase):
 
             other_owner = create_address()
 
-            with self.assertRaises(ServerErrorException) as e:
+            with self.assertRaises(AccessDeniedException) as e:
                 self.storage.put_deploy_info_and_tx_params(context,
                                                            score_address,
                                                            deploy_type,
                                                            other_owner,
                                                            tx_hash,
                                                            deploy_data)
-            self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+            self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
             self.assertEqual(e.exception.message, f'Invalid owner: {deploy_info.owner} != {other_owner}')
 
             self.storage.get_deploy_tx_params.assert_called_once_with(context, tx_hash)
@@ -225,9 +225,9 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         tx_hash = create_tx_hash()
 
         self.storage.get_deploy_info = Mock(return_value=None)
-        with self.assertRaises(ServerErrorException) as e:
+        with self.assertRaises(InvalidParamsException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f'deploy_info is None: {score_address}')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
@@ -239,10 +239,10 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                                           current_tx_hash,
                                           next_tx_hash)
         self.storage.get_deploy_info = Mock(return_value=deepcopy(deploy_info))
-        with self.assertRaises(ServerErrorException) as e:
+        with self.assertRaises(InvalidParamsException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, f'Invalid update tx_hash: '
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
+        self.assertEqual(e.exception.message, f'Invalid update: '
                                               f'tx_hash({tx_hash}) != next_tx_hash({next_tx_hash})')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
@@ -256,9 +256,9 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.storage.get_deploy_info = Mock(return_value=deepcopy(deploy_info))
         self.storage.put_deploy_info = Mock()
         self.storage.get_deploy_tx_params = Mock(return_value=None)
-        with self.assertRaises(ServerErrorException) as e:
+        with self.assertRaises(InvalidParamsException) as e:
             self.storage.update_score_info(context, score_address, tx_hash)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, f'tx_params is None: {tx_hash}')
         self.storage.get_deploy_info.assert_called_once_with(context, score_address)
         self.storage.put_deploy_info.assert_called_once()
