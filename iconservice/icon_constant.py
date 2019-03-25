@@ -78,7 +78,7 @@ class ConfigKey:
     IISS_DB_ROOT_PATH = "iissDbRootPath"
     IISS_GOVERNANCE_VARIABLE = "iissGovernanceVariable",
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod",
-    IISS_PREP_LIST = "iissPrepList",
+    IISS_PREP_LIST = "iissPRepList",
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
 
 
@@ -127,7 +127,7 @@ IISS_METHOD_TABLE = [
     "registerPRepCandidate",
     "unregisterPRepCandidate",
     "setPRepCandidate",
-    "getPrepCandidate",
+    "getPRepCandidate",
     "getPRepCandidateStats",
     "getPRepCandidateDelegationInfo",
     "getPRepList",
