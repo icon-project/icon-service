@@ -29,12 +29,23 @@ if TYPE_CHECKING:
 
 
 class Fee(object):
-    """SCORE Fee Information"""
+    """
+    SCORE Fee Information
 
-    # Fee Structure for level db (big endian, 14 bytes)
-    # ratio(2) | head_id(4) | tail_id(4) | available_head_id(4)
-    # icx(DEFAULT_BYTE_SIZE)
-    _struct = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
+    [Fee Structure for level db]
+    - big endian, 1 + DEFAULT_BYTE_SIZE * 3 bytes
+
+    [In Detail]
+    | ratio(1)
+    | sender(ICON_EOA_ADDRESS_BYTES_SIZE)
+    | head_id(DEFAULT_BYTE_SIZE)
+    | tail_id(DEFAULT_BYTE_SIZE)
+    | available_head_id(DEFAULT_BYTE_SIZE)
+    """
+
+    _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s'
+                     f'{DEFAULT_BYTE_SIZE}s'
+                     f'{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self, ratio: int = 0, head_id: bytes = None, tail_id: bytes = None, available_head_id: bytes = None):
         self.ratio = ratio
@@ -42,28 +53,36 @@ class Fee(object):
         self.tail_id = tail_id
         self.available_head_id = available_head_id
 
-    @staticmethod
-    def from_bytes(buf: bytes):
-        """Converts Fee in bytes into Fee Object
+    def from_bytes(self, buf: bytes):
+        """Converts Fee in bytes into Fee Object.
 
         :param buf: Fee in bytes
         :return: Fee Object
         """
-        return Fee
+        ratio, head_id, tail_id, available_head_id = self._struct.unpack(buf)
+
+        self.ratio = int.from_bytes(ratio, DATA_BYTE_ORDER)
+        self.head_id = head_id
+        self.tail_id = tail_id
+        self.available_head_id = available_head_id
+
+        return self
 
     def to_bytes(self) -> bytes:
-        """Converts Fee object into bytes
+        """Converts Fee object into bytes.
 
         :return: Fee in bytes
         """
-        return Fee._struct.pack()
+        return self._struct.pack(self.ratio, self.head_id, self.tail_id, self.available_head_id)
 
 
 class IcxStorage(object):
-    _LAST_BLOCK_KEY = b'last_block'
+    """Icx coin state manager embedding a state db wrapper"""
 
-    """Icx coin state manager embedding a state db wrapper
-    """
+    # Level db keys
+    _LAST_BLOCK_KEY = b'last_block'
+    _TOTAL_SUPPLY_KEY = b'total_supply'
+    _FEE_PREFIX = b'fee|'
 
     def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
@@ -97,7 +116,7 @@ class IcxStorage(object):
         self._last_block = block
 
     def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
-        """Return text format value from db
+        """Returns text format value from db
 
         :return: (str or None)
             text value mapped by name
@@ -114,7 +133,7 @@ class IcxStorage(object):
                  context: 'IconScoreContext',
                  name: str,
                  text: str) -> None:
-        """save text to db with name as a key
+        """Saves text to db with name as a key
         All text are utf8 encoded.
 
         :param context:
@@ -151,7 +170,7 @@ class IcxStorage(object):
                     context: 'IconScoreContext',
                     address: 'Address',
                     account: 'Account') -> None:
-        """Put account info to db.
+        """Puts account info to db.
 
         :param context:
         :param address: account address
@@ -164,7 +183,7 @@ class IcxStorage(object):
     def delete_account(self,
                        context: 'IconScoreContext',
                        address: 'Address') -> None:
-        """Delete account info from db.
+        """Deletes account info from db.
 
         :param context:
         :param address: account address
@@ -175,7 +194,7 @@ class IcxStorage(object):
     def is_address_present(self,
                            context: 'IconScoreContext',
                            address: 'Address') -> bool:
-        """Check whether value indicated by address is present or not.
+        """Checks whether value indicated by address is present or not.
 
         :param context:
         :param address: account address
@@ -187,12 +206,11 @@ class IcxStorage(object):
         return bool(value)
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
-        """Get the total supply
+        """Returns the total supply.
 
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
-        key = b'total_supply'
-        value = self._db.get(context, key)
+        value = self._db.get(context, self._TOTAL_SUPPLY_KEY)
 
         amount = 0
         if value:
@@ -203,71 +221,81 @@ class IcxStorage(object):
     def put_total_supply(self,
                          context: 'IconScoreContext',
                          value: int) -> None:
-        """Save the total supply to db
+        """Saves the total supply to db.
 
         :param context:
         :param value: coin total supply
         """
-        key = b'total_supply'
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
-        self._db.put(context, key, value)
+        self._db.put(context, self._TOTAL_SUPPLY_KEY, value)
 
     def get_score_fee(self, context: 'IconScoreContext', score_address: 'Address') -> Fee:
-        """Returns the contract fee
+        """Returns the contract fee.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param score_address: SCORE address
         :return: Fee object
         """
-        pass
+        key = self._FEE_PREFIX + score_address.to_bytes()
+        value = self._db.get(context, key)
+        return Fee.from_bytes(value) if value else value
 
     def put_score_fee(self, context: 'IconScoreContext', score_address: 'Address', fee: Fee) -> None:
-        """Puts the contract fee data into db
+        """Puts the contract fee data into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param score_address: SCORE address
         :param fee: Fee object
         :return: None
         """
-        pass
+        key = self._FEE_PREFIX + score_address.to_bytes()
+        value = fee.to_bytes()
+        self._db.put(context, key, value)
 
     def delete_score_fee(self, context: 'IconScoreContext', score_address: 'Address') -> None:
-        """Deletes the contract fee from db
+        """Deletes the contract fee from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param score_address: SCORE address
         :return: None
         """
-        pass
+        key = self._FEE_PREFIX + score_address.to_bytes()
+        self._db.delete(context, key)
 
-    # TODO : unpack 하고 deposit_id 주입해서 return
     def get_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> Deposit:
-        """Returns the deposit
+        """Returns the deposit.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param deposit_id: Deposit id
         :return: Deposit Object
         """
-        pass
+        key = self._FEE_PREFIX + deposit_id
+        value = self._db.get(context, key)
+
+        # TODO : deposit_id 주입해서 return
+        return Deposit.from_bytes(value) if value else value
 
     def put_deposit(self, context: 'IconScoreContext', deposit_id: bytes, deposit: Deposit) -> None:
-        """Puts the deposit data into db
+        """Puts the deposit data into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param deposit_id: Deposit id
         :param deposit: Deposit Object
         :return: None
         """
-        pass
+        key = self._FEE_PREFIX + deposit_id
+        value = deposit.to_bytes()
+        self._db.put(context, key, value)
 
     def delete_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> None:
-        """Deletes the deposit from db
+        """Deletes the deposit from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param deposit_id: Deposit id
         :return: None
         """
-        pass
+        key = self._FEE_PREFIX + deposit_id
+        self._db.delete(context, key)
 
     def close(self,
               context: 'IconScoreContext') -> None:
