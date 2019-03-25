@@ -9,6 +9,10 @@ class Deposit(object):
     Deposit Information Class
     implementing functions to serialize, deserialize and convert to dict type.
     """
+
+    # The minimum remaining amount of a single deposit
+    _MIN_REMAINING_AMOUNT = 50 * 10 ** 18
+
     def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
                  deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = 0,
                  virtual_step_issued: int = 0, virtual_step_used: int = 0, prev_id: bytes = None,
@@ -117,3 +121,17 @@ class Deposit(object):
         :param other: (Deposit)
         """
         return not self.__eq__(other)
+
+    @property
+    def available_virtual_step(self):
+        """
+        the amount of available virtual step
+        """
+        return self.virtual_step_issued - self.virtual_step_used
+
+    @property
+    def available_deposit(self):
+        """
+        the amount of available deposit for fees
+        """
+        return self.deposit_amount - self.deposit_used - self._MIN_REMAINING_AMOUNT

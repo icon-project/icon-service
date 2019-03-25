@@ -21,6 +21,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException, OutOfBalanceException
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.icx.icx_engine import IcxEngine
@@ -30,7 +31,8 @@ from tests import create_address
 class TestTransactionValidator(unittest.TestCase):
 
     def setUp(self):
-        self.validator = IconPreValidator(Mock(spec=IcxEngine), Mock(spec=IconScoreDeployStorage))
+        self.validator = IconPreValidator(
+            Mock(spec=IcxEngine), Mock(spec=FeeEngine), Mock(spec=IconScoreDeployStorage))
 
     def test_excute_v2(self):
         self.validator._check_data_size = Mock()
@@ -38,30 +40,30 @@ class TestTransactionValidator(unittest.TestCase):
 
         self.validator._validate_transaction_v2.reset_mock()
         params = {}
-        self.validator.execute(None, params, ANY, ANY)
+        self.validator.execute(None, params, ANY, ANY, ANY)
         self.validator._validate_transaction_v2.assert_called_once_with(None, params)
 
         self.validator._validate_transaction_v2.reset_mock()
         params = {"version": 2}
-        self.validator.execute(None, params, ANY, ANY)
+        self.validator.execute(None, params, ANY, ANY, ANY)
         self.validator._validate_transaction_v2.assert_called_once_with(None, params)
 
         self.validator._validate_transaction_v2.reset_mock()
         params = {"value": 1}
-        self.validator.execute(None, params, ANY, ANY)
+        self.validator.execute(None, params, ANY, ANY, ANY)
         self.validator._validate_transaction_v2.assert_called_once_with(None, params)
 
         self.validator._validate_transaction_v2.reset_mock()
         params = {"value": -1}
         with self.assertRaises(InvalidParamsException) as e:
-            self.validator.execute(None, params, ANY, ANY)
+            self.validator.execute(None, params, ANY, ANY, ANY)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, "value < 0")
 
         self.validator._validate_transaction_v2.reset_mock()
         params = {"value": 256 * 10 ** 500}
         with self.assertRaises(InvalidParamsException) as e:
-            self.validator.execute(None, params, ANY, ANY)
+            self.validator.execute(None, params, ANY, ANY, ANY)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, "exceed ICX amount you can send at one time")
 
@@ -97,18 +99,18 @@ class TestTransactionValidator(unittest.TestCase):
         self.validator._check_from_can_charge_fee_v2 = Mock()
 
         self.validator._check_from_can_charge_fee_v2.reset_mock()
-        self.validator.execute_to_check_out_of_balance(None, {}, ANY)
+        self.validator.execute_to_check_out_of_balance(None, {}, ANY, ANY)
         self.validator._check_from_can_charge_fee_v2.assert_called_once()
 
         self.validator._check_from_can_charge_fee_v2.reset_mock()
-        self.validator.execute_to_check_out_of_balance(None, {"version": 2}, ANY)
+        self.validator.execute_to_check_out_of_balance(None, {"version": 2}, ANY, ANY)
         self.validator._check_from_can_charge_fee_v2.assert_called_once()
 
     def test_execute_to_check_out_of_balance_v3(self):
         self.validator._check_from_can_charge_fee_v3 = Mock()
 
         self.validator._check_from_can_charge_fee_v3.reset_mock()
-        self.validator.execute_to_check_out_of_balance(None, {"version": 3}, ANY)
+        self.validator.execute_to_check_out_of_balance(None, {"version": 3}, ANY, ANY)
         self.validator._check_from_can_charge_fee_v3.assert_called_once()
 
     def test_check_input_data_type(self):
@@ -281,62 +283,59 @@ class TestTransactionValidator(unittest.TestCase):
 
         params = {}
         with self.assertRaises(KeyError) as ke:
-            self.validator._validate_transaction_v3(None, params, ANY, ANY)
+            self.validator._validate_transaction_v3(None, params, ANY, ANY, ANY)
         self.assertEqual(ke.exception.args[0], 'to')
 
-        self.validator._check_minimum_step.assert_called_once_with(params, ANY)
-        self.validator._check_from_can_charge_fee_v3(None, {}, ANY)
+        self.validator._check_minimum_step.asserd_not_called()
+        self.validator._check_from_can_charge_fee_v3(None, {}, ANY, ANY)
 
         self.validator._check_minimum_step.reset_mock()
         self.validator._check_from_can_charge_fee_v3.reset_mock()
 
         self.validator._is_inactive_score = Mock(return_value=True)
+        self.validator._get_total_available_step = Mock()
         to = ANY
         params = {"to": to}
         with self.assertRaises(InvalidRequestException) as e:
-            self.validator._validate_transaction_v3(None, params, ANY, ANY)
+            self.validator._validate_transaction_v3(None, params, ANY, ANY, ANY)
         self.assertEqual(e.exception.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertEqual(e.exception.message, f'{to} is inactive SCORE')
 
         self.validator._validate_call_transaction = Mock()
         self.validator._is_inactive_score = Mock(return_value=False)
         params = {"to": ANY, "dataType": "call"}
-        self.validator._validate_transaction_v3(None, params, ANY, ANY)
+        self.validator._validate_transaction_v3(None, params, ANY, ANY, ANY)
         self.validator._validate_call_transaction.assert_called_once_with(params)
 
         self.validator._validate_deploy_transaction = Mock()
         self.validator._is_inactive_score = Mock(return_value=False)
         params = {"to": ANY, "dataType": "deploy"}
-        self.validator._validate_transaction_v3(None, params, ANY, ANY)
+        self.validator._validate_transaction_v3(None, params, ANY, ANY, ANY)
         self.validator._validate_deploy_transaction.assert_called_once_with(params)
 
         self.validator._validate_call_transaction.reset_mock()
         self.validator._validate_deploy_transaction.reset_mock()
         self.validator._is_inactive_score = Mock(return_value=False)
         params = {"to": ANY}
-        self.validator._validate_transaction_v3(None, params, ANY, ANY)
+        self.validator._validate_transaction_v3(None, params, ANY, ANY, ANY)
         self.validator._validate_call_transaction.assert_not_called()
         self.validator._validate_deploy_transaction.assert_not_called()
 
     def test_check_minimum_step(self):
         minimum_step = 100
-        params = {}
         with self.assertRaises(InvalidRequestException) as e:
-            self.validator._check_minimum_step(params, minimum_step)
+            self.validator._check_minimum_step(10, minimum_step)
         self.assertEqual(e.exception.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertEqual(e.exception.message, "Step limit too low")
 
-        params = {"stepLimit": minimum_step - 1}
         with self.assertRaises(InvalidRequestException) as e:
-            self.validator._check_minimum_step(params, minimum_step)
+            self.validator._check_minimum_step(minimum_step - 1, minimum_step)
         self.assertEqual(e.exception.code, ExceptionCode.ILLEGAL_FORMAT)
         self.assertEqual(e.exception.message, "Step limit too low")
 
-        params = {"stepLimit": minimum_step}
-        self.validator._check_minimum_step(params, minimum_step)
+        self.validator._check_minimum_step(minimum_step, minimum_step)
 
-        params = {"stepLimit": minimum_step + 1}
-        self.validator._check_minimum_step(params, minimum_step)
+        self.validator._check_minimum_step(minimum_step + 1, minimum_step)
 
     def test_check_from_can_charge_fee_v3(self):
         self.validator._check_balance = Mock()
@@ -344,14 +343,15 @@ class TestTransactionValidator(unittest.TestCase):
 
         params = {}
         with self.assertRaises(KeyError) as ke:
-            self.validator._check_from_can_charge_fee_v3(None, params, step_price)
+            self.validator._check_from_can_charge_fee_v3(None, params, 0, step_price)
         self.assertEqual(ke.exception.args[0], 'from')
         self.validator._check_balance.assert_not_called()
 
         self.validator._check_balance.reset_mock()
         _from = create_address()
-        params = {'from': _from}
-        self.validator._check_from_can_charge_fee_v3(None, params, step_price)
+        to = create_address()
+        params = {'from': _from, 'to': to}
+        self.validator._check_from_can_charge_fee_v3(None, params, 0, step_price)
         self.validator._check_balance.assert_called_once_with(None, _from, 0, 0)
 
         self.validator._check_balance.reset_mock()
@@ -359,8 +359,8 @@ class TestTransactionValidator(unittest.TestCase):
         value = 123
         step_limit = 456
         fee = step_limit * step_price
-        params = {'from': _from, 'value': value, 'stepLimit': step_limit}
-        self.validator._check_from_can_charge_fee_v3(None, params, step_price)
+        params = {'from': _from, 'to': to, 'value': value, 'stepLimit': step_limit}
+        self.validator._check_from_can_charge_fee_v3(None, params, 0, step_price)
         self.validator._check_balance.assert_called_once_with(None, _from, value, fee)
 
     def test_validate_call_transaction(self):

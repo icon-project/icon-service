@@ -22,7 +22,9 @@ from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
+from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_constant import REVISION_3
+from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
 from iconservice.iconscore.icon_score_base2 import sha3_256
@@ -38,6 +40,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     def setUp(self):
         self._inner_task = generate_inner_task()
+
+        self._inner_task._icon_service_engine._icon_pre_validator = \
+            Mock(spec=IconPreValidator)
 
         factory = self._inner_task._icon_service_engine._step_counter_factory
         self.step_counter = Mock(spec=IconScoreStepCounter)
@@ -254,6 +259,20 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine.\
             _icx_context_db.get = Mock(return_value=b'1' * 100)
 
+        self._inner_task._icon_service_engine._fee_engine = Mock(spec=FeeEngine)
+
+        def charge_transaction_fee(*args, **kwargs):
+            return {args[1]: args[4]}
+
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee \
+            = Mock(side_effect=charge_transaction_fee)
+
+        def get_total_available_step(*args, **kwargs):
+            return args[2]
+
+        self._inner_task._icon_service_engine._fee_engine.get_total_available_step \
+            = Mock(side_effect=get_total_available_step)
+
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
@@ -331,6 +350,20 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         self._inner_task._icon_service_engine.\
             _icx_context_db.get = Mock(return_value=b'1' * 100)
+
+        self._inner_task._icon_service_engine._fee_engine = Mock(spec=FeeEngine)
+
+        def charge_transaction_fee(*args, **kwargs):
+            return {args[1]: args[4]}
+
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee \
+            = Mock(side_effect=charge_transaction_fee)
+
+        def get_total_available_step(*args, **kwargs):
+            return args[2]
+
+        self._inner_task._icon_service_engine._fee_engine.get_total_available_step \
+            = Mock(side_effect=get_total_available_step)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):

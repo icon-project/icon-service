@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
     from ..icx.icx_engine import IcxEngine
     from .icon_score_context import IconScoreContext
+    from ..fee.fee_engine import FeeEngine
 
 
 class IconPreValidator:
@@ -36,7 +37,7 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx_engine: 'IcxEngine',
+    def __init__(self, icx_engine: 'IcxEngine', fee_engine: 'FeeEngine',
                  deploy_storage: 'IconScoreDeployStorage') -> None:
         """Constructor
 
@@ -44,8 +45,10 @@ class IconPreValidator:
         """
         self._icx = icx_engine
         self._deploy_storage = deploy_storage
+        self._fee_engine = fee_engine
 
-    def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int) -> None:
+    def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int,
+                maximum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
         If failed to validate a tx, raise an exception
 
@@ -56,6 +59,7 @@ class IconPreValidator:
         :param params: params of icx_sendTransaction JSON-RPC request
         :param step_price:
         :param minimum_step: minimum step
+        :param maximum_step: maximum step
         """
 
         self._check_input_data(params)
@@ -72,15 +76,16 @@ class IconPreValidator:
         if version < 3:
             self._validate_transaction_v2(context, params)
         else:
-            self._validate_transaction_v3(context, params, step_price, minimum_step)
+            self._validate_transaction_v3(context, params, step_price, minimum_step, maximum_step)
 
-    def execute_to_check_out_of_balance(self, context: 'IconScoreContext', params: dict, step_price: int) -> None:
+    def execute_to_check_out_of_balance(self, context: 'IconScoreContext', params: dict,
+                                        total_step_limit: int, step_price: int) -> None:
         version: int = params.get('version', 2)
 
         if version < 3:
             self._check_from_can_charge_fee_v2(context, params)
         else:
-            self._check_from_can_charge_fee_v3(context, params, step_price)
+            self._check_from_can_charge_fee_v3(context, params, total_step_limit, step_price)
 
     @staticmethod
     def _check_input_data(params):
@@ -173,14 +178,22 @@ class IconPreValidator:
             raise InvalidRequestException(
                 'Not allowed to transfer coin to SCORE on protocol v2')
 
-    def _validate_transaction_v3(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int):
+    def _validate_transaction_v3(self, context: 'IconScoreContext', params: dict, step_price: int,
+                                 minimum_step: int, maximum_step: int):
         """Validate transfer transaction based on protocol v3
 
         :param params:
         :return:
         """
-        self._check_minimum_step(params, minimum_step)
-        self._check_from_can_charge_fee_v3(context, params, step_price)
+
+        to: 'Address' = params['to']
+        sender_step_limit = params.get('stepLimit', 0)
+
+        total_step_limit = self._get_total_available_step(context, maximum_step, sender_step_limit,
+                                                          step_price, to)
+
+        self._check_minimum_step(total_step_limit, minimum_step)
+        self._check_from_can_charge_fee_v3(context, params, total_step_limit, step_price)
 
         # Check if "to" address is valid
         to: 'Address' = params['to']
@@ -195,21 +208,28 @@ class IconPreValidator:
         elif data_type == 'deploy':
             self._validate_deploy_transaction(params)
 
+    def _get_total_available_step(self, context, maximum_step, sender_step_limit, step_price, to):
+        return self._fee_engine.get_total_available_step(
+            context, to, sender_step_limit, step_price, context.block.height, maximum_step)
+
     @staticmethod
-    def _check_minimum_step(params: dict, minimum_step: int):
-        step_limit = params.get('stepLimit', 0)
+    def _check_minimum_step(step_limit: int, minimum_step: int):
         if step_limit < minimum_step:
             raise InvalidRequestException('Step limit too low')
 
     def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict,
-                                      step_price: int):
+                                      total_step_limit: int, step_price: int):
         from_: 'Address' = params['from']
+        to: 'Address' = params['to']
         value: int = params.get('value', 0)
 
-        step_limit = params.get('stepLimit', 0)
-        fee = step_limit * step_price
+        sender_step_limit = params.get('stepLimit', 0)
+        sender_fee = sender_step_limit * step_price
+        self._check_balance(context, from_, value, sender_fee)
 
-        self._check_balance(context, from_, value, fee)
+        receiver_step_limit = total_step_limit - sender_step_limit
+        if receiver_step_limit > 0:
+            self._check_score_can_pay_fee(context, to, receiver_step_limit, step_price)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -294,6 +314,13 @@ class IconPreValidator:
         if balance < value + fee:
             raise OutOfBalanceException(
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
+
+    def _check_score_can_pay_fee(self, context: 'IconScoreContext', score: 'Address',
+                                 step_limit: int, step_price: int):
+        if not self._fee_engine.can_charge_fee_from_score(context, score, step_limit,
+                                                          step_price, context.block.height):
+            raise InvalidRequestException(
+                f'Out of balance: score({score}) doesn\'t have {step_limit} step')
 
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract
