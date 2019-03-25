@@ -34,9 +34,9 @@ class Deposit(object):
                      f'{DEFAULT_BYTE_SIZE}s'
                      f'{DEFAULT_BYTE_SIZE}s')
 
-    def __init__(self, deposit_id: bytes, score_address: 'Address', sender: 'Address', deposit_amount: int = 0,
-                 deposit_used: int = 0, created: int = 0, expires: int = 0, virtual_step_issued: int = 0,
-                 virtual_step_used: int = 0, prev_id: bytes = None, next_id: bytes = None):
+    def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
+                 deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = 0,
+                 virtual_step_issued: int = 0, virtual_step_used: int = 0, prev_id: bytes = None, next_id: bytes = None):
         # deposit id, should be tx hash of deposit transaction
         self.id = deposit_id
         # target SCORE address
@@ -60,33 +60,63 @@ class Deposit(object):
         # next id of this deposit
         self.next_id = next_id
 
-    def from_bytes(self, buf: bytes):
+    @staticmethod
+    def from_bytes(buf: bytes):
         """Creates Deposit object from bytes data
 
         :param buf: deposit info in bytes
         :return: deposit object
         """
         score_address, sender, deposit_amount, deposit_used, created, expires, virtual_step_issued, virtual_step_used, \
-        prev_id, next_id = self._struct.unpack(buf)
+        prev_id, next_id = Deposit._struct.unpack(buf)
 
-        self.score_address = score_address
-        self.sender = sender
-        self.deposit_amount = int.from_bytes(deposit_amount, DATA_BYTE_ORDER)
-        self.deposit_used = int.from_bytes(deposit_used, DATA_BYTE_ORDER)
-        self.created = int.from_bytes(created, DATA_BYTE_ORDER)
-        self.expires = int.from_bytes(expires, DATA_BYTE_ORDER)
-        self.virtual_step_issued = int.from_bytes(virtual_step_issued, DATA_BYTE_ORDER)
-        self.virtual_step_used = int.from_bytes(virtual_step_used, DATA_BYTE_ORDER)
-        self.prev_id = prev_id
-        self.next_id = next_id
+        deposit = Deposit()
+        deposit.score_address = Address.from_bytes(score_address)
+        deposit.sender = Address.from_bytes(sender)
+        deposit.deposit_amount = int.from_bytes(deposit_amount, DATA_BYTE_ORDER)
+        deposit.deposit_used = int.from_bytes(deposit_used, DATA_BYTE_ORDER)
+        deposit.created = int.from_bytes(created, DATA_BYTE_ORDER)
+        deposit.expires = int.from_bytes(expires, DATA_BYTE_ORDER)
+        deposit.virtual_step_issued = int.from_bytes(virtual_step_issued, DATA_BYTE_ORDER)
+        deposit.virtual_step_used = int.from_bytes(virtual_step_used, DATA_BYTE_ORDER)
+        deposit.prev_id = prev_id
+        deposit.next_id = next_id
 
-        return self
+        return deposit
 
     def to_bytes(self) -> bytes:
         """Converts Deposit object into bytes
 
         :return: deposit info in bytes
         """
-        return self._struct.pack(self.score_address, self.sender, self.deposit_amount, self.deposit_used,
-                                    self.created, self.expires, self.virtual_step_issued, self.virtual_step_used,
-                                    self.prev_id, self.next_id)
+        return self._struct.pack(self.score_address.to_bytes(), self.sender.to_bytes(),
+                                 self.deposit_amount.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
+                                 self.deposit_used.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
+                                 self.created.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
+                                 self.expires.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
+                                 self.virtual_step_issued.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
+                                 self.virtual_step_used.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER), self.prev_id, self.next_id)
+
+    def __eq__(self, other) -> bool:
+        """operator == overriding
+
+        :param other: (Deposit)
+        """
+        return isinstance(other, Deposit) \
+            and self.score_address == other.score_address \
+            and self.sender == other.sender \
+            and self.deposit_amount == other.deposit_amount \
+            and self.deposit_used == other.deposit_used \
+            and self.created == other.created \
+            and self.expires == other.expires \
+            and self.virtual_step_issued == other.virtual_step_issued \
+            and self.virtual_step_used == other.virtual_step_used \
+            and self.prev_id == other.prev_id \
+            and self.next_id == other.next_id
+
+    def __ne__(self, other) -> bool:
+        """operator != overriding
+
+        :param other: (Deposit)
+        """
+        return not self.__eq__(other)

@@ -21,6 +21,7 @@ from .icx_account import Account
 from ..base.address import Address
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
+from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..fee.deposit import Deposit
 
 if TYPE_CHECKING:
@@ -33,47 +34,74 @@ class Fee(object):
     SCORE Fee Information
 
     [Fee Structure for level db]
-    - big endian, 1 + DEFAULT_BYTE_SIZE * 3 bytes
+    - big endian, 1 + DEFAULT_BYTE_SIZE * 4 bytes
 
     [In Detail]
     | ratio(1)
-    | sender(ICON_EOA_ADDRESS_BYTES_SIZE)
     | head_id(DEFAULT_BYTE_SIZE)
     | tail_id(DEFAULT_BYTE_SIZE)
-    | available_head_id(DEFAULT_BYTE_SIZE)
+    | available_head_id_of_virtual_step (DEFAULT_BYTE_SIZE)
+    | available_head_id_of_deposit (DEFAULT_BYTE_SIZE)
     """
 
     _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s'
                      f'{DEFAULT_BYTE_SIZE}s'
+                     f'{DEFAULT_BYTE_SIZE}s'
                      f'{DEFAULT_BYTE_SIZE}s')
 
-    def __init__(self, ratio: int = 0, head_id: bytes = None, tail_id: bytes = None, available_head_id: bytes = None):
+    def __init__(self, ratio: int = 0, head_id: bytes = None, tail_id: bytes = None,
+                 available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None):
         self.ratio = ratio
         self.head_id = head_id
         self.tail_id = tail_id
-        self.available_head_id = available_head_id
+        self.available_head_id_of_virtual_step = available_head_id_of_virtual_step
+        self.available_head_id_of_deposit = available_head_id_of_deposit
 
-    def from_bytes(self, buf: bytes):
+    @staticmethod
+    def from_bytes(buf: bytes):
         """Converts Fee in bytes into Fee Object.
 
         :param buf: Fee in bytes
         :return: Fee Object
         """
-        ratio, head_id, tail_id, available_head_id = self._struct.unpack(buf)
+        ratio, head_id, tail_id, available_head_id_of_virtual_step, available_head_id_of_deposit \
+            = Fee._struct.unpack(buf)
 
-        self.ratio = int.from_bytes(ratio, DATA_BYTE_ORDER)
-        self.head_id = head_id
-        self.tail_id = tail_id
-        self.available_head_id = available_head_id
+        fee = Fee()
+        fee.ratio = ratio
+        fee.head_id = head_id
+        fee.tail_id = tail_id
+        fee.available_head_id_of_virtual_step = available_head_id_of_virtual_step
+        fee.available_head_id_of_deposit = available_head_id_of_deposit
 
-        return self
+        return fee
 
     def to_bytes(self) -> bytes:
         """Converts Fee object into bytes.
 
         :return: Fee in bytes
         """
-        return self._struct.pack(self.ratio, self.head_id, self.tail_id, self.available_head_id)
+        return self._struct.pack(self.ratio, self.head_id, self.tail_id,
+                                 self.available_head_id_of_virtual_step, self.available_head_id_of_deposit)
+
+    def __eq__(self, other) -> bool:
+        """operator == overriding
+
+        :param other: (Fee)
+        """
+        return isinstance(other, Fee) \
+            and self.ratio == other.ratio \
+            and self.head_id == other.head_id \
+            and self.tail_id == other.tail_id \
+            and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
+            and self.available_head_id_of_deposit == other.available_head_id_of_deposit
+
+    def __ne__(self, other) -> bool:
+        """operator != overriding
+
+        :param other: (Fee)
+        """
+        return not self.__eq__(other)
 
 
 class IcxStorage(object):
@@ -272,8 +300,11 @@ class IcxStorage(object):
         key = self._FEE_PREFIX + deposit_id
         value = self._db.get(context, key)
 
-        # TODO : deposit_id 주입해서 return
-        return Deposit.from_bytes(value) if value else value
+        if value:
+            value = Deposit.from_bytes(value)
+            value.id = deposit_id
+
+        return value
 
     def put_deposit(self, context: 'IconScoreContext', deposit_id: bytes, deposit: Deposit) -> None:
         """Puts the deposit data into db.
