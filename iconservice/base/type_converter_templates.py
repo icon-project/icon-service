@@ -77,7 +77,7 @@ SWITCH_KEY = "SWITCH_KEY"
 KEY_CONVERTER = 'KEY_CONVERTER'
 
 
-class ConstantKeys:
+class ConstantKeys(object):
     BLOCK_HEIGHT = "blockHeight"
     BLOCK_HASH = "blockHash"
     TIMESTAMP = "timestamp"
@@ -129,7 +129,7 @@ class ConstantKeys:
     DELEGATIONS = "delegations"
     NETWORK_INFO = "networkInfo"
     URL = 'url'
-    GOVERNANCE = "goveranance"
+    GOVERNANCE = "governance"
     ICX_PRICE = "icxPrice"
     INCENTIVE_REP = "incentiveRep"
     START_RANK = "startRank"
@@ -266,8 +266,7 @@ type_convert_templates[ParamType.IISS_SET_DELEGATION] = {
 
 type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_CLAIM_I_SCORE] = {
-}
+type_convert_templates[ParamType.IISS_CLAIM_I_SCORE] = {}
 
 type_convert_templates[ParamType.IISS_QUERY_I_SCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
@@ -287,7 +286,8 @@ type_convert_templates[ParamType.IISS_SET_PREP_CANDIDATE] = type_convert_templat
 
 type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO] = \
+    type_convert_templates[ParamType.IISS_GET_STAKE]
 
 type_convert_templates[ParamType.IISS_GET_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
 

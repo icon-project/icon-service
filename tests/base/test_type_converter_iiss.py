@@ -48,7 +48,7 @@ class TestTypeConverter(unittest.TestCase):
         value1 = 1 * 10 ** 18
 
         address2 = create_address()
-        value2 = 1 * 20 ** 18
+        value2 = 2 * 10 ** 18
 
         request = {
             ConstantKeys.DELEGATIONS: [
@@ -82,8 +82,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_claim_i_score(self):
 
-        request = {
-        }
+        request = {}
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_CLAIM_I_SCORE)
         self.assertEqual({}, ret_params)
@@ -125,8 +124,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_unreg_prep_candidate(self):
 
-        request = {
-        }
+        request = {}
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_UNREG_PREP_CANDIDATE)
         self.assertEqual({}, ret_params)
@@ -172,8 +170,7 @@ class TestTypeConverter(unittest.TestCase):
 
     def test_get_prep_list(self):
 
-        request = {
-        }
+        request = {}
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_LIST)
         self.assertEqual({}, ret_params)
