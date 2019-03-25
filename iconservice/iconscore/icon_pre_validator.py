@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
     from ..icx.icx_engine import IcxEngine
     from .icon_score_context import IconScoreContext
+    from ..fee.fee_manager import FeeManager
 
 
 class IconPreValidator:
@@ -37,13 +38,15 @@ class IconPreValidator:
     """
 
     def __init__(self, icx_engine: 'IcxEngine',
-                 deploy_storage: 'IconScoreDeployStorage') -> None:
+                 deploy_storage: 'IconScoreDeployStorage',
+                 fee_manager: 'FeeManager') -> None:
         """Constructor
 
         :param icx_engine: icx engine
         """
         self._icx = icx_engine
         self._deploy_storage = deploy_storage
+        self._fee_manager = fee_manager
 
     def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -205,11 +208,18 @@ class IconPreValidator:
                                       step_price: int):
         from_: 'Address' = params['from']
         value: int = params.get('value', 0)
-
+        to: 'Address' = params['to']
         step_limit = params.get('stepLimit', 0)
-        fee = step_limit * step_price
 
-        self._check_balance(context, from_, value, fee)
+        step_limit_info = self._fee_manager.get_available_step(context, from_, to, step_limit, context.block.height)
+
+        sender_step_limit = step_limit_info.get(from_)
+        sender_fee = sender_step_limit * step_price
+        receiver_step_limit = step_limit_info.get(to)
+
+        self._check_balance(context, from_, value, sender_fee)
+        if to.is_contract:
+            self._check_score_payment_ability(context, to, receiver_step_limit)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -294,6 +304,11 @@ class IconPreValidator:
         if balance < value + fee:
             raise InvalidRequestException(
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
+
+    def _check_score_payment_ability(self, context: 'IconScoreContext', score: 'Address', step_limit: int):
+        if not self._fee_manager.can_charge_fee_from_score():
+            raise InvalidRequestException(
+                f'Out of balance: score({score}) doesn\'t have {step_limit} step')
 
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract

@@ -16,8 +16,10 @@
 # limitations under the License.
 import os
 import unittest
+from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
+from iconservice.fee.fee_manager import FeeManager, ScoreInfo
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
 from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, create_query_request, \
@@ -47,27 +49,35 @@ class TestFeeSharing(unittest.TestCase):
         return self._inner_task._query(request)
 
     def test_set_fee_share(self):
-        ratio = 50
+        mock_set_ratio = Mock()
+        mock_score_info = Mock(spec=ScoreInfo)
+        mock_score_info.configure_mock(sharing_ratio=50)
+        self._inner_task._icon_service_engine._fee_manager.set_fee_sharing_ratio = mock_set_ratio
+        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = Mock(return_value={})
+        self._inner_task._icon_service_engine._fee_manager.get_score_fee_info = Mock(return_value=mock_score_info)
+        self._inner_task._icon_service_engine._fee_manager.can_charge_fee_from_score = Mock()
+
+        ratio = hex(50)
         tx_hash = bytes.hex(os.urandom(32))
 
         data = {
-            'method': 'setFeeShare',
+            'method': 'setRatio',
             'params': {
                 '_score': str(self.score),
                 '_ratio': ratio
             }
         }
 
-        expected_event_log = {
+        expected_event_logs = [{
             "scoreAddress": str(self.to),
             "indexed": [
-                "SetFeeShare(Address,int)",
+                "FeeShareSet(Address,int)",
                 str(self.score),
             ],
             "data": [
-                hex(ratio)
+                ratio
             ]
-        }
+        }]
 
         request = create_request([
             ReqData(tx_hash, self.from_, self.to, 'call', data),
@@ -76,8 +86,10 @@ class TestFeeSharing(unittest.TestCase):
         result = self._inner_task_invoke(request)
         tx_result = result['txResults'][tx_hash]
 
-        self.assertEqual(expected_event_log, tx_result['eventLogs'])
+        self.assertEqual(expected_event_logs, tx_result['eventLogs'])
         self.assertEqual('0x1', tx_result['status'])
+
+        mock_set_ratio.assert_called()
 
         return ratio
 
@@ -101,8 +113,15 @@ class TestFeeSharing(unittest.TestCase):
         self.assertEqual(expected_response, result)
 
     def test_create_deposit(self):
+        mock_score_info = Mock(spec=ScoreInfo)
+        mock_score_info.configure_mock(sharing_ratio=50)
+        self._inner_task._icon_service_engine._fee_manager.deposit_fee = Mock()
+        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = Mock(return_value={})
+        self._inner_task._icon_service_engine._fee_manager.get_score_fee_info = Mock(return_value=mock_score_info)
+        self._inner_task._icon_service_engine._fee_manager.can_charge_fee_from_score = Mock()
+
         tx_hash = bytes.hex(os.urandom(32))
-        term, amount = 50, 5000
+        term, amount = hex(50), hex(5000)
         data = {
             'method': 'createDeposit',
             'params': {
@@ -112,19 +131,19 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        expected_event_log = {
+        expected_event_log = [{
             "scoreAddress": str(self.to),
             "indexed": [
-                "CreateDeposit(bytes,Address,Address,amount,term)",
-                tx_hash,
+                "DepositCreated(bytes,Address,Address,int,int)",
+                f"0x{tx_hash}",
                 str(self.score),
                 str(self.from_)
             ],
             "data": [
-                hex(amount),
-                hex(term)
+                amount,
+                term
             ]
-        }
+        }]
 
         request = create_request([
             ReqData(tx_hash, self.from_, self.to, 'call', data),
@@ -256,6 +275,8 @@ class TestFeeSharing(unittest.TestCase):
         self.assertEqual(expected_result, result)
 
     def test_transaction_result_on_sharing_fee(self):
+        fee_manager = Mock(spec=FeeManager)
+        fee_manager.charge_transaction_fee = Mock(return_value=(1200, 2))
         self.test_set_fee_share()
         self.test_create_deposit()
         tx_hash = bytes.hex(os.urandom(32))

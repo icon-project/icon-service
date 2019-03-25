@@ -110,3 +110,15 @@ class IconScoreFuncType(IntEnum):
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.INVOKE | EnableThreadFlag.QUERY | EnableThreadFlag.VALIDATE
+
+FEE2_EVENT_LOG_SIGNATURE = {
+    "setRatio": "FeeShareSet(Address,int)",
+    "createDeposit": "DepositCreated(bytes,Address,Address,int,int)",
+    "destroyDeposit": "DepositDestroyed(bytes,Address,Address,int,int)"
+}
+
+FEE2_EVENT_LOG_INDEX_COUNT = {
+    "setRatio": 1,
+    "createDeposit": 3,
+    "destroyDeposit": 3
+}

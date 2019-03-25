@@ -34,6 +34,7 @@ class ParamType(IntEnum):
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
     ISE_GET_STATUS = 305
+    FEE2_PARAMS_DATA = 306
 
     WRITE_PRECOMMIT = 400
     REMOVE_PRECOMMIT = 500
@@ -108,6 +109,11 @@ class ConstantKeys:
     ICX_GET_TOTAL_SUPPLY = "icx_getTotalSupply"
     ICX_GET_SCORE_API = "icx_getScoreApi"
     ISE_GET_STATUS = "ise_getStatus"
+
+    FEE2_SCORE_ADDRESS = "_score"
+    FEE2_RATIO = "_ratio"
+    FEE2_TERM = "_term"
+    FEE2_ID = "_id"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -219,4 +225,13 @@ type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[Para
 type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.METHOD: ValueType.STRING,
     ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA]
+}
+
+type_convert_templates[ParamType.FEE2_PARAMS_DATA] = {
+    ConstantKeys.PARAMS: {
+        ConstantKeys.FEE2_ID: ValueType.BYTES,
+        ConstantKeys.FEE2_RATIO: ValueType.INT,
+        ConstantKeys.FEE2_SCORE_ADDRESS: ValueType.ADDRESS,
+        ConstantKeys.FEE2_TERM: ValueType.INT
+    }
 }
