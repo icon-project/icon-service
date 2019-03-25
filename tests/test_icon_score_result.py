@@ -14,14 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import hashlib
+import os
 import unittest
 from typing import Optional
 from unittest.mock import Mock
+from random import randrange
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.exception import IconServiceBaseException
+from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
@@ -50,7 +53,7 @@ class TestTransactionResult(unittest.TestCase):
             Mock(spec=IconScoreDeployEngine)
 
         self._icon_service_engine._charge_transaction_fee = \
-            Mock(return_value=(0, 0))
+            Mock(return_value=({}, 0))
 
         step_counter_factory = IconScoreStepCounterFactory()
         step_counter_factory.get_step_cost = Mock(return_value=6000)
@@ -58,15 +61,12 @@ class TestTransactionResult(unittest.TestCase):
         self._icon_service_engine._icon_pre_validator = \
             Mock(spec=IconPreValidator)
 
-        self._mock_context = Mock(spec=IconScoreContext)
-        self._mock_context.type = IconScoreContextType.INVOKE
-        self._mock_context.tx = Mock(spec=Transaction)
+        self._mock_context = IconScoreContext(IconScoreContextType.INVOKE)
+        self._mock_context.tx = Transaction()
+        self._mock_context.msg = Message()
         self._mock_context.block = Mock(spec=Block)
-        self._mock_context.readonly = False
         self._mock_context.event_logs = []
         self._mock_context.traces = []
-        self._mock_context.cumulative_step_used = Mock(spec=int)
-        self._mock_context.cumulative_step_used.attach_mock(Mock(), "__add__")
         self._mock_context.step_counter = step_counter_factory.create(5000000)
         self._mock_context.current_address = Mock(spec=Address)
         self._mock_context.revision = 0
@@ -76,10 +76,11 @@ class TestTransactionResult(unittest.TestCase):
         clear_inner_task()
 
     def test_tx_success(self):
-        from_ = Mock(spec=Address)
-        to_ = Mock(spec=Address)
-        tx_index = Mock(spec=int)
-        self._mock_context.tx.attach_mock(tx_index, "index")
+        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        to_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        tx_index = randrange(0, 100)
+        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        self._mock_context.msg = Message(from_)
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
 
@@ -110,10 +111,11 @@ class TestTransactionResult(unittest.TestCase):
             Mock(return_value=False), 'is_data_type_supported')
         IconScoreEngine.invoke = Mock(side_effect=IconServiceBaseException("error"))
 
-        from_ = Mock(spec=Address)
-        to_ = Mock(spec=Address)
-        tx_index = Mock(spec=int)
-        self._mock_context.tx.attach_mock(tx_index, "index")
+        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
+        tx_index = randrange(0, 100)
+        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        self._mock_context.msg = Message(from_)
         self._mock_context.tx_batch = TransactionBatch()
 
         raise_exception_start_tag("test_tx_failure")
@@ -132,12 +134,9 @@ class TestTransactionResult(unittest.TestCase):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=True), 'is_data_type_supported')
 
-        from_ = Address.from_data(AddressPrefix.EOA, b'test')
-        tx_index = Mock(spec=int)
-        self._mock_context.tx.attach_mock(tx_index, "index")
-        self._mock_context.tx.timestamp = 0
-        self._mock_context.tx.origin = from_
-        self._mock_context.tx.nonce = None
+        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        self._mock_context.tx = Transaction(os.urandom(32), 0, from_, 0)
+        self._mock_context.msg = Message(from_)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
             self._mock_context,
@@ -156,7 +155,7 @@ class TestTransactionResult(unittest.TestCase):
 
         self._icon_service_engine._charge_transaction_fee.assert_called()
         self.assertEqual(1, tx_result.status)
-        self.assertEqual(tx_index, tx_result.tx_index)
+        self.assertEqual(0, tx_result.tx_index)
         self.assertEqual(ZERO_SCORE_ADDRESS, tx_result.to)
         self.assertIsNotNone(tx_result.score_address)
         camel_dict = tx_result.to_dict(to_camel_case)
@@ -165,8 +164,9 @@ class TestTransactionResult(unittest.TestCase):
     def test_sample_result(self):
         from_ = Address.from_data(AddressPrefix.EOA, b'from')
         to_ = Address.from_data(AddressPrefix.CONTRACT, b'to')
-        self._mock_context.tx.index = 1234
-        self._mock_context.tx.hash = hashlib.sha3_256(b'hash').digest()
+        self._mock_context.tx = Transaction(os.urandom(32), 1234, from_, 0)
+        self._mock_context.msg = Message(from_)
+
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
         self._icon_service_engine._process_transaction = Mock(return_value=to_)

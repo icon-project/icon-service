@@ -15,12 +15,18 @@
 # limitations under the License.
 
 import typing
-from typing import List, Dict
+from enum import IntEnum
+from typing import List, Dict, Optional
 
 from .deposit import Deposit
+from .fee_storage import Fee, FeeStorage
+from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidRequestException, InvalidParamsException
+from ..base.type_converter import TypeConverter
+from ..base.type_converter_templates import ParamType
+from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_engine import IcxEngine
-from ..icx.icx_storage import Fee
+from ..utils import to_camel_case
 
 if typing.TYPE_CHECKING:
     from ..base.address import Address
@@ -47,6 +53,21 @@ class ScoreFeeInfo:
         # available deposits to use
         self.available_deposit: int = 0
 
+    def to_dict(self, casing: Optional = None) -> dict:
+        """
+        Returns properties as `dict`
+        :return: a dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if value is None:
+                # Excludes properties which have `None` value
+                continue
+
+            new_dict[casing(key) if casing else key] = value
+
+        return new_dict
+
 
 class FeeEngine:
     """
@@ -67,10 +88,12 @@ class FeeEngine:
 
     def __init__(self,
                  deploy_storage: 'IconScoreDeployStorage',
+                 fee_storage: 'FeeStorage',
                  icx_storage: 'IcxStorage',
                  icx_engine: 'IcxEngine'):
 
         self._deploy_storage = deploy_storage
+        self._fee_storage = fee_storage
         self._icx_storage = icx_storage
         self._icx_engine = icx_engine
 
@@ -96,7 +119,7 @@ class FeeEngine:
         score_fee_info = self._get_or_create_score_fee(context, score_address)
         score_fee_info.ratio = ratio
 
-        self._icx_storage.put_score_fee(context, score_address, score_fee_info)
+        self._fee_storage.put_score_fee(context, score_address, score_fee_info)
 
         # return ratio
 
@@ -113,7 +136,7 @@ class FeeEngine:
 
         self._check_score_valid(context, score_address)
 
-        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+        score_fee_info = self._fee_storage.get_score_fee(context, score_address)
         return score_fee_info.ratio if score_fee_info is not None else 0
 
     def get_score_fee_info(self,
@@ -210,13 +233,13 @@ class FeeEngine:
         score_fee_info = self._get_or_create_score_fee(context, deposit.score_address)
 
         deposit.prev_id = score_fee_info.tail_id
-        self._icx_storage.put_deposit(context, deposit.id, deposit)
+        self._fee_storage.put_deposit(context, deposit.id, deposit)
 
         # Link to old last item
         if score_fee_info.tail_id is not None:
-            prev_deposit = self._icx_storage.get_deposit(context, score_fee_info.tail_id)
+            prev_deposit = self._fee_storage.get_deposit(context, score_fee_info.tail_id)
             prev_deposit.next_id = deposit.id
-            self._icx_storage.put_deposit(context, prev_deposit.id, prev_deposit)
+            self._fee_storage.put_deposit(context, prev_deposit.id, prev_deposit)
 
         # Update head info
         if score_fee_info.head_id is None:
@@ -229,13 +252,13 @@ class FeeEngine:
             score_fee_info.available_head_id_of_deposit = deposit.id
 
         score_fee_info.tail_id = deposit.id
-        self._icx_storage.put_score_fee(context, deposit.score_address, score_fee_info)
+        self._fee_storage.put_score_fee(context, deposit.score_address, score_fee_info)
 
     def withdraw_fee(self,
                      context: 'IconScoreContext',
                      sender: 'Address',
                      deposit_id: bytes,
-                     block_number: int) -> None:
+                     block_number: int) -> ('Address', int, int):
         """
         Withdraws deposited ICXs from given id.
         It may be paid the penalty if the expiry has not been met.
@@ -244,6 +267,7 @@ class FeeEngine:
         :param sender: msg sender address
         :param deposit_id: deposit id, should be tx hash of deposit transaction
         :param block_number: current block height
+        :return: score_address, returning amount of icx, penalty amount of icx
         """
         # [Sub Task]
         # - Checks if the contract period is finished
@@ -252,7 +276,7 @@ class FeeEngine:
 
         self._check_deposit_id(deposit_id)
 
-        deposit = self._icx_storage.get_deposit(context, deposit_id)
+        deposit = self._fee_storage.get_deposit(context, deposit_id)
 
         if deposit is None:
             raise InvalidRequestException('Deposit info not found')
@@ -272,7 +296,7 @@ class FeeEngine:
             sender_account.deposit(return_amount)
             self._icx_storage.put_account(context, sender, sender_account)
 
-        # return (deposit.score_address, sender, return_amount, penalty)
+        return deposit.score_address, return_amount, penalty
 
     def _delete_deposit(self, context: 'IconScoreContext', deposit: 'Deposit'):
         """
@@ -281,18 +305,18 @@ class FeeEngine:
 
         # Updates the previous link
         if deposit.prev_id is not None:
-            prev_deposit = self._icx_storage.get_deposit(context, deposit.prev_id)
+            prev_deposit = self._fee_storage.get_deposit(context, deposit.prev_id)
             prev_deposit.next_id = deposit.next_id
-            self._icx_storage.put_deposit(context, prev_deposit.id, prev_deposit)
+            self._fee_storage.put_deposit(context, prev_deposit.id, prev_deposit)
 
         # Updates the next link
         if deposit.next_id is not None:
-            next_deposit = self._icx_storage.get_deposit(context, deposit.next_id)
+            next_deposit = self._fee_storage.get_deposit(context, deposit.next_id)
             next_deposit.prev_id = deposit.prev_id
-            self._icx_storage.put_deposit(context, next_deposit.id, next_deposit)
+            self._fee_storage.put_deposit(context, next_deposit.id, next_deposit)
 
         # Update index info
-        score_fee_info = self._icx_storage.get_score_fee(context, deposit.score_address)
+        score_fee_info = self._fee_storage.get_score_fee(context, deposit.score_address)
         fee_info_changed = False
 
         if score_fee_info.head_id == deposit.id:
@@ -313,10 +337,10 @@ class FeeEngine:
 
         if fee_info_changed:
             # Updates if the information has been changed
-            self._icx_storage.put_score_fee(context, deposit.score_address, score_fee_info)
+            self._fee_storage.put_score_fee(context, deposit.score_address, score_fee_info)
 
         # Deletes deposit info
-        self._icx_storage.delete_deposit(context, deposit.id)
+        self._fee_storage.delete_deposit(context, deposit.id)
 
     def get_deposit_info_by_id(self,
                                context: 'IconScoreContext',
@@ -331,7 +355,7 @@ class FeeEngine:
 
         self._check_deposit_id(deposit_id)
 
-        deposit = self._icx_storage.get_deposit(context, deposit_id)
+        deposit = self._fee_storage.get_deposit(context, deposit_id)
 
         if deposit is None:
             raise InvalidRequestException('Deposit info not found')
@@ -360,14 +384,15 @@ class FeeEngine:
         :return: total available STEPs in the transaction
         """
 
-        total_step = 0
+        total_step = sender_step_limit
 
         if to.is_contract:
-            score_fee_info = self._icx_storage.get_score_fee(context, to)
+            score_fee_info = self._fee_storage.get_score_fee(context, to)
 
             if score_fee_info is not None and score_fee_info.ratio > 0:
                 if score_fee_info.ratio == 100:
                     # Retrieves how much STEPs SCORE can pay
+                    total_step = 0
 
                     gen = self._deposit_generator(context, score_fee_info.head_id)
                     for deposit in filter(lambda d: block_number < d.expires, gen):
@@ -399,7 +424,7 @@ class FeeEngine:
         :return: True if the SCORE can pay fees otherwise False
         """
 
-        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+        score_fee_info = self._fee_storage.get_score_fee(context, score_address)
 
         if score_fee_info is None:
             return False
@@ -486,7 +511,13 @@ class FeeEngine:
         sender_step = used_step - receiver_step
         self._icx_engine.charge_fee(context, sender, sender_step * step_price)
 
-        return {sender: sender_step, to: receiver_step}
+        if receiver_step > 0:
+            detail_step_used = {to: receiver_step}
+            if sender_step > 0:
+                detail_step_used[sender] = sender_step
+            return detail_step_used
+        else:
+            return {sender: sender_step}
 
     def _charge_fee_from_score(self,
                                context: 'IconScoreContext',
@@ -499,7 +530,7 @@ class FeeEngine:
         Returns total STEPs SCORE paid
         """
 
-        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+        score_fee_info = self._fee_storage.get_score_fee(context, score_address)
         fee_ratio = score_fee_info.ratio if score_fee_info is not None else 0
 
         # Amount of STEPs that SCORE will pay
@@ -519,7 +550,7 @@ class FeeEngine:
             if score_fee_info.available_head_id_of_virtual_step != next_head_id_for_virtual_step \
                     or score_fee_info.available_head_id_of_deposit != next_head_id_for_deposit:
                 # Updates if the information has been changed
-                self._icx_storage.put_score_fee(context, score_address, score_fee_info)
+                self._fee_storage.put_score_fee(context, score_address, score_fee_info)
 
         return receiver_step
 
@@ -548,7 +579,7 @@ class FeeEngine:
                     last_deposit_id = deposit.next_id
 
                 deposit.virtual_step_used += charged_step
-                self._icx_storage.put_deposit(context, deposit.id, deposit)
+                self._fee_storage.put_deposit(context, deposit.id, deposit)
 
                 remaining_required_step -= charged_step
 
@@ -582,7 +613,7 @@ class FeeEngine:
                     last_deposit_id = deposit.next_id
 
                 deposit.deposit_used += charged_icx
-                self._icx_storage.put_deposit(context, deposit.id, deposit)
+                self._fee_storage.put_deposit(context, deposit.id, deposit)
 
                 remaining_required_icx -= charged_icx
 
@@ -594,7 +625,7 @@ class FeeEngine:
     def _deposit_generator(self, context: 'IconScoreContext', start_id: bytes):
         next_id = start_id
         while next_id is not None:
-            deposit = self._icx_storage.get_deposit(context, next_id)
+            deposit = self._fee_storage.get_deposit(context, next_id)
             if deposit is not None:
                 next_id = deposit.next_id
 
@@ -629,7 +660,7 @@ class FeeEngine:
 
     def _get_or_create_score_fee(
             self, context: 'IconScoreContext', score_address: 'Address') -> 'Fee':
-        score_fee_info = self._icx_storage.get_score_fee(context, score_address)
+        score_fee_info = self._fee_storage.get_score_fee(context, score_address)
         if score_fee_info is None:
             score_fee_info = Fee()
         return score_fee_info
@@ -657,3 +688,106 @@ class FeeEngine:
 
         # TODO implement functionality
         return 0
+
+
+class FeeHandler:
+    """
+    Fee Handler
+    """
+
+    # For eventlog emitting
+    class EventType(IntEnum):
+        RATIO = 0
+        DEPOSIT = 1
+        WITHDRAW = 2
+
+    SIGNATURE_AND_INDEX = [
+        ('FeeShareSet(Address,int)', 1),
+        ('DepositCreated(bytes,Address,Address,int,int)', 3),
+        ('DepositDestroyed(bytes,Address,Address,int,int)', 3)
+    ]
+
+    @staticmethod
+    def get_signature_and_index_count(event_type: EventType):
+        return FeeHandler.SIGNATURE_AND_INDEX[event_type]
+
+    def __init__(self, fee_engine: 'FeeEngine'):
+        self.fee_engine = fee_engine
+
+        self.fee_handler = {
+            'createDeposit': self._deposit_fee,
+            'setRatio': self._set_fee_sharing_ratio,
+            'destroyDeposit': self._withdraw_fee,
+            'getFeeShare': self._get_fee_sharing_ratio,
+            'getDeposit': self._get_deposit_info_by_id,
+            'getScoreInfo': self._get_score_fee_info
+        }
+
+    def handle_fee_request(self, context: 'IconScoreContext', data: dict):
+        """
+        Handles fee request(querying or invoking)
+
+        :param context: IconScoreContext
+        :param data: data field
+        :return:
+        """
+        converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
+        method = converted_data['method']
+
+        try:
+            handler = self.fee_handler[method]
+            params = converted_data.get('params', {})
+            return handler(context, **params)
+        except KeyError:
+            # Case of invoking handler functions with unknown method name
+            raise InvalidRequestException(f"Invalid method: {method}")
+        except TypeError:
+            # Case of invoking handler functions with invalid parameter
+            # e.g. 'missing required params' or 'unknown params'
+            raise InvalidRequestException(f"Invalid request: parameter error")
+
+    def _deposit_fee(
+            self, context: 'IconScoreContext', _score: 'Address', _amount: int, _period: int):
+
+        self.fee_engine.deposit_fee(context, context.tx.hash, context.msg.sender, _score,
+                                    _amount, context.block.height, _period)
+
+        event_log_args = [context.tx.hash, _score, context.msg.sender, _amount, _period]
+        self._emit_event(context, FeeHandler.EventType.DEPOSIT, event_log_args)
+
+    def _set_fee_sharing_ratio(
+            self, context: 'IconScoreContext', _score: 'Address', _ratio: int):
+
+        # return score_address, ratio
+        self.fee_engine.set_fee_sharing_ratio(context, context.msg.sender, _score, _ratio)
+
+        event_log_args = [_score, _ratio]
+        self._emit_event(context, FeeHandler.EventType.RATIO, event_log_args)
+
+    def _withdraw_fee(self, context: 'IconScoreContext', _id: bytes):
+        # return deposit_id, (score_address), context.msg.sender, (return_icx, penalty)
+        score_address, return_icx, penalty = self.fee_engine.withdraw_fee(
+            context, context.msg.sender, _id, context.block.height)
+
+        event_log_args = [_id, score_address, context.msg.sender, return_icx, penalty]
+        self._emit_event(context, FeeHandler.EventType.WITHDRAW, event_log_args)
+
+    def _get_fee_sharing_ratio(self, context: 'IconScoreContext', _score: 'Address'):
+        return self.fee_engine.get_fee_sharing_ratio(context, _score)
+
+    def _get_deposit_info_by_id(self, context: 'IconScoreContext', _id: bytes):
+        deposit = self.fee_engine.get_deposit_info_by_id(context, _id)
+        return deposit.to_dict(to_camel_case)
+
+    def _get_score_fee_info(self, context: 'IconScoreContext', _score: 'Address'):
+        score_info = self.fee_engine.get_score_fee_info(context, _score, context.block.height)
+        return score_info.to_dict(to_camel_case)
+
+    @staticmethod
+    def _emit_event(
+            context: 'IconScoreContext', event_type: 'FeeHandler.EventType', event_log_args: list):
+
+        signature, index_count = FeeHandler.get_signature_and_index_count(event_type)
+
+        EventLogEmitter.emit_event_log(
+            context, ZERO_SCORE_ADDRESS, signature, event_log_args, index_count)

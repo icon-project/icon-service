@@ -34,6 +34,7 @@ class ParamType(IntEnum):
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
     ISE_GET_STATUS = 305
+    FEE2_PARAMS_DATA = 306
 
     WRITE_PRECOMMIT = 400
     REMOVE_PRECOMMIT = 500
@@ -77,7 +78,7 @@ SWITCH_KEY = "SWITCH_KEY"
 KEY_CONVERTER = 'KEY_CONVERTER'
 
 
-class ConstantKeys(object):
+class ConstantKeys:
     BLOCK_HEIGHT = "blockHeight"
     BLOCK_HASH = "blockHash"
     TIMESTAMP = "timestamp"
@@ -124,6 +125,12 @@ class ConstantKeys(object):
     ICX_GET_TOTAL_SUPPLY = "icx_getTotalSupply"
     ICX_GET_SCORE_API = "icx_getScoreApi"
     ISE_GET_STATUS = "ise_getStatus"
+
+    FEE2_SCORE_ADDRESS = "_score"
+    FEE2_RATIO = "_ratio"
+    FEE2_PERIOD = "_period"
+    FEE2_ID = "_id"
+    FEE2_AMOUNT = "_amount"
 
     # IISS
     DELEGATIONS = "delegations"
@@ -247,6 +254,16 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA]
 }
 
+# FEE v2
+type_convert_templates[ParamType.FEE2_PARAMS_DATA] = {
+    ConstantKeys.PARAMS: {
+        ConstantKeys.FEE2_ID: ValueType.BYTES,
+        ConstantKeys.FEE2_RATIO: ValueType.INT,
+        ConstantKeys.FEE2_SCORE_ADDRESS: ValueType.ADDRESS,
+        ConstantKeys.FEE2_PERIOD: ValueType.INT,
+        ConstantKeys.FEE2_AMOUNT: ValueType.INT
+    }
+}
 
 # IISS
 type_convert_templates[ParamType.IISS_SET_STAKE] = {

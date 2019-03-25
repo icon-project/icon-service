@@ -20,11 +20,12 @@ from random import randrange
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
-from iconservice.base.exception import InvalidRequestException, InvalidParamsException
+from iconservice.base.exception import InvalidRequestException, OutOfBalanceException
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy import DeployState
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
 from iconservice.fee.fee_engine import FeeEngine
+from iconservice.fee.fee_storage import FeeStorage
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.icx import IcxEngine
@@ -61,7 +62,7 @@ def create_context_db():
     return context_db
 
 
-def patch_icx_storage(icx_storage: IcxStorage):
+def patch_fee_storage(fee_storage: FeeStorage):
     memory_db = {}
 
     # noinspection PyUnusedLocal
@@ -76,12 +77,12 @@ def patch_icx_storage(icx_storage: IcxStorage):
     def delete(context, key):
         del memory_db[key]
 
-    icx_storage.put_score_fee = put
-    icx_storage.get_score_fee = get
-    icx_storage.delete_score_fee = delete
-    icx_storage.put_deposit = put
-    icx_storage.get_deposit = get
-    icx_storage.delete_deposit = delete
+    fee_storage.put_score_fee = put
+    fee_storage.get_score_fee = get
+    fee_storage.delete_score_fee = delete
+    fee_storage.put_deposit = put
+    fee_storage.get_deposit = get
+    fee_storage.delete_deposit = delete
 
 
 class TestFeeEngine(unittest.TestCase):
@@ -101,8 +102,10 @@ class TestFeeEngine(unittest.TestCase):
                                           os.urandom(32),
                                           os.urandom(32))
         icx_storage = IcxStorage(context_db)
-        patch_icx_storage(icx_storage)
         self._icx_engine = IcxEngine()
+
+        fee_storage = FeeStorage(context_db)
+        patch_fee_storage(fee_storage)
 
         deploy_storage.put_deploy_info(context, deploy_info)
         self._icx_engine.open(icx_storage)
@@ -114,7 +117,7 @@ class TestFeeEngine(unittest.TestCase):
             AccountType.TREASURY, Address.from_data(AddressPrefix.EOA, os.urandom(20)))
         self._icx_engine._init_special_account(context, treasury)
 
-        self._engine = FeeEngine(deploy_storage, icx_storage, self._icx_engine)
+        self._engine = FeeEngine(deploy_storage, fee_storage, icx_storage, self._icx_engine)
 
     def tearDown(self):
         ContextContainer._clear_context()
@@ -263,7 +266,7 @@ class TestFeeEngine(unittest.TestCase):
 
         # out of balance
         # noinspection PyTypeChecker
-        with self.assertRaises(InvalidParamsException) as e:
+        with self.assertRaises(OutOfBalanceException) as e:
             self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
                                      amount, block_number, period)
         self.assertEqual('Out of balance', e.exception.message)
@@ -342,28 +345,22 @@ class TestFeeEngine(unittest.TestCase):
         ratio = 50
         self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        available_steps = self._engine.get_total_available_step(context, self._sender,
-                                                                self._score_address,
-                                                                sender_step_limit, step_price,
-                                                                block_number, max_step_limit)
+        total_available_step = self._engine.get_total_available_step(
+            context, self._score_address, sender_step_limit, step_price, block_number,
+            max_step_limit)
 
         total_step = sender_step_limit * 100 // (100 - ratio)
-        self.assertEqual(
-            total_step - sender_step_limit, available_steps.get(self._score_address, 0))
-        self.assertEqual(sender_step_limit, available_steps.get(self._sender, 0))
+        self.assertEqual(total_step, total_available_step)
 
         ratio = 30
         self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        available_steps = self._engine.get_total_available_step(context, self._sender,
-                                                                self._score_address,
-                                                                sender_step_limit, step_price,
-                                                                block_number, max_step_limit)
+        total_available_step = self._engine.get_total_available_step(
+            context, self._score_address, sender_step_limit, step_price, block_number,
+            max_step_limit)
 
         total_step = sender_step_limit * 100 // (100 - ratio)
-        self.assertEqual(
-            total_step - sender_step_limit, available_steps.get(self._score_address, 0))
-        self.assertEqual(sender_step_limit, available_steps.get(self._sender, 0))
+        self.assertEqual(total_step, total_available_step)
 
     def test_get_available_step_without_sharing(self):
         context = IconScoreContext(IconScoreContextType.QUERY)
@@ -374,13 +371,10 @@ class TestFeeEngine(unittest.TestCase):
         sender_step_limit = 10000
         max_step_limit = 1_000_000
 
-        available_steps = self._engine.get_total_available_step(context, self._sender,
-                                                                score_address, sender_step_limit,
-                                                                step_price, block_number,
-                                                                max_step_limit)
+        total_available_step = self._engine.get_total_available_step(
+            context, score_address, sender_step_limit, step_price, block_number, max_step_limit)
 
-        self.assertEqual(0, available_steps.get(score_address, 0))
-        self.assertEqual(sender_step_limit, available_steps.get(self._sender, 0))
+        self.assertEqual(sender_step_limit, total_available_step)
 
     def test_charge_transaction_fee_without_sharing(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)

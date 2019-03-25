@@ -21,6 +21,7 @@ from unittest.mock import Mock, patch
 from iconcommons.icon_config import IconConfig
 
 from iconservice.database.db import ContextDatabase
+from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
@@ -121,6 +122,8 @@ def _create_service_engine(
     # Ignores icx transfer
     service_engine._icx_engine._transfer = Mock()
 
+    service_engine._icon_pre_validator._is_inactive_score = Mock()
+
     # Mocks get_balance so, it returns always 100 icx
     service_engine._icx_engine.get_balance = Mock(return_value=100 * 10 ** 18)
 
@@ -171,6 +174,22 @@ def create_request(requests: List[ReqData]):
             'prevBlockHash': bytes.hex(create_block_hash(b'prevBlock'))
         },
         'transactions': transactions
+    }
+
+
+def create_transaction_req(request: ReqData):
+    return {
+        'method': 'icx_sendTransaction',
+        'params': {
+            'txHash': request.tx_hash,
+            'version': hex(3),
+            'from': str(request.from_),
+            'to': str(request.to_),
+            'stepLimit': hex(1234567),
+            'timestamp': hex(123456),
+            'dataType': request.data_type,
+            'data': request.data,
+        }
     }
 
 
