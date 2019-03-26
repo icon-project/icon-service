@@ -1,7 +1,8 @@
 from struct import Struct
+from typing import Optional
 
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 
 class Deposit(object):
@@ -97,6 +98,23 @@ class Deposit(object):
                                  self.virtual_step_issued.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER),
                                  self.virtual_step_used.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER), self.prev_id, self.next_id)
 
+    def to_dict(self, casing: Optional = None) -> dict:
+        """Returns properties as dict
+
+        :param casing: a kind of functions to convert one casing notation to another
+        :return: deposit info in dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            # Excludes properties which have `None` value
+            if value is None:
+                continue
+
+            new_key = casing(key) if casing else key
+            new_dict[new_key] = value
+
+        return new_dict
+
     def __eq__(self, other) -> bool:
         """operator == overriding
 
@@ -120,3 +138,6 @@ class Deposit(object):
         :param other: (Deposit)
         """
         return not self.__eq__(other)
+
+
+

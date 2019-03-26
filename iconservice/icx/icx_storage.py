@@ -14,15 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional
 from struct import Struct
+from typing import TYPE_CHECKING, Optional
 
 from .icx_account import Account
 from ..base.address import Address
 from ..base.block import Block
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
-from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..fee.deposit import Deposit
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
