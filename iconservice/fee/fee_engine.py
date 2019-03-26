@@ -48,7 +48,7 @@ class ScoreInfo:
         self.available_deposit: int = 0
 
 
-class FeeManager:
+class FeeEngine:
     """
     Presenter of the fee operation.
 

@@ -24,7 +24,7 @@ from iconservice.base.exception import InvalidRequestException
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy import DeployState
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
-from iconservice.fee.fee_manager import FeeManager
+from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.icx import IcxEngine
@@ -84,7 +84,7 @@ def patch_icx_storage(icx_storage: IcxStorage):
     icx_storage.delete_deposit = delete
 
 
-class TestFeeManager(unittest.TestCase):
+class TestFeeEngine(unittest.TestCase):
 
     def setUp(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
@@ -114,7 +114,7 @@ class TestFeeManager(unittest.TestCase):
             AccountType.TREASURY, Address.from_data(AddressPrefix.EOA, os.urandom(20)))
         self._icx_engine._init_special_account(context, treasury)
 
-        self._manager = FeeManager(deploy_storage, icx_storage, self._icx_engine)
+        self._engine = FeeEngine(deploy_storage, icx_storage, self._icx_engine)
 
     def tearDown(self):
         ContextContainer._clear_context()
@@ -126,15 +126,15 @@ class TestFeeManager(unittest.TestCase):
         # Sets new ratio
         ratio = 50
 
-        self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-        sharing_ratio = self._manager.get_fee_sharing_ratio(context, self._score_address)
+        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+        sharing_ratio = self._engine.get_fee_sharing_ratio(context, self._score_address)
         self.assertEqual(ratio, sharing_ratio)
 
         # Modifies ratio
         ratio = 30
 
-        self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-        sharing_ratio = self._manager.get_fee_sharing_ratio(context, self._score_address)
+        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+        sharing_ratio = self._engine.get_fee_sharing_ratio(context, self._score_address)
         self.assertEqual(ratio, sharing_ratio)
 
     def test_set_fee_sharing_ratio_invalid_request(self):
@@ -145,26 +145,26 @@ class TestFeeManager(unittest.TestCase):
         with self.assertRaises(InvalidRequestException):
             score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
             ratio = 50
-            self._manager.set_fee_sharing_ratio(context, self._sender, score_address, ratio)
+            self._engine.set_fee_sharing_ratio(context, self._sender, score_address, ratio)
 
         # sender is not SCORE owner
         # noinspection PyTypeChecker
         with self.assertRaises(InvalidRequestException):
             sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
             ratio = 50
-            self._manager.set_fee_sharing_ratio(context, sender, score_address, ratio)
+            self._engine.set_fee_sharing_ratio(context, sender, score_address, ratio)
 
         # negative ratio
         # noinspection PyTypeChecker
         with self.assertRaises(InvalidRequestException):
             ratio = -1
-            self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+            self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
         # ratio overflow
         # noinspection PyTypeChecker
         with self.assertRaises(InvalidRequestException):
             ratio = 101
-            self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+            self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
     def test_deposit_fee(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -174,19 +174,19 @@ class TestFeeManager(unittest.TestCase):
         input_param = []
         for i in range(size):
             tx_hash = os.urandom(32)
-            amount = randrange(FeeManager._MIN_DEPOSIT_AMOUNT, FeeManager._MAX_DEPOSIT_AMOUNT)
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
             block_number = randrange(100, 10000)
-            period = randrange(FeeManager._MIN_DEPOSIT_PERIOD, FeeManager._MAX_DEPOSIT_PERIOD)
+            period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
 
             before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-            self._manager.deposit_fee(
+            self._engine.deposit_fee(
                 context, tx_hash, self._sender, self._score_address, amount, block_number, period)
             after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
             self.assertEqual(amount, before_sender_balance - after_sender_balance)
             input_param.append((tx_hash, amount, block_number, period))
 
-        score_info = self._manager.get_score_fee_info(context, self._score_address, block_number)
+        score_info = self._engine.get_score_fee_info(context, self._score_address, block_number)
 
         self.assertEqual(size, len(score_info.deposits))
 
@@ -204,18 +204,18 @@ class TestFeeManager(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         tx_hash = os.urandom(32)
-        amount = randrange(FeeManager._MIN_DEPOSIT_AMOUNT, FeeManager._MAX_DEPOSIT_AMOUNT)
+        amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_number = randrange(100, 10000)
-        period = randrange(FeeManager._MIN_DEPOSIT_PERIOD, FeeManager._MAX_DEPOSIT_PERIOD)
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
 
-        self._manager.deposit_fee(
+        self._engine.deposit_fee(
             context, tx_hash, self._sender, self._score_address, amount, block_number, period)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._manager.withdraw_fee(context, self._sender, tx_hash, block_number + period + 1)
+        self._engine.withdraw_fee(context, self._sender, tx_hash, block_number + period + 1)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
-        score_info = self._manager.get_score_fee_info(context, self._score_address, block_number)
+        score_info = self._engine.get_score_fee_info(context, self._score_address, block_number)
         self.assertEqual(0, len(score_info.deposits))
         self.assertEqual(amount, after_sender_balance - before_sender_balance)
 
@@ -223,18 +223,18 @@ class TestFeeManager(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         tx_hash = os.urandom(32)
-        amount = randrange(FeeManager._MIN_DEPOSIT_AMOUNT, FeeManager._MAX_DEPOSIT_AMOUNT)
+        amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_number = randrange(100, 10000)
-        period = randrange(FeeManager._MIN_DEPOSIT_PERIOD, FeeManager._MAX_DEPOSIT_PERIOD)
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
 
-        self._manager.deposit_fee(
+        self._engine.deposit_fee(
             context, tx_hash, self._sender, self._score_address, amount, block_number, period)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._manager.withdraw_fee(context, self._sender, tx_hash, block_number + period - 1)
+        self._engine.withdraw_fee(context, self._sender, tx_hash, block_number + period - 1)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
-        score_info = self._manager.get_score_fee_info(context, self._score_address, block_number)
+        score_info = self._engine.get_score_fee_info(context, self._score_address, block_number)
         self.assertEqual(0, len(score_info.deposits))
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
@@ -243,18 +243,18 @@ class TestFeeManager(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         tx_hash = os.urandom(32)
-        amount = randrange(FeeManager._MIN_DEPOSIT_AMOUNT, FeeManager._MAX_DEPOSIT_AMOUNT)
+        amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_number = randrange(100, 10000)
-        period = randrange(FeeManager._MIN_DEPOSIT_PERIOD, FeeManager._MAX_DEPOSIT_PERIOD)
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._manager.deposit_fee(
+        self._engine.deposit_fee(
             context, tx_hash, self._sender, self._score_address, amount, block_number, period)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         self.assertEqual(amount, before_sender_balance - after_sender_balance)
 
-        deposit = self._manager.get_deposit_info_by_id(context, tx_hash)
+        deposit = self._engine.get_deposit_info_by_id(context, tx_hash)
 
         self.assertEqual(tx_hash, deposit.id)
         self.assertEqual(self._score_address, deposit.score_address)
@@ -269,9 +269,9 @@ class TestFeeManager(unittest.TestCase):
         sender_step_limit = 10000
 
         ratio = 50
-        self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        available_steps = self._manager.get_available_step(
+        available_steps = self._engine.get_available_step(
             context, self._sender, self._score_address, sender_step_limit)
         total_step = sender_step_limit * 100 // (100 - ratio)
         self.assertEqual(
@@ -279,9 +279,9 @@ class TestFeeManager(unittest.TestCase):
         self.assertEqual(sender_step_limit, available_steps.get(self._sender, 0))
 
         ratio = 30
-        self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        available_steps = self._manager.get_available_step(
+        available_steps = self._engine.get_available_step(
             context, self._sender, self._score_address, sender_step_limit)
         total_step = sender_step_limit * 100 // (100 - ratio)
         self.assertEqual(
@@ -294,7 +294,7 @@ class TestFeeManager(unittest.TestCase):
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         sender_step_limit = 10000
 
-        available_steps = self._manager.get_available_step(
+        available_steps = self._engine.get_available_step(
             context, self._sender, score_address, sender_step_limit)
         self.assertEqual(0, available_steps.get(score_address, 0))
         self.assertEqual(sender_step_limit, available_steps.get(self._sender, 0))
@@ -306,16 +306,16 @@ class TestFeeManager(unittest.TestCase):
         used_step = 10 ** 10
 
         tx_hash = os.urandom(32)
-        amount = randrange(FeeManager._MIN_DEPOSIT_AMOUNT, FeeManager._MAX_DEPOSIT_AMOUNT)
+        amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_number = randrange(100, 10000)
-        period = randrange(FeeManager._MIN_DEPOSIT_PERIOD, FeeManager._MAX_DEPOSIT_PERIOD)
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
 
-        self._manager.deposit_fee(
+        self._engine.deposit_fee(
             context, tx_hash, self._sender, self._score_address, amount, block_number, period)
 
         before_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
-        self._manager.charge_transaction_fee(
+        self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, block_number)
 
         after_sender_balance = self._icx_engine.get_balance(context, self._sender)
@@ -329,23 +329,23 @@ class TestFeeManager(unittest.TestCase):
         used_step = 10 ** 10
 
         tx_hash = os.urandom(32)
-        amount = randrange(FeeManager._MIN_DEPOSIT_AMOUNT, FeeManager._MAX_DEPOSIT_AMOUNT)
+        amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_number = randrange(100, 10000)
-        period = randrange(FeeManager._MIN_DEPOSIT_PERIOD, FeeManager._MAX_DEPOSIT_PERIOD)
-        self._manager.deposit_fee(
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
+        self._engine.deposit_fee(
             context, tx_hash, self._sender, self._score_address, amount, block_number, period)
 
         ratio = 50
-        self._manager.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        score_info = self._manager.get_score_fee_info(context, self._score_address, block_number)
+        score_info = self._engine.get_score_fee_info(context, self._score_address, block_number)
         before_deposit_balance = score_info.available_deposit
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
-        self._manager.charge_transaction_fee(
+        self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, block_number)
 
-        score_info = self._manager.get_score_fee_info(context, self._score_address, block_number)
+        score_info = self._engine.get_score_fee_info(context, self._score_address, block_number)
         after_deposit_balance = score_info.available_deposit
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
