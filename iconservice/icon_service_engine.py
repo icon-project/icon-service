@@ -18,21 +18,21 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from .base.type_converter import TypeConverter
-from .base.type_converter_templates import ParamType
-from .fee.fee_manager import FeeManager
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
-from .base.exception import ExceptionCode, RevertException, ScoreErrorException,\
+from .base.exception import ExceptionCode, RevertException, ScoreErrorException, \
     IconServiceBaseException, ServerErrorException, InvalidRequestException
 from .base.message import Message
 from .base.transaction import Transaction
+from .base.type_converter import TypeConverter
+from .base.type_converter_templates import ParamType
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from .fee.fee_engine import FeeEngine
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     REVISION_3, FEE2_EVENT_LOG_SIGNATURE, FEE2_EVENT_LOG_INDEX_COUNT
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -59,7 +59,6 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
-    from .fee.fee_manager import ScoreInfo
 
 
 class IconServiceEngine(ContextContainer):
@@ -122,8 +121,8 @@ class IconServiceEngine(ContextContainer):
         icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._fee_manager = FeeManager(icon_score_deploy_storage, self._icx_storage, self._icx_engine)
-        self._icon_pre_validator =\
+        self._fee_manager = FeeEngine(icon_score_deploy_storage, self._icx_storage, self._icx_engine)
+        self._icon_pre_validator = \
             IconPreValidator(self._icx_engine, icon_score_deploy_storage, self._fee_manager)
 
         IconScoreClassLoader.init(score_root_path)
@@ -724,7 +723,7 @@ class IconServiceEngine(ContextContainer):
 
         if icon_score_address == ZERO_SCORE_ADDRESS:
             converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
-            return self._process_zero_score_query(context, converted_data)
+            return process_zero_score_query(self._fee_manager, context, converted_data)
 
         return IconScoreEngine.query(context,
                                      icon_score_address,
@@ -772,15 +771,12 @@ class IconServiceEngine(ContextContainer):
                     tx_result.status,
                     context.step_counter.step_used)
 
-            final_step_used = sum(final_step_used_info.values())
             # Finalize tx_result
-            context.cumulative_step_used += final_step_used
-            tx_result.step_used = final_step_used
             tx_result.step_price = final_step_price
-            tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
             tx_result.traces = context.traces
+            self._process_transaction_result(tx_result, context, final_step_used_info)
 
         return tx_result
 
@@ -813,14 +809,14 @@ class IconServiceEngine(ContextContainer):
 
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
-            if to.is_contract:
-                self._adjust_step_limit(context, to)
             if context.revision >= REVISION_3:
                 # Check if from account can charge a tx fee
                 self._icon_pre_validator.execute_to_check_out_of_balance(
                     context,
                     params,
                     step_price=context.step_counter.step_price)
+                if to.is_contract:
+                    self._adjust_step_limit(context, to)
             else:
                 # Check if from account can charge a tx fee
                 self._icon_pre_validator.execute_to_check_out_of_balance(
@@ -896,7 +892,7 @@ class IconServiceEngine(ContextContainer):
 
         # Charge a fee to from account
         try:
-            used_step_info = self._fee_manager.charge_transaction_fee(context, from_, to,  step_price, step_used)
+            used_step_info = self._fee_manager.charge_transaction_fee(context, from_, to, step_price, step_used)
         except BaseException as e:
             if hasattr(e, 'message'):
                 message = e.message
@@ -956,69 +952,27 @@ class IconServiceEngine(ContextContainer):
             return score_address
         elif data_type == 'call' and to == ZERO_SCORE_ADDRESS:
             converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
-            self._process_configure_fee(context, converted_data)
+            process_zero_score_invoke(self._fee_manager, context, converted_data)
         else:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
 
         return None
 
-    def _process_zero_score_query(self, context, data: dict):
-        method = data.get('method')
-        params = data.get('params')
-
-        if method == 'getFeeShare':
-            score_address = params.get('_score')
-            result = self._fee_manager.get_score_fee_info(context, score_address)
-            result = {'ratio': result.sharing_ratio}
-        elif method == 'getDeposit':
-            deposit_id = params.get('_id')
-            result = self._fee_manager.get_deposit_info_by_id(context, deposit_id)
-        elif method == 'getScoreInfo':
-            score_address = params.get('_score')
-            result = self._fee_manager.get_score_fee_info(score_address)
-        else:
-            raise InvalidRequestException(f'Invalid method {method}')
-
-        return result
-
-    def _process_configure_fee(self, context, data: dict):
-        method = data.get('method')
-        params = data.get('params')
-
-        if method == 'setRatio':
-            ratio = params.get('_ratio')
-            score_address = params.get('_score')
-            self._fee_manager.set_fee_sharing_ratio(context, context.msg.sender, score_address, ratio)
-            event_log_args = [score_address, ratio]
-        elif method == 'createDeposit':
-            term = params.get('_term')
-            score_address = params.get('_score')
-            amount = params.get('_amount')
-            self._fee_manager.deposit_fee(context, context.tx.hash, context.msg.sender, score_address,
-                                          amount, context.block.height, term)
-            event_log_args = [context.tx.hash, score_address, context.msg.sender, amount, term]
-        elif method == 'destroyDeposit':
-            _id = params.get('_id')
-            score_address = self._fee_manager.withdraw_fee(context, context.msg.sender, _id, context.block.height)
-            event_log_args = [context.tx.hash, score_address, context.msg.sender]
-        else:
-            raise InvalidRequestException(f'Invalid method: {method}')
-
-        self._emit_event_log_for_configure_fee(context, method, *event_log_args)
-
-    def _emit_event_log_for_configure_fee(self, context, method, *args):
-        EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, FEE2_EVENT_LOG_SIGNATURE[method],
-                                       list(args), FEE2_EVENT_LOG_INDEX_COUNT[method])
-
     def _adjust_step_limit(self, context, to):
-        score_fee_info: 'ScoreInfo' = self._fee_manager.get_score_fee_info(context, to)
-        fee_sharing_ratio = score_fee_info.sharing_ratio
-        if fee_sharing_ratio != 100:
-            new_step_limit = context.step_counter.step_limit * 100 // (100-fee_sharing_ratio)
-            context.step_counter._step_limit = new_step_limit
-        else:
-            context.step_counter._step_limit = context.step_counter.max_step_limit
+        available_step_info: dict = self._fee_manager.get_available_step(
+            context, context.msg.sender, to, context.step_counter.step_limit)
+        total_step_limit = sum(available_step_info.values())
+        context.step_counter._step_limit = total_step_limit
+
+    @staticmethod
+    def _process_transaction_result(tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_info: dict):
+        final_step_used = sum(step_used_info.values())
+        context.cumulative_step_used += final_step_used
+        tx_result.step_used = final_step_used
+        tx_result.cumulative_step_used = context.cumulative_step_used
+        if len(step_used_info) > 1 or context.msg.sender not in step_used_info:
+            tx_result.detail_step_used = step_used_info
 
     @staticmethod
     def _get_failure_from_exception(
@@ -1166,3 +1120,70 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before rollback
         self._precommit_data_manager.validate_precommit_block(block)
         self._precommit_data_manager.rollback(block)
+
+
+def deposit_fee(fee_engine: 'FeeEngine', context, _score, _amount, _term):
+    return fee_engine.deposit_fee(context, context.tx.hash, context.msg.sender, _score,
+                                  _amount, context.block.height, _term)
+
+
+def set_fee_sharing_ratio(fee_engine: 'FeeEngine', context, _score, _ratio):
+    return fee_engine.set_fee_sharing_ratio(context, context.msg.sender, _score, _ratio)
+
+
+def withdraw_fee(fee_engine: 'FeeEngine', context, _id):
+    return fee_engine.withdraw_fee(context, context.msg.sender, _id, context.block.height)
+
+
+def get_fee_sharing_ratio(fee_engine: 'FeeEngine', context, _score):
+    return fee_engine.get_fee_sharing_ratio(context, _score)
+
+
+def get_deposit_info_by_id(fee_engine: 'FeeEngine', context, _id):
+    deposit = fee_engine.get_deposit_info_by_id(context, _id)
+    return deposit.to_dict()
+
+
+def get_score_fee_info(fee_engine: 'FeeEngine', context, _score):
+    score_info = fee_engine.get_score_fee_info(context, _score)
+    return score_info.to_dict()
+
+
+def emit_event_log_for_zero_score(context, method, args):
+    EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, FEE2_EVENT_LOG_SIGNATURE[method],
+                                   args, FEE2_EVENT_LOG_INDEX_COUNT[method])
+
+
+fee_handler = {
+    'createDeposit': deposit_fee,
+    'setRatio': set_fee_sharing_ratio,
+    'destroyDeposit': withdraw_fee,
+    'getFeeShare': get_fee_sharing_ratio,
+    'getDeposit': get_deposit_info_by_id,
+    'getScoreInfo': get_score_fee_info
+}
+
+
+def process_zero_score_invoke(fee_engine, context, data):
+    method = data.get('method')
+    params = data.get('params')
+
+    try:
+        handler = fee_handler[method]
+        event_log_args = handler(fee_engine, context, **params)
+        emit_event_log_for_zero_score(context, method, event_log_args)
+    except BaseException as e:
+        raise InvalidRequestException(str(e))
+
+
+def process_zero_score_query(fee_engine, context, data):
+    method = data.get('method')
+    params = data.get('params')
+
+    try:
+        handler = fee_handler[method]
+        result = handler(fee_engine, context, **params)
+    except BaseException as e:
+        raise InvalidRequestException(str(e))
+    else:
+        return result

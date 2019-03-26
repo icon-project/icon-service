@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
     from ..icx.icx_engine import IcxEngine
     from .icon_score_context import IconScoreContext
-    from ..fee.fee_manager import FeeManager
+    from ..fee.fee_engine import FeeEngine
 
 
 class IconPreValidator:
@@ -39,14 +39,14 @@ class IconPreValidator:
 
     def __init__(self, icx_engine: 'IcxEngine',
                  deploy_storage: 'IconScoreDeployStorage',
-                 fee_manager: 'FeeManager') -> None:
+                 fee_engine: 'FeeEngine') -> None:
         """Constructor
 
         :param icx_engine: icx engine
         """
         self._icx = icx_engine
         self._deploy_storage = deploy_storage
-        self._fee_manager = fee_manager
+        self._fee_manager = fee_engine
 
     def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -211,7 +211,7 @@ class IconPreValidator:
         to: 'Address' = params['to']
         step_limit = params.get('stepLimit', 0)
 
-        step_limit_info = self._fee_manager.get_available_step(context, from_, to, step_limit, context.block.height)
+        step_limit_info = self._fee_manager.get_available_step(context, from_, to, step_limit)
 
         sender_step_limit = step_limit_info.get(from_)
         sender_fee = sender_step_limit * step_price
