@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 @unique
 class AccountVersion(IntEnum):
     OLD = 0
-    IISS = 1
+    MSG_PACK = 1
 
 
 @unique
@@ -87,7 +87,6 @@ class Account(object):
         self._address: 'Address' = address
         self._balance: int = balance
         self._locked: bool = locked
-        self.iiss: 'AccountForIISS' = AccountForIISS()
 
     @property
     def address(self) -> 'Address':
@@ -173,50 +172,6 @@ class Account(object):
 
         self._balance -= value
 
-    # Version 2
-    def stake(self, value: int) -> None:
-        if not isinstance(value, int) or value < 0:
-            raise InvalidParamsException('Failed to stake:value is not int type or value < 0')
-
-        self.iiss.stake += value
-        self.withdraw(value)
-
-    def unstake(self, next_block_height: int, value: int) -> None:
-        if not isinstance(value, int) or value < 0:
-            raise InvalidParamsException('Failed to unstake:value is not int type or value < 0')
-
-        self.iiss.stake -= value
-        self.iiss.unstake += value
-        self.iiss.unstake_block_height: int = next_block_height
-
-    def delegation(self, target: 'Account', value: int) -> bool:
-        delegation: 'DelegationInfo' = self.iiss.delegations.get(target.address, None)
-
-        if delegation is None:
-            delegation: 'DelegationInfo' = AccountForIISS.create_delegation(target.address, value)
-            self.iiss.delegations[target.address] = delegation
-            target.iiss.delegated_amount += value
-            return True
-        else:
-            prev_delegation: int = delegation.value
-            offset: int = value - prev_delegation
-
-            if offset != 0:
-                delegation.value += offset
-                self.iiss.delegated_amount += offset
-
-                if delegation.value == 0:
-                    del self.iiss.delegations[target.address]
-                return True
-            else:
-                return False
-
-    def extension_balance(self, current_block_height: int) -> int:
-        if current_block_height > self.iiss.unstake_block_height:
-            return self.iiss.unstake
-        else:
-            return 0
-
     def __eq__(self, other) -> bool:
         """operator == overriding
 
@@ -226,8 +181,7 @@ class Account(object):
                and self.address == other.address \
                and self.balance == other.balance \
                and self.type == other.type \
-               and self.locked == other.locked \
-               and self.iiss == other.iiss
+               and self.locked == other.locked
 
     def __ne__(self, other) -> bool:
         """operator != overriding
@@ -255,13 +209,12 @@ class Account(object):
         else:
             data: list = MsgPackConverter.loads(buf)
             version = MsgPackConverter.decode(TypeTag.INT, data[0])
-            if version == AccountVersion.IISS:
+            if version == AccountVersion.MSG_PACK:
                 obj = Account()
                 obj.type = AccountType(MsgPackConverter.decode(TypeTag.INT, data[1]))
                 flags = MsgPackConverter.decode(TypeTag.INT, data[2])
                 obj._locked = bool(flags & AccountFlag.LOCKED)
                 obj._balance = MsgPackConverter.decode(TypeTag.INT, data[3])
-                obj.iiss = AccountForIISS.decode(data[4])
                 return obj
             else:
                 raise InvalidParamsException(f"Invalid Account version: {version}")
@@ -269,7 +222,7 @@ class Account(object):
     def to_bytes(self, revision: int = 0) -> bytes:
         """Convert Account object to bytes
 
-        :return: data including information of account object
+        :return: data including information of Account object
         """
 
         if revision >= REVISION_4:
@@ -277,12 +230,11 @@ class Account(object):
             if self._locked:
                 flags |= AccountFlag.LOCKED
 
-            version = AccountVersion.IISS
+            version = AccountVersion.MSG_PACK
             data = [MsgPackConverter.encode(version),
                     MsgPackConverter.encode(self._type),
                     MsgPackConverter.encode(flags),
-                    MsgPackConverter.encode(self.balance),
-                    self.iiss.encode()]
+                    MsgPackConverter.encode(self.balance)]
 
             return MsgPackConverter.dumps(data)
         else:
@@ -296,48 +248,200 @@ class Account(object):
                                             self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
 
 
-class AccountForIISS(object):
-    def __init__(self):
-        self.stake: int = 0
-        self.unstake: int = 0
-        self.unstake_block_height: int = 0
-        self.delegated_amount: int = 0
-        self.delegations: OrderedDict = OrderedDict()
+class AccountOfStake(object):
+    prifix = "aos|"
 
-    def encode(self) -> list:
-        data = [
-            MsgPackConverter.encode(self.stake),
-            MsgPackConverter.encode(self.unstake),
-            MsgPackConverter.encode(self.unstake_block_height),
-            MsgPackConverter.encode(self.delegated_amount)
-        ]
-
-        delegations = []
-        for info in self.delegations.values():
-            delegations.append(MsgPackConverter.encode(info.address))
-            delegations.append(MsgPackConverter.encode(info.value))
-        data.append(delegations)
-        return data
+    def __init__(self, address: 'Address'):
+        self._address: 'Address' = address
+        self._stake_amount: int = 0
+        self._unstake_amount: int = 0
+        self._unstake_block_height: int = 0
 
     @staticmethod
-    def decode(data: list) -> 'AccountForIISS':
-        obj = AccountForIISS()
-        obj.stake: int = MsgPackConverter.decode(TypeTag.INT, data[0])
-        obj.unstake: int = MsgPackConverter.decode(TypeTag.INT, data[1])
-        obj.unstake_block_height: int = MsgPackConverter.decode(TypeTag.INT, data[2])
-        obj.delegated_amount: int = MsgPackConverter.decode(TypeTag.INT, data[3])
+    def make_key(address: 'Address'):
+        prefix_data: bytes = MsgPackConverter.encode(AccountOfStake.prifix)
+        address_data: bytes = MsgPackConverter.encode(address)
+        return prefix_data + address_data
 
-        delegations: list = data[4]
+    @property
+    def address(self) -> 'Address':
+        return self._address
+
+    @property
+    def stake_amount(self):
+        return self._stake_amount
+
+    @property
+    def unstake_amount(self):
+        return self._unstake_amount
+
+    @property
+    def unstake_block_height(self):
+        return self._unstake_block_height
+
+    @staticmethod
+    def from_bytes(buf: bytes, address: 'Address') -> 'AccountOfStake':
+        """Create Account of Stake object from bytes data
+
+        :param buf: (bytes) bytes data including Account of Stake information
+        :param address:
+        :return: (AccountOfStake) AccountOfStake object
+        """
+
+        data: list = MsgPackConverter.loads(buf)
+        version = MsgPackConverter.decode(TypeTag.INT, data[0])
+
+        obj = AccountOfStake(address)
+        obj._stake_amount: int = MsgPackConverter.decode(TypeTag.INT, data[1])
+        obj._unstake_amount: int = MsgPackConverter.decode(TypeTag.INT, data[2])
+        obj._unstake_block_height: int = MsgPackConverter.decode(TypeTag.INT, data[3])
+        return obj
+
+    def to_bytes(self) -> bytes:
+        """Convert Account of Stake object to bytes
+
+        :return: data including information of AccountOfStake object
+        """
+
+        version = 0
+        data = [MsgPackConverter.encode(version),
+                MsgPackConverter.encode(self._stake_amount),
+                MsgPackConverter.encode(self._unstake_amount),
+                MsgPackConverter.encode(self._unstake_block_height)]
+        return MsgPackConverter.dumps(data)
+
+    def stake(self, value: int, account: 'Account') -> None:
+        if not isinstance(value, int) or value < 0:
+            raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
+
+        self._stake_amount += value
+        account.withdraw(value)
+
+    def unstake(self, next_block_height: int, value: int) -> None:
+        if not isinstance(value, int) or value < 0:
+            raise InvalidParamsException('Failed to unstake: value is not int type or value < 0')
+
+        self._stake_amount -= value
+        self._unstake_amount += value
+        self._unstake_block_height: int = next_block_height
+
+    def extension_balance(self, current_block_height: int) -> int:
+        if current_block_height > self._unstake_block_height:
+            return self._unstake_amount
+        else:
+            return 0
+
+    def __eq__(self, other) -> bool:
+        """operator == overriding
+
+        :param other: (AccountOfStake)
+        """
+
+        return isinstance(other, AccountOfStake) \
+               and self._address == other.address \
+               and self._stake_amount == other.stake_amount \
+               and self._unstake_amount == other.unstake_amount \
+               and self._unstake_block_height == other.unstake_block_height
+
+    def __ne__(self, other) -> bool:
+        """operator != overriding
+
+        :param other: (AccountOfStake)
+        """
+        return not self.__eq__(other)
+
+
+class AccountOfDelegation(object):
+    prifix = "aod|"
+
+    def __init__(self, address: 'Address'):
+        self._address: 'Address' = address
+        self._delegated_amount: int = 0
+        self._delegations: OrderedDict = OrderedDict()
+
+    @staticmethod
+    def make_key(address: 'Address'):
+        prefix_data: bytes = MsgPackConverter.encode(AccountOfDelegation.prifix)
+        address_data: bytes = MsgPackConverter.encode(address)
+        return prefix_data + address_data
+
+    @property
+    def address(self) -> 'Address':
+        return self._address
+
+    @property
+    def delegated_amount(self) -> int:
+        return self._delegated_amount
+
+    @property
+    def delegations(self) -> OrderedDict:
+        return self._delegations
+
+    @staticmethod
+    def from_bytes(buf: bytes, address: 'Address') -> 'AccountOfDelegation':
+        """Create Account of Stake object from bytes data
+
+        :param buf: (bytes) bytes data including Account of Delegation information
+        :param address:
+        :return: (AccountOfStake) AccountOfDelegation object
+        """
+
+        data: list = MsgPackConverter.loads(buf)
+        version = MsgPackConverter.decode(TypeTag.INT, data[0])
+
+        obj = AccountOfDelegation(address)
+        obj._delegated_amount: int = MsgPackConverter.decode(TypeTag.INT, data[1])
+
+        delegations: list = data[2]
         for i in range(0, len(delegations), 2):
-            info = DelegationInfo()
+            info = AccountDelegationInfo()
             info.address = MsgPackConverter.decode(TypeTag.ADDRESS, delegations[i])
             info.value = MsgPackConverter.decode(TypeTag.INT, delegations[i + 1])
             obj.delegations[info.address] = info
         return obj
 
+    def to_bytes(self) -> bytes:
+        """Convert Account of Stake object to bytes
+
+        :return: data including information of AccountOfDelegation object
+        """
+
+        version = 0
+        data = [MsgPackConverter.encode(version),
+                MsgPackConverter.encode(self.delegated_amount)]
+        delegations = []
+        for info in self.delegations.values():
+            delegations.append(MsgPackConverter.encode(info.address))
+            delegations.append(MsgPackConverter.encode(info.value))
+        data.append(delegations)
+
+        return MsgPackConverter.dumps(data)
+
+    def delegate(self, target: 'AccountOfDelegation', value: int) -> bool:
+        delegation: 'AccountDelegationInfo' = self._delegations.get(target.address, None)
+
+        if delegation is None:
+            delegation: 'AccountDelegationInfo' = AccountOfDelegation.create_delegation(target.address, value)
+            self._delegations[target.address] = delegation
+            target._delegated_amount += value
+            return True
+        else:
+            prev_delegation: int = delegation.value
+            offset: int = value - prev_delegation
+
+            if offset != 0:
+                delegation.value += offset
+                self._delegated_amount += offset
+
+                if delegation.value == 0:
+                    del self._delegations[target.address]
+                return True
+            else:
+                return False
+
     @staticmethod
-    def create_delegation(address: 'Address', value: int) -> 'DelegationInfo':
-        d = DelegationInfo()
+    def create_delegation(address: 'Address', value: int) -> 'AccountDelegationInfo':
+        d = AccountDelegationInfo()
         d.address: 'Address' = address
         d.value: int = value
         return d
@@ -345,23 +449,23 @@ class AccountForIISS(object):
     def __eq__(self, other) -> bool:
         """operator == overriding
 
-        :param other: (AccountForIISS)
+        :param other: (AccountOfDelegation)
         """
 
-        return isinstance(other, AccountForIISS) \
-               and self.stake == other.stake \
-               and self.delegated_amount == other.delegated_amount \
-               and self.delegations == other.delegations
+        return isinstance(other, AccountOfDelegation) \
+               and self._address == other.address \
+               and self._delegated_amount == other.delegated_amount \
+               and self._delegations == other.delegations
 
     def __ne__(self, other) -> bool:
         """operator != overriding
 
-        :param other: (AccountForIISS)
+        :param other: (AccountOfDelegation)
         """
         return not self.__eq__(other)
 
 
-class DelegationInfo(object):
+class AccountDelegationInfo(object):
     def __init__(self):
         self.address: 'Address' = None
         self.value: int = 0
@@ -369,16 +473,16 @@ class DelegationInfo(object):
     def __eq__(self, other) -> bool:
         """operator == overriding
 
-        :param other: (Delegations)
+        :param other: (AccountDelegationInfo)
         """
-        return isinstance(other, DelegationInfo) \
+        return isinstance(other, AccountDelegationInfo) \
                and self.address == other.address \
                and self.value == other.value
 
     def __ne__(self, other) -> bool:
         """operator != overriding
 
-        :param other: (Delegations)
+        :param other: (AccountDelegationInfo)
         """
         return not self.__eq__(other)
 

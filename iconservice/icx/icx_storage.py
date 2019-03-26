@@ -16,14 +16,15 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from .icx_account import Account
-from ..base.address import Address
+from .icx_account import Account, AccountOfStake, AccountOfDelegation
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..base.address import Address
+    from ..base.block import Block
 
 
 class IcxStorage(object):
@@ -137,6 +138,100 @@ class IcxStorage(object):
         :param address: account address
         """
         key = address.to_bytes()
+        self._db.delete(context, key)
+
+    def get_account_of_stake(self,
+                             context: 'IconScoreContext',
+                             address: 'Address') -> 'AccountOfStake':
+        """Returns the account of stake indicated by address.
+
+        :param context:
+        :param address: account address
+        :return: (AccountOfStake)
+            If the account indicated by address is not present,
+            create a new AccountOfStake object.
+        """
+
+        key = AccountOfStake.make_key(address)
+        value = self._db.get(context, key)
+
+        if value:
+            account = AccountOfStake.from_bytes(value, address)
+        else:
+            account = AccountOfStake(address)
+        return account
+
+    def put_account_of_stake(self,
+                             context: 'IconScoreContext',
+                             address: 'Address',
+                             account: 'AccountOfStake') -> None:
+        """Put AccountOfStake info to db.
+
+        :param context:
+        :param address: account address
+        :param account: account_of_stake to save
+        """
+
+        key = AccountOfStake.make_key(address)
+        value = account.to_bytes()
+        self._db.put(context, key, value)
+
+    def delete_account_of_stake(self,
+                                context: 'IconScoreContext',
+                                address: 'Address') -> None:
+        """Delete AccountOfStake info from db.
+
+        :param context:
+        :param address: account address
+        """
+        key = AccountOfStake.make_key(address)
+        self._db.delete(context, key)
+
+    def get_account_of_delegation(self,
+                                  context: 'IconScoreContext',
+                                  address: 'Address') -> 'AccountOfDelegation':
+        """Returns the account of delegation indicated by address.
+
+        :param context:
+        :param address: account address
+        :return: (AccountOfDelegation)
+            If the account indicated by address is not present,
+            create a new AccountOfDelegation object.
+        """
+
+        key = AccountOfDelegation.make_key(address)
+        value = self._db.get(context, key)
+
+        if value:
+            account = AccountOfDelegation.from_bytes(value, address)
+        else:
+            account = AccountOfDelegation(address)
+        return account
+
+    def put_account_of_delegation(self,
+                                  context: 'IconScoreContext',
+                                  address: 'Address',
+                                  account: 'AccountOfDelegation') -> None:
+        """Put AccountOfDelegation info to db.
+
+        :param context:
+        :param address: account address
+        :param account: account_of_delegation to save
+        """
+
+        key = AccountOfDelegation.make_key(address)
+        value = account.to_bytes()
+        self._db.put(context, key, value)
+
+    def delete_account_of_delegation(self,
+                                     context: 'IconScoreContext',
+                                     address: 'Address') -> None:
+        """Delete AccountOfDelegation info from db.
+
+        :param context:
+        :param address: account address
+        """
+        key = AccountOfDelegation.make_key(address)
         self._db.delete(context, key)
 
     def is_address_present(self,

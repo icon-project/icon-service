@@ -18,7 +18,7 @@ import json
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
-from .icx_account import Account, AccountType
+from .icx_account import Account, AccountType, AccountOfStake, AccountOfDelegation
 from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
@@ -180,7 +180,8 @@ class IcxEngine(object):
         :param address: account address
         :return: the balance of address in loop (1 icx  == 1e18 loop)
         """
-        account = self._storage.get_account(context, address)
+        account: 'Account' = self._storage.get_account(context, address)
+        account_of_stake: 'AccountOfStake' = self._storage.get_account_of_stake(context, address)
 
         # If the address is not present, its balance is 0.
         # Unit: loop (1 icx == 1e18 loop)
@@ -190,7 +191,7 @@ class IcxEngine(object):
             block_height: int = 0
             if context:
                 block_height = 0
-            amount = account.balance + account.extension_balance(block_height)
+            amount = account.balance + account_of_stake.extension_balance(block_height)
 
         return amount
 
