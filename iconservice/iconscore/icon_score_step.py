@@ -327,14 +327,18 @@ class IconScoreStepCounter(object):
             if self._external_call_count > MAX_EXTERNAL_CALL_COUNT:
                 raise InvalidRequestException('Too many external calls')
 
-        step_to_apply = self._step_costs.get(step_type, 0) * count
-        if step_to_apply + self._step_used > self._step_limit:
+        step: int = self._step_costs.get(step_type, 0) * count
+
+        return self.consume_step(step_type, step)
+
+    def consume_step(self, step_type: StepType, step: int) -> int:
+        if step + self._step_used > self._step_limit:
             step_used = self._step_used
             self._step_used = self._step_limit
             raise OutOfStepException(
-                self._step_limit, step_used, step_to_apply, step_type)
+                self._step_limit, step_used, step, step_type)
 
-        self._step_used += step_to_apply
+        self._step_used += step
 
         return self.step_used
 
@@ -367,3 +371,6 @@ class IconScoreStepCounter(object):
         :param max_step_limit: max step limit
         """
         self._max_step_limit = max_step_limit
+
+    def get_step_cost(self, step_type: StepType) -> int:
+        return self._step_costs.get(step_type, 0)

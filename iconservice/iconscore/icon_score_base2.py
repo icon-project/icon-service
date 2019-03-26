@@ -17,6 +17,7 @@
 import hashlib
 import json
 from abc import ABC, ABCMeta
+from enum import IntEnum
 from typing import TYPE_CHECKING, Optional, Any
 
 from secp256k1 import PublicKey, ALL_FLAGS, NO_FLAGS
@@ -74,7 +75,6 @@ class InterfaceScore(ABC, metaclass=InterfaceScoreMeta):
     def from_score(self) -> 'IconScoreBase':
         return self.__from_score
 
-
 class Block(object):
     def __init__(self, block_height: int, timestamp: int) -> None:
         """Constructor
@@ -93,6 +93,19 @@ class Block(object):
     @property
     def timestamp(self) -> int:
         return self._timestamp
+
+
+class ScoreApiStepRatio(IntEnum):
+    SHA3_256 = 1000
+    JSON_DUMPS = 5000
+    JSON_LOADS = 4000
+    RECOVER_KEY = 70000
+    CREATE_ADDRESS_WITH_COMPRESS_KEY = 15000
+    CREATE_ADDRESS_WITH_UNCOMPRESS_KEY = 1500
+
+
+def __get_call_step(ratio: ScoreApiStepRatio, api_call_step) -> int:
+    return api_call_step * ratio // ScoreApiStepRatio.SHA3_256
 
 
 def revert(message: Optional[str] = None, code: int = 0) -> None:
@@ -122,12 +135,19 @@ def sha3_256(data: bytes) -> bytes:
     :param data: input data
     :return: hashed data in bytes
     """
+    if not isinstance(data, bytes):
+        raise InvalidParamsException("Invalid dataType")
+
     context = ContextContainer._get_context()
-    if context.step_counter:
-        step_count = 1
-        if data:
-            step_count += len(data)
-        context.step_counter.apply_step(StepType.API_CALL, step_count)
+    api_call_step: int = context.step_counter.get_step_cost(StepType.API_CALL)
+
+    size = len(data)
+    word_count = size // 32
+    if size % 32 > 0:
+        word_count += 1
+
+    step: int = api_call_step + api_call_step * word_count // 5
+    context.step_counter.consume_step(StepType.API_CALL, step)
 
     return hashlib.sha3_256(data).digest()
 
@@ -160,7 +180,17 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
     :param public_key: Public key based on secp256k1
     :return: Address created from a given public key or None if failed
     """
-    # FIXME: Add step calculation code
+    if _is_key_compressed(public_key):
+        ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESS_KEY
+    else:
+        ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESS_KEY
+
+    context = ContextContainer._get_context()
+    api_call_step: int = context.step_counter.get_step_cost(StepType.API_CALL)
+    call_step: int = __get_call_step(ratio, api_call_step)
+
+    context.step_counter.consume_step(StepType.API_CALL, call_step)
+
     try:
         return _create_address_with_key(public_key)
     except:
@@ -203,6 +233,10 @@ def _convert_key(public_key: bytes) -> Optional[bytes]:
     return public_key.serialize(compressed=not compressed)
 
 
+def _is_key_compressed(public_key: bytes) -> bool:
+    return len(public_key) == 33
+
+
 def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
     """Returns the public key from message hash and recoverable signature
 
@@ -212,7 +246,11 @@ def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> O
     :return: public key recovered from msg_hash and signature
         (compressed: 33 bytes key, uncompressed: 65 bytes key)
     """
-    # FIXME: Add step calculation code
+    context = ContextContainer._get_context()
+    api_call_step: int = context.step_counter.get_step_cost(StepType.API_CALL)
+    call_step: int = __get_call_step(ScoreApiStepRatio.RECOVER_KEY, api_call_step)
+
+    context.step_counter.consume_step(StepType.API_CALL, call_step)
     try:
         return _recover_key(msg_hash, signature, compressed)
     except:
