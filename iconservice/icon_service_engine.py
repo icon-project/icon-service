@@ -34,7 +34,7 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .fee.fee_engine import FeeEngine
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    REVISION_3, FEE2_EVENT_LOG_SIGNATURE, FEE2_EVENT_LOG_INDEX_COUNT
+    REVISION_3, Fee2Signature, Fee2IndexCount
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -79,7 +79,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
-        self._fee_manager = None
+        self._fee_engine = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -121,9 +121,9 @@ class IconServiceEngine(ContextContainer):
         icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._fee_manager = FeeEngine(icon_score_deploy_storage, self._icx_storage, self._icx_engine)
+        self._fee_engine = FeeEngine(icon_score_deploy_storage, self._icx_storage, self._icx_engine)
         self._icon_pre_validator = \
-            IconPreValidator(self._icx_engine, icon_score_deploy_storage, self._fee_manager)
+            IconPreValidator(self._icx_engine, icon_score_deploy_storage, self._fee_engine)
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
@@ -458,11 +458,14 @@ class IconServiceEngine(ContextContainer):
         params = request['params']
 
         from_ = params['from']
-        to = params['to']
+        to: 'Address' = params['to']
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
         step_limit: int = params.get('stepLimit', context.step_counter.max_step_limit)
+
+        if to.is_contract:
+            step_limit = sum(self._fee_engine.get_available_step(context, from_, to, step_limit).values())
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -723,7 +726,7 @@ class IconServiceEngine(ContextContainer):
 
         if icon_score_address == ZERO_SCORE_ADDRESS:
             converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
-            return process_zero_score_query(self._fee_manager, context, converted_data)
+            return process_zero_score_method(self._fee_engine, context, converted_data)
 
         return IconScoreEngine.query(context,
                                      icon_score_address,
@@ -815,8 +818,7 @@ class IconServiceEngine(ContextContainer):
                     context,
                     params,
                     step_price=context.step_counter.step_price)
-                if to.is_contract:
-                    self._adjust_step_limit(context, to)
+
             else:
                 # Check if from account can charge a tx fee
                 self._icon_pre_validator.execute_to_check_out_of_balance(
@@ -892,14 +894,14 @@ class IconServiceEngine(ContextContainer):
 
         # Charge a fee to from account
         try:
-            used_step_info = self._fee_manager.charge_transaction_fee(context, from_, to, step_price, step_used)
+            used_step_info = self._fee_engine.charge_transaction_fee(context, from_, to, step_price, step_used)
         except BaseException as e:
             if hasattr(e, 'message'):
                 message = e.message
             else:
                 message = str(e)
             Logger.exception(message, ICON_SERVICE_LOG_TAG)
-            used_step_info = {}
+            used_step_info = {from_: 0}
         finally:
             # final step_used and step_price
             return used_step_info, step_price
@@ -952,18 +954,12 @@ class IconServiceEngine(ContextContainer):
             return score_address
         elif data_type == 'call' and to == ZERO_SCORE_ADDRESS:
             converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
-            process_zero_score_invoke(self._fee_manager, context, converted_data)
+            process_zero_score_method(self._fee_engine, context, converted_data)
         else:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
 
         return None
-
-    def _adjust_step_limit(self, context, to):
-        available_step_info: dict = self._fee_manager.get_available_step(
-            context, context.msg.sender, to, context.step_counter.step_limit)
-        total_step_limit = sum(available_step_info.values())
-        context.step_counter._step_limit = total_step_limit
 
     @staticmethod
     def _process_transaction_result(tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_info: dict):
@@ -971,7 +967,7 @@ class IconServiceEngine(ContextContainer):
         context.cumulative_step_used += final_step_used
         tx_result.step_used = final_step_used
         tx_result.cumulative_step_used = context.cumulative_step_used
-        if len(step_used_info) > 1 or context.msg.sender not in step_used_info:
+        if final_step_used != step_used_info[context.msg.sender]:
             tx_result.detail_step_used = step_used_info
 
     @staticmethod
@@ -1122,36 +1118,49 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.rollback(block)
 
 
-def deposit_fee(fee_engine: 'FeeEngine', context, _score, _amount, _term):
-    return fee_engine.deposit_fee(context, context.tx.hash, context.msg.sender, _score,
-                                  _amount, context.block.height, _term)
+def deposit_fee(fee_engine: 'FeeEngine', context: 'IconScoreContext', params: dict):
+    score_address, amount, period = params.get('_score'), params.get('_amount'), params.get('_period')
+    fee_engine.deposit_fee(context, context.tx.hash, context.msg.sender,
+                           score_address, amount, context.block.height, period)
+    event_log_args = [context.tx.hash, score_address, context.msg.sender, amount, period]
+    EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, Fee2Signature.CREATE_DEPOSIT,
+                                   event_log_args, Fee2IndexCount.CREATE_DEPOSIT)
 
 
-def set_fee_sharing_ratio(fee_engine: 'FeeEngine', context, _score, _ratio):
-    return fee_engine.set_fee_sharing_ratio(context, context.msg.sender, _score, _ratio)
+def set_fee_sharing_ratio(fee_engine: 'FeeEngine', context: 'IconScoreContext', params: dict):
+    score_address, ratio = params.get('_score'), params.get('_ratio')
+    # return score_address, ratio
+    fee_engine.set_fee_sharing_ratio(context, context.msg.sender, score_address, ratio)
+    event_log_args = [score_address, ratio]
+    EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, Fee2Signature.SET_RATIO,
+                                   event_log_args, Fee2IndexCount.SET_RATIO)
 
 
-def withdraw_fee(fee_engine: 'FeeEngine', context, _id):
-    return fee_engine.withdraw_fee(context, context.msg.sender, _id, context.block.height)
+def withdraw_fee(fee_engine: 'FeeEngine', context: 'IconScoreContext', params: dict):
+    deposit_id = params.get('_id')
+    # return deposit_id, (score_address), context.msg.sender, (return_icx, penalty)
+    score_address, return_icx, penalty = fee_engine.withdraw_fee(
+        context, context.msg.sender, deposit_id, context.block.height)
+    event_log_args = [deposit_id, score_address, context.msg.sender, return_icx, penalty]
+    EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, Fee2Signature.DESTROY_DEPOSIT,
+                                   event_log_args, Fee2IndexCount.DESTROY_DEPOSIT)
 
 
-def get_fee_sharing_ratio(fee_engine: 'FeeEngine', context, _score):
-    return fee_engine.get_fee_sharing_ratio(context, _score)
+def get_fee_sharing_ratio(fee_engine: 'FeeEngine', context: 'IconScoreContext', params: dict):
+    score_address = params.get('_score')
+    return fee_engine.get_fee_sharing_ratio(context, score_address)
 
 
-def get_deposit_info_by_id(fee_engine: 'FeeEngine', context, _id):
-    deposit = fee_engine.get_deposit_info_by_id(context, _id)
+def get_deposit_info_by_id(fee_engine: 'FeeEngine', context: 'IconScoreContext', params: dict):
+    deposit_id = params.get('_id')
+    deposit = fee_engine.get_deposit_info_by_id(context, deposit_id)
     return deposit.to_dict()
 
 
-def get_score_fee_info(fee_engine: 'FeeEngine', context, _score):
-    score_info = fee_engine.get_score_fee_info(context, _score)
+def get_score_fee_info(fee_engine: 'FeeEngine', context: 'IconScoreContext', params: dict):
+    score_address = params.get('_score')
+    score_info = fee_engine.get_score_fee_info(context, score_address)
     return score_info.to_dict()
-
-
-def emit_event_log_for_zero_score(context, method, args):
-    EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, FEE2_EVENT_LOG_SIGNATURE[method],
-                                   args, FEE2_EVENT_LOG_INDEX_COUNT[method])
 
 
 fee_handler = {
@@ -1164,26 +1173,21 @@ fee_handler = {
 }
 
 
-def process_zero_score_invoke(fee_engine, context, data):
+def process_zero_score_method(fee_engine, context, data):
+    """Fee2.0 method handler
+
+    :param fee_engine:
+    :param context:
+    :param data: data field in json-rpc request
+    :return:
+    """
     method = data.get('method')
     params = data.get('params')
 
     try:
         handler = fee_handler[method]
-        event_log_args = handler(fee_engine, context, **params)
-        emit_event_log_for_zero_score(context, method, event_log_args)
-    except BaseException as e:
-        raise InvalidRequestException(str(e))
-
-
-def process_zero_score_query(fee_engine, context, data):
-    method = data.get('method')
-    params = data.get('params')
-
-    try:
-        handler = fee_handler[method]
-        result = handler(fee_engine, context, **params)
-    except BaseException as e:
-        raise InvalidRequestException(str(e))
+    except KeyError:
+        raise InvalidRequestException(f"Invalid method : {method}")
     else:
+        result = handler(fee_engine, context, params)
         return result

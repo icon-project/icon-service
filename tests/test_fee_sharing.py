@@ -59,9 +59,11 @@ class TestFeeSharing(unittest.TestCase):
         mock_set_ratio = Mock(return_value=[self.score, 50])
         mock_score_info = Mock(spec=ScoreInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
-        self._inner_task._icon_service_engine._fee_manager.set_fee_sharing_ratio = mock_set_ratio
-        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = Mock(return_value={})
-        self._inner_task._icon_service_engine._fee_manager.can_charge_fee_from_score = Mock()
+        self._inner_task._icon_service_engine._fee_engine.set_fee_sharing_ratio = mock_set_ratio
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={})
+        self._inner_task._icon_service_engine._fee_engine.can_charge_fee_from_score = Mock()
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
+            Mock(return_value={self.from_: 9000})
 
         ratio = hex(50)
         tx_hash = bytes.hex(os.urandom(32))
@@ -101,7 +103,7 @@ class TestFeeSharing(unittest.TestCase):
 
     def test_get_fee_share(self):
         ratio = self.test_set_fee_share()
-        self._inner_task._icon_service_engine._fee_manager.get_fee_sharing_ratio = Mock(return_value=ratio)
+        self._inner_task._icon_service_engine._fee_engine.get_fee_sharing_ratio = Mock(return_value=ratio)
 
         data = {
             "method": "getFeeShare",
@@ -121,21 +123,23 @@ class TestFeeSharing(unittest.TestCase):
     def test_create_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
-        term, amount = hex(50), hex(5000)
+        period, amount = hex(50), hex(5000)
 
         mock_score_info = Mock(spec=ScoreInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
-        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = Mock(return_value={})
-        self._inner_task._icon_service_engine._fee_manager.can_charge_fee_from_score = Mock()
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={})
+        self._inner_task._icon_service_engine._fee_engine.can_charge_fee_from_score = Mock()
 
-        self._inner_task._icon_service_engine._fee_manager.deposit_fee = Mock(
-            return_value=[tx_hash, self.score, self.from_, amount, term])
+        self._inner_task._icon_service_engine._fee_engine.deposit_fee = Mock(
+            return_value=[tx_hash, self.score, self.from_, amount, period])
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
+            Mock(return_value={self.from_: 9000})
 
         data = {
             'method': 'createDeposit',
             'params': {
                 '_score': str(self.score),
-                '_term': term,
+                '_period': period,
                 '_amount': amount
             }
         }
@@ -150,7 +154,7 @@ class TestFeeSharing(unittest.TestCase):
             ],
             "data": [
                 amount,
-                term
+                period
             ]
         }]
 
@@ -173,8 +177,10 @@ class TestFeeSharing(unittest.TestCase):
         deposit_id = self.test_create_deposit()
         amount, penalty = 4700, 300
 
-        self._inner_task._icon_service_engine._fee_manager.withdraw_fee = Mock(
-            return_value=(deposit_id, self.score, self.from_, amount, penalty))
+        self._inner_task._icon_service_engine._fee_engine.withdraw_fee = Mock(
+            return_value=(self.score, amount, penalty))
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
+            Mock(return_value={self.from_: 9000})
 
         data = {
             'method': 'destroyDeposit',
@@ -217,7 +223,7 @@ class TestFeeSharing(unittest.TestCase):
                                                '_virtualStepUsed': 3000, '_virtualStepIssued': 5000})
         mock_deposit = Mock(spec=Deposit)
         mock_deposit.to_dict = mock_deposit_dict
-        self._inner_task._icon_service_engine._fee_manager.get_deposit_info_by_id = Mock(return_value=mock_deposit)
+        self._inner_task._icon_service_engine._fee_engine.get_deposit_info_by_id = Mock(return_value=mock_deposit)
 
         data = {
             'method': 'getDeposit',
@@ -268,7 +274,7 @@ class TestFeeSharing(unittest.TestCase):
         mock_score_info_dict = Mock(return_value=expected_result)
         mock_score_info = Mock(spec=Deposit)
         mock_score_info.to_dict = mock_score_info_dict
-        self._inner_task._icon_service_engine._fee_manager.get_score_fee_info = Mock(return_value=mock_score_info)
+        self._inner_task._icon_service_engine._fee_engine.get_score_fee_info = Mock(return_value=mock_score_info)
 
         data = {
             'method': "getScoreInfo",
@@ -284,11 +290,9 @@ class TestFeeSharing(unittest.TestCase):
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_transaction_result_on_sharing_fee_user_ratio50(self, score_invoke):
         score_invoke.side_effect = mock_score_invoke
-        self.test_set_fee_share()
-        self.test_create_deposit()
-        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = Mock(return_value={
-            str(self.from_): 9000,
-            str(self.score): 9000
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={
+            self.from_: 9000,
+            self.score: 9000
         })
         tx_hash = bytes.hex(os.urandom(32))
 
@@ -316,8 +320,8 @@ class TestFeeSharing(unittest.TestCase):
         }]
 
         expected_detail_step_used = {
-                str(self.from_): hex(9000),
-                str(self.score): hex(9000)
+                self.from_: hex(9000),
+                self.score: hex(9000)
         }
 
         tx_result = result['txResults'][tx_hash]
@@ -329,9 +333,7 @@ class TestFeeSharing(unittest.TestCase):
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_transaction_result_on_sharing_fee_raised_except(self, score_invoke):
         score_invoke.side_effect = mock_score_invoke
-        self.test_set_fee_share()
-        self.test_create_deposit()
-        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = Mock(return_value={})
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={self.from_:0})
         tx_hash = bytes.hex(os.urandom(32))
 
         data = {
@@ -366,9 +368,7 @@ class TestFeeSharing(unittest.TestCase):
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_transaction_result_on_sharing_fee_user_ratio100(self, score_invoke):
         score_invoke.side_effect = mock_score_invoke
-        self.test_set_fee_share()
-        self.test_create_deposit()
-        self._inner_task._icon_service_engine._fee_manager.charge_transaction_fee = \
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
             Mock(return_value={self.from_: 9000})
         tx_hash = bytes.hex(os.urandom(32))
 
@@ -400,3 +400,5 @@ class TestFeeSharing(unittest.TestCase):
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
         self.assertFalse(tx_result.get('detailStepUsed'))
+
+    # TODO add case validate_transaction

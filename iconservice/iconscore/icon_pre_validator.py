@@ -46,7 +46,7 @@ class IconPreValidator:
         """
         self._icx = icx_engine
         self._deploy_storage = deploy_storage
-        self._fee_manager = fee_engine
+        self._fee_engine = fee_engine
 
     def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -211,15 +211,16 @@ class IconPreValidator:
         to: 'Address' = params['to']
         step_limit = params.get('stepLimit', 0)
 
-        step_limit_info = self._fee_manager.get_available_step(context, from_, to, step_limit)
+        step_limit_info = self._fee_engine.get_available_step(context, from_, to, step_limit)
 
-        sender_step_limit = step_limit_info.get(from_)
+        sender_step_limit = step_limit_info[from_]
         sender_fee = sender_step_limit * step_price
-        receiver_step_limit = step_limit_info.get(to)
+        receiver_step_limit = step_limit_info[to]
 
         self._check_balance(context, from_, value, sender_fee)
-        if to.is_contract:
-            self._check_score_payment_ability(context, to, receiver_step_limit)
+
+        if receiver_step_limit > 0:
+            self._check_score_payment_ability(context, to, receiver_step_limit, step_price)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -305,8 +306,10 @@ class IconPreValidator:
             raise InvalidRequestException(
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
 
-    def _check_score_payment_ability(self, context: 'IconScoreContext', score: 'Address', step_limit: int):
-        if not self._fee_manager.can_charge_fee_from_score():
+    def _check_score_payment_ability(self, context: 'IconScoreContext', score: 'Address', step_limit: int,
+                                     step_price: int):
+        if not self._fee_engine.can_charge_fee_from_score(context, score, step_limit,
+                                                          step_price, context.block.height):
             raise InvalidRequestException(
                 f'Out of balance: score({score}) doesn\'t have {step_limit} step')
 
