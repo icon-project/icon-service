@@ -20,7 +20,7 @@ from random import randrange
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
-from iconservice.base.exception import InvalidRequestException
+from iconservice.base.exception import InvalidRequestException, InvalidParamsException
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy import DeployState
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
@@ -200,6 +200,74 @@ class TestFeeEngine(unittest.TestCase):
             self.assertEqual(block_number, deposit.created)
             self.assertEqual(block_number + period, deposit.expires)
 
+    def test_deposit_fee_invalid_param(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        tx_hash = os.urandom(32)
+        amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+        block_number = randrange(100, 10000)
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
+
+        # invalid amount (underflow)
+        # noinspection PyTypeChecker
+        with self.assertRaises(InvalidRequestException) as e:
+            inv_amount = randrange(0, FeeEngine._MIN_DEPOSIT_AMOUNT - 1)
+            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
+                                     inv_amount, block_number, period)
+        self.assertEqual('Invalid deposit amount', e.exception.message)
+
+        # invalid amount (overflow)
+        # noinspection PyTypeChecker
+        with self.assertRaises(InvalidRequestException) as e:
+            inv_amount = \
+                randrange(FeeEngine._MAX_DEPOSIT_AMOUNT + 1, FeeEngine._MAX_DEPOSIT_AMOUNT * 10)
+            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
+                                     inv_amount, block_number, period)
+        self.assertEqual('Invalid deposit amount', e.exception.message)
+
+        # invalid period (underflow)
+        # noinspection PyTypeChecker
+        with self.assertRaises(InvalidRequestException) as e:
+            inv_period = randrange(0, FeeEngine._MIN_DEPOSIT_PERIOD - 1)
+            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
+                                     amount, block_number, inv_period)
+        self.assertEqual('Invalid deposit period', e.exception.message)
+
+        # invalid period (overflow)
+        # noinspection PyTypeChecker
+        with self.assertRaises(InvalidRequestException) as e:
+            inv_period = \
+                randrange(FeeEngine._MAX_DEPOSIT_PERIOD + 1, FeeEngine._MAX_DEPOSIT_PERIOD * 10)
+            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
+                                     amount, block_number, inv_period)
+        self.assertEqual('Invalid deposit period', e.exception.message)
+
+        # invalid owner
+        # noinspection PyTypeChecker
+        with self.assertRaises(InvalidRequestException) as e:
+            inv_sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+            self._engine.deposit_fee(context, tx_hash, inv_sender, self._score_address,
+                                     amount, block_number, period)
+        self.assertEqual('Invalid SCORE owner', e.exception.message)
+
+    def test_deposit_fee_out_of_balance(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        self._icx_engine.init_account(
+            context, AccountType.GENERAL, 'sender', self._sender, 10000 * 10 ** 18)
+
+        tx_hash = os.urandom(32)
+        amount = 10001 * 10 ** 18
+        block_number = randrange(100, 10000)
+        period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
+
+        # out of balance
+        # noinspection PyTypeChecker
+        with self.assertRaises(InvalidParamsException) as e:
+            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
+                                     amount, block_number, period)
+        self.assertEqual('Out of balance', e.exception.message)
+
     def test_withdraw_fee_without_penalty(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
@@ -266,13 +334,19 @@ class TestFeeEngine(unittest.TestCase):
     def test_get_available_step_with_sharing(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
+        step_price = 10 ** 10
         sender_step_limit = 10000
+        block_number = randrange(100, 10000)
+        max_step_limit = 1_000_000
 
         ratio = 50
         self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        available_steps = self._engine.get_available_step(
-            context, self._sender, self._score_address, sender_step_limit)
+        available_steps = self._engine.get_total_available_step(context, self._sender,
+                                                                self._score_address,
+                                                                sender_step_limit, step_price,
+                                                                block_number, max_step_limit)
+
         total_step = sender_step_limit * 100 // (100 - ratio)
         self.assertEqual(
             total_step - sender_step_limit, available_steps.get(self._score_address, 0))
@@ -281,8 +355,11 @@ class TestFeeEngine(unittest.TestCase):
         ratio = 30
         self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
 
-        available_steps = self._engine.get_available_step(
-            context, self._sender, self._score_address, sender_step_limit)
+        available_steps = self._engine.get_total_available_step(context, self._sender,
+                                                                self._score_address,
+                                                                sender_step_limit, step_price,
+                                                                block_number, max_step_limit)
+
         total_step = sender_step_limit * 100 // (100 - ratio)
         self.assertEqual(
             total_step - sender_step_limit, available_steps.get(self._score_address, 0))
@@ -291,11 +368,17 @@ class TestFeeEngine(unittest.TestCase):
     def test_get_available_step_without_sharing(self):
         context = IconScoreContext(IconScoreContextType.QUERY)
 
+        step_price = 10 ** 10
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
+        block_number = randrange(100, 10000)
         sender_step_limit = 10000
+        max_step_limit = 1_000_000
 
-        available_steps = self._engine.get_available_step(
-            context, self._sender, score_address, sender_step_limit)
+        available_steps = self._engine.get_total_available_step(context, self._sender,
+                                                                score_address, sender_step_limit,
+                                                                step_price, block_number,
+                                                                max_step_limit)
+
         self.assertEqual(0, available_steps.get(score_address, 0))
         self.assertEqual(sender_step_limit, available_steps.get(self._sender, 0))
 

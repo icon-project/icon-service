@@ -27,6 +27,10 @@ class Deposit(object):
     | prev_id(DEFAULT_BYTE_SIZE)
     | next_id(DEFAULT_BYTE_SIZE)
     """
+
+    # The minimum remaining amount of a single deposit
+    _MIN_REMAINING_AMOUNT = 50 * 10 ** 18
+
     _struct = Struct(f'>{ICON_CONTRACT_ADDRESS_BYTES_SIZE}s'
                      f'{ICON_EOA_ADDRESS_BYTES_SIZE}s'
                      f'{DEFAULT_BYTE_SIZE}s'
@@ -124,3 +128,17 @@ class Deposit(object):
         :param other: (Deposit)
         """
         return not self.__eq__(other)
+
+    @property
+    def available_virtual_step(self):
+        """
+        the amount of available virtual step
+        """
+        return self.virtual_step_issued - self.virtual_step_used
+
+    @property
+    def available_deposit(self):
+        """
+        the amount of available deposit for fees
+        """
+        return self.deposit_amount - self.deposit_used - self._MIN_REMAINING_AMOUNT
