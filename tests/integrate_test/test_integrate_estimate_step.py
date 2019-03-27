@@ -259,7 +259,6 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
         # Compares estimate to the real step_used
         converted_tx = self._make_tx_for_estimating_step_from_origin_tx(tx1)
-        converted_tx['params']['data']['params']['value'] = hex(converted_tx['params']['data']['params']['value'])
         estimate = self.icon_service_engine.estimate_step(request=converted_tx)
         self.assertEqual(tx_results[0].step_used, estimate)
 

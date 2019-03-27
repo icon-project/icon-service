@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from .icon_score_step import get_input_data_size
 from ..base.address import Address, ZERO_SCORE_ADDRESS, generate_score_address
-from ..base.exception import InvalidRequestException, InvalidParamsException
+from ..base.exception import InvalidRequestException, InvalidParamsException, OutOfBalanceException
 from ..deploy import DeployState
 from ..icon_constant import FIXED_FEE, MAX_DATA_SIZE, DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, \
     LATEST_REVISION
@@ -127,7 +127,7 @@ class IconPreValidator:
                 IconPreValidator._check_input_data_type(v)
         elif data is not None and not isinstance(data, str):
             # The leaf value should be None or str.
-            raise InvalidRequestException(f'Invalid data type')
+            raise InvalidRequestException('Invalid data type')
 
     @staticmethod
     def _check_input_data_size(input_data: Any):
@@ -146,7 +146,7 @@ class IconPreValidator:
             size = get_input_data_size(LATEST_REVISION, input_data)
 
             if size > MAX_DATA_SIZE:
-                raise InvalidRequestException(f'Invalid message length')
+                raise InvalidRequestException('Invalid message length')
 
     def _check_from_can_charge_fee_v2(self, context: 'IconScoreContext', params: dict):
         fee: int = params['fee']
@@ -225,10 +225,10 @@ class IconPreValidator:
 
         data = params.get('data', None)
         if not isinstance(data, dict):
-            raise InvalidRequestException(f'Data not found')
+            raise InvalidRequestException('Data not found')
 
         if 'method' not in data:
-            raise InvalidRequestException(f'Method not found')
+            raise InvalidRequestException('Method not found')
 
     def _validate_deploy_transaction(self, params: dict):
         to: 'Address' = params['to']
@@ -242,13 +242,13 @@ class IconPreValidator:
 
         data = params.get('data', None)
         if not isinstance(data, dict):
-            raise InvalidRequestException(f'Data not found')
+            raise InvalidRequestException('Data not found')
 
         if 'contentType' not in data:
-            raise InvalidRequestException(f'ContentType not found')
+            raise InvalidRequestException('ContentType not found')
 
         if 'content' not in data:
-            raise InvalidRequestException(f'Content not found')
+            raise InvalidRequestException('Content not found')
 
         self._validate_new_score_address_on_deploy_transaction(params)
 
@@ -292,7 +292,7 @@ class IconPreValidator:
         balance = self._icx.get_balance(context, from_)
 
         if balance < value + fee:
-            raise InvalidRequestException(
+            raise OutOfBalanceException(
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
 
     def _is_inactive_score(self, address: 'Address') -> bool:

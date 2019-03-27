@@ -187,7 +187,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         expected_warning_message = "test_warning_message"
         tx_result = self._accept_score(tx_hash1, expected_warning_message)
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_result.failure.message, "acceptScore() got an unexpected keyword argument 'warning'")
 
     def test_accept_score_with_warning_message(self):
@@ -287,7 +287,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         tx_hash1 = tx_results[0].tx_hash
 
         self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[1].failure.message, f'SCORE address already in use: {str(score_addr1)}')
         tx_hash2 = tx_results[1].tx_hash
 
@@ -354,7 +354,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         tx_hash1 = tx_results[0].tx_hash
 
         self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(tx_results[1].failure.message, f'SCORE address already in use: {str(score_addr1)}')
         tx_hash2 = tx_results[1].tx_hash
 
@@ -413,7 +413,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         tx_result = self._accept_score(tx_hash1)
         raise_exception_end_tag("test_score_no_zip")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PACKAGE)
         self.assertEqual(tx_result.failure.message, f'Bad zip file.')
 
     def test_score_no_scorebase(self):
@@ -430,7 +430,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_scorebase")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
 
     def test_score_on_install_error(self):
@@ -464,8 +464,8 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_external_func")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_result.failure.message, "this score has no external functions")
+        self.assertEqual(tx_result.failure.code, ExceptionCode.ILLEGAL_FORMAT)
+        self.assertEqual(tx_result.failure.message, "There is no external method in the SCORE")
 
     def test_score_with_korean_comments(self):
         self._update_governance()
@@ -481,7 +481,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         raise_exception_end_tag("test_score_with_korean_comments")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
 
     def test_score_no_python(self):
         self._update_governance()
@@ -497,7 +497,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         raise_exception_end_tag("test_score_no_python")
 
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
 
 
 if __name__ == '__main__':

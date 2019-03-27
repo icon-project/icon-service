@@ -56,8 +56,8 @@ class IconScoreInfo(object):
 
     def get_score(self, revision: int) -> 'IconScoreBase':
         """Provide a score instance according to the revision.
-        1. revision <= 3: Returns a cached score instance
-        2. revision > 3: Returns a newly created score instance
+        1. revision <= 2: Returns a cached score instance
+        2. revision > 2: Returns a newly created score instance
 
         :param revision:
         :return:

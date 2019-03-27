@@ -15,7 +15,7 @@
 
 import unittest
 
-from iconservice.base.exception import ServerErrorException
+from iconservice.base.exception import DatabaseException
 from iconservice.database.batch import BlockBatch, TransactionBatch
 
 
@@ -103,7 +103,7 @@ class TestTransactionBatch(unittest.TestCase):
         tx_batch = TransactionBatch()
         tx_batch[b'key0'] = b'value0'
 
-        with self.assertRaises(ServerErrorException):
+        with self.assertRaises(DatabaseException):
             del tx_batch[b'key0']
 
     def test_contains(self):

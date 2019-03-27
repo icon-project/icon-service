@@ -20,7 +20,7 @@ from iconservice import Address
 from iconservice.database.db import ContextDatabase, IconScoreDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.base.address import AddressPrefix
-from iconservice.base.exception import ContainerDBException
+from iconservice.base.exception import InvalidParamsException
 from iconservice.iconscore.icon_container_db import ContainerUtil, DictDB, ArrayDB, VarDB
 from iconservice.iconscore.icon_score_context import ContextContainer
 from tests import create_address
@@ -198,7 +198,7 @@ class TestIconContainerDB(unittest.TestCase):
         test_array.put(1)
         test_array.put(2)
 
-        with self.assertRaises(ContainerDBException):
+        with self.assertRaises(InvalidParamsException):
             var = test_array[2]
             print(var)
 
@@ -324,7 +324,7 @@ class TestIconContainerDB(unittest.TestCase):
         self.assertEqual(2, testarray[-3])
         self.assertEqual(1, testarray[-4])
 
-        with self.assertRaises(ContainerDBException):
+        with self.assertRaises(InvalidParamsException):
             testarray[5] = 1
             a = testarray[5]
 
@@ -336,6 +336,6 @@ class TestIconContainerDB(unittest.TestCase):
         prefix: bytes = ContainerUtil.create_db_prefix(DictDB, 'dictdb')
         self.assertEqual(b'\x01|dictdb', prefix)
 
-        with self.assertRaises(ContainerDBException):
+        with self.assertRaises(InvalidParamsException):
             prefix: bytes = ContainerUtil.create_db_prefix(VarDB, 'vardb')
 

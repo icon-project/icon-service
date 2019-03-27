@@ -154,8 +154,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "This is not payable")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_PAYABLE)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not payable"))
 
         query_request = {
             "address": score_addr1
@@ -188,8 +188,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
         query_request = {
             "address": score_addr1
@@ -313,8 +313,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[1].failure.message, "This is not payable")
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.METHOD_NOT_PAYABLE)
+        self.assertTrue(tx_results[1].failure.message.startswith("Method not payable"))
 
         query_request = {
             "address": score_addr1
@@ -360,8 +360,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
 
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(tx_results[1].status, int(False))
-        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[1].failure.message, "Method not found")
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.METHOD_NOT_FOUND)
+        self.assertTrue(tx_results[1].failure.message.startswith("Method not found"))
 
         query_request = {
             "address": score_addr1
@@ -644,16 +644,16 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
         value = 1 * self._icx_factor
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
         raise_exception_end_tag("test_base_fallback_send_0_and_1")
 
     def test_non_payable_fallback_send_0_and_1(self):
@@ -677,16 +677,16 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
         value = 1 * self._icx_factor
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
-        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SCORE_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "Method not found")
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
+        self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
         raise_exception_end_tag("test_non_payable_fallback_send_0_and_1")
 
     def test_payable_external_send_0_and_1(self):
