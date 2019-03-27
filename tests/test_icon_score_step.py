@@ -747,5 +747,3 @@ class SampleScore(IconScoreBase):
     @external
     def hash_writable(self, data: bytes) -> bytes:
         return sha3_256(data)
-
-

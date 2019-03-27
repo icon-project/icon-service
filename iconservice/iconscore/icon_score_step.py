@@ -332,15 +332,17 @@ class IconScoreStepCounter(object):
         return self.consume_step(step_type, step)
 
     def consume_step(self, step_type: StepType, step: int) -> int:
-        if step + self._step_used > self._step_limit:
+        step_used: int = self._step_used + step
+
+        if step_used > self._step_limit:
             step_used = self._step_used
             self._step_used = self._step_limit
             raise OutOfStepException(
                 self._step_limit, step_used, step, step_type)
 
-        self._step_used += step
+        self._step_used = step_used
 
-        return self.step_used
+        return step_used
 
     def reset(self, step_limit: int):
         """
