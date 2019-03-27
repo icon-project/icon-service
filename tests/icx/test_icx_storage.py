@@ -24,10 +24,8 @@ from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.icx.icx_account import Account
-from iconservice.icx.icx_storage import IcxStorage, Fee
-from iconservice.fee.deposit import Deposit
-
-from tests import create_address, create_tx_hash
+from iconservice.icx.icx_storage import IcxStorage
+from tests import create_address
 
 
 class TestIcxStorage(unittest.TestCase):
@@ -94,49 +92,6 @@ class TestIcxStorage(unittest.TestCase):
         self.storage.put_total_supply(context, putting_total_supply_amount)
         actual_stored_total_supply = self.storage.get_total_supply(context)
         self.assertEqual(putting_total_supply_amount, actual_stored_total_supply)
-
-    def test_get_put_delete_score_fee(self):
-        context = self.context
-        score_address = create_address(AddressPrefix.CONTRACT)
-
-        fee = Fee()
-        fee.ratio = 80
-        fee.head_id = create_tx_hash()
-        fee.tail_id = create_tx_hash()
-        fee.available_head_id_of_deposit = create_tx_hash()
-        fee.available_head_id_of_virtual_step = create_tx_hash()
-        self.storage.put_score_fee(context, score_address, fee)
-
-        fee2 = self.storage.get_score_fee(context, score_address)
-        self.assertEqual(fee, fee2)
-
-        self.storage.delete_score_fee(context, score_address)
-        fee2 = self.storage.get_score_fee(context, score_address)
-        self.assertIsNone(fee2)
-
-    def test_get_put_delete_deposit(self):
-        context = self.context
-
-        deposit = Deposit()
-        deposit.id = create_tx_hash()
-        deposit.score_address = create_address(AddressPrefix.CONTRACT)
-        deposit.sender = create_address(AddressPrefix.EOA)
-        deposit.deposit_amount = 10000
-        deposit.deposit_used = 10000
-        deposit.created = 10
-        deposit.expires = 1000000
-        deposit.virtual_step_issued = 100000000000
-        deposit.virtual_step_used = 200000000000
-        deposit.prev_id = create_tx_hash()
-        deposit.next_id = create_tx_hash()
-        self.storage.put_deposit(context, deposit.id, deposit)
-
-        deposit2 = self.storage.get_deposit(context, deposit.id)
-        self.assertEqual(deposit, deposit2)
-
-        self.storage.delete_deposit(context, deposit.id)
-        deposit2 = self.storage.get_deposit(context, deposit.id)
-        self.assertIsNone(deposit2)
 
 
 class TestIcxStorageForMalformedAddress(unittest.TestCase):
