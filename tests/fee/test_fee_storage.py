@@ -67,6 +67,21 @@ class TestFeeStorage(TestCase):
         fee2 = self.storage.get_score_fee(context, score_address)
         self.assertIsNone(fee2)
 
+    def test_get_put_delete_score_fee_with_none_type(self):
+        context = self.context
+        score_address = create_address(AddressPrefix.CONTRACT)
+
+        fee = Fee()
+        fee.ratio = 100
+        self.storage.put_score_fee(context, score_address, fee)
+
+        fee2 = self.storage.get_score_fee(context, score_address)
+        self.assertEqual(fee, fee2)
+
+        self.storage.delete_score_fee(context, score_address)
+        fee2 = self.storage.get_score_fee(context, score_address)
+        self.assertIsNone(fee2)
+
     def test_get_put_delete_deposit(self):
         context = self.context
 
@@ -82,6 +97,28 @@ class TestFeeStorage(TestCase):
         deposit.virtual_step_used = 200000000000
         deposit.prev_id = create_tx_hash()
         deposit.next_id = create_tx_hash()
+        self.storage.put_deposit(context, deposit.id, deposit)
+
+        deposit2 = self.storage.get_deposit(context, deposit.id)
+        self.assertEqual(deposit, deposit2)
+
+        self.storage.delete_deposit(context, deposit.id)
+        deposit2 = self.storage.get_deposit(context, deposit.id)
+        self.assertIsNone(deposit2)
+
+    def test_get_put_delete_deposit_with_none_type(self):
+        context = self.context
+
+        deposit = Deposit()
+        deposit.id = create_tx_hash()
+        deposit.score_address = create_address(AddressPrefix.CONTRACT)
+        deposit.sender = create_address(AddressPrefix.EOA)
+        deposit.deposit_amount = 10000
+        deposit.deposit_used = 10000
+        deposit.created = 10
+        deposit.expires = 1000000
+        deposit.virtual_step_issued = 100000000000
+        deposit.virtual_step_used = 200000000000
         self.storage.put_deposit(context, deposit.id, deposit)
 
         deposit2 = self.storage.get_deposit(context, deposit.id)

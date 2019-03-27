@@ -1,28 +1,10 @@
-from struct import Struct
-
-from ..icon_constant import DEFAULT_BYTE_SIZE
+from ..base.msgpack_util import MsgPackConverter, TypeTag
 
 
 class Fee(object):
     """
     SCORE Fee Information
-
-    [Fee Structure for level db]
-    - big endian, 1 + DEFAULT_BYTE_SIZE * 4 bytes
-
-    [In Detail]
-    | ratio(1)
-    | head_id(DEFAULT_BYTE_SIZE)
-    | tail_id(DEFAULT_BYTE_SIZE)
-    | available_head_id_of_virtual_step (DEFAULT_BYTE_SIZE)
-    | available_head_id_of_deposit (DEFAULT_BYTE_SIZE)
     """
-
-    _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s'
-                     f'{DEFAULT_BYTE_SIZE}s'
-                     f'{DEFAULT_BYTE_SIZE}s'
-                     f'{DEFAULT_BYTE_SIZE}s')
-
     def __init__(self, ratio: int = 0, head_id: bytes = None, tail_id: bytes = None,
                  available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None):
         self.ratio = ratio
@@ -38,15 +20,14 @@ class Fee(object):
         :param buf: Fee in bytes
         :return: Fee Object
         """
-        ratio, head_id, tail_id, available_head_id_of_virtual_step, available_head_id_of_deposit \
-            = Fee._struct.unpack(buf)
+        data: list = MsgPackConverter.loads(buf)
 
         fee = Fee()
-        fee.ratio = ratio
-        fee.head_id = head_id
-        fee.tail_id = tail_id
-        fee.available_head_id_of_virtual_step = available_head_id_of_virtual_step
-        fee.available_head_id_of_deposit = available_head_id_of_deposit
+        fee.ratio = MsgPackConverter.decode(TypeTag.INT, data[0])
+        fee.head_id = data[1]
+        fee.tail_id = data[2]
+        fee.available_head_id_of_virtual_step = data[3]
+        fee.available_head_id_of_deposit = data[4]
 
         return fee
 
@@ -55,8 +36,9 @@ class Fee(object):
 
         :return: Fee in bytes
         """
-        return self._struct.pack(self.ratio, self.head_id, self.tail_id,
-                                 self.available_head_id_of_virtual_step, self.available_head_id_of_deposit)
+        data: list = [MsgPackConverter.encode(self.ratio), self.head_id, self.tail_id,
+                      self.available_head_id_of_virtual_step, self.available_head_id_of_deposit]
+        return MsgPackConverter.dumps(data)
 
     def __eq__(self, other) -> bool:
         """operator == overriding
