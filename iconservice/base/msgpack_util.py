@@ -14,11 +14,11 @@
 
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Tuple, Any, Union
+from typing import Tuple, Any, Union, Optional
 
 import msgpack
 
-from .address import Address
+from .address import Address, AddressPrefix
 from .exception import InvalidParamsException
 from ..icon_constant import CHARSET_ENCODING
 from ..utils import int_to_bytes, bytes_to_int
@@ -47,14 +47,28 @@ class Codec(metaclass=ABCMeta):
 
 
 class BaseCodec(Codec):
-    def encode(self, obj) -> Tuple[int, bytes]:
+
+    @staticmethod
+    def address_to_bytes(addr: 'Address') -> bytes:
+        prefix_byte = b''
+        addr_bytes = addr.to_bytes()
+        if addr.prefix == AddressPrefix.EOA:
+            prefix_byte = int_to_bytes(addr.prefix.value)
+        return prefix_byte + addr_bytes
+
+    @staticmethod
+    def bytes_to_address(data: bytes) -> 'Address':
+        prefix = AddressPrefix(data[0])
+        return Address(prefix, data[1:])
+
+    def encode(self, obj: Any) -> Tuple[int, bytes]:
         if isinstance(obj, Address):
-            return TypeTag.ADDRESS, obj.to_bytes()
+            return TypeTag.ADDRESS, BaseCodec.address_to_bytes(obj)
         raise InvalidParamsException(f"Invalid encode type: {type(obj)}")
 
     def decode(self, t: int, b: bytes) -> Any:
         if t == TypeTag.ADDRESS:
-            return Address.from_bytes(b)
+            return BaseCodec.bytes_to_address(b)
         else:
             raise InvalidParamsException(f"UnknownType: {type(t)}")
 
@@ -93,6 +107,18 @@ class MsgPackConverter(object):
         else:
             t, v = cls.codec.encode(o)
             return v
+
+    @classmethod
+    def optional_decode(cls, tag: int, value: Optional[bytes]) -> 'Any':
+        if value is None:
+            return value
+        return MsgPackConverter.decode(tag, value)
+
+    @classmethod
+    def optional_encode(cls, o: Any) -> Optional[bytes]:
+        if o is None:
+            return None
+        return MsgPackConverter.encode(o)
 
     @classmethod
     def decode_any(cls, to: Tuple) -> Any:
