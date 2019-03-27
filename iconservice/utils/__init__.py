@@ -92,3 +92,7 @@ def get_main_type_from_annotations_type(annotations_type: type) -> type:
 
 def is_builtin_score(score_address: str) -> bool:
     return score_address in BUILTIN_SCORE_ADDRESS_MAPPER.values()
+
+
+def is_flag_on(src_flag: int, dest_flag: int) -> bool:
+    return src_flag & dest_flag == dest_flag

@@ -44,7 +44,7 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, get_input_data_size, \
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
-from .icx.icx_account import AccountType
+from .icx.account.coin_account import CoinAccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -410,14 +410,14 @@ class IconServiceEngine(ContextContainer):
 
             self._icx_engine.init_account(
                 context=context,
-                account_type=AccountType.GENESIS,
+                account_type=CoinAccountType.GENESIS,
                 account_name=genesis[__NAME_KEY],
                 address=genesis[__ADDRESS_KEY],
                 amount=genesis[__AMOUNT_KEY])
 
             self._icx_engine.init_account(
                 context=context,
-                account_type=AccountType.TREASURY,
+                account_type=CoinAccountType.TREASURY,
                 account_name=treasury[__NAME_KEY],
                 address=treasury[__ADDRESS_KEY],
                 amount=treasury[__AMOUNT_KEY])
@@ -425,7 +425,7 @@ class IconServiceEngine(ContextContainer):
             for other in others:
                 self._icx_engine.init_account(
                     context=context,
-                    account_type=AccountType.GENERAL,
+                    account_type=CoinAccountType.GENERAL,
                     account_name=other[__NAME_KEY],
                     address=other[__ADDRESS_KEY],
                     amount=other[__AMOUNT_KEY])
@@ -530,7 +530,7 @@ class IconServiceEngine(ContextContainer):
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = self._icx_storage.get_account(context, from_)
         account.deposit(step_limit * context.step_counter.step_price + params.get('value', 0))
-        self._icx_storage.put_account(context, from_, account)
+        self._icx_storage.put_account(context, account)
         return self._call(context, method, params)
 
     def estimate_step(self, request: dict) -> int:
@@ -817,9 +817,10 @@ class IconServiceEngine(ContextContainer):
                     params,
                     step_price=context.step_counter.step_price)
             else:
+                tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.DIRECT)
                 # Check if from account can charge a tx fee
                 self._icon_pre_validator.execute_to_check_out_of_balance(
-                    None,
+                    tmp_context,
                     params,
                     step_price=context.step_counter.step_price)
 

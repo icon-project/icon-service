@@ -16,7 +16,12 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from .icx_account import Account, AccountOfStake, AccountOfDelegation
+from ..utils import is_flag_on
+from .icx_account import Account, AccountFlag
+from .account.coin_account import CoinAccount
+from .account.stake_account import StakeAccount
+from .account.delegation_account import DelegationAccount
+
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
@@ -95,158 +100,93 @@ class IcxStorage(object):
 
     def get_account(self,
                     context: 'IconScoreContext',
-                    address: 'Address') -> 'Account':
+                    address: 'Address',
+                    flag: 'AccountFlag' = AccountFlag.COIN) -> 'Account':
+
         """Returns the account indicated by address.
 
         :param context:
         :param address: account address
+        :param flag:
         :return: (Account)
             If the account indicated by address is not present,
             create a new account.
         """
-        key = address.to_bytes()
-        value = self._db.get(context, key)
 
-        if value:
-            account = Account.from_bytes(value)
-        else:
-            account = Account()
+        account = Account(address)
+        if is_flag_on(flag, AccountFlag.COIN):
+            key: bytes = CoinAccount.make_key(address)
+            value: bytes = self._db.get(context, key)
+            if value:
+                coin_account = CoinAccount.from_bytes(value, address)
+                account.coin_account: CoinAccount = coin_account
+            else:
+                account.coin_account: 'CoinAccount' = CoinAccount(address)
 
-        account.address = address
+        if is_flag_on(flag, AccountFlag.STAKE):
+            key: bytes = StakeAccount.make_key(address)
+            value: bytes = self._db.get(context, key)
+            if value:
+                stake_account: 'StakeAccount' = StakeAccount.from_bytes(value, address)
+                account.stake_account: StakeAccount = stake_account
+            else:
+                account.stake_account: 'StakeAccount' = StakeAccount(address)
+
+        if is_flag_on(flag, AccountFlag.DELEGATION):
+            key: bytes = DelegationAccount.make_key(address)
+            value: bytes = self._db.get(context, key)
+            if value:
+                delegation_account: 'StakeAccount' = DelegationAccount.from_bytes(value, address)
+                account.delegation_account: DelegationAccount = delegation_account
+            else:
+                account.delegation_account: 'DelegationAccount' = DelegationAccount(address)
+
         return account
 
     def put_account(self,
                     context: 'IconScoreContext',
-                    address: 'Address',
                     account: 'Account') -> None:
         """Put account info to db.
 
         :param context:
-        :param address: account address
         :param account: account to save
         """
-        key = address.to_bytes()
-        value = account.to_bytes()
-        self._db.put(context, key, value)
+
+        if account.is_flag_on(AccountFlag.COIN):
+            key: bytes = CoinAccount.make_key(account.address)
+            value: bytes = account.coin_account.to_bytes(context.revision)
+            self._db.put(context, key, value)
+
+        if account.is_flag_on(AccountFlag.STAKE):
+            key: bytes = StakeAccount.make_key(account.address)
+            value: bytes = account.stake_account.to_bytes()
+            self._db.put(context, key, value)
+
+        if account.is_flag_on(AccountFlag.DELEGATION):
+            key: bytes = DelegationAccount.make_key(account.address)
+            value: bytes = account.delegation_account.to_bytes()
+            self._db.put(context, key, value)
 
     def delete_account(self,
                        context: 'IconScoreContext',
-                       address: 'Address') -> None:
+                       account: 'Account') -> None:
         """Delete account info from db.
 
         :param context:
-        :param address: account address
-        """
-        key = address.to_bytes()
-        self._db.delete(context, key)
-
-    def get_account_of_stake(self,
-                             context: 'IconScoreContext',
-                             address: 'Address') -> 'AccountOfStake':
-        """Returns the account of stake indicated by address.
-
-        :param context:
-        :param address: account address
-        :return: (AccountOfStake)
-            If the account indicated by address is not present,
-            create a new AccountOfStake object.
+        :param account: account to delete
         """
 
-        key = AccountOfStake.make_key(address)
-        value = self._db.get(context, key)
+        if account.is_flag_on(AccountFlag.COIN):
+            key: bytes = CoinAccount.make_key(account.address)
+            self._db.delete(context, key)
 
-        if value:
-            account = AccountOfStake.from_bytes(value, address)
-        else:
-            account = AccountOfStake(address)
-        return account
+        if account.is_flag_on(AccountFlag.STAKE):
+            key: bytes = StakeAccount.make_key(account.address)
+            self._db.delete(context, key)
 
-    def put_account_of_stake(self,
-                             context: 'IconScoreContext',
-                             address: 'Address',
-                             account: 'AccountOfStake') -> None:
-        """Put AccountOfStake info to db.
-
-        :param context:
-        :param address: account address
-        :param account: account_of_stake to save
-        """
-
-        key = AccountOfStake.make_key(address)
-        value = account.to_bytes()
-        self._db.put(context, key, value)
-
-    def delete_account_of_stake(self,
-                                context: 'IconScoreContext',
-                                address: 'Address') -> None:
-        """Delete AccountOfStake info from db.
-
-        :param context:
-        :param address: account address
-        """
-        key = AccountOfStake.make_key(address)
-        self._db.delete(context, key)
-
-    def get_account_of_delegation(self,
-                                  context: 'IconScoreContext',
-                                  address: 'Address') -> 'AccountOfDelegation':
-        """Returns the account of delegation indicated by address.
-
-        :param context:
-        :param address: account address
-        :return: (AccountOfDelegation)
-            If the account indicated by address is not present,
-            create a new AccountOfDelegation object.
-        """
-
-        key = AccountOfDelegation.make_key(address)
-        value = self._db.get(context, key)
-
-        if value:
-            account = AccountOfDelegation.from_bytes(value, address)
-        else:
-            account = AccountOfDelegation(address)
-        return account
-
-    def put_account_of_delegation(self,
-                                  context: 'IconScoreContext',
-                                  address: 'Address',
-                                  account: 'AccountOfDelegation') -> None:
-        """Put AccountOfDelegation info to db.
-
-        :param context:
-        :param address: account address
-        :param account: account_of_delegation to save
-        """
-
-        key = AccountOfDelegation.make_key(address)
-        value = account.to_bytes()
-        self._db.put(context, key, value)
-
-    def delete_account_of_delegation(self,
-                                     context: 'IconScoreContext',
-                                     address: 'Address') -> None:
-        """Delete AccountOfDelegation info from db.
-
-        :param context:
-        :param address: account address
-        """
-        key = AccountOfDelegation.make_key(address)
-        self._db.delete(context, key)
-
-    def is_address_present(self,
-                           context: 'IconScoreContext',
-                           address: 'Address') -> bool:
-        """Check whether value indicated by address is present or not.
-
-        :param context:
-        :param address: account address
-        :return: True(present) False(not present)
-        """
-        key = address.to_bytes()
-        value = self._db.get(context, key)
-
-        return bool(value)
+        if account.is_flag_on(AccountFlag.DELEGATION):
+            key: bytes = DelegationAccount.make_key(account.address)
+            self._db.delete(context, key)
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply

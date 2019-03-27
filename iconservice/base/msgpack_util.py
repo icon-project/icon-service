@@ -18,7 +18,7 @@ from typing import Tuple, Any, Union
 
 import msgpack
 
-from .address import Address
+from .address import Address, address_to_bytes, bytes_to_address
 from .exception import InvalidParamsException
 from ..icon_constant import CHARSET_ENCODING
 from ..utils import int_to_bytes, bytes_to_int
@@ -49,12 +49,12 @@ class Codec(metaclass=ABCMeta):
 class BaseCodec(Codec):
     def encode(self, obj) -> Tuple[int, bytes]:
         if isinstance(obj, Address):
-            return TypeTag.ADDRESS, obj.to_bytes()
+            return TypeTag.ADDRESS, address_to_bytes(obj)
         raise InvalidParamsException(f"Invalid encode type: {type(obj)}")
 
     def decode(self, t: int, b: bytes) -> Any:
         if t == TypeTag.ADDRESS:
-            return Address.from_bytes(b)
+            return bytes_to_address(b)
         else:
             raise InvalidParamsException(f"UnknownType: {type(t)}")
 

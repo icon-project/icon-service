@@ -18,7 +18,8 @@ import json
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
-from .icx_account import Account, AccountType, AccountOfStake, AccountOfDelegation
+from .account.coin_account import CoinAccountType, CoinAccount
+from .icx_account import Account, AccountFlag
 from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
@@ -76,7 +77,7 @@ class IcxEngine(object):
 
     def init_account(self,
                      context: 'IconScoreContext',
-                     account_type: 'AccountType',
+                     account_type: 'CoinAccountType',
                      account_name: str,
                      address: 'Address',
                      amount: int) -> None:
@@ -90,17 +91,18 @@ class IcxEngine(object):
         :return:
         """
 
-        account = Account(
-            account_type=account_type, address=address, balance=int(amount))
+        coin_account: 'CoinAccount' = CoinAccount(address, account_type=account_type, balance=int(amount))
+        account: 'Account' = Account(address)
+        account.coin_account: 'CoinAccount' = coin_account
 
-        self._storage.put_account(context, account.address, account)
+        self._storage.put_account(context, account)
 
-        if account.balance > 0:
-            self._total_supply_amount += account.balance
+        if account.get_balance(context.block.height) > 0:
+            self._total_supply_amount += account.get_balance(context.block.height)
             self._storage.put_total_supply(context, self._total_supply_amount)
 
-        if account_type == AccountType.GENESIS or \
-                account_type == AccountType.TREASURY:
+        if account_type == CoinAccountType.GENESIS or \
+                account_type == CoinAccountType.TREASURY:
             self._init_special_account(context, account)
 
     def _init_special_account(self,
@@ -113,9 +115,11 @@ class IcxEngine(object):
         :param context:
         :param account: genesis or treasury accounts
         """
-        assert account.type in (AccountType.GENESIS, AccountType.TREASURY)
 
-        if account.type == AccountType.GENESIS:
+        assert account.is_flag_on(AccountFlag.COIN)
+        assert account.coin_account.type in (CoinAccountType.GENESIS, CoinAccountType.TREASURY)
+
+        if account.coin_account.type == CoinAccountType.GENESIS:
             db_key = self._GENESIS_DB_KEY
             self._genesis_address = account.address
         else:
@@ -181,18 +185,15 @@ class IcxEngine(object):
         :return: the balance of address in loop (1 icx  == 1e18 loop)
         """
         account: 'Account' = self._storage.get_account(context, address)
-        account_of_stake: 'AccountOfStake' = self._storage.get_account_of_stake(context, address)
 
         # If the address is not present, its balance is 0.
         # Unit: loop (1 icx == 1e18 loop)
         amount = 0
-
-        if account:
-            block_height: int = 0
-            if context:
-                block_height = 0
-            amount = account.balance + account_of_stake.extension_balance(block_height)
-
+        if context:
+            block_height = 0
+            if context.block:
+                block_height = context.block.height
+            amount = account.get_balance(block_height)
         return amount
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
@@ -249,19 +250,20 @@ class IcxEngine(object):
             to_account.deposit(amount)
 
             # write newly updated state into state db.
-            self._storage.put_account(context, from_account.address, from_account)
-            self._storage.put_account(context, to_account.address, to_account)
+            self._storage.put_account(context, from_account)
+            self._storage.put_account(context, to_account)
 
         return True
 
     def get_account(self,
                     context: 'IconScoreContext',
-                    address: 'Address') -> 'Account':
+                    address: 'Address',
+                    flag: 'AccountFlag' = AccountFlag.COIN) -> 'Account':
         """Returns the instance of Account indicated by address
 
         :param context:
         :param address:
+        :param flag:
         :return: Account
         """
-        return self._storage.get_account(context, address)
-
+        return self._storage.get_account(context, address, flag)
