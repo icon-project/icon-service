@@ -101,6 +101,7 @@ class TestFeeStorage(TestCase):
 
         deposit2 = self.storage.get_deposit(context, deposit.id)
         self.assertEqual(deposit, deposit2)
+        self.assertEqual(deposit.id, deposit2.id)
 
         self.storage.delete_deposit(context, deposit.id)
         deposit2 = self.storage.get_deposit(context, deposit.id)
@@ -123,6 +124,7 @@ class TestFeeStorage(TestCase):
 
         deposit2 = self.storage.get_deposit(context, deposit.id)
         self.assertEqual(deposit, deposit2)
+        self.assertEqual(deposit.id, deposit2.id)
 
         self.storage.delete_deposit(context, deposit.id)
         deposit2 = self.storage.get_deposit(context, deposit.id)
