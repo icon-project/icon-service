@@ -30,6 +30,7 @@ from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
+    from .icon_score_context import IconScoreContext
 
 """
 The explanation below are extracted
@@ -104,7 +105,6 @@ class ScoreApiStepRatio(IntEnum):
     JSON_DUMPS = 5000
     JSON_LOADS = 4000
     RECOVER_KEY = 70000
-    REVERT = 0
 
 
 def _get_api_call_step_cost(context: 'IconScoreContext', ratio: ScoreApiStepRatio) -> int:
@@ -132,11 +132,6 @@ def revert(message: Optional[str] = None, code: int = 0) -> None:
     :param message: revert message
     :param code: code
     """
-    context = ContextContainer._get_context()
-
-    step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.REVERT)
-    context.step_counter.consume_step(StepType.API_CALL, step_cost)
-
     try:
         if not isinstance(code, int):
             code = int(code)
@@ -211,7 +206,7 @@ def json_loads(src: str, **kwargs) -> Any:
 
     if context and context.revision >= REVISION_3:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_LOADS)
-        step = step_cost + step_cost * len(src.encode(CHARSET_ENCODING)) // 100
+        step: int = step_cost + step_cost * len(src.encode(CHARSET_ENCODING)) // 100
 
         context.step_counter.consume_step(StepType.API_CALL, step)
 

@@ -17,9 +17,15 @@
 import base64
 import hashlib
 import unittest
+from unittest.mock import Mock
 
 from iconservice.base.address import Address
+from iconservice.iconscore.icon_score_base2 import sha3_256
 from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _recover_key
+from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
+from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
+from iconservice.icon_constant import REVISION_3
 
 
 def create_msg_hash(tx: dict, excluded_keys: tuple) -> bytes:
@@ -59,6 +65,48 @@ class TestIconScoreApi(unittest.TestCase):
             'signature': 'fcEMXqEGlqEivXXr7YtD/F1RXgxSXF+R4gVrGKxT1zxi3HukX4NzkSl9/Es1G+nyZx+kviTAtQFUrA+/T0NrfAA=',
             'txHash': '6c71ac77b2d130a1f81d234e814974e85cabb0a3ec462c66ff3f820502d0ded2'
         }
+
+        self.context = self._create_context()
+        ContextContainer._push_context(self.context)
+
+    def _create_context(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        step_counter_factory = self._create_step_counter_factory()
+        step_counter = step_counter_factory.create(context.type)
+        step_counter.reset(step_limit=1_000_000)
+
+        context.step_counter = step_counter
+        context.revision = REVISION_3
+
+        return context
+
+    def _create_step_counter_factory(self) -> 'IconScoreStepCounterFactory':
+        step_costs = {
+            StepType.DEFAULT: 100_000,
+            StepType.CONTRACT_CALL: 25_000,
+            StepType.CONTRACT_CREATE: 1_000_000_000,
+            StepType.CONTRACT_UPDATE: 1_600_000_000,
+            StepType.CONTRACT_DESTRUCT: -70000,
+            StepType.CONTRACT_SET: 30_000,
+            StepType.GET: 0,
+            StepType.SET: 320,
+            StepType.REPLACE: 80,
+            StepType.DELETE: -240,
+            StepType.INPUT: 200,
+            StepType.EVENT_LOG: 100,
+            StepType.API_CALL: 10_000
+        }
+
+        factory = IconScoreStepCounterFactory()
+        factory.set_step_properties(step_price=10 ** 10, step_costs=step_costs, max_step_limits=None)
+        factory.set_max_step_limit(IconScoreContextType.INVOKE, 2_500_000_000)
+
+        return factory
+
+    def tearDown(self):
+        ContextContainer._pop_context()
+        assert ContextContainer._get_context_stack_size() == 0
 
     def test_recover_key_v2_and_create_address_with_key(self):
         signature: bytes = base64.b64decode(self.tx_v2['signature'])
@@ -107,6 +155,13 @@ class TestIconScoreApi(unittest.TestCase):
 
         address: Address = _create_address_with_key(compressed_public_key)
         self.assertEqual(self.tx_v3['from'], str(address))
+
+    def test_sha3_256_step(self):
+        data = b''
+        sha3_256(data)
+
+        step_used: int = self.context.step_counter.step_used
+        print(step_used)
 
 
 if __name__ == '__main__':
