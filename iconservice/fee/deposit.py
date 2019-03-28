@@ -1,8 +1,9 @@
 import typing
 from struct import Struct
+from typing import Optional
 
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
 
 if typing.TYPE_CHECKING:
     from ..base.address import Address
@@ -142,3 +143,18 @@ class Deposit(object):
         the amount of available deposit for fees
         """
         return self.deposit_amount - self.deposit_used - self._MIN_REMAINING_AMOUNT
+
+    def to_dict(self, casing: Optional = None) -> dict:
+        """
+        Returns properties as `dict`
+        :return: a dict
+        """
+        new_dict = {}
+        for key, value in self.__dict__.items():
+            if value is None:
+                # Excludes properties which have `None` value
+                continue
+
+            new_dict[casing(key) if casing else key] = value
+
+        return new_dict
