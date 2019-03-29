@@ -22,7 +22,7 @@ from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
 from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.address import GOVERNANCE_SCORE_ADDRESS
-from ..base.exception import ServerErrorException
+from ..base.exception import ScoreNotFoundException, AccessDeniedException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..deploy import DeployState
@@ -75,7 +75,7 @@ class IconScoreContextUtil(object):
         score = IconScoreContextUtil.get_icon_score(context, address)
 
         if score is None:
-            raise ServerErrorException(f'Builtin SCORE is None: {address}')
+            raise ScoreNotFoundException(f'Builtin SCORE not found: {address}')
 
         return score
 
@@ -127,7 +127,7 @@ class IconScoreContextUtil(object):
                 IconScoreContextUtil.create_score_info(context, address, current_tx_hash)
             score_mapper[address] = score_info
         elif score_info.tx_hash != current_tx_hash:
-            raise ServerErrorException(
+            raise AssertionError(
                 f'scoreInfo.txHash(0x{score_info.tx_hash.hex()}) != txHash(0x{current_tx_hash.hex()})')
 
         return score_info
@@ -186,7 +186,7 @@ class IconScoreContextUtil(object):
             IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
 
         if governance_score is not None and governance_score.isInScoreBlackList(score_address):
-            raise ServerErrorException(f'SCORE in blacklist: {score_address}')
+            raise AccessDeniedException(f'SCORE in blacklist: {score_address}')
 
     @staticmethod
     def validate_deployer(context: 'IconScoreContext', deployer: 'Address') -> None:
@@ -203,7 +203,7 @@ class IconScoreContextUtil(object):
             IconScoreContextUtil.get_builtin_score(context, GOVERNANCE_SCORE_ADDRESS)
 
         if not governance_score.isDeployer(deployer):
-            raise ServerErrorException(f'Invalid deployer: no permission (address: {deployer})')
+            raise AccessDeniedException(f'Invalid deployer: no permission (address: {deployer})')
 
     @staticmethod
     def is_service_flag_on(context: 'IconScoreContext', flag: 'IconServiceFlag') -> bool:

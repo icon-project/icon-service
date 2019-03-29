@@ -15,12 +15,12 @@
 # limitations under the License.
 from typing import TYPE_CHECKING, List, Optional
 
-from ..base.exception import ExceptionCode
 from .icon_score_event_log import EventLog
-from ..utils.bloom import BloomFilter
 from ..base.address import Address
 from ..base.block import Block
+from ..base.exception import ExceptionCode
 from ..icon_constant import DATA_BYTE_ORDER
+from ..utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
     from ..base.transaction import Transaction
@@ -41,7 +41,7 @@ class TransactionResult(object):
             :param message: error message
             """
             if type(code) != int:
-                code = ExceptionCode.SERVER_ERROR.value
+                code = ExceptionCode.SYSTEM_ERROR.value
             if type(message) != str:
                 message = 'Invalid argument: message is not a string'
 

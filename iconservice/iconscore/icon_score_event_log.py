@@ -16,11 +16,11 @@
 
 from typing import TYPE_CHECKING, List, Optional, Any
 
-from .icon_score_step import StepType
 from ..base.address import Address, ICON_ADDRESS_BYTES_SIZE, ICON_ADDRESS_BODY_SIZE
-from ..base.exception import EventLogException
+from ..base.exception import InvalidEventLogException
 from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG, REVISION_3
 from ..utils import int_to_bytes, byte_length_of_int
+from .icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_constant import BaseType
@@ -85,11 +85,11 @@ class EventLogEmitter(object):
         """
 
         if context.readonly:
-            raise EventLogException(
+            raise InvalidEventLogException(
                 'The event log can not be recorded on readonly context')
 
         if indexed_args_count > len(arguments):
-            raise EventLogException(
+            raise InvalidEventLogException(
                 f'declared indexed_args_count is {indexed_args_count}, '
                 f'but argument count is {len(arguments)}')
 

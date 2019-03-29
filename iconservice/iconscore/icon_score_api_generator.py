@@ -14,16 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from inspect import signature, Signature, Parameter, isclass
+from inspect import signature, Signature, Parameter, isclass, getmembers, isfunction
 from typing import Any, Optional
 
+from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, BaseType, \
+    STR_FALLBACK, STR_ON_INSTALL, STR_ON_UPDATE
 from ..base.address import Address
-from ..base.exception import IconScoreException, IconTypeError, InvalidParamsException
+from ..base.exception import IllegalFormatException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import REVISION_2
 from ..utils import get_main_type_from_annotations_type
-from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, STR_FALLBACK, BaseType
-from .icon_score_context import ContextContainer
 
 
 class ScoreApiGenerator:
@@ -40,10 +40,12 @@ class ScoreApiGenerator:
     __API_PARAMS_INDEXED = 'Indexed'
     __API_TYPE_FUNCTION = 'function'
     __API_TYPE_EVENT = 'eventlog'
-    __API_TYPE_FALLBACK = STR_FALLBACK
 
-    __API_TYPE_ON_INSTALL = 'on_install'
-    __API_TYPE_ON_UPDATE = 'on_update'
+    __API_TYPE_FALLBACK = STR_FALLBACK
+    __API_TYPE_ON_INSTALL = STR_ON_INSTALL
+    __API_TYPE_ON_UPDATE = STR_ON_UPDATE
+
+    __on_deploy = [__API_TYPE_ON_INSTALL, __API_TYPE_ON_UPDATE]
 
     @staticmethod
     def generate(score_funcs: list) -> list:
@@ -53,30 +55,23 @@ class ScoreApiGenerator:
         return api
 
     @staticmethod
-    def check_on_deploy(score_funcs: list) -> None:
-        for func in score_funcs:
-            if func.__name__ == ScoreApiGenerator.__API_TYPE_ON_INSTALL or \
-                    func.__name__ == ScoreApiGenerator.__API_TYPE_ON_UPDATE:
-                ScoreApiGenerator.__check_on_deploy_function(signature(func))
+    def check_on_deploy(context: 'IconScoreContext', score: 'IconScoreBase') -> None:
+        custom_funcs = [value for key, value in getmembers(score.__class__, predicate=isfunction)
+                        if key in ScoreApiGenerator.__on_deploy]
+        for func in custom_funcs:
+            ScoreApiGenerator.__check_on_deploy_function(context, signature(func))
 
     @staticmethod
-    def __check_on_deploy_function(sig_info: 'Signature') -> None:
+    def __check_on_deploy_function(context: 'IconScoreContext', sig_info: 'Signature') -> None:
         params = dict(sig_info.parameters)
         for param_name, param in params.items():
             if param_name == 'self' or param_name == 'cls':
                 continue
-            if param.kind != Parameter.VAR_KEYWORD:
+            if context.revision > REVISION_2 or param.kind != Parameter.VAR_KEYWORD:
                 ScoreApiGenerator.__generate_input([], param, False)
-            else:
-                context = ContextContainer._get_context()
-                if context.revision > REVISION_2:
-                    raise InvalidParamsException("Keyword arguments not allowed")
-                else:
-                    pass
 
     @staticmethod
     def __generate_functions(src: list, score_funcs: list) -> None:
-
         for func in score_funcs:
             const_bit_flag = getattr(func, CONST_BIT_FLAG, 0)
             is_readonly = const_bit_flag & ConstBitFlag.ReadOnly == ConstBitFlag.ReadOnly
@@ -90,13 +85,12 @@ class ScoreApiGenerator:
                     if is_payable:
                         src.append(ScoreApiGenerator.__generate_fallback_function(
                             func.__name__, is_payable, signature(func)))
-            except IconTypeError as e:
-                raise IconScoreException(f"{e.message} at {func.__name__}")
+            except IllegalFormatException as e:
+                raise IllegalFormatException(f"{e.message} at {func.__name__}")
 
     @staticmethod
     def __generate_normal_function(func_name: str, is_readonly: bool, is_payable: bool, sig_info: 'Signature') -> dict:
         info = dict()
-
         info[ScoreApiGenerator.__API_TYPE] = \
             ScoreApiGenerator.__API_TYPE_FUNCTION
         info[ScoreApiGenerator.__API_NAME] = func_name
@@ -132,7 +126,6 @@ class ScoreApiGenerator:
 
     @staticmethod
     def __generate_events(src: list, score_funcs: list) -> None:
-
         event_funcs = {func.__name__: signature(func) for func in score_funcs
                        if getattr(func, CONST_BIT_FLAG, 0) & ConstBitFlag.EventLog}
 
@@ -161,8 +154,8 @@ class ScoreApiGenerator:
             return info_list
 
         if params_type is Signature.empty:
-            raise IconTypeError(
-                f"'Returning type should be declared in read-only functions")
+            raise IllegalFormatException(
+                "Returning type should be declared in read-only functions")
 
         main_type = get_main_type_from_annotations_type(params_type)
         main_type = ScoreApiGenerator.__convert_str_to_type(main_type)
@@ -175,7 +168,7 @@ class ScoreApiGenerator:
         if api_type is None:
             api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
-            raise IconTypeError(f"'Unsupported type for '{params_type}'")
+            raise IllegalFormatException(f"Unsupported type for '{params_type}'")
 
         info = dict()
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
@@ -209,14 +202,14 @@ class ScoreApiGenerator:
         # If there's no hint of argument in the function declaration,
         # raise an exception
         if param.annotation is Parameter.empty:
-            raise IconTypeError(f"Missing argument hint for '{param.name}'")
+            raise IllegalFormatException(f"Missing argument hint for '{param.name}'")
 
         main_type = get_main_type_from_annotations_type(param.annotation)
         main_type = ScoreApiGenerator.__convert_str_to_type(main_type)
         api_type = ScoreApiGenerator.__find_base_super_type(main_type)
         if api_type is None:
-            raise IconTypeError(
-                f"'Unsupported type for '{param.name}: {param.annotation}'")
+            raise IllegalFormatException(
+                f"Unsupported type for '{param.name}: {param.annotation}'")
         info = dict()
         info[ScoreApiGenerator.__API_NAME] = param.name
         info[ScoreApiGenerator.__API_TYPE] = api_type.__name__
@@ -224,7 +217,7 @@ class ScoreApiGenerator:
             info[ScoreApiGenerator.__API_INPUTS_INDEXED] = is_indexed
         if param.default is not Parameter.empty:
             if param.default is not None and not isinstance(param.default, main_type):
-                raise InvalidParamsException(f'default params type mismatch. value: {param.default} type: {main_type}')
+                raise InvalidParamsException(f'Default params type mismatch. value: {param.default} type: {main_type}')
             info[ScoreApiGenerator.__API_INPUTS_DEFAULT] = TypeConverter.convert_type_reverse(param.default)
         src.append(info)
 

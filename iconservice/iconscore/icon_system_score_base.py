@@ -16,10 +16,10 @@
 
 from abc import abstractmethod
 
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from .icon_score_context_util import IconScoreContextUtil
-from ..base.exception import ScoreErrorException
+from ..base.exception import AccessDeniedException
 from ..iconscore.icon_score_base import IconScoreBase
 from ..utils import is_builtin_score as util_is_builtin_score
 
@@ -48,7 +48,7 @@ class IconSystemScoreBase(IconScoreBase):
     def __init__(self, db: 'IconScoreDatabase') -> None:
         super().__init__(db)
         if not util_is_builtin_score(str(self.address)):
-            raise ScoreErrorException(f"is not system SCORE ({self.address}")
+            raise AccessDeniedException(f"Not a system SCORE ({self.address})")
 
     def is_builtin_score(self, score_address: 'Address') -> bool:
         return util_is_builtin_score(str(score_address))

@@ -44,7 +44,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_result.event_logs = []
 
         tx_result.failure = TransactionResult.Failure(
-            code=ExceptionCode.SERVER_ERROR, message=str('Server error'))
+            code=ExceptionCode.SYSTEM_ERROR, message=str('Server error'))
 
         self.tx_result = tx_result
 
@@ -62,7 +62,7 @@ class TestTransactionResult(unittest.TestCase):
         # dict created by tx_result.to_dict() should not contain failure.
         tx_result.status = TransactionResult.SUCCESS
         tx_result.failure = TransactionResult.Failure(
-            code=ExceptionCode.INVALID_PARAMS, message='Invalid params')
+            code=ExceptionCode.INVALID_PARAMETER, message='Invalid params')
 
         d = tx_result.to_dict()
         self.assertFalse('failure' in d)

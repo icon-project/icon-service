@@ -106,7 +106,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                                         {"address": str("")})
         raise_exception_end_tag("addToScoreBlackList")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_result.failure.message, "Invalid address")
 
         raise_exception_start_tag("removeFromScoreBlackList")
@@ -116,7 +116,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                                         {"address": str("")})
         raise_exception_end_tag("removeFromScoreBlackList")
         self.assertEqual(tx_result.status, int(False))
-        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMS)
+        self.assertEqual(tx_result.failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(tx_result.failure.message, "Invalid address")
 
     def test_governance_call_about_blacklist_eoa_addr(self):
@@ -256,7 +256,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         }
         with self.assertRaises(BaseException) as e:
             self._query(query_request)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
         value2 = 2 * self._icx_factor
         with self.assertRaises(BaseException) as e:
@@ -264,7 +264,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                                      score_addr1,
                                      'set_value',
                                      {"value": hex(value2)})
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
         # indirect external call
         query_request = {
@@ -279,7 +279,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         }
         with self.assertRaises(BaseException) as e:
             self._query(query_request)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
     def test_score_add_blacklist_not_version_field(self):
         self._update_governance()
@@ -321,7 +321,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         }
         with self.assertRaises(BaseException) as e:
             self._query(query_request)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
         value2 = 2 * self._icx_factor
         with self.assertRaises(BaseException) as e:
@@ -329,7 +329,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
                                      score_addr1,
                                      'set_value',
                                      {"value": hex(value2)})
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
         # indirect external call
         query_request = {
@@ -343,7 +343,7 @@ class TestIntegrateDeployBlackList(TestIntegrateBase):
         }
         with self.assertRaises(BaseException) as e:
             self._query(query_request)
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
 
     def test_score_remove_deployer(self):
         self._update_governance()

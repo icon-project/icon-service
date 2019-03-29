@@ -16,13 +16,14 @@
 """IconScoreEngine module
 """
 
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from .icon_score_constant import STR_FALLBACK
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, ServerErrorException
+from ..base.exception import ScoreNotFoundException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 
 if TYPE_CHECKING:
@@ -112,7 +113,7 @@ class IconScoreEngine(object):
 
     @staticmethod
     def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
-        tmp_params = kw_params
+        tmp_params = deepcopy(kw_params)
 
         icon_score.validate_external_method(func_name)
 
@@ -138,6 +139,6 @@ class IconScoreEngine(object):
     def _get_icon_score(context: 'IconScoreContext', icon_score_address: 'Address'):
         icon_score = IconScoreContextUtil.get_icon_score(context, icon_score_address)
         if icon_score is None:
-            raise InvalidParamsException(
+            raise ScoreNotFoundException(
                 f'SCORE not found: {icon_score_address}')
         return icon_score

@@ -17,130 +17,217 @@
 """IconScoreEngine testcase
 """
 
-
-import os
 import unittest
-from unittest import mock
+from unittest.mock import Mock, patch
 
-from iconservice.base.address import AddressPrefix
-from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode, InvalidParamsException
-from iconservice.base.message import Message
-from iconservice.base.transaction import Transaction
-from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.utils import remove_path
-from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
+from iconservice import *
+from iconservice.base.address import AddressPrefix, ZERO_SCORE_ADDRESS, Address
+from iconservice.base.exception import ScoreNotFoundException, InvalidParamsException
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.icx.icx_storage import IcxStorage
-from tests import create_tx_hash, create_block_hash
-from tests import rmtree, create_address
-
-TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+from tests import create_address
 
 
 class TestIconScoreEngine(unittest.TestCase):
-    _SCORE_ROOT_PATH = os.path.join(TEST_ROOT_PATH, 'score')
-    _TEST_DB_PATH = 'tests/test_db/'
+    @patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.validate_score_blacklist')
+    def test_validate_score_blacklist(self,
+                                      mocked_score_context_util_validate_score_blacklist):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
 
-    def setUp(self):
-        rmtree(self._SCORE_ROOT_PATH)
-        rmtree(self._TEST_DB_PATH)
+        # failure case: should not accept ZERO_SCORE_ADDRESS as SCORE address
+        self.assertRaises(InvalidParamsException,
+                          IconScoreEngine._validate_score_blacklist,
+                          context, ZERO_SCORE_ADDRESS)
+        mocked_score_context_util_validate_score_blacklist.assert_not_called()
 
-        archive_path = 'tests/sample/normal_score.zip'
-        archive_path = os.path.join(TEST_ROOT_PATH, archive_path)
-        zip_bytes = self.read_zipfile_as_byte(archive_path)
-        install_path = os.path.join(TEST_ROOT_PATH, self._SCORE_ROOT_PATH)
-        self.__unpack_zip_file(install_path, zip_bytes)
+        # failure case: should not accept EOA as SCORE address
+        eoa_address = create_address(AddressPrefix.EOA)
+        self.assertRaises(InvalidParamsException,
+                          IconScoreEngine._validate_score_blacklist,
+                          context, eoa_address)
+        mocked_score_context_util_validate_score_blacklist.assert_not_called()
 
-        db_path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        ContextDatabaseFactory.open(
-            db_path, ContextDatabaseFactory.Mode.SINGLE_DB)
+        # failure case: should not accept None type as SCORE address
+        none_address = None
+        self.assertRaises(InvalidParamsException,
+                          IconScoreEngine._validate_score_blacklist,
+                          context, none_address)
+        mocked_score_context_util_validate_score_blacklist.assert_not_called()
 
-        self.__ensure_dir(db_path)
+        # success case: valid SCORE address should be passed
+        contract_address = create_address(AddressPrefix.CONTRACT)
+        IconScoreEngine._validate_score_blacklist(context, contract_address)
+        mocked_score_context_util_validate_score_blacklist.assert_called_with(context, contract_address)
 
-        icx_db = ContextDatabaseFactory.create_by_name('icx_db')
-        self.icx_storage = IcxStorage(icx_db)
-        deploy_storage = IconScoreDeployStorage(self.icx_storage.db)
-        deploy_engine = IconScoreDeployEngine()
-        deploy_engine.open(deploy_storage)
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._validate_score_blacklist')
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._fallback')
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._call')
+    def test_invoke(self,
+                    mocked_score_engine_call,
+                    mocked_score_engine_fallback,
+                    mocked_score_engine_validate_score_blacklist):
 
-        IconScoreClassLoader.init(self._SCORE_ROOT_PATH)
+        # success case: valid score. if data type is 'call', _call method should be called
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        data_type = 'call'
+        data = {}
+        mocked_score_engine_call.return_value = None
+        mocked_score_engine_fallback.return_value = None
 
-        IconScoreMapper.deploy_storage = deploy_storage
-        self.icon_score_mapper = IconScoreMapper()
+        contract_address = create_address(AddressPrefix.CONTRACT)
+        IconScoreEngine.invoke(context, contract_address, data_type, data)
+        mocked_score_engine_validate_score_blacklist.assert_called_with(context, contract_address)
+        mocked_score_engine_call.assert_called()
+        mocked_score_engine_fallback.assert_not_called()
 
-        self.engine = IconScoreEngine()
-        # Use mock to prevent an exception from IconScoreEngine._validate_score_blacklist().
-        IconScoreEngine._validate_score_blacklist = mock.Mock()
+        # reset mock
+        mocked_score_engine_validate_score_blacklist.reset_mock(return_value=None)
+        mocked_score_engine_call.reset_mock(return_value=None)
+        mocked_score_engine_fallback.reset_mock(return_value=None)
 
-        self._from = create_address(AddressPrefix.EOA)
-        self._icon_score_address = create_address(AddressPrefix.CONTRACT)
+        # success case: valid score. if data type is not 'call', fallback method should be called
+        data_type = ''
 
-        IconScoreContext.icon_score_deploy_engine = deploy_engine
-        self._context = IconScoreContext(IconScoreContextType.DIRECT)
-        self._context.msg = Message(self._from, 0)
-        tx_hash = create_tx_hash()
-        self._context.tx = Transaction(
-            tx_hash, origin=create_address(AddressPrefix.EOA))
-        block_hash = create_block_hash()
-        self._context.block = Block(1, block_hash, 0, None)
+        IconScoreEngine.invoke(context, contract_address, data_type, data)
+        mocked_score_engine_validate_score_blacklist.assert_called_with(context, contract_address)
+        mocked_score_engine_call.assert_not_called()
+        mocked_score_engine_fallback.assert_called()
 
-    def tearDown(self):
-        self.engine = None
-        self.icx_storage.close(self._context)
-        ContextDatabaseFactory.close()
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._validate_score_blacklist')
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._call')
+    def test_query(self,
+                   mocked_score_engine_call,
+                   mocked_score_engine_validate_score_blacklist):
 
-        path = os.path.join(TEST_ROOT_PATH, self._SCORE_ROOT_PATH)
-        remove_path(path)
-        path = os.path.join(TEST_ROOT_PATH, self._TEST_DB_PATH)
-        remove_path(path)
-
-        IconScoreClassLoader.exit(self._SCORE_ROOT_PATH)
-
-    @staticmethod
-    def read_zipfile_as_byte(archive_path: str) -> bytes:
-        with open(archive_path, 'rb') as f:
-            byte_data = f.read()
-            return byte_data
-
-    @staticmethod
-    def __unpack_zip_file(install_path: str, data: bytes):
-        file_info_generator = IconScoreDeployer._extract_files_gen(data)
-        for name, file_info, parent_directory in file_info_generator:
-            if not os.path.exists(os.path.join(install_path, parent_directory)):
-                os.makedirs(os.path.join(install_path, parent_directory))
-            with file_info as file_info_context,\
-                    open(os.path.join(install_path, name), 'wb') as dest:
-                contents = file_info_context.read()
-                dest.write(contents)
-        return True
-
-    @staticmethod
-    def __ensure_dir(file_path):
-        directory = os.path.dirname(file_path)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-    def test_call_method(self):
-        calldata = {'method': 'total_supply', 'params': {}}
-
-        # proj_name = 'test_score'
-        # path = os.path.join(TEST_ROOT_PATH, 'tests/tmp/{}'.format(proj_name))
-        # install_data = {'contentType': 'application/tbears', 'content': path}
-        # self._engine.invoke(
-        #     self._context, self._icon_score_address, 'install', install_data)
-        # self._engine.commit(self._context)
+        # success case: valid score. if data type is 'call', _call method should be called
         context = IconScoreContext(IconScoreContextType.QUERY)
+        data_type = 'call'
+        data = {}
 
-        with self.assertRaises(InvalidParamsException) as cm:
-            self.engine.query(
-                context, self._icon_score_address, 'call', calldata)
+        mocked_score_engine_call.return_value = "_call_method_return_data"
 
-        e = cm.exception
-        self.assertEqual(ExceptionCode.INVALID_PARAMS, e.code)
+        contract_address = create_address(AddressPrefix.CONTRACT)
+        result = IconScoreEngine.query(context, contract_address, data_type, data)
+
+        self.assertEqual(result, "_call_method_return_data")
+        mocked_score_engine_validate_score_blacklist.assert_called_with(context, contract_address)
+        mocked_score_engine_call.assert_called()
+
+        # reset mock
+        mocked_score_engine_validate_score_blacklist.reset_mock(return_value=None)
+        mocked_score_engine_call.reset_mock(return_value=None)
+
+        # failure case: valid score. if data type is not 'call', exception should be raised
+        data_type = ''
+
+        self.assertRaises(InvalidParamsException,
+                          IconScoreEngine.query,
+                          context, contract_address, data_type, data)
+        mocked_score_engine_validate_score_blacklist.assert_called()
+        mocked_score_engine_call.assert_not_called()
+
+    @patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.get_icon_score')
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._validate_score_blacklist')
+    def test_get_score_api(self,
+                           mocked_icon_score_engine_validate_score_blacklist,
+                           mocked_score_context_util_get_icon_score):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context.new_icon_score_mapper = IconScoreMapper()
+
+        # failure case: should raise error if there is no SCORE
+        score_address = create_address(AddressPrefix.CONTRACT)
+        mocked_score_context_util_get_icon_score.return_value = None
+        self.assertRaises(ScoreNotFoundException, IconScoreEngine.get_score_api, context, score_address)
+        mocked_icon_score_engine_validate_score_blacklist.assert_called_with(context, score_address)
+
+        # reset mock
+        mocked_icon_score_engine_validate_score_blacklist.reset_mock(return_value=None)
+
+        # success case: if SCORE exists, SCORE.get_api() method should be called
+
+        score_object = Mock(spec=IconScoreBase)
+        mocked_score_context_util_get_icon_score.return_value = score_object
+
+        IconScoreEngine.get_score_api(context, score_address)
+        mocked_icon_score_engine_validate_score_blacklist.assert_called_with(context, score_address)
+        score_object.get_api.assert_called()
+
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._convert_score_params_by_annotations')
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine._get_icon_score')
+    def test_call(self,
+                  mocked_score_engine_get_icon_score,
+                  mocked_score_engine_convert_score_params_by_annotations):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context.new_icon_score_mapper = IconScoreMapper()
+
+        def intercept_score_base_call(func_name: str, kw_params: dict):
+            self.assertEqual(func_name, 'score_method')
+            # should be equal to converted_params
+            self.assertEqual(kw_params, converted_params)
+            return "__call method called"
+
+        score_address = Mock(spec=Address)
+        score_object = Mock(spec=IconScoreBase)
+        mocked_score_engine_get_icon_score.return_value = score_object
+
+        primitive_params = {"address": str(create_address(AddressPrefix.EOA)),
+                            "integer": "0x10"}
+        converted_params = {"address": create_address(AddressPrefix.EOA),
+                            "integer": 10}
+        mocked_score_engine_convert_score_params_by_annotations.return_value = converted_params
+        context.set_func_type_by_icon_score = Mock()
+        setattr(score_object, '_IconScoreBase__call', Mock(side_effect=intercept_score_base_call))
+
+        # set method, and params, method cannot be None as pre-validate it
+        data = {'method': 'score_method',
+                'params': primitive_params}
+        result = IconScoreEngine._call(context, score_address, data)
+
+        self.assertEqual(result, "__call method called")
+        IconScoreEngine._get_icon_score.assert_called()
+        IconScoreEngine._convert_score_params_by_annotations.assert_called()
+        context.set_func_type_by_icon_score.assert_called()
+        call = getattr(score_object, '_IconScoreBase__call')
+        call.assert_called()
+
+    def test_convert_score_params_by_annotations(self):
+        # main function is to converting params based on method annotation
+        def test_method(address: Address, integer: int):
+            pass
+
+        # success case: valid params and method
+        primitive_params = {"address": str(create_address(AddressPrefix.EOA)),
+                            "integer": "0x10"}
+        score_object = Mock(spec=IconScoreBase)
+        score_object.validate_external_method = Mock()
+        setattr(score_object, 'test_method', test_method)
+        converted_params = \
+            IconScoreEngine._convert_score_params_by_annotations(score_object, 'test_method', primitive_params)
+
+        score_object.validate_external_method.assert_called()
+        # primitive_params must not be changed.
+        self.assertEqual(type(primitive_params["address"]), str)
+        self.assertEqual(type(converted_params["address"]), Address)
+
+        # failure case: if arguments' type and parameters' type of method does not match, should raise an error
+        not_matching_type_params = {"address": b'bytes_data',
+                                    "integer": "string_data"}
+
+        self.assertRaises(InvalidParamsException,
+                          IconScoreEngine._convert_score_params_by_annotations,
+                          score_object, 'test_method', not_matching_type_params)
+
+        # success case: even though not enough number of params inputted, doesn't raise an error
+        # parameter check is processed when executing method.
+        score_object.validate_external_method.reset_mock()
+        insufficient_params = {"address": str(create_address(AddressPrefix.EOA))}
+        converted_params = \
+            IconScoreEngine._convert_score_params_by_annotations(score_object, 'test_method', insufficient_params)
+        score_object.validate_external_method.assert_called()
+        self.assertEqual(type(insufficient_params["address"]), str)
+        self.assertEqual(type(converted_params["address"]), Address)
+
+    def test_fallback(self):
+        pass

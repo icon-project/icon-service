@@ -22,12 +22,13 @@ from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_deploy_path, get_score_path
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, ServerErrorException
+from ..base.exception import InvalidParamsException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
 from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
+from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
@@ -76,7 +77,7 @@ class IconScoreDeployEngine(object):
         assert icon_score_address.is_contract
 
         if icon_score_address in (None, ZERO_SCORE_ADDRESS):
-            raise ServerErrorException(f'Invalid SCORE address: {icon_score_address}')
+            raise InvalidParamsException(f'Invalid SCORE address: {icon_score_address}')
 
         try:
             IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
@@ -188,6 +189,7 @@ class IconScoreDeployEngine(object):
             # score_info.get_score() returns a cached or created score instance
             # according to context.revision.
             score: 'IconScoreBase' = score_info.get_score(context.revision)
+            ScoreApiGenerator.check_on_deploy(context, score)
 
             # owner is set in IconScoreBase.__init__()
             context.msg = Message(sender=score.owner)
@@ -291,7 +293,7 @@ class IconScoreDeployEngine(object):
         elif deploy_type == DeployType.UPDATE:
             on_init = score.on_update
         else:
-            raise ServerErrorException(f'Invalid deployType: {deploy_type}')
+            raise InvalidParamsException(f'Invalid deployType: {deploy_type}')
 
         annotations = TypeConverter.make_annotations_from_method(on_init)
         TypeConverter.convert_data_params(annotations, params)

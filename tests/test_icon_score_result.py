@@ -222,6 +222,7 @@ class TestTransactionResult(unittest.TestCase):
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
+
             context_db = inner_task._icon_service_engine._icx_context_db
 
             score_address = create_address(AddressPrefix.CONTRACT, b'address')
@@ -229,6 +230,8 @@ class TestTransactionResult(unittest.TestCase):
 
             address = create_address(AddressPrefix.EOA, b'address')
             score.SampleEvent(b'i_data', address, 10, b'data', 'text')
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
