@@ -18,44 +18,57 @@ from typing import Any
 
 from msgpack import dumps as msgpack_dumps, loads as msgpack_loads, ExtType as msgpack_extType
 
-from ..address import Address, AddressPrefix
-from ...utils import int_to_bytes, bytes_to_int
+from ..base.address import Address, AddressPrefix
+from . import int_to_bytes, bytes_to_int
 
 
-class BaseCodec(object):
-    class CustomType(IntEnum):
-        # NONE = 0
-        # BIG_INT = 1
-        # ADDRESS = 2
+# you should override if you want to parse custom type
+# class CustomCodec(Codec):
+#     class CustomType(IntEnum):
+#         # NONE = 0
+#         # BIG_INT = 1
+#         # ADDRESS = 2
+#
+#         CUSTOM = 3
+#
+#     @classmethod
+#     def encode(cls, obj: Any) -> Any:
+#         return obj
+#
+#     @classmethod
+#     def decode(cls, t: int, b: bytes) -> Any:
+#         return msgpack_extType(t, b)
 
-        CUSTOM = 3
+
+class Codec(metaclass=ABCMeta):
+    @classmethod
+    @abstractmethod
+    def encode(cls, obj: Any) -> Any:
+        pass
 
     @classmethod
     @abstractmethod
-    def custom_encode(cls, obj: Any) -> Any:
-        if False:
-            pass
-        else:
-            return obj
-
-    @classmethod
-    @abstractmethod
-    def custom_decode(cls, t: int, b: bytes) -> Any:
-        if False:
-            pass
-        else:
-            return msgpack_extType(t, b)
+    def decode(cls, t: int, b: bytes) -> Any:
+        pass
 
 
 class MsgPackForDB(object):
-    codec: 'BaseCodec' = BaseCodec()
+    class BaseCodec(Codec):
+        @classmethod
+        def encode(cls, obj: Any) -> Any:
+            return obj
 
-    class CustomType(IntEnum):
+        @classmethod
+        def decode(cls, t: int, b: bytes) -> Any:
+            return msgpack_extType(t, b)
+
+    # you should assign CustomCodec if you want to parse custom type
+    _codec: 'Codec' = BaseCodec()
+
+    class BaseType(IntEnum):
         NONE = 0
         BIG_INT = 1
         ADDRESS = 2
-
-        CUSTOM = 3
 
     @classmethod
     def _address_to_bytes(cls, addr: 'Address') -> bytes:
@@ -73,20 +86,20 @@ class MsgPackForDB(object):
     @classmethod
     def _encode(cls, obj: Any) -> Any:
         if isinstance(obj, int):
-            return msgpack_extType(cls.CustomType.BIG_INT, int_to_bytes(obj))
+            return msgpack_extType(cls.BaseType.BIG_INT, int_to_bytes(obj))
         elif isinstance(obj, Address):
-            return msgpack_extType(cls.CustomType.ADDRESS, cls._address_to_bytes(obj))
+            return msgpack_extType(cls.BaseType.ADDRESS, cls._address_to_bytes(obj))
         else:
-            return cls.codec.custom_encode(obj)
+            return cls._codec.encode(obj)
 
     @classmethod
     def _decode(cls, t: int, b: bytes) -> Any:
-        if t == cls.CustomType.BIG_INT:
+        if t == cls.BaseType.BIG_INT:
             return bytes_to_int(b)
-        elif t == cls.CustomType.ADDRESS:
+        elif t == cls.BaseType.ADDRESS:
             return cls._bytes_to_address(b)
         else:
-            return cls.codec.custom_decode(t, b)
+            return cls._codec.decode(t, b)
 
     @classmethod
     def dumps(cls, data: Any) -> bytes:

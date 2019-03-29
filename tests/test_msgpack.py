@@ -20,8 +20,8 @@ import unittest
 from typing import Any
 
 from iconservice.base.address import Address, ZERO_SCORE_ADDRESS
-from iconservice.base.msgpack.msgpack_for_db import MsgPackForDB
-from iconservice.base.msgpack.msgpack_for_ipc import MsgPackForIpc, TypeTag
+from iconservice.utils.msgpack_for_db import MsgPackForDB
+from iconservice.utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 from tests import create_address
 
 
