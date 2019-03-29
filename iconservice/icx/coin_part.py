@@ -14,27 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum, unique
+from enum import IntEnum, unique, IntFlag
 from struct import Struct
 
-from ...base.msgpack_util import MsgPackConverter, TypeTag
-from ...base.exception import InvalidParamsException, OutOfBalanceException
-from ...icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION_4
+from ..base.msgpack_util import MsgPackConverter, TypeTag
+from ..base.exception import InvalidParamsException, OutOfBalanceException
+from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION_4
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...base.address import Address
+    from iconservice.base.address import Address
 
 
 @unique
-class CoinAccountVersion(IntEnum):
+class CoinPartVersion(IntEnum):
     OLD = 0
     MSG_PACK = 1
 
 
 @unique
-class CoinAccountType(IntEnum):
+class CoinPartType(IntEnum):
     """Account Type
     """
     GENERAL = 0
@@ -49,7 +49,7 @@ class CoinAccountType(IntEnum):
 
     @staticmethod
     def from_int(value: int) -> IntEnum:
-        for _type in CoinAccountType:
+        for _type in CoinPartType:
             if value == _type:
                 return _type
 
@@ -57,14 +57,14 @@ class CoinAccountType(IntEnum):
 
 
 @unique
-class CoinAccountFlag(IntEnum):
+class CoinPartFlag(IntFlag):
     """Account bitwise flags
     """
-    # Whether account is locked or not
-    LOCKED = 0x01
+    NONE = 0
+    HAS_UNSTAKE = 1
 
 
-class CoinAccount(object):
+class CoinPart(object):
     """Account class
     Contains information of the account indicated by address.
     """
@@ -78,18 +78,18 @@ class CoinAccount(object):
 
     def __init__(self,
                  address: 'Address',
-                 account_type: 'CoinAccountType' = CoinAccountType.GENERAL,
-                 balance: int = 0,
-                 locked: bool = False) -> None:
+                 account_type: 'CoinPartType' = CoinPartType.GENERAL,
+                 balance: int = 0) -> None:
         """Constructor
         """
         self._address: 'Address' = address
-        self._type: 'CoinAccountType' = account_type
+        self._type: 'CoinPartType' = account_type
         self._balance: int = balance
-        self._locked: bool = locked
+        self._flag: 'CoinPartFlag' = CoinPartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address'):
+        # legacy EOA: 20bytes, CA: 21 bytes
         return address.to_bytes()
 
     @property
@@ -101,38 +101,22 @@ class CoinAccount(object):
         return self._address
 
     @property
-    def type(self) -> 'CoinAccountType':
-        """CoinAccountType getter
+    def type(self) -> 'CoinPartType':
+        """CoinPartType getter
 
-        :return: CoinAccountType value
+        :return: CoinPartType value
         """
         return self._type
 
     @type.setter
-    def type(self, value: 'CoinAccountType') -> None:
-        """CoinAccountType setter
+    def type(self, value: 'CoinPartType') -> None:
+        """CoinPartType setter
 
         :param value: (AccountType)
         """
-        if not isinstance(value, CoinAccountType):
+        if not isinstance(value, CoinPartType):
             raise ValueError('Invalid AccountType')
         self._type = value
-
-    @property
-    def locked(self) -> bool:
-        """Is this locked?
-
-        :return: True(locked) False(unlocked)
-        """
-        return self._locked
-
-    @locked.setter
-    def locked(self, value: bool) -> None:
-        """locked setter
-
-        :param value: True(locked) False(unlocked)
-        """
-        self._locked = bool(value)
 
     @property
     def balance(self) -> int:
@@ -141,6 +125,23 @@ class CoinAccount(object):
         :return: balance in loop
         """
         return self._balance
+
+    @property
+    def flag(self) -> 'CoinPartFlag':
+        """CoinPartFlag getter
+
+        :return: CoinPartType value
+        """
+        return self._flag
+
+    def is_coin_flag_on(self, flag: 'CoinPartFlag') -> bool:
+        return self._flag & flag == flag
+
+    def coin_flag_enable(self, flag: 'CoinPartFlag') -> None:
+        self._flag |= flag
+
+    def coin_flag_disable(self, flag: 'CoinPartFlag') -> None:
+        self._flag &= ~flag
 
     def deposit(self, value: int) -> None:
         """Deposit coin
@@ -171,62 +172,62 @@ class CoinAccount(object):
     def __eq__(self, other) -> bool:
         """operator == overriding
 
-        :param other: (CoinAccount)
+        :param other: (CoinPart)
         """
-        return isinstance(other, CoinAccount) \
+        return isinstance(other, CoinPart) \
                and self.address == other.address \
                and self.balance == other.balance \
                and self.type == other.type \
-               and self.locked == other.locked
+               and self._flag == other.flag
 
     def __ne__(self, other) -> bool:
         """operator != overriding
 
-        :param other: (CoinAccount)
+        :param other: (CoinPart)
         """
         return not self.__eq__(other)
 
     @staticmethod
-    def from_bytes(buf: bytes, address: 'Address') -> 'CoinAccount':
-        """Create CoinAccount object from bytes data
+    def from_bytes(buf: bytes, address: 'Address') -> 'CoinPart':
+        """Create CoinPart object from bytes data
 
         :param buf: (bytes) bytes data including Account information
         :param address:
-        :return: (CoinAccount) account object
+        :return: (CoinPart) account object
         """
 
-        if len(buf) == CoinAccount._old_bytes_length and buf[0] == 0:
-            return CoinAccount._from_bytes_old(buf, address)
+        if len(buf) == CoinPart._old_bytes_length and buf[0] == 0:
+            return CoinPart._from_bytes_old(buf, address)
         else:
-            return CoinAccount._from_bytes_msg_pack(buf, address)
+            return CoinPart._from_bytes_msg_pack(buf, address)
 
     @staticmethod
-    def _from_bytes_old(buf: bytes, address: 'Address') -> 'CoinAccount':
-        version, account_type, flags, amount = CoinAccount._struct_old.unpack(buf)
-        obj = CoinAccount(address)
-        obj.type = CoinAccountType.from_int(account_type)
-        obj._locked = bool(flags & CoinAccountFlag.LOCKED)
+    def _from_bytes_old(buf: bytes, address: 'Address') -> 'CoinPart':
+        version, account_type, flags, amount = CoinPart._struct_old.unpack(buf)
+        obj = CoinPart(address)
+        obj.type = CoinPartType.from_int(account_type)
+        obj._locked = False
         obj._balance = int.from_bytes(amount, DATA_BYTE_ORDER)
         return obj
 
     @staticmethod
-    def _from_bytes_msg_pack(buf: bytes, address: 'Address') -> 'CoinAccount':
+    def _from_bytes_msg_pack(buf: bytes, address: 'Address') -> 'CoinPart':
         data: list = MsgPackConverter.loads(buf)
         version = MsgPackConverter.decode(TypeTag.INT, data[0])
-        if version == CoinAccountVersion.MSG_PACK:
-            obj = CoinAccount(address)
-            obj.type = CoinAccountType(MsgPackConverter.decode(TypeTag.INT, data[1]))
+        if version == CoinPartVersion.MSG_PACK:
+            obj = CoinPart(address)
+            obj.type = CoinPartType(MsgPackConverter.decode(TypeTag.INT, data[1]))
             flags = MsgPackConverter.decode(TypeTag.INT, data[2])
-            obj._locked = bool(flags & CoinAccountFlag.LOCKED)
+            obj._locked = bool(flags & CoinPartFlag.LOCKED)
             obj._balance = MsgPackConverter.decode(TypeTag.INT, data[3])
             return obj
         else:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
     def to_bytes(self, revision: int = 0) -> bytes:
-        """Convert CoinAccount object to bytes
+        """Convert CoinPart object to bytes
 
-        :return: data including information of CoinAccount object
+        :return: data including information of CoinPart object
         """
 
         if revision >= REVISION_4:
@@ -235,24 +236,17 @@ class CoinAccount(object):
             return self._to_bytes_old()
 
     def _to_bytes_msg_pack(self) -> bytes:
-        flags = 0
-        if self._locked:
-            flags |= CoinAccountFlag.LOCKED
-
-        version = CoinAccountVersion.MSG_PACK
+        version = CoinPartVersion.MSG_PACK
         data = [MsgPackConverter.encode(version),
                 MsgPackConverter.encode(self._type),
-                MsgPackConverter.encode(flags),
+                MsgPackConverter.encode(self._flag),
                 MsgPackConverter.encode(self.balance)]
 
         return MsgPackConverter.dumps(data)
 
     def _to_bytes_old(self) -> bytes:
-        version: int = CoinAccountVersion.OLD
-        flags = 0
-        if self._locked:
-            flags |= CoinAccountFlag.LOCKED
-        return CoinAccount._struct_old.pack(version,
-                                            self._type,
-                                            flags,
-                                            self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
+        version: int = CoinPartVersion.OLD
+        return CoinPart._struct_old.pack(version,
+                                         self._type,
+                                         self._flag,
+                                         self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))

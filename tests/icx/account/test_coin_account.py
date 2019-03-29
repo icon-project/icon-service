@@ -21,33 +21,33 @@ import unittest
 from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import REVISION_4, REVISION_3
-from iconservice.icx.account.coin_account import CoinAccountType, CoinAccount
+from iconservice.icx.coin_part import CoinPartType, CoinPart
 from tests import create_address
 
 
 class TestAccountType(unittest.TestCase):
     def test_account_type(self):
-        self.assertTrue(CoinAccountType.GENERAL == 0)
-        self.assertTrue(CoinAccountType.GENESIS == 1)
-        self.assertTrue(CoinAccountType.TREASURY == 2)
+        self.assertTrue(CoinPartType.GENERAL == 0)
+        self.assertTrue(CoinPartType.GENESIS == 1)
+        self.assertTrue(CoinPartType.TREASURY == 2)
 
-        self.assertTrue(str(CoinAccountType.GENERAL) == 'GENERAL')
-        self.assertTrue(str(CoinAccountType.GENESIS) == 'GENESIS')
-        self.assertTrue(str(CoinAccountType.TREASURY) == 'TREASURY')
+        self.assertTrue(str(CoinPartType.GENERAL) == 'GENERAL')
+        self.assertTrue(str(CoinPartType.GENESIS) == 'GENESIS')
+        self.assertTrue(str(CoinPartType.TREASURY) == 'TREASURY')
 
     def test_from_int(self):
-        self.assertEqual(CoinAccountType.GENERAL, CoinAccountType.from_int(0))
-        self.assertEqual(CoinAccountType.GENESIS, CoinAccountType.from_int(1))
-        self.assertEqual(CoinAccountType.TREASURY, CoinAccountType.from_int(2))
+        self.assertEqual(CoinPartType.GENERAL, CoinPartType.from_int(0))
+        self.assertEqual(CoinPartType.GENESIS, CoinPartType.from_int(1))
+        self.assertEqual(CoinPartType.TREASURY, CoinPartType.from_int(2))
 
-        self.assertRaises(ValueError, CoinAccountType.from_int, 3)
+        self.assertRaises(ValueError, CoinPartType.from_int, 3)
 
 
-class TestCoinAccount(unittest.TestCase):
-    def test_coin_account_revision_3(self):
+class TestCoinPart(unittest.TestCase):
+    def test_coin_part_revision_3(self):
         address: 'Address' = create_address()
 
-        account1 = CoinAccount(address)
+        account1 = CoinPart(address)
         self.assertIsNotNone(account1)
         self.assertEqual(address, account1.address)
         self.assertTrue(account1.balance == 0)
@@ -73,62 +73,62 @@ class TestCoinAccount(unittest.TestCase):
         account1.withdraw(0)
         self.assertEqual(old, account1.balance)
 
-    def test_coin_account_from_bytes_to_bytes_revision_3(self):
+    def test_coin_part_from_bytes_to_bytes_revision_3(self):
         address: 'Address' = create_address()
 
-        account = CoinAccount(address)
+        account = CoinPart(address)
 
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(36, len(data))
 
-        account2 = CoinAccount.from_bytes(data, address)
+        account2 = CoinPart.from_bytes(data, address)
         self.assertFalse(account2.locked)
-        self.assertEqual(CoinAccountType.GENERAL, account2.type)
+        self.assertEqual(CoinPartType.GENERAL, account2.type)
         self.assertEqual(0, account2.balance)
 
-        account.type = CoinAccountType.GENESIS
+        account.type = CoinPartType.GENESIS
         account.deposit(1024)
 
-        account3 = CoinAccount.from_bytes(account.to_bytes(), address)
-        self.assertEqual(CoinAccountType.GENESIS, account3.type)
+        account3 = CoinPart.from_bytes(account.to_bytes(), address)
+        self.assertEqual(CoinPartType.GENESIS, account3.type)
         self.assertEqual(1024, account3.balance)
 
     def test_account_from_bytes_to_bytes_revision_4(self):
         address: 'Address' = create_address()
 
-        account = CoinAccount(address)
+        account = CoinPart(address)
 
         data = account.to_bytes(REVISION_4)
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(9, len(data))
 
-        account2 = CoinAccount.from_bytes(data, address)
+        account2 = CoinPart.from_bytes(data, address)
         self.assertFalse(account2.locked)
-        self.assertEqual(CoinAccountType.GENERAL, account2.type)
+        self.assertEqual(CoinPartType.GENERAL, account2.type)
         self.assertEqual(0, account2.balance)
 
-        account.type = CoinAccountType.GENESIS
+        account.type = CoinPartType.GENESIS
         account.deposit(1024)
 
-        account3 = CoinAccount.from_bytes(account.to_bytes(REVISION_4), address)
-        self.assertEqual(CoinAccountType.GENESIS, account3.type)
+        account3 = CoinPart.from_bytes(account.to_bytes(REVISION_4), address)
+        self.assertEqual(CoinPartType.GENESIS, account3.type)
         self.assertEqual(1024, account3.balance)
 
     def test_account_from_bytes_to_bytes_old_db_load_revision_4(self):
         address: 'Address' = create_address()
 
-        account = CoinAccount(address)
+        account = CoinPart(address)
 
         balance = 1024
-        account.type = CoinAccountType.GENERAL
+        account.type = CoinPartType.GENERAL
         account.deposit(balance)
 
-        account1 = CoinAccount.from_bytes(account.to_bytes(REVISION_3), address)
+        account1 = CoinPart.from_bytes(account.to_bytes(REVISION_3), address)
         self.assertEqual(account, account1)
 
         data: bytes = account.to_bytes(REVISION_4)
-        account2 = CoinAccount.from_bytes(data, address)
+        account2 = CoinPart.from_bytes(data, address)
         self.assertEqual(account, account2)
 
 

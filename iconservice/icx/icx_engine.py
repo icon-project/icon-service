@@ -18,8 +18,8 @@ import json
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
-from .account.coin_account import CoinAccountType, CoinAccount
-from .icx_account import Account, AccountFlag
+from .coin_part import CoinPartType, CoinPart
+from .account import Account, AccountFlag
 from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
@@ -75,39 +75,63 @@ class IcxEngine(object):
             self._storage.close(context=None)
             self._storage = None
 
-    def init_account(self,
-                     context: 'IconScoreContext',
-                     account_type: 'CoinAccountType',
-                     account_name: str,
-                     address: 'Address',
-                     amount: int) -> None:
+    def put_genesis_accounts_into_state_db(self, context: 'IconScoreContext', accounts: list) -> None:
+        genesis = accounts[0]
+        treasury = accounts[1]
+        others = accounts[2:]
+
+        __ADDRESS_KEY = 'address'
+        __AMOUNT_KEY = 'balance'
+
+        self._put_genesis_data_account(
+            context=context,
+            account_type=CoinPartType.GENESIS,
+            address=genesis[__ADDRESS_KEY],
+            amount=genesis[__AMOUNT_KEY])
+
+        self._put_genesis_data_account(
+            context=context,
+            account_type=CoinPartType.TREASURY,
+            address=treasury[__ADDRESS_KEY],
+            amount=treasury[__AMOUNT_KEY])
+
+        for other in others:
+            self._put_genesis_data_account(
+                context=context,
+                account_type=CoinPartType.GENERAL,
+                address=other[__ADDRESS_KEY],
+                amount=other[__AMOUNT_KEY])
+
+    def _put_genesis_data_account(self,
+                                  context: 'IconScoreContext',
+                                  account_type: 'CoinPartType',
+                                  address: 'Address',
+                                  amount: int) -> None:
         """This method is called only on invoking the genesis block
 
         :param context:
         :param account_type:
-        :param account_name:
         :param address:
         :param amount:
         :return:
         """
 
-        coin_account: 'CoinAccount' = CoinAccount(address, account_type=account_type, balance=int(amount))
-        account: 'Account' = Account(address)
-        account.coin_account: 'CoinAccount' = coin_account
+        coin_part: 'CoinPart' = CoinPart(address, account_type=account_type, balance=int(amount))
+        account: 'Account' = Account(address, context.block.height)
+        account.init_coin_part_in_icx_storage(coin_part)
 
         self._storage.put_account(context, account)
 
-        if account.get_balance(context.block.height) > 0:
-            self._total_supply_amount += account.get_balance(context.block.height)
+        if account.balance > 0:
+            self._total_supply_amount += account.balance
             self._storage.put_total_supply(context, self._total_supply_amount)
 
-        if account_type == CoinAccountType.GENESIS or \
-                account_type == CoinAccountType.TREASURY:
-            self._init_special_account(context, account)
+        if account_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
+            self._put_special_account(context, account)
 
-    def _init_special_account(self,
-                              context: 'IconScoreContext',
-                              account: 'Account') -> None:
+    def _put_special_account(self,
+                             context: 'IconScoreContext',
+                             account: 'Account') -> None:
         """Compared to other general accounts,
         additional tasks should be processed
         for special accounts (genesis, treasury)
@@ -117,9 +141,9 @@ class IcxEngine(object):
         """
 
         assert account.is_flag_on(AccountFlag.COIN)
-        assert account.coin_account.type in (CoinAccountType.GENESIS, CoinAccountType.TREASURY)
+        assert account.coin_part.type in (CoinPartType.GENESIS, CoinPartType.TREASURY)
 
-        if account.coin_account.type == CoinAccountType.GENESIS:
+        if account.coin_part.type == CoinPartType.GENESIS:
             db_key = self._GENESIS_DB_KEY
             self._genesis_address = account.address
         else:
@@ -184,17 +208,11 @@ class IcxEngine(object):
         :param address: account address
         :return: the balance of address in loop (1 icx  == 1e18 loop)
         """
-        account: 'Account' = self._storage.get_account(context, address)
 
         # If the address is not present, its balance is 0.
         # Unit: loop (1 icx == 1e18 loop)
-        amount = 0
-        if context:
-            block_height = 0
-            if context.block:
-                block_height = context.block.height
-            amount = account.get_balance(block_height)
-        return amount
+        account: 'Account' = self._storage.get_account(context, address)
+        return account.balance
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply of icx coin

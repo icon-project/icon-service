@@ -17,10 +17,10 @@
 from typing import TYPE_CHECKING, Optional
 
 from ..utils import is_flag_on
-from .icx_account import Account, AccountFlag
-from .account.coin_account import CoinAccount
-from .account.stake_account import StakeAccount
-from .account.delegation_account import DelegationAccount
+from .account import Account, AccountFlag
+from .coin_part import CoinPart, CoinPartFlag
+from .stake_part import StakePart
+from .delegation_part import DelegationPart
 
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
@@ -113,33 +113,38 @@ class IcxStorage(object):
             create a new account.
         """
 
-        account = Account(address)
+        account: 'Account' = Account(address, context.block.height)
+        is_need_stake: bool = False
         if is_flag_on(flag, AccountFlag.COIN):
-            key: bytes = CoinAccount.make_key(address)
+            key: bytes = CoinPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
-                coin_account = CoinAccount.from_bytes(value, address)
-                account.coin_account: CoinAccount = coin_account
+                coin_part: 'CoinPart' = CoinPart.from_bytes(value, address)
+                is_need_stake = coin_part.is_coin_flag_on(CoinPartFlag.HAS_UNSTAKE)
+                account.init_coin_part_in_icx_storage(coin_part)
             else:
-                account.coin_account: 'CoinAccount' = CoinAccount(address)
+                coin_part: 'CoinPart' = CoinPart(address)
+                account.init_coin_part_in_icx_storage(coin_part)
 
-        if is_flag_on(flag, AccountFlag.STAKE):
-            key: bytes = StakeAccount.make_key(address)
+        if is_flag_on(flag, AccountFlag.STAKE) or is_need_stake:
+            key: bytes = StakePart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
-                stake_account: 'StakeAccount' = StakeAccount.from_bytes(value, address)
-                account.stake_account: StakeAccount = stake_account
+                stake_part: 'StakePart' = StakePart.from_bytes(value, address)
+                account.init_stake_part_in_icx_storage(stake_part)
             else:
-                account.stake_account: 'StakeAccount' = StakeAccount(address)
+                stake_part: 'StakePart' = StakePart(address)
+                account.init_stake_part_in_icx_storage(stake_part)
 
         if is_flag_on(flag, AccountFlag.DELEGATION):
-            key: bytes = DelegationAccount.make_key(address)
+            key: bytes = DelegationPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
-                delegation_account: 'StakeAccount' = DelegationAccount.from_bytes(value, address)
-                account.delegation_account: DelegationAccount = delegation_account
+                delegation_part: 'DelegationPart' = DelegationPart.from_bytes(value, address)
+                account.init_delegation_part_in_icx_storage(delegation_part)
             else:
-                account.delegation_account: 'DelegationAccount' = DelegationAccount(address)
+                delegation_part: DelegationPart = DelegationPart(address)
+                account.init_delegation_part_in_icx_storage(delegation_part)
 
         return account
 
@@ -153,18 +158,18 @@ class IcxStorage(object):
         """
 
         if account.is_flag_on(AccountFlag.COIN):
-            key: bytes = CoinAccount.make_key(account.address)
-            value: bytes = account.coin_account.to_bytes(context.revision)
+            key: bytes = CoinPart.make_key(account.address)
+            value: bytes = account.coin_part.to_bytes(context.revision)
             self._db.put(context, key, value)
 
         if account.is_flag_on(AccountFlag.STAKE):
-            key: bytes = StakeAccount.make_key(account.address)
-            value: bytes = account.stake_account.to_bytes()
+            key: bytes = StakePart.make_key(account.address)
+            value: bytes = account.stake_part.to_bytes()
             self._db.put(context, key, value)
 
         if account.is_flag_on(AccountFlag.DELEGATION):
-            key: bytes = DelegationAccount.make_key(account.address)
-            value: bytes = account.delegation_account.to_bytes()
+            key: bytes = DelegationPart.make_key(account.address)
+            value: bytes = account.delegation_part.to_bytes()
             self._db.put(context, key, value)
 
     def delete_account(self,
@@ -175,18 +180,7 @@ class IcxStorage(object):
         :param context:
         :param account: account to delete
         """
-
-        if account.is_flag_on(AccountFlag.COIN):
-            key: bytes = CoinAccount.make_key(account.address)
-            self._db.delete(context, key)
-
-        if account.is_flag_on(AccountFlag.STAKE):
-            key: bytes = StakeAccount.make_key(account.address)
-            self._db.delete(context, key)
-
-        if account.is_flag_on(AccountFlag.DELEGATION):
-            key: bytes = DelegationAccount.make_key(account.address)
-            self._db.delete(context, key)
+        raise Exception("not implemented")
 
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply

@@ -19,21 +19,21 @@
 import unittest
 
 from iconservice import Address
-from iconservice.icx.account.stake_account import StakeAccount
+from iconservice.icx.stake_part import StakePart
 from tests import create_address
 
 
-class TestStakeAccount(unittest.TestCase):
+class TestStakePart(unittest.TestCase):
 
-    def test_stake_account_from_bytes_to_bytes(self):
+    def test_stake_part_from_bytes_to_bytes(self):
         address: 'Address' = create_address()
 
-        account = StakeAccount(address)
+        account = StakePart(address)
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(9, len(data))
 
-        account2 = StakeAccount.from_bytes(data, address)
+        account2 = StakePart.from_bytes(data, address)
         self.assertEqual(account.stake_amount, account2.stake_amount)
         self.assertEqual(account.unstake_amount, account2.unstake_amount)
         self.assertEqual(account.unstake_block_height, account2.unstake_block_height)
@@ -42,33 +42,33 @@ class TestStakeAccount(unittest.TestCase):
         account._unstake_amount = 20
         account._unstake_block_height = 30
 
-        account3 = StakeAccount.from_bytes(account.to_bytes(), address)
+        account3 = StakePart.from_bytes(account.to_bytes(), address)
         self.assertEqual(account.stake_amount, account3.stake_amount)
         self.assertEqual(account.unstake_amount, account3.unstake_amount)
         self.assertEqual(account.unstake_block_height, account3.unstake_block_height)
 
-    def test_stake_account(self):
+    def test_stake_part(self):
         address: 'Address' = create_address()
 
         stake = 500
         unstake = 0
         unstake_block_height = 0
 
-        stake_account = StakeAccount(address)
-        stake_account.stake(stake)
+        stake_part = StakePart(address)
+        stake_part.stake(stake)
 
-        self.assertEqual(stake, stake_account.stake_amount)
-        self.assertEqual(unstake, stake_account.unstake_amount)
-        self.assertEqual(unstake_block_height, stake_account.unstake_block_height)
+        self.assertEqual(stake, stake_part.stake_amount)
+        self.assertEqual(unstake, stake_part.unstake_amount)
+        self.assertEqual(unstake_block_height, stake_part.unstake_block_height)
 
         unstake = 100
         block_height = 10
         remain_stake = stake - unstake
-        stake_account.unstake(block_height, unstake)
+        stake_part.unstake(block_height, unstake)
 
-        self.assertEqual(remain_stake, stake_account.stake_amount)
-        self.assertEqual(unstake, stake_account.unstake_amount)
-        self.assertEqual(block_height, stake_account.unstake_block_height)
+        self.assertEqual(remain_stake, stake_part.stake_amount)
+        self.assertEqual(unstake, stake_part.unstake_amount)
+        self.assertEqual(block_height, stake_part.unstake_block_height)
 
 
 if __name__ == '__main__':

@@ -53,6 +53,9 @@ def _create_context(context_type: IconScoreContextType) -> IconScoreContext:
     if context.type == IconScoreContextType.INVOKE:
         context.block_batch = BlockBatch()
         context.tx_batch = TransactionBatch()
+    mock_block: 'Mock' = Mock(spec=Block)
+    mock_block.attach_mock(Mock(return_value=0), 'height')
+    context.block = mock_block
 
     return context
 
@@ -136,7 +139,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(self._total_supply, balance)
 
     def test_call_on_query(self):
-        context = IconScoreContext(IconScoreContextType.QUERY)
+        context = _create_context(IconScoreContextType.QUERY)
 
         method = 'icx_getBalance'
         params = {'address': self.from_}
@@ -574,8 +577,9 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_timestamp,
                       self.genesis_block.hash)
 
+        context = _create_context(IconScoreContextType.QUERY)
         before_from_balance: int = \
-            self._engine._icx_engine.get_balance(None, self.from_)
+            self._engine._icx_engine.get_balance(context, self.from_)
 
         self._engine._handle_score_invoke = \
             Mock(return_value=None, side_effect=IconScoreException("force revert"))
@@ -615,8 +619,9 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.commit(block)
 
         # Check whether fee charging works well
+        context = _create_context(IconScoreContextType.QUERY)
         after_from_balance: int = \
-            self._engine._icx_engine.get_balance(None, self.from_)
+            self._engine._icx_engine.get_balance(context, self.from_)
 
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(after_from_balance, before_from_balance - fee)

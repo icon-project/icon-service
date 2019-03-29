@@ -25,6 +25,10 @@ import random
 import sys
 
 import shutil
+from unittest.mock import Mock
+
+from iconservice.iconscore.icon_score_base2 import Block
+from iconservice.iconscore.icon_score_context import IconScoreContext
 
 from iconcommons.logger import Logger
 from iconservice.base.address import Address, AddressPrefix

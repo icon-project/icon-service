@@ -24,10 +24,10 @@ from iconservice.base.block import Block
 from iconservice.base.address import Address, MalformedAddress
 from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType, ContextContainer
-from iconservice.icx.account.coin_account import CoinAccountType, CoinAccount
+from iconservice.icx.coin_part import CoinPartType, CoinPart
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.icx.icx_account import Account
+from iconservice.icx.account import Account
 
 
 class TestIcxEngine(unittest.TestCase, ContextContainer):
@@ -51,12 +51,11 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         icx_storage = IcxStorage(db)
         self.engine.open(icx_storage)
 
-        self.engine.init_account(
-            self.context, CoinAccountType.GENESIS,
-            'genesis', self.genesis_address, self.total_supply)
-        self.engine.init_account(
-            self.context, CoinAccountType.TREASURY,
-            'treasury', self.fee_treasury_address, 0)
+        accounts: list = [
+            {'address': self.genesis_address, 'balance': self.total_supply},
+            {'address': self.fee_treasury_address, 'balance': 0}
+        ]
+        self.engine.put_genesis_accounts_into_state_db(self.context, accounts)
 
     def tearDown(self):
         self._clear_context()
@@ -65,61 +64,61 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         # Remove a state db for test
         shutil.rmtree(self.db_name)
 
-    def test_init_account(self):
-        def intercept_storage_put_account(context: 'IconScoreContext',
-                                          account: 'Account'):
+    def test_put_genesis_data_account(self):
+        def intercept_storage_put_account(context: 'IconScoreContext', account: 'Account'):
             if not isinstance(account, Account):
                 raise Exception("invalid type of params was set when calling put_account")
 
-        self.engine._init_special_account = Mock()
         self.engine._storage.put_account = Mock(side_effect=intercept_storage_put_account)
 
+        # genesis
+        self.engine._put_special_account = Mock()
         genesis_address = Address.from_string('hx' + 'f' * 40)
-        self.engine.init_account(
-            self.context, CoinAccountType.GENESIS,
-            'genesis', genesis_address, 1000)
+        self.engine._put_genesis_data_account(
+            self.context, CoinPartType.GENESIS, genesis_address, 1000)
         self.total_supply += 1000
 
         self.engine._storage.put_account.assert_called()
-        self.engine._init_special_account.assert_called()
+        self.engine._put_special_account.assert_called()
         self.assertEqual(self.total_supply, self.engine._total_supply_amount)
 
+        # general
+        self.engine._put_special_account = Mock()
         self.engine._init_special_account = Mock()
         general_addr = Address.from_string('hx' + 'f' * 40)
-        self.engine.init_account(
-            self.context, CoinAccountType.GENERAL,
-            'general', general_addr, 1000)
+        self.engine._put_genesis_data_account(
+            self.context, CoinPartType.GENERAL, general_addr, 1000)
         self.total_supply += 1000
 
         self.engine._storage.put_account.assert_called()
-        self.engine._init_special_account.assert_not_called()
+        self.engine._put_special_account.assert_not_called()
         self.assertEqual(self.total_supply, self.engine._total_supply_amount)
 
-    def test_init_special_account(self):
+    def test_put_special_account(self):
         # failure case: input general account
         account = Mock(spec=Account)
-        coin_account = Mock(spec=CoinAccount)
-        coin_account.attach_mock(CoinAccountType.GENERAL, 'type')
-        account.attach_mock(coin_account, 'coin_account')
+        coin_part = Mock(spec=CoinPart)
+        coin_part.attach_mock(CoinPartType.GENERAL, 'type')
+        account.attach_mock(coin_part, 'coin_part')
 
         self.assertRaises(AssertionError,
-                          self.engine._init_special_account, self.context, account)
+                          self.engine._put_special_account, self.context, account)
 
         # success case: input genesis and treasury account
         account = Mock(spec=Account)
-        coin_account = Mock(spec=CoinAccount)
-        coin_account.attach_mock(CoinAccountType.GENESIS, 'type')
-        account.attach_mock(coin_account, 'coin_account')
+        coin_part = Mock(spec=CoinPart)
+        coin_part.attach_mock(CoinPartType.GENESIS, 'type')
+        account.attach_mock(coin_part, 'coin_part')
 
-        self.engine._init_special_account(self.context, account)
+        self.engine._put_special_account(self.context, account)
         self.assertEqual(account.address, self.engine._genesis_address)
 
         account = Mock(spec=Account)
-        coin_account = Mock(spec=CoinAccount)
-        coin_account.attach_mock(CoinAccountType.TREASURY, 'type')
-        account.attach_mock(coin_account, 'coin_account')
+        coin_part = Mock(spec=CoinPart)
+        coin_part.attach_mock(CoinPartType.TREASURY, 'type')
+        account.attach_mock(coin_part, 'coin_part')
 
-        self.engine._init_special_account(self.context, account)
+        self.engine._put_special_account(self.context, account)
         self.assertEqual(account.address, self.engine._fee_treasury_address)
 
         def intercept_storage_put_text(*args, **kwargs):
@@ -132,7 +131,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             self.assertEqual(expected_address, text_dict['address'])
 
         self.engine.storage.put_text = Mock(side_effect=intercept_storage_put_text)
-        self.engine._init_special_account(self.context, account)
+        self.engine._put_special_account(self.context, account)
         self.engine.storage.put_text.assert_called()
 
     def test_load_address_from_storage(self):
@@ -236,12 +235,11 @@ class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
         icx_storage = IcxStorage(db)
         self.engine.open(icx_storage)
 
-        self.engine.init_account(
-            self.context, CoinAccountType.GENESIS,
-            'genesis', self.genesis_address, self.total_supply)
-        self.engine.init_account(
-            self.context, CoinAccountType.TREASURY,
-            'treasury', self.fee_treasury_address, 0)
+        accounts: list = [
+            {'address': self.genesis_address, 'balance': self.total_supply},
+            {'address': self.fee_treasury_address, 'balance': 0}
+        ]
+        self.engine.put_genesis_accounts_into_state_db(self.context, accounts)
 
     def tearDown(self):
         self.engine.close()

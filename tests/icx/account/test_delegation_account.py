@@ -19,31 +19,31 @@
 import unittest
 
 from iconservice import Address
-from iconservice.icx.account.delegation_account import DelegationAccount
+from iconservice.icx.delegation_part import DelegationPart
 from tests import create_address
 
 
-class TestDelegationAccount(unittest.TestCase):
+class TestDelegationPart(unittest.TestCase):
 
-    def test_delegation_account_from_bytes_to_bytes(self):
+    def test_delegation_part_from_bytes_to_bytes(self):
         address: 'Address' = create_address()
 
-        account = DelegationAccount(address)
+        account = DelegationPart(address)
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(6, len(data))
 
-        account2 = DelegationAccount.from_bytes(data, address)
+        account2 = DelegationPart.from_bytes(data, address)
         self.assertEqual(account.delegated_amount, account2.delegated_amount)
         self.assertEqual(account.delegations, account2.delegations)
 
     def test_account_for_delegation(self):
         target_accounts = []
 
-        src_account = DelegationAccount(create_address())
+        src_account = DelegationPart(create_address())
 
         for _ in range(0, 10):
-            target_account = DelegationAccount(create_address())
+            target_account = DelegationPart(create_address())
             target_accounts.append(target_account)
 
             src_account.update_delegations(target_account, 10)
