@@ -100,8 +100,8 @@ class Block(object):
 
 class ScoreApiStepRatio(IntEnum):
     SHA3_256 = 1000
-    CREATE_ADDRESS_WITH_COMPRESS_KEY = 15000
-    CREATE_ADDRESS_WITH_UNCOMPRESS_KEY = 1500
+    CREATE_ADDRESS_WITH_COMPRESSED_KEY = 15000
+    CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY = 1500
     JSON_DUMPS = 5000
     JSON_LOADS = 4000
     RECOVER_KEY = 70000
@@ -231,9 +231,9 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
     context = ContextContainer._get_context()
     if context and context.revision >= REVISION_3:
         if key_size == 33:
-            ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESS_KEY
+            ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY
         else:
-            ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESS_KEY
+            ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY
 
         step: int = _get_api_call_step_cost(context, ratio)
         context.step_counter.consume_step(StepType.API_CALL, step)

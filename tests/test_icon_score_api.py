@@ -195,8 +195,8 @@ class TestIconScoreApi(unittest.TestCase):
         self.assertEqual(step_cost, step_used)
 
     def test_create_address_with_key_step_with_tx_v3(self):
-        uncompressed_step_cost: int = self._calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESS_KEY)
-        compressed_step_cost: int = self._calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESS_KEY)
+        uncompressed_step_cost: int = self._calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY)
+        compressed_step_cost: int = self._calc_step_cost(ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY)
         self.assertTrue(uncompressed_step_cost != compressed_step_cost)
 
         signature: bytes = base64.b64decode(self.tx_v3['signature'])
@@ -255,7 +255,7 @@ class TestIconScoreApi(unittest.TestCase):
             obj = {}
 
             for j in range(i):
-                obj[f'key{i}'] = f'value{j}'
+                obj[f'key{j}'] = f'value{j}'
 
             text: str = json_dumps(obj)
 
@@ -275,7 +275,7 @@ class TestIconScoreApi(unittest.TestCase):
             obj = {}
 
             for j in range(i):
-                obj[f'key{i}'] = f'value{j}'
+                obj[f'key{j}'] = f'value{j}'
 
             text: str = json_dumps(obj)
 
