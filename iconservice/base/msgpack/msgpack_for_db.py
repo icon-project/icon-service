@@ -58,7 +58,7 @@ class MsgPackForDB(object):
         CUSTOM = 3
 
     @classmethod
-    def address_to_bytes(cls, addr: 'Address') -> bytes:
+    def _address_to_bytes(cls, addr: 'Address') -> bytes:
         prefix_byte = b''
         addr_bytes = addr.to_bytes()
         if addr.prefix == AddressPrefix.EOA:
@@ -66,32 +66,32 @@ class MsgPackForDB(object):
         return prefix_byte + addr_bytes
 
     @classmethod
-    def bytes_to_address(cls, data: bytes) -> 'Address':
+    def _bytes_to_address(cls, data: bytes) -> 'Address':
         prefix = AddressPrefix(data[0])
         return Address(prefix, data[1:])
 
     @classmethod
-    def encode(cls, obj: Any) -> Any:
+    def _encode(cls, obj: Any) -> Any:
         if isinstance(obj, int):
             return msgpack_extType(cls.CustomType.BIG_INT, int_to_bytes(obj))
         elif isinstance(obj, Address):
-            return msgpack_extType(cls.CustomType.ADDRESS, cls.address_to_bytes(obj))
+            return msgpack_extType(cls.CustomType.ADDRESS, cls._address_to_bytes(obj))
         else:
             return cls.codec.custom_encode(obj)
 
     @classmethod
-    def decode(cls, t: int, b: bytes) -> Any:
+    def _decode(cls, t: int, b: bytes) -> Any:
         if t == cls.CustomType.BIG_INT:
             return bytes_to_int(b)
         elif t == cls.CustomType.ADDRESS:
-            return cls.bytes_to_address(b)
+            return cls._bytes_to_address(b)
         else:
             return cls.codec.custom_decode(t, b)
 
     @classmethod
     def dumps(cls, data: Any) -> bytes:
-        return msgpack_dumps(data, default=cls.encode, use_bin_type=True)
+        return msgpack_dumps(data, default=cls._encode, use_bin_type=True, strict_types=True)
 
     @classmethod
     def loads(cls, data: bytes) -> list:
-        return msgpack_loads(data, ext_hook=cls.decode, raw=False)
+        return msgpack_loads(data, ext_hook=cls._decode, raw=False)
