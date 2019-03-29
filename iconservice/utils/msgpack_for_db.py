@@ -71,7 +71,7 @@ class MsgPackForDB(object):
         ADDRESS = 2
 
     @classmethod
-    def _address_to_bytes(cls, addr: 'Address') -> bytes:
+    def address_to_bytes(cls, addr: 'Address') -> bytes:
         prefix_byte = b''
         addr_bytes = addr.to_bytes()
         if addr.prefix == AddressPrefix.EOA:
@@ -79,7 +79,7 @@ class MsgPackForDB(object):
         return prefix_byte + addr_bytes
 
     @classmethod
-    def _bytes_to_address(cls, data: bytes) -> 'Address':
+    def bytes_to_address(cls, data: bytes) -> 'Address':
         prefix = AddressPrefix(data[0])
         return Address(prefix, data[1:])
 
@@ -88,7 +88,7 @@ class MsgPackForDB(object):
         if isinstance(obj, int):
             return msgpack_extType(cls.BaseType.BIG_INT, int_to_bytes(obj))
         elif isinstance(obj, Address):
-            return msgpack_extType(cls.BaseType.ADDRESS, cls._address_to_bytes(obj))
+            return msgpack_extType(cls.BaseType.ADDRESS, cls.address_to_bytes(obj))
         else:
             return cls._codec.encode(obj)
 
@@ -97,7 +97,7 @@ class MsgPackForDB(object):
         if t == cls.BaseType.BIG_INT:
             return bytes_to_int(b)
         elif t == cls.BaseType.ADDRESS:
-            return cls._bytes_to_address(b)
+            return cls.bytes_to_address(b)
         else:
             return cls._codec.decode(t, b)
 

@@ -31,33 +31,30 @@ class TestDelegationPart(unittest.TestCase):
         account = DelegationPart(address)
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
-        self.assertEqual(6, len(data))
+        self.assertEqual(4, len(data))
 
         account2 = DelegationPart.from_bytes(data, address)
         self.assertEqual(account.delegated_amount, account2.delegated_amount)
         self.assertEqual(account.delegations, account2.delegations)
 
     def test_account_for_delegation(self):
-        target_accounts = []
-
-        src_account = DelegationPart(create_address())
+        accounts = []
+        src = DelegationPart(create_address())
 
         for _ in range(0, 10):
-            target_account = DelegationPart(create_address())
-            target_accounts.append(target_account)
+            to: 'DelegationPart' = DelegationPart(create_address())
+            accounts.append(to)
+            src.delegate(to, 10)
 
-            src_account.update_delegations(target_account, 10)
-
-        self.assertEqual(10, len(src_account.delegations))
-
-        for i in range(0, 10):
-            self.assertEqual(10, target_accounts[i].delegated_amount)
+        self.assertEqual(10, len(src.delegations))
 
         for i in range(0, 10):
-            src_account.update_delegations(target_accounts[i], 0)
+            self.assertEqual(10, accounts[i].delegated_amount)
 
-        src_account.trim_deletions()
-        self.assertEqual(0, len(src_account.delegations))
+        for i in range(0, 10):
+            src.delegate(accounts[i], 0)
+
+        self.assertEqual(0, len(src.delegations))
 
 
 if __name__ == '__main__':

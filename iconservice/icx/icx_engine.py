@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
 from .coin_part import CoinPartType, CoinPart
-from .account import Account, AccountFlag
+from .icx_account import Account, AccountFlag
 from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException

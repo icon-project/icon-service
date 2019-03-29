@@ -31,11 +31,11 @@ class TestStakePart(unittest.TestCase):
         account = StakePart(address)
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
-        self.assertEqual(9, len(data))
+        self.assertEqual(5, len(data))
 
         account2 = StakePart.from_bytes(data, address)
-        self.assertEqual(account.stake_amount, account2.stake_amount)
-        self.assertEqual(account.unstake_amount, account2.unstake_amount)
+        self.assertEqual(account.stake, account2.stake)
+        self.assertEqual(account.unstake, account2.unstake)
         self.assertEqual(account.unstake_block_height, account2.unstake_block_height)
 
         account._stake_amount = 10
@@ -43,8 +43,8 @@ class TestStakePart(unittest.TestCase):
         account._unstake_block_height = 30
 
         account3 = StakePart.from_bytes(account.to_bytes(), address)
-        self.assertEqual(account.stake_amount, account3.stake_amount)
-        self.assertEqual(account.unstake_amount, account3.unstake_amount)
+        self.assertEqual(account.stake, account3.stake)
+        self.assertEqual(account.unstake, account3.unstake)
         self.assertEqual(account.unstake_block_height, account3.unstake_block_height)
 
     def test_stake_part(self):
@@ -54,20 +54,20 @@ class TestStakePart(unittest.TestCase):
         unstake = 0
         unstake_block_height = 0
 
-        stake_part = StakePart(address)
-        stake_part.stake(stake)
+        stake_part: 'StakePart' = StakePart(address)
+        stake_part.update_stake(stake)
 
-        self.assertEqual(stake, stake_part.stake_amount)
-        self.assertEqual(unstake, stake_part.unstake_amount)
+        self.assertEqual(stake, stake_part.stake)
+        self.assertEqual(unstake, stake_part.unstake)
         self.assertEqual(unstake_block_height, stake_part.unstake_block_height)
 
         unstake = 100
         block_height = 10
         remain_stake = stake - unstake
-        stake_part.unstake(block_height, unstake)
+        stake_part.update_unstake(block_height, unstake)
 
-        self.assertEqual(remain_stake, stake_part.stake_amount)
-        self.assertEqual(unstake, stake_part.unstake_amount)
+        self.assertEqual(remain_stake, stake_part.stake)
+        self.assertEqual(unstake, stake_part.unstake)
         self.assertEqual(block_height, stake_part.unstake_block_height)
 
 

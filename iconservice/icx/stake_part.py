@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from ..base.msgpack_util import MsgPackConverter, TypeTag
+from ..utils.msgpack_for_db import MsgPackForDB
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class StakePart(object):
 
     @staticmethod
     def make_key(address: 'Address'):
-        return StakePart.prefix + MsgPackConverter.encode(address)
+        return StakePart.prefix + MsgPackForDB.address_to_bytes(address)
 
     @property
     def address(self) -> 'Address':
@@ -78,13 +78,13 @@ class StakePart(object):
         :return: (AccountOfStake) AccountOfStake object
         """
 
-        data: list = MsgPackConverter.loads(buf)
-        version = MsgPackConverter.decode(TypeTag.INT, data[0])
+        data: list = MsgPackForDB.loads(buf)
+        version = data[0]
 
         obj = StakePart(address)
-        obj._stake_amount: int = MsgPackConverter.decode(TypeTag.INT, data[1])
-        obj._unstake_amount: int = MsgPackConverter.decode(TypeTag.INT, data[2])
-        obj._unstake_block_height: int = MsgPackConverter.decode(TypeTag.INT, data[3])
+        obj._stake_amount: int = data[1]
+        obj._unstake_amount: int = data[2]
+        obj._unstake_block_height: int = data[3]
         return obj
 
     def to_bytes(self) -> bytes:
@@ -94,11 +94,11 @@ class StakePart(object):
         """
 
         version = 0
-        data = [MsgPackConverter.encode(version),
-                MsgPackConverter.encode(self._stake),
-                MsgPackConverter.encode(self._unstake),
-                MsgPackConverter.encode(self._unstake_block_height)]
-        return MsgPackConverter.dumps(data)
+        data = [version,
+                self._stake,
+                self._unstake,
+                self._unstake_block_height]
+        return MsgPackForDB.dumps(data)
 
     def __eq__(self, other) -> bool:
         """operator == overriding

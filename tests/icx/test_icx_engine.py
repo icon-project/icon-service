@@ -27,7 +27,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext, IconScore
 from iconservice.icx.coin_part import CoinPartType, CoinPart
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.icx.account import Account
+from iconservice.icx.icx_account import Account
 
 
 class TestIcxEngine(unittest.TestCase, ContextContainer):

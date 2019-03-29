@@ -17,7 +17,7 @@
 from typing import TYPE_CHECKING, Optional
 
 from ..utils import is_flag_on
-from .account import Account, AccountFlag
+from .icx_account import Account, AccountFlag
 from .coin_part import CoinPart, CoinPartFlag
 from .stake_part import StakePart
 from .delegation_part import DelegationPart

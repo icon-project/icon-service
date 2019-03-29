@@ -20,7 +20,7 @@ import unittest
 
 from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
-from iconservice.icx.account import AccountFlag, Account
+from iconservice.icx.icx_account import AccountFlag, Account
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.stake_part import StakePart
 from iconservice.icx.delegation_part import DelegationPart

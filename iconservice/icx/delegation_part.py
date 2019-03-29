@@ -17,7 +17,7 @@
 from collections import OrderedDict
 from typing import TYPE_CHECKING
 
-from ..base.msgpack_util import MsgPackConverter, TypeTag
+from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..base.address import Address
@@ -33,7 +33,7 @@ class DelegationPart(object):
 
     @staticmethod
     def make_key(address: 'Address'):
-        return DelegationPart.prefix + MsgPackConverter.encode(address)
+        return DelegationPart.prefix + MsgPackForDB.address_to_bytes(address)
 
     @property
     def address(self) -> 'Address':
@@ -60,17 +60,17 @@ class DelegationPart(object):
         :return: (DelegationPart) DelegationPart object
         """
 
-        data: list = MsgPackConverter.loads(buf)
-        version = MsgPackConverter.decode(TypeTag.INT, data[0])
+        data: list = MsgPackForDB.loads(buf)
+        version = data[0]
 
         obj = DelegationPart(address)
-        obj._delegated_amount: int = MsgPackConverter.decode(TypeTag.INT, data[1])
+        obj._delegated_amount: int = data[1]
 
         delegations: list = data[2]
         for i in range(0, len(delegations), 2):
             info = DelegationPartInfo()
-            info.address = MsgPackConverter.decode(TypeTag.ADDRESS, delegations[i])
-            info.value = MsgPackConverter.decode(TypeTag.INT, delegations[i + 1])
+            info.address = delegations[i]
+            info.value = delegations[i + 1]
             obj.delegations[info.address] = info
         return obj
 
@@ -81,17 +81,19 @@ class DelegationPart(object):
         """
 
         version = 0
-        data = [MsgPackConverter.encode(version),
-                MsgPackConverter.encode(self.delegated_amount)]
+        data = [
+            version,
+            self.delegated_amount
+        ]
         delegations = []
         for info in self.delegations.values():
-            delegations.append(MsgPackConverter.encode(info.address))
-            delegations.append(MsgPackConverter.encode(info.value))
+            delegations.append(info.address)
+            delegations.append(info.value)
         data.append(delegations)
 
-        return MsgPackConverter.dumps(data)
+        return MsgPackForDB.dumps(data)
 
-    def update_delegation(self, to: 'DelegationPart', value: int) -> bool:
+    def delegate(self, to: 'DelegationPart', value: int) -> bool:
         info: 'DelegationPartInfo' = self._delegations.get(to.address)
 
         if info is None:

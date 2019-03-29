@@ -17,7 +17,7 @@
 from enum import IntEnum, unique, IntFlag
 from struct import Struct
 
-from ..base.msgpack_util import MsgPackConverter, TypeTag
+from ..utils.msgpack_for_db import MsgPackForDB
 from ..base.exception import InvalidParamsException, OutOfBalanceException
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION_4
 
@@ -35,7 +35,7 @@ class CoinPartVersion(IntEnum):
 
 @unique
 class CoinPartType(IntEnum):
-    """Account Type
+    """CoinPartType Type
     """
     GENERAL = 0
     GENESIS = 1
@@ -43,18 +43,6 @@ class CoinPartType(IntEnum):
 
     def __str__(self) -> str:
         return self.name
-
-    def __int__(self) -> int:
-        return self.value
-
-    @staticmethod
-    def from_int(value: int) -> IntEnum:
-        for _type in CoinPartType:
-            if value == _type:
-                return _type
-
-        raise ValueError('Invalid AccountType value')
-
 
 @unique
 class CoinPartFlag(IntFlag):
@@ -115,7 +103,7 @@ class CoinPart(object):
         :param value: (AccountType)
         """
         if not isinstance(value, CoinPartType):
-            raise ValueError('Invalid AccountType')
+            raise ValueError('Invalid CoinPartType')
         self._type = value
 
     @property
@@ -203,23 +191,22 @@ class CoinPart(object):
 
     @staticmethod
     def _from_bytes_old(buf: bytes, address: 'Address') -> 'CoinPart':
-        version, account_type, flags, amount = CoinPart._struct_old.unpack(buf)
+        version, coin_type, flags, amount = CoinPart._struct_old.unpack(buf)
         obj = CoinPart(address)
-        obj.type = CoinPartType.from_int(account_type)
-        obj._locked = False
+        obj._type = CoinPartType(coin_type)
+        obj._flag = False
         obj._balance = int.from_bytes(amount, DATA_BYTE_ORDER)
         return obj
 
     @staticmethod
     def _from_bytes_msg_pack(buf: bytes, address: 'Address') -> 'CoinPart':
-        data: list = MsgPackConverter.loads(buf)
-        version = MsgPackConverter.decode(TypeTag.INT, data[0])
+        data: list = MsgPackForDB.loads(buf)
+        version = data[0]
         if version == CoinPartVersion.MSG_PACK:
             obj = CoinPart(address)
-            obj.type = CoinPartType(MsgPackConverter.decode(TypeTag.INT, data[1]))
-            flags = MsgPackConverter.decode(TypeTag.INT, data[2])
-            obj._locked = bool(flags & CoinPartFlag.LOCKED)
-            obj._balance = MsgPackConverter.decode(TypeTag.INT, data[3])
+            obj._type = CoinPartType(data[1])
+            obj._flag = data[2]
+            obj._balance = data[3]
             return obj
         else:
             raise InvalidParamsException(f"Invalid Account version: {version}")
@@ -237,12 +224,14 @@ class CoinPart(object):
 
     def _to_bytes_msg_pack(self) -> bytes:
         version = CoinPartVersion.MSG_PACK
-        data = [MsgPackConverter.encode(version),
-                MsgPackConverter.encode(self._type),
-                MsgPackConverter.encode(self._flag),
-                MsgPackConverter.encode(self.balance)]
+        data = [
+            version,
+            self._type,
+            self._flag,
+            self.balance
+        ]
 
-        return MsgPackConverter.dumps(data)
+        return MsgPackForDB.dumps(data)
 
     def _to_bytes_old(self) -> bytes:
         version: int = CoinPartVersion.OLD

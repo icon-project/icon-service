@@ -28,7 +28,7 @@ from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from iconservice.icx.coin_part import CoinPart
-from iconservice.icx.account import Account
+from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_address
 
