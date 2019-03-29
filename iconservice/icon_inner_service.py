@@ -65,18 +65,22 @@ class IconScoreInnerTask(object):
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
 
     @message_queue_task
-    async def issue_amount(self):
+    async def get_issue_info(self):
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
                                               self._issue_amount)
         else:
-            return self._issue_amount()
+            return self._get_issue_info()
 
-    def _issue_amount(self):
+    def _get_issue_info(self):
         try:
-            issue_amount = self._icx_issue_formular()
-            response_data = {"issueAmount": issue_amount}
+            value, total_delegation = self._icx_issue_formular()
+
+            response_data = {
+                "totalDelegation": total_delegation,
+                "value": value
+            }
             response = MakeResponse.make_response(response_data)
         # todo: add except after implement formular method
         except Exception as e:
