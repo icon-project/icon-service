@@ -20,7 +20,7 @@ import unittest
 
 from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
-from iconservice.icx.icx_account import AccountFlag, Account
+from iconservice.icx.icx_account import Account, PartFlag
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.stake_part import StakePart
 from iconservice.icx.delegation_part import DelegationPart
@@ -33,39 +33,39 @@ class TestAccount(unittest.TestCase):
         address: 'Address' = create_address()
 
         account: 'Account' = Account(address, 0)
-        self.assertEqual(AccountFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flag)
 
         coin_part: 'CoinPart' = CoinPart(address)
         account.init_coin_part_in_icx_storage(coin_part)
-        self.assertEqual(AccountFlag.COIN, account.flag)
+        self.assertEqual(PartFlag.COIN, account.flag)
         account.init_coin_part_in_icx_storage(None)
-        self.assertEqual(AccountFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flag)
 
         stake_part: 'StakePart' = StakePart(address)
         account.init_stake_part_in_icx_storage(stake_part)
-        self.assertEqual(AccountFlag.STAKE, account.flag)
+        self.assertEqual(PartFlag.STAKE, account.flag)
         account.init_stake_part_in_icx_storage(None)
-        self.assertEqual(AccountFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flag)
 
         delegation_part: 'DelegationPart' = DelegationPart(address)
         account.init_delegation_part_in_icx_storage(delegation_part)
-        self.assertEqual(AccountFlag.DELEGATION, account.flag)
+        self.assertEqual(PartFlag.DELEGATION, account.flag)
         account.init_delegation_part_in_icx_storage(None)
-        self.assertEqual(AccountFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flag)
 
         account.init_coin_part_in_icx_storage(coin_part)
         account.init_stake_part_in_icx_storage(stake_part)
         account.init_delegation_part_in_icx_storage(delegation_part)
-        self.assertTrue(account.is_flag_on(AccountFlag.COIN))
-        self.assertTrue(account.is_flag_on(AccountFlag.STAKE))
-        self.assertTrue(account.is_flag_on(AccountFlag.DELEGATION))
-        self.assertEqual(AccountFlag.COIN|AccountFlag.STAKE|AccountFlag.DELEGATION, account.flag)
+        self.assertTrue(account.is_flag_on(PartFlag.COIN))
+        self.assertTrue(account.is_flag_on(PartFlag.STAKE))
+        self.assertTrue(account.is_flag_on(PartFlag.DELEGATION))
+        self.assertEqual(PartFlag.COIN | PartFlag.STAKE | PartFlag.DELEGATION, account.flag)
 
         account.init_coin_part_in_icx_storage(None)
         account.init_stake_part_in_icx_storage(None)
         account.init_delegation_part_in_icx_storage(None)
-        self.assertTrue(account.is_flag_on(AccountFlag.NONE))
-        self.assertEqual(AccountFlag.NONE, account.flag)
+        self.assertTrue(account.is_flag_on(PartFlag.NONE))
+        self.assertEqual(PartFlag.NONE, account.flag)
 
     def test_coin_part(self):
         address: 'Address' = create_address()

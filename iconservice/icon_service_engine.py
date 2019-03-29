@@ -399,7 +399,7 @@ class IconServiceEngine(ContextContainer):
             genesis_data = tx_params['genesisData']
             accounts = genesis_data['accounts']
 
-            self._icx_engine.put_genesis_accounts_into_state_db(context, accounts)
+            self._icx_engine.put_genesis_accounts(context, accounts)
 
             tx_result.status = TransactionResult.SUCCESS
 
@@ -789,7 +789,7 @@ class IconServiceEngine(ContextContainer):
                     params,
                     step_price=context.step_counter.step_price)
             else:
-                tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.DIRECT)
+                tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
                 tmp_context.block = self._precommit_data_manager.last_block
                 # Check if from account can charge a tx fee
                 self._icon_pre_validator.execute_to_check_out_of_balance(

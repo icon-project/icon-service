@@ -44,6 +44,7 @@ class CoinPartType(IntEnum):
     def __str__(self) -> str:
         return self.name
 
+
 @unique
 class CoinPartFlag(IntFlag):
     """Account bitwise flags
@@ -122,14 +123,14 @@ class CoinPart(object):
         """
         return self._flag
 
-    def is_coin_flag_on(self, flag: 'CoinPartFlag') -> bool:
+    def is_flag_on(self, flag: 'CoinPartFlag') -> bool:
         return self._flag & flag == flag
 
-    def coin_flag_enable(self, flag: 'CoinPartFlag') -> None:
-        self._flag |= flag
-
-    def coin_flag_disable(self, flag: 'CoinPartFlag') -> None:
-        self._flag &= ~flag
+    def toggle_flag(self, flag: 'CoinPartFlag', on: bool) -> None:
+        if on:
+            self._flag |= flag
+        else:
+            self._flag &= ~flag
 
     def deposit(self, value: int) -> None:
         """Deposit coin

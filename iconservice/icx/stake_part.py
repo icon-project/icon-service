@@ -63,11 +63,11 @@ class StakePart(object):
         self._unstake += value
         self._unstake_block_height: int = next_block_height
 
-    def payback_unstake(self) -> int:
-        payback: int = self._unstake
+    def finish_unstake(self) -> int:
+        unstake: int = self._unstake
         self._unstake = 0
         self._unstake_block_height: int = 0
-        return payback
+        return unstake
 
     @staticmethod
     def from_bytes(buf: bytes, address: 'Address') -> 'StakePart':

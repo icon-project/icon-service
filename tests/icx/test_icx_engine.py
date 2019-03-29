@@ -55,7 +55,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             {'address': self.genesis_address, 'balance': self.total_supply},
             {'address': self.fee_treasury_address, 'balance': 0}
         ]
-        self.engine.put_genesis_accounts_into_state_db(self.context, accounts)
+        self.engine.put_genesis_accounts(self.context, accounts)
 
     def tearDown(self):
         self._clear_context()
@@ -239,7 +239,7 @@ class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
             {'address': self.genesis_address, 'balance': self.total_supply},
             {'address': self.fee_treasury_address, 'balance': 0}
         ]
-        self.engine.put_genesis_accounts_into_state_db(self.context, accounts)
+        self.engine.put_genesis_accounts(self.context, accounts)
 
     def tearDown(self):
         self.engine.close()

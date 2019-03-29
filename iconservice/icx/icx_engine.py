@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
 from .coin_part import CoinPartType, CoinPart
-from .icx_account import Account, AccountFlag
-from .icx_storage import IcxStorage
+from .icx_account import Account, PartFlag
+from .icx_storage import IcxStorage, AccountType
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import ICX_LOG_TAG
@@ -75,7 +75,7 @@ class IcxEngine(object):
             self._storage.close(context=None)
             self._storage = None
 
-    def put_genesis_accounts_into_state_db(self, context: 'IconScoreContext', accounts: list) -> None:
+    def put_genesis_accounts(self, context: 'IconScoreContext', accounts: list) -> None:
         genesis = accounts[0]
         treasury = accounts[1]
         others = accounts[2:]
@@ -140,7 +140,7 @@ class IcxEngine(object):
         :param account: genesis or treasury accounts
         """
 
-        assert account.is_flag_on(AccountFlag.COIN)
+        assert account.is_flag_on(PartFlag.COIN)
         assert account.coin_part.type in (CoinPartType.GENESIS, CoinPartType.TREASURY)
 
         if account.coin_part.type == CoinPartType.GENESIS:
@@ -276,7 +276,7 @@ class IcxEngine(object):
     def get_account(self,
                     context: 'IconScoreContext',
                     address: 'Address',
-                    flag: 'AccountFlag' = AccountFlag.COIN) -> 'Account':
+                    flag: 'AccountType' = AccountType.COIN) -> 'Account':
         """Returns the instance of Account indicated by address
 
         :param context:

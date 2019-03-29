@@ -134,13 +134,13 @@ class TestCoinPart(unittest.TestCase):
         address: 'Address' = create_address()
 
         part1 = CoinPart(address)
-        self.assertEqual(True, part1.is_coin_flag_on(CoinPartFlag.NONE))
+        self.assertEqual(True, part1.is_flag_on(CoinPartFlag.NONE))
 
-        part1.coin_flag_enable(CoinPartFlag.HAS_UNSTAKE)
-        self.assertEqual(True, part1.is_coin_flag_on(CoinPartFlag.HAS_UNSTAKE))
+        part1.toggle_flag(CoinPartFlag.HAS_UNSTAKE, True)
+        self.assertEqual(True, part1.is_flag_on(CoinPartFlag.HAS_UNSTAKE))
 
-        part1.coin_flag_disable(CoinPartFlag.HAS_UNSTAKE)
-        self.assertEqual(True, part1.is_coin_flag_on(CoinPartFlag.NONE))
+        part1.toggle_flag(CoinPartFlag.HAS_UNSTAKE, False)
+        self.assertEqual(True, part1.is_flag_on(CoinPartFlag.NONE))
 
 
 if __name__ == '__main__':
