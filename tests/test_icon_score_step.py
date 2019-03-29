@@ -492,8 +492,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.API_CALL, 1 + len(data_to_hash)), call_args_for_apply_step[3][0])
-        self.assertEqual(4, len(call_args_for_apply_step))
+        self.assertEqual(3, len(call_args_for_apply_step))
+
+        # step_counter.consume_step should called in sha3_256() only if context.revision is more than 2
+        self.step_counter.consume_step.assert_not_called()
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
 
@@ -531,8 +533,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.API_CALL, 1 + len(data_to_hash)), call_args_for_apply_step[3][0])
-        self.assertEqual(4, len(call_args_for_apply_step))
+        self.assertEqual(3, len(call_args_for_apply_step))
+
+        # step_counter.consume_step() should be called in sha3_256() only if context.revision is more than 2
+        self.step_counter.consume_step.assert_not_called()
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
 
@@ -656,7 +660,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             governance.STEP_TYPE_DELETE: -15,
             governance.STEP_TYPE_INPUT: 20,
             governance.STEP_TYPE_EVENT_LOG: 10,
-            governance.STEP_TYPE_API_CALL: 0
+            governance.STEP_TYPE_API_CALL: 10000
         }
         step_costs = {}
 
@@ -747,5 +751,3 @@ class SampleScore(IconScoreBase):
     @external
     def hash_writable(self, data: bytes) -> bytes:
         return sha3_256(data)
-
-
