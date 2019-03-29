@@ -193,7 +193,7 @@ class IconPreValidator:
             context, to, sender_step_limit, step_price, context.block.height, maximum_step)
 
         self._check_minimum_step(total_step_limit, minimum_step)
-        self._check_from_can_charge_fee_v3(context, params, step_price)
+        self._check_from_can_charge_fee_v3(context, params, step_price, context.step_counter.step_price)
 
         # Check if "to" address is valid
         to: 'Address' = params['to']
@@ -312,7 +312,7 @@ class IconPreValidator:
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
 
     def _check_score_can_pay_fee(self, context: 'IconScoreContext', score: 'Address',
-                                     step_limit: int, step_price: int):
+                                 step_limit: int, step_price: int):
         if not self._fee_engine.can_charge_fee_from_score(context, score, step_limit,
                                                           step_price, context.block.height):
             raise InvalidRequestException(

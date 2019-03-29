@@ -465,7 +465,11 @@ class IconServiceEngine(ContextContainer):
         step_limit: int = params.get('stepLimit', context.step_counter.max_step_limit)
 
         if to.is_contract:
-            step_limit = sum(self._fee_engine.get_available_step(context, from_, to, step_limit).values())
+            step_limit = self._fee_engine.get_total_available_step(context, to, step_limit,
+                                                                   context.step_counter.step_price,
+                                                                   context.block.height,
+                                                                   context.step_counter.max_step_limit
+                                                                   )
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,

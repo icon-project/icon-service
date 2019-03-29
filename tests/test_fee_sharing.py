@@ -19,13 +19,14 @@ import unittest
 from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
+from iconservice.base.block import Block
 from iconservice.fee.deposit import Deposit
-from iconservice.fee.fee_engine import ScoreInfo
+from iconservice.fee.fee_engine import ScoreFeeInfo
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
 from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, create_query_request, \
-    QueryData
+    QueryData, create_transaction_req
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -55,9 +56,12 @@ class TestFeeSharing(unittest.TestCase):
     def _inner_task_query(self, request) -> dict:
         return self._inner_task._query(request)
 
+    def _validate_transaction(self, request) -> dict:
+        return self._inner_task._validate_transaction(request)
+
     def test_set_fee_share(self):
         mock_set_ratio = Mock(return_value=[self.score, 50])
-        mock_score_info = Mock(spec=ScoreInfo)
+        mock_score_info = Mock(spec=ScoreFeeInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
         self._inner_task._icon_service_engine._fee_engine.set_fee_sharing_ratio = mock_set_ratio
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={})
@@ -119,13 +123,12 @@ class TestFeeSharing(unittest.TestCase):
 
         self.assertEqual(expected_response, result)
 
-    # TODO invalid parameters
     def test_create_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
         period, amount = hex(50), hex(5000)
 
-        mock_score_info = Mock(spec=ScoreInfo)
+        mock_score_info = Mock(spec=ScoreFeeInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={})
         self._inner_task._icon_service_engine._fee_engine.can_charge_fee_from_score = Mock()
@@ -170,7 +173,6 @@ class TestFeeSharing(unittest.TestCase):
 
         return tx_hash
 
-    # TODO invalid parameters
     def test_destroy_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
@@ -213,7 +215,6 @@ class TestFeeSharing(unittest.TestCase):
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
 
-    # TODO invalid parameters
     def test_get_deposit(self):
         deposit_id = self.test_create_deposit()
         current_block_height = 100
@@ -248,8 +249,10 @@ class TestFeeSharing(unittest.TestCase):
 
         self.assertEqual(expected_result, result)
 
-    # TODO invalid SCORE address
     def test_get_score_info(self):
+        mock_block = Mock(spec=Block)
+        mock_block.configure_mock(height=3)
+        self._inner_task._icon_service_engine._icx_storage._last_block = mock_block
         self.test_set_fee_share()
         deposit_id = self.test_create_deposit()
         current_block_height = 100
@@ -401,4 +404,22 @@ class TestFeeSharing(unittest.TestCase):
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
         self.assertFalse(tx_result.get('detailStepUsed'))
 
-    # TODO add case validate_transaction
+    @patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.validate_score_blacklist')
+    @patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.is_service_flag_on')
+    def test_validate_transaction(self, validate_score_blacklist, is_service_flag_on):
+        mock_block = Mock(spec=Block)
+        mock_block.configure_mock(height=3)
+        self._inner_task._icon_service_engine._icx_storage._last_block = mock_block
+        self._inner_task._icon_service_engine._icon_pre_validator._is_inactive_score = Mock(return_value=False)
+        tx_hash = bytes.hex(os.urandom(32))
+
+        data = {
+            "method": "transfer",
+            "params": {
+                "_to": f"hx{'2'*40}",
+                "_amount": hex(100)
+            }
+        }
+
+        request = create_transaction_req(ReqData(tx_hash, self.from_, str(self.score), "call", data))
+        result = self._validate_transaction(request)
