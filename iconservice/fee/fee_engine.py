@@ -363,27 +363,25 @@ class FeeEngine:
 
     def get_total_available_step(self,
                                  context: 'IconScoreContext',
-                                 sender: 'Address',
                                  to: 'Address',
                                  sender_step_limit: int,
                                  step_price: int,
                                  block_number: int,
-                                 max_step_limit: int) -> Dict['Address', int]:
+                                 max_step_limit: int) -> int:
         """
         Gets the usable STEPs for the given step_limit from the sender.
         The return value is a dict of the sender's one and receiver's one.
 
         :param context: IconScoreContext
-        :param sender: msg sender
         :param to: msg receiver
         :param sender_step_limit: step_limit from sender
         :param step_price: current step price
         :param block_number: current block height
         :param max_step_limit: Maximum step limit per one transaction. (system(governance) defined)
-        :return: Address-available_step dict
+        :return: total available STEPs in the transaction
         """
 
-        receiver_step = 0
+        total_step = 0
 
         if to.is_contract:
             score_fee_info = self._icx_storage.get_score_fee(context, to)
@@ -394,28 +392,16 @@ class FeeEngine:
 
                     gen = self._deposit_generator(context, score_fee_info.head_id)
                     for deposit in filter(lambda d: block_number < d.expires, gen):
-                        receiver_step += deposit.available_virtual_step
-                        receiver_step += deposit.available_deposit // step_price
+                        total_step += deposit.available_virtual_step
+                        total_step += deposit.available_deposit // step_price
 
-                        if receiver_step >= max_step_limit:
-                            receiver_step = max_step_limit
+                        if total_step >= max_step_limit:
+                            total_step = max_step_limit
                             break
                 else:
                     total_step = sender_step_limit * 100 // (100 - score_fee_info.ratio)
-                    receiver_step = total_step - sender_step_limit
 
-        return {sender: sender_step_limit, to: receiver_step}
-
-    # TODO
-    # def can_charge_fee(self,
-    #                    context: 'IconScoreContext',
-    #                    sender: 'Address',
-    #                    to: 'Address',
-    #                    step_limit: int,
-    #                    step_price: int,
-    #                    block_number: int):
-    #
-    #     if to.is_contract:
+        return total_step
 
     def can_charge_fee_from_score(self,
                                   context: 'IconScoreContext',
