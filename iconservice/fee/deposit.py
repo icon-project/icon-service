@@ -1,12 +1,13 @@
 from typing import Optional
 
 from ..base.address import Address
-from ..base.msgpack_util import MsgPackConverter, TypeTag
+from ..utils.msgpack_for_db import MsgPackForDB
 
 
 class Deposit(object):
     """
-    Deposit Information having both pack and unpack function
+    Deposit Information Class
+    implementing functions to serialize, deserialize and convert to dict type.
     """
     def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
                  deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = 0,
@@ -42,17 +43,17 @@ class Deposit(object):
         :param buf: deposit info in bytes
         :return: deposit object
         """
-        data: list = MsgPackConverter.loads(buf)
+        data: list = MsgPackForDB.loads(buf)
 
         deposit = Deposit()
-        deposit.score_address = Address.from_bytes(data[0])
-        deposit.sender = Address.from_bytes(data[1])
-        deposit.deposit_amount = MsgPackConverter.decode(TypeTag.INT, data[2])
-        deposit.deposit_used = MsgPackConverter.decode(TypeTag.INT, data[3])
-        deposit.created = MsgPackConverter.decode(TypeTag.INT, data[4])
-        deposit.expires = MsgPackConverter.decode(TypeTag.INT, data[5])
-        deposit.virtual_step_issued = MsgPackConverter.decode(TypeTag.INT, data[6])
-        deposit.virtual_step_used = MsgPackConverter.decode(TypeTag.INT, data[7])
+        deposit.score_address = data[0]
+        deposit.sender = data[1]
+        deposit.deposit_amount = data[2]
+        deposit.deposit_used = data[3]
+        deposit.created = data[4]
+        deposit.expires = data[5]
+        deposit.virtual_step_issued = data[6]
+        deposit.virtual_step_used = data[7]
         deposit.prev_id = data[8]
         deposit.next_id = data[9]
 
@@ -63,18 +64,18 @@ class Deposit(object):
 
         :return: deposit info in bytes
         """
-        data: list = [self.score_address.to_bytes(),
-                      self.sender.to_bytes(),
-                      MsgPackConverter.encode(self.deposit_amount),
-                      MsgPackConverter.encode(self.deposit_used),
-                      MsgPackConverter.encode(self.created),
-                      MsgPackConverter.encode(self.expires),
-                      MsgPackConverter.encode(self.virtual_step_issued),
-                      MsgPackConverter.encode(self.virtual_step_used),
+        data: list = [self.score_address,
+                      self.sender,
+                      self.deposit_amount,
+                      self.deposit_used,
+                      self.created,
+                      self.expires,
+                      self.virtual_step_issued,
+                      self.virtual_step_used,
                       self.prev_id,
                       self.next_id]
 
-        return MsgPackConverter.dumps(data)
+        return MsgPackForDB.dumps(data)
 
     def to_dict(self, casing: Optional = None) -> dict:
         """Returns properties as dict.

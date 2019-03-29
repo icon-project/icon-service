@@ -1,9 +1,10 @@
-from ..base.msgpack_util import MsgPackConverter, TypeTag
+from ..utils.msgpack_for_db import MsgPackForDB
 
 
 class Fee(object):
     """
-    SCORE Fee Information
+    SCORE Fee Information Class
+    implementing functions to serialize and deserialize.
     """
     def __init__(self, ratio: int = 0, head_id: bytes = None, tail_id: bytes = None,
                  available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None):
@@ -20,10 +21,10 @@ class Fee(object):
         :param buf: Fee in bytes
         :return: Fee Object
         """
-        data: list = MsgPackConverter.loads(buf)
+        data: list = MsgPackForDB.loads(buf)
 
         fee = Fee()
-        fee.ratio = MsgPackConverter.decode(TypeTag.INT, data[0])
+        fee.ratio = data[0]
         fee.head_id = data[1]
         fee.tail_id = data[2]
         fee.available_head_id_of_virtual_step = data[3]
@@ -36,9 +37,9 @@ class Fee(object):
 
         :return: Fee in bytes
         """
-        data: list = [MsgPackConverter.encode(self.ratio), self.head_id, self.tail_id,
+        data: list = [self.ratio, self.head_id, self.tail_id,
                       self.available_head_id_of_virtual_step, self.available_head_id_of_deposit]
-        return MsgPackConverter.dumps(data)
+        return MsgPackForDB.dumps(data)
 
     def __eq__(self, other) -> bool:
         """operator == overriding
