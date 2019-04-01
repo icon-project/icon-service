@@ -22,7 +22,7 @@ from ..base.exception import IllegalFormatException
 CODE_ATTR = 'co_code'
 CODE_NAMES_ATTR = 'co_names'
 
-BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile']
+BLACKLIST_RESERVED_KEYWORD = ['exec', 'eval', 'compile', '__import__']
 
 LOAD_CONST = 100
 IMPORT_STAR = 84
