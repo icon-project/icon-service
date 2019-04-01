@@ -88,19 +88,6 @@ class AddressPrefix(IntEnum):
         raise InvalidParamsException('Invalid address prefix')
 
 
-def address_to_bytes(addr: 'Address') -> bytes:
-    prefix_byte = b''
-    addr_bytes = addr.to_bytes()
-    if addr.prefix == AddressPrefix.EOA:
-        prefix_byte = int_to_bytes(addr.prefix.value)
-    return prefix_byte + addr_bytes
-
-
-def bytes_to_address(data: bytes) -> 'Address':
-    prefix = AddressPrefix(data[0])
-    return Address(prefix, data[1:])
-
-
 class Address(object):
     """Address class
     """
