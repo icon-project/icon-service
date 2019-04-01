@@ -392,6 +392,7 @@ class FeeEngine:
             if score_fee_info is not None and score_fee_info.ratio > 0:
                 if score_fee_info.ratio == 100:
                     # Retrieves how much STEPs SCORE can pay
+                    total_step = 0
 
                     gen = self._deposit_generator(context, score_fee_info.head_id)
                     for deposit in filter(lambda d: block_number < d.expires, gen):

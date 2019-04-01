@@ -128,8 +128,9 @@ class ConstantKeys:
 
     FEE2_SCORE_ADDRESS = "_score"
     FEE2_RATIO = "_ratio"
-    FEE2_TERM = "_term"
+    FEE2_PERIOD = "_period"
     FEE2_ID = "_id"
+    FEE2_AMOUNT = "_amount"
 
     # IISS
     DELEGATIONS = "delegations"
@@ -259,7 +260,8 @@ type_convert_templates[ParamType.FEE2_PARAMS_DATA] = {
         ConstantKeys.FEE2_ID: ValueType.BYTES,
         ConstantKeys.FEE2_RATIO: ValueType.INT,
         ConstantKeys.FEE2_SCORE_ADDRESS: ValueType.ADDRESS,
-        ConstantKeys.FEE2_TERM: ValueType.INT
+        ConstantKeys.FEE2_PERIOD: ValueType.INT,
+        ConstantKeys.FEE2_AMOUNT: ValueType.INT
     }
 }
 
