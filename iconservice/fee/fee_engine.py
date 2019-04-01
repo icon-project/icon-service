@@ -19,6 +19,7 @@ from enum import IntEnum
 from typing import List, Dict, Optional
 
 from .deposit import Deposit
+from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
@@ -28,7 +29,7 @@ from ..icx.icx_storage import Fee
 from ..utils import to_camel_case
 
 if typing.TYPE_CHECKING:
-    from ..base.address import Address, ZERO_SCORE_ADDRESS
+    from ..base.address import Address
     from ..deploy.icon_score_deploy_storage import IconScoreDeployInfo
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage
     from ..iconscore.icon_score_context import IconScoreContext
