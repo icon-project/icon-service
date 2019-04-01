@@ -37,8 +37,8 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx_engine: 'IcxEngine', deploy_storage: 'IconScoreDeployStorage',
-                 fee_engine: 'FeeEngine') -> None:
+    def __init__(self, icx_engine: 'IcxEngine', fee_engine: 'FeeEngine',
+                 deploy_storage: 'IconScoreDeployStorage') -> None:
         """Constructor
 
         :param icx_engine: icx engine
@@ -79,13 +79,13 @@ class IconPreValidator:
             self._validate_transaction_v3(context, params, step_price, minimum_step, maximum_step)
 
     def execute_to_check_out_of_balance(self, context: 'IconScoreContext', params: dict,
-                                        step_price: int, maximum_step: int) -> None:
+                                        total_step_limit: int, step_price: int) -> None:
         version: int = params.get('version', 2)
 
         if version < 3:
             self._check_from_can_charge_fee_v2(context, params)
         else:
-            self._check_from_can_charge_fee_v3(context, params, step_price, maximum_step)
+            self._check_from_can_charge_fee_v3(context, params, total_step_limit, step_price)
 
     @staticmethod
     def _check_input_data(params):
@@ -189,11 +189,11 @@ class IconPreValidator:
         to: 'Address' = params['to']
         sender_step_limit = params.get('stepLimit', 0)
 
-        total_step_limit = self._fee_engine.get_total_available_step(
-            context, to, sender_step_limit, step_price, context.block.height, maximum_step)
+        total_step_limit = self._get_total_available_step(context, maximum_step, sender_step_limit,
+                                                          step_price, to)
 
         self._check_minimum_step(total_step_limit, minimum_step)
-        self._check_from_can_charge_fee_v3(context, params, step_price, context.step_counter.step_price)
+        self._check_from_can_charge_fee_v3(context, params, total_step_limit, step_price)
 
         # Check if "to" address is valid
         to: 'Address' = params['to']
@@ -207,6 +207,10 @@ class IconPreValidator:
             self._validate_call_transaction(params)
         elif data_type == 'deploy':
             self._validate_deploy_transaction(params)
+
+    def _get_total_available_step(self, context, maximum_step, sender_step_limit, step_price, to):
+        return self._fee_engine.get_total_available_step(
+            context, to, sender_step_limit, step_price, context.block.height, maximum_step)
 
     @staticmethod
     def _check_minimum_step(step_limit: int, minimum_step: int):

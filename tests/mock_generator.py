@@ -122,11 +122,6 @@ def _create_service_engine(
     # Ignores icx transfer
     service_engine._icx_engine._transfer = Mock()
 
-    # patch last block
-    mock_block = Mock(spec=Block)
-    mock_block.configure_mock(height=3)
-    service_engine._icx_storage.last_block = mock_block
-
     service_engine._icon_pre_validator._is_inactive_score = Mock()
 
     # Mocks get_balance so, it returns always 100 icx

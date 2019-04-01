@@ -16,13 +16,15 @@
 
 """IconScoreEngine testcase
 """
-
+import os
 import unittest
+from random import randrange
 from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconScoreException, InvalidParamsException
+from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
@@ -31,8 +33,8 @@ from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, interface
 from iconservice.iconscore.icon_score_base2 import InterfaceScore
-from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, IconScoreContextType
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
+from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, \
+    IconScoreContextType
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import TraceType
@@ -145,11 +147,14 @@ class TestTrace(unittest.TestCase):
             spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
 
-        from_ = Mock(spec=Address)
-        to_ = Mock(spec=Address)
+        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
+        tx_index = randrange(0, 100)
+        context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        context.msg = Message(from_)
 
         def intercept_charge_transaction_fee(*args, **kwargs):
-            return Mock(spec=int), Mock(spec=int)
+            return {}, Mock(spec=int)
 
         IconServiceEngine_charge_transaction_fee.side_effect = \
             intercept_charge_transaction_fee
@@ -189,11 +194,14 @@ class TestTrace(unittest.TestCase):
             spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
 
-        from_ = Mock(spec=Address)
-        to_ = Mock(spec=Address)
+        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
+        to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
+        tx_index = randrange(0, 100)
+        context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        context.msg = Message(from_)
 
         def intercept_charge_transaction_fee(*args, **kwargs):
-            return Mock(spec=int), Mock(spec=int)
+            return {}, Mock(spec=int)
 
         IconServiceEngine_charge_transaction_fee.side_effect = \
             intercept_charge_transaction_fee
