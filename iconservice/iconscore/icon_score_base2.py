@@ -155,6 +155,7 @@ def sha3_256(data: bytes) -> bytes:
         raise InvalidParamsException("Invalid dataType")
 
     context = ContextContainer._get_context()
+    assert context
 
     if context and context.revision >= REVISION_3:
         size = len(data)
@@ -170,7 +171,7 @@ def sha3_256(data: bytes) -> bytes:
     return hashlib.sha3_256(data).digest()
 
 
-def json_dumps(obj: Any, **kwargs) -> str:
+def json_dumps(obj: Any) -> str:
     """
     Converts a python object `obj` to a JSON string
 
@@ -179,19 +180,22 @@ def json_dumps(obj: Any, **kwargs) -> str:
     :return: json string
     """
     context = ContextContainer._get_context()
-
-    ret: str = json.dumps(obj, **kwargs)
+    assert context
 
     if context and context.revision >= REVISION_3:
+        ret: str = json.dumps(obj, separators=(',', ':'))
+
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_DUMPS)
         step: int = step_cost + step_cost * len(ret.encode(CHARSET_ENCODING)) // 100
 
         context.step_counter.consume_step(StepType.API_CALL, step)
+    else:
+        ret: str = json.dumps(obj)
 
     return ret
 
 
-def json_loads(src: str, **kwargs) -> Any:
+def json_loads(src: str) -> Any:
     """
     Parses a JSON string `src` and converts it to a python object
 
@@ -203,6 +207,7 @@ def json_loads(src: str, **kwargs) -> Any:
         return None
 
     context = ContextContainer._get_context()
+    assert context
 
     if context and context.revision >= REVISION_3:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_LOADS)
@@ -210,7 +215,7 @@ def json_loads(src: str, **kwargs) -> Any:
 
         context.step_counter.consume_step(StepType.API_CALL, step)
 
-    return json.loads(src, **kwargs)
+    return json.loads(src)
 
 
 def create_address_with_key(public_key: bytes) -> Optional['Address']:
@@ -229,6 +234,8 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
         return None
 
     context = ContextContainer._get_context()
+    assert context
+
     if context and context.revision >= REVISION_3:
         if key_size == 33:
             ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY
@@ -249,7 +256,7 @@ def _create_address_with_key(public_key: bytes) -> Optional['Address']:
     assert len(public_key) in (33, 65)
 
     size = len(public_key)
-    prefix: bytes = public_key[0]
+    prefix: int = public_key[0]
 
     if size == 33 and prefix in (0x02, 0x03):
         uncompressed_public_key: bytes = _convert_key(public_key, compressed=True)
@@ -282,6 +289,7 @@ def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> O
         (compressed: 33 bytes key, uncompressed: 65 bytes key)
     """
     context = ContextContainer._get_context()
+    assert context
 
     if context and context.revision >= REVISION_3:
         step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.RECOVER_KEY)
