@@ -234,12 +234,9 @@ class Address(object):
         :return: :class:`.bytes` data including information of Address object
         """
         if self.__prefix == AddressPrefix.EOA:
-            address_bytes: bytes = self.__body
+            return self.__body
         else:
-            prefix_byte: bytes = self.__prefix.to_bytes(1, DATA_BYTE_ORDER)
-            address_bytes: bytes = prefix_byte + self.__body
-
-        return address_bytes
+            return self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body
 
     @staticmethod
     def from_bytes_including_prefix(buf: bytes) -> Optional['Address']:

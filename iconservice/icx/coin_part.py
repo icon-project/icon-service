@@ -16,12 +16,12 @@
 
 from enum import IntEnum, unique, IntFlag
 from struct import Struct
+from typing import TYPE_CHECKING
 
-from ..utils.msgpack_for_db import MsgPackForDB
+from ..base.address import AddressPrefix
 from ..base.exception import InvalidParamsException, OutOfBalanceException
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION_4
-
-from typing import TYPE_CHECKING
+from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 @unique
 class CoinPartVersion(IntEnum):
-    OLD = 0
+    STRUCT = 0
     MSG_PACK = 1
 
 
@@ -62,8 +62,8 @@ class CoinPart(object):
     # version(1) | type(1) | flags(1) | reserved(1) |
     # icx(DEFAULT_BYTE_SIZE)
 
-    _old_bytes_length = 36
-    _struct_old = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
+    _STRUCT_PACKED_BYTES_SIZE = 36
+    _STRUCT_FORMAT = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self,
                  address: 'Address',
@@ -74,12 +74,14 @@ class CoinPart(object):
         self._address: 'Address' = address
         self._type: 'CoinPartType' = account_type
         self._balance: int = balance
-        self._flag: 'CoinPartFlag' = CoinPartFlag.NONE
+        self._flags: int = CoinPartFlag.NONE
 
     @staticmethod
-    def make_key(address: 'Address'):
-        # legacy EOA: 20bytes, CA: 21 bytes
-        return address.to_bytes()
+    def make_key(address: 'Address') -> bytes:
+        if address.prefix == AddressPrefix.EOA:
+            return address.body
+        else:
+            return address.to_bytes_including_prefix()
 
     @property
     def address(self) -> 'Address':
@@ -116,21 +118,21 @@ class CoinPart(object):
         return self._balance
 
     @property
-    def flag(self) -> 'CoinPartFlag':
+    def flags(self) -> int:
         """CoinPartFlag getter
 
         :return: CoinPartType value
         """
-        return self._flag
+        return self._flags
 
     def is_flag_on(self, flag: 'CoinPartFlag') -> bool:
-        return self._flag & flag == flag
+        return self._flags & flag == flag
 
     def toggle_flag(self, flag: 'CoinPartFlag', on: bool) -> None:
         if on:
-            self._flag |= flag
+            self._flags |= flag
         else:
-            self._flag &= ~flag
+            self._flags &= ~flag
 
     def deposit(self, value: int) -> None:
         """Deposit coin
@@ -164,10 +166,10 @@ class CoinPart(object):
         :param other: (CoinPart)
         """
         return isinstance(other, CoinPart) \
-               and self.address == other.address \
-               and self.balance == other.balance \
-               and self.type == other.type \
-               and self._flag == other.flag
+            and self.address == other.address \
+            and self.balance == other.balance \
+            and self.type == other.type \
+            and self.flags == other.flags
 
     def __ne__(self, other) -> bool:
         """operator != overriding
@@ -185,58 +187,56 @@ class CoinPart(object):
         :return: (CoinPart) account object
         """
 
-        if len(buf) == CoinPart._old_bytes_length and buf[0] == 0:
-            return CoinPart._from_bytes_old(buf, address)
+        if len(buf) == CoinPart._STRUCT_PACKED_BYTES_SIZE and buf[0] == CoinPartVersion.STRUCT:
+            return CoinPart._from_struct_packed_bytes(buf, address)
         else:
-            return CoinPart._from_bytes_msg_pack(buf, address)
+            return CoinPart._from_msg_packed_bytes(buf, address)
 
     @staticmethod
-    def _from_bytes_old(buf: bytes, address: 'Address') -> 'CoinPart':
-        version, coin_type, flags, amount = CoinPart._struct_old.unpack(buf)
+    def _from_struct_packed_bytes(buf: bytes, address: 'Address') -> 'CoinPart':
+        version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
         obj = CoinPart(address)
         obj._type = CoinPartType(coin_type)
-        obj._flag = False
+        obj._flags = flags
         obj._balance = int.from_bytes(amount, DATA_BYTE_ORDER)
         return obj
 
     @staticmethod
-    def _from_bytes_msg_pack(buf: bytes, address: 'Address') -> 'CoinPart':
+    def _from_msg_packed_bytes(buf: bytes, address: 'Address') -> 'CoinPart':
         data: list = MsgPackForDB.loads(buf)
-        version = data[0]
-        if version == CoinPartVersion.MSG_PACK:
-            obj = CoinPart(address)
-            obj._type = CoinPartType(data[1])
-            obj._flag = data[2]
-            obj._balance = data[3]
-            return obj
-        else:
+        version: int = data[0]
+        if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
+
+        obj = CoinPart(address)
+        obj._type = CoinPartType(data[1])
+        obj._flags = data[2]
+        obj._balance = data[3]
+
+        return obj
 
     def to_bytes(self, revision: int = 0) -> bytes:
         """Convert CoinPart object to bytes
 
         :return: data including information of CoinPart object
         """
-
         if revision >= REVISION_4:
-            return self._to_bytes_msg_pack()
+            return self._to_msg_packed_bytes()
         else:
-            return self._to_bytes_old()
+            return self._to_struct_packed_bytes()
 
-    def _to_bytes_msg_pack(self) -> bytes:
-        version = CoinPartVersion.MSG_PACK
+    def _to_msg_packed_bytes(self) -> bytes:
         data = [
-            version,
+            CoinPartVersion.MSG_PACK,
             self._type,
-            self._flag,
+            self._flags,
             self.balance
         ]
 
         return MsgPackForDB.dumps(data)
 
-    def _to_bytes_old(self) -> bytes:
-        version: int = CoinPartVersion.OLD
-        return CoinPart._struct_old.pack(version,
-                                         self._type,
-                                         self._flag,
-                                         self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
+    def _to_struct_packed_bytes(self) -> bytes:
+        return CoinPart._STRUCT_FORMAT.pack(CoinPartVersion.STRUCT,
+                                            self._type,
+                                            self._flags,
+                                            self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))

@@ -49,7 +49,7 @@ class TestCoinPart(unittest.TestCase):
 
         part1 = CoinPart(address)
         self.assertIsNotNone(part1)
-        self.assertEqual(CoinPartFlag.NONE, part1.flag)
+        self.assertEqual(CoinPartFlag.NONE, part1.flags)
         self.assertEqual(address, part1.address)
         self.assertTrue(part1.balance == 0)
 
