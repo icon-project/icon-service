@@ -487,7 +487,8 @@ class IconServiceEngine(ContextContainer):
         from_: Address = params['from']
         to: Address = params['to']
 
-        timestamp = params.get('timestamp', self._precommit_data_manager.last_block.timestamp)
+        last_block: 'Block' = self._get_last_block()
+        timestamp = params.get('timestamp', last_block.timestamp)
         context.tx = Transaction(tx_hash=sha3_256(int_to_bytes(timestamp)),
                                  index=0,
                                  origin=from_,
@@ -525,7 +526,7 @@ class IconServiceEngine(ContextContainer):
         """
         context = IconScoreContext(IconScoreContextType.ESTIMATION)
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = self._precommit_data_manager.last_block
+        context.block = self._get_last_block()
         context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
@@ -559,7 +560,7 @@ class IconServiceEngine(ContextContainer):
         :return: the result of query
         """
         context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._precommit_data_manager.last_block
+        context.block = self._get_last_block()
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
         step_limit: int = context.step_counter.max_step_limit
@@ -599,7 +600,7 @@ class IconServiceEngine(ContextContainer):
         to: 'Address' = params.get('to')
 
         context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._precommit_data_manager.last_block
+        context.block = self._get_last_block()
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
 
@@ -790,7 +791,7 @@ class IconServiceEngine(ContextContainer):
                     step_price=context.step_counter.step_price)
             else:
                 tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
-                tmp_context.block = self._precommit_data_manager.last_block
+                tmp_context.block = self._get_last_block()
                 # Check if from account can charge a tx fee
                 self._icon_pre_validator.execute_to_check_out_of_balance(
                     tmp_context,
@@ -1014,7 +1015,7 @@ class IconServiceEngine(ContextContainer):
         return response
 
     def _make_last_block_status(self) -> Optional[dict]:
-        block = self._precommit_data_manager.last_block
+        block = self._get_last_block()
         if block is None:
             block_height = -1
             block_hash = b'\x00' * 32
@@ -1086,3 +1087,9 @@ class IconServiceEngine(ContextContainer):
                 ICON_SERVICE_LOG_TAG)
 
         self._clear_context()
+
+    def _get_last_block(self) -> Optional['Block']:
+        if self._precommit_data_manager:
+            return self._precommit_data_manager.last_block
+
+        return None

@@ -71,17 +71,18 @@ class MsgPackForDB(object):
         ADDRESS = 2
 
     @classmethod
-    def address_to_bytes(cls, addr: 'Address') -> bytes:
-        prefix_byte = b''
-        addr_bytes = addr.to_bytes()
-        if addr.prefix == AddressPrefix.EOA:
-            prefix_byte = int_to_bytes(addr.prefix.value)
-        return prefix_byte + addr_bytes
+    def address_to_bytes(cls, address: 'Address') -> bytes:
+        address_bytes: bytes = address.to_bytes()
+
+        if address.prefix == AddressPrefix.EOA:
+            assert len(address_bytes) == 20
+            address_bytes: bytes = AddressPrefix.EOA.to_bytes(1, 'big') + address_bytes
+
+        return address_bytes
 
     @classmethod
     def bytes_to_address(cls, data: bytes) -> 'Address':
-        prefix = AddressPrefix(data[0])
-        return Address(prefix, data[1:])
+        return Address(AddressPrefix(data[0]), data[1:])
 
     @classmethod
     def _encode(cls, obj: Any) -> Any:
