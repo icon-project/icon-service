@@ -20,10 +20,12 @@ from iconcommons import IconConfig
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidRequestException
+from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_result import TransactionResult
+from tests import create_tx_hash
 from tests.integrate_test import root_clear
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -107,6 +109,15 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                                                {"_score": str(score_address),
                                                 "_amount": hex(amount), "_period": hex(period)})
         prev_block, tx_results = self._make_and_req_block([deposit_req])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
+    def _withdraw_deposit(self, deposit_id: bytes, sender: Address = None) -> TransactionResult:
+        if sender is None:
+            sender = self._admin
+        withdraw_tx_hash = self._make_score_call_tx(sender, ZERO_SCORE_ADDRESS, "destroyDeposit",
+                                                    {"_id": f"0x{bytes.hex(deposit_id)}"})
+        prev_block, tx_results = self._make_and_req_block([withdraw_tx_hash])
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
@@ -302,3 +313,210 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
         self.assertEqual(set_ratio_tx_result.status, 0)
         self.assertTrue(set_ratio_tx_result.failure)
+
+    def test_get_score_info_without_deposit(self):
+        """
+        Given : The SCORE is deployed.
+        When  : The SCORE does not have any deposit yet.
+        Then  : There is not no deposit list
+                and all of values like sharing ratio, available virtual step and available deposit is 0.
+        """
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(score_info["scoreAddress"], self.score_address)
+        self.assertEqual(score_info["deposits"], [])
+        self.assertEqual(score_info["sharingRatio"], 0)
+        self.assertEqual(score_info["availableVirtualStep"], 0)
+        self.assertEqual(score_info["availableDeposit"], 0)
+
+    def test_get_score_info_with_deposits(self):
+        """
+        Given : The SCORE is deployed.
+        When  : The SCORE has one or two deposits.
+        Then  : Checks if values like sharing ratio, available virtual step and available deposit is correct.
+        """
+        amount_deposit = 5000 * 10 ** 18
+
+        # Creates a deposit with 5000 ICX
+        deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit, 1_296_000)
+        deposit_id1 = deposit_tx_result.tx_hash
+
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(score_info["scoreAddress"], self.score_address)
+        self.assertEqual(deposit_id1, score_info["deposits"][0].id)
+        self.assertEqual(len(score_info["deposits"]), 1)
+        self.assertEqual(score_info["sharingRatio"], 0)
+        self.assertEqual(score_info["availableVirtualStep"], 0)
+        self.assertEqual(score_info["availableDeposit"], amount_deposit - 50 * 10 ** 18)
+
+        # Creates a more deposit with 5000 * 2 ICX
+        deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit * 2, 1_296_000)
+        deposit_id2 = deposit_tx_result.tx_hash
+
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(score_info["scoreAddress"], self.score_address)
+        self.assertEqual(deposit_id1, score_info["deposits"][0].id)
+        self.assertEqual(deposit_id2, score_info["deposits"][1].id)
+        self.assertEqual(len(score_info["deposits"]), 2)
+        self.assertEqual(score_info["sharingRatio"], 0)
+        self.assertEqual(score_info["availableVirtualStep"], 0)
+
+        # availableDeposit = total amount of deposit - 50 * count of deposit
+        self.assertEqual(score_info["availableDeposit"],
+                         amount_deposit * 3 - 50 * 10 ** 18 * len(score_info["deposits"]))
+
+    def test_add_multiple_deposits(self):
+        """
+        Given : The SCORE is deployed.
+        When  : The SCORE has multiple deposits.
+        Then  : Checks if SCORE has multiple deposits without any problem.
+        """
+        amount_deposit = FeeEngine._MIN_DEPOSIT_AMOUNT
+
+        # Creates more deposit with 5000000 ICX
+        for _ in range(100):
+            _ = self._deposit_icx(self.score_address, amount_deposit, 1_296_000)
+
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(len(score_info["deposits"]), 100)
+        self.assertEqual(score_info["availableDeposit"],
+                         amount_deposit * 100 - 50 * 10 ** 18 * len(score_info["deposits"]))
+
+    def test_get_deposit_by_valid_id(self):
+        """
+        Given : The SCORE is deployed.
+        When  : Tries to get deposit info by valid id.
+        Then  : Returns deposit info correctly.
+        """
+        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_id = deposit_tx_result.tx_hash
+
+        deposit_info = self._query_request('getDeposit', {"_id": f"0x{bytes.hex(deposit_id)}"})
+        self.assertTrue(deposit_info)
+
+    def test_get_deposit_by_invalid_id(self):
+        """
+        Given : The SCORE is deployed.
+        When  : Ties to get deposit info by invalid id.
+        Then  : Raises exception(InvalidRequestException) before and after making a deposit.
+        """
+        # Before making a deposit, getting deposit with invalid ID failed.
+        self.assertRaises(InvalidRequestException, self._query_request, 'getDeposit',
+                          {"_id": f"0x{bytes.hex(create_tx_hash())}"})
+
+        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_id = deposit_tx_result.tx_hash
+
+        deposit_info = self._query_request('getDeposit', {"_id": f"0x{bytes.hex(deposit_id)}"})
+        self.assertTrue(deposit_info)
+
+        # After making a deposit, getting deposit with invalid ID failed, too.
+        self.assertRaises(InvalidRequestException, self._query_request, 'getDeposit',
+                          {"_id": f"0x{bytes.hex(create_tx_hash())}"})
+
+    def test_withdraw_deposit_after_deposit(self):
+        """
+        Given : The SCORE is deployed and deposit once.
+        When  : Withdraws the deposit.
+        Then  : Amount of availableDeposit is 0.
+        """
+        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_id = deposit_tx_result.tx_hash
+
+        deposit_info = self._query_request('getDeposit', {"_id": f"0x{bytes.hex(deposit_id)}"})
+        self.assertTrue(deposit_info)
+
+        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        self.assertTrue(withdraw_tx_result.status)
+
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(len(score_info["deposits"]), 0)
+        self.assertEqual(score_info["availableDeposit"], 0)
+
+    def test_withdraw_deposit_after_charging_fee(self):
+        """
+        Given : The SCORE is deployed and deposit once. After setting ratio of SCORE, it happens to charge fee.
+        When  : Withdraws the deposit.
+        Then  : Return the left deposit after charging fee.
+        """
+        # deposit icx
+        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_id = deposit_tx_result.tx_hash
+        self.assertEqual(deposit_tx_result.status, 1)
+
+        # set ratio
+        set_ratio_tx_result = self._set_ratio(self.score_address, 100)
+        self.assertEqual(set_ratio_tx_result.status, 1)
+
+        # invoke score method
+        score_call_tx = self._make_score_call_tx(self._admin, self.score_address, 'set_value', {"value": hex(100)})
+        prev_block, tx_results = self._make_and_req_block([score_call_tx])
+        self._write_precommit_state(prev_block)
+
+        # check result
+        available_deposit_after_call = self._query_request('getScoreInfo', {"_score": str(self.score_address)})[
+            'availableDeposit']
+
+        user_balance_before_withdraw = self._query({"address": self._admin}, "icx_getBalance")
+
+        # withdraw
+        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        self.assertTrue(withdraw_tx_result.status)
+
+        user_balance_after_withdraw = self._query({"address": self._admin}, "icx_getBalance")
+
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(len(score_info["deposits"]), 0)
+        self.assertEqual(score_info["availableDeposit"], 0)
+
+        # check the owner balance
+        validate_user_balance = user_balance_before_withdraw + available_deposit_after_call + 50 * 10 ** 18 - withdraw_tx_result.step_used * withdraw_tx_result.step_price
+        self.assertEqual(user_balance_after_withdraw, validate_user_balance)
+
+    def test_withdraw_deposit_by_not_owner(self):
+        """
+        Given : The SCORE is deployed and deposit.
+        When  : Try to withdraw by not owner.
+        Then  : Return tx result with failure and status is 0.
+        """
+        # deposit icx
+        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_id = deposit_tx_result.tx_hash
+        self.assertEqual(deposit_tx_result.status, 1)
+
+        # set ratio
+        set_ratio_tx_result = self._set_ratio(self.score_address, 100)
+        self.assertEqual(set_ratio_tx_result.status, 1)
+
+        # withdraw by not owner
+        withdraw_tx_result = self._withdraw_deposit(deposit_id, self._genesis)
+        self.assertFalse(withdraw_tx_result.status)
+        self.assertEqual(withdraw_tx_result.failure.message, "Invalid sender")
+
+    def test_withdraw_deposit_again_after_already_withdraw_one(self):
+        """
+        Given : The SCORE is deployed and deposit. Sets ratio.
+        When  : Withdraws twice from same deposit.
+        Then  : Return tx result with failure and status is 0.
+        """
+        # deposit icx
+        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_id = deposit_tx_result.tx_hash
+        self.assertEqual(deposit_tx_result.status, 1)
+
+        # set ratio
+        set_ratio_tx_result = self._set_ratio(self.score_address, 100)
+        self.assertEqual(set_ratio_tx_result.status, 1)
+
+        # withdraw
+        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        self.assertTrue(withdraw_tx_result.status)
+
+        score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
+        self.assertEqual(len(score_info["deposits"]), 0)
+
+        # withdraw again
+        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        self.assertFalse(withdraw_tx_result.status)
+        self.assertEqual(withdraw_tx_result.failure.message, "Deposit info not found")
+
+    # TODO Add tests for pre-validate
