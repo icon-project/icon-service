@@ -20,7 +20,6 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import hashlib
-
 import re
 from typing import Any, Union
 

@@ -33,7 +33,7 @@ class DelegationPart(object):
 
     @staticmethod
     def make_key(address: 'Address'):
-        return DelegationPart.prefix + MsgPackForDB.address_to_bytes(address)
+        return DelegationPart.prefix + address.to_bytes_including_prefix()
 
     @property
     def address(self) -> 'Address':

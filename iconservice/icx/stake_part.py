@@ -34,7 +34,7 @@ class StakePart(object):
 
     @staticmethod
     def make_key(address: 'Address'):
-        return StakePart.prefix + MsgPackForDB.address_to_bytes(address)
+        return StakePart.prefix + address.to_bytes_including_prefix()
 
     @property
     def address(self) -> 'Address':
