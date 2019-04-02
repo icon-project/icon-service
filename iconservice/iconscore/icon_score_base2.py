@@ -176,7 +176,6 @@ def json_dumps(obj: Any) -> str:
     Converts a python object `obj` to a JSON string
 
     :param obj: a python object to be converted
-    :param kwargs: json options (see https://docs.python.org/3/library/json.html#json.dumps)
     :return: json string
     """
     context = ContextContainer._get_context()
@@ -200,7 +199,6 @@ def json_loads(src: str) -> Any:
     Parses a JSON string `src` and converts it to a python object
 
     :param src: a JSON string to be converted
-    :param kwargs: kwargs: json options (see https://docs.python.org/3/library/json.html#json.loads)
     :return: a python object
     """
     if not isinstance(src, str):
