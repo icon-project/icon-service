@@ -18,7 +18,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, Optional
 
 from ..base.exception import InvalidParamsException
-from ..utils import is_flag_on
+from ..utils import is_flags_on
 from .icx_account import Account, PartFlag
 from .coin_part import CoinPart, CoinPartFlag, CoinPartType
 from .stake_part import StakePart
@@ -107,12 +107,12 @@ class IcxStorage(object):
         self._db.put(context, key, value)
 
     @classmethod
-    def _convert_account_type_to_part_flag(cls, flag: 'AccountType') -> 'PartFlag':
-        if flag == AccountType.COIN:
+    def _convert_account_type_to_part_flag(cls, flags: 'AccountType') -> 'PartFlag':
+        if flags == AccountType.COIN:
             return PartFlag.COIN
-        elif flag == AccountType.STAKE:
+        elif flags == AccountType.STAKE:
             return PartFlag.COIN_STAKE
-        elif flag == AccountType.DELEGATION:
+        elif flags == AccountType.DELEGATION:
             return PartFlag.DELEGATION
 
     def get_account(self,
@@ -130,22 +130,22 @@ class IcxStorage(object):
             create a new account.
         """
 
-        flag: 'PartFlag' = self._convert_account_type_to_part_flag(account_type)
+        flags: int = self._convert_account_type_to_part_flag(account_type)
 
         account: 'Account' = Account(address, context.block.height)
-        is_stake_needed: bool = False
-        if is_flag_on(flag, PartFlag.COIN):
+        if is_flags_on(flags, PartFlag.COIN):
             key: bytes = CoinPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
                 coin_part: 'CoinPart' = CoinPart.from_bytes(value)
-                is_stake_needed = coin_part.is_flag_on(CoinPartFlag.HAS_UNSTAKE)
                 account.init_coin_part_in_icx_storage(coin_part)
+                if is_flags_on(coin_part.flags, CoinPartFlag.HAS_UNSTAKE):
+                    flags |= PartFlag.STAKE
             else:
                 coin_part: 'CoinPart' = CoinPart()
                 account.init_coin_part_in_icx_storage(coin_part)
 
-        if is_flag_on(flag, PartFlag.STAKE) or is_stake_needed:
+        if is_flags_on(flags, PartFlag.STAKE):
             key: bytes = StakePart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
@@ -155,7 +155,7 @@ class IcxStorage(object):
                 stake_part: 'StakePart' = StakePart()
                 account.init_stake_part_in_icx_storage(stake_part)
 
-        if is_flag_on(flag, PartFlag.DELEGATION):
+        if is_flags_on(flags, PartFlag.DELEGATION):
             key: bytes = DelegationPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
@@ -181,24 +181,24 @@ class IcxStorage(object):
 
         flag: 'PartFlag' = self._convert_account_type_to_part_flag(account_type)
 
-        if is_flag_on(flag, PartFlag.COIN):
-            if not account.is_flag_on(PartFlag.COIN):
+        if is_flags_on(flag, PartFlag.COIN):
+            if not is_flags_on(account.flags, PartFlag.COIN):
                 raise InvalidParamsException("mispatch account_type")
 
             key: bytes = CoinPart.make_key(account.address)
             value: bytes = account.coin_part.to_bytes(context.revision)
             self._db.put(context, key, value)
 
-        if is_flag_on(flag, PartFlag.STAKE):
-            if not account.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(flag, PartFlag.STAKE):
+            if not is_flags_on(account.flags, PartFlag.STAKE):
                 raise InvalidParamsException("mispatch account_type")
 
             key: bytes = StakePart.make_key(account.address)
             value: bytes = account.stake_part.to_bytes()
             self._db.put(context, key, value)
 
-        if is_flag_on(flag, PartFlag.DELEGATION):
-            if not account.is_flag_on(PartFlag.DELEGATION):
+        if is_flags_on(flag, PartFlag.DELEGATION):
+            if not is_flags_on(account.flags, PartFlag.DELEGATION):
                 raise InvalidParamsException("mispatch account_type")
 
             key: bytes = DelegationPart.make_key(account.address)

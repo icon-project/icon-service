@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import IntFlag, unique
 from typing import TYPE_CHECKING
 
 from ..base.exception import InvalidParamsException
@@ -24,16 +25,26 @@ if TYPE_CHECKING:
     from ..base.address import Address
 
 
+@unique
+class DelegationPartFlag(IntFlag):
+    """Account bitwise flags
+    """
+    NONE = 0
+    DIRTY = 1
+
+
 class DelegationPart(object):
     _VERSION = 0
     PREFIX = b"aod|"
 
     def __init__(self, delegated_amount: int = 0, delegations: list = None):
-        self._delegated_amount: int = delegated_amount
         if delegations:
             self._delegations: list = delegations
         else:
             self._delegations: list = []
+
+        self._delegated_amount: int = delegated_amount
+        self._flag: int = DelegationPartFlag.NONE
         self._delegations_amount: int = self._update_delegations_amount()
 
     @staticmethod
@@ -58,8 +69,8 @@ class DelegationPart(object):
 
     def _update_delegations_amount(self) -> int:
         total_delegation_amount: int = 0
-        for delegation in self.delegations:
-            total_delegation_amount += delegation.value
+        for address, value in self.delegations:
+            total_delegation_amount += value
         return total_delegation_amount
 
     @staticmethod

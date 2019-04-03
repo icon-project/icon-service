@@ -27,7 +27,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext, IconScore
 from iconservice.icx.coin_part import CoinPartType, CoinPart
 from iconservice.icx.icx_engine import IcxEngine
 from iconservice.icx.icx_storage import IcxStorage
-from iconservice.icx.icx_account import Account
+from iconservice.icx.icx_account import Account, PartFlag
 
 
 class TestIcxEngine(unittest.TestCase, ContextContainer):
@@ -97,6 +97,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
     def test_put_special_account(self):
         # failure case: input general account
         account = Mock(spec=Account)
+        account.attach_mock(PartFlag.COIN, 'flags')
         coin_part = Mock(spec=CoinPart)
         coin_part.attach_mock(CoinPartType.GENERAL, 'type')
         account.attach_mock(coin_part, 'coin_part')
@@ -106,6 +107,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
         # success case: input genesis and treasury account
         account = Mock(spec=Account)
+        account.attach_mock(PartFlag.COIN, 'flags')
         coin_part = Mock(spec=CoinPart)
         coin_part.attach_mock(CoinPartType.GENESIS, 'type')
         account.attach_mock(coin_part, 'coin_part')
@@ -114,6 +116,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.assertEqual(account.address, self.engine._genesis_address)
 
         account = Mock(spec=Account)
+        account.attach_mock(PartFlag.COIN, 'flags')
         coin_part = Mock(spec=CoinPart)
         coin_part.attach_mock(CoinPartType.TREASURY, 'type')
         account.attach_mock(coin_part, 'coin_part')

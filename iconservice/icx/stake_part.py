@@ -14,13 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import IntFlag, unique
 from typing import TYPE_CHECKING
 
+from ..utils import is_flags_on, toggle_flags
 from ..base.exception import InvalidParamsException
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..base.address import Address
+
+
+@unique
+class StakePartFlag(IntFlag):
+    """Account bitwise flags
+    """
+    NONE = 0
+    DIRTY = 1
+    COMPLETE = 2
 
 
 class StakePart(object):
@@ -31,7 +42,7 @@ class StakePart(object):
         self._stake: int = stake
         self._unstake: int = unstake
         self._unstake_block_height: int = unstake_block_height
-        self._complete: bool = False
+        self._flags: int = StakePartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
@@ -39,41 +50,41 @@ class StakePart(object):
 
     @property
     def stake(self) -> int:
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return self._stake
 
     @property
     def voting_weight(self) -> int:
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return self._stake
 
     @property
     def unstake(self) -> int:
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return self._unstake
 
     @property
     def unstake_block_height(self) -> int:
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return self._unstake_block_height
 
     @property
     def total_stake(self) -> int:
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return self._stake + self._unstake
 
     def add_stake(self, value: int):
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         self._stake += value
 
     def set_unstake(self, block_height: int, value: int):
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         if self.total_stake < value:
             raise InvalidParamsException(f'Failed to unstake: stake_amount({self._stake}) < value({value})')
@@ -90,7 +101,7 @@ class StakePart(object):
             self._unstake = 0
             self._unstake_block_height: int = 0
 
-        self._complete = True
+        self._flags = toggle_flags(self._flags, StakePartFlag.COMPLETE, True)
         return unstake
 
     @staticmethod
@@ -114,7 +125,7 @@ class StakePart(object):
         :return: data including information of StakePart object
         """
 
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         data = [self._VERSION,
                 self._stake,
@@ -128,7 +139,7 @@ class StakePart(object):
         :param other: (StakePart)
         """
 
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return isinstance(other, StakePart) \
             and self._stake == other.stake \
@@ -141,6 +152,6 @@ class StakePart(object):
         :param other: (StakePart)
         """
 
-        assert self._complete
+        assert is_flags_on(self._flags, StakePartFlag.COMPLETE)
 
         return not self.__eq__(other)

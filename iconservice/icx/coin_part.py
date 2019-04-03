@@ -117,15 +117,6 @@ class CoinPart(object):
         """
         return self._flags
 
-    def is_flag_on(self, flag: 'CoinPartFlag') -> bool:
-        return self._flags & flag == flag
-
-    def toggle_flag(self, flag: 'CoinPartFlag', on: bool):
-        if on:
-            self._flags |= flag
-        else:
-            self._flags &= ~flag
-
     def deposit(self, value: int):
         """Deposit coin
 
@@ -158,9 +149,9 @@ class CoinPart(object):
         :param other: (CoinPart)
         """
         return isinstance(other, CoinPart) \
-            and self.balance == other.balance \
-            and self.type == other.type \
-            and self.flags == other.flags
+            and self._balance == other.balance \
+            and self._type == other.type \
+            and self._flags == other.flags
 
     def __ne__(self, other) -> bool:
         """operator != overriding

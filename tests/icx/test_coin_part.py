@@ -18,11 +18,10 @@
 
 import unittest
 
-from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import REVISION_4, REVISION_3
 from iconservice.icx.coin_part import CoinPartType, CoinPart, CoinPartFlag
-from tests import create_address
+from iconservice.utils import is_flags_on, toggle_flags
 
 
 class TestAccountType(unittest.TestCase):
@@ -123,13 +122,13 @@ class TestCoinPart(unittest.TestCase):
 
     def test_coin_part_flag(self):
         part1 = CoinPart()
-        self.assertEqual(True, part1.is_flag_on(CoinPartFlag.NONE))
+        self.assertEqual(True, is_flags_on(part1.flags, CoinPartFlag.NONE))
 
-        part1.toggle_flag(CoinPartFlag.HAS_UNSTAKE, True)
-        self.assertEqual(True, part1.is_flag_on(CoinPartFlag.HAS_UNSTAKE))
+        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
+        self.assertEqual(True, is_flags_on(part1.flags, CoinPartFlag.HAS_UNSTAKE))
 
-        part1.toggle_flag(CoinPartFlag.HAS_UNSTAKE, False)
-        self.assertEqual(True, part1.is_flag_on(CoinPartFlag.NONE))
+        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, False)
+        self.assertEqual(True, is_flags_on(part1.flags, CoinPartFlag.NONE))
 
 
 if __name__ == '__main__':

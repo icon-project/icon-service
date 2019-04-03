@@ -18,12 +18,14 @@ import json
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons.logger import Logger
+
 from .coin_part import CoinPartType, CoinPart
 from .icx_account import Account, PartFlag
 from .icx_storage import IcxStorage, AccountType
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import ICX_LOG_TAG
+from ..utils import is_flags_on
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -140,7 +142,7 @@ class IcxEngine(object):
         :param account: genesis or treasury accounts
         """
 
-        assert account.is_flag_on(PartFlag.COIN)
+        assert is_flags_on(account.flags, PartFlag.COIN)
         assert account.coin_part.type in (CoinPartType.GENESIS, CoinPartType.TREASURY)
 
         if account.coin_part.type == CoinPartType.GENESIS:

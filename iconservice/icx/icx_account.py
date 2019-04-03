@@ -17,6 +17,7 @@
 from enum import IntFlag
 from typing import TYPE_CHECKING, Optional, Any
 
+from ..utils import is_flags_on, toggle_flags
 from ..base.exception import InvalidParamsException
 from .coin_part import CoinPartFlag
 
@@ -25,7 +26,6 @@ if TYPE_CHECKING:
     from .stake_part import StakePart
     from .delegation_part import DelegationPart
     from ..base.address import Address
-    from collections import OrderedDict
 
 
 class PartFlag(IntFlag):
@@ -42,15 +42,15 @@ class Account(object):
     def __init__(self, address: 'Address', current_block_height: int):
         self._address: 'Address' = address
         self._current_block_height: int = current_block_height
-        self._flag: 'PartFlag' = PartFlag.NONE
+        self._flags: int = PartFlag.NONE
 
         self._coin_part: 'CoinPart' = None
         self._stake_part: 'StakePart' = None
         self._delegation_part: 'DelegationPart' = None
 
     @property
-    def flag(self) -> 'PartFlag':
-        return self._flag
+    def flags(self) -> int:
+        return self._flags
 
     @property
     def address(self):
@@ -69,91 +69,86 @@ class Account(object):
         return self._delegation_part
 
     def init_coin_part_in_icx_storage(self, coin_part: Optional['CoinPart']):
-        self._setter_flag_set(coin_part, PartFlag.COIN)
         self._coin_part = coin_part
+        self._update_flags(self._coin_part, PartFlag.COIN)
 
     def init_stake_part_in_icx_storage(self, stake_part: Optional['StakePart']):
-        self._setter_flag_set(stake_part, PartFlag.STAKE)
         self._stake_part = stake_part
+        self._update_flags(self._stake_part, PartFlag.STAKE)
 
     def init_delegation_part_in_icx_storage(self, delegation_part: Optional['DelegationPart']):
-        self._setter_flag_set(delegation_part, PartFlag.DELEGATION)
         self._delegation_part = delegation_part
+        self._update_flags(self._delegation_part, PartFlag.DELEGATION)
 
-    def _setter_flag_set(self, dest: Any, flag: 'PartFlag'):
-        if dest is None and self.is_flag_on(flag):
-            self._flag &= ~flag
-        elif not self.is_flag_on(flag):
-            self._flag |= flag
-
-    def is_flag_on(self, flag: int) -> bool:
-        return self.flag & flag == flag
+    def _update_flags(self, dest: Any, flags: 'PartFlag'):
+        enable: bool = dest is not None
+        self._flags: int = toggle_flags(self.flags, flags, enable)
 
     def deposit(self, value: int):
-        if not self.is_flag_on(PartFlag.COIN):
+        if not is_flags_on(self.flags, PartFlag.COIN):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
 
         self.coin_part.deposit(value)
 
     def withdraw(self, value: int):
-        if not self.is_flag_on(PartFlag.COIN):
+        if not is_flags_on(self.flags, PartFlag.COIN):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
 
         self.coin_part.withdraw(value)
 
     def update(self):
-        if not self.is_flag_on(PartFlag.COIN_STAKE):
+        if not is_flags_on(self.flags, PartFlag.STAKE):
             return
 
         balance: int = self.stake_part.update(self._current_block_height)
         if balance > 0:
-            self.coin_part.toggle_flag(CoinPartFlag.HAS_UNSTAKE, False)
+            toggle_flags(self.coin_part.flags, CoinPartFlag.HAS_UNSTAKE, False)
             self.coin_part.deposit(balance)
 
     @property
     def balance(self) -> int:
         balance = 0
 
-        if self.is_flag_on(PartFlag.COIN):
+        if is_flags_on(self.flags, PartFlag.COIN):
             balance = self.coin_part.balance
 
-        if self.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(self.flags, PartFlag.STAKE):
             if self._current_block_height > self.stake_part.unstake_block_height:
                 balance += self.stake_part.unstake
         return balance
 
     @property
     def stake(self) -> int:
-        if self.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(self.flags, PartFlag.STAKE):
             return self.stake_part.stake
         return 0
 
     @property
     def unstake(self) -> int:
-        if self.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(self.flags, PartFlag.STAKE):
             return self.stake_part.unstake
         return 0
 
     @property
     def unstake_block_height(self) -> int:
-        if self.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(self.flags, PartFlag.STAKE):
             return self.stake_part.unstake_block_height
         return 0
 
     @property
     def delegated_amount(self) -> int:
-        if self.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(self.flags, PartFlag.STAKE):
             return self.delegation_part.delegated_amount
         return 0
 
     @property
     def delegations(self) -> Optional[list]:
-        if self.is_flag_on(PartFlag.STAKE):
+        if is_flags_on(self.flags, PartFlag.STAKE):
             return self.delegation_part.delegations
         return None
 
     def set_stake(self, value: int, unstake_lock_period: int) -> None:
-        if not self.is_flag_on(PartFlag.COIN | PartFlag.STAKE):
+        if not is_flags_on(self.flags, PartFlag.COIN | PartFlag.STAKE):
             raise InvalidParamsException('Failed to stake: InvalidAccount')
 
         if not isinstance(value, int) or value < 0:
@@ -173,17 +168,17 @@ class Account(object):
             self.stake_part.add_stake(abs(offset))
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
-            self.coin_part.toggle_flag(CoinPartFlag.HAS_UNSTAKE, True)
+            toggle_flags(self.coin_part.flags, CoinPartFlag.HAS_UNSTAKE, True)
             self.stake_part.set_unstake(unlock_block_height, abs(offset))
 
     def update_delegated_amount(self, offset: int):
-        if not self.is_flag_on(PartFlag.DELEGATION):
+        if not is_flags_on(self.flags, PartFlag.DELEGATION):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
 
         self.delegation_part.update_delegated_amount(offset)
 
     def set_delegations(self, new_delegations: list):
-        if not self.is_flag_on(PartFlag.DELEGATION):
+        if not is_flags_on(self.flags, PartFlag.DELEGATION):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
         
         self.delegation_part.set_delegations(new_delegations)
@@ -194,11 +189,11 @@ class Account(object):
         :param other: (CoinPart)
         """
         return isinstance(other, Account) \
-               and self.address == other.address \
-               and self._flag == other.flag \
+               and self._address == other.address \
+               and self._flags == other.flags \
                and self._coin_part == other.coin_part \
-               and self.stake_part == other.stake_part \
-               and self.delegation_part == other.delegation_part
+               and self._stake_part == other.stake_part \
+               and self._delegation_part == other.delegation_part
 
     def __ne__(self, other) -> bool:
         """operator != overriding

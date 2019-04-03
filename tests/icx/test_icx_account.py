@@ -24,6 +24,7 @@ from iconservice.icx.icx_account import Account, PartFlag
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.stake_part import StakePart
 from iconservice.icx.delegation_part import DelegationPart
+from iconservice.utils import is_flags_on
 
 from tests import create_address
 
@@ -33,39 +34,39 @@ class TestAccount(unittest.TestCase):
         address: 'Address' = create_address()
 
         account: 'Account' = Account(address, 0)
-        self.assertEqual(PartFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flags)
 
         coin_part: 'CoinPart' = CoinPart()
         account.init_coin_part_in_icx_storage(coin_part)
-        self.assertEqual(PartFlag.COIN, account.flag)
+        self.assertEqual(PartFlag.COIN, account.flags)
         account.init_coin_part_in_icx_storage(None)
-        self.assertEqual(PartFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flags)
 
         stake_part: 'StakePart' = StakePart()
         account.init_stake_part_in_icx_storage(stake_part)
-        self.assertEqual(PartFlag.STAKE, account.flag)
+        self.assertEqual(PartFlag.STAKE, account.flags)
         account.init_stake_part_in_icx_storage(None)
-        self.assertEqual(PartFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flags)
 
         delegation_part: 'DelegationPart' = DelegationPart()
         account.init_delegation_part_in_icx_storage(delegation_part)
-        self.assertEqual(PartFlag.DELEGATION, account.flag)
+        self.assertEqual(PartFlag.DELEGATION, account.flags)
         account.init_delegation_part_in_icx_storage(None)
-        self.assertEqual(PartFlag.NONE, account.flag)
+        self.assertEqual(PartFlag.NONE, account.flags)
 
         account.init_coin_part_in_icx_storage(coin_part)
         account.init_stake_part_in_icx_storage(stake_part)
         account.init_delegation_part_in_icx_storage(delegation_part)
-        self.assertTrue(account.is_flag_on(PartFlag.COIN))
-        self.assertTrue(account.is_flag_on(PartFlag.STAKE))
-        self.assertTrue(account.is_flag_on(PartFlag.DELEGATION))
-        self.assertEqual(PartFlag.COIN | PartFlag.STAKE | PartFlag.DELEGATION, account.flag)
+        self.assertTrue(is_flags_on(account.flags, PartFlag.COIN))
+        self.assertTrue(is_flags_on(account.flags, PartFlag.STAKE))
+        self.assertTrue(is_flags_on(account.flags, PartFlag.DELEGATION))
+        self.assertEqual(PartFlag.COIN | PartFlag.STAKE | PartFlag.DELEGATION, account.flags)
 
         account.init_coin_part_in_icx_storage(None)
         account.init_stake_part_in_icx_storage(None)
         account.init_delegation_part_in_icx_storage(None)
-        self.assertTrue(account.is_flag_on(PartFlag.NONE))
-        self.assertEqual(PartFlag.NONE, account.flag)
+        self.assertTrue(is_flags_on(account.flags, PartFlag.NONE))
+        self.assertEqual(PartFlag.NONE, account.flags)
 
     def test_coin_part(self):
         address: 'Address' = create_address()

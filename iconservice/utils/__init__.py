@@ -93,5 +93,14 @@ def is_builtin_score(score_address: str) -> bool:
     return score_address in BUILTIN_SCORE_ADDRESS_MAPPER.values()
 
 
-def is_flag_on(src_flag: int, dest_flag: int) -> bool:
-    return src_flag & dest_flag == dest_flag
+def is_flags_on(src_flags: int, dest_flags: int) -> bool:
+    return src_flags & dest_flags == dest_flags
+
+
+def toggle_flags(src_flags: int, dest_flags: int, on: bool) -> int:
+    if on:
+        src_flags |= dest_flags
+        return src_flags
+    else:
+        src_flags &= ~dest_flags
+        return src_flags
