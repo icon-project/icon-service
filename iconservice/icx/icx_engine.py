@@ -20,12 +20,11 @@ from typing import TYPE_CHECKING, Optional
 from iconcommons.logger import Logger
 
 from .coin_part import CoinPartType, CoinPart
-from .icx_account import Account, PartFlag
+from .icx_account import Account
 from .icx_storage import IcxStorage, AccountType
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import ICX_LOG_TAG
-from ..utils import is_flags_on
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -118,9 +117,10 @@ class IcxEngine(object):
         :return:
         """
 
-        coin_part: 'CoinPart' = CoinPart(account_type=account_type, balance=int(amount))
+        coin_part: 'CoinPart' = CoinPart(account_type=account_type)
         account: 'Account' = Account(address, context.block.height)
         account.init_coin_part_in_icx_storage(coin_part)
+        account.deposit(int(amount))
 
         self._storage.put_account(context, account)
 
@@ -142,7 +142,7 @@ class IcxEngine(object):
         :param account: genesis or treasury accounts
         """
 
-        assert is_flags_on(account.flags, PartFlag.COIN)
+        assert account.coin_part is not None
         assert account.coin_part.type in (CoinPartType.GENESIS, CoinPartType.TREASURY)
 
         if account.coin_part.type == CoinPartType.GENESIS:
@@ -278,12 +278,12 @@ class IcxEngine(object):
     def get_account(self,
                     context: 'IconScoreContext',
                     address: 'Address',
-                    flag: 'AccountType' = AccountType.COIN) -> 'Account':
+                    t: 'AccountType' = AccountType.TRAMSFER) -> 'Account':
         """Returns the instance of Account indicated by address
 
         :param context:
         :param address:
-        :param flag:
+        :param t:
         :return: Account
         """
-        return self._storage.get_account(context, address, flag)
+        return self._storage.get_account(context, address, t)

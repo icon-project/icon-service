@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum
+from enum import IntEnum, IntFlag
 from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import InvalidParamsException
 from ..utils import is_flags_on
 from .icx_account import Account, PartFlag
-from .coin_part import CoinPart, CoinPartFlag, CoinPartType
+from .coin_part import CoinPart
 from .stake_part import StakePart
 from .delegation_part import DelegationPart
 
@@ -35,9 +34,18 @@ if TYPE_CHECKING:
 
 
 class AccountType(IntEnum):
-    COIN = 0
+    TRAMSFER = 0
     STAKE = 1
-    DELEGATION = 2
+    DELEGATE = 2
+
+
+class AccountPartFlag(IntFlag):
+    """PartFlag Type
+    """
+    NONE = 0
+    COIN = 1
+    STAKE = 2
+    DELEGATION = 4
 
 
 class IcxStorage(object):
@@ -107,18 +115,18 @@ class IcxStorage(object):
         self._db.put(context, key, value)
 
     @classmethod
-    def _convert_account_type_to_part_flag(cls, flags: 'AccountType') -> 'PartFlag':
-        if flags == AccountType.COIN:
-            return PartFlag.COIN
-        elif flags == AccountType.STAKE:
-            return PartFlag.COIN_STAKE
-        elif flags == AccountType.DELEGATION:
-            return PartFlag.DELEGATION
+    def _convert_account_type_to_part_flag(cls, t: 'AccountType') -> int:
+        if t == AccountType.TRAMSFER:
+            return AccountPartFlag.COIN
+        elif t == AccountType.STAKE:
+            return AccountPartFlag.COIN | AccountPartFlag.STAKE
+        elif t == AccountType.DELEGATION:
+            return AccountPartFlag.DELEGATION
 
     def get_account(self,
                     context: 'IconScoreContext',
                     address: 'Address',
-                    account_type: 'AccountType' = AccountType.COIN) -> 'Account':
+                    account_type: 'AccountType' = AccountType.TRAMSFER) -> 'Account':
 
         """Returns the account indicated by address.
 
@@ -133,19 +141,19 @@ class IcxStorage(object):
         flags: int = self._convert_account_type_to_part_flag(account_type)
 
         account: 'Account' = Account(address, context.block.height)
-        if is_flags_on(flags, PartFlag.COIN):
+        if is_flags_on(flags, AccountPartFlag.COIN):
             key: bytes = CoinPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
                 coin_part: 'CoinPart' = CoinPart.from_bytes(value)
                 account.init_coin_part_in_icx_storage(coin_part)
-                if is_flags_on(coin_part.flags, CoinPartFlag.HAS_UNSTAKE):
-                    flags |= PartFlag.STAKE
+                if is_flags_on(account.flags, PartFlag.COIN_HAS_UNSTAKE):
+                    flags |= AccountPartFlag.STAKE
             else:
                 coin_part: 'CoinPart' = CoinPart()
                 account.init_coin_part_in_icx_storage(coin_part)
 
-        if is_flags_on(flags, PartFlag.STAKE):
+        if is_flags_on(flags, AccountPartFlag.STAKE):
             key: bytes = StakePart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
@@ -155,7 +163,7 @@ class IcxStorage(object):
                 stake_part: 'StakePart' = StakePart()
                 account.init_stake_part_in_icx_storage(stake_part)
 
-        if is_flags_on(flags, PartFlag.DELEGATION):
+        if is_flags_on(flags, AccountPartFlag.DELEGATION):
             key: bytes = DelegationPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
@@ -170,37 +178,24 @@ class IcxStorage(object):
 
     def put_account(self,
                     context: 'IconScoreContext',
-                    account: 'Account',
-                    account_type: 'AccountType' = AccountType.COIN) -> None:
+                    account: 'Account') -> None:
         """Put account info to db.
 
         :param context:
         :param account: account to save
-        :param account_type:
         """
 
-        flag: 'PartFlag' = self._convert_account_type_to_part_flag(account_type)
-
-        if is_flags_on(flag, PartFlag.COIN):
-            if not is_flags_on(account.flags, PartFlag.COIN):
-                raise InvalidParamsException("mispatch account_type")
-
+        if is_flags_on(account.flags, PartFlag.COIN_DIRTY):
             key: bytes = CoinPart.make_key(account.address)
             value: bytes = account.coin_part.to_bytes(context.revision)
             self._db.put(context, key, value)
 
-        if is_flags_on(flag, PartFlag.STAKE):
-            if not is_flags_on(account.flags, PartFlag.STAKE):
-                raise InvalidParamsException("mispatch account_type")
-
+        if is_flags_on(account.flags, PartFlag.STAKE_DIRTY):
             key: bytes = StakePart.make_key(account.address)
             value: bytes = account.stake_part.to_bytes()
             self._db.put(context, key, value)
 
-        if is_flags_on(flag, PartFlag.DELEGATION):
-            if not is_flags_on(account.flags, PartFlag.DELEGATION):
-                raise InvalidParamsException("mispatch account_type")
-
+        if is_flags_on(account.flags, PartFlag.DELEGATION_DIRTY):
             key: bytes = DelegationPart.make_key(account.address)
             value: bytes = account.delegation_part.to_bytes()
             self._db.put(context, key, value)

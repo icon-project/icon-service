@@ -20,7 +20,8 @@ import unittest
 
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import REVISION_4, REVISION_3
-from iconservice.icx.coin_part import CoinPartType, CoinPart, CoinPartFlag
+from iconservice.icx.icx_account import PartFlag
+from iconservice.icx.coin_part import CoinPartType, CoinPart
 from iconservice.utils import is_flags_on, toggle_flags
 
 
@@ -46,7 +47,7 @@ class TestCoinPart(unittest.TestCase):
     def test_coin_part_revision_3(self):
         part1 = CoinPart()
         self.assertIsNotNone(part1)
-        self.assertEqual(CoinPartFlag.NONE, part1.flags)
+        self.assertEqual(PartFlag.NONE, part1.flags)
         self.assertTrue(part1.balance == 0)
 
         part1.deposit(100)
@@ -122,13 +123,13 @@ class TestCoinPart(unittest.TestCase):
 
     def test_coin_part_flag(self):
         part1 = CoinPart()
-        self.assertEqual(True, is_flags_on(part1.flags, CoinPartFlag.NONE))
+        self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
 
-        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
-        self.assertEqual(True, is_flags_on(part1.flags, CoinPartFlag.HAS_UNSTAKE))
+        part1._flags = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, True)
+        self.assertEqual(True, is_flags_on(part1.flags, PartFlag.COIN_HAS_UNSTAKE))
 
-        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, False)
-        self.assertEqual(True, is_flags_on(part1.flags, CoinPartFlag.NONE))
+        part1._flags = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, False)
+        self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
 
 
 if __name__ == '__main__':

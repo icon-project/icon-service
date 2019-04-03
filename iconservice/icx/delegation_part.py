@@ -14,23 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique
 from typing import TYPE_CHECKING
 
+from ..utils import toggle_flags
 from ..base.exception import InvalidParamsException
 from ..icon_constant import IISS_MAX_DELEGATIONS
 from ..utils.msgpack_for_db import MsgPackForDB
+from .icx_account import PartFlag
 
 if TYPE_CHECKING:
     from ..base.address import Address
-
-
-@unique
-class DelegationPartFlag(IntFlag):
-    """Account bitwise flags
-    """
-    NONE = 0
-    DIRTY = 1
 
 
 class DelegationPart(object):
@@ -44,8 +37,8 @@ class DelegationPart(object):
             self._delegations: list = []
 
         self._delegated_amount: int = delegated_amount
-        self._flag: int = DelegationPartFlag.NONE
         self._delegations_amount: int = self._update_delegations_amount()
+        self._flags: int = PartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address'):
@@ -67,11 +60,27 @@ class DelegationPart(object):
     def delegations_amount(self) -> int:
         return self._delegations_amount
 
+    @property
+    def flags(self) -> int:
+        return self._flags
+
     def _update_delegations_amount(self) -> int:
         total_delegation_amount: int = 0
         for address, value in self.delegations:
             total_delegation_amount += value
         return total_delegation_amount
+
+    def update_delegated_amount(self, offset: int):
+        self._delegated_amount += offset
+        self._flags = toggle_flags(self._flags, PartFlag.DELEGATION_DIRTY, True)
+
+    def set_delegations(self, new_delegations: list):
+        if len(new_delegations) > IISS_MAX_DELEGATIONS:
+            raise InvalidParamsException('overflow delegations')
+
+        self._delegations: list = new_delegations
+        self._delegations_amount: int = self._update_delegations_amount()
+        self._flags = toggle_flags(self._flags, PartFlag.DELEGATION_DIRTY, True)
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'DelegationPart':
@@ -112,16 +121,6 @@ class DelegationPart(object):
         data.append(delegations)
 
         return MsgPackForDB.dumps(data)
-
-    def update_delegated_amount(self, offset: int):
-        self._delegated_amount += offset
-
-    def set_delegations(self, new_delegations: list):
-        if len(new_delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException('overflow delegations')
-
-        self._delegations: list = new_delegations
-        self._delegations_amount: int = self._update_delegations_amount()
 
     def __eq__(self, other) -> bool:
         """operator == overriding
