@@ -462,17 +462,11 @@ class IconServiceEngine(ContextContainer):
         params = request['params']
 
         from_ = params['from']
-        to: 'Address' = params['to']
+        to = params['to']
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
-        max_step_limit = context.step_counter.max_step_limit
-        step_limit: int = params.get('stepLimit', max_step_limit)
-
-        if to.is_contract:
-            step_limit = self._fee_engine.get_total_available_step(
-                context, to, step_limit, context.step_counter.step_price, context.block.height,
-                max_step_limit)
+        step_limit: int = params.get('stepLimit', context.step_counter.max_step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
@@ -652,8 +646,6 @@ class IconServiceEngine(ContextContainer):
 
             step_price: int = context.step_counter.step_price
             minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
-            maximum_step: int = \
-                self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
 
             if 'data' in params:
                 # minimum_step is the sum of
@@ -662,7 +654,7 @@ class IconServiceEngine(ContextContainer):
                 input_size = get_input_data_size(context.revision, data)
                 minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
-            self._icon_pre_validator.execute(context, params, step_price, minimum_step, maximum_step)
+            self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
             IconScoreContextUtil.validate_score_blacklist(context, to)
             if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
@@ -834,7 +826,6 @@ class IconServiceEngine(ContextContainer):
             self._icon_pre_validator.execute_to_check_out_of_balance(
                 context if context.revision >= REVISION_3 else None,
                 params,
-                context.step_counter.step_limit,
                 context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first

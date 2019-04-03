@@ -362,126 +362,30 @@ class FeeEngine:
 
         return deposit
 
-    # TODO : get_score_info_by_EOA
-
-    def get_total_available_step(self,
-                                 context: 'IconScoreContext',
-                                 to: 'Address',
-                                 sender_step_limit: int,
-                                 step_price: int,
-                                 block_number: int,
-                                 max_step_limit: int) -> int:
-        """
-        Gets the usable STEPs for the given step_limit from the sender.
-        The return value is a dict of the sender's one and receiver's one.
-
-        :param context: IconScoreContext
-        :param to: msg receiver
-        :param sender_step_limit: step_limit from sender
-        :param step_price: current step price
-        :param block_number: current block height
-        :param max_step_limit: Maximum step limit per one transaction. (system(governance) defined)
-        :return: total available STEPs in the transaction
-        """
-
-        total_step = sender_step_limit
-
-        if to.is_contract:
-            score_fee_info = self._fee_storage.get_score_fee(context, to)
-
-            if score_fee_info is not None and score_fee_info.ratio > 0:
-                if score_fee_info.ratio == 100:
-                    # Retrieves how much STEPs SCORE can pay
-                    total_step = 0
-
-                    gen = self._deposit_generator(context, score_fee_info.head_id)
-                    for deposit in filter(lambda d: block_number < d.expires, gen):
-                        total_step += deposit.available_virtual_step
-                        total_step += deposit.available_deposit // step_price
-
-                        if total_step >= max_step_limit:
-                            total_step = max_step_limit
-                            break
-                else:
-                    total_step = sender_step_limit * 100 // (100 - score_fee_info.ratio)
-
-        return total_step
-
-    def can_charge_fee_from_score(self,
-                                  context: 'IconScoreContext',
-                                  score_address: 'Address',
-                                  step_required: int,
-                                  step_price: int,
+    def can_charge_fee_from_score(self, context: 'IconScoreContext', score_address: 'Address',
                                   block_number: int) -> bool:
-        """
-        Returns whether the SCORE can pay fees.
+        """check if SCORE can charge fee
 
-        :param context: IconScoreContext
-        :param score_address: SCORE address
-        :param step_required: Amount of STEPs that SCORE will pay
-        :param step_price: current step price
+        :param context:
+        :param score_address:
         :param block_number: current block height
-        :return: True if the SCORE can pay fees otherwise False
+        :return: whether SCORE can pay fee
         """
+        fee_info: 'Fee' = self._get_or_create_score_fee(context, score_address)
 
-        score_fee_info = self._fee_storage.get_score_fee(context, score_address)
+        if not self._is_score_sharing_fee(fee_info):
+            return True
 
-        if score_fee_info is None:
-            return False
+        if block_number < fee_info.expires_of_virtual_step and fee_info.available_head_id_of_virtual_step is not None:
+            return True
 
-        chargeable_virtual_step = self._get_chargeable_virtual_step_for_fee(
-            context, score_fee_info, step_required, block_number)
+        if block_number < fee_info.expires_of_virtual_step and fee_info.available_head_id_of_virtual_step is not None:
+            return True
 
-        icx_required = (step_required - chargeable_virtual_step) * step_price
+    def _is_score_sharing_fee(self, score_fee_info: 'Fee') -> bool:
+        return score_fee_info.head_id is not None
 
-        chargeable_deposit = self._get_chargeable_deposit_for_fee(
-            context, score_fee_info, icx_required, block_number)
-
-        return icx_required == chargeable_deposit
-
-    def _get_chargeable_virtual_step_for_fee(self,
-                                             context: 'IconScoreContext',
-                                             score_fee_info: 'Fee',
-                                             step_required: int,
-                                             block_number: int) -> int:
-        """
-        Calculates the amount of virtual STEPs that SCORE can pay for the required STEPs
-        """
-
-        total_chargeable_virtual_step = 0
-
-        gen = self._deposit_generator(context, score_fee_info.available_head_id_of_virtual_step)
-        for deposit in filter(lambda d: block_number < d.expires, gen):
-            # The virtual STEPs are not available when expired
-            total_chargeable_virtual_step += deposit.available_virtual_step
-
-            if total_chargeable_virtual_step >= step_required:
-                total_chargeable_virtual_step = step_required
-                break
-
-        return total_chargeable_virtual_step
-
-    def _get_chargeable_deposit_for_fee(self,
-                                        context: 'IconScoreContext',
-                                        score_fee_info: 'Fee',
-                                        icx_required: int,
-                                        block_number: int) -> int:
-        """
-        Calculates the amount of ICXs that SCORE can pay for the required fees
-        """
-
-        total_chargeable_deposit = 0
-
-        gen = self._deposit_generator(context, score_fee_info.available_head_id_of_deposit)
-        for deposit in filter(lambda d: block_number < d.expires, gen):
-            total_chargeable_deposit += deposit.available_deposit
-
-            if total_chargeable_deposit >= icx_required:
-                total_chargeable_deposit = icx_required
-                break
-
-        return total_chargeable_deposit
-
+    # TODO : get_score_info_by_EOA
     def charge_transaction_fee(self,
                                context: 'IconScoreContext',
                                sender: 'Address',
