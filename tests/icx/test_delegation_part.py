@@ -36,27 +36,21 @@ class TestDelegationPart(unittest.TestCase):
         self.assertEqual(account.delegations, account2.delegations)
 
     def test_account_for_delegation(self):
-        accounts = []
-        src_address: 'Address' = create_address()
         src = DelegationPart()
+        preps: list = []
 
         for _ in range(0, 10):
-            to_address: 'Address' = create_address()
-            to: 'DelegationPart' = DelegationPart()
-            accounts.append((to_address, to))
-            src.delegate(to_address, to, 10)
+            prep: 'DelegationPart' = DelegationPart()
+            prep.update_delegated_amount(10)
+            preps.append((prep, 10))
+
+        src.set_delegations(preps)
 
         self.assertEqual(10, len(src.delegations))
 
         for i in range(0, 10):
-            address, account = accounts[i]
-            self.assertEqual(10, account.delegated_amount)
-
-        for i in range(0, 10):
-            address, account = accounts[i]
-            src.delegate(address, account, 0)
-
-        self.assertEqual(0, len(src.delegations))
+            prep, value = preps[i]
+            self.assertEqual(10, prep.delegated_amount)
 
 
 if __name__ == '__main__':

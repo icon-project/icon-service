@@ -44,6 +44,12 @@ class StakePart(object):
         return self._stake
 
     @property
+    def voting_weight(self) -> int:
+        assert self._complete
+
+        return self._stake
+
+    @property
     def unstake(self) -> int:
         assert self._complete
 

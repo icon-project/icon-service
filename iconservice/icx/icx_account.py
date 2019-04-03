@@ -147,7 +147,7 @@ class Account(object):
         return 0
 
     @property
-    def delegations(self) -> Optional['OrderedDict']:
+    def delegations(self) -> Optional[list]:
         if self.is_flag_on(PartFlag.STAKE):
             return self.delegation_part.delegations
         return None
@@ -176,10 +176,17 @@ class Account(object):
             self.coin_part.toggle_flag(CoinPartFlag.HAS_UNSTAKE, True)
             self.stake_part.set_unstake(unlock_block_height, abs(offset))
 
-    def delegate(self, target: 'Account', value: int) -> bool:
-        if not self.is_flag_on(PartFlag.DELEGATION) or not target.is_flag_on(PartFlag.DELEGATION):
+    def update_delegated_amount(self, offset: int):
+        if not self.is_flag_on(PartFlag.DELEGATION):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
-        return self.delegation_part.delegate(target.address, target.delegation_part, value)
+
+        self.delegation_part.update_delegated_amount(offset)
+
+    def set_delegations(self, new_delegations: list):
+        if not self.is_flag_on(PartFlag.DELEGATION):
+            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+        
+        self.delegation_part.set_delegations(new_delegations)
 
     def __eq__(self, other) -> bool:
         """operator == overriding

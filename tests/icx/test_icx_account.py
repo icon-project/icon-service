@@ -143,23 +143,23 @@ class TestAccount(unittest.TestCase):
         src_account = Account(create_address(), 0)
         src_delegation_part: 'DelegationPart' = DelegationPart()
         src_account.init_delegation_part_in_icx_storage(src_delegation_part)
+        preps: list = []
 
         for _ in range(0, 10):
-            target_account: 'Account' = Account(create_address(), 0)
+            address: 'Address' = create_address()
+            target_account: 'Account' = Account(address, 0)
             target_delegation_part: 'DelegationPart' = DelegationPart()
             target_account.init_delegation_part_in_icx_storage(target_delegation_part)
 
             target_accounts.append(target_account)
-            src_account.delegate(target_account, 10)
+            target_account.update_delegated_amount(10)
+            preps.append((address, 10))
+        src_account.set_delegations(preps)
 
         self.assertEqual(10, len(src_account.delegation_part.delegations))
 
         for i in range(0, 10):
             self.assertEqual(10, target_accounts[i].delegation_part.delegated_amount)
-
-        for i in range(0, 10):
-            src_account.delegate(target_accounts[i], 0)
-        self.assertEqual(0, len(src_account.delegation_part.delegations))
 
 
 if __name__ == '__main__':

@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import OrderedDict
 from typing import TYPE_CHECKING
 
+from ..base.exception import InvalidParamsException
+from ..icon_constant import IISS_MAX_DELEGATIONS
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -27,12 +28,13 @@ class DelegationPart(object):
     _VERSION = 0
     PREFIX = b"aod|"
 
-    def __init__(self, delegated_amount: int = 0, delegations: OrderedDict = None):
+    def __init__(self, delegated_amount: int = 0, delegations: list = None):
         self._delegated_amount: int = delegated_amount
         if delegations:
-            self._delegations: OrderedDict = delegations
+            self._delegations: list = delegations
         else:
-            self._delegations: OrderedDict = OrderedDict()
+            self._delegations: list = []
+        self._delegations_amount: int = self._update_delegations_amount()
 
     @staticmethod
     def make_key(address: 'Address'):
@@ -47,8 +49,18 @@ class DelegationPart(object):
         self._delegated_amount = delegated_amount
 
     @property
-    def delegations(self) -> OrderedDict:
+    def delegations(self) -> list:
         return self._delegations
+
+    @property
+    def delegations_amount(self) -> int:
+        return self._delegations_amount
+
+    def _update_delegations_amount(self) -> int:
+        total_delegation_amount: int = 0
+        for delegation in self.delegations:
+            total_delegation_amount += delegation.value
+        return total_delegation_amount
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'DelegationPart':
@@ -65,14 +77,12 @@ class DelegationPart(object):
 
         delegated_amount: int = data[1]
         delegation_list: list = data[2]
-        delegations: OrderedDict = OrderedDict()
+        delegations: list = []
         for i in range(0, len(delegation_list), 2):
-            info = DelegationPartInfo()
-            info.address = delegation_list[i]
-            info.value = delegation_list[i + 1]
-            delegations[info.address] = info
+            item = (delegation_list[i], delegation_list[i + 1])
+            delegations.append(item)
 
-        return DelegationPart(delegated_amount=delegated_amount, delegations = delegations)
+        return DelegationPart(delegated_amount=delegated_amount, delegations=delegations)
 
     def to_bytes(self) -> bytes:
         """Convert Account of Stake object to bytes
@@ -84,98 +94,23 @@ class DelegationPart(object):
             self._VERSION,
             self.delegated_amount
         ]
-        delegations = []
-        for info in self.delegations.values():
-            delegations.append(info.address)
-            delegations.append(info.value)
+        delegations: list = []
+        for address, value in self.delegations:
+            delegations.append(address)
+            delegations.append(value)
         data.append(delegations)
 
         return MsgPackForDB.dumps(data)
 
-    def delegate(self, to_address: 'Address', to: 'DelegationPart', value: int) -> bool:
-        info: 'DelegationPartInfo' = self._delegations.get(to_address)
+    def update_delegated_amount(self, offset: int):
+        self._delegated_amount += offset
 
-        if info is None:
-            if value == 0:
-                ret = False
-            else:
-                info: 'DelegationPartInfo' = DelegationPart.create_delegation(to_address, value)
-                self._delegations[to_address] = info
-                to.delegated_amount += value
-                ret = True
-        else:
-            prev_value: int = info.value
-            offset: int = value - prev_value
+    def set_delegations(self, new_delegations: list):
+        if len(new_delegations) > IISS_MAX_DELEGATIONS:
+            raise InvalidParamsException('overflow delegations')
 
-            if offset != 0:
-                info.value += offset
-                to.delegated_amount += offset
-                ret = True
-            else:
-                ret = False
-
-            if info.value == 0:
-                del self._delegations[info.address]
-        return ret
-
-    # def func(self):
-    #     if not isinstance(delegations, list):
-    #         raise InvalidParamsException('Failed to delegation: delegations is not list type')
-    #
-    #     if len(delegations) > IISS_MAX_DELEGATION_LIST:
-    #         raise InvalidParamsException(f'Failed to delegation: Overflow Max Input List')
-    #
-    #     from_account: 'Account' = cls.icx_storage.get_account(context, from_address, AccountType.STAKE_DELEGATION)
-    #     stake: int = from_account.stake
-    #
-    #     total_amoount: int = 0
-    #     update_list: dict = {}
-    #
-    #     prev_delegations = deepcopy(from_account.delegations)
-    #     for address in prev_delegations:
-    #         target_account: 'Account' = cls.icx_storage.get_account(context, address, AccountType.DELEGATION)
-    #
-    #         if target_account.address == from_account.address:
-    #             target_account = from_account
-    #
-    #         if from_account.delegate(target_account, 0):
-    #             update_list[address] = target_account
-    #
-    #     for delegation in delegations:
-    #         address: 'Address' = delegation[ConstantKeys.ADDRESS]
-    #         value: int = delegation[ConstantKeys.VALUE]
-    # 
-    #         target_account: 'Account' = cls.icx_storage.get_account(context, address, AccountType.DELEGATION)
-    #
-    #         if target_account.address == from_account.address:
-    #             target_account = from_account
-    #
-    #         if from_account.delegate(target_account, value):
-    #             update_list[address] = target_account
-    #         total_amoount += value
-    #
-    #     if len(from_account.delegations) > IISS_MAX_DELEGATION_LIST:
-    #         raise InvalidParamsException(f'Failed to delegation: Overflow Max Account List')
-    #
-    #     if stake < total_amoount:
-    #         raise InvalidParamsException('Failed to delegation: stake < total_delegations')
-    #
-    #     cls.icx_storage.put_account(context, from_account, AccountType.STAKE_DELEGATION)
-    #
-    #     for address, account in update_list.items():
-    #         if address == from_account.address:
-    #             continue
-    #
-    #         cls.icx_storage.put_account(context, account, AccountType.DELEGATION)
-    #
-    #     # TODO tx_result make if needs
-
-    @staticmethod
-    def create_delegation(address: 'Address', value: int) -> 'DelegationPartInfo':
-        d = DelegationPartInfo()
-        d.address: 'Address' = address
-        d.value: int = value
-        return d
+        self._delegations: list = new_delegations
+        self._delegations_amount: int = self._update_delegations_amount()
 
     def __eq__(self, other) -> bool:
         """operator == overriding
@@ -193,31 +128,3 @@ class DelegationPart(object):
         :param other: (AccountOfDelegation)
         """
         return not self.__eq__(other)
-
-
-class DelegationPartInfo(object):
-    def __init__(self):
-        self.address: 'Address' = None
-        self.value: int = 0
-
-    def __eq__(self, other) -> bool:
-        """operator == overriding
-
-        :param other: (AccountDelegationInfo)
-        """
-        return isinstance(other, DelegationPartInfo) \
-            and self.address == other.address \
-            and self.value == other.value
-
-    def __ne__(self, other) -> bool:
-        """operator != overriding
-
-        :param other: (AccountDelegationInfo)
-        """
-        return not self.__eq__(other)
-
-    def to_dict(self):
-        return {
-            "address": self.address,
-            "value": self.value
-        }
