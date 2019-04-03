@@ -62,17 +62,19 @@ class CoinPart(object):
     # version(1) | type(1) | flags(1) | reserved(1) |
     # icx(DEFAULT_BYTE_SIZE)
 
+    _VERSION = CoinPartVersion.MSG_PACK
     _STRUCT_PACKED_BYTES_SIZE = 36
     _STRUCT_FORMAT = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self,
                  account_type: 'CoinPartType' = CoinPartType.GENERAL,
+                 flags: int = CoinPartFlag.NONE,
                  balance: int = 0) -> None:
         """Constructor
         """
         self._type: 'CoinPartType' = account_type
+        self._flags: int = flags
         self._balance: int = balance
-        self._flags: int = CoinPartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
@@ -183,16 +185,15 @@ class CoinPart(object):
     @staticmethod
     def _from_struct_packed_bytes(buf: bytes) -> 'CoinPart':
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
-        obj = CoinPart()
-        obj._type = CoinPartType(coin_type)
-        obj._flags = flags
-        obj._balance = int.from_bytes(amount, DATA_BYTE_ORDER)
-        return obj
+        balance: int.from_bytes(amount, DATA_BYTE_ORDER)
+        return CoinPart(coin_type, flags, balance)
 
     @staticmethod
     def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
+        assert version <= CoinPart._VERSION
+
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 

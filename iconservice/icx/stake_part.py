@@ -16,52 +16,66 @@
 
 from typing import TYPE_CHECKING
 
-from ..utils.msgpack_for_db import MsgPackForDB
 from ..base.exception import InvalidParamsException
+from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..base.address import Address
 
 
 class StakePart(object):
+    _VERSION = 0
     prefix = b"aos|"
 
-    def __init__(self):
-        self._stake: int = 0
-        self._unstake: int = 0
-        self._unstake_block_height: int = 0
+    def __init__(self, stake: int = 0, unstake: int = 0, unstake_block_height: int = 0):
+        self._stake: int = stake
+        self._unstake: int = unstake
+        self._unstake_block_height: int = unstake_block_height
+        self._complete: bool = False
 
     @staticmethod
-    def make_key(address: 'Address'):
+    def make_key(address: 'Address') -> bytes:
         return StakePart.prefix + address.to_bytes_including_prefix()
 
     @property
-    def stake(self):
+    def stake(self) -> int:
         return self._stake
 
     @property
-    def unstake(self):
+    def unstake(self) -> int:
         return self._unstake
 
     @property
-    def unstake_block_height(self):
+    def unstake_block_height(self) -> int:
         return self._unstake_block_height
 
-    def update_stake(self, value):
+    @property
+    def total_stake(self) -> int:
+        assert self._complete
+        return self._stake + self._unstake
+
+    def add_stake(self, value: int):
+        assert self._complete
         self._stake += value
 
-    def update_unstake(self, next_block_height: int, value: int):
-        if self._stake < value:
+    def set_unstake(self, block_height: int, value: int):
+        assert self._complete
+
+        if self.total_stake < value:
             raise InvalidParamsException(f'Failed to unstake: stake_amount({self._stake}) < value({value})')
 
-        self._stake -= value
-        self._unstake += value
-        self._unstake_block_height: int = next_block_height
+        self._stake = self.total_stake - value
+        self._unstake = value
+        self._unstake_block_height: int = block_height
 
-    def finish_unstake(self) -> int:
+    def update(self, block_height: int) -> int:
         unstake: int = self._unstake
-        self._unstake = 0
-        self._unstake_block_height: int = 0
+
+        if block_height > self._unstake_block_height:
+            self._unstake = 0
+            self._unstake_block_height: int = 0
+
+        self._complete = True
         return unstake
 
     @staticmethod
@@ -74,21 +88,18 @@ class StakePart(object):
 
         data: list = MsgPackForDB.loads(buf)
         version = data[0]
+        assert version == StakePart._VERSION
 
-        obj = StakePart()
-        obj._stake_amount: int = data[1]
-        obj._unstake_amount: int = data[2]
-        obj._unstake_block_height: int = data[3]
-        return obj
+        return StakePart(stake=data[1], unstake=data[2], unstake_block_height=data[3])
 
     def to_bytes(self) -> bytes:
         """Convert Account of Stake object to bytes
 
         :return: data including information of StakePart object
         """
+        assert self._complete
 
-        version = 0
-        data = [version,
+        data = [self._VERSION,
                 self._stake,
                 self._unstake,
                 self._unstake_block_height]
@@ -99,15 +110,17 @@ class StakePart(object):
 
         :param other: (StakePart)
         """
+        assert self._complete
 
         return isinstance(other, StakePart) \
-               and self._stake == other.stake \
-               and self._unstake == other.unstake \
-               and self._unstake_block_height == other.unstake_block_height
+            and self._stake == other.stake \
+            and self._unstake == other.unstake \
+            and self._unstake_block_height == other.unstake_block_height
 
     def __ne__(self, other) -> bool:
         """operator != overriding
 
         :param other: (StakePart)
         """
+        assert self._complete
         return not self.__eq__(other)
