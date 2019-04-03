@@ -114,12 +114,12 @@ class TestCoinPart(unittest.TestCase):
         part1.type = CoinPartType.GENERAL
         part1.deposit(balance)
 
-        account1 = CoinPart.from_bytes(part1.to_bytes(REVISION_3))
-        self.assertEqual(part1, account1)
+        part2 = CoinPart.from_bytes(part1.to_bytes(REVISION_3))
+        self.assertEqual(part1, part2)
 
         data: bytes = part1.to_bytes(REVISION_4)
-        account2 = CoinPart.from_bytes(data)
-        self.assertEqual(part1, account2)
+        part3 = CoinPart.from_bytes(data)
+        self.assertEqual(part1, part3)
 
     def test_coin_part_flag(self):
         part1 = CoinPart()

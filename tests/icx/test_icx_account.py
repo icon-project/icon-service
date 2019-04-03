@@ -106,6 +106,7 @@ class TestAccount(unittest.TestCase):
         stake_part: 'StakePart' = StakePart()
         account.init_coin_part_in_icx_storage(coin_part)
         account.init_stake_part_in_icx_storage(stake_part)
+        account.update()
 
         balance = 1000
         account.deposit(balance)

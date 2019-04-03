@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional
 from ..base.exception import InvalidParamsException
 from ..utils import is_flag_on
 from .icx_account import Account, PartFlag
-from .coin_part import CoinPart, CoinPartFlag
+from .coin_part import CoinPart, CoinPartFlag, CoinPartType
 from .stake_part import StakePart
 from .delegation_part import DelegationPart
 
@@ -152,7 +152,7 @@ class IcxStorage(object):
                 stake_part: 'StakePart' = StakePart.from_bytes(value)
                 account.init_stake_part_in_icx_storage(stake_part)
             else:
-                stake_part: 'StakePart' = StakePart(address)
+                stake_part: 'StakePart' = StakePart()
                 account.init_stake_part_in_icx_storage(stake_part)
 
         if is_flag_on(flag, PartFlag.DELEGATION):
@@ -162,9 +162,10 @@ class IcxStorage(object):
                 delegation_part: 'DelegationPart' = DelegationPart.from_bytes(value)
                 account.init_delegation_part_in_icx_storage(delegation_part)
             else:
-                delegation_part: DelegationPart = DelegationPart(address)
+                delegation_part: DelegationPart = DelegationPart()
                 account.init_delegation_part_in_icx_storage(delegation_part)
 
+        account.update()
         return account
 
     def put_account(self,

@@ -69,7 +69,7 @@ class CoinPart(object):
     def __init__(self,
                  account_type: 'CoinPartType' = CoinPartType.GENERAL,
                  flags: int = CoinPartFlag.NONE,
-                 balance: int = 0) -> None:
+                 balance: int = 0):
         """Constructor
         """
         self._type: 'CoinPartType' = account_type
@@ -92,7 +92,7 @@ class CoinPart(object):
         return self._type
 
     @type.setter
-    def type(self, value: 'CoinPartType') -> None:
+    def type(self, value: 'CoinPartType'):
         """CoinPartType setter
 
         :param value: (AccountType)
@@ -120,13 +120,13 @@ class CoinPart(object):
     def is_flag_on(self, flag: 'CoinPartFlag') -> bool:
         return self._flags & flag == flag
 
-    def toggle_flag(self, flag: 'CoinPartFlag', on: bool) -> None:
+    def toggle_flag(self, flag: 'CoinPartFlag', on: bool):
         if on:
             self._flags |= flag
         else:
             self._flags &= ~flag
 
-    def deposit(self, value: int) -> None:
+    def deposit(self, value: int):
         """Deposit coin
 
         :param value: amount to deposit in loop (1 icx == 1e18 loop)
@@ -138,7 +138,7 @@ class CoinPart(object):
 
         self._balance += value
 
-    def withdraw(self, value: int) -> None:
+    def withdraw(self, value: int):
         """Withdraw coin
 
         :param value: coin amount to withdraw
@@ -185,24 +185,20 @@ class CoinPart(object):
     @staticmethod
     def _from_struct_packed_bytes(buf: bytes) -> 'CoinPart':
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
-        balance: int.from_bytes(amount, DATA_BYTE_ORDER)
+        balance: int = int.from_bytes(amount, DATA_BYTE_ORDER)
         return CoinPart(coin_type, flags, balance)
 
     @staticmethod
     def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
+
         assert version <= CoinPart._VERSION
 
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
-        obj = CoinPart()
-        obj._type = CoinPartType(data[1])
-        obj._flags = data[2]
-        obj._balance = data[3]
-
-        return obj
+        return CoinPart(account_type=data[1], flags=data[2], balance=data[3])
 
     def to_bytes(self, revision: int = 0) -> bytes:
         """Convert CoinPart object to bytes

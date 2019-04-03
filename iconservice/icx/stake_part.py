@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class StakePart(object):
     _VERSION = 0
-    prefix = b"aos|"
+    PREFIX = b"aos|"
 
     def __init__(self, stake: int = 0, unstake: int = 0, unstake_block_height: int = 0):
         self._stake: int = stake
@@ -35,27 +35,35 @@ class StakePart(object):
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
-        return StakePart.prefix + address.to_bytes_including_prefix()
+        return StakePart.PREFIX + address.to_bytes_including_prefix()
 
     @property
     def stake(self) -> int:
+        assert self._complete
+
         return self._stake
 
     @property
     def unstake(self) -> int:
+        assert self._complete
+
         return self._unstake
 
     @property
     def unstake_block_height(self) -> int:
+        assert self._complete
+
         return self._unstake_block_height
 
     @property
     def total_stake(self) -> int:
         assert self._complete
+
         return self._stake + self._unstake
 
     def add_stake(self, value: int):
         assert self._complete
+
         self._stake += value
 
     def set_unstake(self, block_height: int, value: int):
@@ -69,6 +77,7 @@ class StakePart(object):
         self._unstake_block_height: int = block_height
 
     def update(self, block_height: int) -> int:
+
         unstake: int = self._unstake
 
         if block_height > self._unstake_block_height:
@@ -88,6 +97,7 @@ class StakePart(object):
 
         data: list = MsgPackForDB.loads(buf)
         version = data[0]
+
         assert version == StakePart._VERSION
 
         return StakePart(stake=data[1], unstake=data[2], unstake_block_height=data[3])
@@ -97,6 +107,7 @@ class StakePart(object):
 
         :return: data including information of StakePart object
         """
+
         assert self._complete
 
         data = [self._VERSION,
@@ -110,6 +121,7 @@ class StakePart(object):
 
         :param other: (StakePart)
         """
+
         assert self._complete
 
         return isinstance(other, StakePart) \
@@ -122,5 +134,7 @@ class StakePart(object):
 
         :param other: (StakePart)
         """
+
         assert self._complete
+
         return not self.__eq__(other)

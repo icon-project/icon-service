@@ -93,28 +93,22 @@ class Account(object):
         if not self.is_flag_on(PartFlag.COIN):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
 
-        self._update_unstake_state()
         self.coin_part.deposit(value)
 
     def withdraw(self, value: int):
         if not self.is_flag_on(PartFlag.COIN):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
 
-        self._update_unstake_state()
         self.coin_part.withdraw(value)
 
-    def _update_unstake_state(self):
-        if not self.coin_part.is_flag_on(CoinPartFlag.HAS_UNSTAKE):
+    def update(self):
+        if not self.is_flag_on(PartFlag.COIN_STAKE):
             return
 
-        if not self.is_flag_on(PartFlag.STAKE):
-            raise InvalidParamsException('Failed to coin: InvalidAccount')
-
-        if self.unstake_block_height > 0:
-            balance: int = self.stake_part.finish_unstake()
-            if balance > 0:
-                self.coin_part.toggle_flag(CoinPartFlag.HAS_UNSTAKE, False)
-                self.coin_part.deposit(balance)
+        balance: int = self.stake_part.update(self._current_block_height)
+        if balance > 0:
+            self.coin_part.toggle_flag(CoinPartFlag.HAS_UNSTAKE, False)
+            self.coin_part.deposit(balance)
 
     @property
     def balance(self) -> int:
@@ -176,11 +170,11 @@ class Account(object):
             return
         elif offset > 0:
             self.coin_part.withdraw(value)
-            self.stake_part.update_stake(abs(offset))
+            self.stake_part.add_stake(abs(offset))
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
             self.coin_part.toggle_flag(CoinPartFlag.HAS_UNSTAKE, True)
-            self.stake_part.update_unstake(unlock_block_height, abs(offset))
+            self.stake_part.set_unstake(unlock_block_height, abs(offset))
 
     def delegate(self, target: 'Account', value: int) -> bool:
         if not self.is_flag_on(PartFlag.DELEGATION) or not target.is_flag_on(PartFlag.DELEGATION):
