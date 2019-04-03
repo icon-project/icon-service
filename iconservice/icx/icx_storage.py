@@ -138,18 +138,18 @@ class IcxStorage(object):
             key: bytes = CoinPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
-                coin_part: 'CoinPart' = CoinPart.from_bytes(value, address)
+                coin_part: 'CoinPart' = CoinPart.from_bytes(value)
                 is_stake_needed = coin_part.is_flag_on(CoinPartFlag.HAS_UNSTAKE)
                 account.init_coin_part_in_icx_storage(coin_part)
             else:
-                coin_part: 'CoinPart' = CoinPart(address)
+                coin_part: 'CoinPart' = CoinPart()
                 account.init_coin_part_in_icx_storage(coin_part)
 
         if is_flag_on(flag, PartFlag.STAKE) or is_stake_needed:
             key: bytes = StakePart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
-                stake_part: 'StakePart' = StakePart.from_bytes(value, address)
+                stake_part: 'StakePart' = StakePart.from_bytes(value)
                 account.init_stake_part_in_icx_storage(stake_part)
             else:
                 stake_part: 'StakePart' = StakePart(address)
@@ -159,7 +159,7 @@ class IcxStorage(object):
             key: bytes = DelegationPart.make_key(address)
             value: bytes = self._db.get(context, key)
             if value:
-                delegation_part: 'DelegationPart' = DelegationPart.from_bytes(value, address)
+                delegation_part: 'DelegationPart' = DelegationPart.from_bytes(value)
                 account.init_delegation_part_in_icx_storage(delegation_part)
             else:
                 delegation_part: DelegationPart = DelegationPart(address)

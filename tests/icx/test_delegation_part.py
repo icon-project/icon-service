@@ -26,33 +26,35 @@ from tests import create_address
 class TestDelegationPart(unittest.TestCase):
 
     def test_delegation_part_from_bytes_to_bytes(self):
-        address: 'Address' = create_address()
-
-        account = DelegationPart(address)
+        account = DelegationPart()
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(4, len(data))
 
-        account2 = DelegationPart.from_bytes(data, address)
+        account2 = DelegationPart.from_bytes(data)
         self.assertEqual(account.delegated_amount, account2.delegated_amount)
         self.assertEqual(account.delegations, account2.delegations)
 
     def test_account_for_delegation(self):
         accounts = []
-        src = DelegationPart(create_address())
+        src_address: 'Address' = create_address()
+        src = DelegationPart()
 
         for _ in range(0, 10):
-            to: 'DelegationPart' = DelegationPart(create_address())
-            accounts.append(to)
-            src.delegate(to, 10)
+            to_address: 'Address' = create_address()
+            to: 'DelegationPart' = DelegationPart()
+            accounts.append((to_address, to))
+            src.delegate(to_address, to, 10)
 
         self.assertEqual(10, len(src.delegations))
 
         for i in range(0, 10):
-            self.assertEqual(10, accounts[i].delegated_amount)
+            address, account = accounts[i]
+            self.assertEqual(10, account.delegated_amount)
 
         for i in range(0, 10):
-            src.delegate(accounts[i], 0)
+            address, account = accounts[i]
+            src.delegate(address, account, 0)
 
         self.assertEqual(0, len(src.delegations))
 

@@ -35,19 +35,19 @@ class TestAccount(unittest.TestCase):
         account: 'Account' = Account(address, 0)
         self.assertEqual(PartFlag.NONE, account.flag)
 
-        coin_part: 'CoinPart' = CoinPart(address)
+        coin_part: 'CoinPart' = CoinPart()
         account.init_coin_part_in_icx_storage(coin_part)
         self.assertEqual(PartFlag.COIN, account.flag)
         account.init_coin_part_in_icx_storage(None)
         self.assertEqual(PartFlag.NONE, account.flag)
 
-        stake_part: 'StakePart' = StakePart(address)
+        stake_part: 'StakePart' = StakePart()
         account.init_stake_part_in_icx_storage(stake_part)
         self.assertEqual(PartFlag.STAKE, account.flag)
         account.init_stake_part_in_icx_storage(None)
         self.assertEqual(PartFlag.NONE, account.flag)
 
-        delegation_part: 'DelegationPart' = DelegationPart(address)
+        delegation_part: 'DelegationPart' = DelegationPart()
         account.init_delegation_part_in_icx_storage(delegation_part)
         self.assertEqual(PartFlag.DELEGATION, account.flag)
         account.init_delegation_part_in_icx_storage(None)
@@ -70,7 +70,7 @@ class TestAccount(unittest.TestCase):
     def test_coin_part(self):
         address: 'Address' = create_address()
 
-        coin_part: 'CoinPart' = CoinPart(address)
+        coin_part: 'CoinPart' = CoinPart()
         account: 'Account' = Account(address, 0)
         account.init_coin_part_in_icx_storage(coin_part)
 
@@ -102,8 +102,8 @@ class TestAccount(unittest.TestCase):
         address: 'Address' = create_address()
 
         account = Account(address, 0)
-        coin_part: 'CoinPart' = CoinPart(address)
-        stake_part: 'StakePart' = StakePart(address)
+        coin_part: 'CoinPart' = CoinPart()
+        stake_part: 'StakePart' = StakePart()
         account.init_coin_part_in_icx_storage(coin_part)
         account.init_stake_part_in_icx_storage(stake_part)
 
@@ -140,12 +140,12 @@ class TestAccount(unittest.TestCase):
         target_accounts = []
 
         src_account = Account(create_address(), 0)
-        src_delegation_part: 'DelegationPart' = DelegationPart(src_account.address)
+        src_delegation_part: 'DelegationPart' = DelegationPart()
         src_account.init_delegation_part_in_icx_storage(src_delegation_part)
 
         for _ in range(0, 10):
             target_account: 'Account' = Account(create_address(), 0)
-            target_delegation_part: 'DelegationPart' = DelegationPart(target_account.address)
+            target_delegation_part: 'DelegationPart' = DelegationPart()
             target_account.init_delegation_part_in_icx_storage(target_delegation_part)
 
             target_accounts.append(target_account)

@@ -26,18 +26,13 @@ if TYPE_CHECKING:
 class DelegationPart(object):
     prefix = b"aod|"
 
-    def __init__(self, address: 'Address'):
-        self._address: 'Address' = address
+    def __init__(self):
         self._delegated_amount: int = 0
         self._delegations: OrderedDict = OrderedDict()
 
     @staticmethod
     def make_key(address: 'Address'):
         return DelegationPart.prefix + address.to_bytes_including_prefix()
-
-    @property
-    def address(self) -> 'Address':
-        return self._address
 
     @property
     def delegated_amount(self) -> int:
@@ -52,18 +47,17 @@ class DelegationPart(object):
         return self._delegations
 
     @staticmethod
-    def from_bytes(buf: bytes, address: 'Address') -> 'DelegationPart':
+    def from_bytes(buf: bytes) -> 'DelegationPart':
         """Create DelegationPart object from bytes data
 
         :param buf: (bytes) bytes data including DelegationPart information
-        :param address:
         :return: (DelegationPart) DelegationPart object
         """
 
         data: list = MsgPackForDB.loads(buf)
         version = data[0]
 
-        obj = DelegationPart(address)
+        obj = DelegationPart()
         obj._delegated_amount: int = data[1]
 
         delegations: list = data[2]
@@ -93,15 +87,15 @@ class DelegationPart(object):
 
         return MsgPackForDB.dumps(data)
 
-    def delegate(self, to: 'DelegationPart', value: int) -> bool:
-        info: 'DelegationPartInfo' = self._delegations.get(to.address)
+    def delegate(self, to_address: 'Address', to: 'DelegationPart', value: int) -> bool:
+        info: 'DelegationPartInfo' = self._delegations.get(to_address)
 
         if info is None:
             if value == 0:
                 ret = False
             else:
-                info: 'DelegationPartInfo' = DelegationPart.create_delegation(to.address, value)
-                self._delegations[to.address] = info
+                info: 'DelegationPartInfo' = DelegationPart.create_delegation(to_address, value)
+                self._delegations[to_address] = info
                 to.delegated_amount += value
                 ret = True
         else:
@@ -133,7 +127,6 @@ class DelegationPart(object):
         """
 
         return isinstance(other, DelegationPart) \
-               and self._address == other.address \
                and self._delegated_amount == other.delegated_amount \
                and self._delegations == other.delegations
 

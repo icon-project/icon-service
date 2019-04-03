@@ -185,7 +185,7 @@ class Account(object):
     def delegate(self, target: 'Account', value: int) -> bool:
         if not self.is_flag_on(PartFlag.DELEGATION) or not target.is_flag_on(PartFlag.DELEGATION):
             raise InvalidParamsException('Failed to delegation: InvalidAccount')
-        return self.delegation_part.delegate(target.delegation_part, value)
+        return self.delegation_part.delegate(target.address, target.delegation_part, value)
 
     def __eq__(self, other) -> bool:
         """operator == overriding

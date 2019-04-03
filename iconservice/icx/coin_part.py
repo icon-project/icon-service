@@ -66,12 +66,10 @@ class CoinPart(object):
     _STRUCT_FORMAT = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self,
-                 address: 'Address',
                  account_type: 'CoinPartType' = CoinPartType.GENERAL,
                  balance: int = 0) -> None:
         """Constructor
         """
-        self._address: 'Address' = address
         self._type: 'CoinPartType' = account_type
         self._balance: int = balance
         self._flags: int = CoinPartFlag.NONE
@@ -82,14 +80,6 @@ class CoinPart(object):
             return address.body
         else:
             return address.to_bytes_including_prefix()
-
-    @property
-    def address(self) -> 'Address':
-        """Address object
-
-        :return: (Address)
-        """
-        return self._address
 
     @property
     def type(self) -> 'CoinPartType':
@@ -166,7 +156,6 @@ class CoinPart(object):
         :param other: (CoinPart)
         """
         return isinstance(other, CoinPart) \
-            and self.address == other.address \
             and self.balance == other.balance \
             and self.type == other.type \
             and self.flags == other.flags
@@ -179,36 +168,35 @@ class CoinPart(object):
         return not self.__eq__(other)
 
     @staticmethod
-    def from_bytes(buf: bytes, address: 'Address') -> 'CoinPart':
+    def from_bytes(buf: bytes) -> 'CoinPart':
         """Create CoinPart object from bytes data
 
         :param buf: (bytes) bytes data including Account information
-        :param address:
         :return: (CoinPart) account object
         """
 
         if len(buf) == CoinPart._STRUCT_PACKED_BYTES_SIZE and buf[0] == CoinPartVersion.STRUCT:
-            return CoinPart._from_struct_packed_bytes(buf, address)
+            return CoinPart._from_struct_packed_bytes(buf)
         else:
-            return CoinPart._from_msg_packed_bytes(buf, address)
+            return CoinPart._from_msg_packed_bytes(buf)
 
     @staticmethod
-    def _from_struct_packed_bytes(buf: bytes, address: 'Address') -> 'CoinPart':
+    def _from_struct_packed_bytes(buf: bytes) -> 'CoinPart':
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
-        obj = CoinPart(address)
+        obj = CoinPart()
         obj._type = CoinPartType(coin_type)
         obj._flags = flags
         obj._balance = int.from_bytes(amount, DATA_BYTE_ORDER)
         return obj
 
     @staticmethod
-    def _from_msg_packed_bytes(buf: bytes, address: 'Address') -> 'CoinPart':
+    def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
-        obj = CoinPart(address)
+        obj = CoinPart()
         obj._type = CoinPartType(data[1])
         obj._flags = data[2]
         obj._balance = data[3]

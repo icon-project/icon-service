@@ -26,8 +26,7 @@ if TYPE_CHECKING:
 class StakePart(object):
     prefix = b"aos|"
 
-    def __init__(self, address: 'Address'):
-        self._address: 'Address' = address
+    def __init__(self):
         self._stake: int = 0
         self._unstake: int = 0
         self._unstake_block_height: int = 0
@@ -35,10 +34,6 @@ class StakePart(object):
     @staticmethod
     def make_key(address: 'Address'):
         return StakePart.prefix + address.to_bytes_including_prefix()
-
-    @property
-    def address(self) -> 'Address':
-        return self._address
 
     @property
     def stake(self):
@@ -70,18 +65,17 @@ class StakePart(object):
         return unstake
 
     @staticmethod
-    def from_bytes(buf: bytes, address: 'Address') -> 'StakePart':
+    def from_bytes(buf: bytes) -> 'StakePart':
         """Create Account of Stake object from bytes data
 
         :param buf: (bytes) bytes data including Account of Stake information
-        :param address:
         :return: (AccountOfStake) AccountOfStake object
         """
 
         data: list = MsgPackForDB.loads(buf)
         version = data[0]
 
-        obj = StakePart(address)
+        obj = StakePart()
         obj._stake_amount: int = data[1]
         obj._unstake_amount: int = data[2]
         obj._unstake_block_height: int = data[3]
@@ -107,9 +101,8 @@ class StakePart(object):
         """
 
         return isinstance(other, StakePart) \
-               and self._address == other.address \
-               and self._stake == other.stake_amount \
-               and self._unstake == other.unstake_amount \
+               and self._stake == other.stake \
+               and self._unstake == other.unstake \
                and self._unstake_block_height == other.unstake_block_height
 
     def __ne__(self, other) -> bool:

@@ -116,7 +116,7 @@ class IcxEngine(object):
         :return:
         """
 
-        coin_part: 'CoinPart' = CoinPart(address, account_type=account_type, balance=int(amount))
+        coin_part: 'CoinPart' = CoinPart(account_type=account_type, balance=int(amount))
         account: 'Account' = Account(address, context.block.height)
         account.init_coin_part_in_icx_storage(coin_part)
 

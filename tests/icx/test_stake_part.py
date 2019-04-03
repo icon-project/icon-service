@@ -26,14 +26,12 @@ from tests import create_address
 class TestStakePart(unittest.TestCase):
 
     def test_stake_part_from_bytes_to_bytes(self):
-        address: 'Address' = create_address()
-
-        account = StakePart(address)
+        account = StakePart()
         data = account.to_bytes()
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(5, len(data))
 
-        account2 = StakePart.from_bytes(data, address)
+        account2 = StakePart.from_bytes(data)
         self.assertEqual(account.stake, account2.stake)
         self.assertEqual(account.unstake, account2.unstake)
         self.assertEqual(account.unstake_block_height, account2.unstake_block_height)
@@ -42,19 +40,17 @@ class TestStakePart(unittest.TestCase):
         account._unstake_amount = 20
         account._unstake_block_height = 30
 
-        account3 = StakePart.from_bytes(account.to_bytes(), address)
+        account3 = StakePart.from_bytes(account.to_bytes())
         self.assertEqual(account.stake, account3.stake)
         self.assertEqual(account.unstake, account3.unstake)
         self.assertEqual(account.unstake_block_height, account3.unstake_block_height)
 
     def test_stake_part(self):
-        address: 'Address' = create_address()
-
         stake = 500
         unstake = 0
         unstake_block_height = 0
 
-        stake_part: 'StakePart' = StakePart(address)
+        stake_part: 'StakePart' = StakePart()
         stake_part.update_stake(stake)
 
         self.assertEqual(stake, stake_part.stake)
