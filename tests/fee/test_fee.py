@@ -8,11 +8,13 @@ class TestFee(TestCase):
 
     def test_fee_from_bytes_to_bytes(self):
         fee = Fee()
-        fee.ratio = 80
+        fee.min_remaining_amount = 5000 * 10 ** 18
         fee.head_id = create_tx_hash()
         fee.tail_id = create_tx_hash()
         fee.available_head_id_of_deposit = create_tx_hash()
         fee.available_head_id_of_virtual_step = create_tx_hash()
+        fee.expires_of_deposit = 1
+        fee.expires_of_virtual_step = 200
 
         fee_in_bytes = fee.to_bytes()
         self.assertIsInstance(fee_in_bytes, bytes)
@@ -23,7 +25,7 @@ class TestFee(TestCase):
 
     def test_to_bytes_from_bytes_with_none_type(self):
         fee = Fee()
-        fee.ratio = 80
+        fee.min_remaining_amount = 5000 * 10 ** 18
 
         fee_in_bytes = fee.to_bytes()
         self.assertIsInstance(fee_in_bytes, bytes)
