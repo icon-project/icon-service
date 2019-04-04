@@ -37,6 +37,7 @@ class AccountType(IntEnum):
     TRAMSFER = 0
     STAKE = 1
     DELEGATE = 2
+    STAKE_DELEGATE = 3
 
 
 class AccountPartFlag(IntFlag):
@@ -120,8 +121,10 @@ class IcxStorage(object):
             return AccountPartFlag.COIN
         elif account_type == AccountType.STAKE:
             return AccountPartFlag.COIN | AccountPartFlag.STAKE
-        elif account_type == AccountType.DELEGATION:
+        elif account_type == AccountType.DELEGATE:
             return AccountPartFlag.DELEGATION
+        elif account_type == AccountType.STAKE_DELEGATE:
+            return AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
 
     def get_account(self,
                     context: 'IconScoreContext',

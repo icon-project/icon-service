@@ -94,10 +94,9 @@ class StakePart(object):
         self._flags = toggle_flags(self._flags, PartFlag.STAKE_DIRTY, True)
 
     def update(self, block_height: int) -> int:
-
-        unstake: int = self._unstake
-
-        if block_height > self._unstake_block_height:
+        unstake: int = 0
+        if 0 < self._unstake_block_height < block_height:
+            unstake: int = self._unstake
             self._unstake = 0
             self._unstake_block_height: int = 0
             self._flags = toggle_flags(self._flags, PartFlag.STAKE_DIRTY, True)

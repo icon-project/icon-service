@@ -112,6 +112,10 @@ class CoinPart(object):
         """
         return self._flags | self._db_flags
 
+    def toggle_has_unstake(self, on: bool):
+        self._db_flags = toggle_flags(self.flags, PartFlag.COIN_HAS_UNSTAKE, on)
+        self._flags = toggle_flags(self._flags, PartFlag.COIN_DIRTY, True)
+
     def deposit(self, value: int):
         """Deposit coin
 

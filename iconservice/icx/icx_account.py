@@ -106,6 +106,12 @@ class Account(object):
         return 0
 
     @property
+    def total_stake(self) -> int:
+        if self.stake_part:
+            return self.stake_part.total_stake
+        return 0
+
+    @property
     def unstake_block_height(self) -> int:
         if self.stake_part:
             return self.stake_part.unstake_block_height
@@ -147,7 +153,7 @@ class Account(object):
 
         balance: int = self.stake_part.update(self._current_block_height)
         if balance > 0:
-            toggle_flags(self.coin_part.flags, PartFlag.COIN_HAS_UNSTAKE, False)
+            self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
     def set_stake(self, value: int, unstake_lock_period: int):
@@ -157,22 +163,22 @@ class Account(object):
         if not isinstance(value, int) or value < 0:
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
-        total: int = self.balance + self.stake
+        total: int = self.balance + self.total_stake
 
         if total < value:
             raise InvalidParamsException('Failed to stake: total < stake')
 
-        offset: int = value - self.stake
+        offset: int = value - self.total_stake
 
         if offset == 0:
             return
         elif offset > 0:
-            self.coin_part.withdraw(value)
-            self.stake_part.add_stake(abs(offset))
+            self.coin_part.withdraw(offset)
+            self.stake_part.add_stake(offset)
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
-            toggle_flags(self.coin_part.flags, PartFlag.COIN_HAS_UNSTAKE, True)
-            self.stake_part.set_unstake(unlock_block_height, abs(offset))
+            self.coin_part.toggle_has_unstake(True)
+            self.stake_part.set_unstake(unlock_block_height,  self.total_stake - value)
 
     def update_delegated_amount(self, offset: int):
         if self.delegation_part is None:
