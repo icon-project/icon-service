@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from .base.address import Address, generate_score_address, generate_score_address_for_tbears
+from iconservice.iiss.iiss_issue_formula import IcxIssueFormula
+from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
@@ -31,7 +32,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    REVISION_3
+    REVISION_3, ICX_ISSUE_TRANSACTION_INDEX
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -85,7 +86,8 @@ class IconServiceEngine(ContextContainer):
             'icx_sendTransaction': self._handle_icx_send_transaction,
             'debug_estimateStep': self._handle_estimate_step,
             'icx_getScoreApi': self._handle_icx_get_score_api,
-            'ise_getStatus': self._handle_ise_get_status
+            'ise_getStatus': self._handle_ise_get_status,
+            'iiss_get_issue_info': self._handle_iiss_get_issue_info
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -1038,6 +1040,38 @@ class IconServiceEngine(ContextContainer):
             last_block_status = self._make_last_block_status()
             response['lastBlock'] = last_block_status
         return response
+
+    def _handle_iiss_get_issue_info(self,
+                                    context: 'IconScoreContext',
+                                    _: dict) -> dict:
+        # todo: get issue related info from iiss engine
+        # dummy data
+        iiss_data_for_issue: dict = \
+            {
+                "prep": {
+                    "incentive": "1",
+                    "rewardRate": "1",
+                    "totalDelegation": "10",
+                },
+                "eep": {
+                    "incentive": "2",
+                    "rewardRate": "2",
+                    "totalDelegation": "100",
+                },
+                "dapp": {
+                    "incentive": "3",
+                    "rewardRate": "3",
+                    "totalDelegation": "1000",
+                }
+            }
+
+        # calculate issue amount using formula method
+        formula = IcxIssueFormula()
+        for group in iiss_data_for_issue.keys():
+            issue_amount_per_group = formula.calculate(group, iiss_data_for_issue[group])
+            iiss_data_for_issue[group]["value"] = issue_amount_per_group
+
+        return iiss_data_for_issue
 
     def _make_last_block_status(self) -> Optional[dict]:
         block = self._precommit_data_manager.last_block

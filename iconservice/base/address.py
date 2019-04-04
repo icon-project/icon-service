@@ -281,6 +281,8 @@ ZERO_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
 GOVERNANCE_SCORE_ADDRESS = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
 ICX_ENGINE_ADDRESS = Address.from_data(AddressPrefix.CONTRACT, ICON_DEX_DB_NAME.encode())
 
+# todo: set treasury address
+TREASURY_ADDRESS = ""
 
 def generate_score_address_for_tbears(score_path: str) -> 'Address':
     """
