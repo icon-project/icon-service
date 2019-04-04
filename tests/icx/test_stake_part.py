@@ -18,11 +18,9 @@
 
 import unittest
 
-from iconservice import Address
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
-from iconservice.icx.icx_account import PartFlag
+from iconservice.icx.base_part import BasePartState
 from iconservice.icx.stake_part import StakePart
-from iconservice.utils import toggle_flags
 from tests import create_address
 
 
@@ -99,81 +97,81 @@ class TestStakePart(unittest.TestCase):
 
     def test_stake_part_stake(self):
         part = StakePart()
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
         self.assertEqual(0, part.stake)
 
     def test_stake_part_stake_overflow(self):
         part = StakePart()
 
         with self.assertRaises(Exception) as e:
-            stake = part.stake
+            self.assertEqual(0, part.stake)
         self.assertEqual(AssertionError, type(e.exception))
 
     def test_stake_part_voting_weight(self):
         stake = 10
         part = StakePart(stake=stake)
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
         self.assertEqual(stake, part.voting_weight)
 
     def test_stake_part_voting_weight_overflow(self):
         part = StakePart()
 
         with self.assertRaises(Exception) as e:
-            voting_weight = part.voting_weight
+            self.assertEqual(0, part.voting_weight)
         self.assertEqual(AssertionError, type(e.exception))
 
     def test_stake_part_unstake(self):
         unstake = 10
         part = StakePart(unstake=unstake)
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
         self.assertEqual(unstake, part.unstake)
 
     def test_stake_part_unstake_overflow(self):
         part = StakePart()
 
         with self.assertRaises(Exception) as e:
-            unstake = part.unstake
+            self.assertEqual(0, part.unstake)
         self.assertEqual(AssertionError, type(e.exception))
 
     def test_stake_part_unstake_block_height(self):
         unstake_block_height = 10
         part = StakePart(unstake_block_height=unstake_block_height)
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
         self.assertEqual(unstake_block_height, part.unstake_block_height)
 
     def test_stake_part_unstake_block_height_overflow(self):
         part = StakePart()
 
         with self.assertRaises(Exception) as e:
-            unstake_block_height = part.unstake_block_height
+            self.assertEqual(0, part.unstake_block_height)
         self.assertEqual(AssertionError, type(e.exception))
 
     def test_stake_part_total_stake(self):
         stake = 10
         unstake = 20
         part = StakePart(stake=stake, unstake=unstake)
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
         self.assertEqual(stake+unstake, part.total_stake)
 
     def test_stake_part_total_stake_overflow(self):
         part = StakePart()
 
         with self.assertRaises(Exception) as e:
-            total_stake = part.total_stake
+            self.assertEqual(0, part.total_stake)
         self.assertEqual(AssertionError, type(e.exception))
 
     def test_stake_part_add_stake(self):
         part = StakePart()
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
 
         stake = 100
         part.add_stake(100)
         self.assertEqual(stake, part.stake)
-        self.assertEqual(PartFlag.STAKE_DIRTY | PartFlag.STAKE_COMPLETE, part.flags)
+        self.assertTrue(part.is_set(BasePartState.DIRTY | BasePartState.COMPLETE))
 
     def test_stake_part_set_unstake_update(self):
         part = StakePart()
-        part._flags = toggle_flags(part._flags, PartFlag.STAKE_COMPLETE, True)
+        part.set_complete(True)
 
         stake = 100
         block_height = 10
@@ -184,7 +182,7 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(0, part.stake)
         self.assertEqual(stake, part.unstake)
         self.assertEqual(block_height, part.unstake_block_height)
-        self.assertEqual(PartFlag.STAKE_DIRTY | PartFlag.STAKE_COMPLETE, part.flags)
+        self.assertTrue(part.is_set(BasePartState.DIRTY | BasePartState.COMPLETE))
 
         block_height += block_height
         unstake = 10
@@ -192,7 +190,7 @@ class TestStakePart(unittest.TestCase):
         self.assertEqual(stake - unstake, part.stake)
         self.assertEqual(unstake, part.unstake)
         self.assertEqual(block_height, part.unstake_block_height)
-        self.assertEqual(PartFlag.STAKE_DIRTY | PartFlag.STAKE_COMPLETE, part.flags)
+        self.assertTrue(part.is_set(BasePartState.DIRTY | BasePartState.COMPLETE))
 
         refund_unstake = part.normalize(block_height + 1)
         self.assertEqual(unstake, refund_unstake)

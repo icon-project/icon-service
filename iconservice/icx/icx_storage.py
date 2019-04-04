@@ -23,7 +23,6 @@ from .icx_account import Account
 from .stake_part import StakePart
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
-from ..utils import is_flags_on
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
@@ -128,13 +127,11 @@ class IcxStorage(object):
             create a new account.
         """
 
-        coin_part: 'CoinPart' = None
-        stake_part: 'StakePart' = None
-        delegation_part: 'DelegationPart' = None
+        coin_part: Optional['CoinPart'] = None
+        stake_part: Optional['StakePart'] = None
+        delegation_part: Optional['DelegationPart'] = None
 
         part_flags: 'AccountPartFlag' = AccountPartFlag(intent)
-
-        account: 'Account' = Account(address, context.block.height)
 
         if AccountPartFlag.COIN in part_flags:
             coin_part: 'CoinPart' = self._get_part(context, CoinPart, address)
@@ -145,13 +142,13 @@ class IcxStorage(object):
         if AccountPartFlag.STAKE in part_flags:
             stake_part: 'StakePart' = self._get_part(context, StakePart, address)
 
-        if is_flags_on(part_flags, AccountPartFlag.DELEGATION):
-            delegation_part: 'DelegatePart' = self._get_part(context, DelegationPart, address)
+        if AccountPartFlag.DELEGATION in part_flags:
+            delegation_part: 'DelegationPart' = self._get_part(context, DelegationPart, address)
 
-        account.init_parts(coin_part, stake_part, delegation_part)
-        account.normalize()
-
-        return account
+        return Account(address, context.block.height,
+                       coin_part=coin_part,
+                       stake_part=stake_part,
+                       delegation_part=delegation_part)
 
     def _get_part(self, context: 'IconScoreContext',
                   part_class: Union[type(CoinPart), type(StakePart), type(DelegationPart)],
@@ -164,25 +161,23 @@ class IcxStorage(object):
     def put_account(self,
                     context: 'IconScoreContext',
                     account: 'Account') -> None:
-        """Put account info to db.
+        """Put account into to db.
 
         :param context:
         :param account: account to save
         """
-        if is_flags_on(account.flags, PartFlag.COIN_DIRTY):
-            key: bytes = CoinPart.make_key(account.address)
-            value: bytes = account.coin_part.to_bytes(context.revision)
-            self._db.put(context, key, value)
+        parts = [account.coin_part, account.stake_part, account.delegation_part]
 
-        if is_flags_on(account.flags, PartFlag.STAKE_DIRTY):
-            key: bytes = StakePart.make_key(account.address)
-            value: bytes = account.stake_part.to_bytes()
-            self._db.put(context, key, value)
+        for part in parts:
+            if part and part.is_dirty():
+                key: bytes = part.make_key(account.address)
 
-        if is_flags_on(account.flags, PartFlag.DELEGATION_DIRTY):
-            key: bytes = DelegationPart.make_key(account.address)
-            value: bytes = account.delegation_part.to_bytes()
-            self._db.put(context, key, value)
+                if isinstance(part, CoinPart):
+                    value: bytes = part.to_bytes(context.revision)
+                else:
+                    value: bytes = part.to_bytes()
+
+                self._db.put(context, key, value)
 
     def delete_account(self,
                        context: 'IconScoreContext',

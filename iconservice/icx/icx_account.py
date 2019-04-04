@@ -14,51 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique
 from typing import TYPE_CHECKING, Optional
 
-from ..utils import toggle_flags
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from .coin_part import CoinPart
-    from .stake_part import StakePart
     from .delegation_part import DelegationPart
+    from .stake_part import StakePart
     from ..base.address import Address
 
 
-# @unique
-# class PartFlag(IntFlag):
-#     """PartFlag bitwise flags
-#     """
-#     NONE = 0
-#     COIN_DIRTY = 1
-#     STAKE_DIRTY = 2
-#     DELEGATION_DIRTY = 4
-#
-#     COIN_HAS_UNSTAKE = 8
-#     STAKE_COMPLETE = 16
-
-
 class Account(object):
-    def __init__(self, address: 'Address', current_block_height: int):
+    def __init__(self, address: 'Address', current_block_height: int, *,
+                 coin_part: Optional['CoinPart'] = None,
+                 stake_part: Optional['StakePart'] = None,
+                 delegation_part: Optional['DelegationPart'] = None):
         self._address: 'Address' = address
         self._current_block_height: int = current_block_height
 
-        self._coin_part: 'CoinPart' = None
-        self._stake_part: 'StakePart' = None
-        self._delegation_part: 'DelegationPart' = None
+        self._coin_part: 'CoinPart' = coin_part
+        self._stake_part: 'StakePart' = stake_part
+        self._delegation_part: 'DelegationPart' = delegation_part
 
-    # @property
-    # def flags(self) -> int:
-    #     flags = PartFlag.NONE
-    #     if self.coin_part:
-    #         flags |= self.coin_part.flags
-    #     if self.stake_part:
-    #         flags |= self.stake_part.flags
-    #     if self.delegation_part:
-    #         flags |= self.delegation_part.flags
-    #     return flags
+        self.normalize()
 
     @property
     def address(self):
@@ -76,9 +55,9 @@ class Account(object):
     def delegation_part(self) -> 'DelegationPart':
         return self._delegation_part
 
-    def init_parts(self, coin_part: Optional['CoinPart'],
-                   stake_part: Optional['StakePart'],
-                   delegation_part: Optional['DelegationPart']):
+    def init_parts(self, coin_part: Optional['CoinPart'] = None,
+                   stake_part: Optional['StakePart'] = None,
+                   delegation_part: Optional['DelegationPart'] = None):
         self._coin_part = coin_part
         self._stake_part = stake_part
         self._delegation_part = delegation_part

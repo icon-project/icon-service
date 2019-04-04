@@ -18,12 +18,9 @@
 
 import unittest
 
-from iconservice.base.exception import InvalidParamsException, ExceptionCode
-
-from iconservice import Address
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.icx.delegation_part import DelegationPart
-from iconservice.icx.icx_account import PartFlag
 from tests import create_address
 
 
@@ -83,11 +80,12 @@ class TestDelegationPart(unittest.TestCase):
     def test_delegation_part_update_delegated_amount(self):
         offset = 100
         part = DelegationPart()
+
+        self.assertFalse(part.is_dirty())
         part.update_delegated_amount(offset)
+        self.assertTrue(part.is_dirty())
 
         self.assertEqual(offset, part.delegated_amount)
-        flags = PartFlag.DELEGATION_DIRTY
-        self.assertEqual(flags, part.flags)
 
     def test_delegation_part_set_delegations(self):
         count = 10
@@ -97,11 +95,12 @@ class TestDelegationPart(unittest.TestCase):
             delegations.append((create_address(), amount))
 
         part = DelegationPart()
+
+        self.assertFalse(part.is_dirty())
         part.set_delegations(delegations)
+        self.assertTrue(part.is_dirty())
 
         self.assertEqual(delegations, part.delegations)
-        flags = PartFlag.DELEGATION_DIRTY
-        self.assertEqual(flags, part.flags)
 
     def test_delegation_part_set_delegations_overflow(self):
         count = 10 + 1
@@ -116,7 +115,7 @@ class TestDelegationPart(unittest.TestCase):
             part.set_delegations(delegations)
 
         self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.exception.code)
-        self.assertEqual('overflow delegations', e.exception.message)
+        self.assertEqual('Delegations overflow', e.exception.message)
 
     def test_delegation_part_equal(self):
         part1 = DelegationPart()

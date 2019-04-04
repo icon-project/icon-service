@@ -20,14 +20,14 @@ import shutil
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.block import Block
 from iconservice.base.address import Address, MalformedAddress
+from iconservice.base.block import Block
 from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType, ContextContainer
 from iconservice.icx.coin_part import CoinPartType, CoinPart
+from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_engine import IcxEngine
-from iconservice.icx.icx_storage import IcxStorage, AccountPartFlag
-from iconservice.icx.icx_account import Account, PartFlag
+from iconservice.icx.icx_storage import IcxStorage
 
 
 class TestIcxEngine(unittest.TestCase, ContextContainer):

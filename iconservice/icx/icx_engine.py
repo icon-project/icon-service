@@ -117,9 +117,9 @@ class IcxEngine(object):
         :return:
         """
 
-        coin_part: 'CoinPart' = CoinPart(coin_part_type=coin_part_type)
+        coin_part: 'CoinPart' = CoinPart(coin_part_type)
         account: 'Account' = Account(address, context.block.height)
-        account.init_coin_part_in_icx_storage(coin_part)
+        account.init_parts(coin_part)
         account.deposit(int(amount))
 
         self._storage.put_account(context, account)
@@ -274,16 +274,3 @@ class IcxEngine(object):
             self._storage.put_account(context, to_account)
 
         return True
-
-    def get_account(self,
-                    context: 'IconScoreContext',
-                    address: 'Address',
-                    t: 'Intent' = Intent.TRANSFER) -> 'Account':
-        """Returns the instance of Account indicated by address
-
-        :param context:
-        :param address:
-        :param t:
-        :return: Account
-        """
-        return self._storage.get_account(context, address, t)

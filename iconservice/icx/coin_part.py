@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum, unique, Flag, auto
+from enum import IntEnum, unique, Flag
 from struct import Struct
 from typing import TYPE_CHECKING
 
@@ -49,7 +49,7 @@ class CoinPartType(IntEnum):
 
 class CoinPartFlag(Flag):
     NONE = 0
-    HAS_UNSTAKE = auto()
+    HAS_UNSTAKE = 1
 
 
 class CoinPart(BasePart):

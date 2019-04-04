@@ -21,9 +21,9 @@ import unittest
 from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import REVISION_4, REVISION_3
-from iconservice.icx.icx_account import PartFlag
-from iconservice.icx.coin_part import CoinPartType, CoinPart
-from iconservice.utils import is_flags_on, toggle_flags
+from iconservice.icx.base_part import BasePartState
+from iconservice.icx.coin_part import CoinPartType, CoinPartFlag, CoinPart
+from iconservice.utils import toggle_flags
 from tests import create_address
 
 
@@ -49,7 +49,7 @@ class TestCoinPart(unittest.TestCase):
     def test_coin_part_revision_3(self):
         part1 = CoinPart()
         self.assertIsNotNone(part1)
-        self.assertEqual(PartFlag.NONE, part1.flags)
+        self.assertIs(CoinPartFlag.NONE, part1.flags)
         self.assertTrue(part1.balance == 0)
 
         part1.deposit(100)
@@ -96,11 +96,12 @@ class TestCoinPart(unittest.TestCase):
 
         data = part1.to_bytes(REVISION_4)
         self.assertTrue(isinstance(data, bytes))
-        self.assertEqual(11, len(data))
 
         part2 = CoinPart.from_bytes(data)
+        self.assertEqual(part1, part2)
         self.assertEqual(CoinPartType.GENERAL, part2.type)
         self.assertEqual(0, part2.balance)
+        self.assertEqual(CoinPartFlag.NONE, part2.flags)
 
         part1.type = CoinPartType.GENESIS
         part1.deposit(1024)
@@ -125,13 +126,14 @@ class TestCoinPart(unittest.TestCase):
 
     def test_coin_part_flag(self):
         part1 = CoinPart()
-        self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
+        self.assertEqual(BasePartState.NONE, part1.states)
 
-        part1._state = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, True)
-        self.assertEqual(True, is_flags_on(part1.flags, PartFlag.COIN_HAS_UNSTAKE))
+        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, True)
+        self.assertIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
 
-        part1._state = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, False)
-        self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
+        part1._flags = toggle_flags(part1.flags, CoinPartFlag.HAS_UNSTAKE, False)
+        self.assertEqual(CoinPartFlag.NONE, part1.flags)
+        self.assertNotIn(CoinPartFlag.HAS_UNSTAKE, part1.flags)
 
     def test_coin_part_make_key(self):
         key = CoinPart.make_key(create_address())
@@ -163,25 +165,27 @@ class TestCoinPart(unittest.TestCase):
         self.assertEqual(balance, part.balance)
 
     def test_coin_part_flags(self):
-        db_flags = PartFlag.COIN_HAS_UNSTAKE
-        part = CoinPart(flags=db_flags)
-        self.assertEqual(db_flags, part.flags)
+        part = CoinPart(flags=CoinPartFlag.HAS_UNSTAKE)
+        self.assertEqual(CoinPartFlag.HAS_UNSTAKE, part.flags)
 
     def test_coin_part_deposit(self):
         balance = 100
         part = CoinPart()
+
+        self.assertFalse(part.is_dirty())
         part.deposit(balance)
-        flags = PartFlag.COIN_DIRTY
-        self.assertEqual(flags, part.flags)
+        self.assertTrue(part.is_dirty())
+
         self.assertEqual(balance, part.balance)
 
     def test_coin_part_withdraw(self):
         balance = 100
         part = CoinPart()
+
+        self.assertFalse(part.is_dirty())
         part.deposit(balance)
         part.withdraw(balance)
-        flags = PartFlag.COIN_DIRTY
-        self.assertEqual(flags, part.flags)
+        self.assertTrue(part.is_dirty())
         self.assertEqual(0, part.balance)
 
     def test_coin_part_equal(self):

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from enum import Flag
+
 from ..utils import toggle_flags
 
 
@@ -34,14 +35,21 @@ class BasePart(object):
     def __init__(self, states: 'BasePartState' = BasePartState.NONE):
         self._states = states
 
+    @property
+    def states(self) -> 'BasePartState':
+        return self._states
+
     def toggle_state(self, state: 'BasePartState', on: bool):
         self._states = toggle_flags(self._states, state, on)
 
     def is_dirty(self) -> bool:
-        return self.is_set(BasePart.State.DIRTY)
+        return self.is_set(BasePartState.DIRTY)
 
     def set_dirty(self, on: bool):
-        self.toggle_state(BasePart.State.DIRTY, on)
+        self.toggle_state(BasePartState.DIRTY, on)
+
+    def set_complete(self, on: bool):
+        self.toggle_state(BasePartState.COMPLETE, on)
 
     def is_set(self, states: 'BasePartState') -> bool:
         return self._states & states == states

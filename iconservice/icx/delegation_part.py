@@ -32,13 +32,12 @@ class DelegationPart(BasePart):
     def __init__(self, delegated_amount: int = 0, delegations: list = None):
         super().__init__()
 
-        if delegations:
-            self._delegations: list = delegations
-        else:
-            self._delegations: list = []
+        if delegations is None:
+            delegations = []
 
+        self._delegations: list = delegations
         self._delegated_amount: int = delegated_amount
-        self._delegations_amount: int = self._update_delegations_amount()
+        self._delegations_amount: int = self._update_delegations_amount(delegations)
 
     @staticmethod
     def make_key(address: 'Address'):

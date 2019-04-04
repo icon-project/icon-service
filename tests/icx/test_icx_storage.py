@@ -63,8 +63,7 @@ class TestIcxStorage(unittest.TestCase):
 
         address: 'Address' = create_address(AddressPrefix.EOA)
         coin_part: 'CoinPart' = CoinPart()
-        account: 'Account' = Account(address, self.context.block.height)
-        account.init_coin_part_in_icx_storage(coin_part)
+        account: 'Account' = Account(address, self.context.block.height, coin_part=coin_part)
 
         account.deposit(10 ** 19)
 
@@ -131,8 +130,8 @@ class TestIcxStorageForMalformedAddress(unittest.TestCase):
         accounts:list = []
         for address in self.addresses:
             coin_part: 'CoinPart' = CoinPart()
-            account: 'Account' = Account(address, self.context.block.height)
-            account.init_coin_part_in_icx_storage(coin_part)
+            account: 'Account' = Account(
+                address, self.context.block.height, coin_part=coin_part)
             account.deposit(10 ** 19)
             accounts.append(account)
 
