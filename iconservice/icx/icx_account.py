@@ -118,11 +118,14 @@ class Account(object):
         self.coin_part.withdraw(value)
 
     def normalize(self):
-        if self.coin_part is None or self.stake_part is None:
+        if self.stake_part is None:
             return
 
         balance: int = self.stake_part.normalize(self._current_block_height)
         if balance > 0:
+            if self.coin_part is None:
+                raise InvalidParamsException('Failed to normalize: no coin part')
+
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
 
