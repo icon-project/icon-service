@@ -21,7 +21,7 @@ from iconcommons.logger import Logger
 
 from .coin_part import CoinPartType, CoinPart
 from .icx_account import Account
-from .icx_storage import IcxStorage, AccountType
+from .icx_storage import IcxStorage, Intent
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import ICX_LOG_TAG
@@ -278,7 +278,7 @@ class IcxEngine(object):
     def get_account(self,
                     context: 'IconScoreContext',
                     address: 'Address',
-                    t: 'AccountType' = AccountType.TRAMSFER) -> 'Account':
+                    t: 'Intent' = Intent.TRANSFER) -> 'Account':
         """Returns the instance of Account indicated by address
 
         :param context:

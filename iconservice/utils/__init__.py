@@ -21,6 +21,7 @@ Functions and classes in this module don't have any external dependencies.
 
 import hashlib
 import re
+from enum import Flag
 from typing import Any, Union
 
 from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
@@ -97,10 +98,10 @@ def is_flags_on(src_flags: int, dest_flags: int) -> bool:
     return src_flags & dest_flags == dest_flags
 
 
-def toggle_flags(src_flags: int, dest_flags: int, on: bool) -> int:
+def toggle_flags(src_flags: Flag, dest_flags: Flag, on: bool) -> Flag:
     if on:
         src_flags |= dest_flags
-        return src_flags
     else:
         src_flags &= ~dest_flags
-        return src_flags
+
+    return src_flags

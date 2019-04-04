@@ -16,24 +16,24 @@
 
 from typing import TYPE_CHECKING
 
-from ..utils import is_flags_on, toggle_flags
+from .base_part import BasePart, BasePartState
 from ..base.exception import InvalidParamsException
-from .icx_account import PartFlag
 from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ..base.address import Address
 
 
-class StakePart(object):
+class StakePart(BasePart):
     _VERSION = 0
     PREFIX = b"aos|"
 
     def __init__(self, stake: int = 0, unstake: int = 0, unstake_block_height: int = 0):
+        super().__init__()
+
         self._stake: int = stake
         self._unstake: int = unstake
         self._unstake_block_height: int = unstake_block_height
-        self._flags: int = PartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
@@ -41,67 +41,64 @@ class StakePart(object):
 
     @property
     def stake(self) -> int:
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
-
+        assert self.is_set(BasePartState.COMPLETE)
         return self._stake
 
     @property
     def voting_weight(self) -> int:
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
-
+        assert self.is_set(BasePartState.COMPLETE)
         return self._stake
 
     @property
     def unstake(self) -> int:
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
-
+        assert self.is_set(BasePartState.COMPLETE)
         return self._unstake
 
     @property
     def unstake_block_height(self) -> int:
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
-
+        assert self.is_set(BasePartState.COMPLETE)
         return self._unstake_block_height
 
     @property
     def total_stake(self) -> int:
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
-
+        assert self.is_set(BasePartState.COMPLETE)
         return self._stake + self._unstake
 
-    @property
-    def flags(self) -> int:
-        return self._flags
-
     def add_stake(self, value: int):
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
+        assert self.is_set(BasePartState.COMPLETE)
 
         if value <= 0:
             raise InvalidParamsException("Failed to stake: value <= 0")
 
         self._stake += value
-        self._flags = toggle_flags(self._flags, PartFlag.STAKE_DIRTY, True)
+        self.set_dirty(True)
 
     def set_unstake(self, block_height: int, value: int):
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
+        assert self.is_set(BasePartState.COMPLETE)
 
         if self.total_stake < value:
             raise InvalidParamsException(f'Failed to unstake: stake_amount({self._stake}) < value({value})')
 
+        # FIXME: Consider the case when value is 0
         self._stake = self.total_stake - value
         self._unstake = value
         self._unstake_block_height: int = block_height
-        self._flags = toggle_flags(self._flags, PartFlag.STAKE_DIRTY, True)
 
-    def update(self, block_height: int) -> int:
+        self.set_dirty(True)
+
+    def normalize(self, block_height: int) -> int:
         unstake: int = 0
+        state: 'BasePartState' = BasePartState.COMPLETE
+
         if 0 < self._unstake_block_height < block_height:
             unstake: int = self._unstake
             self._unstake = 0
             self._unstake_block_height: int = 0
-            self._flags = toggle_flags(self._flags, PartFlag.STAKE_DIRTY, True)
 
-        self._flags = toggle_flags(self._flags, PartFlag.STAKE_COMPLETE, True)
+            state |= BasePartState.DIRTY
+
+        self.toggle_state(state, True)
+
         return unstake
 
     @staticmethod
@@ -125,7 +122,7 @@ class StakePart(object):
         :return: data including information of StakePart object
         """
 
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
+        assert self.is_set(BasePartState.COMPLETE)
 
         data = [self._VERSION,
                 self._stake,
@@ -139,7 +136,7 @@ class StakePart(object):
         :param other: (StakePart)
         """
 
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
+        assert self.is_set(BasePartState.COMPLETE)
 
         return isinstance(other, StakePart) \
             and self._stake == other.stake \
@@ -152,6 +149,6 @@ class StakePart(object):
         :param other: (StakePart)
         """
 
-        assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
+        assert self.is_set(BasePartState.COMPLETE)
 
         return not self.__eq__(other)

@@ -107,7 +107,7 @@ class TestAccount(unittest.TestCase):
         stake_part: 'StakePart' = StakePart()
         account.init_coin_part_in_icx_storage(coin_part)
         account.init_stake_part_in_icx_storage(stake_part)
-        account.update()
+        account.normalize()
 
         balance = 1000
         account.deposit(balance)
@@ -136,7 +136,7 @@ class TestAccount(unittest.TestCase):
 
         remain_balance = remain_balance + unstake
         account._current_block_height += 11
-        account.update()
+        account.normalize()
         self.assertEqual(remain_balance, account.balance)
 
     def test_account_for_delegation(self):

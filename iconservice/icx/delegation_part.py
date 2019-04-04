@@ -16,21 +16,22 @@
 
 from typing import TYPE_CHECKING
 
-from ..utils import toggle_flags
+from .base_part import BasePart
 from ..base.exception import InvalidParamsException
 from ..icon_constant import IISS_MAX_DELEGATIONS
 from ..utils.msgpack_for_db import MsgPackForDB
-from .icx_account import PartFlag
 
 if TYPE_CHECKING:
     from ..base.address import Address
 
 
-class DelegationPart(object):
+class DelegationPart(BasePart):
     _VERSION = 0
     PREFIX = b"aod|"
 
     def __init__(self, delegated_amount: int = 0, delegations: list = None):
+        super().__init__()
+
         if delegations:
             self._delegations: list = delegations
         else:
@@ -38,7 +39,6 @@ class DelegationPart(object):
 
         self._delegated_amount: int = delegated_amount
         self._delegations_amount: int = self._update_delegations_amount()
-        self._flags: int = PartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address'):
@@ -56,27 +56,30 @@ class DelegationPart(object):
     def delegations_amount(self) -> int:
         return self._delegations_amount
 
-    @property
-    def flags(self) -> int:
-        return self._flags
-
-    def _update_delegations_amount(self) -> int:
+    @staticmethod
+    def _update_delegations_amount(delegations: list) -> int:
         total_delegation_amount: int = 0
-        for address, value in self.delegations:
+
+        for _, value in delegations:
             total_delegation_amount += value
+
         return total_delegation_amount
 
     def update_delegated_amount(self, offset: int):
+        if offset == 0:
+            return
+
         self._delegated_amount += offset
-        self._flags = toggle_flags(self._flags, PartFlag.DELEGATION_DIRTY, True)
+        self.set_dirty(True)
 
     def set_delegations(self, new_delegations: list):
         if len(new_delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException('overflow delegations')
+            raise InvalidParamsException('Delegations overflow')
 
         self._delegations: list = new_delegations
-        self._delegations_amount: int = self._update_delegations_amount()
-        self._flags = toggle_flags(self._flags, PartFlag.DELEGATION_DIRTY, True)
+        self._delegations_amount: int = self._update_delegations_amount(new_delegations)
+
+        self.set_dirty(True)
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'DelegationPart':
@@ -96,6 +99,9 @@ class DelegationPart(object):
         delegations: list = []
         for i in range(0, len(delegation_list), 2):
             item = (delegation_list[i], delegation_list[i + 1])
+            assert isinstance(item[0], Address)
+            assert isinstance(item[1], int)
+
             delegations.append(item)
 
         return DelegationPart(delegated_amount=delegated_amount, delegations=delegations)

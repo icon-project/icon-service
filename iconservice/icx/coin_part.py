@@ -14,16 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum, unique
+from enum import IntEnum, unique, Flag, auto
 from struct import Struct
 from typing import TYPE_CHECKING
 
-from ..utils import toggle_flags
+from .base_part import BasePart
 from ..base.address import AddressPrefix
 from ..base.exception import InvalidParamsException, OutOfBalanceException
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, REVISION_4
+from ..utils import toggle_flags
 from ..utils.msgpack_for_db import MsgPackForDB
-from .icx_account import PartFlag
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -47,7 +47,12 @@ class CoinPartType(IntEnum):
         return self.name
 
 
-class CoinPart(object):
+class CoinPartFlag(Flag):
+    NONE = 0
+    HAS_UNSTAKE = auto()
+
+
+class CoinPart(BasePart):
     """Account class
     Contains information of the account indicated by address.
     """
@@ -62,14 +67,15 @@ class CoinPart(object):
 
     def __init__(self,
                  coin_part_type: 'CoinPartType' = CoinPartType.GENERAL,
-                 db_flags: int = PartFlag.NONE,
+                 flags: 'CoinPartFlag' = CoinPartFlag.NONE,
                  balance: int = 0):
         """Constructor
         """
+        super().__init__()
+
         self._type: 'CoinPartType' = coin_part_type
-        self._db_flags: int = db_flags
+        self._flags: 'CoinPartFlag' = flags
         self._balance: int = balance
-        self._flags: int = PartFlag.NONE
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
@@ -105,16 +111,19 @@ class CoinPart(object):
         return self._balance
 
     @property
-    def flags(self) -> int:
+    def flags(self) -> 'CoinPartFlag':
         """CoinPartFlag getter
 
         :return: CoinPartType value
         """
-        return self._flags | self._db_flags
+        return self._flags
 
     def toggle_has_unstake(self, on: bool):
-        self._db_flags = toggle_flags(self.flags, PartFlag.COIN_HAS_UNSTAKE, on)
-        self._flags = toggle_flags(self._flags, PartFlag.COIN_DIRTY, True)
+        new_flags = toggle_flags(self._flags, CoinPartFlag.HAS_UNSTAKE, on)
+
+        if self._flags != new_flags:
+            self._flags = new_flags
+            self.set_dirty(True)
 
     def deposit(self, value: int):
         """Deposit coin
@@ -126,8 +135,7 @@ class CoinPart(object):
             raise InvalidParamsException(
                 'Failed to deposit: value is not int type or value < 0')
 
-        self._balance += value
-        self._flags = toggle_flags(self._flags, PartFlag.COIN_DIRTY, True)
+        self._increase_balance(value)
 
     def withdraw(self, value: int):
         """Withdraw coin
@@ -141,8 +149,14 @@ class CoinPart(object):
         if self._balance < value:
             raise OutOfBalanceException('Out of balance')
 
-        self._balance -= value
-        self._flags = toggle_flags(self._flags, PartFlag.COIN_DIRTY, True)
+        self._increase_balance(-value)
+
+    def _increase_balance(self, value: int):
+        if value == 0:
+            return
+
+        self._balance += value
+        self.set_dirty(True)
 
     def __eq__(self, other) -> bool:
         """operator == overriding
@@ -152,7 +166,7 @@ class CoinPart(object):
         return isinstance(other, CoinPart) \
             and self._balance == other._balance \
             and self._type == other._type \
-            and self._db_flags == other._db_flags
+            and self._flags == other._flags
 
     def __ne__(self, other) -> bool:
         """operator != overriding
@@ -178,7 +192,8 @@ class CoinPart(object):
     def _from_struct_packed_bytes(buf: bytes) -> 'CoinPart':
         version, coin_type, flags, amount = CoinPart._STRUCT_FORMAT.unpack(buf)
         balance: int = int.from_bytes(amount, DATA_BYTE_ORDER)
-        return CoinPart(coin_type, flags, balance)
+
+        return CoinPart(coin_type, CoinPartFlag(flags), balance)
 
     @staticmethod
     def _from_msg_packed_bytes(buf: bytes) -> 'CoinPart':
@@ -190,7 +205,9 @@ class CoinPart(object):
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
-        return CoinPart(coin_part_type=data[1], db_flags=data[2], balance=data[3])
+        return CoinPart(coin_part_type=data[1],
+                        flags=CoinPartFlag(data[2]),
+                        balance=data[3])
 
     def to_bytes(self, revision: int = 0) -> bytes:
         """Convert CoinPart object to bytes
@@ -206,7 +223,7 @@ class CoinPart(object):
         data = [
             CoinPartVersion.MSG_PACK,
             self._type,
-            self._db_flags,
+            self._flags.value,
             self.balance
         ]
 
@@ -215,5 +232,5 @@ class CoinPart(object):
     def _to_struct_packed_bytes(self) -> bytes:
         return CoinPart._STRUCT_FORMAT.pack(CoinPartVersion.STRUCT,
                                             self._type,
-                                            self._db_flags,
+                                            self._flags.value,
                                             self._balance.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))

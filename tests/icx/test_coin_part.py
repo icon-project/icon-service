@@ -127,10 +127,10 @@ class TestCoinPart(unittest.TestCase):
         part1 = CoinPart()
         self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
 
-        part1._flags = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, True)
+        part1._state = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, True)
         self.assertEqual(True, is_flags_on(part1.flags, PartFlag.COIN_HAS_UNSTAKE))
 
-        part1._flags = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, False)
+        part1._state = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, False)
         self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
 
     def test_coin_part_make_key(self):
@@ -164,7 +164,7 @@ class TestCoinPart(unittest.TestCase):
 
     def test_coin_part_flags(self):
         db_flags = PartFlag.COIN_HAS_UNSTAKE
-        part = CoinPart(db_flags=db_flags)
+        part = CoinPart(flags=db_flags)
         self.assertEqual(db_flags, part.flags)
 
     def test_coin_part_deposit(self):

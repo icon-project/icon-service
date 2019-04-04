@@ -27,17 +27,17 @@ if TYPE_CHECKING:
     from ..base.address import Address
 
 
-@unique
-class PartFlag(IntFlag):
-    """PartFlag bitwise flags
-    """
-    NONE = 0
-    COIN_DIRTY = 1
-    STAKE_DIRTY = 2
-    DELEGATION_DIRTY = 4
-
-    COIN_HAS_UNSTAKE = 8
-    STAKE_COMPLETE = 16
+# @unique
+# class PartFlag(IntFlag):
+#     """PartFlag bitwise flags
+#     """
+#     NONE = 0
+#     COIN_DIRTY = 1
+#     STAKE_DIRTY = 2
+#     DELEGATION_DIRTY = 4
+#
+#     COIN_HAS_UNSTAKE = 8
+#     STAKE_COMPLETE = 16
 
 
 class Account(object):
@@ -49,16 +49,16 @@ class Account(object):
         self._stake_part: 'StakePart' = None
         self._delegation_part: 'DelegationPart' = None
 
-    @property
-    def flags(self) -> int:
-        flags = PartFlag.NONE
-        if self.coin_part:
-            flags |= self.coin_part.flags
-        if self.stake_part:
-            flags |= self.stake_part.flags
-        if self.delegation_part:
-            flags |= self.delegation_part.flags
-        return flags
+    # @property
+    # def flags(self) -> int:
+    #     flags = PartFlag.NONE
+    #     if self.coin_part:
+    #         flags |= self.coin_part.flags
+    #     if self.stake_part:
+    #         flags |= self.stake_part.flags
+    #     if self.delegation_part:
+    #         flags |= self.delegation_part.flags
+    #     return flags
 
     @property
     def address(self):
@@ -76,13 +76,11 @@ class Account(object):
     def delegation_part(self) -> 'DelegationPart':
         return self._delegation_part
 
-    def init_coin_part_in_icx_storage(self, coin_part: Optional['CoinPart']):
+    def init_parts(self, coin_part: Optional['CoinPart'],
+                   stake_part: Optional['StakePart'],
+                   delegation_part: Optional['DelegationPart']):
         self._coin_part = coin_part
-
-    def init_stake_part_in_icx_storage(self, stake_part: Optional['StakePart']):
         self._stake_part = stake_part
-
-    def init_delegation_part_in_icx_storage(self, delegation_part: Optional['DelegationPart']):
         self._delegation_part = delegation_part
 
     @property
@@ -147,11 +145,11 @@ class Account(object):
 
         self.coin_part.withdraw(value)
 
-    def update(self):
+    def normalize(self):
         if self.stake_part is None:
             return
 
-        balance: int = self.stake_part.update(self._current_block_height)
+        balance: int = self.stake_part.normalize(self._current_block_height)
         if balance > 0:
             self.coin_part.toggle_has_unstake(False)
             self.coin_part.deposit(balance)
