@@ -86,38 +86,38 @@ class IcxEngine(object):
 
         self._put_genesis_data_account(
             context=context,
-            account_type=CoinPartType.GENESIS,
+            coin_part_type=CoinPartType.GENESIS,
             address=genesis[__ADDRESS_KEY],
             amount=genesis[__AMOUNT_KEY])
 
         self._put_genesis_data_account(
             context=context,
-            account_type=CoinPartType.TREASURY,
+            coin_part_type=CoinPartType.TREASURY,
             address=treasury[__ADDRESS_KEY],
             amount=treasury[__AMOUNT_KEY])
 
         for other in others:
             self._put_genesis_data_account(
                 context=context,
-                account_type=CoinPartType.GENERAL,
+                coin_part_type=CoinPartType.GENERAL,
                 address=other[__ADDRESS_KEY],
                 amount=other[__AMOUNT_KEY])
 
     def _put_genesis_data_account(self,
                                   context: 'IconScoreContext',
-                                  account_type: 'CoinPartType',
+                                  coin_part_type: 'CoinPartType',
                                   address: 'Address',
                                   amount: int) -> None:
         """This method is called only on invoking the genesis block
 
         :param context:
-        :param account_type:
+        :param coin_part_type:
         :param address:
         :param amount:
         :return:
         """
 
-        coin_part: 'CoinPart' = CoinPart(account_type=account_type)
+        coin_part: 'CoinPart' = CoinPart(coin_part_type=coin_part_type)
         account: 'Account' = Account(address, context.block.height)
         account.init_coin_part_in_icx_storage(coin_part)
         account.deposit(int(amount))
@@ -128,7 +128,7 @@ class IcxEngine(object):
             self._total_supply_amount += account.balance
             self._storage.put_total_supply(context, self._total_supply_amount)
 
-        if account_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
+        if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
             self._put_special_account(context, account)
 
     def _put_special_account(self,

@@ -76,6 +76,9 @@ class StakePart(object):
     def add_stake(self, value: int):
         assert is_flags_on(self._flags, PartFlag.STAKE_COMPLETE)
 
+        if value <= 0:
+            raise InvalidParamsException("Failed to stake: value <= 0")
+
         self._stake += value
         self._flags = toggle_flags(self._flags, PartFlag.STAKE_DIRTY, True)
 

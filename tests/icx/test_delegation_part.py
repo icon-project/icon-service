@@ -18,8 +18,12 @@
 
 import unittest
 
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
+
 from iconservice import Address
+from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.icx.delegation_part import DelegationPart
+from iconservice.icx.icx_account import PartFlag
 from tests import create_address
 
 
@@ -35,7 +39,7 @@ class TestDelegationPart(unittest.TestCase):
         self.assertEqual(account.delegated_amount, account2.delegated_amount)
         self.assertEqual(account.delegations, account2.delegations)
 
-    def test_account_for_delegation(self):
+    def test_delegation_part_for_delegation(self):
         src = DelegationPart()
         preps: list = []
 
@@ -51,6 +55,79 @@ class TestDelegationPart(unittest.TestCase):
         for i in range(0, 10):
             prep, value = preps[i]
             self.assertEqual(10, prep.delegated_amount)
+
+    def test_delegation_part_make_key(self):
+        key = DelegationPart.make_key(create_address())
+        self.assertEqual(ICON_EOA_ADDRESS_BYTES_SIZE + len(DelegationPart.PREFIX) + 1, len(key))
+
+        key = DelegationPart.make_key(create_address(1))
+        self.assertEqual(ICON_CONTRACT_ADDRESS_BYTES_SIZE + len(DelegationPart.PREFIX), len(key))
+
+    def test_delegation_part_delegated_amount(self):
+        delegated_amount = 10000
+        part = DelegationPart(delegated_amount=delegated_amount)
+        self.assertEqual(delegated_amount, part.delegated_amount)
+
+    def test_delegation_part_delegations(self):
+        count = 10
+        amount = 10
+        delegations = []
+        for _ in range(count):
+            delegations.append((create_address(), amount))
+
+        part = DelegationPart(delegations=delegations)
+        self.assertEqual(delegations, part.delegations)
+        delegations_amount = amount * count
+        self.assertEqual(delegations_amount, part.delegations_amount)
+
+    def test_delegation_part_update_delegated_amount(self):
+        offset = 100
+        part = DelegationPart()
+        part.update_delegated_amount(offset)
+
+        self.assertEqual(offset, part.delegated_amount)
+        flags = PartFlag.DELEGATION_DIRTY
+        self.assertEqual(flags, part.flags)
+
+    def test_delegation_part_set_delegations(self):
+        count = 10
+        amount = 10
+        delegations = []
+        for _ in range(count):
+            delegations.append((create_address(), amount))
+
+        part = DelegationPart()
+        part.set_delegations(delegations)
+
+        self.assertEqual(delegations, part.delegations)
+        flags = PartFlag.DELEGATION_DIRTY
+        self.assertEqual(flags, part.flags)
+
+    def test_delegation_part_set_delegations_overflow(self):
+        count = 10 + 1
+        amount = 10
+        delegations = []
+        for _ in range(count):
+            delegations.append((create_address(), amount))
+
+        part = DelegationPart()
+
+        with self.assertRaises(InvalidParamsException) as e:
+            part.set_delegations(delegations)
+
+        self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.exception.code)
+        self.assertEqual('overflow delegations', e.exception.message)
+
+    def test_delegation_part_equal(self):
+        part1 = DelegationPart()
+        part2 = DelegationPart()
+        self.assertEqual(part1, part2)
+
+        offset = 100
+        part1.update_delegated_amount(offset)
+
+        part3 = DelegationPart(delegated_amount=offset)
+        self.assertEqual(part1, part3)
 
 
 if __name__ == '__main__':

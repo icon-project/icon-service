@@ -17,6 +17,7 @@
 
 
 import unittest
+from unittest.mock import Mock
 
 from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
@@ -24,7 +25,6 @@ from iconservice.icx.icx_account import Account, PartFlag
 from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.stake_part import StakePart
 from iconservice.icx.delegation_part import DelegationPart
-from iconservice.utils import is_flags_on
 
 from tests import create_address
 
@@ -136,6 +136,7 @@ class TestAccount(unittest.TestCase):
 
         remain_balance = remain_balance + unstake
         account._current_block_height += 11
+        account.update()
         self.assertEqual(remain_balance, account.balance)
 
     def test_account_for_delegation(self):
@@ -161,6 +162,77 @@ class TestAccount(unittest.TestCase):
 
         for i in range(0, 10):
             self.assertEqual(10, target_accounts[i].delegation_part.delegated_amount)
+
+    def test_account_flags_property(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(PartFlag.NONE, account.flags)
+        coin_part = Mock(spec=CoinPart)
+        stake_part = Mock(spec=StakePart)
+        delegation_part = Mock(spec=DelegationPart)
+
+        coin_part.attach_mock(PartFlag.COIN_DIRTY, 'flags')
+        account.init_coin_part_in_icx_storage(coin_part)
+        stake_part.attach_mock(PartFlag.STAKE_DIRTY, 'flags')
+        account.init_stake_part_in_icx_storage(stake_part)
+        delegation_part.attach_mock(PartFlag.DELEGATION_DIRTY, 'flags')
+        account.init_delegation_part_in_icx_storage(delegation_part)
+        self.assertEqual(PartFlag.COIN_DIRTY | PartFlag.STAKE_DIRTY | PartFlag.DELEGATION_DIRTY, account.flags)
+
+    def test_account_balance(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.balance)
+        balance = 100
+        coin_part = Mock(spec=CoinPart, balance=balance)
+        account.init_coin_part_in_icx_storage(coin_part)
+        self.assertEqual(balance, account.balance)
+
+    def test_account_stake(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.stake)
+        stake = 100
+        stake_part = Mock(spec=StakePart, stake=stake)
+        account.init_stake_part_in_icx_storage(stake_part)
+        self.assertEqual(stake, account.stake)
+
+    def test_account_unstake(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.unstake)
+        unstake = 100
+        stake_part = Mock(spec=StakePart, unstake=unstake)
+        account.init_stake_part_in_icx_storage(stake_part)
+        self.assertEqual(unstake, account.unstake)
+
+    def test_account_unstake_block_height(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.unstake_block_height)
+        unstake_block_height = 100
+        stake_part = Mock(spec=StakePart, unstake_block_height=unstake_block_height)
+        account.init_stake_part_in_icx_storage(stake_part)
+        self.assertEqual(unstake_block_height, account.unstake_block_height)
+
+    def test_account_delegated_amount(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.delegated_amount)
+        delegated_amount = 100
+        delegation_part = Mock(spec=StakePart, delegated_amount=delegated_amount)
+        account.init_delegation_part_in_icx_storage(delegation_part)
+        self.assertEqual(delegated_amount, account.delegated_amount)
+
+    def test_account_delegations(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(None, account.delegations)
+        delegations = [(create_address(), 1)]
+        delegation_part = Mock(spec=StakePart, delegations=delegations)
+        account.init_delegation_part_in_icx_storage(delegation_part)
+        self.assertEqual(delegations, account.delegations)
+
+    def test_account_delegations_amount(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.delegations_amount)
+        delegations_amount = 100
+        delegation_part = Mock(spec=StakePart, delegations_amount=delegations_amount)
+        account.init_delegation_part_in_icx_storage(delegation_part)
+        self.assertEqual(delegations_amount, account.delegations_amount)
 
 
 if __name__ == '__main__':

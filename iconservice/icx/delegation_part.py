@@ -48,10 +48,6 @@ class DelegationPart(object):
     def delegated_amount(self) -> int:
         return self._delegated_amount
 
-    @delegated_amount.setter
-    def delegated_amount(self, delegated_amount: int):
-        self._delegated_amount = delegated_amount
-
     @property
     def delegations(self) -> list:
         return self._delegations

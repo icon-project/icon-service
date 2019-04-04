@@ -115,12 +115,12 @@ class IcxStorage(object):
         self._db.put(context, key, value)
 
     @classmethod
-    def _convert_account_type_to_part_flag(cls, t: 'AccountType') -> int:
-        if t == AccountType.TRAMSFER:
+    def _convert_account_type_to_part_flag(cls, account_type: 'AccountType') -> int:
+        if account_type == AccountType.TRAMSFER:
             return AccountPartFlag.COIN
-        elif t == AccountType.STAKE:
+        elif account_type == AccountType.STAKE:
             return AccountPartFlag.COIN | AccountPartFlag.STAKE
-        elif t == AccountType.DELEGATION:
+        elif account_type == AccountType.DELEGATION:
             return AccountPartFlag.DELEGATION
 
     def get_account(self,

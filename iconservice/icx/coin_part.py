@@ -61,12 +61,12 @@ class CoinPart(object):
     _STRUCT_FORMAT = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
 
     def __init__(self,
-                 account_type: 'CoinPartType' = CoinPartType.GENERAL,
+                 coin_part_type: 'CoinPartType' = CoinPartType.GENERAL,
                  db_flags: int = PartFlag.NONE,
                  balance: int = 0):
         """Constructor
         """
-        self._type: 'CoinPartType' = account_type
+        self._type: 'CoinPartType' = coin_part_type
         self._db_flags: int = db_flags
         self._balance: int = balance
         self._flags: int = PartFlag.NONE
@@ -90,7 +90,7 @@ class CoinPart(object):
     def type(self, value: 'CoinPartType'):
         """CoinPartType setter
 
-        :param value: (AccountType)
+        :param value: (CoinPartType)
         """
         if not isinstance(value, CoinPartType):
             raise ValueError('Invalid CoinPartType')
@@ -186,7 +186,7 @@ class CoinPart(object):
         if version != CoinPartVersion.MSG_PACK:
             raise InvalidParamsException(f"Invalid Account version: {version}")
 
-        return CoinPart(account_type=data[1], db_flags=data[2], balance=data[3])
+        return CoinPart(coin_part_type=data[1], db_flags=data[2], balance=data[3])
 
     def to_bytes(self, revision: int = 0) -> bytes:
         """Convert CoinPart object to bytes

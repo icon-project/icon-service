@@ -91,10 +91,6 @@ class Account(object):
 
         if self.coin_part:
             balance = self.coin_part.balance
-
-        if self.stake_part:
-            if self._current_block_height > self.stake_part.unstake_block_height:
-                balance += self.stake_part.unstake
         return balance
 
     @property
@@ -126,6 +122,12 @@ class Account(object):
         if self.delegation_part:
             return self.delegation_part.delegations
         return None
+
+    @property
+    def delegations_amount(self) -> int:
+        if self.delegation_part:
+            return self.delegation_part.delegations_amount
+        return 0
 
     def deposit(self, value: int):
         if self.coin_part is None:

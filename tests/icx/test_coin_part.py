@@ -18,11 +18,13 @@
 
 import unittest
 
+from iconservice.base.address import ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icon_constant import REVISION_4, REVISION_3
 from iconservice.icx.icx_account import PartFlag
 from iconservice.icx.coin_part import CoinPartType, CoinPart
 from iconservice.utils import is_flags_on, toggle_flags
+from tests import create_address
 
 
 class TestAccountType(unittest.TestCase):
@@ -130,6 +132,67 @@ class TestCoinPart(unittest.TestCase):
 
         part1._flags = toggle_flags(part1.flags, PartFlag.COIN_HAS_UNSTAKE, False)
         self.assertEqual(True, is_flags_on(part1.flags, PartFlag.NONE))
+
+    def test_coin_part_make_key(self):
+        key = CoinPart.make_key(create_address())
+        self.assertEqual(ICON_EOA_ADDRESS_BYTES_SIZE, len(key))
+
+        key = CoinPart.make_key(create_address(1))
+        self.assertEqual(ICON_CONTRACT_ADDRESS_BYTES_SIZE, len(key))
+
+    def test_coin_part_type_property(self):
+        part = CoinPart()
+        self.assertEqual(CoinPartType.GENERAL, part.type)
+
+        for coin_part_type in CoinPartType:
+            part = CoinPart(coin_part_type=coin_part_type)
+            self.assertEqual(coin_part_type, part.type)
+
+        for coin_part_type in CoinPartType:
+            part = CoinPart()
+            part.type = coin_part_type
+            self.assertEqual(coin_part_type, part.type)
+
+        with self.assertRaises(ValueError) as e:
+            part.type = len(CoinPartType) + 1
+        self.assertEqual("Invalid CoinPartType", e.exception.args[0])
+
+    def test_coin_part_balance(self):
+        balance = 10000
+        part = CoinPart(balance=balance)
+        self.assertEqual(balance, part.balance)
+
+    def test_coin_part_flags(self):
+        db_flags = PartFlag.COIN_HAS_UNSTAKE
+        part = CoinPart(db_flags=db_flags)
+        self.assertEqual(db_flags, part.flags)
+
+    def test_coin_part_deposit(self):
+        balance = 100
+        part = CoinPart()
+        part.deposit(balance)
+        flags = PartFlag.COIN_DIRTY
+        self.assertEqual(flags, part.flags)
+        self.assertEqual(balance, part.balance)
+
+    def test_coin_part_withdraw(self):
+        balance = 100
+        part = CoinPart()
+        part.deposit(balance)
+        part.withdraw(balance)
+        flags = PartFlag.COIN_DIRTY
+        self.assertEqual(flags, part.flags)
+        self.assertEqual(0, part.balance)
+
+    def test_coin_part_equal(self):
+        part1 = CoinPart()
+        part2 = CoinPart()
+        self.assertEqual(part1, part2)
+
+        balance = 100
+        part1.deposit(balance)
+        part3 = CoinPart(balance=balance)
+        self.assertEqual(part1, part3)
 
 
 if __name__ == '__main__':
