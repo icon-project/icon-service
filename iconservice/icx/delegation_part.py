@@ -69,6 +69,10 @@ class DelegationPart(BasePart):
             return
 
         self._delegated_amount += offset
+
+        if self._delegations_amount < 0:
+            raise InvalidParamsException('Fail update_delegated_amount: delegations_amount < 0')
+        
         self.set_dirty(True)
 
     def set_delegations(self, new_delegations: list):
