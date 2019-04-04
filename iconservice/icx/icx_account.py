@@ -55,13 +55,6 @@ class Account(object):
     def delegation_part(self) -> 'DelegationPart':
         return self._delegation_part
 
-    def init_parts(self, coin_part: Optional['CoinPart'] = None,
-                   stake_part: Optional['StakePart'] = None,
-                   delegation_part: Optional['DelegationPart'] = None):
-        self._coin_part = coin_part
-        self._stake_part = stake_part
-        self._delegation_part = delegation_part
-
     @property
     def balance(self) -> int:
         balance = 0
@@ -125,7 +118,7 @@ class Account(object):
         self.coin_part.withdraw(value)
 
     def normalize(self):
-        if self.stake_part is None:
+        if self.coin_part is None or self.stake_part is None:
             return
 
         balance: int = self.stake_part.normalize(self._current_block_height)

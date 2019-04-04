@@ -44,6 +44,7 @@ class Intent(IntEnum):
     TRANSFER = AccountPartFlag.COIN
     STAKE = AccountPartFlag.COIN | AccountPartFlag.STAKE
     DELEGATE = AccountPartFlag.DELEGATION
+    GET_ALL_IISS = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
 
 
 class IcxStorage(object):

@@ -118,8 +118,7 @@ class IcxEngine(object):
         """
 
         coin_part: 'CoinPart' = CoinPart(coin_part_type)
-        account: 'Account' = Account(address, context.block.height)
-        account.init_parts(coin_part)
+        account: 'Account' = Account(address, context.block.height, coin_part=coin_part)
         account.deposit(int(amount))
 
         self._storage.put_account(context, account)

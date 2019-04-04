@@ -25,13 +25,6 @@ class BasePartState(Flag):
 
 
 class BasePart(object):
-    class State(Flag):
-        """This class should be used just internally
-
-        """
-        NONE = 0
-        DIRTY = 1
-
     def __init__(self, states: 'BasePartState' = BasePartState.NONE):
         self._states = states
 
