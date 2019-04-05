@@ -462,23 +462,18 @@ class IconServiceEngine(ContextContainer):
         params = request['params']
 
         from_ = params['from']
-        to: 'Address' = params['to']
+        to = params['to']
 
         # If the request is V2 the stepLimit field is not there,
         # so fills it as the max step limit to proceed the transaction.
-        max_step_limit = context.step_counter.max_step_limit
-        step_limit: int = params.get('stepLimit', max_step_limit)
-
-        if to.is_contract:
-            step_limit = self._fee_engine.get_total_available_step(
-                context, to, step_limit, context.step_counter.step_price, context.block.height,
-                max_step_limit)
+        step_limit: int = params.get('stepLimit', context.step_counter.max_step_limit)
 
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
                                  origin=from_,
                                  timestamp=params.get('timestamp', context.block.timestamp),
-                                 nonce=params.get('nonce', None))
+                                 nonce=params.get('nonce', None),
+                                 recipient=params['to'])
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
@@ -487,6 +482,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
+        context.fee_sharing_proportion = 0
 
         return self._call(context, method, params)
 
@@ -652,8 +648,6 @@ class IconServiceEngine(ContextContainer):
 
             step_price: int = context.step_counter.step_price
             minimum_step: int = self._step_counter_factory.get_step_cost(StepType.DEFAULT)
-            maximum_step: int = \
-                self._step_counter_factory.get_max_step_limit(IconScoreContextType.INVOKE)
 
             if 'data' in params:
                 # minimum_step is the sum of
@@ -662,7 +656,7 @@ class IconServiceEngine(ContextContainer):
                 input_size = get_input_data_size(context.revision, data)
                 minimum_step += input_size * self._step_counter_factory.get_step_cost(StepType.INPUT)
 
-            self._icon_pre_validator.execute(context, params, step_price, minimum_step, maximum_step)
+            self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
             IconScoreContextUtil.validate_score_blacklist(context, to)
             if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
@@ -782,7 +776,7 @@ class IconServiceEngine(ContextContainer):
             context.func_type = IconScoreFuncType.WRITABLE
 
             # Charge a fee to from account
-            detail_step_used, final_step_price = \
+            step_used_details, final_step_price = \
                 self._charge_transaction_fee(
                     context,
                     params,
@@ -794,7 +788,7 @@ class IconServiceEngine(ContextContainer):
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
             tx_result.traces = context.traces
-            final_step_used = self._append_step_results(tx_result, context, detail_step_used)
+            final_step_used = self._append_step_results(tx_result, context, step_used_details)
 
             context.cumulative_step_used += final_step_used
 
@@ -829,12 +823,13 @@ class IconServiceEngine(ContextContainer):
 
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
+            tmp_context = IconScoreContext(IconScoreContextType.QUERY)
+            tmp_context.block = self._get_last_block()
 
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= REVISION_3 else None,
+                context if context.revision >= REVISION_3 else tmp_context,
                 params,
-                context.step_counter.step_limit,
                 context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first
@@ -974,15 +969,15 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _append_step_results(
-            tx_result: 'TransactionResult', context: 'IconScoreContext', detail_step_used: dict)->int:
+            tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_details: dict)->int:
         """
         Appends step usage information to TransactionResult
         """
-        final_step_used = sum(detail_step_used.values())
+        final_step_used = sum(step_used_details.values())
         tx_result.step_used = final_step_used
         tx_result.cumulative_step_used = context.cumulative_step_used + final_step_used
-        if final_step_used != detail_step_used.get(context.msg.sender, 0):
-            tx_result.detail_step_used = detail_step_used
+        if final_step_used != step_used_details.get(context.msg.sender, 0):
+            tx_result.step_used_details = step_used_details
 
         return final_step_used
 
@@ -1145,3 +1140,9 @@ class IconServiceEngine(ContextContainer):
                 ICON_SERVICE_LOG_TAG)
 
         self._clear_context()
+
+    def _get_last_block(self) -> Optional['Block']:
+        if self._precommit_data_manager:
+            return self._precommit_data_manager.last_block
+
+        return None

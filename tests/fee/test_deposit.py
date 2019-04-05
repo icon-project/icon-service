@@ -67,9 +67,12 @@ class TestDeposit(TestCase):
         deposit_in_dict_to_camel_case = deposit.to_dict(to_camel_case)
         self.assertIsInstance(deposit_in_dict_to_camel_case, dict)
 
-        attributes = dir(deposit)[-14:]
+        attributes = dir(deposit)[-16:]
+        cnt_attr = 0
         for attr in attributes:
-            if attr in ('to_bytes', 'to_dict', 'from_bytes'):
+            if attr in ('to_bytes', 'to_dict', 'from_bytes', 'remaining_deposit', 'remaining_virtual_step'):
                 continue
             self.assertIn(attr, deposit_in_dict)
             self.assertIn(to_camel_case(attr), deposit_in_dict_to_camel_case)
+            cnt_attr += 1
+        self.assertEqual(11, cnt_attr)

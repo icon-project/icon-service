@@ -125,6 +125,7 @@ class IconScoreContext(object):
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
         self.traces: List['Trace'] = None
+        self.fee_sharing_proportion = 0  # The proportion of fee by SCORE in percent (0-100)
 
         self.msg_stack = []
         self.event_log_stack = []
