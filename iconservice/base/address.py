@@ -19,10 +19,11 @@
 
 import hashlib
 from enum import IntEnum
+from typing import Optional
 
+from .exception import InvalidParamsException
 from ..icon_constant import DATA_BYTE_ORDER, ICON_DEX_DB_NAME
 from ..utils import is_lowercase_hex_string, int_to_bytes
-from .exception import InvalidParamsException
 
 ICON_EOA_ADDRESS_PREFIX = 'hx'
 ICON_CONTRACT_ADDRESS_PREFIX = 'cx'
@@ -107,7 +108,7 @@ class Address(object):
             raise InvalidParamsException('Invalid address body type')
 
         if not ignore_length_validate:
-            if len(address_body) != 20:
+            if len(address_body) != ICON_ADDRESS_BODY_SIZE:
                 raise InvalidParamsException('Address length is not 20 in bytes')
 
         self.__prefix = address_prefix
@@ -190,7 +191,7 @@ class Address(object):
         return Address(address_prefix, address_body)
 
     @staticmethod
-    def from_data(prefix: AddressPrefix, data: bytes):
+    def from_data(prefix: AddressPrefix, data: bytes) -> Optional['Address']:
         """
         creates an address object using given bytes
 
@@ -198,25 +199,33 @@ class Address(object):
         :param data:
         :return:
         """
-        hash_value = hashlib.sha3_256(data).digest()
-        return Address(prefix, hash_value[-20:])
+        try:
+            hash_value = hashlib.sha3_256(data).digest()
+            return Address(prefix, hash_value[-20:])
+        except:
+            return None
 
     @staticmethod
-    def from_bytes(buf: bytes) -> 'Address':
+    def from_bytes(buf: bytes) -> Optional['Address']:
         """Create Address object from bytes data
 
         :param buf: :class:`.bytes` bytes data including Address information
         :return: :class:`.Address`
         """
-        buf_size = len(buf)
+        if not isinstance(buf, bytes):
+            return None
 
-        prefix = AddressPrefix.EOA
-        if buf_size != ICON_EOA_ADDRESS_BYTES_SIZE:
-            prefix_byte = buf[0:1]
-            prefix_int = int.from_bytes(prefix_byte, DATA_BYTE_ORDER)
-            prefix = AddressPrefix(prefix_int)
-            buf = buf[1:]
-        return Address(prefix, buf)
+        size: int = len(buf)
+        if size not in (ICON_ADDRESS_BODY_SIZE, ICON_ADDRESS_BYTES_SIZE):
+            return None
+
+        if size == ICON_ADDRESS_BYTES_SIZE:
+            if buf[0] != AddressPrefix.CONTRACT:
+                return None
+
+            return Address(AddressPrefix.CONTRACT, buf[1:])
+        else:
+            return Address(AddressPrefix.EOA, buf)
 
     def to_bytes(self) -> bytes:
         """
@@ -224,13 +233,20 @@ class Address(object):
 
         :return: :class:`.bytes` data including information of Address object
         """
-        body_bytes = self.body
-        if self.prefix != AddressPrefix.EOA:
-            prefix_byte = self.prefix.value.to_bytes(1, DATA_BYTE_ORDER)
-            address_bytes = prefix_byte + body_bytes
+        if self.__prefix == AddressPrefix.EOA:
+            return self.__body
         else:
-            address_bytes = body_bytes
-        return address_bytes
+            return self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body
+
+    @staticmethod
+    def from_bytes_including_prefix(buf: bytes) -> Optional['Address']:
+        try:
+            return Address(address_prefix=AddressPrefix(buf[0]), address_body=buf[1:])
+        except:
+            return None
+
+    def to_bytes_including_prefix(self) -> bytes:
+        return self.__prefix.to_bytes(1, DATA_BYTE_ORDER) + self.__body
 
     @staticmethod
     def from_prefix_and_int(prefix: 'AddressPrefix', num: int):

@@ -57,6 +57,7 @@ ZERO_TX_HASH = bytes(32)
 
 REVISION_2 = 2
 REVISION_3 = 3
+REVISION_4 = 4
 LATEST_REVISION = REVISION_3
 
 
@@ -74,6 +75,11 @@ class ConfigKey:
     AMQP_TARGET = 'amqpTarget'
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
+    IISS_DB_ROOT_PATH = "iissDbRootPath"
+    IISS_GOVERNANCE_VARIABLE = "iissGovernanceVariable",
+    IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod",
+    IISS_PREP_LIST = "iissPRepList",
+    IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
 
 
 class EnableThreadFlag(IntFlag):
@@ -110,3 +116,22 @@ class IconScoreFuncType(IntEnum):
 
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.INVOKE | EnableThreadFlag.QUERY | EnableThreadFlag.VALIDATE
+
+IISS_METHOD_TABLE = [
+    "setStake",
+    "getStake",
+    "setDelegation",
+    "getDelegation",
+    "claimIScore",
+    "queryIScore",
+    "registerPRepCandidate",
+    "unregisterPRepCandidate",
+    "setPRepCandidate",
+    "getPRepCandidate",
+    "getPRepCandidateStats",
+    "getPRepCandidateDelegationInfo",
+    "getPRepList",
+    "getPRepCandidateList"
+]
+
+IISS_MAX_DELEGATIONS = 10
