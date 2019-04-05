@@ -29,6 +29,7 @@ class IcxIssueFormula(object):
                          'eep': self.handle_icx_issue_formula_for_eep,
                          'dapp': self.handle_icx_issue_formula_for_dapp}
 
+        # todo: allocate these variable when initiate formula, formula instance is created when iiss engine is opend
         self._prep_count = 23
         self._sub_prep_count = 100
         self._month = 12

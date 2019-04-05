@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from iconservice.iiss.iiss_issue_formula import IcxIssueFormula
+from iconservice.iiss.icx_issue_formula import IcxIssueFormula
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -306,7 +306,14 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                tx_result = self._invoke_request(context, tx_request, index)
+                # todo: 성공케이스만 가정 즉 첫 번째가 아닌 곳에 issue가 있는 case는 추후 처리
+                if index is ICX_ISSUE_TRANSACTION_INDEX and tx_request['params']['dataType'] == "issue":
+                    # todo: implement icx issue validation process
+                    tx_result = self._invoke_issue_request(context, tx_request, index)
+                    pass
+                else:
+                    tx_result = self._invoke_request(context, tx_request, index)
+
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
                 context.tx_batch.clear()
@@ -438,6 +445,49 @@ class IconServiceEngine(ContextContainer):
             tx_result.failure = self._get_failure_from_exception(e)
 
         return tx_result
+
+    def _invoke_issue_request(self,
+                              context: 'IconScoreContext',
+                              request: dict,
+                              index: int) -> 'TransactionResult':
+        tx_hash = request['params']['txHash']
+        issue_data = request['params']['data']
+
+        # issue transaction 생성
+        context.tx = Transaction(tx_hash=tx_hash,
+                                 index=index,
+                                 origin=None,
+                                 timestamp=context.block.timestamp,
+                                 nonce=None)
+
+        context.event_logs: List['EventLog'] = []
+        context.traces: List['Trace'] = []
+        context.event_log_stack.clear()
+
+        # iiss engine으로부터 issue 값을 계산하는데 필요한 데이터 받아옴
+
+        # 받아온 값과 transaction params 비교 (이부분 설계가 완벽하지 않아 구현 보류)
+
+        # formular method를 이용하여 icx issue 량 계산
+        formula = IcxIssueFormula()
+        issue_amount = formula.calculate()
+
+        # 계산한 결과값과 transaction에 기록된 결과값 비교 (이부분 설계가 완벽하지 않아 구현 보류)
+
+        # icx engine에 issue 요청
+        self._icx_engine.issue(context, TREASURY_ADDRESS, issue_amount)
+
+        # event log에 관련 정보 기록
+
+        # tx_result data 생성
+        tx_result = TransactionResult(context.tx, context.block)
+        tx_result.to = TREASURY_ADDRESS
+        tx_result.event_logs = context.event_logs
+        # todo: check bloom filter
+        tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
+        tx_result.traces = context.traces
+
+        # 결과 리턴
 
     def _invoke_request(self,
                         context: 'IconScoreContext',
@@ -1045,23 +1095,24 @@ class IconServiceEngine(ContextContainer):
                                     context: 'IconScoreContext',
                                     _: dict) -> dict:
         # todo: get issue related info from iiss engine
+        # todo: consider order of dict data (should I have to use OrderedDict?)
         # dummy data
         iiss_data_for_issue: dict = \
             {
                 "prep": {
-                    "incentive": "1",
-                    "rewardRate": "1",
-                    "totalDelegation": "10",
+                    "incentive": 1,
+                    "rewardRate": 1,
+                    "totalDelegation": 10,
                 },
                 "eep": {
-                    "incentive": "2",
-                    "rewardRate": "2",
-                    "totalDelegation": "100",
+                    "incentive": 2,
+                    "rewardRate": 2,
+                    "totalDelegation": 100,
                 },
                 "dapp": {
-                    "incentive": "3",
-                    "rewardRate": "3",
-                    "totalDelegation": "1000",
+                    "incentive": 3,
+                    "rewardRate": 3,
+                    "totalDelegation": 1000,
                 }
             }
 
