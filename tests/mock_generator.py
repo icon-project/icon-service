@@ -25,12 +25,14 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iiss.database.iiss_db import IissDatabase
 from tests import create_block_hash, rmtree
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
 ICX_ENGINE_PATH = 'iconservice.icx.icx_engine.IcxEngine'
 DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
+IISS_DB_PATH = 'iconservice.iiss.database.iiss_db'
 
 
 # noinspection PyProtectedMember
@@ -38,24 +40,38 @@ ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
+@patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
 def generate_inner_task(
+        iiss_db_from_path,
         db_factory_create_by_name,
         icx_engine_open,
         service_engine_load_builtin_scores,
         service_engine_init_global_value_by_governance_score):
-    memory_db = {}
+    state_db = {}
+    iiss_db = {}
 
-    def put(self, key, value):
-        memory_db[key] = value
+    def state_put(self, key, value):
+        state_db[key] = value
 
-    def get(self, key):
-        return memory_db.get(key)
+    def state_get(self, key):
+        return state_db.get(key)
+
+    def iiss_put(self, key, value):
+        iiss_db[key] = value
+
+    def iiss_get(self, key):
+        return iiss_db.get(key)
 
     context_db = Mock(spec=ContextDatabase)
-    context_db.get = get
-    context_db.put = put
+    context_db.get = state_get
+    context_db.put = state_put
+
+    iiss_db = Mock(spec=IissDatabase)
+    iiss_db.get = iiss_get
+    iiss_db.put = iiss_put
 
     db_factory_create_by_name.return_value = context_db
+    iiss_db_from_path.return_value = iiss_db
     inner_task = IconScoreInnerTask(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
@@ -85,12 +101,15 @@ def generate_inner_task(
 def clear_inner_task():
     rmtree(default_icon_config[ConfigKey.SCORE_ROOT_PATH])
     rmtree(default_icon_config[ConfigKey.STATE_DB_ROOT_PATH])
+    rmtree(default_icon_config[ConfigKey.IISS_DB_ROOT_PATH])
 
 
 # noinspection PyProtectedMember
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
+@patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
 def generate_service_engine(
+        iiss_db_from_path,
         db_factory_create_by_name,
         icx_engine_open):
     service_engine = IconServiceEngine()
@@ -104,6 +123,8 @@ def generate_service_engine(
     service_engine.open(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
+    # TODO Not Implement
+    # iiss_db_from_path.assert_called()
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
 

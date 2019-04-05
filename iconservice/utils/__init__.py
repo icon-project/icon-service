@@ -24,16 +24,16 @@ import re
 from enum import Flag
 from typing import Any, Union
 
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER
 
 
 def int_to_bytes(n: int) -> bytes:
     length = byte_length_of_int(n)
-    return n.to_bytes(length, byteorder='big', signed=True)
+    return n.to_bytes(length, byteorder=DATA_BYTE_ORDER, signed=True)
 
 
 def bytes_to_int(v: bytes) -> int:
-    return int.from_bytes(v, "big", signed=True)
+    return int.from_bytes(v, byteorder=DATA_BYTE_ORDER, signed=True)
 
 
 def byte_length_of_int(n: int):
