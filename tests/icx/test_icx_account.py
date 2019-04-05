@@ -17,89 +17,196 @@
 
 
 import unittest
+from unittest.mock import Mock
 
+from iconservice import Address
 from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
-from iconservice.icx.icx_account import AccountType, Account
+from iconservice.icx.icx_account import Account
+from iconservice.icx.coin_part import CoinPart
+from iconservice.icx.stake_part import StakePart
+from iconservice.icx.delegation_part import DelegationPart
+
 from tests import create_address
 
 
-class TestAccountType(unittest.TestCase):
-    def test_account_type(self):
-        self.assertTrue(AccountType.GENERAL == 0)
-        self.assertTrue(AccountType.GENESIS == 1)
-        self.assertTrue(AccountType.TREASURY == 2)
-        self.assertTrue(AccountType.CONTRACT == 3)
-
-        self.assertTrue(str(AccountType.GENERAL) == 'GENERAL')
-        self.assertTrue(str(AccountType.GENESIS) == 'GENESIS')
-        self.assertTrue(str(AccountType.TREASURY) == 'TREASURY')
-        self.assertTrue(str(AccountType.CONTRACT) == 'CONTRACT')
-
-    def test_from_int(self):
-        self.assertEqual(AccountType.GENERAL, AccountType.from_int(0))
-        self.assertEqual(AccountType.GENESIS, AccountType.from_int(1))
-        self.assertEqual(AccountType.TREASURY, AccountType.from_int(2))
-        self.assertEqual(AccountType.CONTRACT, AccountType.from_int(3))
-
-        self.assertRaises(ValueError, AccountType.from_int, 4)
-
-
 class TestAccount(unittest.TestCase):
-    def test_account(self):
-        account1 = Account()
-        self.assertIsNotNone(account1)
-        self.assertIsNone(account1.address)
-        self.assertTrue(account1.icx == 0)
-        self.assertFalse(account1.locked)
-        self.assertFalse(account1.c_rep)
+    def test_account_flag(self):
+        address: 'Address' = create_address()
 
-        account1.address = create_address()
+        account: 'Account' = Account(address, 0)
+        self.assertIsNone(account.coin_part)
+        self.assertIsNone(account.stake_part)
+        self.assertIsNone(account.delegation_part)
 
-        account1.deposit(100)
-        self.assertEqual(100, account1.icx)
+        coin_part: 'CoinPart' = CoinPart()
+        account: 'Account' = Account(address, 0, coin_part=coin_part)
+        self.assertIsNotNone(account.coin_part)
+        self.assertIsNone(account.stake_part)
+        self.assertIsNone(account.delegation_part)
 
-        account1.withdraw(100)
-        self.assertEqual(0, account1.icx)
+        stake_part: 'StakePart' = StakePart()
+        account: 'Account' = Account(address, 0, stake_part=stake_part)
+        self.assertIsNone(account.coin_part)
+        self.assertIsNotNone(account.stake_part)
+        self.assertIsNone(account.delegation_part)
+
+        delegation_part: 'DelegationPart' = DelegationPart()
+        account: 'Account' = Account(address, 0, delegation_part=delegation_part)
+        self.assertIsNone(account.coin_part)
+        self.assertIsNone(account.stake_part)
+        self.assertIsNotNone(account.delegation_part)
+
+        account: 'Account' = Account(address, 0,
+                                     coin_part=coin_part,
+                                     stake_part=stake_part,
+                                     delegation_part=delegation_part)
+        self.assertIsNotNone(account.coin_part)
+        self.assertIsNotNone(account.stake_part)
+        self.assertIsNotNone(account.delegation_part)
+
+    def test_coin_part(self):
+        address: 'Address' = create_address()
+
+        coin_part: 'CoinPart' = CoinPart()
+        account: 'Account' = Account(address, 0, coin_part=coin_part)
+        self.assertEqual(address, account.address)
+        self.assertEqual(0, account.balance)
+
+        account.deposit(100)
+        self.assertEqual(100, account.balance)
+
+        account.withdraw(100)
+        self.assertEqual(0, account.balance)
 
         # wrong value
-        self.assertRaises(InvalidParamsException, account1.deposit, -10)
+        self.assertRaises(InvalidParamsException, account.deposit, -10)
 
         # 0 transfer is possible
-        old = account1.icx
-        account1.deposit(0)
-        self.assertEqual(old, account1.icx)
+        old = account.balance
+        account.deposit(0)
+        self.assertEqual(old, account.balance)
 
-        self.assertRaises(InvalidParamsException, account1.withdraw, -11234)
-        self.assertRaises(OutOfBalanceException, account1.withdraw, 1)
+        self.assertRaises(InvalidParamsException, account.withdraw, -11234)
+        self.assertRaises(OutOfBalanceException, account.withdraw, 1)
 
-        old = account1.icx
-        account1.withdraw(0)
-        self.assertEqual(old, account1.icx)
+        old = account.balance
+        account.withdraw(0)
+        self.assertEqual(old, account.balance)
 
-    def test_account_from_bytes_to_bytes(self):
-        account = Account()
+    def test_account_for_stake(self):
+        address: 'Address' = create_address()
 
-        data = account.to_bytes()
-        self.assertEqual(bytes(account), data)
-        self.assertTrue(isinstance(data, bytes))
-        self.assertEqual(36, len(data))
+        coin_part: 'CoinPart' = CoinPart()
+        stake_part: 'StakePart' = StakePart()
+        account = Account(address, 0, coin_part=coin_part, stake_part=stake_part)
 
-        account2 = Account.from_bytes(data)
-        self.assertFalse(account2.locked)
-        self.assertFalse(account2.c_rep)
-        self.assertEqual(AccountType.GENERAL, account2.type)
-        self.assertEqual(0, account2.icx)
+        balance = 1000
+        account.deposit(balance)
 
-        account.type = AccountType.GENESIS
-        account.locked = True
-        account.c_rep = True
-        account.deposit(1024)
+        stake1 = 500
+        unstake_block_height = 0
+        remain_balance = balance - stake1
 
-        account3 = Account.from_bytes(account.to_bytes())
-        self.assertTrue(account3.locked)
-        self.assertTrue(account3.c_rep)
-        self.assertEqual(AccountType.GENESIS, account3.type)
-        self.assertEqual(1024, account3.icx)
+        account.set_stake(stake1, 0)
+
+        self.assertEqual(stake1, account.stake)
+        self.assertEqual(0, account.unstake)
+        self.assertEqual(unstake_block_height, account.unstake_block_height)
+        self.assertEqual(remain_balance, account.balance)
+
+        stake2 = 100
+        block_height = 10
+        unstake = stake1 - stake2
+        remain_balance = balance - stake1
+        account.set_stake(stake2, block_height)
+
+        self.assertEqual(stake2, account.stake)
+        self.assertEqual(unstake, account.unstake)
+        self.assertEqual(block_height, account.unstake_block_height)
+        self.assertEqual(remain_balance, account.balance)
+
+        remain_balance = remain_balance + unstake
+        account._current_block_height += 11
+        account.normalize()
+        self.assertEqual(remain_balance, account.balance)
+
+    def test_account_for_delegation(self):
+        target_accounts = []
+
+        src_delegation_part: 'DelegationPart' = DelegationPart()
+        src_account = Account(create_address(), 0, delegation_part=src_delegation_part)
+        preps: list = []
+
+        for _ in range(0, 10):
+            address: 'Address' = create_address()
+            target_delegation_part: 'DelegationPart' = DelegationPart()
+            target_account: 'Account' = \
+                Account(address, 0, delegation_part=target_delegation_part)
+
+            target_accounts.append(target_account)
+            target_account.update_delegated_amount(10)
+            preps.append((address, 10))
+
+        src_account.set_delegations(preps)
+        self.assertEqual(10, len(src_account.delegation_part.delegations))
+
+        for i in range(10):
+            self.assertEqual(10, target_accounts[i].delegation_part.delegated_amount)
+
+    def test_account_balance(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.balance)
+
+        balance = 100
+        coin_part = Mock(spec=CoinPart, balance=balance)
+        account = Account(create_address(), 0, coin_part=coin_part)
+        self.assertEqual(balance, account.balance)
+
+    def test_account_stake(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.stake)
+
+        stake_part = StakePart(stake=100)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual(100, account.stake)
+
+    def test_account_unstake(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.unstake)
+
+        stake_part = StakePart(unstake=200)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual(200, account.unstake)
+
+    def test_account_unstake_block_height(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.unstake_block_height)
+
+        stake_part = StakePart(unstake_block_height=300)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual(300, account.unstake_block_height)
+
+    def test_account_delegated_amount(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(0, account.delegated_amount)
+
+        delegation_part = DelegationPart(delegated_amount=100)
+        account = Account(create_address(), 0, delegation_part=delegation_part)
+        self.assertEqual(100, account.delegated_amount)
+
+    def test_account_delegations(self):
+        account = Account(create_address(), 0)
+        self.assertEqual(None, account.delegations)
+
+        delegations = [
+            (create_address(), 100),
+            (create_address(), 200),
+            (create_address(), 300)
+        ]
+        delegation_part = DelegationPart(delegations=delegations)
+        account = Account(create_address(), 0, delegation_part=delegation_part)
+        self.assertEqual(delegations, account.delegations)
+        self.assertEqual(600, account.delegations_amount)
 
 
 if __name__ == '__main__':

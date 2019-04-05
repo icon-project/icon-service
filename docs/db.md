@@ -50,7 +50,7 @@ ICON의 기반 통화인 icx의 계좌 정보는 다음의 형식으로 저장�
 | key | Address | 20 | icx 계좌의 주소 |
 | version | int | 1 | 데이터 구조의 버전 |
 | type | int | 1 | 계좌의 종류를 나타내는 정수값<br>EOA(0), GENESIS(1), TREASURY(2), CONTRACT(3) |
-| flag | int | 1 | 계좌의 속성을 나타내는 bitwise 플래그값<br>C_REP(1), LOCKED(2) |
+| flag | int | 1 | 계좌의 속성을 나타내는 bitwise 플래그값<br>has_unstake(1) |
 | reserved | int | 1 | 나중 사용을 위한 예약 영역 |
 | icx | big endian int | 32 | 해당 계좌에 보관되어 있는 icx 코인양 |
 

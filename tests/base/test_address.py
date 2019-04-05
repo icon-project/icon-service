@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
+import random
 import unittest
 
 from iconservice.base.address import Address, AddressPrefix, \
@@ -150,6 +152,53 @@ class TestAddress(unittest.TestCase):
             Address.from_string(address)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message, "Invalid address")
+
+    def test_from_bytes_including_prefix(self):
+        address_prefixes = [AddressPrefix.EOA, AddressPrefix.CONTRACT]
+
+        value: int = random.randint(0, 0xffffffff)
+        input_data: bytes = value.to_bytes(4, 'big')
+        data: bytes = hashlib.sha3_256(input_data).digest()
+
+        for prefix in address_prefixes:
+            body: bytes = data[-20:]
+            self.assertEqual(20, len(body))
+
+            address_bytes: bytes = prefix.to_bytes(1, 'big') + body
+            address = Address.from_bytes_including_prefix(address_bytes)
+
+            self.assertEqual(prefix, address.prefix)
+            self.assertEqual(body, address.body)
+
+        for prefix in address_prefixes:
+            size = random.randint(1, 32)
+            if size == 20:
+                size += 1
+
+            body: bytes = data[-size:]
+            self.assertEqual(size, len(body))
+
+            address_bytes: bytes = prefix.to_bytes(1, 'big') + body
+            address = Address.from_bytes_including_prefix(address_bytes)
+            self.assertIsNone(address)
+
+            address = Address.from_bytes_including_prefix(body)
+            self.assertIsNone(address)
+
+    def test_to_bytes_including_prefix(self):
+        value: int = random.randint(0, 0xffffffff)
+        input_data: bytes = value.to_bytes(4, 'big')
+        data: bytes = hashlib.sha3_256(input_data).digest()
+        body: bytes = data[-20:]
+
+        for prefix in [AddressPrefix.EOA, AddressPrefix.CONTRACT]:
+            address = Address(prefix, body)
+            address_bytes: bytes = address.to_bytes_including_prefix()
+
+            expected_bytes: bytes = prefix.to_bytes(1, 'big') + body
+            self.assertIsInstance(address_bytes, bytes)
+            self.assertEqual(21, len(address_bytes))
+            self.assertEqual(expected_bytes, address_bytes)
 
 
 if __name__ == '__main__':
