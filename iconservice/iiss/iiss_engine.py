@@ -16,11 +16,10 @@
 
 from typing import TYPE_CHECKING, Any
 
-from ..icon_constant import ConfigKey
-
-from .iiss_data_storage import IissDataStorage
 from .database.iiss_batch import IissBatchManager
+from .iiss_data_storage import IissDataStorage
 from .reward_calc_proxy import RewardCalcProxy
+from ..icon_constant import ConfigKey
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_result import TransactionResult

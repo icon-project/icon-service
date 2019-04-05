@@ -811,6 +811,11 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _check_iiss_process(params: dict) -> bool:
+        """Check if data in params is related to IISS
+
+        :param params: tx params
+        :return: True(IISS tx), False(None IISS tx)
+        """
 
         to: Optional['Address'] = params.get('to')
         if to != ZERO_SCORE_ADDRESS:
@@ -825,9 +830,7 @@ class IconServiceEngine(ContextContainer):
             return False
 
         method_name: Optional[str] = data.get("method")
-        if method_name in IISS_METHOD_TABLE:
-            return True
-        return False
+        return method_name in IISS_METHOD_TABLE
 
     def _process_icx_transaction(self,
                                  context: 'IconScoreContext',
