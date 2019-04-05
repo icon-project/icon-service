@@ -37,27 +37,14 @@ class TypeTag(IntEnum):
 
 class BaseCodec(object):
 
-    @staticmethod
-    def address_to_bytes(addr: 'Address') -> bytes:
-        prefix_byte = b''
-        addr_bytes = addr.to_bytes()
-        if addr.prefix == AddressPrefix.EOA:
-            prefix_byte = int_to_bytes(addr.prefix.value)
-        return prefix_byte + addr_bytes
-
-    @staticmethod
-    def bytes_to_address(data: bytes) -> 'Address':
-        prefix = AddressPrefix(data[0])
-        return Address(prefix, data[1:])
-
     def encode(self, obj: Any) -> Tuple[int, bytes]:
         if isinstance(obj, Address):
-            return TypeTag.ADDRESS, obj.to_bytes()
+            return TypeTag.ADDRESS, obj.to_bytes_including_prefix()
         raise InvalidParamsException(f"Invalid encode type: {type(obj)}")
 
     def decode(self, t: int, b: bytes) -> Any:
         if t == TypeTag.ADDRESS:
-            return Address.from_bytes(b)
+            return Address.from_bytes_including_prefix(b)
         else:
             raise InvalidParamsException(f"UnknownType: {type(t)}")
 

@@ -20,8 +20,8 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import hashlib
-
 import re
+from enum import Flag
 from typing import Any, Union
 
 from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
@@ -92,3 +92,16 @@ def get_main_type_from_annotations_type(annotations_type: type) -> type:
 
 def is_builtin_score(score_address: str) -> bool:
     return score_address in BUILTIN_SCORE_ADDRESS_MAPPER.values()
+
+
+def is_flags_on(src_flags: int, dest_flags: int) -> bool:
+    return src_flags & dest_flags == dest_flags
+
+
+def toggle_flags(src_flags: Flag, dest_flags: Flag, on: bool) -> Flag:
+    if on:
+        src_flags |= dest_flags
+    else:
+        src_flags &= ~dest_flags
+
+    return src_flags

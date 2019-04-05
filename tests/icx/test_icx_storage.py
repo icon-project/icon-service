@@ -19,19 +19,27 @@ import json
 import shutil
 import unittest
 
+from typing import TYPE_CHECKING
+from unittest.mock import Mock
+
+from iconservice.base.block import Block
 from iconservice.base.address import AddressPrefix, MalformedAddress
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
+from iconservice.icx.coin_part import CoinPart
 from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
 from tests import create_address
+
+if TYPE_CHECKING:
+    from iconservice.base.address import Address
 
 
 class TestIcxStorage(unittest.TestCase):
     def setUp(self):
         self.db_name = 'icx.db'
-        self.address = create_address(AddressPrefix.EOA)
+
         db = ContextDatabase.from_path(self.db_name)
         self.assertIsNotNone(db)
 
@@ -39,39 +47,38 @@ class TestIcxStorage(unittest.TestCase):
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
         context.tx_batch = TransactionBatch()
+        mock_block: 'Mock' = Mock(spec=Block)
+        mock_block.attach_mock(Mock(return_value=0), 'height')
+        context.block = mock_block
         context.block_batch = BlockBatch()
         self.context = context
 
     def tearDown(self):
         context = self.context
-        self.storage.delete_account(context, self.address)
         self.storage.close(context)
 
         shutil.rmtree(self.db_name)
 
     def test_get_put_account(self):
         context = self.context
-        account = Account()
-        account.address = create_address(AddressPrefix.EOA)
+
+        address = create_address(AddressPrefix.EOA)
+        coin_part: 'CoinPart' = CoinPart()
+        account: 'Account' = Account(address, 0, coin_part=coin_part)
         account.deposit(10 ** 19)
-        self.storage.put_account(context, account.address, account)
 
-        account2 = self.storage.get_account(context, account.address)
+        self.storage.put_account(context, account)
+
+        address: 'Address' = create_address(AddressPrefix.EOA)
+        coin_part: 'CoinPart' = CoinPart()
+        account: 'Account' = Account(address, self.context.block.height, coin_part=coin_part)
+
+        account.deposit(10 ** 19)
+
+        self.storage.put_account(self.context, account)
+
+        account2 = self.storage.get_account(self.context, account.address)
         self.assertEqual(account, account2)
-
-    def test_delete_account(self):
-        context = self.context
-        account = Account()
-        account.address = create_address(AddressPrefix.EOA)
-        self.storage.put_account(context, account.address, account)
-
-        ret = self.storage.is_address_present(context, account.address)
-        self.assertTrue(ret)
-
-        self.storage.delete_account(context, account.address)
-
-        ret = self.storage.is_address_present(context, self.address)
-        self.assertFalse(ret)
 
     def test_get_put_text(self):
         context = self.context
@@ -115,6 +122,10 @@ class TestIcxStorageForMalformedAddress(unittest.TestCase):
         self.storage = IcxStorage(db)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        mock_block: 'Mock' = Mock(spec=Block)
+        mock_block.attach_mock(Mock(return_value=0), 'height')
+        context.block = mock_block
+
         self.context = context
 
     def tearDown(self):
@@ -124,32 +135,18 @@ class TestIcxStorageForMalformedAddress(unittest.TestCase):
         shutil.rmtree(self.db_name)
 
     def test_get_put_account(self):
-        context = self.context
-        account = Account()
-        account.deposit(10 ** 19)
-
+        accounts:list = []
         for address in self.addresses:
-            account.address = address
-            self.storage.put_account(context, account.address, account)
+            coin_part: 'CoinPart' = CoinPart()
+            account: 'Account' = Account(
+                address, self.context.block.height, coin_part=coin_part)
+            account.deposit(10 ** 19)
+            accounts.append(account)
 
-            account2 = self.storage.get_account(context, account.address)
+        for account in accounts:
+            self.storage.put_account(self.context, account)
+            account2 = self.storage.get_account(self.context, account.address)
             self.assertEqual(account, account2)
-
-    def test_delete_account(self):
-        context = self.context
-        account = Account()
-
-        for address in self.addresses:
-            account.address = address
-            self.storage.put_account(context, account.address, account)
-
-            ret = self.storage.is_address_present(context, account.address)
-            self.assertTrue(ret)
-
-            self.storage.delete_account(context, account.address)
-
-            ret = self.storage.is_address_present(context, account.address)
-            self.assertFalse(ret)
 
 
 if __name__ == '__main__':
