@@ -123,52 +123,6 @@ class TestFeeEngine(unittest.TestCase):
         ContextContainer._clear_context()
         clear_inner_task()
 
-    def test_set_fee_sharing_ratio(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-
-        # Sets new ratio
-        ratio = 50
-
-        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-        sharing_ratio = self._engine.get_fee_sharing_ratio(context, self._score_address)
-        self.assertEqual(ratio, sharing_ratio)
-
-        # Modifies ratio
-        ratio = 30
-
-        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-        sharing_ratio = self._engine.get_fee_sharing_ratio(context, self._score_address)
-        self.assertEqual(ratio, sharing_ratio)
-
-    def test_set_fee_sharing_ratio_invalid_request(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-
-        # SCORE is not exists
-        # noinspection PyTypeChecker
-        with self.assertRaises(InvalidRequestException):
-            score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
-            ratio = 50
-            self._engine.set_fee_sharing_ratio(context, self._sender, score_address, ratio)
-
-        # sender is not SCORE owner
-        # noinspection PyTypeChecker
-        with self.assertRaises(InvalidRequestException):
-            sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-            ratio = 50
-            self._engine.set_fee_sharing_ratio(context, sender, score_address, ratio)
-
-        # negative ratio
-        # noinspection PyTypeChecker
-        with self.assertRaises(InvalidRequestException):
-            ratio = -1
-            self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-
-        # ratio overflow
-        # noinspection PyTypeChecker
-        with self.assertRaises(InvalidRequestException):
-            ratio = 101
-            self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-
     def test_deposit_fee(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         block_number = 0
@@ -334,47 +288,47 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(block_number, deposit.created)
         self.assertEqual(block_number + period, deposit.expires)
 
-    def test_get_available_step_with_sharing(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-
-        step_price = 10 ** 10
-        sender_step_limit = 10000
-        block_number = randrange(100, 10000)
-        max_step_limit = 1_000_000
-
-        ratio = 50
-        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-
-        total_available_step = self._engine.get_total_available_step(
-            context, self._score_address, sender_step_limit, step_price, block_number,
-            max_step_limit)
-
-        total_step = sender_step_limit * 100 // (100 - ratio)
-        self.assertEqual(total_step, total_available_step)
-
-        ratio = 30
-        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-
-        total_available_step = self._engine.get_total_available_step(
-            context, self._score_address, sender_step_limit, step_price, block_number,
-            max_step_limit)
-
-        total_step = sender_step_limit * 100 // (100 - ratio)
-        self.assertEqual(total_step, total_available_step)
-
-    def test_get_available_step_without_sharing(self):
-        context = IconScoreContext(IconScoreContextType.QUERY)
-
-        step_price = 10 ** 10
-        score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
-        block_number = randrange(100, 10000)
-        sender_step_limit = 10000
-        max_step_limit = 1_000_000
-
-        total_available_step = self._engine.get_total_available_step(
-            context, score_address, sender_step_limit, step_price, block_number, max_step_limit)
-
-        self.assertEqual(sender_step_limit, total_available_step)
+    # def test_get_available_step_with_sharing(self):
+    #     context = IconScoreContext(IconScoreContextType.INVOKE)
+    #
+    #     step_price = 10 ** 10
+    #     sender_step_limit = 10000
+    #     block_number = randrange(100, 10000)
+    #     max_step_limit = 1_000_000
+    #
+    #     ratio = 50
+    #     self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+    #
+    #     total_available_step = self._engine.get_total_available_step(
+    #         context, self._score_address, sender_step_limit, step_price, block_number,
+    #         max_step_limit)
+    #
+    #     total_step = sender_step_limit * 100 // (100 - ratio)
+    #     self.assertEqual(total_step, total_available_step)
+    #
+    #     ratio = 30
+    #     self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+    #
+    #     total_available_step = self._engine.get_total_available_step(
+    #         context, self._score_address, sender_step_limit, step_price, block_number,
+    #         max_step_limit)
+    #
+    #     total_step = sender_step_limit * 100 // (100 - ratio)
+    #     self.assertEqual(total_step, total_available_step)
+    #
+    # def test_get_available_step_without_sharing(self):
+    #     context = IconScoreContext(IconScoreContextType.QUERY)
+    #
+    #     step_price = 10 ** 10
+    #     score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
+    #     block_number = randrange(100, 10000)
+    #     sender_step_limit = 10000
+    #     max_step_limit = 1_000_000
+    #
+    #     total_available_step = self._engine.get_total_available_step(
+    #         context, score_address, sender_step_limit, step_price, block_number, max_step_limit)
+    #
+    #     self.assertEqual(sender_step_limit, total_available_step)
 
     def test_charge_transaction_fee_without_sharing(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -413,7 +367,7 @@ class TestFeeEngine(unittest.TestCase):
             context, tx_hash, self._sender, self._score_address, amount, block_number, period)
 
         ratio = 50
-        self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
+        context.fee_sharing_ratio = ratio
 
         score_info = self._engine.get_score_fee_info(context, self._score_address, block_number)
         before_deposit_balance = score_info.available_deposit

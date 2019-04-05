@@ -215,7 +215,7 @@ class IconPreValidator:
         self._check_balance(context, from_, value, fee)
 
         if to.is_contract:
-            self._check_score_can_pay_fee(context, to)
+            self._fee_engine.check_score_available(context, to, context.block.height)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -300,11 +300,6 @@ class IconPreValidator:
         if balance < value + fee:
             raise OutOfBalanceException(
                 f'Out of balance: balance({balance}) < value({value}) + fee({fee})')
-
-    def _check_score_can_pay_fee(self, context: 'IconScoreContext', score: 'Address'):
-
-        if not self._fee_engine.can_charge_fee_from_score(context, score, context.block.height):
-            raise InvalidRequestException(f"{score} can't charge fee")
 
     def _is_inactive_score(self, address: 'Address') -> bool:
         is_contract = address.is_contract

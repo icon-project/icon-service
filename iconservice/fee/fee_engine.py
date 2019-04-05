@@ -46,8 +46,6 @@ class ScoreFeeInfo:
         self.score_address: 'Address' = score_address
         # List of deposits
         self.deposits: List[Deposit] = []
-        # fee sharing ratio that SCORE pays
-        self.sharing_ratio: int = 0
         # available virtual STEPs to use
         self.available_virtual_step: int = 0
         # available deposits to use
@@ -97,48 +95,6 @@ class FeeEngine:
         self._icx_storage = icx_storage
         self._icx_engine = icx_engine
 
-    def set_fee_sharing_ratio(self,
-                              context: 'IconScoreContext',
-                              sender: 'Address',
-                              score_address: 'Address',
-                              ratio: int) -> None:
-        """
-        Sets the fee sharing ratio that SCORE pays.
-
-        :param context: IconScoreContext
-        :param sender: msg sender address
-        :param score_address: SCORE address
-        :param ratio: sharing ratio in percent (0-100)
-        """
-
-        self._check_score_ownership(context, sender, score_address)
-
-        if not (0 <= ratio <= 100):
-            raise InvalidRequestException('Invalid ratio')
-
-        score_fee_info = self._get_or_create_score_fee(context, score_address)
-        score_fee_info.ratio = ratio
-
-        self._fee_storage.put_score_fee(context, score_address, score_fee_info)
-
-        # return ratio
-
-    def get_fee_sharing_ratio(self,
-                              context: 'IconScoreContext',
-                              score_address: 'Address') -> int:
-        """
-        Gets the fee sharing ratio from score info
-
-        :param context: IconScoreContext
-        :param score_address: SCORE address
-        :return: sharing ratio in percent (0-100)
-        """
-
-        self._check_score_valid(context, score_address)
-
-        score_fee_info = self._fee_storage.get_score_fee(context, score_address)
-        return score_fee_info.ratio if score_fee_info is not None else 0
-
     def get_score_fee_info(self,
                            context: 'IconScoreContext',
                            score_address: 'Address',
@@ -161,7 +117,6 @@ class FeeEngine:
         score_fee_info_from_storage = self._get_or_create_score_fee(context, score_address)
 
         score_fee_info = ScoreFeeInfo(score_address)
-        score_fee_info.sharing_ratio = score_fee_info_from_storage.ratio
 
         # Appends all deposits
         for deposit in self._deposit_generator(context, score_fee_info_from_storage.head_id):
@@ -221,9 +176,8 @@ class FeeEngine:
             self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
         deposit.prev_id = score_fee_info.tail_id
 
+        # TODO insert the deposit with keeping expiring order.
         self._insert_deposit(context, deposit)
-
-        # return (id, SCORE address, sender, amount, period)
 
     def _insert_deposit(self, context, deposit):
         """
@@ -362,30 +316,43 @@ class FeeEngine:
 
         return deposit
 
-    def can_charge_fee_from_score(self, context: 'IconScoreContext', score_address: 'Address',
-                                  block_number: int) -> bool:
-        """check if SCORE can charge fee
+    def check_score_available(
+            self, context: 'IconScoreContext', score_address: 'Address', block_number: int):
+        """
+        Check if the SCORE is available.
+        If the SCORE is sharing fee, SCORE should be able to pay the fee,
+        otherwise, the SCORE is not available.
 
-        :param context:
-        :param score_address:
+        :param context: IconScoreContext
+        :param score_address: SCORE address
         :param block_number: current block height
-        :return: whether SCORE can pay fee
         """
         fee_info: 'Fee' = self._get_or_create_score_fee(context, score_address)
 
-        if not self._is_score_sharing_fee(fee_info):
-            return True
+        if self._is_score_sharing_fee(fee_info):
+            virtual_step_available = \
+                block_number < fee_info.expires_of_virtual_step \
+                and fee_info.available_head_id_of_virtual_step is not None
 
-        if block_number < fee_info.expires_of_virtual_step and fee_info.available_head_id_of_virtual_step is not None:
-            return True
+            deposit_available = \
+                block_number < fee_info.expires_of_deposit \
+                and fee_info.available_head_id_of_deposit is not None
 
-        if block_number < fee_info.expires_of_virtual_step and fee_info.available_head_id_of_virtual_step is not None:
-            return True
+            if not virtual_step_available and not deposit_available:
+                raise InvalidRequestException('SCORE can not share fee')
 
-    def _is_score_sharing_fee(self, score_fee_info: 'Fee') -> bool:
-        return score_fee_info.head_id is not None
+    @staticmethod
+    def _is_score_sharing_fee(score_fee_info: 'Fee') -> bool:
+        return score_fee_info is not None and score_fee_info.head_id is not None
 
-    # TODO : get_score_info_by_EOA
+    def _get_fee_sharing_ratio(self, context: 'IconScoreContext', score_fee_info: 'Fee'):
+
+        if not self._is_score_sharing_fee(score_fee_info):
+            # If there are no deposits, ignores the fee sharing ratio that the SCORE set.
+            return 0
+
+        return context.fee_sharing_ratio
+
     def charge_transaction_fee(self,
                                context: 'IconScoreContext',
                                sender: 'Address',
@@ -415,13 +382,15 @@ class FeeEngine:
         sender_step = used_step - receiver_step
         self._icx_engine.charge_fee(context, sender, sender_step * step_price)
 
+        detail_step_used = {}
+
+        if sender_step > 0:
+            detail_step_used[sender_step] = sender_step
+
         if receiver_step > 0:
-            detail_step_used = {to: receiver_step}
-            if sender_step > 0:
-                detail_step_used[sender] = sender_step
-            return detail_step_used
-        else:
-            return {sender: sender_step}
+            detail_step_used[to] = receiver_step
+
+        return detail_step_used
 
     def _charge_fee_from_score(self,
                                context: 'IconScoreContext',
@@ -435,10 +404,9 @@ class FeeEngine:
         """
 
         score_fee_info = self._fee_storage.get_score_fee(context, score_address)
-        fee_ratio = score_fee_info.ratio if score_fee_info is not None else 0
 
         # Amount of STEPs that SCORE will pay
-        receiver_step = used_step * fee_ratio // 100
+        receiver_step = used_step * self._get_fee_sharing_ratio(context, score_fee_info) // 100
 
         if receiver_step > 0:
             charged_step, next_head_id_for_virtual_step = self._charge_fee_by_virtual_step(
@@ -462,69 +430,83 @@ class FeeEngine:
                                     context: 'IconScoreContext',
                                     score_fee_info: 'Fee',
                                     step_required: int,
-                                    block_number: int) -> (int, int):
+                                    block_number: int) -> (int, bytes):
         """
         Charges fees by available virtual STEPs
         Returns total charged amount and next available deposit id
         """
 
         remaining_required_step = step_required
-        last_deposit_id = None
 
+        # Search for next available deposit id
         gen = self._deposit_generator(context, score_fee_info.available_head_id_of_virtual_step)
-        for deposit in filter(lambda d: block_number < d.expires, gen):
-            available_virtual_step = deposit.available_virtual_step
+        deposit = next(filter(lambda d: block_number < d.expires, gen), None)
+        next_deposit_id = deposit.id if deposit is not None else None
 
-            if available_virtual_step > 0:
-                if remaining_required_step < available_virtual_step:
-                    charged_step = remaining_required_step
-                else:
-                    charged_step = available_virtual_step
-                    last_deposit_id = deposit.next_id
+        for deposit in self._deposit_generator(context, next_deposit_id):
+            available_virtual_step = deposit.virtual_step_issued - deposit.virtual_step_used
 
+            if remaining_required_step < available_virtual_step:
+                charged_step = remaining_required_step
+            else:
+                charged_step = available_virtual_step
+                next_deposit_id = deposit.next_id
+
+            if charged_step > 0:
                 deposit.virtual_step_used += charged_step
                 self._fee_storage.put_deposit(context, deposit.id, deposit)
-
                 remaining_required_step -= charged_step
-
                 if remaining_required_step == 0:
                     break
 
-        return step_required - remaining_required_step, last_deposit_id
+        return step_required - remaining_required_step, next_deposit_id
 
     def _charge_fee_by_deposit(self,
                                context: 'IconScoreContext',
                                score_fee_info: 'Fee',
                                icx_required: int,
-                               block_number: int) -> (int, int):
+                               block_number: int) -> (int, bytes):
         """
         Charges fees by available deposit ICXs
         Returns total charged amount and next available deposit id
         """
 
         remaining_required_icx = icx_required
-        last_deposit_id = None
+        last_paid_deposit = None
 
+        # Search for next available deposit id
         gen = self._deposit_generator(context, score_fee_info.available_head_id_of_deposit)
-        for deposit in filter(lambda d: block_number < d.expires, gen):
-            available_deposit = deposit.available_deposit
+        deposit = next(filter(lambda d: block_number < d.expires, gen), None)
+        next_deposit_id = deposit.id if deposit is not None else None
 
-            if available_deposit > 0:
-                if remaining_required_icx < available_deposit:
-                    charged_icx = remaining_required_icx
-                else:
-                    charged_icx = available_deposit
-                    last_deposit_id = deposit.next_id
+        for deposit in self._deposit_generator(context, next_deposit_id):
+            available_deposit = \
+                deposit.deposit_amount - deposit.deposit_used - score_fee_info.min_remaining_amount
 
+            if remaining_required_icx < available_deposit:
+                charged_icx = remaining_required_icx
+            else:
+                charged_icx = available_deposit
+                next_deposit_id = deposit.next_id
+
+            if charged_icx > 0:
                 deposit.deposit_used += charged_icx
                 self._fee_storage.put_deposit(context, deposit.id, deposit)
-
+                last_paid_deposit = deposit
                 remaining_required_icx -= charged_icx
-
                 if remaining_required_icx == 0:
                     break
 
-        return icx_required - remaining_required_icx, last_deposit_id
+        if remaining_required_icx > 0 and last_paid_deposit is not None:
+            # This is the last chargeable deposit
+            # so, charges all remaining fee regardless minimum remaining amount.
+            available_deposit = last_paid_deposit.deposit_amount - last_paid_deposit.deposit_used
+            charged_icx = min(available_deposit, remaining_required_icx)
+            last_paid_deposit.deposit_used += charged_icx
+            self._fee_storage.put_deposit(context, last_paid_deposit.id, last_paid_deposit)
+            remaining_required_icx -= charged_icx
+
+        return icx_required - remaining_required_icx, next_deposit_id
 
     def _deposit_generator(self, context: 'IconScoreContext', start_id: bytes):
         next_id = start_id
@@ -601,12 +583,10 @@ class FeeHandler:
 
     # For eventlog emitting
     class EventType(IntEnum):
-        RATIO = 0
-        DEPOSIT = 1
-        WITHDRAW = 2
+        DEPOSIT = 0
+        WITHDRAW = 1
 
     SIGNATURE_AND_INDEX = [
-        ('FeeShareSet(Address,int)', 1),
         ('DepositCreated(bytes,Address,Address,int,int)', 3),
         ('DepositDestroyed(bytes,Address,Address,int,int)', 3)
     ]
@@ -620,9 +600,7 @@ class FeeHandler:
 
         self.fee_handler = {
             'createDeposit': self._deposit_fee,
-            'setRatio': self._set_fee_sharing_ratio,
             'destroyDeposit': self._withdraw_fee,
-            'getFeeShare': self._get_fee_sharing_ratio,
             'getDeposit': self._get_deposit_info_by_id,
             'getScoreInfo': self._get_score_fee_info
         }
@@ -659,15 +637,6 @@ class FeeHandler:
         event_log_args = [context.tx.hash, _score, context.msg.sender, _amount, _period]
         self._emit_event(context, FeeHandler.EventType.DEPOSIT, event_log_args)
 
-    def _set_fee_sharing_ratio(
-            self, context: 'IconScoreContext', _score: 'Address', _ratio: int):
-
-        # return score_address, ratio
-        self.fee_engine.set_fee_sharing_ratio(context, context.msg.sender, _score, _ratio)
-
-        event_log_args = [_score, _ratio]
-        self._emit_event(context, FeeHandler.EventType.RATIO, event_log_args)
-
     def _withdraw_fee(self, context: 'IconScoreContext', _id: bytes):
         # return deposit_id, (score_address), context.msg.sender, (return_icx, penalty)
         score_address, return_icx, penalty = self.fee_engine.withdraw_fee(
@@ -675,9 +644,6 @@ class FeeHandler:
 
         event_log_args = [_id, score_address, context.msg.sender, return_icx, penalty]
         self._emit_event(context, FeeHandler.EventType.WITHDRAW, event_log_args)
-
-    def _get_fee_sharing_ratio(self, context: 'IconScoreContext', _score: 'Address'):
-        return self.fee_engine.get_fee_sharing_ratio(context, _score)
 
     def _get_deposit_info_by_id(self, context: 'IconScoreContext', _id: bytes):
         deposit = self.fee_engine.get_deposit_info_by_id(context, _id)
