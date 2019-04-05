@@ -174,7 +174,7 @@ class FeeEngine:
         # Withdraws from sender's account
         sender_account = self._icx_storage.get_account(context, sender)
         sender_account.withdraw(amount)
-        self._icx_storage.put_account(context, sender, sender_account)
+        self._icx_storage.put_account(context, sender_account)
 
         deposit = Deposit(tx_hash, score_address, sender, amount)
         deposit.created = block_height
@@ -260,13 +260,13 @@ class FeeEngine:
             # Move the penalty amount to the treasury account
             treasury_account = self._icx_engine.get_treasury_account(context)
             treasury_account.deposit(penalty)
-            self._icx_storage.put_account(context, treasury_account.address, treasury_account)
+            self._icx_storage.put_account(context, treasury_account)
 
         if withdrawal_amount > 0:
             # Send the withdrawal amount of ICX to sender account
             sender_account = self._icx_storage.get_account(context, sender)
             sender_account.deposit(withdrawal_amount)
-            self._icx_storage.put_account(context, sender, sender_account)
+            self._icx_storage.put_account(context, sender_account)
 
         self._delete_deposit(context, deposit, block_height)
 

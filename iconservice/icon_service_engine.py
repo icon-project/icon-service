@@ -45,7 +45,6 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, get_input_data_size, \
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
-from .icx.icx_account import AccountType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -409,35 +408,7 @@ class IconServiceEngine(ContextContainer):
             genesis_data = tx_params['genesisData']
             accounts = genesis_data['accounts']
 
-            genesis = accounts[0]
-            treasury = accounts[1]
-            others = accounts[2:]
-
-            __NAME_KEY = 'name'
-            __ADDRESS_KEY = 'address'
-            __AMOUNT_KEY = 'balance'
-
-            self._icx_engine.init_account(
-                context=context,
-                account_type=AccountType.GENESIS,
-                account_name=genesis[__NAME_KEY],
-                address=genesis[__ADDRESS_KEY],
-                amount=genesis[__AMOUNT_KEY])
-
-            self._icx_engine.init_account(
-                context=context,
-                account_type=AccountType.TREASURY,
-                account_name=treasury[__NAME_KEY],
-                address=treasury[__ADDRESS_KEY],
-                amount=treasury[__AMOUNT_KEY])
-
-            for other in others:
-                self._icx_engine.init_account(
-                    context=context,
-                    account_type=AccountType.GENERAL,
-                    account_name=other[__NAME_KEY],
-                    address=other[__ADDRESS_KEY],
-                    amount=other[__AMOUNT_KEY])
+            self._icx_engine.put_genesis_accounts(context, accounts)
 
             tx_result.status = TransactionResult.SUCCESS
 
@@ -527,7 +498,8 @@ class IconServiceEngine(ContextContainer):
         from_: Address = params['from']
         to: Address = params['to']
 
-        timestamp = params.get('timestamp', self._icx_storage.last_block.timestamp)
+        last_block: 'Block' = self._get_last_block()
+        timestamp = params.get('timestamp', last_block.timestamp)
         context.tx = Transaction(tx_hash=sha3_256(int_to_bytes(timestamp)),
                                  index=0,
                                  origin=from_,
@@ -541,7 +513,7 @@ class IconServiceEngine(ContextContainer):
         # Deposits virtual ICXs to the sender to prevent validation error due to 'out of balance'.
         account = self._icx_storage.get_account(context, from_)
         account.deposit(step_limit * context.step_counter.step_price + params.get('value', 0))
-        self._icx_storage.put_account(context, from_, account)
+        self._icx_storage.put_account(context, account)
         return self._call(context, method, params)
 
     def estimate_step(self, request: dict) -> int:
@@ -565,7 +537,7 @@ class IconServiceEngine(ContextContainer):
         """
         context = IconScoreContext(IconScoreContextType.ESTIMATION)
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.INVOKE)
-        context.block = self._precommit_data_manager.last_block
+        context.block = self._get_last_block()
         context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
@@ -599,7 +571,7 @@ class IconServiceEngine(ContextContainer):
         :return: the result of query
         """
         context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._icx_storage.last_block
+        context.block = self._get_last_block()
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
         step_limit: int = context.step_counter.max_step_limit
@@ -639,7 +611,7 @@ class IconServiceEngine(ContextContainer):
         to: 'Address' = params.get('to')
 
         context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._icx_storage.last_block
+        context.block = self._get_last_block()
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
 
@@ -819,14 +791,13 @@ class IconServiceEngine(ContextContainer):
 
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
-            tmp_context = IconScoreContext(IconScoreContextType.QUERY)
+            tmp_context: 'IconScoreContext' = IconScoreContext(IconScoreContextType.QUERY)
             tmp_context.block = self._get_last_block()
-
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
                 context if context.revision >= REVISION_3 else tmp_context,
                 params,
-                context.step_counter.step_price)
+                step_price=context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first
         context.step_counter.apply_step(StepType.DEFAULT, 1)
@@ -1064,7 +1035,7 @@ class IconServiceEngine(ContextContainer):
         return response
 
     def _make_last_block_status(self) -> Optional[dict]:
-        block = self._precommit_data_manager.last_block
+        block = self._get_last_block()
         if block is None:
             block_height = -1
             block_hash = b'\x00' * 32

@@ -20,6 +20,7 @@ from random import randrange
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
+from iconservice.base.block import Block
 from iconservice.base.exception import InvalidRequestException, OutOfBalanceException
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import ContextDatabase
@@ -32,8 +33,10 @@ from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
-from iconservice.icx.icx_account import AccountType, Account
+from iconservice.icx.coin_part import CoinPartType
+from iconservice.icx.icx_account import Account
 from iconservice.icx.icx_storage import IcxStorage
+from tests import create_address
 from tests.mock_generator import clear_inner_task
 
 
@@ -106,6 +109,9 @@ class TestFeeEngine(unittest.TestCase):
 
     def setUp(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        block = Mock(spec=Block)
+        block.attach_mock(Mock(return_value=0), 'height')
+        context.block = block
 
         self._sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         self._score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
@@ -127,12 +133,14 @@ class TestFeeEngine(unittest.TestCase):
         deploy_storage.put_deploy_info(context, deploy_info)
         self._icx_engine.open(icx_storage)
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, 100000000 * 10 ** 18)
-
-        treasury = Account(
-            AccountType.TREASURY, Address.from_data(AddressPrefix.EOA, os.urandom(20)))
-        self._icx_engine._init_special_account(context, treasury)
+        self._icx_engine._put_genesis_data_account(context,
+                                                   CoinPartType.GENERAL,
+                                                   self._sender,
+                                                   100000000 * 10 ** 18)
+        self._icx_engine._put_genesis_data_account(context,
+                                                   CoinPartType.TREASURY,
+                                                   Address.from_data(AddressPrefix.EOA, os.urandom(20)),
+                                                   0)
 
         self._engine = FeeEngine(deploy_storage, fee_storage, icx_storage, self._icx_engine)
 
