@@ -176,7 +176,6 @@ class FeeEngine:
             self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
         deposit.prev_id = score_fee_info.tail_id
 
-        # TODO insert the deposit with keeping expiring order.
         self._insert_deposit(context, deposit)
 
     def _insert_deposit(self, context, deposit):
@@ -204,6 +203,12 @@ class FeeEngine:
 
         if score_fee_info.available_head_id_of_deposit is None:
             score_fee_info.available_head_id_of_deposit = deposit.id
+
+        if score_fee_info.expires_of_virtual_step < deposit.expires:
+            score_fee_info.expires_of_virtual_step = deposit.expires
+
+        if score_fee_info.expires_of_deposit < deposit.expires:
+            score_fee_info.expires_of_deposit = deposit.expires
 
         score_fee_info.tail_id = deposit.id
         self._fee_storage.put_score_fee(context, deposit.score_address, score_fee_info)
