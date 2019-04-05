@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING
 from plyvel import destroy_db
 
 from iconservice.icon_constant import DATA_BYTE_ORDER
-from .iiss_msg_data import IissTxData
 from .database.iiss_db import IissDatabase
+from .iiss_msg_data import IissTxData
 
 if TYPE_CHECKING:
     from .iiss_msg_data import IissData
@@ -94,7 +94,7 @@ class IissDataStorage(object):
 
     def create_db_for_calc(self, block_height: int) -> str:
         self._check_block_height(block_height)
-        # todo: checklist about before creating db
+        # todo: check before creating db
         self._db.close()
 
         iiss_rc_db_path = self._iiss_rc_db_path + str(block_height)
@@ -115,7 +115,6 @@ class IissDataStorage(object):
             # todo: consider try except about destroy_db method(when try to remove locked db)
             # this method check the process lock
             destroy_db(iiss_rc_db_path)
-            # rmtree(iiss_rc_db_path, ignore_errors=True)
         else:
             # todo: consider which exception should be raised
             raise Exception

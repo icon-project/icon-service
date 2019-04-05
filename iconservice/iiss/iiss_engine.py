@@ -55,9 +55,9 @@ class IissEngine:
 
     def open(self, conf: 'IconConfig'):
         self._reward_calc_proxy = RewardCalcProxy()
-        self._batch_manager = IissBatchManager()
         self._data_storage: 'IissDataStorage' = IissDataStorage()
         self._data_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
+        self._batch_manager = IissBatchManager(self._data_storage.load_last_transaction_index())
 
     def close(self):
         self._data_storage.close()
@@ -83,8 +83,10 @@ class IissEngine:
     def commit(self, block_hash: bytes):
         batch: 'IissBatch' = self._batch_manager.get_batch(block_hash)
         self._data_storage.commit(batch)
-
+        self._batch_manager.update_index_and_clear_mapper(block_hash)
         # TODO RC
+
+        # after request calculating to RC, batch_manager.update_index_to_zero should be called
 
     def rollback(self, block_hash: bytes):
         pass
