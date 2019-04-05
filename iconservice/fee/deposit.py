@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2019 ICON Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import Optional
 
 from ..base.address import Address
@@ -9,14 +25,17 @@ class Deposit(object):
     Deposit Information Class
     implementing functions to serialize, deserialize and convert to dict type.
     """
+    _VERSION = 0
 
-    # The minimum remaining amount of a single deposit
-    _MIN_REMAINING_AMOUNT = 50 * 10 ** 18
+    # Percentage of the minimum remaining deposit amount to pay fee.
+    # The minimum remaining amount of a single deposit is 10 percent of amount of the deposit
+    _MIN_REMAINING_PROPORTION = 10
 
     def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
-                 deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = 0,
-                 virtual_step_issued: int = 0, virtual_step_used: int = 0, prev_id: bytes = None,
-                 next_id: bytes = None):
+                 deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = -1,
+                 virtual_step_issued: int = 0, virtual_step_used: int = 0,
+                 prev_id: bytes = None, next_id: bytes = None):
+        self.version = self._VERSION
         # deposit id, should be tx hash of deposit transaction
         self.id = deposit_id
         # target SCORE address
@@ -50,16 +69,17 @@ class Deposit(object):
         data: list = MsgPackForDB.loads(buf)
 
         deposit = Deposit()
-        deposit.score_address = data[0]
-        deposit.sender = data[1]
-        deposit.deposit_amount = data[2]
-        deposit.deposit_used = data[3]
-        deposit.created = data[4]
-        deposit.expires = data[5]
-        deposit.virtual_step_issued = data[6]
-        deposit.virtual_step_used = data[7]
-        deposit.prev_id = data[8]
-        deposit.next_id = data[9]
+        deposit.version = data[0]
+        deposit.score_address = data[1]
+        deposit.sender = data[2]
+        deposit.deposit_amount = data[3]
+        deposit.deposit_used = data[4]
+        deposit.created = data[5]
+        deposit.expires = data[6]
+        deposit.virtual_step_issued = data[7]
+        deposit.virtual_step_used = data[8]
+        deposit.prev_id = data[9]
+        deposit.next_id = data[10]
 
         return deposit
 
@@ -68,7 +88,8 @@ class Deposit(object):
 
         :return: deposit info in bytes
         """
-        data: list = [self.score_address,
+        data: list = [self.version,
+                      self.score_address,
                       self.sender,
                       self.deposit_amount,
                       self.deposit_used,
@@ -104,6 +125,7 @@ class Deposit(object):
         :param other: (Deposit)
         """
         return isinstance(other, Deposit) \
+               and self.version == other.version \
                and self.score_address == other.score_address \
                and self.sender == other.sender \
                and self.deposit_amount == other.deposit_amount \
@@ -123,15 +145,22 @@ class Deposit(object):
         return not self.__eq__(other)
 
     @property
-    def available_virtual_step(self):
+    def remaining_virtual_step(self):
         """
         the amount of available virtual step
         """
         return self.virtual_step_issued - self.virtual_step_used
 
     @property
-    def available_deposit(self):
+    def remaining_deposit(self):
         """
         the amount of available deposit for fees
         """
-        return self.deposit_amount - self.deposit_used - self._MIN_REMAINING_AMOUNT
+        return self.deposit_amount - self.deposit_used
+
+    @property
+    def min_remaining_deposit(self):
+        """
+        the minimum remaining deposit amount
+        """
+        return self.deposit_amount * self._MIN_REMAINING_PROPORTION // 100

@@ -28,6 +28,7 @@ class Transaction(object):
                  tx_hash: Optional[bytes] = None,
                  index: int = 0,
                  origin: Optional['Address'] = None,
+                 recipient: Optional['Address'] = None,
                  timestamp: int = None,
                  nonce: int = None) -> None:
         """Transaction class for icon score context
@@ -35,6 +36,7 @@ class Transaction(object):
         self._hash = tx_hash
         self._index = index
         self._origin = origin
+        self._recipient = recipient
         self._timestamp = timestamp
         self._nonce = nonce
 
@@ -75,4 +77,11 @@ class Transaction(object):
         random value
         """
         return self._nonce
+
+    @property
+    def recipient(self):
+        """
+        The account of msg recipient.
+        """
+        return self._recipient
 

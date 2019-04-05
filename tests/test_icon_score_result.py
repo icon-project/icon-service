@@ -30,6 +30,7 @@ from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.icon_constant import REVISION_3
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -217,7 +218,7 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['status'].startswith('0x'))
 
     def test_request(self):
-        inner_task = generate_inner_task()
+        inner_task = generate_inner_task(REVISION_3)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
