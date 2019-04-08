@@ -16,6 +16,7 @@
 
 import unittest
 
+from iconservice.base.exception import InvalidParamsException
 from iconservice.iiss.database.iiss_batch import IissBatchManager
 
 
@@ -28,7 +29,7 @@ class TestIissBatchManager(unittest.TestCase):
 
     def test_init(self):
         # failure case: when input index under -1, should raise exception
-        self.assertRaises(Exception, IissBatchManager, -2)
+        self.assertRaises(InvalidParamsException, IissBatchManager, -2)
 
         # success case: when input index -1 or more, should create new instance successfully
         # and recorded index should be + 1
@@ -70,7 +71,7 @@ class TestIissBatchManager(unittest.TestCase):
         batch._batch_iiss_tx_index = expected_tx_index
 
         # failure case: when input non-existing block hash as a param, should raise an error
-        self.assertRaises(Exception,
+        self.assertRaises(InvalidParamsException,
                           batch_manager.update_index_and_clear_mapper,
                           b'non_exist_block_hash')
 

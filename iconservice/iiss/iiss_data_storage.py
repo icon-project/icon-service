@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from plyvel import destroy_db
 
+from ..base.exception import DatabaseException, InvalidParamsException
 from ..icon_constant import DATA_BYTE_ORDER
 from .database.iiss_db import IissDatabase
 from .iiss_msg_data import IissTxData
@@ -49,8 +50,7 @@ class IissDataStorage(object):
 
     def open(self, path: str) -> None:
         if not os.path.exists(path):
-            # todo: consider which exception should be raised
-            raise Exception
+            raise DatabaseException(f"Invalid IISS DB path: {path}")
         self._current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
         self._iiss_rc_db_path = os.path.join(path, self._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT)
         self._db = IissDatabase.from_path(self._current_db_path, create_if_missing=True)
@@ -79,7 +79,6 @@ class IissDataStorage(object):
         self._db.write_batch(batch)
 
     def load_last_transaction_index(self) -> int:
-        # todo: need to refactor
         tx_key_prefix = IissTxData._prefix
         tx_sub_db: 'IissDatabase' = self._db.get_sub_db(tx_key_prefix.encode())
         last_tx_key, _ = next(tx_sub_db.iterator(reverse=True), (None, None))
@@ -90,7 +89,7 @@ class IissDataStorage(object):
     @staticmethod
     def _check_block_height(block_height: int):
         if block_height <= 0:
-            raise Exception
+            raise InvalidParamsException("Block height should be more than 0")
 
     def create_db_for_calc(self, block_height: int) -> str:
         self._check_block_height(block_height)
@@ -101,8 +100,8 @@ class IissDataStorage(object):
         if os.path.exists(self._current_db_path) and not os.path.exists(iiss_rc_db_path):
             os.rename(self._current_db_path, iiss_rc_db_path)
         else:
-            # todo: consider which exception should be raised
-            raise Exception
+            raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
+                                    "current DB path and IISS DB path")
 
         self._db.reset_db(self._current_db_path)
         return iiss_rc_db_path
@@ -116,5 +115,4 @@ class IissDataStorage(object):
             # this method check the process lock
             destroy_db(iiss_rc_db_path)
         else:
-            # todo: consider which exception should be raised
-            raise Exception
+            raise DatabaseException("Cannot remove IISS DB because of invalid path. Check IISS DB path")

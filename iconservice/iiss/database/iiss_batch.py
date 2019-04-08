@@ -18,6 +18,9 @@ from collections import OrderedDict
 
 
 # todo: Ordered dict is not used
+from ...base.exception import InvalidParamsException
+
+
 class IissBatch(OrderedDict):
     def __init__(self, db_iiss_tx_index: int):
         super().__init__()
@@ -35,8 +38,7 @@ class IissBatch(OrderedDict):
 class IissBatchManager(object):
     def __init__(self, recorded_last_iiss_tx_index: int):
         if recorded_last_iiss_tx_index < -1:
-            # todo: set specific exception
-            raise Exception
+            raise InvalidParamsException("Transaction index should be equal or more than 0")
         # should increase last transaction index (already used index).
         self._db_iiss_tx_index = recorded_last_iiss_tx_index + 1
         self._iiss_batch_mapper = {}
@@ -52,8 +54,7 @@ class IissBatchManager(object):
     # todo: rename method
     def update_index_and_clear_mapper(self, block_hash: bytes) -> None:
         if block_hash not in self._iiss_batch_mapper.keys():
-            # todo: set specific exception
-            raise Exception
+            raise InvalidParamsException(f"Cannot find batch corresponding with this block hash:{block_hash}")
         self._db_iiss_tx_index = self._iiss_batch_mapper[block_hash].batch_iiss_tx_index
 
         self._iiss_batch_mapper.clear()

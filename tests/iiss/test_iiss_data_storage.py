@@ -21,6 +21,7 @@ from unittest.mock import Mock
 
 import plyvel
 
+from iconservice.base.exception import DatabaseException, InvalidParamsException
 from iconservice.iiss.database.iiss_batch import IissBatch
 from iconservice.iiss.database.iiss_db import IissDatabase
 from iconservice.iiss.iiss_data_creator import *
@@ -71,7 +72,7 @@ class TestIissDataStorage(unittest.TestCase):
         # failure case: when input non-existing path, should raise error
         iiss_data_storage = IissDataStorage()
         non_exist_path = os.path.join(self.test_db_path, "non_exist_path")
-        self.assertRaises(Exception, iiss_data_storage.open, non_exist_path)
+        self.assertRaises(DatabaseException, iiss_data_storage.open, non_exist_path)
 
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
@@ -153,23 +154,23 @@ class TestIissDataStorage(unittest.TestCase):
     def test_create_db_for_calc_invalid_block_height(self):
         # failure case: when input block height less than or equal to 0, raise exception
         for block_height in range(-2, 1):
-            self.assertRaises(Exception, self.iiss_data_storage.create_db_for_calc, block_height)
+            self.assertRaises(InvalidParamsException, self.iiss_data_storage.create_db_for_calc, block_height)
 
     def test_create_db_for_calc_current_db_exists(self):
         valid_block_height = 1
         # failure case: call this method when current db is not exists
-        self.iiss_data_storage.close()
+        self.iiss_data_storage._db.close()
         # remove current path
         rmtree(self.iiss_data_storage._current_db_path, ignore_errors=True)
 
-        self.assertRaises(Exception, self.iiss_data_storage.create_db_for_calc, valid_block_height)
+        self.assertRaises(DatabaseException, self.iiss_data_storage.create_db_for_calc, valid_block_height)
 
     def test_create_db_for_calc_iiss_db_exists(self):
         valid_block_height = 1
         # failure case: call this method when same block height iiss db is exists
         dummy_iiss_db_dir = self.iiss_data_storage._iiss_rc_db_path + f"{valid_block_height}"
         os.mkdir(dummy_iiss_db_dir)
-        self.assertRaises(Exception, self.iiss_data_storage.create_db_for_calc, valid_block_height)
+        self.assertRaises(DatabaseException, self.iiss_data_storage.create_db_for_calc, valid_block_height)
 
     def test_create_db_for_calc_valid_block_height(self):
         # success case: when input valid block height, should create iiss_db and return path
@@ -188,12 +189,12 @@ class TestIissDataStorage(unittest.TestCase):
     def test_remove_db_for_calc_invalid_block_height(self):
         # failure case: when input block height less than or equal to 0, raise exception
         for block_height in range(-2, 1):
-            self.assertRaises(Exception, self.iiss_data_storage.remove_db_for_calc, block_height)
+            self.assertRaises(InvalidParamsException, self.iiss_data_storage.remove_db_for_calc, block_height)
 
     def test_remove_db_for_calc_no_db_corresponding_to_block_height(self):
         # failure case: when there is no db corresponding to block height, raise exception
         invalid_block_height = 1_000_000
-        self.assertRaises(Exception, self.iiss_data_storage.remove_db_for_calc, invalid_block_height)
+        self.assertRaises(DatabaseException, self.iiss_data_storage.remove_db_for_calc, invalid_block_height)
         pass
 
     def test_remove_db_for_calc_db_occupied_by_another_process(self):
