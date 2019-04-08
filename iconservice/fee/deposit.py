@@ -123,15 +123,15 @@ class Deposit(object):
         return not self.__eq__(other)
 
     @property
-    def available_virtual_step(self):
+    def remaining_virtual_step(self):
         """
         the amount of available virtual step
         """
         return self.virtual_step_issued - self.virtual_step_used
 
     @property
-    def available_deposit(self):
+    def remaining_deposit(self):
         """
         the amount of available deposit for fees
         """
-        return self.deposit_amount - self.deposit_used - self._MIN_REMAINING_AMOUNT
+        return self.deposit_amount - self.deposit_used
