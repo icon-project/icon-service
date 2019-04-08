@@ -19,7 +19,7 @@ from enum import IntEnum
 from typing import Any, TYPE_CHECKING
 
 from ..icon_constant import DATA_BYTE_ORDER
-from .iiss_data_converter import IissDataConverter, TypeTag
+from ..utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -55,7 +55,7 @@ class IissHeader(IissData):
         self.block_height: int = 0
 
     def make_key(self) -> bytes:
-        return IissDataConverter.encode(self._prefix)
+        return MsgPackForIpc.encode(self._prefix)
 
     def make_value(self) -> bytes:
         data = [
@@ -63,11 +63,11 @@ class IissHeader(IissData):
             self.block_height
         ]
 
-        return IissDataConverter.dumps(data)
+        return MsgPackForIpc.dumps(data)
 
     @staticmethod
     def get_value(data: bytes) -> 'IissHeader':
-        data_list: list = IissDataConverter.loads(data)
+        data_list: list = MsgPackForIpc.loads(data)
         obj = IissHeader()
         obj.version: int = data_list[0]
         obj.block_height: int = data_list[1]
@@ -87,7 +87,7 @@ class IissGovernanceVariable(IissData):
         self.reward_rep: int = 0
 
     def make_key(self) -> bytes:
-        prefix: bytes = IissDataConverter.encode(self._prefix)
+        prefix: bytes = MsgPackForIpc.encode(self._prefix)
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return prefix + block_height
 
@@ -97,11 +97,11 @@ class IissGovernanceVariable(IissData):
             self.incentive_rep,
             self.reward_rep
         ]
-        return IissDataConverter.dumps(data)
+        return MsgPackForIpc.dumps(data)
 
     @staticmethod
     def get_value(key: bytes, data: bytes) -> 'IissGovernanceVariable':
-        data_list: list = IissDataConverter.loads(data)
+        data_list: list = MsgPackForIpc.loads(data)
         obj = IissGovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.icx_price: int = data_list[0]
@@ -123,26 +123,26 @@ class PrepsData(IissData):
         self.block_validator_list: list = None
 
     def make_key(self) -> bytes:
-        prefix: bytes = IissDataConverter.encode(self._prefix)
+        prefix: bytes = MsgPackForIpc.encode(self._prefix)
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return prefix + block_height
 
     def make_value(self) -> bytes:
 
         data = [
-            IissDataConverter.encode(self.block_generator),
-            [IissDataConverter.encode(validator_address) for validator_address in self.block_validator_list]
+            MsgPackForIpc.encode(self.block_generator),
+            [MsgPackForIpc.encode(validator_address) for validator_address in self.block_validator_list]
         ]
-        return IissDataConverter.dumps(data)
+        return MsgPackForIpc.dumps(data)
 
     @staticmethod
     def get_value(key: bytes, data: bytes) -> 'PrepsData':
-        data_list: list = IissDataConverter.loads(data)
+        data_list: list = MsgPackForIpc.loads(data)
         obj = PrepsData()
         obj.block_height: int = int.from_bytes(key[4:], DATA_BYTE_ORDER)
-        obj.block_generator: 'Address' = IissDataConverter.decode(TypeTag.ADDRESS, data_list[0])
+        obj.block_generator: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
 
-        obj.block_validator_list: list = [IissDataConverter.decode(TypeTag.ADDRESS, bytes_address)
+        obj.block_validator_list: list = [MsgPackForIpc.decode(TypeTag.ADDRESS, bytes_address)
                                           for bytes_address in data_list[1]]
         return obj
 
@@ -161,7 +161,7 @@ class IissTxData(IissData):
         self.data: 'IissTx' = None
 
     def make_key(self) -> bytes:
-        prefix: bytes = IissDataConverter.encode(self._prefix)
+        prefix: bytes = MsgPackForIpc.encode(self._prefix)
         tx_index: bytes = self.index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return prefix + tx_index
 
@@ -179,20 +179,20 @@ class IissTxData(IissData):
             raise InvalidParamsException(f"Invalid TxData: {tx_data}")
 
         data = [
-            IissDataConverter.encode(self.address),
+            MsgPackForIpc.encode(self.address),
             self.block_height,
             tx_type,
             tx_data.encode()
         ]
 
-        return IissDataConverter.dumps(data)
+        return MsgPackForIpc.dumps(data)
 
     @staticmethod
     def get_value(tx_index: int, data: bytes) -> 'IissTxData':
-        data_list: list = IissDataConverter.loads(data)
+        data_list: list = MsgPackForIpc.loads(data)
         obj = IissTxData()
         obj.index: int = tx_index
-        obj.address: 'Address' = IissDataConverter.decode(TypeTag.ADDRESS, data_list[0])
+        obj.address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
         obj.block_height: int = data_list[1]
         obj.type: 'IissTxType' = IissTxType(data_list[2])
         obj.data: 'IissTx' = IissTxData._covert_tx_data(obj.type, data_list[3])
@@ -234,11 +234,11 @@ class DelegationTx(IissTx):
 
     def encode(self) -> tuple:
         data = [x.encode() for x in self.delegation_info]
-        return IissDataConverter.encode_any(data)
+        return MsgPackForIpc.encode_any(data)
 
     @staticmethod
     def decode(data: tuple) -> 'DelegationTx':
-        data_list: list = IissDataConverter.decode_any(data)
+        data_list: list = MsgPackForIpc.decode_any(data)
         obj = DelegationTx()
         obj.delegation_info: list = [DelegationInfo.decode(x) for x in data_list]
         return obj
@@ -268,7 +268,7 @@ class PRepRegisterTx(IissTx):
         return IissTxType.PREP_REGISTER
 
     def encode(self) -> tuple:
-        return IissDataConverter.encode_any(None)
+        return MsgPackForIpc.encode_any(None)
 
     @staticmethod
     def decode(data: tuple) -> 'PRepRegisterTx':
@@ -284,7 +284,7 @@ class PRepUnregisterTx(IissTx):
         return IissTxType.PREP_UNREGISTER
 
     def encode(self) -> tuple:
-        return IissDataConverter.encode_any(None)
+        return MsgPackForIpc.encode_any(None)
 
     @staticmethod
     def decode(data: tuple) -> 'PRepUnregisterTx':

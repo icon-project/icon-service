@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from plyvel import destroy_db
 
-from iconservice.icon_constant import DATA_BYTE_ORDER
+from ..icon_constant import DATA_BYTE_ORDER
 from .database.iiss_db import IissDatabase
 from .iiss_msg_data import IissTxData
 

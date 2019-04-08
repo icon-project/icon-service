@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING
 
 import plyvel
 
-from iconservice.database.db import KeyValueDatabase
+from ...database.db import KeyValueDatabase
 
 if TYPE_CHECKING:
-    from iconservice.database.db import KeyValueDatabase
+    from ...database.db import KeyValueDatabase
 
 
 class IissDatabase(KeyValueDatabase):
