@@ -84,6 +84,9 @@ class FeeEngine:
 
     _MIN_DEPOSIT_PERIOD = 1_296_000
 
+    # The minimum remaining amount of a single deposit
+    _MIN_REMAINING_AMOUNT = 500 * 10 ** 18
+
     def __init__(self,
                  deploy_storage: 'IconScoreDeployStorage',
                  fee_storage: 'FeeStorage',
@@ -115,7 +118,6 @@ class FeeEngine:
         self._check_score_valid(context, score_address)
 
         score_fee_info_from_storage = self._get_or_create_score_fee(context, score_address)
-        min_remaining_amount = score_fee_info_from_storage.min_remaining_amount
 
         score_fee_info = ScoreFeeInfo(score_address)
 
@@ -126,7 +128,8 @@ class FeeEngine:
             # Retrieves available virtual STEPs and deposits
             if block_number < deposit.expires:
                 score_fee_info.available_virtual_step += deposit.remaining_virtual_step
-                score_fee_info.available_deposit += deposit.remaining_deposit - min_remaining_amount
+                score_fee_info.available_deposit += \
+                    max(deposit.remaining_deposit - self._MIN_REMAINING_AMOUNT, 0)
 
         return score_fee_info
 
@@ -549,7 +552,7 @@ class FeeEngine:
         # Search for next available deposit id
         gen = self._deposit_generator(context, score_fee_info.available_head_id_of_deposit)
         for deposit in filter(lambda d: block_number < d.expires, gen):
-            available_deposit = deposit.remaining_deposit - score_fee_info.min_remaining_amount
+            available_deposit = deposit.remaining_deposit - self._MIN_REMAINING_AMOUNT
 
             if remaining_required_icx < available_deposit:
                 charged_icx = remaining_required_icx
@@ -595,7 +598,7 @@ class FeeEngine:
 
         next_available_deposit = last_paid_deposit
 
-        if last_paid_deposit.remaining_deposit <= score_fee_info.min_remaining_amount:
+        if last_paid_deposit.remaining_deposit <= self._MIN_REMAINING_AMOUNT:
             # All available deposits have been consumed in the current deposit
             # so should find the next available deposits
             gen = self._deposit_generator(context, last_paid_deposit.next_id)
