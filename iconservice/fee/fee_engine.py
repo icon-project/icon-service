@@ -177,7 +177,6 @@ class FeeEngine:
             self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
         deposit.prev_id = score_fee_info.tail_id
 
-        # TODO insert the deposit with keeping expiring order.
         self._insert_deposit(context, deposit)
 
     def _insert_deposit(self, context, deposit):
@@ -206,6 +205,12 @@ class FeeEngine:
         if score_fee_info.available_head_id_of_deposit is None:
             score_fee_info.available_head_id_of_deposit = deposit.id
 
+        if score_fee_info.expires_of_virtual_step < deposit.expires:
+            score_fee_info.expires_of_virtual_step = deposit.expires
+
+        if score_fee_info.expires_of_deposit < deposit.expires:
+            score_fee_info.expires_of_deposit = deposit.expires
+
         score_fee_info.tail_id = deposit.id
         self._fee_storage.put_score_fee(context, deposit.score_address, score_fee_info)
 
@@ -226,7 +231,7 @@ class FeeEngine:
         """
         # [Sub Task]
         # - Checks if the contract period is finished
-        # - if the period is not finished, calculates and apply a penalty
+        # - If the period is not finished, it calculates and applies to a penalty
         # - Update ICX
 
         self._check_deposit_id(deposit_id)
@@ -239,7 +244,7 @@ class FeeEngine:
         if deposit.sender != sender:
             raise InvalidRequestException('Invalid sender')
 
-        self._delete_deposit(context, deposit)
+        self._delete_deposit(context, deposit, block_number)
 
         # Deposits to sender's account
         penalty = self._calculate_penalty(
@@ -253,11 +258,10 @@ class FeeEngine:
 
         return deposit.score_address, return_amount, penalty
 
-    def _delete_deposit(self, context: 'IconScoreContext', deposit: 'Deposit'):
+    def _delete_deposit(self, context: 'IconScoreContext', deposit: 'Deposit', block_number: int) -> None:
         """
         Deletes deposit information from storage
         """
-
         # Updates the previous link
         if deposit.prev_id is not None:
             prev_deposit = self._fee_storage.get_deposit(context, deposit.prev_id)
@@ -279,11 +283,31 @@ class FeeEngine:
             fee_info_changed = True
 
         if score_fee_info.available_head_id_of_virtual_step == deposit.id:
-            score_fee_info.available_head_id_of_virtual_step = deposit.next_id
+            # Search for next deposit id which is available to use virtual step
+            gen = self._deposit_generator(context, deposit.next_id)
+            next_available_deposit = next(filter(lambda d: block_number < d.expires, gen), None)
+            next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
+            score_fee_info.available_head_id_of_virtual_step = next_deposit_id
             fee_info_changed = True
 
         if score_fee_info.available_head_id_of_deposit == deposit.id:
-            score_fee_info.available_head_id_of_deposit = deposit.next_id
+            # Search for next deposit id which is available to use the deposited ICX
+            gen = self._deposit_generator(context, deposit.next_id)
+            next_available_deposit = next(filter(lambda d: block_number < d.expires, gen), None)
+            next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
+            score_fee_info.available_head_id_of_deposit = next_deposit_id
+            fee_info_changed = True
+
+        if score_fee_info.expires_of_virtual_step == deposit.expires:
+            gen = self._deposit_generator(context, score_fee_info.available_head_id_of_virtual_step)
+            max_expires = max(map(lambda d: d.expires, gen), default=-1)
+            score_fee_info.expires_of_virtual_step = max_expires if max_expires > block_number else -1
+            fee_info_changed = True
+
+        if score_fee_info.expires_of_deposit == deposit.expires:
+            gen = self._deposit_generator(context, score_fee_info.available_head_id_of_deposit)
+            max_expires = max(map(lambda d: d.expires, gen), default=-1)
+            score_fee_info.expires_of_deposit = max_expires if max_expires > block_number else -1
             fee_info_changed = True
 
         if score_fee_info.tail_id == deposit.id:

@@ -9,7 +9,7 @@ class Fee(object):
 
     def __init__(self, min_remaining_amount: int = 0, head_id: bytes = None, tail_id: bytes = None,
                  available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None,
-                 expires_of_virtual_step: int = 0, expires_of_deposit: int = 0):
+                 expires_of_virtual_step: int = -1, expires_of_deposit: int = -1):
         # min remaining amount of deposit; it is boundary of processing the last transaction.
         self.min_remaining_amount = min_remaining_amount
         self.head_id = head_id
