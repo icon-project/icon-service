@@ -225,6 +225,48 @@ class TestFeeEngine(unittest.TestCase):
                                      amount, block_number, period)
         self.assertEqual('Out of balance', e.exception.message)
 
+    def test_deposit_fee_available_head_ids(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        tx_hash = os.urandom(32)
+        amount = 10000 * 10 ** 18
+        block_number = 1000
+
+        self._icx_engine.init_account(
+            context, AccountType.GENERAL, 'sender', self._sender, amount)
+
+        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+
+        self.assertEqual(fee_info.available_head_id_of_virtual_step, None)
+        self.assertEqual(fee_info.available_head_id_of_deposit, None)
+
+        self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number,
+                                 FeeEngine._MIN_DEPOSIT_PERIOD)
+
+        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(fee_info.available_head_id_of_virtual_step, tx_hash)
+        self.assertEqual(fee_info.available_head_id_of_deposit, tx_hash)
+
+    def test_deposit_fee_expires_updated(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        tx_hash = os.urandom(32)
+        amount = 10000 * 10 ** 18
+        block_number = 1000
+        period = FeeEngine._MIN_DEPOSIT_PERIOD
+
+        self._icx_engine.init_account(
+            context, AccountType.GENERAL, 'sender', self._sender, amount)
+
+        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+
+        self.assertEqual(fee_info.expires_of_virtual_step, 0)
+        self.assertEqual(fee_info.expires_of_deposit, 0)
+
+        self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number, period)
+
+        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(fee_info.expires_of_virtual_step, block_number + period)
+        self.assertEqual(fee_info.expires_of_deposit, block_number + period)
+
     def test_withdraw_fee_without_penalty(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
