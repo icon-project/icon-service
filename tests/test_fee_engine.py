@@ -171,6 +171,7 @@ class TestFeeEngine(unittest.TestCase):
             inv_amount = randrange(0, FeeEngine._MIN_DEPOSIT_AMOUNT - 1)
             self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
                                      inv_amount, block_number, period)
+        # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit amount', e.exception.message)
 
         # invalid amount (overflow)
@@ -180,6 +181,7 @@ class TestFeeEngine(unittest.TestCase):
                 randrange(FeeEngine._MAX_DEPOSIT_AMOUNT + 1, FeeEngine._MAX_DEPOSIT_AMOUNT * 10)
             self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
                                      inv_amount, block_number, period)
+        # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit amount', e.exception.message)
 
         # invalid period (underflow)
@@ -188,6 +190,7 @@ class TestFeeEngine(unittest.TestCase):
             inv_period = randrange(0, FeeEngine._MIN_DEPOSIT_PERIOD - 1)
             self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
                                      amount, block_number, inv_period)
+        # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit period', e.exception.message)
 
         # invalid period (overflow)
@@ -197,6 +200,7 @@ class TestFeeEngine(unittest.TestCase):
                 randrange(FeeEngine._MAX_DEPOSIT_PERIOD + 1, FeeEngine._MAX_DEPOSIT_PERIOD * 10)
             self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
                                      amount, block_number, inv_period)
+        # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit period', e.exception.message)
 
         # invalid owner
@@ -205,6 +209,7 @@ class TestFeeEngine(unittest.TestCase):
             inv_sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
             self._engine.deposit_fee(context, tx_hash, inv_sender, self._score_address,
                                      amount, block_number, period)
+        # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid SCORE owner', e.exception.message)
 
     def test_deposit_fee_out_of_balance(self):
@@ -223,6 +228,7 @@ class TestFeeEngine(unittest.TestCase):
         with self.assertRaises(OutOfBalanceException) as e:
             self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
                                      amount, block_number, period)
+        # noinspection PyUnresolvedReferences
         self.assertEqual('Out of balance', e.exception.message)
 
     def test_deposit_fee_available_head_ids(self):
@@ -512,48 +518,6 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(block_number, deposit.created)
         self.assertEqual(block_number + period, deposit.expires)
 
-    # def test_get_available_step_with_sharing(self):
-    #     context = IconScoreContext(IconScoreContextType.INVOKE)
-    #
-    #     step_price = 10 ** 10
-    #     sender_step_limit = 10000
-    #     block_number = randrange(100, 10000)
-    #     max_step_limit = 1_000_000
-    #
-    #     ratio = 50
-    #     self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-    #
-    #     total_available_step = self._engine.get_total_available_step(
-    #         context, self._score_address, sender_step_limit, step_price, block_number,
-    #         max_step_limit)
-    #
-    #     total_step = sender_step_limit * 100 // (100 - ratio)
-    #     self.assertEqual(total_step, total_available_step)
-    #
-    #     ratio = 30
-    #     self._engine.set_fee_sharing_ratio(context, self._sender, self._score_address, ratio)
-    #
-    #     total_available_step = self._engine.get_total_available_step(
-    #         context, self._score_address, sender_step_limit, step_price, block_number,
-    #         max_step_limit)
-    #
-    #     total_step = sender_step_limit * 100 // (100 - ratio)
-    #     self.assertEqual(total_step, total_available_step)
-    #
-    # def test_get_available_step_without_sharing(self):
-    #     context = IconScoreContext(IconScoreContextType.QUERY)
-    #
-    #     step_price = 10 ** 10
-    #     score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
-    #     block_number = randrange(100, 10000)
-    #     sender_step_limit = 10000
-    #     max_step_limit = 1_000_000
-    #
-    #     total_available_step = self._engine.get_total_available_step(
-    #         context, score_address, sender_step_limit, step_price, block_number, max_step_limit)
-    #
-    #     self.assertEqual(sender_step_limit, total_available_step)
-
     def test_charge_transaction_fee_without_sharing(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
@@ -611,5 +575,468 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(
             step_price * sender_charging_step, before_sender_balance - after_sender_balance)
 
-    # TODO test_charge_transaction_fee_sharing_virtual_step
-    # TODO test_charge_transaction_fee_sharing_deposit_virtual_step
+    def test_charge_fee_from_score_by_virtual_step_single_deposit(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+        When :  Current  block is 120 so  1st deposit is unavailable
+        Then :  Pays fee by virtual step of 2nd.
+                update indices to 2nd
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 100),
+            (os.urandom(32), 50, 180, 100, 100),
+            (os.urandom(32), 70, 150, 100, 100),
+            (os.urandom(32), 90, 250, 100, 100),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 120
+        used_step = 80
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        before_virtual_step = score_info.available_virtual_step
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(used_step, before_virtual_step - after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(deposits[1][0], score_fee_info.available_head_id_of_virtual_step)
+
+    def test_charge_fee_from_score_by_virtual_step_single_deposit_next_head(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+        When :  Current  block is 120 so  1st deposit is unavailable
+        Then :  Pays fee by virtual step of 2nd.
+                the virtual steps in 2nd are fully consumed
+                update indices to 3rd
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 100),
+            (os.urandom(32), 50, 180, 100, 100),
+            (os.urandom(32), 70, 150, 100, 100),
+            (os.urandom(32), 90, 250, 100, 100),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 120
+        used_step = 100
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        before_virtual_step = score_info.available_virtual_step
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(used_step, before_virtual_step - after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(deposits[2][0], score_fee_info.available_head_id_of_virtual_step)
+
+    def test_charge_fee_from_score_by_virtual_step__single_deposit_next_head_next_expire(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+        When :  Current  block is 190 so  4th, 5th deposits are available
+        Then :  Pays fee by virtual step of 4th.
+                the virtual steps in 4th are fully consumed
+                update indices to 5th
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 100),
+            (os.urandom(32), 50, 180, 100, 100),
+            (os.urandom(32), 70, 150, 100, 100),
+            (os.urandom(32), 90, 250, 100, 100),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 190
+        used_step = 100
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        before_virtual_step = score_info.available_virtual_step
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(used_step, before_virtual_step - after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(deposits[4][0], score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(deposits[4][2], score_fee_info.expires_of_virtual_step)
+
+    def test_charge_fee_from_score_by_virtual_step__single_deposit_next_head_next_expire_none(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+        When :  Current  block is 210 so only 4th deposit is available
+        Then :  Pays fee by virtual step of 4th.
+                the virtual steps in 4th are fully consumed
+                should update indices but there are no more available deposits
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 100),
+            (os.urandom(32), 50, 180, 100, 100),
+            (os.urandom(32), 70, 150, 100, 100),
+            (os.urandom(32), 90, 250, 100, 100),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 210
+        used_step = 100
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        before_virtual_step = score_info.available_virtual_step
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(used_step, before_virtual_step - after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+    def test_charge_fee_from_score_by_virtual_step_multiple_deposit(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+        When :  Current  block is 120 so 1st deposit is unavailable
+        Then :  Pays fee by virtual step through 2nd, 3rd, 4th.
+                the virtual steps in 2nd, 3rd are fully consumed
+                update indices to 4th
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 100),
+            (os.urandom(32), 50, 180, 100, 100),
+            (os.urandom(32), 70, 150, 100, 100),
+            (os.urandom(32), 90, 250, 100, 100),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 120
+        used_step = 250
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        before_virtual_step = score_info.available_virtual_step
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(used_step, before_virtual_step - after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(deposits[3][0], score_fee_info.available_head_id_of_virtual_step)
+
+    def test_charge_fee_from_score_by_combine_by_single_deposit(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+                Remaining virtual steps are in 5th deposit
+        When :  Current  block is 120 so 1st deposit is unavailable
+                Remaining virtual steps are not enough to pay fees
+        Then :  Pays fee by virtual step first.
+                Pays remaining fee by deposit of 2nd
+                update indices to 2nd
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 0),
+            (os.urandom(32), 50, 180, 100, 0),
+            (os.urandom(32), 70, 150, 100, 0),
+            (os.urandom(32), 90, 250, 100, 0),
+            (os.urandom(32), 110, 200, 100, 50)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 120
+        used_step = 70
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(0, after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+        self.assertEqual(deposits[1][0], score_fee_info.available_head_id_of_deposit)
+
+    def test_charge_fee_from_score_by_combine_next_head(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+                Remaining virtual steps are in 5th deposit
+        When :  Current  block is 120 so 1st deposit is unavailable
+                Remaining virtual steps are not enough to pay fees
+        Then :  Pays fee by virtual step first.
+                Pays remaining fee by deposit of 2nd
+                2nd deposit is fully consumed so update indices to 3rd
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 0),
+            (os.urandom(32), 50, 180, 100, 0),
+            (os.urandom(32), 70, 150, 100, 0),
+            (os.urandom(32), 90, 250, 100, 0),
+            (os.urandom(32), 110, 200, 100, 50)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 120
+        used_step = 140
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(0, after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+        self.assertEqual(deposits[2][0], score_fee_info.available_head_id_of_deposit)
+
+    def test_charge_fee_from_score_by_combine_next_head_next_expire(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+                Remaining virtual steps are in 5th deposit
+        When :  Current  block is 190 so 1st, 2nd, 3rd deposits are unavailable
+                Remaining virtual steps are not enough to pay fees
+        Then :  Pays fee by virtual step first.
+                Pays remaining fee by deposit of 4th
+                4th deposit is fully consumed so update indices to 5th
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 0),
+            (os.urandom(32), 50, 180, 100, 0),
+            (os.urandom(32), 70, 150, 100, 0),
+            (os.urandom(32), 90, 250, 100, 0),
+            (os.urandom(32), 110, 200, 100, 50)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 190
+        used_step = 140
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(0, after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+        self.assertEqual(deposits[4][0], score_fee_info.available_head_id_of_deposit)
+        self.assertEqual(deposits[4][2], score_fee_info.expires_of_deposit)
+
+    def test_charge_fee_from_score_by_combine_next_head_next_expire_none(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+                Remaining virtual steps are in 4th and 5th deposit
+        When :  Current  block is 220 so 5th deposit is unavailable
+                Remaining virtual steps are not enough to pay fees
+        Then :  Pays fee by virtual step first.
+                Pays remaining fee by deposit of 4th
+                All available deposits are consumed so make the SCORE disabled
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 0),
+            (os.urandom(32), 50, 180, 100, 0),
+            (os.urandom(32), 70, 150, 100, 0),
+            (os.urandom(32), 90, 250, 100, 50),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 220
+        used_step = 140
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(0, after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+        self.assertEqual(None, score_fee_info.available_head_id_of_deposit)
+        self.assertEqual(-1, score_fee_info.expires_of_deposit)
+
+    def test_charge_fee_from_score_by_combine_multiple_deposit(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+                Remaining virtual steps are in 5th deposit
+        When :  Current  block is 120 so 1st deposit is unavailable
+                Remaining virtual steps are not enough to pay fees
+        Then :  Pays fee by virtual step first.
+                Pays remaining fee by deposit through 2nd and 3rd deposit.
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 0),
+            (os.urandom(32), 50, 180, 100, 0),
+            (os.urandom(32), 70, 150, 100, 0),
+            (os.urandom(32), 90, 250, 100, 0),
+            (os.urandom(32), 110, 200, 100, 50)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 120
+        used_step = 230
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(0, after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+        # Asserts indices are updated
+        self.assertEqual(deposits[3][0], score_fee_info.available_head_id_of_deposit)
+        self.assertEqual(deposits[3][2], score_fee_info.expires_of_deposit)
+
+    def test_charge_fee_from_score_by_combine_additional_pay(self):
+        """
+        Given:  Five deposits. The fourth deposit is the max expire.
+                Remaining virtual steps are in 4th and 5th deposit
+        When :  Current  block is 220 so 5th deposit is unavailable
+                Remaining virtual steps are not enough to pay fees
+                Available deposits are also not enough to pay fees
+        Then :  Pays fees regardless minimum remaining amount
+                and make the SCORE disabled
+        """
+
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
+        deposits = [
+            (os.urandom(32), 10, 100, 100, 0),
+            (os.urandom(32), 50, 180, 100, 0),
+            (os.urandom(32), 70, 150, 100, 0),
+            (os.urandom(32), 90, 250, 100, 50),
+            (os.urandom(32), 110, 200, 100, 100)
+        ]
+        self._set_up_deposits(context, deposits)
+
+        step_price = 1
+        current_block = 220
+        used_step = 150
+
+        self._engine.charge_transaction_fee(
+            context, self._sender, self._score_address, step_price, used_step, current_block)
+
+        score_info = self._engine.get_score_fee_info(context, self._score_address, current_block)
+        after_virtual_step = score_info.available_virtual_step
+
+        self.assertEqual(0, after_virtual_step)
+
+        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        # Asserts virtual step disabled
+        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
+        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+
+        # Asserts deposit disabled
+        self.assertEqual(None, score_fee_info.available_head_id_of_deposit)
+        self.assertEqual(-1, score_fee_info.expires_of_deposit)
+
+    def _set_up_deposits(self, context, deposits):
+        context.fee_sharing_ratio = 100
+
+        FeeEngine._MIN_DEPOSIT_PERIOD = 50
+        FeeEngine._MIN_DEPOSIT_AMOUNT = 10
+        FeeEngine._MIN_REMAINING_AMOUNT = 10
+
+        for deposit in deposits:
+            tx_hash = deposit[0]
+            amount = deposit[3]
+            block_number = deposit[1]
+            period = deposit[2] - block_number
+
+            self._engine._calculate_virtual_step_issuance = Mock(return_value=deposit[4])
+
+            self._engine.deposit_fee(
+                context, tx_hash, self._sender, self._score_address, amount, block_number, period)
