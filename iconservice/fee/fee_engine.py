@@ -256,7 +256,6 @@ class FeeEngine:
         """
         Deletes deposit information from storage
         """
-
         # Updates the previous link
         if deposit.prev_id is not None:
             prev_deposit = self._fee_storage.get_deposit(context, deposit.prev_id)
@@ -280,27 +279,27 @@ class FeeEngine:
         if score_fee_info.available_head_id_of_virtual_step == deposit.id:
             # Search for next deposit id which is available to use virtual step
             gen = self._deposit_generator(context, score_fee_info.available_head_id_of_virtual_step)
-            deposit = next(filter(lambda d: block_number < d.expires, gen), None)
-            next_deposit_id = deposit.id if deposit is not None else None
+            next_available_deposit = next(filter(lambda d: block_number < d.expires, gen), None)
+            next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
             score_fee_info.available_head_id_of_virtual_step = next_deposit_id
             fee_info_changed = True
 
         if score_fee_info.available_head_id_of_deposit == deposit.id:
             # Search for next deposit id which is available to use the deposited ICX
             gen = self._deposit_generator(context, score_fee_info.available_head_id_of_deposit)
-            deposit = next(filter(lambda d: block_number < d.expires, gen), None)
-            next_deposit_id = deposit.id if deposit is not None else None
+            next_available_deposit = next(filter(lambda d: block_number < d.expires, gen), None)
+            next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
             score_fee_info.available_head_id_of_deposit = next_deposit_id
             fee_info_changed = True
 
         if score_fee_info.expires_of_virtual_step == deposit.expires:
-            gen = self._deposit_generator(context, deposit.next_id)
+            gen = self._deposit_generator(context, score_fee_info.available_head_id_of_virtual_step)
             max_expires = max(map(lambda d: d.expires, gen), default=-1)
             score_fee_info.expires_of_virtual_step = max_expires if max_expires > block_number else -1
             fee_info_changed = True
 
         if score_fee_info.expires_of_deposit == deposit.expires:
-            gen = self._deposit_generator(context, deposit.next_id)
+            gen = self._deposit_generator(context, score_fee_info.available_head_id_of_deposit)
             max_expires = max(map(lambda d: d.expires, gen), default=-1)
             score_fee_info.expires_of_deposit = max_expires if max_expires > block_number else -1
             fee_info_changed = True
