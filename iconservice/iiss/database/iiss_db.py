@@ -24,13 +24,15 @@ if TYPE_CHECKING:
     from ...database.db import KeyValueDatabase
 
 
+# todo: actually there is no diff with KeyValueDatabase, so consider just using KeyValueDatabase
+# todo: could be removed
 class IissDatabase(KeyValueDatabase):
     def __init__(self, db: plyvel.DB) -> None:
         super().__init__(db)
 
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool = True) -> 'KeyValueDatabase':
+                  create_if_missing: bool = True) -> 'IissDatabase':
         """
         :param path: db path
         :param create_if_missing:

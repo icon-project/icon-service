@@ -15,7 +15,8 @@
 # limitations under the License.
 
 import os
-from typing import TYPE_CHECKING
+from collections import OrderedDict
+from typing import TYPE_CHECKING, Optional
 
 from plyvel import destroy_db
 
@@ -27,10 +28,9 @@ from .iiss_msg_data import IissTxData
 if TYPE_CHECKING:
     from .iiss_msg_data import IissData
     from .database.iiss_db import IissDatabase
-    from .database.iiss_batch import IissBatch
 
 
-class IissDataStorage(object):
+class RcDataStorage(object):
     _CURRENT_IISS_DB_NAME = "current_db"
     # todo: rename class variable
     _IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT = "iiss_rc_db_"
@@ -43,6 +43,8 @@ class IissDataStorage(object):
         self._current_db_path: str = ""
         self._iiss_rc_db_path: str = ""
         self._db: 'IissDatabase' = None
+        # 'None' if open() is not called else 'int'
+        self._db_iiss_tx_index: Optional[int] = None
 
     @property
     def db(self) -> 'IissDatabase':
@@ -55,6 +57,9 @@ class IissDataStorage(object):
         self._iiss_rc_db_path = os.path.join(path, self._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT)
         self._db = IissDatabase.from_path(self._current_db_path, create_if_missing=True)
 
+        recorded_last_iiss_tx_index = self._load_last_transaction_index()
+        self._db_iiss_tx_index = recorded_last_iiss_tx_index + 1
+
     def close(self) -> None:
         """Close the embedded database.
         """
@@ -63,22 +68,28 @@ class IissDataStorage(object):
             self._db = None
 
     # todo: consider rename 'put' to 'write_to_batch' or 'put_to_batch'
-    def put(self, batch: 'IissBatch', iiss_data: 'IissData') -> None:
-        # todo: batch data check logic
-        if isinstance(iiss_data, IissTxData):
-            iiss_data.index = batch.batch_iiss_tx_index
-            batch.increase_iiss_tx_index()
-
-        key: bytes = iiss_data.make_key()
-        value: bytes = iiss_data.make_value()
-        batch[key] = value
+    def put(self, batch: list, iiss_data: 'IissData') -> None:
+        # todo: iiss_data check logic (if need)
+        batch.append(iiss_data)
 
     # todo: consider rename 'commit' to 'write_to_db' or 'put_to_db'
-    def commit(self, batch: 'IissBatch') -> None:
-        # todo: batch data check logic
-        self._db.write_batch(batch)
+    def commit(self, batch: list) -> None:
+        index = 0
+        batch_dict = OrderedDict()
 
-    def load_last_transaction_index(self) -> int:
+        for iiss_data in batch:
+            if isinstance(iiss_data, IissTxData):
+                iiss_data.index = self._db_iiss_tx_index + index
+                index += 1
+
+            key: bytes = iiss_data.make_key()
+            value: bytes = iiss_data.make_value()
+            batch_dict[key] = value
+
+        self._db.write_batch(batch_dict)
+        self._db_iiss_tx_index += index
+
+    def _load_last_transaction_index(self) -> int:
         tx_key_prefix = IissTxData._prefix
         tx_sub_db: 'IissDatabase' = self._db.get_sub_db(tx_key_prefix.encode())
         last_tx_key, _ = next(tx_sub_db.iterator(reverse=True), (None, None))
@@ -104,6 +115,8 @@ class IissDataStorage(object):
                                     "current DB path and IISS DB path")
 
         self._db.reset_db(self._current_db_path)
+        self._db_iiss_tx_index = 0
+
         return iiss_rc_db_path
 
     def remove_db_for_calc(self, block_height: int) -> None:

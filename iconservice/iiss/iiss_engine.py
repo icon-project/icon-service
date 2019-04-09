@@ -16,8 +16,7 @@
 
 from typing import TYPE_CHECKING, Any
 
-from .database.iiss_batch import IissBatchManager
-from .iiss_data_storage import IissDataStorage
+from .rc_data_storage import RcDataStorage
 from .reward_calc_proxy import RewardCalcProxy
 from ..icon_constant import ConfigKey
 
@@ -25,7 +24,6 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_result import TransactionResult
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icx.icx_storage import IcxStorage
-    from .database.iiss_batch import IissBatch
     from iconcommons import IconConfig
 
 
@@ -47,17 +45,15 @@ class IissEngine:
         self._query_handler: dict = {
         }
 
-        self._batch_manager: 'IissBatchManager' = None
-        self._data_storage: 'IissDataStorage' = None
+        self._data_storage: 'RcDataStorage' = None
         self._reward_calc_proxy: 'RewardCalcProxy' = None
 
         self._global_variable: 'IissGlobalVariable' = None
 
     def open(self, conf: 'IconConfig'):
         self._reward_calc_proxy = RewardCalcProxy()
-        self._data_storage: 'IissDataStorage' = IissDataStorage()
+        self._data_storage: 'RcDataStorage' = RcDataStorage()
         self._data_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
-        self._batch_manager = IissBatchManager(self._data_storage.load_last_transaction_index())
 
     def close(self):
         self._data_storage.close()
@@ -81,12 +77,9 @@ class IissEngine:
         return ret
 
     def commit(self, block_hash: bytes):
-        batch: 'IissBatch' = self._batch_manager.get_batch(block_hash)
-        self._data_storage.commit(batch)
-        self._batch_manager.update_index_and_clear_mapper(block_hash)
+        # todo: should get procommit data
         # TODO RC
-
-        # after request calculating to RC, batch_manager.update_index_to_zero should be called
+        pass
 
     def rollback(self, block_hash: bytes):
         pass

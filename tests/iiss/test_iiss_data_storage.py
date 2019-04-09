@@ -22,10 +22,9 @@ from unittest.mock import Mock
 import plyvel
 
 from iconservice.base.exception import DatabaseException, InvalidParamsException
-from iconservice.iiss.database.iiss_batch import IissBatch
 from iconservice.iiss.database.iiss_db import IissDatabase
 from iconservice.iiss.iiss_data_creator import *
-from iconservice.iiss.iiss_data_storage import IissDataStorage
+from iconservice.iiss.rc_data_storage import RcDataStorage
 from iconservice.iiss.iiss_msg_data import IissTxType
 from tests import create_address
 
@@ -35,7 +34,7 @@ class TestIissDataStorage(unittest.TestCase):
 
     def setUp(self):
         os.mkdir(self.test_db_path)
-        self.iiss_data_storage = IissDataStorage()
+        self.iiss_data_storage = RcDataStorage()
         self.iiss_data_storage.open(self.test_db_path)
 
         dummy_block_height = 1
@@ -70,15 +69,15 @@ class TestIissDataStorage(unittest.TestCase):
         rmtree(self.iiss_data_storage._current_db_path)
 
         # failure case: when input non-existing path, should raise error
-        iiss_data_storage = IissDataStorage()
+        iiss_data_storage = RcDataStorage()
         non_exist_path = os.path.join(self.test_db_path, "non_exist_path")
         self.assertRaises(DatabaseException, iiss_data_storage.open, non_exist_path)
 
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
         iiss_data_storage.open(self.test_db_path)
-        expected_current_db_path = os.path.join(self.test_db_path, IissDataStorage._CURRENT_IISS_DB_NAME)
-        expected_iiss_rc_db_path = os.path.join(self.test_db_path, IissDataStorage._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT)
+        expected_current_db_path = os.path.join(self.test_db_path, RcDataStorage._CURRENT_IISS_DB_NAME)
+        expected_iiss_rc_db_path = os.path.join(self.test_db_path, RcDataStorage._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT)
         actual_current_db_path = iiss_data_storage._current_db_path
         actual_iiss_rc_db_path = iiss_data_storage._iiss_rc_db_path
 
@@ -90,14 +89,15 @@ class TestIissDataStorage(unittest.TestCase):
     def test_put(self):
         # success case: when input IissTxData, iiss_data's index variable is assigned as batch's index
         # and batch's increase_iiss_tx_index should be called
-        self.iiss_data_storage = IissDataStorage()
+        self.iiss_data_storage = RcDataStorage()
         self.iiss_data_storage.open(self.test_db_path)
 
         expected_index = 5
         expected_key = b"key"
         expected_value = b"value"
 
-        batch = IissBatch(expected_index)
+        # todo: need to refactoring after confirm the rc_data_storage
+        batch = []
         mock_iiss_tx_data = Mock(spec=IissTxData)
         mock_iiss_tx_data.attach_mock(Mock(return_value=expected_key), "make_key")
         mock_iiss_tx_data.attach_mock(Mock(return_value=expected_value), "make_value")
@@ -116,7 +116,8 @@ class TestIissDataStorage(unittest.TestCase):
             expected_key = b"key" + index.to_bytes(1, 'big')
             expected_value = b"value" + index.to_bytes(1, 'big')
 
-            batch = IissBatch(expected_index)
+            # todo: need to refactoring after confirm the rc_data_storage
+            batch = []
             mocked_iiss_data.attach_mock(Mock(return_value=expected_key), "make_key")
             mocked_iiss_data.attach_mock(Mock(return_value=expected_value), "make_value")
 
@@ -177,7 +178,7 @@ class TestIissDataStorage(unittest.TestCase):
         valid_block_height = 1
         current_db_path = self.iiss_data_storage._current_db_path
         expected_iiss_db_path = os.path.join(self.test_db_path,
-                                             IissDataStorage._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT + f"{valid_block_height}")
+                                             RcDataStorage._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT + f"{valid_block_height}")
         actual_path = self.iiss_data_storage.create_db_for_calc(valid_block_height)
         self.assertEqual(expected_iiss_db_path, actual_path)
         assert os.path.exists(current_db_path)

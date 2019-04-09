@@ -326,7 +326,11 @@ class IconServiceEngine(ContextContainer):
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
-            context.block_batch, block_result, context.new_icon_score_mapper, precommit_flag)
+            context.block_batch,
+            block_result,
+            context.iiss_batch,
+            context.new_icon_score_mapper,
+            precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
@@ -1150,6 +1154,7 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
+        # todo: should input precommit data
         self._iiss_engine.commit(block.hash)
 
     def rollback(self, block: 'Block') -> None:

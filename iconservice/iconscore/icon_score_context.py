@@ -120,6 +120,7 @@ class IconScoreContext(object):
         self.revision: int = 0
         self.block_batch: 'BlockBatch' = None
         self.tx_batch: 'TransactionBatch' = None
+        self.iiss_batch: list = []
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
