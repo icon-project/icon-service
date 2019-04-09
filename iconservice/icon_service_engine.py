@@ -481,6 +481,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
+        context.fee_sharing_ratio = 0
 
         return self._call(context, method, params)
 
@@ -821,10 +822,12 @@ class IconServiceEngine(ContextContainer):
 
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
+            tmp_context = IconScoreContext(IconScoreContextType.QUERY)
+            tmp_context.block = self._get_last_block()
 
             # Check if from account can charge a tx fee
             self._icon_pre_validator.execute_to_check_out_of_balance(
-                context if context.revision >= REVISION_3 else None,
+                context if context.revision >= REVISION_3 else tmp_context,
                 params,
                 context.step_counter.step_price)
 
@@ -1136,3 +1139,9 @@ class IconServiceEngine(ContextContainer):
                 ICON_SERVICE_LOG_TAG)
 
         self._clear_context()
+
+    def _get_last_block(self) -> Optional['Block']:
+        if self._precommit_data_manager:
+            return self._precommit_data_manager.last_block
+
+        return None

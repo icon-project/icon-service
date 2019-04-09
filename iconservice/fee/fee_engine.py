@@ -414,7 +414,7 @@ class FeeEngine:
         detail_step_used = {}
 
         if sender_step > 0:
-            detail_step_used[sender_step] = sender_step
+            detail_step_used[sender] = sender_step
 
         if receiver_step > 0:
             detail_step_used[to] = receiver_step
