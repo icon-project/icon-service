@@ -258,8 +258,8 @@ class TestFeeEngine(unittest.TestCase):
 
         fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
 
-        self.assertEqual(fee_info.expires_of_virtual_step, 0)
-        self.assertEqual(fee_info.expires_of_deposit, 0)
+        self.assertEqual(fee_info.expires_of_virtual_step, -1)
+        self.assertEqual(fee_info.expires_of_deposit, -1)
 
         self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number, period)
 
@@ -305,6 +305,188 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(0, len(score_info.deposits))
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
+
+    def test_withdraw_fee_and_updates_previous_and_next_link(self):
+        """
+        Given: There are four deposits.
+        When : Withdraws all of them sequentially.
+        Then : Checks if the previous and next link update correctly.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_number = randrange(100, 10000)
+        arr_tx_hash = []
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            period = randrange(FeeEngine._MIN_DEPOSIT_PERIOD, FeeEngine._MAX_DEPOSIT_PERIOD)
+            block_number += 1
+            self._engine.deposit_fee(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, period)
+
+        for i in range(cnt_deposit):
+            target_deposit = self._engine.get_deposit_info_by_id(context, arr_tx_hash[i])
+            self._engine.withdraw_fee(context, self._sender, arr_tx_hash[i], block_number + period // 2)
+
+            if cnt_deposit - 1 == i:
+                self.assertIsNone(target_deposit.next_id)
+                break
+
+            next_deposit = self._engine.get_deposit_info_by_id(context, target_deposit.next_id)
+            self.assertEqual(next_deposit.prev_id, None)
+
+    def test_withdraw_fee_when_available_head_id_of_virtual_step_is_same_as_deposit_id(self):
+        """
+        Given: There are four deposits. Only the last deposit has enough to long period.
+        When : Available head id of the virtual step is same as deposit id.
+        Then : Searches for next deposit id which is available to use virtual step
+               and where expires of the deposit is more than current block height.
+               In the test, only the last deposit is available.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_number = randrange(100, 10000)
+        arr_tx_hash = []
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            block_number += 1
+
+            if i != cnt_deposit - 1:
+                period = FeeEngine._MIN_DEPOSIT_PERIOD
+            else:
+                period = FeeEngine._MAX_DEPOSIT_PERIOD
+
+            self._engine.deposit_fee(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, period)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
+
+        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
+                                  block_number + FeeEngine._MAX_DEPOSIT_PERIOD // 2)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[len(arr_tx_hash) - 1])
+
+    def test_withdraw_fee_when_available_head_id_of_deposit_is_same_as_deposit_id(self):
+        """
+        Given: There are four deposits. Only the third deposit has enough long period.
+        When : Available head id of deposit is same as deposit id.
+        Then : Searches for next deposit id which is available to use deposit
+               and where expires of the deposit is more than current block height.
+               In the test, only the third deposit is available.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_number = randrange(100, 10000)
+        arr_tx_hash = []
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            block_number += 1
+
+            if i != cnt_deposit - 2:
+                period = FeeEngine._MIN_DEPOSIT_PERIOD
+            else:
+                period = FeeEngine._MAX_DEPOSIT_PERIOD
+
+            self._engine.deposit_fee(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, period)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[0])
+
+        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
+                                  block_number + FeeEngine._MAX_DEPOSIT_PERIOD // 2)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[len(arr_tx_hash) - 2])
+
+    def test_withdraw_fee_to_check_setting_on_next_max_expires(self):
+        """
+        Given: There are four deposits.
+        When : Expires of the withdrawal deposit is same as expires.
+        Then : Searches for max expires which is more than current block height.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_number = randrange(100, 10000)
+        arr_tx_hash = []
+        last_expires = 0
+        org_last_expires = 0
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            block_number += 1
+
+            if i != 0:
+                period = FeeEngine._MIN_DEPOSIT_PERIOD
+                if block_number + period > last_expires:
+                    last_expires = block_number + period
+            else:
+                period = FeeEngine._MAX_DEPOSIT_PERIOD
+                org_last_expires = block_number + period
+            self._engine.deposit_fee(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, period)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
+        self.assertEqual(score_info.expires_of_virtual_step, org_last_expires)
+        self.assertEqual(score_info.expires_of_deposit, org_last_expires)
+
+        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
+                                  block_number + FeeEngine._MIN_DEPOSIT_PERIOD // 2)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.expires_of_virtual_step, last_expires)
+        self.assertEqual(score_info.expires_of_deposit, last_expires)
+
+    def test_withdraw_fee_of_last_deposit_to_check_setting_on_next_max_expires(self):
+        """
+        Given: There are four deposits.
+        When : Expires of the withdrawal deposit which is the last one is same as expires.
+        Then : Searches for max expires which is more than current block height.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_number = randrange(100, 10000)
+        arr_tx_hash = []
+        last_expires = 0
+        org_last_expires = 0
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            block_number += 1
+
+            if i != cnt_deposit-1:
+                period = FeeEngine._MIN_DEPOSIT_PERIOD
+                if block_number + period > last_expires:
+                    last_expires = block_number + period
+            else:
+                period = FeeEngine._MAX_DEPOSIT_PERIOD
+                org_last_expires = block_number + period
+            self._engine.deposit_fee(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, period)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
+        self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[0])
+        self.assertEqual(score_info.expires_of_virtual_step, org_last_expires)
+        self.assertEqual(score_info.expires_of_deposit, org_last_expires)
+
+        # Withdraws the last one
+        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[cnt_deposit-1],
+                                  block_number + FeeEngine._MIN_DEPOSIT_PERIOD // 2)
+
+        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        self.assertEqual(score_info.expires_of_virtual_step, last_expires)
+        self.assertEqual(score_info.expires_of_deposit, last_expires)
 
     def test_get_deposit_info(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
