@@ -289,7 +289,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(deposit_id1, score_info["deposits"][0].id)
         self.assertEqual(len(score_info["deposits"]), 1)
         self.assertEqual(score_info["availableVirtualStep"], 0)
-        self.assertEqual(score_info["availableDeposit"], amount_deposit)
+        self.assertEqual(score_info["availableDeposit"], amount_deposit - 500 * 10 ** 18)
 
         # Creates a more deposit with 5000 * 2 ICX
         deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit * 2, 1_296_000)
@@ -303,7 +303,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(score_info["availableVirtualStep"], 0)
 
         # availableDeposit = total amount of deposit - 50 * count of deposit
-        self.assertEqual(score_info["availableDeposit"], amount_deposit * 3)
+        self.assertEqual(score_info["availableDeposit"],
+                         amount_deposit * 3 - 500 * 10 ** 18 * len(score_info["deposits"]))
 
     def test_add_multiple_deposits(self):
         """
@@ -319,7 +320,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
         score_info = self._query_request("getScoreInfo", {"_score": str(self.score_address)})
         self.assertEqual(len(score_info["deposits"]), 100)
-        self.assertEqual(score_info["availableDeposit"], amount_deposit * 100)
+        self.assertEqual(score_info["availableDeposit"],
+                         amount_deposit * 100 - 500 * 10 ** 18 * len(score_info['deposits']))
 
     def test_get_deposit_by_valid_id(self):
         """
@@ -406,7 +408,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(score_info["availableDeposit"], 0)
 
         # check the owner balance
-        validate_user_balance = user_balance_before_withdraw + available_deposit_after_call - withdraw_tx_result.step_used * withdraw_tx_result.step_price
+        validate_user_balance = user_balance_before_withdraw + available_deposit_after_call + 500 * 10 ** 18 - withdraw_tx_result.step_used * withdraw_tx_result.step_price
         self.assertEqual(user_balance_after_withdraw, validate_user_balance)
 
     def test_withdraw_deposit_by_not_owner(self):
