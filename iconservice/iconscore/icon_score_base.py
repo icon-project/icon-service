@@ -655,13 +655,16 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
 
-    def set_fee_ratio(self, ratio: int):
-        if self._context.type == IconScoreContextType.QUERY:
-            raise InvalidRequestException("Can not set fee sharing ratio in read-only context")
-        if ratio < 0 or ratio > 100:
-            raise InvalidRequestException("Invalid ratio. The ratio should be between 0 and 100.")
-
-        self._context.fee_sharing_ratio = ratio
-
-    def get_fee_ratio(self):
+    @property
+    def ratio(self):
         return self._context.fee_sharing_ratio
+
+    @ratio.setter
+    def ratio(self, ratio: int):
+        if len(self._context.msg_stack) == 0:
+            if self._context.type == IconScoreContextType.QUERY:
+                raise InvalidRequestException("Can not set fee sharing ratio in read-only context")
+            if ratio < 0 or ratio > 100:
+                raise InvalidRequestException("Invalid ratio. The ratio should be between 0 and 100.")
+
+            self._context.fee_sharing_ratio = ratio

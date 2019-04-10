@@ -1,7 +1,12 @@
 from iconservice import *
 
 
-class TestFeeSharing(IconScoreBase):
+class TestInterface(InterfaceScore):
+    @interface
+    def set_value(self, value: int, ratio: int = 0) -> None: pass
+
+
+class TestScoreFeeSharingInterCall(IconScoreBase):
 
     @eventlog(indexed=1)
     def Changed(self, value: int):
@@ -9,11 +14,13 @@ class TestFeeSharing(IconScoreBase):
 
     def __init__(self, db: IconScoreDatabase) -> None:
         super().__init__(db)
+        self._score_address = VarDB('score', db, value_type=Address)
         self._value = VarDB('value', db, value_type=int)
 
-    def on_install(self, value: int=1000) -> None:
+    def on_install(self, score_address: Address, value: int=1000) -> None:
         super().on_install()
         self._value.set(value)
+        self._score_address.set(score_address)
 
     def on_update(self) -> None:
         super().on_update()
@@ -28,6 +35,12 @@ class TestFeeSharing(IconScoreBase):
 
     @external
     def set_value(self, value: int, ratio: int = 0):
-        self.set_fee_ratio(ratio)
+        self.ratio = ratio
         self._value.set(value)
         self.Changed(value)
+
+    @external
+    def set_other_score_value(self, value: int, ratio: int, other_score_ratio: int):
+        self.ratio = ratio
+        score = self.create_interface_score(self._score_address.get(), TestInterface)
+        score.set_value(value, other_score_ratio)
