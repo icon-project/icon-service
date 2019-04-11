@@ -65,23 +65,26 @@ class RcDataStorage(object):
     def put(self, batch: list, iiss_data: 'IissData'):
         batch.append(iiss_data)
 
-    def commit(self, batch: list):
+    def commit(self, rc_block_batch: list):
+        if len(rc_block_batch) == 0:
+            return
+
         index = 0
         batch_dict = {}
-
-        for iiss_data in batch:
-            if isinstance(iiss_data, IissTxData):
-                index += 1
-                iiss_data.index = self._db_iiss_tx_index + index
-                key: bytes = iiss_data.make_key(index)
-            else:
-                key: bytes = iiss_data.make_key()
-            value: bytes = iiss_data.make_value()
-            batch_dict[key] = value
+        for rc_tx_batch in rc_block_batch:
+            for iiss_data in rc_tx_batch:
+                if isinstance(iiss_data, IissTxData):
+                    index += 1
+                    key: bytes = iiss_data.make_key(self._db_iiss_tx_index + index)
+                else:
+                    key: bytes = iiss_data.make_key()
+                value: bytes = iiss_data.make_value()
+                batch_dict[key] = value
 
         self._db_iiss_tx_index += index
-        batch_dict[self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
-            self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
+        if self._db_iiss_tx_index >= 0:
+            batch_dict[self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
+                self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
 
         self._db.write_batch(batch_dict)
 

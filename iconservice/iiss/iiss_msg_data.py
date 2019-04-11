@@ -66,8 +66,8 @@ class IissHeader(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(data: bytes) -> 'IissHeader':
-        data_list: list = MsgPackForIpc.loads(data)
+    def from_bytes(value: bytes) -> 'IissHeader':
+        data_list: list = MsgPackForIpc.loads(value)
         obj = IissHeader()
         obj.version: int = data_list[0]
         obj.block_height: int = data_list[1]
@@ -154,7 +154,7 @@ class IissTxData(IissData):
         self.type: 'IissTxType' = IissTxType.INVALID
         self.data: 'IissTx' = None
 
-    def make_key(self, index) -> bytes:
+    def make_key(self, index: int) -> bytes:
         tx_index: bytes = index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return self._PREFIX + tx_index
 
@@ -181,10 +181,9 @@ class IissTxData(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(tx_index: int, value: bytes) -> 'IissTxData':
+    def from_bytes(value: bytes) -> 'IissTxData':
         data_list: list = MsgPackForIpc.loads(value)
         obj = IissTxData()
-        obj.index: int = tx_index
         obj.address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
         obj.block_height: int = data_list[1]
         obj.type: 'IissTxType' = IissTxType(data_list[2])

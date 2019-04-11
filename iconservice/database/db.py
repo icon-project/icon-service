@@ -105,8 +105,8 @@ class KeyValueDatabase(object):
         """
         return KeyValueDatabase(self._db.prefixed_db(prefix))
 
-    def iterator(self, reverse=False) -> iter:
-        return self._db.iterator(reverse=reverse)
+    def iterator(self) -> iter:
+        return self._db.iterator()
 
     def write_batch(self, states: dict) -> None:
         """Write a batch to the database for the specified states dict.
