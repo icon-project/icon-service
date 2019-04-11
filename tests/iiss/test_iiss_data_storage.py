@@ -16,20 +16,20 @@
 
 import os
 import unittest
+from unittest.mock import Mock, patch
+
 from shutil import rmtree
-from unittest.mock import Mock
 
 import plyvel
 
-from iconservice.base.exception import DatabaseException, InvalidParamsException
-from iconservice.iiss.database.iiss_db import IissDatabase
+from iconservice.base.exception import DatabaseException
 from iconservice.iiss.iiss_data_creator import *
-from iconservice.iiss.rc_data_storage import RcDataStorage
 from iconservice.iiss.iiss_msg_data import IissTxType
+from iconservice.iiss.rc_data_storage import RcDataStorage
 from tests import create_address
 
 
-class TestIissDataStorage(unittest.TestCase):
+class TestRcDataStorage(unittest.TestCase):
     test_db_path: str = os.path.join(os.getcwd(), ".storage_test_db")
 
     def setUp(self):
@@ -151,7 +151,7 @@ class TestIissDataStorage(unittest.TestCase):
     def test_commit_without_iiss_tx(self):
         # todo: should supplement this unit tests
         # success case: when there is no iiss_tx data, index should not be increased
-        dummy_iiss_data_list_without_iiss_tx = [[self.dummy_header, self.dummy_gv, self.dummy_prep]]
+        dummy_iiss_data_list_without_iiss_tx = [self.dummy_header, [self.dummy_gv, self.dummy_prep]]
         self.rc_data_storage.commit(dummy_iiss_data_list_without_iiss_tx)
         expected_index = -1
         self.assertEqual(expected_index, self.rc_data_storage._db_iiss_tx_index)
@@ -162,7 +162,7 @@ class TestIissDataStorage(unittest.TestCase):
         # todo: should supplement this unit tests
         # success case: when there is iiss_tx data, index should be increased
         for expected_index in range(0, 10):
-            dummy_iiss_data_list = [[self.dummy_header, self.dummy_gv, self.dummy_prep, self.dummy_tx]]
+            dummy_iiss_data_list = [self.dummy_header, [self.dummy_gv, self.dummy_prep, self.dummy_tx]]
             self.rc_data_storage.commit(dummy_iiss_data_list)
             self.assertEqual(expected_index, self.rc_data_storage._db_iiss_tx_index)
 

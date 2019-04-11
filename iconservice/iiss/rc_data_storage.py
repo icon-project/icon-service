@@ -15,15 +15,12 @@
 # limitations under the License.
 
 import os
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Optional
 
-from plyvel import destroy_db
-
-from ..base.exception import DatabaseException, InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER
 from .database.iiss_db import IissDatabase
 from .iiss_msg_data import IissTxData
+from ..base.exception import DatabaseException
+from ..icon_constant import DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from .iiss_msg_data import IissData
@@ -65,23 +62,29 @@ class RcDataStorage(object):
     def put(self, batch: list, iiss_data: 'IissData'):
         batch.append(iiss_data)
 
+    @staticmethod
+    def flatten_batch(batch):
+        for item in batch:
+            if isinstance(item, list):
+                for iiss_data in RcDataStorage.flatten_batch(item):
+                    yield iiss_data
+            else:
+                yield item
+
     def commit(self, rc_block_batch: list):
         if len(rc_block_batch) == 0:
             return
 
-        index = 0
         batch_dict = {}
-        for rc_tx_batch in rc_block_batch:
-            for iiss_data in rc_tx_batch:
-                if isinstance(iiss_data, IissTxData):
-                    index += 1
-                    key: bytes = iiss_data.make_key(self._db_iiss_tx_index + index)
-                else:
-                    key: bytes = iiss_data.make_key()
-                value: bytes = iiss_data.make_value()
-                batch_dict[key] = value
+        for iiss_data in self.flatten_batch(rc_block_batch):
+            if isinstance(iiss_data, IissTxData):
+                self._db_iiss_tx_index += 1
+                key: bytes = iiss_data.make_key(self._db_iiss_tx_index)
+            else:
+                key: bytes = iiss_data.make_key()
+            value: bytes = iiss_data.make_value()
+            batch_dict[key] = value
 
-        self._db_iiss_tx_index += index
         if self._db_iiss_tx_index >= 0:
             batch_dict[self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
                 self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
