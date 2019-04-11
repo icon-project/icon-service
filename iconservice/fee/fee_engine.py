@@ -254,8 +254,9 @@ class FeeEngine:
             deposit.deposit_amount, deposit.created, deposit.expires, block_number)
 
         if penalty > 0:
-            treasury_account = self._icx_storage.get_account(context, self._icx_engine._fee_treasury_address)
+            treasury_account = self._icx_engine.get_treasury_account(context)
             treasury_account.deposit(penalty)
+            self._icx_storage.put_account(context, treasury_account.address, treasury_account)
 
         return_amount = deposit.deposit_amount - deposit.deposit_used - penalty
         if return_amount > 0:
