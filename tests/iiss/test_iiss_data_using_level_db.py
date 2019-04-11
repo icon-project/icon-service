@@ -92,7 +92,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
     def test_iiss_header_data(self):
         data: bytes = self.iiss_header.make_value()
-        ret_h: 'IissHeader' = self.iiss_header.get_value(data)
+        ret_h: 'IissHeader' = self.iiss_header.from_bytes(data)
 
         self.assertEqual(self.iiss_header.version, ret_h.version)
         self.assertEqual(self.iiss_header.block_height, ret_h.block_height)
@@ -100,7 +100,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
     def test_iiss_governance_variable_data(self):
         key: bytes = self.iiss_gv.make_key()
         data: bytes = self.iiss_gv.make_value()
-        ret_gv: 'IissGovernanceVariable' = self.iiss_gv.get_value(key, data)
+        ret_gv: 'IissGovernanceVariable' = self.iiss_gv.from_bytes(key, data)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
         self.assertEqual(self.iiss_gv.icx_price, ret_gv.icx_price)
@@ -110,7 +110,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
     def test_preps_data(self):
         key: bytes = self.iiss_prep.make_key()
         data: bytes = self.iiss_prep.make_value()
-        ret_p: 'PrepsData' = self.iiss_prep.get_value(key, data)
+        ret_p: 'PrepsData' = self.iiss_prep.from_bytes(key, data)
 
         self.assertEqual(self.iiss_prep.block_height, ret_p.block_height)
         self.assertEqual(self.iiss_prep.block_generator, ret_p.block_generator)
@@ -118,7 +118,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
     def test_iiss_tx_data_delegate(self):
         data: bytes = self.tx_delegate.make_value()
-        ret_tx: 'IissTxData' = self.tx_delegate.get_value(self.tx_delegate.index, data)
+        ret_tx: 'IissTxData' = self.tx_delegate.from_bytes(self.tx_delegate.index, data)
 
         self.assertEqual(self.tx_delegate.index, ret_tx.index)
         self.assertEqual(self.tx_delegate.address, ret_tx.address)
@@ -132,7 +132,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
     def test_iiss_tx_data_preb_reg_tx(self):
         data: bytes = self.tx_prep_reg.make_value()
-        ret_tx: 'IissTxData' = self.tx_prep_reg.get_value(self.tx_prep_reg.index, data)
+        ret_tx: 'IissTxData' = self.tx_prep_reg.from_bytes(self.tx_prep_reg.index, data)
 
         self.assertEqual(self.tx_prep_reg.index, ret_tx.index)
         self.assertEqual(self.tx_prep_reg.address, ret_tx.address)
@@ -141,7 +141,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
     def test_iiss_tx_data_preb_un_reg_tx(self):
         data: bytes = self.tx_prep_un_reg.make_value()
-        ret_tx: 'IissTxData' = self.tx_prep_un_reg.get_value(self.tx_prep_un_reg.index, data)
+        ret_tx: 'IissTxData' = self.tx_prep_un_reg.from_bytes(self.tx_prep_un_reg.index, data)
 
         self.assertEqual(self.tx_prep_un_reg.index, ret_tx.index)
         self.assertEqual(self.tx_prep_un_reg.address, ret_tx.address)
@@ -237,14 +237,14 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
     def _load_mock_db(self):
         key: bytes = self.iiss_header.make_key()
         value = self.db.get(key)
-        ret_h: 'IissHeader' = self.iiss_header.get_value(value)
+        ret_h: 'IissHeader' = self.iiss_header.from_bytes(value)
 
         self.assertEqual(self.iiss_header.version, ret_h.version)
         self.assertEqual(self.iiss_header.block_height, ret_h.block_height)
 
         key: bytes = self.iiss_gv.make_key()
         value = self.db.get(key)
-        ret_gv: 'IissGovernanceVariable' = self.iiss_gv.get_value(key, value)
+        ret_gv: 'IissGovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, self.iiss_gv.block_height)
         self.assertEqual(self.iiss_gv.icx_price, ret_gv.icx_price)
@@ -253,7 +253,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         key: bytes = self.iiss_prep.make_key()
         value = self.db.get(key)
-        ret_p: 'PrepsData' = self.iiss_prep.get_value(key, value)
+        ret_p: 'PrepsData' = self.iiss_prep.from_bytes(key, value)
 
         self.assertEqual(self.iiss_prep.block_height, ret_p.block_height)
         self.assertEqual(self.iiss_prep.block_generator, ret_p.block_generator)
@@ -261,7 +261,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         key: bytes = self.tx_delegate.make_key()
         value = self.db.get(key)
-        ret_tx: 'IissTxData' = self.tx_delegate.get_value(self.tx_delegate.index, value)
+        ret_tx: 'IissTxData' = self.tx_delegate.from_bytes(self.tx_delegate.index, value)
 
         self.assertEqual(self.tx_delegate.index, ret_tx.index)
         self.assertEqual(self.tx_delegate.address, ret_tx.address)
@@ -275,7 +275,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         key: bytes = self.tx_prep_reg.make_key()
         value = self.db.get(key)
-        ret_tx: 'IissTxData' = self.tx_prep_reg.get_value(self.tx_prep_reg.index, value)
+        ret_tx: 'IissTxData' = self.tx_prep_reg.from_bytes(self.tx_prep_reg.index, value)
 
         self.assertEqual(self.tx_prep_reg.index, ret_tx.index)
         self.assertEqual(self.tx_prep_reg.address, ret_tx.address)
@@ -284,7 +284,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         key: bytes = self.tx_prep_un_reg.make_key()
         value = self.db.get(key)
-        ret_tx: 'IissTxData' = self.tx_prep_un_reg.get_value(self.tx_prep_un_reg.index, value)
+        ret_tx: 'IissTxData' = self.tx_prep_un_reg.from_bytes(self.tx_prep_un_reg.index, value)
 
         self.assertEqual(self.tx_prep_un_reg.index, ret_tx.index)
         self.assertEqual(self.tx_prep_un_reg.address, ret_tx.address)

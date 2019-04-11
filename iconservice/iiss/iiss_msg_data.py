@@ -35,7 +35,7 @@ class IissTxType(IntEnum):
 
 class IissData(object):
     @abstractmethod
-    def make_key(self) -> bytes:
+    def make_key(self, *args, **kwargs) -> bytes:
         pass
 
     @abstractmethod
@@ -43,19 +43,19 @@ class IissData(object):
         pass
 
     @staticmethod
-    def get_value(**kwargs) -> 'IissData':
+    def from_bytes(*args, **kwargs) -> 'IissData':
         pass
 
 
 class IissHeader(IissData):
-    _prefix = 'HD'
+    _PREFIX = b'HD'
 
     def __init__(self):
         self.version: int = 0
         self.block_height: int = 0
 
     def make_key(self) -> bytes:
-        return MsgPackForIpc.encode(self._prefix)
+        return self._PREFIX
 
     def make_value(self) -> bytes:
         data = [
@@ -66,7 +66,7 @@ class IissHeader(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def get_value(data: bytes) -> 'IissHeader':
+    def from_bytes(data: bytes) -> 'IissHeader':
         data_list: list = MsgPackForIpc.loads(data)
         obj = IissHeader()
         obj.version: int = data_list[0]
@@ -75,7 +75,7 @@ class IissHeader(IissData):
 
 
 class IissGovernanceVariable(IissData):
-    _prefix = 'gv'
+    _PREFIX = b'gv'
 
     def __init__(self):
         # key
@@ -87,9 +87,8 @@ class IissGovernanceVariable(IissData):
         self.reward_rep: int = 0
 
     def make_key(self) -> bytes:
-        prefix: bytes = MsgPackForIpc.encode(self._prefix)
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return prefix + block_height
+        return self._PREFIX + block_height
 
     def make_value(self) -> bytes:
         data = [
@@ -100,8 +99,8 @@ class IissGovernanceVariable(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def get_value(key: bytes, data: bytes) -> 'IissGovernanceVariable':
-        data_list: list = MsgPackForIpc.loads(data)
+    def from_bytes(key: bytes, value: bytes) -> 'IissGovernanceVariable':
+        data_list: list = MsgPackForIpc.loads(value)
         obj = IissGovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.icx_price: int = data_list[0]
@@ -111,7 +110,7 @@ class IissGovernanceVariable(IissData):
 
 
 class PrepsData(IissData):
-    _prefix = 'prep'
+    _PREFIX = b'prep'
 
     def __init__(self):
         # key
@@ -123,9 +122,8 @@ class PrepsData(IissData):
         self.block_validator_list: list = None
 
     def make_key(self) -> bytes:
-        prefix: bytes = MsgPackForIpc.encode(self._prefix)
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return prefix + block_height
+        return self._PREFIX + block_height
 
     def make_value(self) -> bytes:
 
@@ -136,8 +134,8 @@ class PrepsData(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def get_value(key: bytes, data: bytes) -> 'PrepsData':
-        data_list: list = MsgPackForIpc.loads(data)
+    def from_bytes(key: bytes, value: bytes) -> 'PrepsData':
+        data_list: list = MsgPackForIpc.loads(value)
         obj = PrepsData()
         obj.block_height: int = int.from_bytes(key[4:], DATA_BYTE_ORDER)
         obj.block_generator: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
@@ -148,22 +146,17 @@ class PrepsData(IissData):
 
 
 class IissTxData(IissData):
-    _prefix = 'TX'
+    _PREFIX = b'TX'
 
     def __init__(self):
-        # key
-        self.index: int = 0
-
-        # value
         self.address: 'Address' = None
         self.block_height: int = 0
         self.type: 'IissTxType' = IissTxType.INVALID
         self.data: 'IissTx' = None
 
-    def make_key(self) -> bytes:
-        prefix: bytes = MsgPackForIpc.encode(self._prefix)
-        tx_index: bytes = self.index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
-        return prefix + tx_index
+    def make_key(self, index) -> bytes:
+        tx_index: bytes = index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
+        return self._PREFIX + tx_index
 
     def make_value(self) -> bytes:
         tx_type: 'IissTxType' = self.type
@@ -188,8 +181,8 @@ class IissTxData(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def get_value(tx_index: int, data: bytes) -> 'IissTxData':
-        data_list: list = MsgPackForIpc.loads(data)
+    def from_bytes(tx_index: int, value: bytes) -> 'IissTxData':
+        data_list: list = MsgPackForIpc.loads(value)
         obj = IissTxData()
         obj.index: int = tx_index
         obj.address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])

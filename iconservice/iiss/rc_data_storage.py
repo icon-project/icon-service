@@ -32,16 +32,12 @@ if TYPE_CHECKING:
 
 class RcDataStorage(object):
     _CURRENT_IISS_DB_NAME = "current_db"
-    # todo: rename class variable
-    _IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT = "iiss_rc_db_"
+    _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
-    def __init__(self) -> None:
-        """Constructor
+    _KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
 
-        :param db: (Database) IISS db wrapper
-        """
-        self._current_db_path: str = ""
-        self._iiss_rc_db_path: str = ""
+    def __init__(self):
+        self._path: str = ""
         self._db: 'IissDatabase' = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
@@ -50,82 +46,67 @@ class RcDataStorage(object):
     def db(self) -> 'IissDatabase':
         return self._db
 
-    def open(self, path: str) -> None:
+    def open(self, path: str):
         if not os.path.exists(path):
             raise DatabaseException(f"Invalid IISS DB path: {path}")
-        self._current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
-        self._iiss_rc_db_path = os.path.join(path, self._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT)
-        self._db = IissDatabase.from_path(self._current_db_path, create_if_missing=True)
+        self._path = path
 
-        recorded_last_iiss_tx_index = self._load_last_transaction_index()
-        self._db_iiss_tx_index = recorded_last_iiss_tx_index + 1
+        current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
+        self._db = IissDatabase.from_path(current_db_path, create_if_missing=True)
+        self._db_iiss_tx_index = self._load_last_transaction_index()
 
-    def close(self) -> None:
+    def close(self):
         """Close the embedded database.
         """
         if self._db:
             self._db.close()
             self._db = None
 
-    # todo: consider rename 'put' to 'write_to_batch' or 'put_to_batch'
-    def put(self, batch: list, iiss_data: 'IissData') -> None:
-        # todo: iiss_data check logic (if need)
+    def put(self, batch: list, iiss_data: 'IissData'):
         batch.append(iiss_data)
 
-    # todo: consider rename 'commit' to 'write_to_db' or 'put_to_db'
-    def commit(self, batch: list) -> None:
+    def commit(self, batch: list):
         index = 0
-        batch_dict = OrderedDict()
+        batch_dict = {}
 
         for iiss_data in batch:
             if isinstance(iiss_data, IissTxData):
-                iiss_data.index = self._db_iiss_tx_index + index
                 index += 1
-
-            key: bytes = iiss_data.make_key()
+                iiss_data.index = self._db_iiss_tx_index + index
+                key: bytes = iiss_data.make_key(index)
+            else:
+                key: bytes = iiss_data.make_key()
             value: bytes = iiss_data.make_value()
             batch_dict[key] = value
 
-        self._db.write_batch(batch_dict)
         self._db_iiss_tx_index += index
+        batch_dict[self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX] = \
+            self._db_iiss_tx_index.to_bytes(8, DATA_BYTE_ORDER)
+
+        self._db.write_batch(batch_dict)
 
     def _load_last_transaction_index(self) -> int:
-        tx_key_prefix = IissTxData._prefix
-        tx_sub_db: 'IissDatabase' = self._db.get_sub_db(tx_key_prefix.encode())
-        last_tx_key, _ = next(tx_sub_db.iterator(reverse=True), (None, None))
-        # if there is no tx data, return -1 (as iiss engine increase tx index automatically).
-        return int.from_bytes(last_tx_key[len(tx_key_prefix):], DATA_BYTE_ORDER) \
-            if last_tx_key is not None else -1
-
-    @staticmethod
-    def _check_block_height(block_height: int):
-        if block_height <= 0:
-            raise InvalidParamsException("Block height should be more than 0")
+        encoded_last_index = self._db.get(self._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX)
+        if encoded_last_index is None:
+            return -1
+        else:
+            return int.from_bytes(encoded_last_index, DATA_BYTE_ORDER)
 
     def create_db_for_calc(self, block_height: int) -> str:
-        self._check_block_height(block_height)
-        # todo: check before creating db
-        self._db.close()
+        assert block_height > 0
 
-        iiss_rc_db_path = self._iiss_rc_db_path + str(block_height)
-        if os.path.exists(self._current_db_path) and not os.path.exists(iiss_rc_db_path):
-            os.rename(self._current_db_path, iiss_rc_db_path)
+        self._db.close()
+        current_db_path = os.path.join(self._path, self._CURRENT_IISS_DB_NAME)
+        iiss_rc_db_name = self._IISS_RC_DB_NAME_PREFIX + str(block_height)
+        iiss_rc_db_path = os.path.join(self._path, iiss_rc_db_name)
+
+        if os.path.exists(current_db_path) and not os.path.exists(iiss_rc_db_path):
+            os.rename(current_db_path, iiss_rc_db_path)
         else:
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
 
-        self._db.reset_db(self._current_db_path)
-        self._db_iiss_tx_index = 0
+        self._db = IissDatabase.from_path(current_db_path)
+        self._db_iiss_tx_index = -1
 
         return iiss_rc_db_path
-
-    def remove_db_for_calc(self, block_height: int) -> None:
-        self._check_block_height(block_height)
-        iiss_rc_db_path = self._iiss_rc_db_path + str(block_height)
-
-        if os.path.exists(iiss_rc_db_path):
-            # todo: consider try except about destroy_db method(when try to remove locked db)
-            # this method check the process lock
-            destroy_db(iiss_rc_db_path)
-        else:
-            raise DatabaseException("Cannot remove IISS DB because of invalid path. Check IISS DB path")

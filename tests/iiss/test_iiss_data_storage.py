@@ -77,7 +77,7 @@ class TestIissDataStorage(unittest.TestCase):
         # and generate current level db(if not exist)
         iiss_data_storage.open(self.test_db_path)
         expected_current_db_path = os.path.join(self.test_db_path, RcDataStorage._CURRENT_IISS_DB_NAME)
-        expected_iiss_rc_db_path = os.path.join(self.test_db_path, RcDataStorage._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT)
+        expected_iiss_rc_db_path = os.path.join(self.test_db_path, RcDataStorage._IISS_RC_DB_NAME_PREFIX)
         actual_current_db_path = iiss_data_storage._current_db_path
         actual_iiss_rc_db_path = iiss_data_storage._iiss_rc_db_path
 
@@ -178,7 +178,7 @@ class TestIissDataStorage(unittest.TestCase):
         valid_block_height = 1
         current_db_path = self.iiss_data_storage._current_db_path
         expected_iiss_db_path = os.path.join(self.test_db_path,
-                                             RcDataStorage._IISS_RC_DB_NAME_WITHOUT_BLOCK_HEIGHT + f"{valid_block_height}")
+                                             RcDataStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
         actual_path = self.iiss_data_storage.create_db_for_calc(valid_block_height)
         self.assertEqual(expected_iiss_db_path, actual_path)
         assert os.path.exists(current_db_path)

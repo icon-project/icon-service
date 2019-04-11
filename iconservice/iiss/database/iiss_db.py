@@ -24,8 +24,6 @@ if TYPE_CHECKING:
     from ...database.db import KeyValueDatabase
 
 
-# todo: actually there is no diff with KeyValueDatabase, so consider just using KeyValueDatabase
-# todo: could be removed
 class IissDatabase(KeyValueDatabase):
     def __init__(self, db: plyvel.DB) -> None:
         super().__init__(db)
@@ -47,8 +45,3 @@ class IissDatabase(KeyValueDatabase):
         :param prefix: (bytes): prefix to use
         """
         return IissDatabase(self._db.prefixed_db(prefix))
-
-    # todo: consider more good method name
-    def reset_db(self, path, create_if_missing: bool = True):
-        self.close()
-        self._db: plyvel.DB = plyvel.DB(path, create_if_missing=create_if_missing)
