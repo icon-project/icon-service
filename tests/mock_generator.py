@@ -33,18 +33,29 @@ ICX_ENGINE_PATH = 'iconservice.icx.icx_engine.IcxEngine'
 DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, data_type, data")
 IISS_DB_PATH = 'iconservice.iiss.database.iiss_db'
+IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.rc_data_storage'
+IISS_VARIABLE_PATH = 'iconservice.iiss.iiss_variable.iiss_variable'
+PREP_VARIABLE_PATH = 'iconservice.prep.prep_variable.prep_variable'
 
 
 # noinspection PyProtectedMember
 @patch(f'{SERVICE_ENGINE_PATH}._init_global_value_by_governance_score')
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
+@patch(f'{SERVICE_ENGINE_PATH}._load_prep_candidate')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
 @patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
+@patch(f'{IISS_RC_DATA_STORAGE_PATH}.RcDataStorage._load_last_transaction_index')
+@patch(f'{IISS_VARIABLE_PATH}.IissVariable.init_config')
+@patch(f'{PREP_VARIABLE_PATH}.PRepVariable.init_config')
 def generate_inner_task(
+        prep_init_config,
+        iiss_init_config,
+        load_last_tx_index,
         iiss_db_from_path,
         db_factory_create_by_name,
         icx_engine_open,
+        service_engine_load_prep_candidate,
         service_engine_load_builtin_scores,
         service_engine_init_global_value_by_governance_score):
     state_db = {}
@@ -72,11 +83,13 @@ def generate_inner_task(
 
     db_factory_create_by_name.return_value = context_db
     iiss_db_from_path.return_value = iiss_db
+    load_last_tx_index.return_value = 0
     inner_task = IconScoreInnerTask(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
+    service_engine_load_prep_candidate.assert_called()
     service_engine_load_builtin_scores.assert_called()
     service_engine_init_global_value_by_governance_score.assert_called()
 
@@ -108,7 +121,11 @@ def clear_inner_task():
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
 @patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
+@patch(f'{IISS_VARIABLE_PATH}.IissVariable.init_config')
+@patch(f'{PREP_VARIABLE_PATH}.PRepVariable.init_config')
 def generate_service_engine(
+        prep_init_config,
+        iiss_init_config,
         iiss_db_from_path,
         db_factory_create_by_name,
         icx_engine_open):
@@ -123,8 +140,7 @@ def generate_service_engine(
     service_engine.open(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
-    # TODO Not Implement
-    # iiss_db_from_path.assert_called()
+    iiss_db_from_path.assert_called()
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
 
