@@ -13,14 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from enum import IntFlag
 from threading import Lock
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from .base.block import Block
 from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
+
+if TYPE_CHECKING:
+    from .prep.prep_candidate_batch import PRepCandidateBatch
 
 
 class PrecommitFlag(IntFlag):
@@ -34,6 +38,8 @@ class PrecommitFlag(IntFlag):
     STEP_MAX_LIMIT_CHANGED = 0x40
     # STEP changed flag mask
     STEP_ALL_CHANGED = 0xf0
+    # CHANGE REVISION
+    GENESIS_IISS_CALC = 0x100
 
 
 class PrecommitData(object):
@@ -41,6 +47,7 @@ class PrecommitData(object):
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
+                 prep_candidate_block_batch: 'PRepCandidateBatch',
                  score_mapper: Optional['IconScoreMapper']=None,
                  precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
@@ -54,6 +61,7 @@ class PrecommitData(object):
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch
+        self.prep_candidate_block_batch = prep_candidate_block_batch
         self.score_mapper = score_mapper
         self.precommit_flag = precommit_flag
         self.block = block_batch.block

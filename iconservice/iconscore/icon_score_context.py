@@ -34,6 +34,9 @@ if TYPE_CHECKING:
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
+    from ..prep.prep_candidate_batch import PRepCandidateBatch
+    from ..prep.prep_candidate_engine import PRepCandidateEngine
+    from ..iiss.iiss_engine import IissEngine
 
 _thread_local_data = threading.local()
 
@@ -104,6 +107,9 @@ class IconScoreContext(object):
     icon_service_flag: int = 0
     legacy_tbears_mode = False
 
+    iiss_engine: 'IissEngine' = None
+    prep_candidate_engine: 'PRepCandidateEngine' = None
+
     """Contains the useful information to process user's JSON-RPC request
     """
 
@@ -124,6 +130,8 @@ class IconScoreContext(object):
         self.tx_batch: 'TransactionBatch' = None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
+        self.prep_candidate_tx_batch: 'PRepCandidateBatch' = None
+        self.prep_candidate_block_batch: 'PRepCandidateBatch' = None
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
@@ -150,3 +158,18 @@ class IconScoreContext(object):
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
         self.icon_score_deploy_engine.deploy(self, tx_hash)
+
+    def update_batch(self):
+        self.block_batch.update(self.tx_batch)
+        self.tx_batch.clear()
+
+        self.rc_block_batch.extend(self.rc_tx_batch)
+        self.rc_tx_batch.clear()
+
+        self.prep_candidate_block_batch.update(self.prep_candidate_tx_batch)
+        self.prep_candidate_tx_batch.clear()
+
+    def clear_batch(self):
+        self.tx_batch.clear()
+        self.rc_tx_batch.clear()
+        self.prep_candidate_tx_batch.clear()

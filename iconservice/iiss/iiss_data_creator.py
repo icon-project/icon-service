@@ -33,11 +33,11 @@ class IissDataCreator:
         return data
 
     @staticmethod
-    def create_gv_variable(block_height: int, icx_price: int, incentive_rep: int) -> 'IissGovernanceVariable':
+    def create_gv_variable(block_height: int, incentive_rep: int, reward_rep: int) -> 'IissGovernanceVariable':
         data = IissGovernanceVariable()
         data.block_height: int = block_height
-        data.icx_price: int = icx_price
         data.incentive_rep: int = incentive_rep
+        data.reward_reg: int = reward_rep
         return data
 
     @staticmethod
