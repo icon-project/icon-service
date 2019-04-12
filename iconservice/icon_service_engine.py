@@ -32,8 +32,8 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .fee.fee_engine import FeeEngine, DepositHandler
 from .fee.fee_storage import FeeStorage
-from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, REVISION_3, \
-    IISS_METHOD_TABLE, REVISION_4
+from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REVISION_4, REVISION_5
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -47,10 +47,13 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
 from .iiss.iiss_engine import IissEngine
+from .prep.prep_candidate_engine import PRepCandidateEngine
+from .prep.prep_candidate_batch import PRepCandidateBatch
+
 from .icx.icx_engine import IcxEngine
 from .icx.icx_storage import IcxStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
-from .utils import sha3_256, int_to_bytes
+from .utils import sha3_256, int_to_bytes, is_flags_on
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 
@@ -82,6 +85,7 @@ class IconServiceEngine(ContextContainer):
         self._fee_engine = None
         self._deposit_handler = None
         self._iiss_engine: 'IissEngine' = None
+        self._prep_candidate_engine: 'PRepCandidateEngine' = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -135,6 +139,9 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = \
             IconPreValidator(self._icx_engine, self._fee_engine, icon_score_deploy_storage)
 
+        self._iiss_engine = IissEngine()
+        self._prep_candidate_engine: 'PRepCandidateEngine' = PRepCandidateEngine()
+
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
         IconScoreContext.icx_engine = self._icx_engine
@@ -143,16 +150,22 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
+        IconScoreContext.iiss_engine: 'IissEngine' = self._iiss_engine
+        IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
 
         self._icx_engine.open(self._icx_storage)
         self._icon_score_deploy_engine.open(icon_score_deploy_storage)
 
+        context = IconScoreContext(IconScoreContextType.DIRECT)
         IissEngine.icx_storage: 'IcxStorage' = self._icx_storage
-        self._iiss_engine = IissEngine()
-        self._iiss_engine.open(conf)
+        self._iiss_engine.open(context, conf, self._icx_context_db)
+
+        PRepCandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage
+        self._prep_candidate_engine.open(context, conf, self._icx_context_db)
 
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
+        self._load_prep_candidate()
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
 
@@ -168,12 +181,18 @@ class IconServiceEngine(ContextContainer):
 
     def _load_builtin_scores(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.block = self._precommit_data_manager.last_block
         try:
             self._push_context(context)
             IconBuiltinScoreLoader.load_builtin_scores(
                 context, self._conf[ConfigKey.BUILTIN_SCORE_OWNER])
         finally:
             self._pop_context()
+
+    def _load_prep_candidate(self):
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.block = self._get_last_block()
+        self._prep_candidate_engine.load_prep_candidates(context, self._icx_storage)
 
     def _init_global_value_by_governance_score(self):
         """Initialize step_counter_factory with parameters
@@ -182,6 +201,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         context = IconScoreContext(IconScoreContextType.QUERY)
+        context.block = self._precommit_data_manager.last_block
         # Clarifies this context does not count steps
         context.step_counter = None
 
@@ -201,12 +221,18 @@ class IconServiceEngine(ContextContainer):
         finally:
             self._pop_context()
 
-    def _set_revision_to_context(self, context):
+    def _set_revision_to_context(self, context: 'IconScoreContext') -> bool:
         try:
             self._push_context(context)
             governance_score = self._get_governance_score(context)
             if hasattr(governance_score, 'revision_code'):
-                context.revision = governance_score.revision_code
+                before_revision: int = context.revision
+                revision: int = governance_score.revision_code
+                if before_revision != revision:
+                    context.revision = revision
+                    return True
+                else:
+                    return False
         finally:
             self._pop_context()
 
@@ -272,9 +298,11 @@ class IconServiceEngine(ContextContainer):
         including db, memory and so on
         """
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.block = self._precommit_data_manager.last_block
         try:
             self._push_context(context)
             self._icx_engine.close()
+            self._prep_candidate_engine.close()
             self._iiss_engine.close()
 
             IconScoreContext.icon_score_mapper.close()
@@ -313,6 +341,8 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
+        context.prep_candidate_tx_batch = PRepCandidateBatch()
+        context.prep_candidate_block_batch = PRepCandidateBatch()
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -327,14 +357,11 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 tx_result = self._invoke_request(context, tx_request, index)
                 block_result.append(tx_result)
-                context.block_batch.update(context.tx_batch)
-                context.tx_batch.clear()
-                context.rc_block_batch.extend(context.rc_tx_batch)
-                context.rc_tx_batch.clear()
-                self._update_revision_if_necessary(context, tx_result)
-                tx_precommit_flag = self._generate_precommit_flag(tx_result)
-                self._update_step_properties_if_necessary(context, tx_precommit_flag)
-                precommit_flag |= tx_precommit_flag
+                context.update_batch()
+
+                precommit_flag = self._update_revision_if_necessary(precommit_flag, context, tx_result)
+                precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
+                self._update_step_properties_if_necessary(context, precommit_flag)
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -342,13 +369,17 @@ class IconServiceEngine(ContextContainer):
             context.block_batch,
             block_result,
             context.rc_block_batch,
+            context.prep_candidate_block_batch,
             context.new_icon_score_mapper,
             precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
 
-    def _update_revision_if_necessary(self, context, tx_result):
+    def _update_revision_if_necessary(self,
+                                      flags: 'PrecommitFlag',
+                                      context: 'IconScoreContext',
+                                      tx_result: 'TransactionResult'):
         """
         Updates the revision code of given context if governance or its states has been updated
         :param context: current context
@@ -358,23 +389,24 @@ class IconServiceEngine(ContextContainer):
         if tx_result.to == GOVERNANCE_SCORE_ADDRESS and \
                 tx_result.status == TransactionResult.SUCCESS:
             # If the tx is heading for Governance, updates the revision
-            self._set_revision_to_context(context)
+            if self._set_revision_to_context(context):
+                if context.revision == REVISION_5:
+                    flags |= PrecommitFlag.GENESIS_IISS_CALC
+        return flags
 
     @staticmethod
-    def _generate_precommit_flag(tx_result) -> PrecommitFlag:
+    def _generate_precommit_flag(flags: 'PrecommitFlag', tx_result: 'TransactionResult') -> 'PrecommitFlag':
         """
         Generates pre-commit flag related in STEP properties from the transaction result
 
         :param tx_result: transaction result
         :return: pre-commit flag related in STEP properties
         """
-        precommit_flag = PrecommitFlag.NONE
 
         if tx_result.to == GOVERNANCE_SCORE_ADDRESS and \
                 tx_result.status == TransactionResult.SUCCESS:
-            precommit_flag = PrecommitFlag.STEP_ALL_CHANGED
-
-        return precommit_flag
+            flags |= PrecommitFlag.STEP_ALL_CHANGED
+        return flags
 
     def _update_step_properties_if_necessary(self, context, precommit_flag):
         """
@@ -604,7 +636,6 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.reset(step_limit)
 
         ret = self._call(context, method, params)
-
         return ret
 
     def validate_transaction(self, request: dict) -> None:
@@ -722,12 +753,17 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
 
-        if self._check_iiss_process(params):
+        if self._check_new_process(params):
             if context.revision < REVISION_4:
                 raise InvalidParamsException(f"Method Not Found")
 
             data: dict = params['data']
-            return self._iiss_engine.query(context, data)
+            if self._check_iiss_process(params):
+                return self._iiss_engine.query(context, data)
+            elif self._check_prep_process(params):
+                return self._prep_candidate_engine.query(context, data)
+            else:
+                raise InvalidParamsException("Invalid Method")
         else:
             icon_score_address: Address = params['to']
             data_type = params.get('dataType', None)
@@ -762,11 +798,9 @@ class IconServiceEngine(ContextContainer):
         except BaseException as e:
             tx_result.failure = self._get_failure_from_exception(e)
             trace = self._get_trace_from_exception(context.current_address, e)
-            context.tx_batch.clear()
+            context.clear_batch()
             context.traces.append(trace)
             context.event_logs.clear()
-
-            context.rc_tx_batch.clear()
         finally:
             # Revert func_type to IconScoreFuncType.WRITABLE
             # to avoid DatabaseException in self._charge_transaction_fee()
@@ -822,16 +856,17 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
         # TODO Branch IISS Engine
-        if self._check_iiss_process(params):
+        if self._check_new_process(params):
+
             if context.revision < REVISION_4:
                 raise InvalidParamsException(f"Method Not Found")
 
-            self._process_iiss_transaction(context, params, tx_result)
+            self._process_new_transaction(context, params, tx_result)
         else:
             self._process_icx_transaction(context, params, tx_result)
 
     @staticmethod
-    def _check_iiss_process(params: dict) -> bool:
+    def _check_new_process(params: dict) -> bool:
         """Check if data in params is related to IISS
 
         :param params: tx params
@@ -851,7 +886,19 @@ class IconServiceEngine(ContextContainer):
             return False
 
         method_name: Optional[str] = data.get("method")
+        return method_name in NEW_METHPD_TABLE
+
+    @staticmethod
+    def _check_iiss_process(params: dict) -> bool:
+        data: Optional[dict] = params.get('data')
+        method_name: Optional[str] = data.get("method")
         return method_name in IISS_METHOD_TABLE
+
+    @staticmethod
+    def _check_prep_process(params: dict) -> bool:
+        data: Optional[dict] = params.get('data')
+        method_name: Optional[str] = data.get("method")
+        return method_name in PREP_METHOD_TABLE
 
     def _process_icx_transaction(self,
                                  context: 'IconScoreContext',
@@ -889,10 +936,10 @@ class IconServiceEngine(ContextContainer):
         if to.is_contract:
             tx_result.score_address = self._handle_score_invoke(context, to, params)
 
-    def _process_iiss_transaction(self,
-                                  context: 'IconScoreContext',
-                                  params: dict,
-                                  tx_result: 'TransactionResult') -> None:
+    def _process_new_transaction(self,
+                                 context: 'IconScoreContext',
+                                 params: dict,
+                                 tx_result: 'TransactionResult') -> None:
         """
         Processes the iiss transaction
 
@@ -914,7 +961,12 @@ class IconServiceEngine(ContextContainer):
             params,
             step_price=context.step_counter.step_price)
 
-        self._iiss_engine.invoke(context, data, tx_result)
+        if self._check_iiss_process(params):
+            self._iiss_engine.invoke(context, data, tx_result)
+        elif self._check_prep_process(params):
+            self._prep_candidate_engine.invoke(context, data, tx_result)
+        else:
+            raise InvalidParamsException("invalid method")
 
     def _transfer_coin(self,
                        context: 'IconScoreContext',
@@ -1188,8 +1240,12 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
-        # todo: should input precommit data
-        self._iiss_engine.commit(block.hash)
+        self._prep_candidate_engine.commit(precommit_data.prep_candidate_block_batch)
+
+        if is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC):
+            self._iiss_engine.genesis_commit(context, precommit_data)
+        else:
+            self._iiss_engine.commit(context, precommit_data)
 
     def rollback(self, block: 'Block') -> None:
         """Throw away a precommit state
@@ -1198,7 +1254,8 @@ class IconServiceEngine(ContextContainer):
         # Check for block validation before rollback
         self._precommit_data_manager.validate_precommit_block(block)
         self._precommit_data_manager.rollback(block)
-        self._iiss_engine.rollback(block.hash)
+        self._prep_candidate_engine.rollback()
+        self._iiss_engine.rollback()
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks

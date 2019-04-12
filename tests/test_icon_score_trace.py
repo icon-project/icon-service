@@ -146,6 +146,8 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
+        context.clear_batch = Mock()
+        context.update_batch = Mock()
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
@@ -193,6 +195,8 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
         context.tx_batch = TransactionBatch()
+        context.clear_batch = Mock()
+        context.update_batch = Mock()
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
