@@ -133,10 +133,11 @@ class ConstantKeys:
 
     # IISS
     DELEGATIONS = "delegations"
-    NETWORK_INFO = "networkInfo"
-    URL = 'url'
-    GOVERNANCE = "governance"
-    ICX_PRICE = "icxPrice"
+    EMAIL = 'email'
+    WEBSITE = 'website'
+    JSON = 'json'
+    IP = 'ip'
+    GOVERNANCE_VARIABLE = "governanceVariable"
     INCENTIVE_REP = "incentiveRep"
     START_RANK = "startRank"
     END_RANK = "endRank"
@@ -285,11 +286,12 @@ type_convert_templates[ParamType.IISS_CLAIM_I_SCORE] = {}
 type_convert_templates[ParamType.IISS_QUERY_I_SCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
 type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
-    ConstantKeys.NETWORK_INFO: ValueType.STRING,
     ConstantKeys.NAME: ValueType.STRING,
-    ConstantKeys.URL: ValueType.STRING,
-    ConstantKeys.GOVERNANCE: {
-        ConstantKeys.ICX_PRICE: ValueType.INT,
+    ConstantKeys.EMAIL: ValueType.STRING,
+    ConstantKeys.WEBSITE: ValueType.STRING,
+    ConstantKeys.JSON: ValueType.STRING,
+    ConstantKeys.IP: ValueType.STRING,
+    ConstantKeys.GOVERNANCE_VARIABLE: {
         ConstantKeys.INCENTIVE_REP: ValueType.INT
     }
 }

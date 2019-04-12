@@ -167,6 +167,7 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(0, account.stake)
 
         stake_part = StakePart(stake=100)
+        stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
         self.assertEqual(100, account.stake)
 
@@ -175,6 +176,7 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(0, account.unstake)
 
         stake_part = StakePart(unstake=200)
+        stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
         self.assertEqual(200, account.unstake)
 
@@ -183,6 +185,7 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(0, account.unstake_block_height)
 
         stake_part = StakePart(unstake_block_height=300)
+        stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
         self.assertEqual(300, account.unstake_block_height)
 
