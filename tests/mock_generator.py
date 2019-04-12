@@ -66,22 +66,22 @@ def _create_inner_task(
     def state_get(self, key):
         return state_db.get(key)
 
-    def iiss_put(self, key, value):
+    def iiss_put(key, value):
         iiss_db[key] = value
 
-    def iiss_get(self, key):
+    def iiss_get(key):
         return iiss_db.get(key)
 
     context_db = Mock(spec=ContextDatabase)
     context_db.get = state_get
     context_db.put = state_put
 
-    iiss_db = Mock(spec=IissDatabase)
-    iiss_db.get = iiss_get
-    iiss_db.put = iiss_put
+    iiss_mock_db = Mock(spec=IissDatabase)
+    iiss_mock_db.get = iiss_get
+    iiss_mock_db.put = iiss_put
 
     db_factory_create_by_name.return_value = context_db
-    iiss_db_from_path.return_value = iiss_db
+    iiss_db_from_path.return_value = iiss_mock_db
     inner_task = IconScoreInnerTask(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB

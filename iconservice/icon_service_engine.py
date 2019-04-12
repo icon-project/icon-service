@@ -328,6 +328,8 @@ class IconServiceEngine(ContextContainer):
                 block_result.append(tx_result)
                 context.block_batch.update(context.tx_batch)
                 context.tx_batch.clear()
+                context.rc_block_batch.extend(context.rc_tx_batch)
+                context.rc_tx_batch.clear()
                 self._update_revision_if_necessary(context, tx_result)
                 tx_precommit_flag = self._generate_precommit_flag(tx_result)
                 self._update_step_properties_if_necessary(context, tx_precommit_flag)
@@ -336,7 +338,11 @@ class IconServiceEngine(ContextContainer):
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
-            context.block_batch, block_result, context.new_icon_score_mapper, precommit_flag)
+            context.block_batch,
+            block_result,
+            context.rc_block_batch,
+            context.new_icon_score_mapper,
+            precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
@@ -758,6 +764,8 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
             context.traces.append(trace)
             context.event_logs.clear()
+
+            context.rc_tx_batch.clear()
         finally:
             # Revert func_type to IconScoreFuncType.WRITABLE
             # to avoid DatabaseException in self._charge_transaction_fee()

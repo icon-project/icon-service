@@ -14,34 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
-
-import plyvel
-
-from ...database.db import KeyValueDatabase
-
-if TYPE_CHECKING:
-    from ...database.db import KeyValueDatabase
+from iconservice.database.db import KeyValueDatabase
+from tests.mock_db import MockPlyvelDB
 
 
-class IissDatabase(KeyValueDatabase):
-    def __init__(self, db: plyvel.DB) -> None:
+class MockIissDataBase(KeyValueDatabase):
+    def __init__(self, db) -> None:
         super().__init__(db)
 
     @staticmethod
     def from_path(path: str,
-                  create_if_missing: bool = True) -> 'IissDatabase':
+                  create_if_missing: bool = True) -> 'MockIissDataBase':
         """
         :param path: db path
         :param create_if_missing:
         :return: KeyValueDatabase instance
         """
-        db = plyvel.DB(path, create_if_missing=create_if_missing)
-        return IissDatabase(db)
+        db = MockPlyvelDB(MockPlyvelDB.make_db())
+        return MockIissDataBase(db)
 
-    def get_sub_db(self, prefix: bytes) -> 'IissDatabase':
+    def get_sub_db(self, prefix: bytes) -> 'MockIissDataBase':
         """Return a new prefixed database.
 
         :param prefix: (bytes): prefix to use
         """
-        return IissDatabase(self._db.prefixed_db(prefix))
+        return MockIissDataBase(self._db.prefixed_db(prefix))
