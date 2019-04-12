@@ -141,10 +141,15 @@ class TestRcDataStorage(unittest.TestCase):
         expected_last_tx_index = -1
         self.assertEqual(expected_last_tx_index, self.rc_data_storage._db_iiss_tx_index)
 
+    def test_commit_invalid_batch_format(self):
+        # failure case: when input invalid format of batch, should raise error
+        invalid_batch = [self.dummy_header, [self.dummy_gv, self.dummy_prep]]
+        self.assertRaises(AttributeError, self.rc_data_storage.commit, invalid_batch)
+
     def test_commit_without_iiss_tx(self):
         # todo: should supplement this unit tests
         # success case: when there is no iiss_tx data, index should not be increased
-        dummy_iiss_data_list_without_iiss_tx = [self.dummy_header, [self.dummy_gv, self.dummy_prep]]
+        dummy_iiss_data_list_without_iiss_tx = [self.dummy_header, self.dummy_gv, self.dummy_prep]
         self.rc_data_storage.commit(dummy_iiss_data_list_without_iiss_tx)
         expected_index = -1
         self.assertEqual(expected_index, self.rc_data_storage._db_iiss_tx_index)
@@ -155,7 +160,7 @@ class TestRcDataStorage(unittest.TestCase):
         # todo: should supplement this unit tests
         # success case: when there is iiss_tx data, index should be increased
         for expected_index in range(0, 10):
-            dummy_iiss_data_list = [self.dummy_header, [self.dummy_gv, self.dummy_prep, self.dummy_tx]]
+            dummy_iiss_data_list = [self.dummy_header, self.dummy_gv, self.dummy_prep, self.dummy_tx]
             self.rc_data_storage.commit(dummy_iiss_data_list)
             self.assertEqual(expected_index, self.rc_data_storage._db_iiss_tx_index)
 

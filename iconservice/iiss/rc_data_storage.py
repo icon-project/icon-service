@@ -62,21 +62,12 @@ class RcDataStorage(object):
     def put(self, batch: list, iiss_data: 'IissData'):
         batch.append(iiss_data)
 
-    @staticmethod
-    def flatten_batch(batch):
-        for item in batch:
-            if isinstance(item, list):
-                for iiss_data in RcDataStorage.flatten_batch(item):
-                    yield iiss_data
-            else:
-                yield item
-
     def commit(self, rc_block_batch: list):
         if len(rc_block_batch) == 0:
             return
 
         batch_dict = {}
-        for iiss_data in self.flatten_batch(rc_block_batch):
+        for iiss_data in rc_block_batch:
             if isinstance(iiss_data, IissTxData):
                 self._db_iiss_tx_index += 1
                 key: bytes = iiss_data.make_key(self._db_iiss_tx_index)
