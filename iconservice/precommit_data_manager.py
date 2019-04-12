@@ -40,6 +40,7 @@ class PrecommitData(object):
     def __init__(self,
                  block_batch: 'BlockBatch',
                  block_result: list,
+                 rc_block_batch: list,
                  score_mapper: Optional['IconScoreMapper']=None,
                  precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
@@ -52,6 +53,7 @@ class PrecommitData(object):
         """
         self.block_batch = block_batch
         self.block_result = block_result
+        self.rc_block_batch = rc_block_batch
         self.score_mapper = score_mapper
         self.precommit_flag = precommit_flag
         self.block = block_batch.block
