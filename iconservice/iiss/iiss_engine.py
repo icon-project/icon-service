@@ -17,15 +17,14 @@
 from typing import TYPE_CHECKING, Any
 
 from iconservice.iiss.iiss_msg_data import PRepUnregisterTx
-from .iiss_data_creator import IissDataCreator
-from .rc_data_storage import RcDataStorage
-from .handler.stake_handler import StakeHandler
+from iconservice.iiss.ipc.reward_calc_proxy import RewardCalcProxy
+from .commit_delegator import CommitDelegator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
+from .handler.stake_handler import StakeHandler
+from .iiss_data_creator import IissDataCreator
 from .iiss_variable.iiss_variable import IissVariable
-from .commit_delegator import CommitDelegator
-
-from .reward_calc_proxy import RewardCalcProxy
+from .rc_data_storage import RcDataStorage
 from ..icon_constant import ConfigKey
 
 if TYPE_CHECKING:
