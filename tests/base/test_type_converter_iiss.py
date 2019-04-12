@@ -98,28 +98,31 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
 
     def test_reg_prep_candidate(self):
-        network_info = "network_info"
         name = "name"
-        url = "url"
-        icx_price = 1000
+        email = 'email'
+        website = "website"
+        json = "json"
+        ip = "ip"
         incentive_rep = 10000
 
         request = {
-            ConstantKeys.NETWORK_INFO: network_info,
             ConstantKeys.NAME: name,
-            ConstantKeys.URL: url,
-            ConstantKeys.GOVERNANCE: {
-                ConstantKeys.ICX_PRICE: hex(icx_price),
+            ConstantKeys.EMAIL: email,
+            ConstantKeys.WEBSITE: website,
+            ConstantKeys.JSON: json,
+            ConstantKeys.IP: ip,
+            ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
             }
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP_CANDIDATE)
-        self.assertEqual(network_info, ret_params[ConstantKeys.NETWORK_INFO])
         self.assertEqual(name, ret_params[ConstantKeys.NAME])
-        self.assertEqual(url, ret_params[ConstantKeys.URL])
-        governance = ret_params[ConstantKeys.GOVERNANCE]
-        self.assertEqual(icx_price, governance[ConstantKeys.ICX_PRICE])
+        self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
+        self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
+        self.assertEqual(json, ret_params[ConstantKeys.JSON])
+        self.assertEqual(ip, ret_params[ConstantKeys.IP])
+        governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
         self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
 
     def test_unreg_prep_candidate(self):
@@ -130,22 +133,19 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual({}, ret_params)
 
     def test_set_prep_candidate(self):
-        network_info = "network_info"
-        url = "url"
+        website = "website"
         incentive_rep = 10000
 
         request = {
-            ConstantKeys.NETWORK_INFO: network_info,
-            ConstantKeys.URL: url,
-            ConstantKeys.GOVERNANCE: {
+            ConstantKeys.WEBSITE: website,
+            ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
             }
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP_CANDIDATE)
-        self.assertEqual(network_info, ret_params[ConstantKeys.NETWORK_INFO])
-        self.assertEqual(url, ret_params[ConstantKeys.URL])
-        governance = ret_params[ConstantKeys.GOVERNANCE]
+        self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
+        governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
         self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
 
     def test_get_prep_candidate(self):

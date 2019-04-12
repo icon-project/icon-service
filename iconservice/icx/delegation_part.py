@@ -14,15 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
-
 from .base_part import BasePart
 from ..base.exception import InvalidParamsException
 from ..icon_constant import IISS_MAX_DELEGATIONS
 from ..utils.msgpack_for_db import MsgPackForDB
-
-if TYPE_CHECKING:
-    from ..base.address import Address
+from ..base.address import Address
 
 
 class DelegationPart(BasePart):

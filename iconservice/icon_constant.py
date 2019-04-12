@@ -58,6 +58,7 @@ ZERO_TX_HASH = bytes(32)
 REVISION_2 = 2
 REVISION_3 = 3
 REVISION_4 = 4
+REVISION_5 = 5
 LATEST_REVISION = REVISION_3
 
 
@@ -76,10 +77,15 @@ class ConfigKey:
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
     IISS_DB_ROOT_PATH = "iissDbRootPath"
-    IISS_GOVERNANCE_VARIABLE = "iissGovernanceVariable",
+    IISS_VARIABLE = "iissVariable",
+    GOVERNANCE_VARIABLE = "governanceVariable",
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod",
     IISS_PREP_LIST = "iissPRepList",
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
+
+    # IISS VARIABLE
+    IISS_VERIABLE = "iissVariable"
+    REWARD_REP = "rewardRep"
 
 
 class EnableThreadFlag(IntFlag):
@@ -124,6 +130,9 @@ IISS_METHOD_TABLE = [
     "getDelegation",
     "claimIScore",
     "queryIScore",
+]
+
+PREP_METHOD_TABLE = [
     "registerPRepCandidate",
     "unregisterPRepCandidate",
     "setPRepCandidate",
@@ -134,6 +143,9 @@ IISS_METHOD_TABLE = [
     "getPRepCandidateList"
 ]
 
+NEW_METHPD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE
+
 IISS_MAX_DELEGATIONS = 10
+PREP_MAX_PREPS = 100
 
 IISS_MAX_REWARD_RATE = 10_000

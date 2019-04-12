@@ -118,7 +118,7 @@ class Account(object):
         self.coin_part.withdraw(value)
 
     def normalize(self):
-        if self.stake_part is None:
+        if self.coin_part is None or self.stake_part is None:
             return
 
         balance: int = self.stake_part.normalize(self._current_block_height)

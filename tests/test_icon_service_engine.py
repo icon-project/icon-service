@@ -662,6 +662,8 @@ class TestIconServiceEngine(unittest.TestCase):
         context.step_counter = Mock(spec=IconScoreStepCounter)
         context.event_logs = []
         context.traces = Mock(spec=list)
+        context.clear_batch = Mock()
+        context.update_batch = Mock()
 
         raise_exception_start_tag("test_score_invoke_failure")
         tx_result = self._engine._call(context, method, params)
