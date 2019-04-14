@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
-import msgpack
 import hashlib
+import unittest
+
+from iconservice.base.address import AddressPrefix
 from iconservice.iiss.ipc.message import *
 from iconservice.iiss.ipc.message_unpacker import MessageUnpacker
-from iconservice.base.address import Address, AddressPrefix
 from iconservice.utils import int_to_bytes
 
 
@@ -37,40 +37,48 @@ class TestMessageUnpacker(unittest.TestCase):
         success: bool = True
 
         messages = [
-            [
+            (
                 MessageType.VERSION,
                 msg_id,
                 version
-            ],
-            [
+            ),
+            (
                 MessageType.CALCULATE,
                 msg_id,
-                success,
-                block_height,
-                state_hash
-            ],
-            [
+                (
+                    success,
+                    block_height,
+                    state_hash
+                )
+            ),
+            (
                 MessageType.QUERY,
                 msg_id,
-                address.to_bytes_including_prefix(),
-                int_to_bytes(iscore),
-                block_height
-            ],
-            [
+                (
+                    address.to_bytes_including_prefix(),
+                    int_to_bytes(iscore),
+                    block_height
+                )
+            ),
+            (
                 MessageType.CLAIM,
                 msg_id,
-                address.to_bytes_including_prefix(),
-                block_height,
-                block_hash,
-                int_to_bytes(iscore)
-            ],
-            [
+                (
+                    address.to_bytes_including_prefix(),
+                    block_height,
+                    block_hash,
+                    int_to_bytes(iscore)
+                )
+            ),
+            (
                 MessageType.COMMIT_BLOCK,
                 msg_id,
-                success,
-                block_height,
-                block_hash
-            ]
+                (
+                    success,
+                    block_height,
+                    block_hash
+                )
+            )
         ]
 
         for message in messages:
@@ -110,7 +118,10 @@ class TestMessageUnpacker(unittest.TestCase):
             data: bytes = msgpack.packb(message)
             self.unpacker.feed(data)
 
-        expected = [version_response, calculate_response, query_response, claim_response, commit_block_response]
+        expected = [
+            version_response, calculate_response, query_response,
+            claim_response, commit_block_response
+        ]
         for expected_response, response in zip(expected, self.unpacker):
             self.assertEqual(expected_response.MSG_TYPE, response.MSG_TYPE)
             self.assertEqual(msg_id, response.msg_id)

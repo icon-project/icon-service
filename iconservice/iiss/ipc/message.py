@@ -13,23 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = (
-    'MessageType',
-    'VersionRequest', 'VersionResponse',
-    'ClaimRequest', 'ClaimResponse',
-    'QueryRequest', 'QueryResponse',
-    'CalculateRequest', 'CalculateResponse',
-    'CommitBlockRequest', 'CommitBlockResponse'
-)
-
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from threading import Lock
 
 import msgpack
 
 from ...base.address import Address
 from ...utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
+
+_next_msg_id: int = 0
+
+
+def _get_next_id() -> int:
+    global _next_msg_id
+
+    msg_id: int = _next_msg_id
+    _next_msg_id = (msg_id + 1) % 0xffffffff
+
+    return msg_id
 
 
 class MessageType(IntEnum):
@@ -42,33 +43,22 @@ class MessageType(IntEnum):
 
 
 class Request(metaclass=ABCMeta):
-    _next_msg_id = 0
-    _msg_id_lock = Lock()
-
     def __init__(self, msg_type: 'MessageType'):
         self.msg_type = msg_type
-        self.msg_id = self._get_next_id()
-
-    @classmethod
-    def _get_next_id(cls) -> int:
-        with cls._msg_id_lock:
-            msg_id: int = cls._next_msg_id
-            cls._next_msg_id = (msg_id + 1) % 0xffffffff
-
-            return msg_id
+        self.msg_id = _get_next_id()
 
     @abstractmethod
-    def _get_payload(self) -> tuple:
+    def _to_list(self) -> tuple:
         return None,
 
     def to_bytes(self) -> bytes:
-        payload = self._get_payload()
-        return msgpack.dumps(payload)
+        items: tuple = self._to_list()
+        return msgpack.dumps(items)
 
 
 class Response(metaclass=ABCMeta):
     def __init__(self):
-        pass
+        self.msg_id = -1
 
     @staticmethod
     @abstractmethod
@@ -80,7 +70,7 @@ class VersionRequest(Request):
     def __init__(self):
         super().__init__(MessageType.VERSION)
 
-    def _get_payload(self) -> tuple:
+    def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id
 
 
@@ -109,12 +99,12 @@ class ClaimRequest(Request):
         self.block_height = block_height
         self.block_hash = block_hash
 
-    def _get_payload(self) -> tuple:
-        return self.msg_type, \
-               self.msg_id, \
-               self.address.to_bytes_including_prefix(), \
-               self.block_height, \
-               self.block_hash
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id,\
+               (self.address.to_bytes_including_prefix(), self.block_height, self.block_hash)
+
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id}, {self.address}, {self.block_height}, {self.block_hash.hex()})"
 
 
 class ClaimResponse(Response):
@@ -133,10 +123,12 @@ class ClaimResponse(Response):
     @staticmethod
     def from_list(items: list) -> 'ClaimResponse':
         msg_id: int = items[1]
-        address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, items[2])
-        block_height: int = items[3]
-        block_hash: bytes = items[4]
-        iscore: int = MsgPackForIpc.decode(TypeTag.INT, items[5])
+        payload: list = items[2]
+
+        address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, payload[0])
+        block_height: int = payload[1]
+        block_hash: bytes = payload[2]
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[3])
 
         return ClaimResponse(msg_id, address, block_height, block_hash, iscore)
 
@@ -147,7 +139,10 @@ class QueryRequest(Request):
 
         self.address = address
 
-    def _get_payload(self) -> tuple:
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id}, {self.address})"
+
+    def _to_list(self) -> tuple:
         return self.msg_type, \
                self.msg_id, \
                self.address.to_bytes_including_prefix()
@@ -168,9 +163,11 @@ class QueryResponse(Response):
     @staticmethod
     def from_list(items: list) -> 'QueryResponse':
         msg_id: int = items[1]
-        address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, items[2])
-        iscore: int = MsgPackForIpc.decode(TypeTag.INT, items[3])
-        block_height: int = items[4]
+        payload: list = items[2]
+
+        address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, payload[0])
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[1])
+        block_height: int = payload[2]
 
         return QueryResponse(msg_id, address, block_height, iscore)
 
@@ -182,8 +179,8 @@ class CalculateRequest(Request):
         self.db_path = db_path
         self.block_height = block_height
 
-    def _get_payload(self) -> tuple:
-        return self.msg_type, self.msg_id, self.db_path, self.block_height
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id, (self.db_path, self.block_height)
 
 
 class CalculateResponse(Response):
@@ -200,9 +197,11 @@ class CalculateResponse(Response):
     @staticmethod
     def from_list(items: list) -> 'CalculateResponse':
         msg_id: int = items[1]
-        success: bool = items[2]
-        block_height: int = items[3]
-        state_hash: bytes = items[4]
+        payload: list = items[2]
+
+        success: bool = payload[0]
+        block_height: int = payload[1]
+        state_hash: bytes = payload[2]
 
         return CalculateResponse(msg_id, success, block_height, state_hash)
 
@@ -215,8 +214,8 @@ class CommitBlockRequest(Request):
         self.block_height = block_height
         self.block_hash = block_hash
 
-    def _get_payload(self) -> tuple:
-        return self.msg_type, self.msg_id, self.success, self.block_height, self.block_hash
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id, (self.success, self.block_height, self.block_hash)
 
 
 class CommitBlockResponse(Response):
@@ -233,8 +232,31 @@ class CommitBlockResponse(Response):
     @staticmethod
     def from_list(items: list) -> 'CommitBlockResponse':
         msg_id: int = items[1]
-        success: bool = items[2]
-        block_height: int = items[3]
-        block_hash: bytes = items[4]
+        payload: list = items[2]
+
+        success: bool = payload[0]
+        block_height: int = payload[1]
+        block_hash: bytes = payload[2]
 
         return CommitBlockResponse(msg_id, success, block_height, block_hash)
+
+
+class NoneRequest(Request):
+    def __init__(self):
+        super().__init__(MessageType.NONE)
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id
+
+
+class NoneResponse(Response):
+    MSG_TYPE = MessageType.NONE
+
+    def __init__(self, msg_id: int):
+        super().__init__()
+        self.msg_id = msg_id
+
+    @staticmethod
+    def from_list(items: list) -> 'NoneResponse':
+        msg_id: int = items[1]
+        return NoneResponse(msg_id)
