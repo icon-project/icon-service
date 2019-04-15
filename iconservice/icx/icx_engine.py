@@ -42,8 +42,10 @@ class IcxEngine(object):
         """Constructor
         """
         self._storage: IcxStorage = None
+        # todo: refactoring
         self._total_supply_amount: int = 0
         self._genesis_address: Address = None
+        # todo: refactoring
         self._fee_treasury_address: Address = None
 
     def open(self, storage: 'IcxStorage') -> None:
@@ -218,8 +220,6 @@ class IcxEngine(object):
               context: 'IconScoreContext',
               to: Address,
               amount: int):
-        if amount < 0:
-            raise InvalidParamsException('Amount is less than zero')
 
         if amount > 0:
             to_account = self._storage.get_account(context, to)

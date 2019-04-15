@@ -35,7 +35,7 @@ class IcxIssueFormula(object):
         self._month = 12
         self._block_generation_amount_per_year = 1000
 
-    def calculate(self, group, data):
+    def calculate(self, group: str, data: dict) -> int:
         handler = self._handler[group]
         value = handler(data)
         return value
