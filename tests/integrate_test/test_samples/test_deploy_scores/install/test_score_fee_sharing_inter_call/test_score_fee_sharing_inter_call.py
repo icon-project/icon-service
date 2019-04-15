@@ -3,7 +3,7 @@ from iconservice import *
 
 class TestInterface(InterfaceScore):
     @interface
-    def set_value(self, value: int, ratio: int = 0) -> None: pass
+    def set_value(self, value: int, proportion: int = 0) -> None: pass
 
 
 class TestScoreFeeSharingInterCall(IconScoreBase):
@@ -34,13 +34,13 @@ class TestScoreFeeSharingInterCall(IconScoreBase):
         return self._value.get()
 
     @external
-    def set_value(self, value: int, ratio: int = 0):
-        self.ratio = ratio
+    def set_value(self, value: int, proportion: int = 0):
+        self.proportion = proportion
         self._value.set(value)
         self.Changed(value)
 
     @external
-    def set_other_score_value(self, value: int, ratio: int, other_score_ratio: int):
-        self.ratio = ratio
+    def set_other_score_value(self, value: int, proportion: int, other_score_proportion: int):
+        self.proportion = proportion
         score = self.create_interface_score(self._score_address.get(), TestInterface)
-        score.set_value(value, other_score_ratio)
+        score.set_value(value, other_score_proportion)

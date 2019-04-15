@@ -481,7 +481,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
-        context.fee_sharing_ratio = 0
+        context.fee_sharing_proportion = 0
 
         return self._call(context, method, params)
 
@@ -775,7 +775,7 @@ class IconServiceEngine(ContextContainer):
             context.func_type = IconScoreFuncType.WRITABLE
 
             # Charge a fee to from account
-            detail_step_used, final_step_price = \
+            step_used_details, final_step_price = \
                 self._charge_transaction_fee(
                     context,
                     params,
@@ -787,7 +787,7 @@ class IconServiceEngine(ContextContainer):
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
             tx_result.traces = context.traces
-            final_step_used = self._append_step_results(tx_result, context, detail_step_used)
+            final_step_used = self._append_step_results(tx_result, context, step_used_details)
 
             context.cumulative_step_used += final_step_used
 
@@ -968,15 +968,15 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _append_step_results(
-            tx_result: 'TransactionResult', context: 'IconScoreContext', detail_step_used: dict)->int:
+            tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_details: dict)->int:
         """
         Appends step usage information to TransactionResult
         """
-        final_step_used = sum(detail_step_used.values())
+        final_step_used = sum(step_used_details.values())
         tx_result.step_used = final_step_used
         tx_result.cumulative_step_used = context.cumulative_step_used + final_step_used
-        if final_step_used != detail_step_used.get(context.msg.sender, 0):
-            tx_result.detail_step_used = detail_step_used
+        if final_step_used != step_used_details.get(context.msg.sender, 0):
+            tx_result.step_used_details = step_used_details
 
         return final_step_used
 

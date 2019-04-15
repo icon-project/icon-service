@@ -27,7 +27,7 @@ class TestScoreFeeSharing(IconScoreBase):
         return self._value.get()
 
     @external
-    def set_value(self, value: int, ratio: int = 0):
-        self.ratio = ratio
+    def set_value(self, value: int, proportion: int = 0):
+        self.proportion = proportion
         self._value.set(value)
         self.Changed(value)
