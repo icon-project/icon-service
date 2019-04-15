@@ -21,7 +21,7 @@ from typing import List, Dict, Optional
 from .deposit import Deposit
 from .fee_storage import Fee, FeeStorage
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidRequestException, InvalidParamsException
+from ..base.exception import InvalidRequestException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -440,24 +440,24 @@ class FeeEngine:
         score_fee_info = self._fee_storage.get_score_fee(context, score_address)
 
         # Amount of STEPs that SCORE will pay
-        receiver_step = used_step * self._get_fee_sharing_ratio(context, score_fee_info) // 100
+        score_step = used_step * self._get_fee_sharing_ratio(context, score_fee_info) // 100
+        score_used_step = 0
 
-        if receiver_step > 0:
+        if score_step > 0:
             charged_step, virtual_step_indices_changed = self._charge_fee_by_virtual_step(
-                context, score_fee_info, receiver_step, block_number)
+                context, score_fee_info, score_step, block_number)
 
-            icx_required = (receiver_step - charged_step) * step_price
+            icx_required = (score_step - charged_step) * step_price
             charged_icx, deposit_indices_changed = self._charge_fee_by_deposit(
                 context, score_fee_info, icx_required, block_number)
 
-            if icx_required != charged_icx:
-                raise InvalidParamsException('Out of deposit balance')
+            score_used_step = charged_step + charged_icx // step_price
 
             if virtual_step_indices_changed or deposit_indices_changed:
                 # Updates if the information has been changed
                 self._fee_storage.put_score_fee(context, score_address, score_fee_info)
 
-        return receiver_step
+        return score_used_step
 
     def _charge_fee_by_virtual_step(self,
                                     context: 'IconScoreContext',
