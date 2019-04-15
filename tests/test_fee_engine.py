@@ -77,9 +77,9 @@ def patch_fee_storage(fee_storage: FeeStorage):
     def delete(context, key):
         del memory_db[key]
 
-    fee_storage.put_score_fee = put
-    fee_storage.get_score_fee = get
-    fee_storage.delete_score_fee = delete
+    fee_storage.put_score_deposit_info = put
+    fee_storage.get_score_deposit_info = get
+    fee_storage.delete_score_deposit_info = delete
     fee_storage.put_deposit = put
     fee_storage.get_deposit = get
     fee_storage.delete_deposit = delete
@@ -240,7 +240,7 @@ class TestFeeEngine(unittest.TestCase):
         self._icx_engine.init_account(
             context, AccountType.GENERAL, 'sender', self._sender, amount)
 
-        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
 
         self.assertEqual(fee_info.available_head_id_of_virtual_step, None)
         self.assertEqual(fee_info.available_head_id_of_deposit, None)
@@ -248,7 +248,7 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number,
                                  FeeEngine._MIN_DEPOSIT_TERM)
 
-        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(fee_info.available_head_id_of_virtual_step, tx_hash)
         self.assertEqual(fee_info.available_head_id_of_deposit, tx_hash)
 
@@ -262,14 +262,14 @@ class TestFeeEngine(unittest.TestCase):
         self._icx_engine.init_account(
             context, AccountType.GENERAL, 'sender', self._sender, amount)
 
-        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
 
         self.assertEqual(fee_info.expires_of_virtual_step, -1)
         self.assertEqual(fee_info.expires_of_deposit, -1)
 
         self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number, term)
 
-        fee_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(fee_info.expires_of_virtual_step, block_number + term)
         self.assertEqual(fee_info.expires_of_deposit, block_number + term)
 
@@ -368,13 +368,13 @@ class TestFeeEngine(unittest.TestCase):
             self._engine.deposit_fee(
                 context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
 
         self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
                                   block_number + FeeEngine._MAX_DEPOSIT_TERM // 2)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[len(arr_tx_hash) - 1])
 
     def test_withdraw_fee_when_available_head_id_of_deposit_is_same_as_deposit_id(self):
@@ -403,13 +403,13 @@ class TestFeeEngine(unittest.TestCase):
             self._engine.deposit_fee(
                 context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[0])
 
         self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
                                   block_number + FeeEngine._MAX_DEPOSIT_TERM // 2)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[len(arr_tx_hash) - 2])
 
     def test_withdraw_fee_to_check_setting_on_next_max_expires(self):
@@ -440,7 +440,7 @@ class TestFeeEngine(unittest.TestCase):
             self._engine.deposit_fee(
                 context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
         self.assertEqual(score_info.expires_of_virtual_step, org_last_expires)
         self.assertEqual(score_info.expires_of_deposit, org_last_expires)
@@ -448,7 +448,7 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
                                   block_number + FeeEngine._MIN_DEPOSIT_TERM // 2)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.expires_of_virtual_step, last_expires)
         self.assertEqual(score_info.expires_of_deposit, last_expires)
 
@@ -480,7 +480,7 @@ class TestFeeEngine(unittest.TestCase):
             self._engine.deposit_fee(
                 context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
         self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[0])
         self.assertEqual(score_info.expires_of_virtual_step, org_last_expires)
@@ -490,7 +490,7 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.withdraw_fee(context, self._sender, arr_tx_hash[cnt_deposit-1],
                                   block_number + FeeEngine._MIN_DEPOSIT_TERM // 2)
 
-        score_info = self._engine._get_or_create_score_fee(context, self._score_address)
+        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
         self.assertEqual(score_info.expires_of_virtual_step, last_expires)
         self.assertEqual(score_info.expires_of_deposit, last_expires)
 
@@ -610,7 +610,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(deposits[1][0], score_fee_info.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step_single_deposit_next_head(self):
@@ -649,7 +649,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(deposits[2][0], score_fee_info.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step__single_deposit_next_head_next_expire(self):
@@ -688,7 +688,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(deposits[4][0], score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(deposits[4][2], score_fee_info.expires_of_virtual_step)
 
@@ -728,7 +728,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
 
@@ -768,7 +768,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(deposits[3][0], score_fee_info.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_combine_by_single_deposit(self):
@@ -806,7 +806,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
 
@@ -847,7 +847,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
 
@@ -888,7 +888,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
 
@@ -930,7 +930,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
 
@@ -971,7 +971,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
 
@@ -1014,7 +1014,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_fee(context, self._score_address)
+        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
         # Asserts virtual step disabled
         self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
         self.assertEqual(-1, score_fee_info.expires_of_virtual_step)

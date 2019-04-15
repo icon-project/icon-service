@@ -22,8 +22,8 @@ from iconservice.base.address import AddressPrefix
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
 from iconservice.fee.deposit import Deposit
-from iconservice.fee.fee import Fee
 from iconservice.fee.fee_storage import FeeStorage
+from iconservice.fee.score_deposit_info import ScoreDepositInfo
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from tests import create_address, create_tx_hash
 
@@ -52,35 +52,33 @@ class TestFeeStorage(TestCase):
         context = self.context
         score_address = create_address(AddressPrefix.CONTRACT)
 
-        fee = Fee()
-        fee.ratio = 80
-        fee.head_id = create_tx_hash()
-        fee.tail_id = create_tx_hash()
-        fee.available_head_id_of_deposit = create_tx_hash()
-        fee.available_head_id_of_virtual_step = create_tx_hash()
-        self.storage.put_score_fee(context, score_address, fee)
+        score_deposit_info = ScoreDepositInfo()
+        score_deposit_info.head_id = create_tx_hash()
+        score_deposit_info.tail_id = create_tx_hash()
+        score_deposit_info.available_head_id_of_deposit = create_tx_hash()
+        score_deposit_info.available_head_id_of_virtual_step = create_tx_hash()
+        self.storage.put_score_deposit_info(context, score_address, score_deposit_info)
 
-        fee2 = self.storage.get_score_fee(context, score_address)
-        self.assertEqual(fee, fee2)
+        score_deposit_info_2 = self.storage.get_score_deposit_info(context, score_address)
+        self.assertEqual(score_deposit_info, score_deposit_info_2)
 
-        self.storage.delete_score_fee(context, score_address)
-        fee2 = self.storage.get_score_fee(context, score_address)
-        self.assertIsNone(fee2)
+        self.storage.delete_score_deposit_info(context, score_address)
+        score_deposit_info_2 = self.storage.get_score_deposit_info(context, score_address)
+        self.assertIsNone(score_deposit_info_2)
 
     def test_get_put_delete_score_fee_with_none_type(self):
         context = self.context
         score_address = create_address(AddressPrefix.CONTRACT)
 
-        fee = Fee()
-        fee.ratio = 100
-        self.storage.put_score_fee(context, score_address, fee)
+        score_deposit_info = ScoreDepositInfo()
+        self.storage.put_score_deposit_info(context, score_address, score_deposit_info)
 
-        fee2 = self.storage.get_score_fee(context, score_address)
-        self.assertEqual(fee, fee2)
+        score_deposit_info_2 = self.storage.get_score_deposit_info(context, score_address)
+        self.assertEqual(score_deposit_info, score_deposit_info_2)
 
-        self.storage.delete_score_fee(context, score_address)
-        fee2 = self.storage.get_score_fee(context, score_address)
-        self.assertIsNone(fee2)
+        self.storage.delete_score_deposit_info(context, score_address)
+        score_deposit_info_2 = self.storage.get_score_deposit_info(context, score_address)
+        self.assertIsNone(score_deposit_info_2)
 
     def test_get_put_delete_deposit(self):
         context = self.context

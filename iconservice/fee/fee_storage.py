@@ -15,9 +15,10 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING
+from hashlib import sha3_256
 
 from .deposit import Deposit
-from .fee import Fee
+from .score_deposit_info import ScoreDepositInfo
 from ..base.address import Address
 
 if TYPE_CHECKING:
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 class FeeStorage(object):
     """Fee and Deposit state manager embedding a state db wrapper"""
 
-    _FEE_PREFIX = b'fee|'
+    _FEE_PREFIX = b'02'
 
     def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
@@ -45,37 +46,38 @@ class FeeStorage(object):
         """
         return self._db
 
-    def get_score_fee(self, context: 'IconScoreContext', score_address: 'Address') -> 'Fee':
-        """Returns the contract fee.
+    def get_score_deposit_info(self, context: 'IconScoreContext', score_address: 'Address') -> 'ScoreDepositInfo':
+        """Returns the score deposit information.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param score_address: SCORE address
-        :return: Fee object
+        :return: ScoreDepositInfo object
         """
-        key = self._FEE_PREFIX + score_address.to_bytes()
+        key = self._FEE_PREFIX + sha3_256(score_address.to_bytes()).digest()
         value = self._db.get(context, key)
-        return Fee.from_bytes(value) if value else value
+        return ScoreDepositInfo.from_bytes(value) if value else value
 
-    def put_score_fee(self, context: 'IconScoreContext', score_address: 'Address', fee: 'Fee') -> None:
-        """Puts the contract fee data into db.
+    def put_score_deposit_info(self, context: 'IconScoreContext', score_address: 'Address',
+                               score_deposit_info: 'ScoreDepositInfo') -> None:
+        """Puts the score deposit information into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param score_address: SCORE address
-        :param fee: Fee object
+        :param score_deposit_info: ScoreDepositInfo object
         :return: None
         """
-        key = self._FEE_PREFIX + score_address.to_bytes()
-        value = fee.to_bytes()
+        key = self._FEE_PREFIX + sha3_256(score_address.to_bytes()).digest()
+        value = score_deposit_info.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_score_fee(self, context: 'IconScoreContext', score_address: 'Address') -> None:
-        """Deletes the contract fee from db.
+    def delete_score_deposit_info(self, context: 'IconScoreContext', score_address: 'Address') -> None:
+        """Deletes the score deposit information from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
         :param score_address: SCORE address
         :return: None
         """
-        key = self._FEE_PREFIX + score_address.to_bytes()
+        key = self._FEE_PREFIX + sha3_256(score_address.to_bytes()).digest()
         self._db.delete(context, key)
 
     def get_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> 'Deposit':
@@ -85,7 +87,7 @@ class FeeStorage(object):
         :param deposit_id: Deposit id
         :return: Deposit Object
         """
-        key = self._FEE_PREFIX + deposit_id
+        key = self._FEE_PREFIX + sha3_256(deposit_id).digest()
         value = self._db.get(context, key)
 
         if value:
@@ -102,7 +104,7 @@ class FeeStorage(object):
         :param deposit: Deposit Object
         :return: None
         """
-        key = self._FEE_PREFIX + deposit_id
+        key = self._FEE_PREFIX + sha3_256(deposit_id).digest()
         value = deposit.to_bytes()
         self._db.put(context, key, value)
 
@@ -113,7 +115,7 @@ class FeeStorage(object):
         :param deposit_id: Deposit id
         :return: None
         """
-        key = self._FEE_PREFIX + deposit_id
+        key = self._FEE_PREFIX + sha3_256(deposit_id).digest()
         self._db.delete(context, key)
 
     def close(self,

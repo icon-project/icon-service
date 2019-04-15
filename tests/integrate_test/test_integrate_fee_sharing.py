@@ -250,8 +250,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # deposit icx in nonexistent SCORE
-        set_proportion_tx_result = self._deposit_icx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 3), 5000 * 10 ** 18,
-                                                1296000)
+        set_proportion_tx_result = self._deposit_icx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 3),
+                                                     5000 * 10 ** 18, 1296000)
 
         self.assertEqual(set_proportion_tx_result.status, 0)
         self.assertTrue(set_proportion_tx_result.failure)

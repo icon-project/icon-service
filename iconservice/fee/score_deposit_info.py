@@ -17,17 +17,13 @@
 from ..utils.msgpack_for_db import MsgPackForDB
 
 
-class Fee(object):
+class ScoreDepositInfo(object):
     """
-    SCORE Fee Information Class
-    implementing functions to serialize and deserialize.
+    SScoreDepositInfo Class implementing functions to serialize and deserialize.
     """
-
-    def __init__(self, min_remaining_amount: int = 0, head_id: bytes = None, tail_id: bytes = None,
+    def __init__(self, head_id: bytes = None, tail_id: bytes = None,
                  available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None,
                  expires_of_virtual_step: int = -1, expires_of_deposit: int = -1):
-        # min remaining amount of deposit; it is boundary of processing the last transaction.
-        self.min_remaining_amount = min_remaining_amount
         self.head_id = head_id
         self.tail_id = tail_id
         self.available_head_id_of_virtual_step = available_head_id_of_virtual_step
@@ -37,30 +33,29 @@ class Fee(object):
 
     @staticmethod
     def from_bytes(buf: bytes):
-        """Converts Fee in bytes into Fee Object.
+        """Converts ScoreDepositInfo in bytes into ScoreDepositInfo Object.
 
-        :param buf: Fee in bytes
-        :return: Fee Object
+        :param buf: ScoreDepositInfo in bytes
+        :return: ScoreDepositInfo Object
         """
         data: list = MsgPackForDB.loads(buf)
 
-        fee = Fee()
-        fee.min_remaining_amount = data[0]
-        fee.head_id = data[1]
-        fee.tail_id = data[2]
-        fee.available_head_id_of_virtual_step = data[3]
-        fee.available_head_id_of_deposit = data[4]
-        fee.expires_of_virtual_step = data[5]
-        fee.expires_of_deposit = data[6]
+        score_deposit_info = ScoreDepositInfo()
+        score_deposit_info.head_id = data[0]
+        score_deposit_info.tail_id = data[1]
+        score_deposit_info.available_head_id_of_virtual_step = data[2]
+        score_deposit_info.available_head_id_of_deposit = data[3]
+        score_deposit_info.expires_of_virtual_step = data[4]
+        score_deposit_info.expires_of_deposit = data[5]
 
-        return fee
+        return score_deposit_info
 
     def to_bytes(self) -> bytes:
-        """Converts Fee object into bytes.
+        """Converts ScoreDepositInfo object into bytes.
 
-        :return: Fee in bytes
+        :return: ScoreDepositInfo in bytes
         """
-        data: list = [self.min_remaining_amount, self.head_id, self.tail_id,
+        data: list = [self.head_id, self.tail_id,
                       self.available_head_id_of_virtual_step, self.available_head_id_of_deposit,
                       self.expires_of_virtual_step, self.expires_of_deposit]
         return MsgPackForDB.dumps(data)
@@ -70,8 +65,7 @@ class Fee(object):
 
         :param other: (Fee)
         """
-        return isinstance(other, Fee) \
-               and self.min_remaining_amount == other.min_remaining_amount \
+        return isinstance(other, ScoreDepositInfo) \
                and self.head_id == other.head_id \
                and self.tail_id == other.tail_id \
                and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
