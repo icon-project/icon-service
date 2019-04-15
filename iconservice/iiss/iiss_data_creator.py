@@ -21,7 +21,7 @@ from .iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTx
 
 if TYPE_CHECKING:
     from ..base.address import Address
-    from .iiss_msg_data import IissTx
+    from .iiss_msg_data import IissTx, IissBlockProduceInfoData
 
 
 class IissDataCreator:
@@ -33,19 +33,29 @@ class IissDataCreator:
         return data
 
     @staticmethod
-    def create_gv_variable(block_height: int, incentive_rep: int, reward_rep: int) -> 'IissGovernanceVariable':
+    def create_gv_variable(block_height: int, calculated_incentive_rep: int, reward_rep: int) -> 'IissGovernanceVariable':
         data = IissGovernanceVariable()
         data.block_height: int = block_height
-        data.incentive_rep: int = incentive_rep
+        data.calculated_incentive_rep: int = calculated_incentive_rep
         data.reward_reg: int = reward_rep
         return data
 
     @staticmethod
-    def create_prep_data(block_height: int, block_generator: 'Address', block_validator_list: list) -> 'PrepsData':
-        data = PrepsData()
+    def create_block_produce_info_data(block_height: int,
+                                       block_generator: 'Address',
+                                       block_validator_list: list) -> 'IissBlockProduceInfoData':
+        data = IissBlockProduceInfoData()
         data.block_height: int = block_height
         data.block_generator: 'Address' = block_generator
         data.block_validator_list: list = block_validator_list
+        return data
+
+    @staticmethod
+    def create_prep_data(block_height: int, total_delegation: int, prep_list: list) -> 'PrepsData':
+        data = PrepsData()
+        data.block_height: int = block_height
+        data.total_delegation: int = total_delegation
+        data.prep_list: list = prep_list
         return data
 
     @staticmethod
@@ -62,6 +72,7 @@ class IissDataCreator:
         tx.delegation_info: list = delegation_infos
         return tx
 
+    # todo: need to modify
     @staticmethod
     def create_delegation_info(address: 'Address', value: int) -> 'DelegationInfo':
         info = DelegationInfo()
