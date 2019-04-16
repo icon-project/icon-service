@@ -286,7 +286,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(deposit_id1, score_info["deposits"][0].id)
         self.assertEqual(len(score_info["deposits"]), 1)
         self.assertEqual(score_info["availableVirtualStep"], 0)
-        self.assertEqual(score_info["availableDeposit"], amount_deposit - 500 * 10 ** 18)
+        self.assertEqual(score_info["availableDeposit"], amount_deposit * 90 // 100)
 
         # Creates a more deposit with 5000 * 2 ICX
         deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit * 2, 1_296_000)
@@ -299,9 +299,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(len(score_info["deposits"]), 2)
         self.assertEqual(score_info["availableVirtualStep"], 0)
 
-        # availableDeposit = total amount of deposit - 50 * count of deposit
-        self.assertEqual(score_info["availableDeposit"],
-                         amount_deposit * 3 - 500 * 10 ** 18 * len(score_info["deposits"]))
+        sum_of_available_deposit = 0
+        for i in range(len(score_info["deposits"])):
+            sum_of_available_deposit += score_info["deposits"][i].deposit_amount * 90 // 100
+        self.assertEqual(score_info["availableDeposit"], sum_of_available_deposit)
 
     def test_add_multiple_deposits(self):
         """
@@ -318,7 +319,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
         self.assertEqual(len(score_info["deposits"]), 100)
         self.assertEqual(score_info["availableDeposit"],
-                         amount_deposit * 100 - 500 * 10 ** 18 * len(score_info['deposits']))
+                         amount_deposit * 100 - amount_deposit * 10 // 100 * len(score_info['deposits']))
 
     def test_get_deposit_by_valid_id(self):
         """

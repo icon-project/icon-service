@@ -85,9 +85,6 @@ class FeeEngine:
 
     _MIN_DEPOSIT_TERM = 1_296_000
 
-    # The minimum remaining amount of a single deposit
-    _MIN_REMAINING_AMOUNT = 500 * 10 ** 18
-
     def __init__(self,
                  deploy_storage: 'IconScoreDeployStorage',
                  fee_storage: 'FeeStorage',
@@ -127,10 +124,11 @@ class FeeEngine:
             score_fee_info.deposits.append(deposit)
 
             # Retrieves available virtual STEPs and deposits
+            # The minimum remaining amount of a single deposit is 10 percent of amount of the deposit
             if block_number < deposit.expires:
                 score_fee_info.available_virtual_step += deposit.remaining_virtual_step
                 score_fee_info.available_deposit += \
-                    max(deposit.remaining_deposit - self._MIN_REMAINING_AMOUNT, 0)
+                    max(deposit.remaining_deposit - deposit.deposit_amount * 10 // 100, 0)
 
         return score_fee_info
 
@@ -556,7 +554,7 @@ class FeeEngine:
         # Search for next available deposit id
         gen = self._deposit_generator(context, score_deposit_info.available_head_id_of_deposit)
         for deposit in filter(lambda d: block_number < d.expires, gen):
-            available_deposit = deposit.remaining_deposit - self._MIN_REMAINING_AMOUNT
+            available_deposit = deposit.remaining_deposit - deposit.deposit_amount * 10 // 100
 
             if remaining_required_icx < available_deposit:
                 charged_icx = remaining_required_icx
@@ -602,7 +600,7 @@ class FeeEngine:
 
         next_available_deposit = last_paid_deposit
 
-        if last_paid_deposit.remaining_deposit <= self._MIN_REMAINING_AMOUNT:
+        if last_paid_deposit.remaining_deposit <= last_paid_deposit.deposit_amount * 10 // 100:
             # All available deposits have been consumed in the current deposit
             # so should find the next available deposits
             gen = self._deposit_generator(context, last_paid_deposit.next_id)

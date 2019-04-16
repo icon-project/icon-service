@@ -1028,7 +1028,6 @@ class TestFeeEngine(unittest.TestCase):
 
         FeeEngine._MIN_DEPOSIT_TERM = 50
         FeeEngine._MIN_DEPOSIT_AMOUNT = 10
-        FeeEngine._MIN_REMAINING_AMOUNT = 10
 
         for deposit in deposits:
             tx_hash = deposit[0]
