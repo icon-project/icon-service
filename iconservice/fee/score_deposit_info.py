@@ -19,19 +19,20 @@ from ..utils.msgpack_for_db import MsgPackForDB
 
 class ScoreDepositInfo(object):
     """
-    SScoreDepositInfo Class implementing functions to serialize and deserialize.
+    ScoreDepositInfo Class implementing functions to serialize and deserialize.
     """
+    _VERSION = 0
 
     def __init__(self, head_id: bytes = None, tail_id: bytes = None,
                  available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None,
-                 expires_of_virtual_step: int = -1, expires_of_deposit: int = -1, version: int = 0):
+                 expires_of_virtual_step: int = -1, expires_of_deposit: int = -1):
+        self.version = self._VERSION
         self.head_id = head_id
         self.tail_id = tail_id
         self.available_head_id_of_virtual_step = available_head_id_of_virtual_step
         self.available_head_id_of_deposit = available_head_id_of_deposit
         self.expires_of_virtual_step = expires_of_virtual_step
         self.expires_of_deposit = expires_of_deposit
-        self.version = version
 
     @staticmethod
     def from_bytes(buf: bytes):
@@ -43,13 +44,13 @@ class ScoreDepositInfo(object):
         data: list = MsgPackForDB.loads(buf)
 
         score_deposit_info = ScoreDepositInfo()
-        score_deposit_info.head_id = data[0]
-        score_deposit_info.tail_id = data[1]
-        score_deposit_info.available_head_id_of_virtual_step = data[2]
-        score_deposit_info.available_head_id_of_deposit = data[3]
-        score_deposit_info.expires_of_virtual_step = data[4]
-        score_deposit_info.expires_of_deposit = data[5]
-        score_deposit_info.version = data[6]
+        score_deposit_info.version = data[0]
+        score_deposit_info.head_id = data[1]
+        score_deposit_info.tail_id = data[2]
+        score_deposit_info.available_head_id_of_virtual_step = data[3]
+        score_deposit_info.available_head_id_of_deposit = data[4]
+        score_deposit_info.expires_of_virtual_step = data[5]
+        score_deposit_info.expires_of_deposit = data[6]
 
         return score_deposit_info
 
@@ -58,9 +59,9 @@ class ScoreDepositInfo(object):
 
         :return: ScoreDepositInfo in bytes
         """
-        data: list = [self.head_id, self.tail_id,
+        data: list = [self.version, self.head_id, self.tail_id,
                       self.available_head_id_of_virtual_step, self.available_head_id_of_deposit,
-                      self.expires_of_virtual_step, self.expires_of_deposit, self.version]
+                      self.expires_of_virtual_step, self.expires_of_deposit]
         return MsgPackForDB.dumps(data)
 
     def __eq__(self, other) -> bool:
@@ -69,13 +70,14 @@ class ScoreDepositInfo(object):
         :param other: (Fee)
         """
         return isinstance(other, ScoreDepositInfo) \
+               and self.version == other.version \
                and self.head_id == other.head_id \
                and self.tail_id == other.tail_id \
                and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
                and self.available_head_id_of_deposit == other.available_head_id_of_deposit \
                and self.expires_of_virtual_step == other.expires_of_virtual_step \
                and self.expires_of_deposit == other.expires_of_deposit \
-               and self.version == other.version
+
 
     def __ne__(self, other) -> bool:
         """operator != overriding
