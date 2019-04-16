@@ -19,7 +19,7 @@ import unittest
 from typing import TYPE_CHECKING
 
 from iconservice.iiss.iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTxData, IissTxType, \
-    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx
+    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, IissBlockProduceInfoData
 from tests import create_address, rmtree
 
 if TYPE_CHECKING:
@@ -39,17 +39,27 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         self.iiss_gv: 'IissGovernanceVariable' = IissGovernanceVariable()
         self.iiss_gv.block_height = 20
-        self.iiss_gv.icx_price = 10
-        self.iiss_gv.incentive_rep = 30
+        self.iiss_gv.calculated_incentive_rep = 30
         self.iiss_gv.reward_rep = 10_000
 
-        self.iiss_prep: 'PrepsData' = PrepsData()
-        self.iiss_prep.block_height = 20
-        self.iiss_prep.block_generator = create_address(data=b'generator_address')
+        self.iiss_block_produce_info: 'IissBlockProduceInfoData' = IissBlockProduceInfoData()
+        self.iiss_block_produce_info.block_height = 20
+        self.iiss_block_produce_info.block_generator = create_address(data=b'generator_address')
         list_of_address = []
         for x in range(0, 10):
             list_of_address.append(create_address(data=b'address' + x.to_bytes(1, 'big')))
-        self.iiss_prep.block_validator_list = list_of_address
+        self.iiss_block_produce_info.block_validator_list = list_of_address
+
+        self.iiss_prep: 'PrepsData' = PrepsData()
+        self.iiss_prep.block_height = 20
+        self.iiss_prep.total_delegation = 10_000
+
+        self.iiss_prep.prep_list = []
+        for x in range(0, 10):
+            delegate_info: 'DelegationInfo' = DelegationInfo()
+            delegate_info.address = create_address(data=b'address' + x.to_bytes(1, 'big'))
+            delegate_info.value = 10 ** 10
+            self.iiss_prep.prep_list.append(delegate_info)
 
         self.tx_delegate: 'IissTxData' = IissTxData()
         self.tx_delegate_index: int = 1
@@ -83,7 +93,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         self.tx_prep_un_reg.data: 'PRepUnregisterTx' = PRepUnregisterTx()
 
     def tearDown(self):
-        rmtree(self.db_path)
+        #rmtree(self.db_path)
         pass
 
     def test_iiss_data_using_level_db(self):
@@ -103,9 +113,17 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_gv: 'IissGovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
-        self.assertEqual(self.iiss_gv.icx_price, ret_gv.icx_price)
-        self.assertEqual(self.iiss_gv.incentive_rep, ret_gv.incentive_rep)
+        self.assertEqual(self.iiss_gv.calculated_incentive_rep, ret_gv.calculated_incentive_rep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
+
+    def test_iiss_block_produce_info_data(self):
+        key: bytes = self.iiss_block_produce_info.make_key()
+        value: bytes = self.iiss_block_produce_info.make_value()
+        ret_bp: 'IissBlockProduceInfoData' = self.iiss_block_produce_info.from_bytes(key, value)
+
+        self.assertEqual(self.iiss_block_produce_info.block_height, ret_bp.block_height)
+        self.assertEqual(self.iiss_block_produce_info.block_generator, ret_bp.block_generator)
+        self.assertEqual(self.iiss_block_produce_info.block_validator_list, ret_bp.block_validator_list)
 
     def test_preps_data(self):
         key: bytes = self.iiss_prep.make_key()
@@ -113,8 +131,10 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_p: 'PrepsData' = self.iiss_prep.from_bytes(key, value)
 
         self.assertEqual(self.iiss_prep.block_height, ret_p.block_height)
-        self.assertEqual(self.iiss_prep.block_generator, ret_p.block_generator)
-        self.assertEqual(self.iiss_prep.block_validator_list, ret_p.block_validator_list)
+        self.assertEqual(self.iiss_prep.total_delegation, ret_p.total_delegation)
+        for index, iiss_prep in enumerate(self.iiss_prep.prep_list):
+            self.assertEqual(iiss_prep.value, ret_p.prep_list[index].value)
+            self.assertEqual(iiss_prep.address, ret_p.prep_list[index].address)
 
     def test_iiss_tx_data_delegate(self):
         key: bytes = self.tx_delegate.make_key(self.tx_delegate_index)
@@ -174,9 +194,21 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         if self.debug:
             print("===IISS_GOVERNANCE_VARIABLE===")
             print(f"block_height: {self.iiss_gv.block_height}")
-            print(f"icx_price: {self.iiss_gv.icx_price}")
-            print(f"incentive_rep: {self.iiss_gv.incentive_rep}")
+            print(f"calculated incentive_rep: {self.iiss_gv.calculated_incentive_rep}")
             print(f"reward_rep: {self.iiss_gv.reward_rep}")
+            print(f"key: {key}")
+            print(f"value: {value}")
+            print("")
+
+        key: bytes = self.iiss_block_produce_info.make_key()
+        value: bytes = self.iiss_block_produce_info.make_value()
+        self.db.put(key, value)
+
+        if self.debug:
+            print("===IISS_BLOCK_PRODUCE_INFO_DATA===")
+            print(f"block_height: {self.iiss_block_produce_info.block_height}")
+            print(f"block_generator: {str(self.iiss_block_produce_info.block_generator)}")
+            print(f"block_validator_list: {[str(address)for address in self.iiss_block_produce_info.block_validator_list]}")
             print(f"key: {key}")
             print(f"value: {value}")
             print("")
@@ -186,10 +218,11 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         self.db.put(key, value)
 
         if self.debug:
+            prep_list: list = [[str(prep.address), prep.value] for prep in self.iiss_prep.prep_list]
             print("===PREPS_DATA===")
             print(f"block_height: {self.iiss_prep.block_height}")
-            print(f"block_block_generator: {self.iiss_prep.block_generator}")
-            print(f"block_block_validator_list: {self.iiss_prep.block_validator_list}")
+            print(f"total_delegation: {self.iiss_prep.total_delegation}")
+            print(f"prep_list: {prep_list}")
             print(f"key: {key}")
             print(f"value: {value}")
             print("")
@@ -252,18 +285,27 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         value = self.db.get(key)
         ret_gv: 'IissGovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
-        self.assertEqual(self.iiss_gv.block_height, self.iiss_gv.block_height)
-        self.assertEqual(self.iiss_gv.icx_price, ret_gv.icx_price)
-        self.assertEqual(self.iiss_gv.incentive_rep, ret_gv.incentive_rep)
+        self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
+        self.assertEqual(self.iiss_gv.calculated_incentive_rep, ret_gv.calculated_incentive_rep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
+
+        key: bytes = self.iiss_block_produce_info.make_key()
+        value = self.db.get(key)
+        ret_bp: 'IissBlockProduceInfoData' = self.iiss_block_produce_info.from_bytes(key, value)
+
+        self.assertEqual(self.iiss_block_produce_info.block_height, ret_bp.block_height)
+        self.assertEqual(self.iiss_block_produce_info.block_generator, ret_bp.block_generator)
+        self.assertEqual(self.iiss_block_produce_info.block_validator_list, ret_bp.block_validator_list)
 
         key: bytes = self.iiss_prep.make_key()
         value = self.db.get(key)
         ret_p: 'PrepsData' = self.iiss_prep.from_bytes(key, value)
 
         self.assertEqual(self.iiss_prep.block_height, ret_p.block_height)
-        self.assertEqual(self.iiss_prep.block_generator, ret_p.block_generator)
-        self.assertEqual(self.iiss_prep.block_validator_list, ret_p.block_validator_list)
+        self.assertEqual(self.iiss_prep.total_delegation, ret_p.total_delegation)
+        for index, iiss_prep in enumerate(self.iiss_prep.prep_list):
+            self.assertEqual(iiss_prep.value, ret_p.prep_list[index].value)
+            self.assertEqual(iiss_prep.address, ret_p.prep_list[index].address)
 
         key: bytes = self.tx_delegate.make_key(self.tx_delegate_index)
         value = self.db.get(key)
