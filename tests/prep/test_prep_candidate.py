@@ -46,11 +46,16 @@ class TestPrepCandidate(unittest.TestCase):
         actual_prep: 'PRepCandidate' = prep.from_bytes(data, address)
         self.assertEqual(prep, actual_prep)
 
-    def _make_sorted_list(self, count: int, list1: list, list2: list, list3: list) -> 'PRepCandidateSortedInfos':
+    def _make_sorted_list(self,
+                          count: int,
+                          list1: list,
+                          list2: list,
+                          list3: list,
+                          addresses: list) -> 'PRepCandidateSortedInfos':
         mapper = PRepCandiateInfoMapper()
 
         for i in range(count):
-            addr: 'Address' = create_address()
+            addr: 'Address' = addresses[i]
             name: str = f'name{i}'
             total_delegated: int = list1[i]
             block_height: int = list2[i]
@@ -70,88 +75,96 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort1(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [i for i in range(0, count)]
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{count - i - 1}', info.name)
 
     def test_prep_candidate_info_for_sort1_rev(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [i for i in range(count, 0, -1)]
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos):
+        for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort2(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [0] * count
         block_heights = [i for i in range(0, count)]
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort2_rev(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [0] * count
         block_heights = [i for i in range(count, 0, -1)]
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{count - i - 1}', info.name)
 
     def test_prep_candidate_info_for_sort3(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [i for i in range(0, count)]
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort3_rev(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [i for i in range(count, 0, -1)]
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{count - i - 1}', info.name)
 
     def test_prep_candidate_info_for_sort4(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(infos.get()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_update_info(self):
         count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
         total_delegateds = [i for i in range(0, count)]
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
         info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(create_address(),
                                                                     "new_name1",
@@ -164,10 +177,25 @@ class TestPrepCandidate(unittest.TestCase):
         infos.update_info(info.address, 0)
         self.assertEqual(info.name, infos.get()[count].name)
 
-        for i in range(5):
+        for i in range(count):
             infos.update_info(info.address, count - i - 1)
             self.assertEqual(info.name, infos.get()[i + 1].name)
-            
+
+    def test_prep_candidate_info_for_updates(self):
+        count = 5
+        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        total_delegateds = [0] * count
+        block_heights = [0] * count
+        tx_indexs = [0] * count
+
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+
+        for i, info in enumerate(infos.get()):
+            infos.update_info(info.address, i)
+
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(info.total_delegated, count - i - 1)
+
 
 if __name__ == '__main__':
     unittest.main()
