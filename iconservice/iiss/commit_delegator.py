@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
+from ..base.exception import InvalidParamsException
 from .iiss_data_creator import IissDataCreator
 
 if TYPE_CHECKING:
@@ -73,12 +74,17 @@ class CommitDelegator:
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData') -> bool:
         block_height: int = precommit_data.block.height
-        check_next_block_height: int = cls.variable.issue.get_calc_next_block_height(context)
+        check_next_block_height: Optional[int] = cls.variable.issue.get_calc_next_block_height(context)
+        if check_next_block_height is None:
+            return False
+
         return block_height > check_next_block_height
 
     @classmethod
     def _put_next_calc_block_height(cls, context: 'IconScoreContext', block_height: int):
         calc_period: int = cls.variable.issue.get_calc_period(context)
+        if calc_period is None:
+            raise InvalidParamsException("Fail put next calc block height: didn't init yet")
         cls.variable.issue.put_calc_next_block_height(context, block_height + calc_period)
 
     @classmethod
