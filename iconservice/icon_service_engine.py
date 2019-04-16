@@ -132,6 +132,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
         IconScoreContext.icx_engine = self._icx_engine
+        IconScoreContext.fee_engine = self._fee_engine
         IconScoreContext.icon_score_mapper = IconScoreMapper(is_threadsafe=True)
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag

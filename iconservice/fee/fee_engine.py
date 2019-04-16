@@ -26,7 +26,6 @@ from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_engine import IcxEngine
-from ..utils import to_camel_case
 
 if typing.TYPE_CHECKING:
     from ..base.address import Address
@@ -717,8 +716,6 @@ class FeeHandler:
         self.fee_handler = {
             'add': self._deposit_fee,
             'withdraw': self._withdraw_fee,
-            'getDeposit': self._get_deposit_info_by_id,
-            'getDepositList': self._get_score_deposit_info
         }
 
     def handle_fee_request(self, context: 'IconScoreContext', data: dict):
@@ -762,14 +759,6 @@ class FeeHandler:
 
         event_log_args = [depositId, score_address, context.msg.sender, return_icx, penalty]
         self._emit_event(context, FeeHandler.EventType.WITHDRAW, event_log_args)
-
-    def _get_deposit_info_by_id(self, context: 'IconScoreContext', depositId: bytes):
-        deposit = self.fee_engine.get_deposit_info_by_id(context, depositId)
-        return deposit.to_dict(to_camel_case)
-
-    def _get_score_deposit_info(self, context: 'IconScoreContext', score: 'Address'):
-        score_info = self.fee_engine.get_deposit_info(context, score, context.block.height)
-        return score_info.to_dict(to_camel_case)
 
     @staticmethod
     def _emit_event(

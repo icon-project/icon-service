@@ -18,7 +18,7 @@ from typing import Any, Optional
 from iconcommons import IconConfig
 
 from iconservice import ZERO_SCORE_ADDRESS
-from iconservice.base.address import Address, AddressPrefix
+from iconservice.base.address import Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidRequestException
 from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_config import default_icon_config
@@ -55,6 +55,9 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
         self._genesis_invoke()
 
+        governance_tx_result = self._update_governance(self._admin)
+        self.assertEqual(governance_tx_result.status, int(True))
+
         deploy_tx_hash = self._deploy_score('install/test_score_fee_sharing', 0, self._admin, {"value": hex(100)})
         self.assertEqual(deploy_tx_hash.status, int(True))
         self.score_address = deploy_tx_hash.score_address
@@ -66,6 +69,15 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
     def tearDown(self):
         super().tearDown()
+
+    def _update_governance(self, from_address: 'Address') -> Any:
+        tx = self._make_deploy_tx("test_builtin",
+                                  "governance_for_fee2/governance",
+                                  from_address,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
 
     def _deploy_score(self, score_path: str,
                       value: int,
@@ -83,15 +95,17 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         return tx_results[0]
 
     # noinspection PyDefaultArgument
-    def _query_request(self, method: str, params: dict = {}):
+    def _query_score_info(self, address: Address):
         query_request = {
             "version": self._version,
             "from": self._admin,
-            "to": ZERO_SCORE_ADDRESS,
+            "to": GOVERNANCE_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": method,
-                "params": params
+                "method": "getScoreStatus",
+                "params": {
+                    "address": str(address)
+                }
             }
         }
         response = self._query(query_request)
@@ -141,8 +155,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                      sender: Address = None) -> TransactionResult:
         if sender is None:
             sender = self._admin
-        deposit_req = self._make_deposit_tx(sender, score_address, "add",
-                                            {"term": hex(period)})
+        deposit_req = self._make_deposit_tx(sender, score_address, "add", {"term": hex(period)})
         deposit_req['params']['value'] = amount
         prev_block, tx_results = self._make_and_req_block([deposit_req])
         self._write_precommit_state(prev_block)
@@ -153,7 +166,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         if sender is None:
             sender = self._admin
         withdraw_tx_hash = self._make_deposit_tx(sender, score_address, "withdraw",
-                                                    {"depositId": f"0x{bytes.hex(deposit_id)}"})
+                                                 {"depositId": f"0x{bytes.hex(deposit_id)}"})
         prev_block, tx_results = self._make_and_req_block([withdraw_tx_hash])
         self._write_precommit_state(prev_block)
         return tx_results[0]
@@ -162,8 +175,9 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
 
         deposit_id = deposit_tx_result.tx_hash
-        deposit_info = self._query_request('getDeposit', {"depositId": f"0x{bytes.hex(deposit_id)}"})
-        self.assertTrue(deposit_info)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
 
     def test_deposit_fee_icx_range(self):
         deposit_tx_result = self._deposit_icx(self.score_address, 100_001 * 10 ** 18, 1_296_000)
@@ -181,8 +195,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
     def test_sharing_fee_case_score_0(self):
         user_balance = self._query({"address": self._admin}, "icx_getBalance")
-        initial_available_depost = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        initial_available_deposit = deposit_info['availableDeposit']
 
         score_call_tx = self._make_score_call_tx(self._admin, self.score_address, 'set_value', {"value": hex(100)})
         prev_block, tx_results = self._make_and_req_block([score_call_tx])
@@ -191,10 +207,13 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         fee_used = tx_results[0].step_used * tx_results[0].step_price
 
         after_call_user_balance = self._query({"address": self._admin}, "icx_getBalance")
-        after_call_available_depost = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        after_call_available_depost = deposit_info['availableDeposit']
         self.assertEqual(user_balance - fee_used, after_call_user_balance)
-        self.assertEqual(initial_available_depost, after_call_available_depost)
+        self.assertEqual(initial_available_deposit, after_call_available_depost)
         self.assertFalse(tx_results[0].to_dict().get('detailed_step_used'))
 
     def test_sharing_fee_case_score_50(self):
@@ -202,8 +221,11 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address, 15000 * 10 ** 18, 1_296_000)
         self.assertEqual(deposit_tx_result.status, 1)
         user_balance = self._query({"address": self._admin}, "icx_getBalance")
-        initial_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        initial_available_deposit = deposit_info['availableDeposit']
         proportion = 50
 
         # invoke score method
@@ -213,8 +235,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # check result
-        after_call_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        after_call_available_deposit = deposit_info['availableDeposit']
         user_used_fee = tx_results[0].step_used_details[self._admin] * tx_results[0].step_price
         score_used_fee = tx_results[0].step_used_details[self.score_address] * tx_results[0].step_price
         after_call_user_balance = self._query({"address": self._admin}, "icx_getBalance")
@@ -228,8 +252,11 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address, 15000 * 10 ** 18, 1_296_000)
         self.assertEqual(deposit_tx_result.status, 1)
         user_balance = self._query({"address": self._admin}, "icx_getBalance")
-        initial_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        initial_available_deposit = deposit_info['availableDeposit']
 
         # invoke score method
         score_call_tx = self._make_score_call_tx(self._admin, self.score_address, 'set_value', {"value": hex(100),
@@ -238,8 +265,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # check result
-        after_call_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        after_call_available_deposit = deposit_info['availableDeposit']
         score_used_fee = tx_results[0].step_used_details[self.score_address] * tx_results[0].step_price
         after_call_user_balance = self._query({"address": self._admin}, "icx_getBalance")
         self.assertEqual(initial_available_deposit - score_used_fee, after_call_available_deposit)
@@ -252,8 +281,11 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         # deposit icx
         deposit_tx_result = self._deposit_icx(self.score_address, 15000 * 10 ** 18, 1)
         self.assertEqual(deposit_tx_result.status, 1)
-        initial_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        initial_available_deposit = deposit_info['availableDeposit']
         self.assertNotEqual(initial_available_deposit, 0)
 
         # increase block_height
@@ -268,8 +300,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(e.exception.message, "SCORE can not share fee")
 
         # check result
-        after_destroyed_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        after_destroyed_available_deposit = deposit_info['availableDeposit']
         self.assertEqual(after_destroyed_available_deposit, 0)
 
     def test_deposit_unauthorized_account(self):
@@ -301,11 +335,13 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         Then  : There is not no deposit list
                 and all of values like sharing proportion, available virtual step and available deposit is 0.
         """
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(score_info["scoreAddress"], self.score_address)
-        self.assertEqual(score_info["deposits"], [])
-        self.assertEqual(score_info["availableVirtualStep"], 0)
-        self.assertEqual(score_info["availableDeposit"], 0)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        self.assertEqual(deposit_info["scoreAddress"], self.score_address)
+        self.assertEqual(deposit_info["deposits"], [])
+        self.assertEqual(deposit_info["availableVirtualStep"], 0)
+        self.assertEqual(deposit_info["availableDeposit"], 0)
 
     def test_get_score_info_with_deposits(self):
         """
@@ -319,28 +355,32 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit, 1_296_000)
         deposit_id1 = deposit_tx_result.tx_hash
 
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(score_info["scoreAddress"], self.score_address)
-        self.assertEqual(deposit_id1, score_info["deposits"][0].id)
-        self.assertEqual(len(score_info["deposits"]), 1)
-        self.assertEqual(score_info["availableVirtualStep"], 0)
-        self.assertEqual(score_info["availableDeposit"], amount_deposit * 90 // 100)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        self.assertEqual(deposit_info["scoreAddress"], self.score_address)
+        self.assertEqual(deposit_id1, deposit_info["deposits"][0].id)
+        self.assertEqual(len(deposit_info["deposits"]), 1)
+        self.assertEqual(deposit_info["availableVirtualStep"], 0)
+        self.assertEqual(deposit_info["availableDeposit"], amount_deposit * 90 // 100)
 
         # Creates a more deposit with 5000 * 2 ICX
         deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit * 2, 1_296_000)
         deposit_id2 = deposit_tx_result.tx_hash
 
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(score_info["scoreAddress"], self.score_address)
-        self.assertEqual(deposit_id1, score_info["deposits"][0].id)
-        self.assertEqual(deposit_id2, score_info["deposits"][1].id)
-        self.assertEqual(len(score_info["deposits"]), 2)
-        self.assertEqual(score_info["availableVirtualStep"], 0)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        self.assertEqual(deposit_info["scoreAddress"], self.score_address)
+        self.assertEqual(deposit_id1, deposit_info["deposits"][0].id)
+        self.assertEqual(deposit_id2, deposit_info["deposits"][1].id)
+        self.assertEqual(len(deposit_info["deposits"]), 2)
+        self.assertEqual(deposit_info["availableVirtualStep"], 0)
 
         sum_of_available_deposit = 0
-        for i in range(len(score_info["deposits"])):
-            sum_of_available_deposit += score_info["deposits"][i].deposit_amount * 90 // 100
-        self.assertEqual(score_info["availableDeposit"], sum_of_available_deposit)
+        for i in range(len(deposit_info["deposits"])):
+            sum_of_available_deposit += deposit_info["deposits"][i].deposit_amount * 90 // 100
+        self.assertEqual(deposit_info["availableDeposit"], sum_of_available_deposit)
 
     def test_add_multiple_deposits(self):
         """
@@ -354,9 +394,12 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         for _ in range(99):
             _ = self._deposit_icx(self.score_address, amount_deposit, 1_296_000)
 
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(len(score_info["deposits"]), 100)
-        self.assertEqual(score_info["availableDeposit"],
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+
+        deposit_info = score_info['depositInfo']
+        self.assertEqual(len(deposit_info["deposits"]), 99)
+        self.assertEqual(deposit_info["availableDeposit"],
                          (amount_deposit - amount_deposit * 10 // 100) * len(deposit_info['deposits']))
 
     def test_get_deposit_by_valid_id(self):
@@ -368,28 +411,9 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
         deposit_id = deposit_tx_result.tx_hash
 
-        deposit_info = self._query_request('getDeposit', {"depositId": f"0x{bytes.hex(deposit_id)}"})
-        self.assertTrue(deposit_info)
-
-    def test_get_deposit_by_invalid_id(self):
-        """
-        Given : The SCORE is deployed.
-        When  : Ties to get deposit info by invalid id.
-        Then  : Raises exception(InvalidRequestException) before and after making a deposit.
-        """
-        # Before making a deposit, getting deposit with invalid ID failed.
-        self.assertRaises(InvalidRequestException, self._query_request, 'getDeposit',
-                          {"depositId": f"0x{bytes.hex(create_tx_hash())}"})
-
-        deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
-        deposit_id = deposit_tx_result.tx_hash
-
-        deposit_info = self._query_request('getDeposit', {"depositId": f"0x{bytes.hex(deposit_id)}"})
-        self.assertTrue(deposit_info)
-
-        # After making a deposit, getting deposit with invalid ID failed, too.
-        self.assertRaises(InvalidRequestException, self._query_request, 'getDeposit',
-                          {"depositId": f"0x{bytes.hex(create_tx_hash())}"})
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
 
     def test_withdraw_deposit_after_deposit(self):
         """
@@ -400,15 +424,17 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
         deposit_id = deposit_tx_result.tx_hash
 
-        deposit_info = self._query_request('getDeposit', {"depositId": f"0x{bytes.hex(deposit_id)}"})
-        self.assertTrue(deposit_info)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
 
         withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertTrue(withdraw_tx_result.status)
 
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(len(score_info["deposits"]), 0)
-        self.assertEqual(score_info["availableDeposit"], 0)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        self.assertEqual(len(score_info['depositInfo']["deposits"]), 0)
+        self.assertEqual(score_info['depositInfo']["availableDeposit"], 0)
 
     def test_withdraw_deposit_after_charging_fee(self):
         """
@@ -427,9 +453,12 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([score_call_tx])
         self._write_precommit_state(prev_block)
 
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+
+        deposit_info = score_info['depositInfo']
         # check result
-        available_deposit_after_call = self._query_request('getDepositList', {"score": str(self.score_address)})[
-            'availableDeposit']
+        available_deposit_after_call = deposit_info['availableDeposit']
 
         user_balance_before_withdraw = self._query({"address": self._admin}, "icx_getBalance")
 
@@ -439,9 +468,11 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
         user_balance_after_withdraw = self._query({"address": self._admin}, "icx_getBalance")
 
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(len(score_info["deposits"]), 0)
-        self.assertEqual(score_info["availableDeposit"], 0)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        self.assertEqual(len(deposit_info["deposits"]), 0)
+        self.assertEqual(deposit_info["availableDeposit"], 0)
 
         # check the owner balance
         validate_user_balance = user_balance_before_withdraw + available_deposit_after_call + 500 * 10 ** 18 - withdraw_tx_result.step_used * withdraw_tx_result.step_price
@@ -478,8 +509,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertTrue(withdraw_tx_result.status)
 
-        score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
-        self.assertEqual(len(score_info["deposits"]), 0)
+        score_info = self._query_score_info(self.score_address)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        self.assertEqual(len(deposit_info["deposits"]), 0)
 
         # withdraw again
         withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
@@ -491,8 +524,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address2, 15000 * 10 ** 18, 1_296_000)
         self.assertEqual(deposit_tx_result.status, 1)
         user_balance = self._query({"address": self._admin}, "icx_getBalance")
-        initial_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address2)})[
-            'availableDeposit']
+        score_info = self._query_score_info(self.score_address2)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        initial_available_deposit = deposit_info['availableDeposit']
 
         # invoke score method
         score_call_tx = self._make_score_call_tx(self._admin, self.score_address2, 'set_other_score_value',
@@ -502,8 +537,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # check result
-        after_call_available_deposit = self._query_request('getDepositList', {"score": str(self.score_address2)})[
-            'availableDeposit']
+        score_info = self._query_score_info(self.score_address2)
+        self.assertIn('depositInfo', score_info)
+        deposit_info = score_info['depositInfo']
+        after_call_available_deposit = deposit_info['availableDeposit']
         score_used_fee = tx_results[0].step_used_details[self.score_address2] * tx_results[0].step_price
         after_call_user_balance = self._query({"address": self._admin}, "icx_getBalance")
         self.assertEqual(initial_available_deposit - score_used_fee, after_call_available_deposit)
