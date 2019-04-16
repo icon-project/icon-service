@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from .iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx
@@ -22,6 +22,7 @@ from .iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTx
 if TYPE_CHECKING:
     from ..base.address import Address
     from .iiss_msg_data import IissTx, IissBlockProduceInfoData
+    from ..prep.prep_variable.prep_variable_storage import PRep
 
 
 class IissDataCreator:
@@ -33,7 +34,9 @@ class IissDataCreator:
         return data
 
     @staticmethod
-    def create_gv_variable(block_height: int, calculated_incentive_rep: int, reward_rep: int) -> 'IissGovernanceVariable':
+    def create_gv_variable(block_height: int,
+                           calculated_incentive_rep: int,
+                           reward_rep: int) -> 'IissGovernanceVariable':
         data = IissGovernanceVariable()
         data.block_height: int = block_height
         data.calculated_incentive_rep: int = calculated_incentive_rep
@@ -43,19 +46,25 @@ class IissDataCreator:
     @staticmethod
     def create_block_produce_info_data(block_height: int,
                                        block_generator: 'Address',
-                                       block_validator_list: list) -> 'IissBlockProduceInfoData':
+                                       block_validators: List['Address']) -> 'IissBlockProduceInfoData':
         data = IissBlockProduceInfoData()
         data.block_height: int = block_height
         data.block_generator: 'Address' = block_generator
-        data.block_validator_list: list = block_validator_list
+        data.block_validator_list: list = block_validators
         return data
 
     @staticmethod
-    def create_prep_data(block_height: int, total_delegation: int, prep_list: list) -> 'PrepsData':
+    def create_prep_data(block_height: int, total_delegation: int, preps: List['PRep']) -> 'PrepsData':
+
+        converted_preps: List['DelegationInfo'] = []
+        for prep in preps:
+            info = IissDataCreator.create_delegation_info(prep.address, prep.total_delegated)
+            converted_preps.append(info)
+
         data = PrepsData()
         data.block_height: int = block_height
         data.total_delegation: int = total_delegation
-        data.prep_list: list = prep_list
+        data.prep_list: List['DelegationInfo'] = converted_preps
         return data
 
     @staticmethod
