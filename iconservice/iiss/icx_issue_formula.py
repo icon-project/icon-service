@@ -24,16 +24,20 @@ class IcxIssueFormula(object):
 
         return cls._instance
 
-    def __init__(self):
+    def __init__(self,
+                 prep_count: int = 23,
+                 sub_prep_count: int = 100,
+                 month: int = 12,
+                 block_generation_amount_per_year: int = 1000):
         self._handler = {'prep': self.handle_icx_issue_formula_for_prep,
                          'eep': self.handle_icx_issue_formula_for_eep,
                          'dapp': self.handle_icx_issue_formula_for_dapp}
 
         # todo: allocate these variable when initiate formula, formula instance is created when iiss engine is opend
-        self._prep_count = 23
-        self._sub_prep_count = 100
-        self._month = 12
-        self._block_generation_amount_per_year = 1000
+        self._prep_count = prep_count
+        self._sub_prep_count = sub_prep_count
+        self._month = month
+        self._block_generation_amount_per_year = block_generation_amount_per_year
 
     def calculate(self, group: str, data: dict) -> int:
         handler = self._handler[group]

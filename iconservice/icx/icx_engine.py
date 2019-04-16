@@ -200,7 +200,8 @@ class IcxEngine(object):
         :param context:
         :return: (int) amount in loop (1 icx == 1e18 loop)
         """
-        return self._total_supply_amount
+        # todo: to be refactored (using memory)
+        return self._storage.get_total_supply(context)
 
     def charge_fee(self,
                    context: 'IconScoreContext',

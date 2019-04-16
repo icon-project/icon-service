@@ -21,9 +21,10 @@ from iconcommons.logger import Logger
 from iconservice.iiss.icx_issue_formula import IcxIssueFormula
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from .iconscore.icon_score_event_log import EventLog
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException
+    AccessDeniedException, IconScoreException, IllegalFormatException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -32,7 +33,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    REVISION_3, ICX_ISSUE_TRANSACTION_INDEX, ISSUE_EVENT_LOG_MAPPER, ISSUE_CALCULATE_ORDER
+    REVISION_3, ICX_ISSUE_TRANSACTION_INDEX, ISSUE_EVENT_LOG_MAPPER, ISSUE_CALCULATE_ORDER, IssueDataKey
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -54,7 +55,6 @@ from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
-    from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
 
@@ -307,12 +307,12 @@ class IconServiceEngine(ContextContainer):
         else:
             for index, tx_request in enumerate(tx_requests):
                 if index is ICX_ISSUE_TRANSACTION_INDEX:
-                    if not tx_request['params']['dataType'] == "issue":
+                    if not tx_request['params'].get('dataType', None) == "issue":
                         # invalid block. raise Exception to propagate a negative vote on the block
-                        raise Exception
+                        raise IconServiceBaseException("invalid block. "
+                                                       "first transaction must be issue transaction")
                     # todo: implement icx issue validation process
                     tx_result = self._invoke_issue_request(context, tx_request, index)
-                    pass
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -452,12 +452,12 @@ class IconServiceEngine(ContextContainer):
     def _issue_transaction_format_check(tx_data, db_data):
         sorted_db_data_keys = sorted(db_data.keys())
         if not sorted(tx_data.keys()) == sorted_db_data_keys:
-            raise Exception("invalid issue transaction format")
+            raise IllegalFormatException("invalid issue transaction format")
 
         for key in sorted_db_data_keys:
             diff_set = tx_data[key].keys() ^ db_data[key].keys()
             if not len(diff_set) == 1 or diff_set.pop() != "value":
-                raise Exception("invalid issue transaction format")
+                raise IllegalFormatException("invalid issue transaction format")
 
     @staticmethod
     def _create_issue_event_log(indexed: list, data: list) -> dict:
@@ -486,23 +486,23 @@ class IconServiceEngine(ContextContainer):
         context.traces: List['Trace'] = []
         context.event_log_stack.clear()
 
-        # iiss engine으로부터 issue 값을 계산하는데 필요한 데이터 받아옴
+        # todo: get issue related data from iiss engine
         issue_data_in_db: dict = \
             {
                 "prep": {
                     "incentive": 1,
                     "rewardRate": 1,
-                    "totalDelegation": 10,
+                    "totalDelegation": 1,
                 },
                 "eep": {
                     "incentive": 2,
                     "rewardRate": 2,
-                    "totalDelegation": 100,
+                    "totalDelegation": 2,
                 },
                 "dapp": {
                     "incentive": 3,
                     "rewardRate": 3,
-                    "totalDelegation": 1000,
+                    "totalDelegation": 3,
                 }
             }
         # format check
@@ -512,6 +512,7 @@ class IconServiceEngine(ContextContainer):
         total_issue_amount = 0
 
         tx_result = TransactionResult(context.tx, context.block)
+        # todo: treasury address should be assigned when icon service open.
         tx_result.to = TREASURY_ADDRESS
 
         for group_key in ISSUE_CALCULATE_ORDER:
@@ -534,17 +535,18 @@ class IconServiceEngine(ContextContainer):
 
             indexed = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
             data = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
-            event_log: dict = self._create_issue_event_log(indexed=indexed, data=data)
+            event_log = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
             context.event_logs.append(event_log)
             total_issue_amount += calculated_issue_amount
         else:
-            # case of non break
+            # case of break being not called
+            # todo : issue amount = total_issue_amount - prev total transaction fee
             self._icx_engine.issue(context, TREASURY_ADDRESS, total_issue_amount)
-            total_issue_indexed = ISSUE_EVENT_LOG_MAPPER[ISSUE_EVENT_LOG_MAPPER.TOTAL]["indexed"]
+            total_issue_indexed = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
             total_issue_data = [total_issue_amount]
-            total_issue_event_log: dict = self._create_issue_event_log(indexed=total_issue_indexed, data=total_issue_data)
+            total_issue_event_log = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
             context.event_logs.append(total_issue_event_log)
-        # todo : issue amount = total_issue_amount - prev total transaction fee
+            tx_result.status = TransactionResult.SUCCESS
 
         tx_result.event_logs = context.event_logs
         tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
