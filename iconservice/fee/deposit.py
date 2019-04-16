@@ -27,6 +27,10 @@ class Deposit(object):
     """
     _VERSION = 0
 
+    # Percentage of the minimum remaining deposit amount to pay fee.
+    # The minimum remaining amount of a single deposit is 10 percent of amount of the deposit
+    _MIN_REMAINING_PROPORTION = 10
+
     def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
                  deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = -1,
                  virtual_step_issued: int = 0, virtual_step_used: int = 0,
@@ -153,3 +157,10 @@ class Deposit(object):
         the amount of available deposit for fees
         """
         return self.deposit_amount - self.deposit_used
+
+    @property
+    def min_remaining_deposit(self):
+        """
+        the minimum remaining deposit amount
+        """
+        return self.deposit_amount * self._MIN_REMAINING_PROPORTION // 100
