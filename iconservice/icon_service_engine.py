@@ -267,13 +267,17 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
+    # todo: remove None of rev_block_contributors default
     def invoke(self,
                block: 'Block',
-               tx_requests: list) -> tuple:
+               tx_requests: list,
+               prev_block_contributors: dict = None) -> tuple:
+
         """Process transactions in a block sent by loopchain
 
         :param block:
         :param tx_requests: transactions in a block
+        :param prev_block_contributors: previous block contributors
         :return: (TransactionResult[], bytes)
         """
         # If the block has already been processed,
@@ -306,12 +310,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index is ICX_ISSUE_TRANSACTION_INDEX:
-                    if not tx_request['params'].get('dataType', None) == "issue":
-                        # invalid block. raise Exception to propagate a negative vote on the block
-                        raise IconServiceBaseException("invalid block. "
-                                                       "first transaction must be issue transaction")
-                    # todo: implement icx issue validation process
+                if self._check_is_issue_transaction(index, tx_request['params'].get('dataType', None)):
                     tx_result = self._invoke_issue_request(context, tx_request, index)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
@@ -327,10 +326,26 @@ class IconServiceEngine(ContextContainer):
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
-            context.block_batch, block_result, context.new_icon_score_mapper, precommit_flag)
+            context.block_batch,
+            block_result,
+            context.new_icon_score_mapper,
+            precommit_flag,
+            prev_block_contributors
+        )
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
+
+    @staticmethod
+    def _check_is_issue_transaction(index: int, data_type: Optional[str]) -> bool:
+        if index is ICX_ISSUE_TRANSACTION_INDEX:
+            if not data_type == "issue":
+                # invalid block. raise Exception to propagate a negative vote on the block
+                raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
+            else:
+                return True
+        else:
+            return False
 
     def _update_revision_if_necessary(self, context, tx_result):
         """

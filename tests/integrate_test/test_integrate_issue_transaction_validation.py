@@ -28,25 +28,6 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
 
-    def _make_issue_tx(self,
-                       data: dict):
-        timestamp_us = create_timestamp()
-
-        request_params = {
-            "version": self._version,
-            "timestamp": timestamp_us,
-            "dataType": "issue",
-            "data": data
-        }
-        method = 'icx_sendTransaction'
-        request_params['txHash'] = create_tx_hash()
-        tx = {
-            'method': method,
-            'params': request_params
-        }
-
-        return tx
-
     def _make_dummy_tx(self):
         return self._make_icx_send_tx(self._genesis, create_address(), 1)
 
@@ -87,7 +68,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         invalid_tx_list = [
             self._make_dummy_tx()
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list, None, True)
 
         # failure case: when first transaction is not a issue transaction
         # but 2nd is a issue transaction, should raise error
@@ -95,14 +76,14 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_issue_tx(self.issue_data_in_tx)
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list, None, True)
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
             self._make_issue_tx(self.issue_data_in_tx),
             self._make_issue_tx(self.issue_data_in_tx)
         ]
-        self.assertRaises(KeyError, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(KeyError, self._make_and_req_block, invalid_tx_list, None, True)
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [
@@ -110,7 +91,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list, None, True)
 
     def test_validate_issue_transaction_format(self):
         # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with
@@ -126,7 +107,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
+            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
             copied_issue_data[group_key] = temp
 
         # more than
@@ -137,7 +118,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
+        self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
 
         # failure case: when group's inner data key (i.e. incentiveRep, rewardRep, etc) is different
         # with stateDB (except value), should raise error
@@ -151,7 +132,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
+            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
             del data['dummy_key']
 
         # less than
@@ -165,7 +146,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                     self._make_dummy_tx(),
                     self._make_dummy_tx()
                 ]
-                self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
+                self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
                 data[key] = temp
 
     def test_validate_issue_transaction_value(self):
@@ -188,7 +169,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                     self._make_dummy_tx(),
                     self._make_dummy_tx()
                 ]
-                _, tx_results = self._make_and_req_block(tx_list)
+                _, tx_results = self._make_and_req_block(tx_list, None, True)
                 self.assertEqual(expected_tx_status, tx_results[0].status)
                 self.assertEqual(expected_failure_msg, tx_results[0].failure.message)
                 self.assertEqual(expected_event_logs, tx_results[0].event_logs)
@@ -205,7 +186,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        prev_block, tx_results = self._make_and_req_block(tx_list, None, True)
         self._write_precommit_state(prev_block)
         expected_tx_status = 1
         expected_failure = None

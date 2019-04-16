@@ -137,6 +137,10 @@ class ConstantKeys(object):
     BLOCK = "block"
     TRANSACTIONS = "transactions"
 
+    PREV_BLOCK_CONTRIBUTORS = "prevBlockContributors"
+    GENERATOR = "generator"
+    VALIDATORS = "validators"
+
     FILTER = "filter"
 
     ICX_CALL = "icx_call"
@@ -241,7 +245,11 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.BLOCK: type_convert_templates[ParamType.BLOCK],
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
-    ]
+    ],
+    ConstantKeys.PREV_BLOCK_CONTRIBUTORS: {
+        ConstantKeys.GENERATOR: ValueType.ADDRESS,
+        ConstantKeys.VALIDATORS: [ValueType.ADDRESS]
+    }
 }
 
 type_convert_templates[ParamType.ICX_CALL] = {
