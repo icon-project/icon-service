@@ -20,7 +20,8 @@ from ..base.address import Address
 from ..icx.icx_storage import Intent
 from ..iconscore.icon_score_result import TransactionResult
 
-from .prep_candidate_info_for_sort import PRepCandiateInfoMapper, PRepCandidateSortedInfos, PRepCandidateInfoForSort
+from .prep_candidate_info_for_sort import PRepCandidateInfoForSort
+from .prep_candidate_container import PRepCandiateInfoMapper, PRepCandidateSortedInfos
 from .prep_candidate import PRepCandidate
 from .prep_candidate_storage import PRepCandidateStorage
 from .prep_variable.prep_variable import PRepVariable
@@ -84,7 +85,8 @@ class PRepCandidateEngine(object):
             address: 'Address' = Address.from_bytes(key)
             account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATION)
             self._add_prep_candidate_objects(address, value, account.delegated_amount)
-        self._sorted_prep_candidates()
+        sorted_objs: list = self._candidate_info_mapper.to_genesis_sorted_list()
+        self._candidate_sorted_infos.genesis_update(sorted_objs)
 
     def _add_prep_candidate_objects(self, address: 'Address', value: bytes, total_delegated: int):
         candidate: 'PRepCandidate' = PRepCandidate.from_bytes(value, address)
@@ -127,27 +129,22 @@ class PRepCandidateEngine(object):
             put_obj = batch.get(BatchSlotType.PUT)
             if put_obj:
                 if isinstance(put_obj, RegPRep):
-                    self._candidate_info_mapper[address] = \
-                        PRepCandidateInfoForSort.create_object(address,
-                                                               put_obj.name,
-                                                               put_obj.block_height,
-                                                               put_obj.tx_index)
+                    info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort.create_object(address,
+                                                                                              put_obj.name,
+                                                                                              put_obj.block_height,
+                                                                                              put_obj.tx_index)
+                    self._candidate_info_mapper[address] = info
+                    self._candidate_sorted_infos.add_info(info)
                 elif isinstance(put_obj, UnregPRep):
                     del self._candidate_info_mapper[address]
+                    self._candidate_sorted_infos.del_info(address)
 
             update_obj = batch.get(BatchSlotType.UPDATE)
             if update_obj:
                 if isinstance(update_obj, UpdatePRep):
                     obj: 'PRepCandidateInfoForSort' = self._candidate_info_mapper[address]
                     obj.update(update_obj.total_delegated)
-        self._sorted_prep_candidates()
-
-    def _sorted_prep_candidates(self):
-        # TODO 3. sort
-        # TODO 4. set list to querylist
-        # TODO Option optimization sort
-        sorted_objs: list = self._candidate_info_mapper.to_sorted_list()
-        self._candidate_sorted_infos.update(sorted_objs)
+                    self._candidate_sorted_infos.update_info(address, update_obj.total_delegated)
 
     def rollback(self):
         pass
