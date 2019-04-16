@@ -78,6 +78,7 @@ class PRepCandidateLinkedList:
                 it: 'Node' = it.prev
 
         self._insert_next_src_node(node, update_node)
+        a = 10
 
     def _append(self, new_node: 'Node'):
         if self._tail is None:
@@ -92,27 +93,34 @@ class PRepCandidateLinkedList:
 
     def _insert_next_src_node(self, src_node: 'Node', new_node: 'Node'):
         if src_node is None:
-            prev_head = self._head
-            self._head = new_node
-            prev_head.prev = new_node
-            new_node.next = prev_head
-            self._head = new_node
+            # side
+            if self._head is None:
+                # first
+                self._head = new_node
+                self._tail = new_node
+            else: #
+                prev_head = self._head
+                prev_head.prev = new_node
+                self._head = new_node
+                new_node.next = prev_head
         elif src_node.next is None:
             self._tail = new_node
-            src_node.next = new_node
             new_node.prev = src_node
+            src_node.next = new_node
         else:
-            new_node.next = src_node.next
+            next_node = src_node.next
+            new_node.next = next_node
+            next_node.prev = new_node
+
             new_node.prev = src_node
             src_node.next = new_node
-
         self._size += 1
 
     def _remove_node(self, node: 'Node'):
 
         prev_node: 'Node' = node.prev
-        node.prev = None
         next_node: 'Node' = node.next
+        node.prev = None
         node.next = None
 
         if prev_node is None:
