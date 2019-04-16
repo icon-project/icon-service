@@ -149,6 +149,20 @@ class TestIntegrateIISS(TestIntegrateBase):
 
             self._delegate(self._addr_array[i], delegations)
 
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {
+                }
+            }
+        }
+        response = self._query(query_request)
+        print(response)
+
 
 if __name__ == '__main__':
     unittest.main()
