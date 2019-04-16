@@ -20,13 +20,12 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
-from iconservice.fee.deposit import Deposit
 from iconservice.fee.fee_engine import DepositInfo
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
-from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, create_query_request, \
-    QueryData, create_transaction_req
+from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
+    create_transaction_req
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -62,29 +61,25 @@ class TestFeeSharing(unittest.TestCase):
     def test_add_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
-        term, amount = hex(50), hex(5000)
+        term, amount = hex(50), 5000
 
         mock_score_info = Mock(spec=DepositInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={})
         self._inner_task._icon_service_engine._fee_engine.can_charge_fee_from_score = Mock()
 
-        self._inner_task._icon_service_engine._fee_engine.deposit_fee = Mock(
+        self._inner_task._icon_service_engine._fee_engine.add_deposit = Mock(
             return_value=[tx_hash, self.score, self.from_, amount, term])
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
             Mock(return_value={self.from_: 9000})
 
         data = {
-            'method': 'addDeposit',
-            'params': {
-                'score': str(self.score),
-                'term': term,
-                'amount': amount
-            }
+            'action': 'add',
+            'term': term,
         }
 
         expected_event_log = [{
-            "scoreAddress": str(self.to),
+            "scoreAddress": str(self.score),
             "indexed": [
                 "DepositAdded(bytes,Address,Address,int,int)",
                 f"0x{tx_hash_hex}",
@@ -92,13 +87,13 @@ class TestFeeSharing(unittest.TestCase):
                 str(self.from_)
             ],
             "data": [
-                amount,
+                hex(amount),
                 term
             ]
         }]
 
         request = create_request([
-            ReqData(tx_hash_hex, self.from_, self.to, 'call', data),
+            ReqData(tx_hash_hex, self.from_, self.score, amount, 'deposit', data),
         ])
 
         result = self._inner_task_invoke(request)
@@ -115,20 +110,18 @@ class TestFeeSharing(unittest.TestCase):
         deposit_id = self.test_add_deposit()
         amount, penalty = 4700, 300
 
-        self._inner_task._icon_service_engine._fee_engine.withdraw_fee = Mock(
+        self._inner_task._icon_service_engine._fee_engine.withdraw_deposit = Mock(
             return_value=(self.score, amount, penalty))
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
             Mock(return_value={self.from_: 9000})
 
         data = {
-            'method': 'withdrawDeposit',
-            'params': {
-                'depositId': f"0x{bytes.hex(deposit_id)}"
-            }
+            'action': 'withdraw',
+            'id': f"0x{bytes.hex(deposit_id)}"
         }
 
         expected_event_log = [{
-            "scoreAddress": str(self.to),
+            "scoreAddress": str(self.score),
             "indexed": [
                 "DepositWithdrawn(bytes,Address,Address,int,int)",
                 f"0x{bytes.hex(deposit_id)}",
@@ -142,7 +135,7 @@ class TestFeeSharing(unittest.TestCase):
         }]
 
         request = create_request([
-            ReqData(tx_hash_hex, self.from_, self.to, 'call', data),
+            ReqData(tx_hash_hex, self.from_, self.score, 0, 'deposit', data),
         ])
 
         result = self._inner_task_invoke(request)
@@ -150,80 +143,6 @@ class TestFeeSharing(unittest.TestCase):
 
         self.assertEqual('0x1', tx_result['status'])
         self.assertEqual(expected_event_log, tx_result['eventLogs'])
-
-    def test_get_deposit(self):
-        deposit_id = self.test_add_deposit()
-        current_block_height = 100
-        mock_deposit_dict = Mock(return_value={'id': deposit_id, 'score': self.score, 'from_': self.from_,
-                                               'amount': 5000, 'createdAt': current_block_height,
-                                               'expiresIn': current_block_height+50,
-                                               'virtualStepUsed': 3000, 'virtualStepIssued': 5000})
-        mock_deposit = Mock(spec=Deposit)
-        mock_deposit.to_dict = mock_deposit_dict
-        self._inner_task._icon_service_engine._fee_engine.get_deposit_info_by_id = Mock(return_value=mock_deposit)
-
-        data = {
-            'method': 'getDeposit',
-            'params': {
-                'depositId': f"0x{bytes.hex(deposit_id)}"
-            }
-        }
-
-        expected_result = {
-            "id": f"0x{bytes.hex(deposit_id)}",
-            "score": str(self.score),
-            "from_": str(self.from_),
-            "amount": hex(5000),
-            "createdAt": f"{hex(current_block_height)}",
-            "expiresIn": f"{hex(current_block_height+50)}",
-            "virtualStepUsed": hex(3000),
-            "virtualStepIssued": hex(5000)
-        }
-        request = create_query_request(QueryData(self.from_, self.to, "call", data))
-
-        result = self._inner_task_query(request)
-
-        self.assertEqual(expected_result, result)
-
-    def test_get_score_info(self):
-        mock_block = Mock(spec=Block)
-        mock_block.configure_mock(height=3)
-        self._inner_task._icon_service_engine._icx_storage._last_block = mock_block
-        deposit_id = self.test_add_deposit()
-        current_block_height = 100
-        expected_result = {
-            "address": str(self.score),
-            "totalVirtualStepIssued": hex(5000),
-            "totalVirtualStepUsed": hex(0),
-            "deposits": [
-                {
-                    "id": deposit_id,
-                    "score": str(self.score),
-                    "from_": str(self.from_),
-                    "amount": hex(5000),
-                    "createdAt": hex(current_block_height),
-                    "expiresIn": hex(current_block_height + 50),
-                    "virtualStepIssued": hex(5000),
-                    "virtualStepUsed": hex(3000)
-                }
-            ]
-        }
-
-        mock_score_info_dict = Mock(return_value=expected_result)
-        mock_score_info = Mock(spec=Deposit)
-        mock_score_info.to_dict = mock_score_info_dict
-        self._inner_task._icon_service_engine._fee_engine.get_score_deposit_info = Mock(return_value=mock_score_info)
-
-        data = {
-            'method': "getDepositList",
-            "params": {
-                "score": str(self.score)
-            }
-        }
-
-        request = create_query_request(QueryData(self.from_, self.to, "call", data))
-        result = self._inner_task_query(request)
-        self.assertEqual(expected_result, result)
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_transaction_result_on_sharing_fee_user_ratio50(self, score_invoke):
@@ -242,7 +161,7 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), 0, "call", data)])
         result = self._inner_task_invoke(request)
 
         expected_event_log = [{
@@ -258,8 +177,8 @@ class TestFeeSharing(unittest.TestCase):
         }]
 
         expected_detail_step_used = {
-                self.from_: hex(9000),
-                self.score: hex(9000)
+                str(self.from_): hex(9000),
+                str(self.score): hex(9000)
         }
 
         tx_result = result['txResults'][tx_hash]
@@ -282,7 +201,7 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), 0, "call", data)])
         result = self._inner_task_invoke(request)
 
         expected_event_log = [{
@@ -318,7 +237,7 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), 0, "call", data)])
         result = self._inner_task_invoke(request)
 
         expected_event_log = [{
@@ -356,5 +275,5 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_transaction_req(ReqData(tx_hash, self.from_, str(self.score), "call", data))
+        request = create_transaction_req(ReqData(tx_hash, self.from_, str(self.score), 0, "call", data))
         result = self._validate_transaction(request)

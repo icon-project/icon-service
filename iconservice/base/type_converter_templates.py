@@ -25,6 +25,7 @@ class ParamType(IntEnum):
     CALL_DATA = 102
     DEPLOY_DATA = 103
     TRANSACTION_PARAMS_DATA = 104
+    DEPOSIT_DATA = 105
 
     INVOKE = 200
 
@@ -34,7 +35,6 @@ class ParamType(IntEnum):
     ICX_GET_TOTAL_SUPPLY = 303
     ICX_GET_SCORE_API = 304
     ISE_GET_STATUS = 305
-    FEE2_PARAMS_DATA = 306
 
     WRITE_PRECOMMIT = 400
     REMOVE_PRECOMMIT = 500
@@ -126,10 +126,8 @@ class ConstantKeys:
     ICX_GET_SCORE_API = "icx_getScoreApi"
     ISE_GET_STATUS = "ise_getStatus"
 
-    FEE2_SCORE_ADDRESS = "score"
-    FEE2_TERM = "term"
-    FEE2_ID = "depositId"
-    FEE2_AMOUNT = "amount"
+    DEPOSIT_TERM = "term"
+    DEPOSIT_ID = "id"
 
     # IISS
     DELEGATIONS = "delegations"
@@ -253,14 +251,10 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA]
 }
 
-# FEE v2
-type_convert_templates[ParamType.FEE2_PARAMS_DATA] = {
-    ConstantKeys.PARAMS: {
-        ConstantKeys.FEE2_ID: ValueType.BYTES,
-        ConstantKeys.FEE2_SCORE_ADDRESS: ValueType.ADDRESS,
-        ConstantKeys.FEE2_TERM: ValueType.INT,
-        ConstantKeys.FEE2_AMOUNT: ValueType.INT
-    }
+# DEPOSIT
+type_convert_templates[ParamType.DEPOSIT_DATA] = {
+    ConstantKeys.DEPOSIT_ID: ValueType.BYTES,
+    ConstantKeys.DEPOSIT_TERM: ValueType.INT,
 }
 
 # IISS

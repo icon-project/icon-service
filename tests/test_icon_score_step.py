@@ -72,7 +72,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         }
 
         request1 = create_request([
-            ReqData(tx_hash1, from_, to_, 'deploy', data),
+            ReqData(tx_hash1, from_, to_, 0, 'deploy', data),
         ])
 
         # for StepType.CONTRACT_CREATE
@@ -84,7 +84,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         tx_hash2 = bytes.hex(create_tx_hash())
 
         request2 = create_request([
-            ReqData(tx_hash2, from_, to_, 'deploy', data),
+            ReqData(tx_hash2, from_, to_, 0, 'deploy', data),
         ])
 
         result = self._inner_task_invoke(request2)
@@ -125,7 +125,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         data = '0x01234abcde01234abcde01234abcde01234abcde01234abcde'
 
         request = create_request([
-            ReqData(tx_hash1, from_, to_, 'message', data),
+            ReqData(tx_hash1, from_, to_, 0, 'message', data),
         ])
 
         result = self._inner_task_invoke(request)
@@ -149,7 +149,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.EOA)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, "", ""),
+            ReqData(tx_hash, from_, to_, 0, "", ""),
         ])
 
         result = self._inner_task_invoke(request)
@@ -172,7 +172,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -209,7 +209,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -253,7 +253,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         self._inner_task._icon_service_engine.\
@@ -345,7 +345,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         self._inner_task._icon_service_engine.\
@@ -399,7 +399,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -447,7 +447,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -498,7 +498,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         data_to_hash = b'1234'
@@ -539,7 +539,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         data_to_hash = b'1234'
@@ -578,7 +578,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal

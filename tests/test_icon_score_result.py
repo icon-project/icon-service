@@ -240,8 +240,8 @@ class TestTransactionResult(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT, b'score')
 
         request = create_request([
-            ReqData(bytes.hex(create_tx_hash(b'tx1')), from_, to_, 'call', {}),
-            ReqData(bytes.hex(create_tx_hash(b'tx2')), from_, to_, 'call', {})
+            ReqData(bytes.hex(create_tx_hash(b'tx1')), from_, to_, 0, 'call', {}),
+            ReqData(bytes.hex(create_tx_hash(b'tx2')), from_, to_, 0, 'call', {})
         ])
         response = inner_task._invoke(request)
 

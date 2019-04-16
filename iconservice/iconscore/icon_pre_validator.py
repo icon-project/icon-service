@@ -196,6 +196,8 @@ class IconPreValidator:
             self._validate_call_transaction(params)
         elif data_type == 'deploy':
             self._validate_deploy_transaction(params)
+        elif data_type == 'deposit':
+            self._validate_deposit_transaction(params)
 
     @staticmethod
     def _check_minimum_step(params: dict, minimum_step: int):
@@ -214,7 +216,11 @@ class IconPreValidator:
 
         self._check_balance(context, from_, value, fee)
 
-        if to.is_contract:
+        data_type: str = params.get('dataType')
+        if to.is_contract and data_type in (None, 'call', 'message'):
+            # Check if the SCORE can be called when fee-sharing ON.
+            # If data_type is None or message and the recipient is SCORE,
+            # it works like `call`.(calling fallback)
             self._fee_engine.check_score_available(context, to, context.block.height)
 
     def _validate_call_transaction(self, params: dict):
@@ -257,6 +263,24 @@ class IconPreValidator:
             raise InvalidRequestException('Content not found')
 
         self._validate_new_score_address_on_deploy_transaction(params)
+
+    def _validate_deposit_transaction(self, params: dict):
+        """Validate deposit transaction
+
+        :param params:
+        :return:
+        """
+        to: 'Address' = params['to']
+
+        if self._is_inactive_score(to):
+            raise InvalidRequestException(f'{to} is inactive SCORE')
+
+        data = params.get('data', None)
+        if not isinstance(data, dict):
+            raise InvalidRequestException('Data not found')
+
+        if 'action' not in data:
+            raise InvalidRequestException('Action not found')
 
     def _validate_new_score_address_on_deploy_transaction(self, params):
         """Check if a newly generated score address is available

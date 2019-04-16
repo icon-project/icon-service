@@ -32,6 +32,7 @@ from iconservice.icx import IcxEngine
 from iconservice.icx.icx_account import AccountType, Account
 from iconservice.icx.icx_storage import IcxStorage
 from tests.mock_generator import clear_inner_task
+from iconservice.fee.fee_engine import VirtualStepCalculator
 
 
 def create_context_db():
@@ -70,6 +71,10 @@ def patch_fee_storage(fee_storage: FeeStorage):
         memory_db[key] = value
 
     # noinspection PyUnusedLocal
+    def put_deposit(context, deposit):
+        memory_db[deposit.id] = deposit
+
+    # noinspection PyUnusedLocal
     def get(context, key):
         return memory_db[key] if key in memory_db else None
 
@@ -77,10 +82,10 @@ def patch_fee_storage(fee_storage: FeeStorage):
     def delete(context, key):
         del memory_db[key]
 
-    fee_storage.put_score_deposit_info = put
-    fee_storage.get_score_deposit_info = get
-    fee_storage.delete_score_deposit_info = delete
-    fee_storage.put_deposit = put
+    fee_storage.put_deposit_meta = put
+    fee_storage.get_deposit_meta = get
+    fee_storage.delete_deposit_meta = delete
+    fee_storage.put_deposit = put_deposit
     fee_storage.get_deposit = get
     fee_storage.delete_deposit = delete
 
@@ -123,54 +128,97 @@ class TestFeeEngine(unittest.TestCase):
         ContextContainer._clear_context()
         clear_inner_task()
 
-    def test_deposit_fee(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        block_number = 0
+    def _deposit_bulk(self, count):
+        self.context = IconScoreContext(IconScoreContextType.INVOKE)
+        self.block_height = 0
+        input_params = []
 
-        size = randrange(10, 100)
-        input_param = []
-        for i in range(size):
+        for i in range(count):
             tx_hash = os.urandom(32)
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            block_number = randrange(100, 10000)
+            block_height = randrange(100, 10000)
             term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
             before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-            self._engine.deposit_fee(
-                context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+            self._engine.add_deposit(
+                self.context, tx_hash, self._sender, self._score_address, amount, block_height, term)
             after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
             self.assertEqual(amount, before_sender_balance - after_sender_balance)
-            input_param.append((tx_hash, amount, block_number, term))
+            input_params.append((tx_hash, amount, block_height, term))
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, block_number)
+        return input_params
 
-        self.assertEqual(size, len(score_info.deposits))
+    def test_deposit_fee(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        block_height = 0
+
+        size = randrange(10, 100)
+        input_param = self._deposit_bulk(size)
+
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
+
+        self.assertEqual(size, len(deposit_info.deposits))
 
         for i in range(size):
-            tx_hash, amount, block_number, term = input_param[i]
-            deposit = score_info.deposits[i]
+            tx_hash, amount, block_height, term = input_param[i]
+            deposit = deposit_info.deposits[i]
             self.assertEqual(tx_hash, deposit.id)
             self.assertEqual(self._sender, deposit.sender)
             self.assertEqual(self._score_address, deposit.score_address)
             self.assertEqual(amount, deposit.deposit_amount)
-            self.assertEqual(block_number, deposit.created)
-            self.assertEqual(block_number + term, deposit.expires)
+            self.assertEqual(block_height, deposit.created)
+            self.assertEqual(block_height + term, deposit.expires)
+
+    def test_deposit_append_and_delete(self):
+        size = randrange(10, 100)
+        deposit_list = self._deposit_bulk(size)
+
+        for i in range(size):
+            index = randrange(0, size)
+            size -= 1
+            withdrawal_deposit_id = deposit_list.pop(index)[0]
+            self._engine.withdraw_deposit(self.context, self._sender, withdrawal_deposit_id, 1, 1)
+
+            deposit_info = self._engine.get_deposit_info(self.context, self._score_address, 1)
+            for j in range(size):
+                deposit = deposit_info.deposits[j]
+                self.assertEqual(deposit.id, deposit_list[j][0])
+                self.assertEqual(self._sender, deposit.sender)
+                self.assertEqual(self._score_address, deposit.score_address)
+                self.assertEqual(deposit.deposit_amount, deposit_list[j][1])
+                self.assertEqual(deposit.created, deposit_list[j][2])
+                self.assertEqual(deposit.expires, deposit_list[j][2] + deposit_list[j][3])
+
+        input_param = self._deposit_bulk(100)
+        deposit_info = self._engine.get_deposit_info(self.context, self._score_address, self.block_height)
+
+        self.assertEqual(100, len(deposit_info.deposits))
+
+        for i in range(size):
+            tx_hash, amount, block_height, term = input_param[i]
+            deposit = deposit_info.deposits[i]
+            self.assertEqual(tx_hash, deposit.id)
+            self.assertEqual(self._sender, deposit.sender)
+            self.assertEqual(self._score_address, deposit.score_address)
+            self.assertEqual(amount, deposit.deposit_amount)
+            self.assertEqual(block_height, deposit.created)
+            self.assertEqual(block_height + term, deposit.expires)
 
     def test_deposit_fee_invalid_param(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
         # invalid amount (underflow)
         # noinspection PyTypeChecker
         with self.assertRaises(InvalidRequestException) as e:
             inv_amount = randrange(0, FeeEngine._MIN_DEPOSIT_AMOUNT - 1)
-            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
-                                     inv_amount, block_number, term)
+            self._engine.add_deposit(context, tx_hash, self._sender, self._score_address,
+                                     inv_amount, block_height, term)
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit amount', e.exception.message)
 
@@ -179,8 +227,8 @@ class TestFeeEngine(unittest.TestCase):
         with self.assertRaises(InvalidRequestException) as e:
             inv_amount = \
                 randrange(FeeEngine._MAX_DEPOSIT_AMOUNT + 1, FeeEngine._MAX_DEPOSIT_AMOUNT * 10)
-            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
-                                     inv_amount, block_number, term)
+            self._engine.add_deposit(context, tx_hash, self._sender, self._score_address,
+                                     inv_amount, block_height, term)
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit amount', e.exception.message)
 
@@ -188,8 +236,8 @@ class TestFeeEngine(unittest.TestCase):
         # noinspection PyTypeChecker
         with self.assertRaises(InvalidRequestException) as e:
             inv_term = randrange(0, FeeEngine._MIN_DEPOSIT_TERM - 1)
-            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
-                                     amount, block_number, inv_term)
+            self._engine.add_deposit(context, tx_hash, self._sender, self._score_address,
+                                     amount, block_height, inv_term)
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit term', e.exception.message)
 
@@ -198,8 +246,8 @@ class TestFeeEngine(unittest.TestCase):
         with self.assertRaises(InvalidRequestException) as e:
             inv_term = \
                 randrange(FeeEngine._MAX_DEPOSIT_TERM + 1, FeeEngine._MAX_DEPOSIT_TERM * 10)
-            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
-                                     amount, block_number, inv_term)
+            self._engine.add_deposit(context, tx_hash, self._sender, self._score_address,
+                                     amount, block_height, inv_term)
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid deposit term', e.exception.message)
 
@@ -207,8 +255,8 @@ class TestFeeEngine(unittest.TestCase):
         # noinspection PyTypeChecker
         with self.assertRaises(InvalidRequestException) as e:
             inv_sender = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-            self._engine.deposit_fee(context, tx_hash, inv_sender, self._score_address,
-                                     amount, block_number, term)
+            self._engine.add_deposit(context, tx_hash, inv_sender, self._score_address,
+                                     amount, block_height, term)
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid SCORE owner', e.exception.message)
 
@@ -220,14 +268,14 @@ class TestFeeEngine(unittest.TestCase):
 
         tx_hash = os.urandom(32)
         amount = 10001 * 10 ** 18
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
         # out of balance
         # noinspection PyTypeChecker
         with self.assertRaises(OutOfBalanceException) as e:
-            self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address,
-                                     amount, block_number, term)
+            self._engine.add_deposit(context, tx_hash, self._sender, self._score_address,
+                                     amount, block_height, term)
         # noinspection PyUnresolvedReferences
         self.assertEqual('Out of balance', e.exception.message)
 
@@ -235,61 +283,61 @@ class TestFeeEngine(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         tx_hash = os.urandom(32)
         amount = 10000 * 10 ** 18
-        block_number = 1000
+        block_height = 1000
 
         self._icx_engine.init_account(
             context, AccountType.GENERAL, 'sender', self._sender, amount)
 
-        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
 
-        self.assertEqual(fee_info.available_head_id_of_virtual_step, None)
-        self.assertEqual(fee_info.available_head_id_of_deposit, None)
+        self.assertEqual(deposit_meta.available_head_id_of_virtual_step, None)
+        self.assertEqual(deposit_meta.available_head_id_of_deposit, None)
 
-        self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number,
+        self._engine.add_deposit(context, tx_hash, self._sender, self._score_address, amount, block_height,
                                  FeeEngine._MIN_DEPOSIT_TERM)
 
-        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(fee_info.available_head_id_of_virtual_step, tx_hash)
-        self.assertEqual(fee_info.available_head_id_of_deposit, tx_hash)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_virtual_step, tx_hash)
+        self.assertEqual(deposit_meta.available_head_id_of_deposit, tx_hash)
 
     def test_deposit_fee_expires_updated(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
         tx_hash = os.urandom(32)
         amount = 10000 * 10 ** 18
-        block_number = 1000
+        block_height = 1000
         term = FeeEngine._MIN_DEPOSIT_TERM
 
         self._icx_engine.init_account(
             context, AccountType.GENERAL, 'sender', self._sender, amount)
 
-        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
 
-        self.assertEqual(fee_info.expires_of_virtual_step, -1)
-        self.assertEqual(fee_info.expires_of_deposit, -1)
+        self.assertEqual(deposit_meta.expires_of_virtual_step, -1)
+        self.assertEqual(deposit_meta.expires_of_deposit, -1)
 
-        self._engine.deposit_fee(context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+        self._engine.add_deposit(context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
-        fee_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(fee_info.expires_of_virtual_step, block_number + term)
-        self.assertEqual(fee_info.expires_of_deposit, block_number + term)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.expires_of_virtual_step, block_height + term)
+        self.assertEqual(deposit_meta.expires_of_deposit, block_height + term)
 
     def test_withdraw_fee_without_penalty(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
-        self._engine.deposit_fee(
-            context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+        self._engine.add_deposit(
+            context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._engine.withdraw_fee(context, self._sender, tx_hash, block_number + term + 1)
+        self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term + 1, 1)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, block_number)
-        self.assertEqual(0, len(score_info.deposits))
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
+        self.assertIsNone(deposit_info)
         self.assertEqual(amount, after_sender_balance - before_sender_balance)
 
     def test_withdraw_fee_with_penalty(self):
@@ -297,50 +345,86 @@ class TestFeeEngine(unittest.TestCase):
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
-        self._engine.deposit_fee(
-            context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+        self._engine.add_deposit(
+            context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._engine.withdraw_fee(context, self._sender, tx_hash, block_number + term - 1)
+        self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term - 1, 1)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, block_number)
-        self.assertEqual(0, len(score_info.deposits))
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
+        self.assertIsNone(deposit_info)
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
 
-    def test_withdraw_fee_and_updates_previous_and_next_link(self):
+    def test_withdraw_fee_and_updates_previous_and_next_link_ascending(self):
         """
         Given: There are four deposits.
-        When : Withdraws all of them sequentially.
+        When : Withdraws all of them sequentially(ascending).
         Then : Checks if the previous and next link update correctly.
         """
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         cnt_deposit = 4
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         arr_tx_hash = []
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
             term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
-            block_number += 1
-            self._engine.deposit_fee(
-                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
+            block_height += 1
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
 
         for i in range(cnt_deposit):
-            target_deposit = self._engine.get_deposit_info_by_id(context, arr_tx_hash[i])
-            self._engine.withdraw_fee(context, self._sender, arr_tx_hash[i], block_number + term // 2)
+            target_deposit = self._engine.get_deposit(context, arr_tx_hash[i])
+            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2, 1)
 
             if cnt_deposit - 1 == i:
                 self.assertIsNone(target_deposit.next_id)
                 break
 
-            next_deposit = self._engine.get_deposit_info_by_id(context, target_deposit.next_id)
+            next_deposit = self._engine.get_deposit(context, target_deposit.next_id)
             self.assertEqual(next_deposit.prev_id, None)
+
+            deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+            self.assertEqual(next_deposit.id, deposit_meta.head_id)
+
+    def test_withdraw_fee_and_updates_previous_and_next_link_descending(self):
+        """
+        Given: There are four deposits.
+        When : Withdraws all of them sequentially(descending).
+        Then : Checks if the previous and next link update correctly.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_height = randrange(100, 10000)
+        arr_tx_hash = []
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+            block_height += 1
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
+
+        for i in range(cnt_deposit - 1, -1, -1):
+            target_deposit = self._engine.get_deposit(context, arr_tx_hash[i])
+            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2, 1)
+
+            if i == 0:
+                self.assertIsNone(target_deposit.prev_id)
+                break
+
+            prev_deposit = self._engine.get_deposit(context, target_deposit.prev_id)
+            self.assertEqual(prev_deposit.next_id, None)
+
+            deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+            self.assertEqual(prev_deposit.id, deposit_meta.tail_id)
 
     def test_withdraw_fee_when_available_head_id_of_virtual_step_is_same_as_deposit_id(self):
         """
@@ -353,29 +437,29 @@ class TestFeeEngine(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         cnt_deposit = 4
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         arr_tx_hash = []
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            block_number += 1
+            block_height += 1
 
             if i != cnt_deposit - 1:
                 term = FeeEngine._MIN_DEPOSIT_TERM
             else:
                 term = FeeEngine._MAX_DEPOSIT_TERM
 
-            self._engine.deposit_fee(
-                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[0])
 
-        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
-                                  block_number + FeeEngine._MAX_DEPOSIT_TERM // 2)
+        self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[0],
+                                      block_height + FeeEngine._MAX_DEPOSIT_TERM // 2, 1)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[len(arr_tx_hash) - 1])
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[len(arr_tx_hash) - 1])
 
     def test_withdraw_fee_when_available_head_id_of_deposit_is_same_as_deposit_id(self):
         """
@@ -388,29 +472,29 @@ class TestFeeEngine(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         cnt_deposit = 4
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         arr_tx_hash = []
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            block_number += 1
+            block_height += 1
 
             if i != cnt_deposit - 2:
                 term = FeeEngine._MIN_DEPOSIT_TERM
             else:
                 term = FeeEngine._MAX_DEPOSIT_TERM
 
-            self._engine.deposit_fee(
-                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[0])
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_deposit, arr_tx_hash[0])
 
-        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
-                                  block_number + FeeEngine._MAX_DEPOSIT_TERM // 2)
+        self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[0],
+                                      block_height + FeeEngine._MAX_DEPOSIT_TERM // 2, 1)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[len(arr_tx_hash) - 2])
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_deposit, arr_tx_hash[len(arr_tx_hash) - 2])
 
     def test_withdraw_fee_to_check_setting_on_next_max_expires(self):
         """
@@ -421,36 +505,36 @@ class TestFeeEngine(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         cnt_deposit = 4
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         arr_tx_hash = []
         last_expires = 0
         org_last_expires = 0
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            block_number += 1
+            block_height += 1
 
             if i != 0:
                 term = FeeEngine._MIN_DEPOSIT_TERM
-                if block_number + term > last_expires:
-                    last_expires = block_number + term
+                if block_height + term > last_expires:
+                    last_expires = block_height + term
             else:
                 term = FeeEngine._MAX_DEPOSIT_TERM
-                org_last_expires = block_number + term
-            self._engine.deposit_fee(
-                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
+                org_last_expires = block_height + term
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
-        self.assertEqual(score_info.expires_of_virtual_step, org_last_expires)
-        self.assertEqual(score_info.expires_of_deposit, org_last_expires)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[0])
+        self.assertEqual(deposit_meta.expires_of_virtual_step, org_last_expires)
+        self.assertEqual(deposit_meta.expires_of_deposit, org_last_expires)
 
-        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[0],
-                                  block_number + FeeEngine._MIN_DEPOSIT_TERM // 2)
+        self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[0],
+                                      block_height + FeeEngine._MIN_DEPOSIT_TERM // 2, 1)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.expires_of_virtual_step, last_expires)
-        self.assertEqual(score_info.expires_of_deposit, last_expires)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
+        self.assertEqual(deposit_meta.expires_of_deposit, last_expires)
 
     def test_withdraw_fee_of_last_deposit_to_check_setting_on_next_max_expires(self):
         """
@@ -461,62 +545,62 @@ class TestFeeEngine(unittest.TestCase):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         cnt_deposit = 4
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         arr_tx_hash = []
         last_expires = 0
         org_last_expires = 0
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            block_number += 1
+            block_height += 1
 
             if i != cnt_deposit-1:
                 term = FeeEngine._MIN_DEPOSIT_TERM
-                if block_number + term > last_expires:
-                    last_expires = block_number + term
+                if block_height + term > last_expires:
+                    last_expires = block_height + term
             else:
                 term = FeeEngine._MAX_DEPOSIT_TERM
-                org_last_expires = block_number + term
-            self._engine.deposit_fee(
-                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_number, term)
+                org_last_expires = block_height + term
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.available_head_id_of_virtual_step, arr_tx_hash[0])
-        self.assertEqual(score_info.available_head_id_of_deposit, arr_tx_hash[0])
-        self.assertEqual(score_info.expires_of_virtual_step, org_last_expires)
-        self.assertEqual(score_info.expires_of_deposit, org_last_expires)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[0])
+        self.assertEqual(deposit_meta.available_head_id_of_deposit, arr_tx_hash[0])
+        self.assertEqual(deposit_meta.expires_of_virtual_step, org_last_expires)
+        self.assertEqual(deposit_meta.expires_of_deposit, org_last_expires)
 
         # Withdraws the last one
-        self._engine.withdraw_fee(context, self._sender, arr_tx_hash[cnt_deposit-1],
-                                  block_number + FeeEngine._MIN_DEPOSIT_TERM // 2)
+        self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[cnt_deposit - 1],
+                                      block_height + FeeEngine._MIN_DEPOSIT_TERM // 2, 1)
 
-        score_info = self._engine._get_or_create_score_deposit_info(context, self._score_address)
-        self.assertEqual(score_info.expires_of_virtual_step, last_expires)
-        self.assertEqual(score_info.expires_of_deposit, last_expires)
+        deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+        self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
+        self.assertEqual(deposit_meta.expires_of_deposit, last_expires)
 
     def test_get_deposit_info(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._engine.deposit_fee(
-            context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+        self._engine.add_deposit(
+            context, tx_hash, self._sender, self._score_address, amount, block_height, term)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         self.assertEqual(amount, before_sender_balance - after_sender_balance)
 
-        deposit = self._engine.get_deposit_info_by_id(context, tx_hash)
+        deposit = self._engine.get_deposit(context, tx_hash)
 
         self.assertEqual(tx_hash, deposit.id)
         self.assertEqual(self._score_address, deposit.score_address)
         self.assertEqual(self._sender, deposit.sender)
         self.assertEqual(amount, deposit.deposit_amount)
-        self.assertEqual(block_number, deposit.created)
-        self.assertEqual(block_number + term, deposit.expires)
+        self.assertEqual(block_height, deposit.created)
+        self.assertEqual(block_height + term, deposit.expires)
 
     def test_charge_transaction_fee_without_sharing(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -526,16 +610,16 @@ class TestFeeEngine(unittest.TestCase):
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
 
-        self._engine.deposit_fee(
-            context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+        self._engine.add_deposit(
+            context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
         before_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
         self._engine.charge_transaction_fee(
-            context, self._sender, self._score_address, step_price, used_step, block_number)
+            context, self._sender, self._score_address, step_price, used_step, block_height)
 
         after_sender_balance = self._icx_engine.get_balance(context, self._sender)
 
@@ -549,10 +633,10 @@ class TestFeeEngine(unittest.TestCase):
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-        block_number = randrange(100, 10000)
+        block_height = randrange(100, 10000)
         term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
-        self._engine.deposit_fee(
-            context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+        self._engine.add_deposit(
+            context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
         ratio = 50
         context.fee_sharing_proportion = ratio
@@ -560,7 +644,7 @@ class TestFeeEngine(unittest.TestCase):
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         self._engine.charge_transaction_fee(
-            context, self._sender, self._score_address, step_price, used_step, block_number)
+            context, self._sender, self._score_address, step_price, used_step, block_height)
 
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
@@ -593,19 +677,19 @@ class TestFeeEngine(unittest.TestCase):
         current_block = 120
         used_step = 80
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        before_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        before_virtual_step = deposit_info.available_virtual_step
 
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(deposits[1][0], score_fee_info.available_head_id_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(deposits[1][0], deposit_meta.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step_single_deposit_next_head(self):
         """
@@ -632,19 +716,19 @@ class TestFeeEngine(unittest.TestCase):
         current_block = 120
         used_step = 100
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        before_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        before_virtual_step = deposit_info.available_virtual_step
 
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(deposits[2][0], score_fee_info.available_head_id_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(deposits[2][0], deposit_meta.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step__single_deposit_next_head_next_expire(self):
         """
@@ -671,20 +755,20 @@ class TestFeeEngine(unittest.TestCase):
         current_block = 190
         used_step = 100
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        before_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        before_virtual_step = deposit_info.available_virtual_step
 
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(deposits[4][0], score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(deposits[4][2], score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(deposits[4][0], deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(deposits[4][2], deposit_meta.expires_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step__single_deposit_next_head_next_expire_none(self):
         """
@@ -711,20 +795,20 @@ class TestFeeEngine(unittest.TestCase):
         current_block = 210
         used_step = 100
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        before_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        before_virtual_step = deposit_info.available_virtual_step
 
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
     def test_charge_fee_from_score_by_virtual_step_multiple_deposit(self):
         """
@@ -751,19 +835,19 @@ class TestFeeEngine(unittest.TestCase):
         current_block = 120
         used_step = 250
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        before_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        before_virtual_step = deposit_info.available_virtual_step
 
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(used_step, before_virtual_step - after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(deposits[3][0], score_fee_info.available_head_id_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(deposits[3][0], deposit_meta.available_head_id_of_virtual_step)
 
     def test_charge_fee_from_score_by_combine_by_single_deposit(self):
         """
@@ -795,16 +879,16 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
-        self.assertEqual(deposits[1][0], score_fee_info.available_head_id_of_deposit)
+        self.assertEqual(deposits[1][0], deposit_meta.available_head_id_of_deposit)
 
     def test_charge_fee_from_score_by_combine_next_head(self):
         """
@@ -836,16 +920,16 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
-        self.assertEqual(deposits[2][0], score_fee_info.available_head_id_of_deposit)
+        self.assertEqual(deposits[2][0], deposit_meta.available_head_id_of_deposit)
 
     def test_charge_fee_from_score_by_combine_next_head_next_expire(self):
         """
@@ -877,17 +961,17 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
-        self.assertEqual(deposits[4][0], score_fee_info.available_head_id_of_deposit)
-        self.assertEqual(deposits[4][2], score_fee_info.expires_of_deposit)
+        self.assertEqual(deposits[4][0], deposit_meta.available_head_id_of_deposit)
+        self.assertEqual(deposits[4][2], deposit_meta.expires_of_deposit)
 
     def test_charge_fee_from_score_by_combine_next_head_next_expire_none(self):
         """
@@ -919,17 +1003,17 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
-        self.assertEqual(None, score_fee_info.available_head_id_of_deposit)
-        self.assertEqual(-1, score_fee_info.expires_of_deposit)
+        self.assertEqual(None, deposit_meta.available_head_id_of_deposit)
+        self.assertEqual(-1, deposit_meta.expires_of_deposit)
 
     def test_charge_fee_from_score_by_combine_multiple_deposit(self):
         """
@@ -960,18 +1044,18 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
         # Asserts indices are updated
-        self.assertEqual(deposits[3][0], score_fee_info.available_head_id_of_deposit)
-        self.assertEqual(deposits[3][2], score_fee_info.expires_of_deposit)
+        self.assertEqual(deposits[3][0], deposit_meta.available_head_id_of_deposit)
+        self.assertEqual(deposits[3][2], deposit_meta.expires_of_deposit)
 
     def test_charge_fee_from_score_by_combine_additional_pay(self):
         """
@@ -1003,19 +1087,19 @@ class TestFeeEngine(unittest.TestCase):
         self._engine.charge_transaction_fee(
             context, self._sender, self._score_address, step_price, used_step, current_block)
 
-        score_info = self._engine.get_deposit_info(context, self._score_address, current_block)
-        after_virtual_step = score_info.available_virtual_step
+        deposit_info = self._engine.get_deposit_info(context, self._score_address, current_block)
+        after_virtual_step = deposit_info.available_virtual_step
 
         self.assertEqual(0, after_virtual_step)
 
-        score_fee_info = self._engine._fee_storage.get_score_deposit_info(context, self._score_address)
+        deposit_meta = self._engine._fee_storage.get_deposit_meta(context, self._score_address)
         # Asserts virtual step disabled
-        self.assertEqual(None, score_fee_info.available_head_id_of_virtual_step)
-        self.assertEqual(-1, score_fee_info.expires_of_virtual_step)
+        self.assertEqual(None, deposit_meta.available_head_id_of_virtual_step)
+        self.assertEqual(-1, deposit_meta.expires_of_virtual_step)
 
         # Asserts deposit disabled
-        self.assertEqual(None, score_fee_info.available_head_id_of_deposit)
-        self.assertEqual(-1, score_fee_info.expires_of_deposit)
+        self.assertEqual(None, deposit_meta.available_head_id_of_deposit)
+        self.assertEqual(-1, deposit_meta.expires_of_deposit)
 
     def _set_up_deposits(self, context, deposits):
         context.fee_sharing_proportion = 100
@@ -1026,10 +1110,11 @@ class TestFeeEngine(unittest.TestCase):
         for deposit in deposits:
             tx_hash = deposit[0]
             amount = deposit[3]
-            block_number = deposit[1]
-            term = deposit[2] - block_number
+            block_height = deposit[1]
+            term = deposit[2] - block_height
 
-            self._engine._calculate_virtual_step_issuance = Mock(return_value=deposit[4])
+            # self._engine._calculate_virtual_step_issuance = Mock(return_value=deposit[4])
+            VirtualStepCalculator.calculate_virtual_step = Mock(return_value=deposit[4])
 
-            self._engine.deposit_fee(
-                context, tx_hash, self._sender, self._score_address, amount, block_number, term)
+            self._engine.add_deposit(
+                context, tx_hash, self._sender, self._score_address, amount, block_height, term)
