@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from .iiss_data_creator import IissDataCreator
 
@@ -23,10 +23,10 @@ if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address
-    from ..prep.prep_variable.prep_variable_storage import GovernanceVariable
+    from ..prep.prep_variable.prep_variable_storage import GovernanceVariable, PRep
     from .reward_calc_proxy import RewardCalcProxy
     from .rc_data_storage import RcDataStorage
-    from .iiss_msg_data import IissHeader, PrepsData
+    from .iiss_msg_data import IissHeader, IissBlockProduceInfoData, PrepsData
     from .iiss_variable.iiss_variable import IissVariable
 
 
@@ -52,7 +52,7 @@ class CommitDelegator:
     @classmethod
     def update_db(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         # TODO UpdateCheck PrepList
-        # cls._set_preps_iiss_variable(context)
+        # cls._put_preps_for_rc(context, precommit_data)
 
         # every block time
         cls._put_block_produce_info_for_rc(context, precommit_data)
@@ -91,8 +91,10 @@ class CommitDelegator:
         gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
         reward_rep: int = cls.variable.common.get_reward_rep(context)
 
+        # TODO converted_incentive_rep
+        calculated_incentive_rep: int = gv.incentive_rep
         data: 'IissHeader' = IissDataCreator.create_gv_variable(precommit_data.block.height,
-                                                                gv.incentive_rep,
+                                                                calculated_incentive_rep,
                                                                 reward_rep)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
@@ -109,18 +111,22 @@ class CommitDelegator:
         generator: 'Address' = preps[0].address
         validator_list: list = [prep.address for prep in preps]
 
-        data: 'PrepsData' = IissDataCreator.create_prep_data(precommit_data.block.height,
-                                                             generator,
-                                                             validator_list)
+        data: 'IissBlockProduceInfoData' = IissDataCreator.create_block_produce_info_data(precommit_data.block.height,
+                                                                                          generator,
+                                                                                          validator_list)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         # tmp implement
 
-        total_preps: list = context.prep_candidate_engine.get_preps(context)
+        preps: List['PRep'] = context.prep_candidate_engine.get_preps(context)
 
-        if len(total_preps) == 0:
+        if len(preps) == 0:
             return
 
-        # cls.rc_storage.put(precommit_data.rc_block_batch, data)
+        total_candidate_delegated: int = cls.variable.issue.get_total_candidate_delegated(context)
+        data: 'PrepsData' = IissDataCreator.create_prep_data(precommit_data.block.height,
+                                                             total_candidate_delegated,
+                                                             preps)
+        cls.rc_storage.put(precommit_data.rc_block_batch, data)

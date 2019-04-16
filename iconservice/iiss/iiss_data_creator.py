@@ -17,11 +17,11 @@
 from typing import TYPE_CHECKING, List
 
 from .iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTxData, \
-    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx
+    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, IissBlockProduceInfoData
 
 if TYPE_CHECKING:
     from ..base.address import Address
-    from .iiss_msg_data import IissTx, IissBlockProduceInfoData
+    from .iiss_msg_data import IissTx
     from ..prep.prep_variable.prep_variable_storage import PRep
 
 

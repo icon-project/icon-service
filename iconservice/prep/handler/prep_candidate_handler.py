@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from ...icx.icx_account import Account
     from ...base.address import Address
     from ..prep_candidate_storage import PRepCandidateStorage
-    from ..prep_candidate_info_for_sort import PRepCandidateSortedInfos
+    from ..prep_candidate_container import PRepCandidateSortedInfos
     from ..prep_variable.prep_variable import PRepVariable
 
 
