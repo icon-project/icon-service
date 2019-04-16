@@ -158,9 +158,9 @@ class PrepsData(IissData):
     def make_value(self) -> bytes:
         # todo: check int to bytes...
         encoded_prep_list = [[MsgPackForIpc.encode(delegation_info.address),
-                              delegation_info.value] for delegation_info in self.prep_list]
+                              MsgPackForIpc.encode(delegation_info.value)] for delegation_info in self.prep_list]
         data = [
-            self.total_delegation,
+            MsgPackForIpc.encode(self.total_delegation),
             encoded_prep_list
         ]
         return MsgPackForIpc.dumps(data)
@@ -171,10 +171,12 @@ class PrepsData(IissData):
         obj = PrepsData()
         obj.prep_list = []
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
-        obj.total_delegation = data_list[0]
+        obj.total_delegation = MsgPackForIpc.decode(TypeTag.INT, data_list[0])
         prep_list: list = [
-            [MsgPackForIpc.decode(TypeTag.ADDRESS, delegation_info[0]), delegation_info[1]]
-            for delegation_info in data_list[1]]
+            [MsgPackForIpc.decode(TypeTag.ADDRESS, delegation_info[0]),
+             MsgPackForIpc.decode(TypeTag.INT, delegation_info[1])]
+            for delegation_info in data_list[1]
+        ]
         for prep in prep_list:
             del_info = DelegationInfo()
             del_info.address = prep[0]

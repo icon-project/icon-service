@@ -93,7 +93,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         self.tx_prep_un_reg.data: 'PRepUnregisterTx' = PRepUnregisterTx()
 
     def tearDown(self):
-        rmtree(self.db_path)
+        #rmtree(self.db_path)
         pass
 
     def test_iiss_data_using_level_db(self):
