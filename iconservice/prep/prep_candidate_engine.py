@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List
 
 from ..icon_constant import PREP_MAX_PREPS
 from ..database.db import ContextDatabase
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from ..icx.icx_account import Account
     from .prep_candidate_batch import PRepCandidateBatch
     from .prep_variable.prep_variable_storage import GovernanceVariable
+    from .prep_variable.prep_variable_storage import PRep
     from iconcommons import IconConfig
 
 
@@ -123,8 +124,6 @@ class PRepCandidateEngine(object):
         # state DB write DB
 
     def _update_prep_candidates(self, prep_candiate_block_batch: 'PRepCandidateBatch'):
-        # TODO 1. deepcopy querylist
-        # TODO 2. update elements
         for address, batch in prep_candiate_block_batch.items():
             put_obj = batch.get(BatchSlotType.PUT)
             if put_obj:
@@ -163,7 +162,7 @@ class PRepCandidateEngine(object):
     def get_gv(self, context: 'IconScoreContext') -> 'GovernanceVariable':
         return self._variable.get_gv(context)
 
-    def get_preps(self, context: 'IconScoreContext') -> list:
+    def get_preps(self, context: 'IconScoreContext') -> List['PRep']:
         return self._variable.get_preps(context)
 
     def update_preps(self, context: 'IconScoreContext'):

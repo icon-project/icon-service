@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from ...utils.msgpack_for_db import MsgPackForDB
 from ...base.type_converter_templates import ConstantKeys
@@ -98,7 +98,7 @@ class PReps(object):
     _VERSION = 0
 
     def __init__(self):
-        self.preps: list = []
+        self.preps: List['PRep'] = []
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'PReps':
