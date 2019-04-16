@@ -473,7 +473,7 @@ class IconServiceEngine(ContextContainer):
                                  origin=from_,
                                  timestamp=params.get('timestamp', context.block.timestamp),
                                  nonce=params.get('nonce', None),
-                                 recipient=params['to'])
+                                 to=params['to'])
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
@@ -736,11 +736,7 @@ class IconServiceEngine(ContextContainer):
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
-        if icon_score_address == ZERO_SCORE_ADDRESS:
-            return self._fee_handler.handle_fee_request(context, data)
-
-        else:
-            return IconScoreEngine.query(context, icon_score_address, data_type, data)
+        return IconScoreEngine.query(context, icon_score_address, data_type, data)
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -959,12 +955,11 @@ class IconServiceEngine(ContextContainer):
                 icon_score_address=score_address,
                 data=data)
             return score_address
+        elif data_type == 'deposit':
+            self._fee_handler.handle_fee_request(context, data)
         else:
-            if data_type == 'call' and to == ZERO_SCORE_ADDRESS:
-                self._fee_handler.handle_fee_request(context, data)
-            else:
-                context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-                IconScoreEngine.invoke(context, to, data_type, data)
+            context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
+            IconScoreEngine.invoke(context, to, data_type, data)
             return None
 
     @staticmethod

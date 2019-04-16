@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any
+from typing import Any, Optional
 
 from iconcommons import IconConfig
 
@@ -26,7 +26,7 @@ from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests import create_tx_hash
-from tests.integrate_test import root_clear
+from tests.integrate_test import root_clear, create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -97,21 +97,62 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         response = self._query(query_request)
         return response
 
+    def _make_deposit_tx(self,
+                         addr_from: Optional['Address'],
+                         addr_to: 'Address',
+                         method: str,
+                         params: dict,
+                         value: int = 0,
+                         pre_validation_enabled: bool = True):
+
+        timestamp_us = create_timestamp()
+        nonce = 0
+
+        request_params = {
+            "version": self._version,
+            "from": addr_from,
+            "to": addr_to,
+            "value": value,
+            "stepLimit": self._step_limit,
+            "timestamp": timestamp_us,
+            "nonce": nonce,
+            "signature": self._signature,
+            "dataType": "deposit",
+            "data": {
+                "action": method,
+                "params": params
+            }
+        }
+
+        method = 'icx_sendTransaction'
+        # Insert txHash into request params
+        request_params['txHash'] = create_tx_hash()
+        tx = {
+            'method': method,
+            'params': request_params
+        }
+
+        if pre_validation_enabled:
+            self.icon_service_engine.validate_transaction(tx)
+
+        return tx
+
     def _deposit_icx(self, score_address: Address, amount: int, period: int,
                      sender: Address = None) -> TransactionResult:
         if sender is None:
             sender = self._admin
-        deposit_req = self._make_score_call_tx(sender, ZERO_SCORE_ADDRESS, "addDeposit",
-                                               {"score": str(score_address),
-                                                "amount": hex(amount), "term": hex(period)})
+        deposit_req = self._make_deposit_tx(sender, score_address, "add",
+                                            {"term": hex(period)})
+        deposit_req['params']['value'] = amount
         prev_block, tx_results = self._make_and_req_block([deposit_req])
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
-    def _withdraw_deposit(self, deposit_id: bytes, sender: Address = None) -> TransactionResult:
+    def _withdraw_deposit(self, deposit_id: bytes, score_address: Address,
+                          sender: Address = None) -> TransactionResult:
         if sender is None:
             sender = self._admin
-        withdraw_tx_hash = self._make_score_call_tx(sender, ZERO_SCORE_ADDRESS, "withdrawDeposit",
+        withdraw_tx_hash = self._make_deposit_tx(sender, score_address, "withdraw",
                                                     {"depositId": f"0x{bytes.hex(deposit_id)}"})
         prev_block, tx_results = self._make_and_req_block([withdraw_tx_hash])
         self._write_precommit_state(prev_block)
@@ -250,11 +291,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # deposit icx in nonexistent SCORE
-        set_proportion_tx_result = self._deposit_icx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 3),
-                                                     5000 * 10 ** 18, 1296000)
-
-        self.assertEqual(set_proportion_tx_result.status, 0)
-        self.assertTrue(set_proportion_tx_result.failure)
+        with self.assertRaises(InvalidRequestException) as e:
+            self._deposit_icx(Address.from_prefix_and_int(AddressPrefix.CONTRACT, 3), 5000 * 10 ** 18, 1296000)
 
     def test_get_score_info_without_deposit(self):
         """
@@ -313,13 +351,13 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         amount_deposit = FeeEngine._MIN_DEPOSIT_AMOUNT
 
         # Creates more deposit with 5000000 ICX
-        for _ in range(100):
+        for _ in range(99):
             _ = self._deposit_icx(self.score_address, amount_deposit, 1_296_000)
 
         score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
         self.assertEqual(len(score_info["deposits"]), 100)
         self.assertEqual(score_info["availableDeposit"],
-                         amount_deposit * 100 - amount_deposit * 10 // 100 * len(score_info['deposits']))
+                         (amount_deposit - amount_deposit * 10 // 100) * len(deposit_info['deposits']))
 
     def test_get_deposit_by_valid_id(self):
         """
@@ -365,7 +403,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_info = self._query_request('getDeposit', {"depositId": f"0x{bytes.hex(deposit_id)}"})
         self.assertTrue(deposit_info)
 
-        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertTrue(withdraw_tx_result.status)
 
         score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
@@ -396,7 +434,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         user_balance_before_withdraw = self._query({"address": self._admin}, "icx_getBalance")
 
         # withdraw
-        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertTrue(withdraw_tx_result.status)
 
         user_balance_after_withdraw = self._query({"address": self._admin}, "icx_getBalance")
@@ -421,7 +459,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(deposit_tx_result.status, 1)
 
         # withdraw by not owner
-        withdraw_tx_result = self._withdraw_deposit(deposit_id, self._genesis)
+        withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address, self._genesis)
         self.assertFalse(withdraw_tx_result.status)
         self.assertEqual(withdraw_tx_result.failure.message, "Invalid sender")
 
@@ -437,14 +475,14 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(deposit_tx_result.status, 1)
 
         # withdraw
-        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertTrue(withdraw_tx_result.status)
 
         score_info = self._query_request("getDepositList", {"score": str(self.score_address)})
         self.assertEqual(len(score_info["deposits"]), 0)
 
         # withdraw again
-        withdraw_tx_result = self._withdraw_deposit(deposit_id)
+        withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertFalse(withdraw_tx_result.status)
         self.assertEqual(withdraw_tx_result.failure.message, "Deposit info not found")
 

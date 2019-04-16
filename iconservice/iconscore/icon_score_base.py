@@ -659,7 +659,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return self._context.fee_sharing_proportion
 
     def set_fee_sharing_proportion(self, proportion: int):
-        if self._context.tx.recipient == self.address:
+        if self._context.tx.to == self.address:
             if self._context.type == IconScoreContextType.QUERY:
                 raise InvalidRequestException("Can not set fee sharing ratio in read-only context")
             if proportion < 0 or proportion > 100:

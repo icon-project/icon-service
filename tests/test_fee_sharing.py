@@ -62,7 +62,7 @@ class TestFeeSharing(unittest.TestCase):
     def test_add_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
-        term, amount = hex(50), hex(5000)
+        term, amount = hex(50), 5000
 
         mock_score_info = Mock(spec=DepositInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
@@ -75,16 +75,14 @@ class TestFeeSharing(unittest.TestCase):
             Mock(return_value={self.from_: 9000})
 
         data = {
-            'method': 'addDeposit',
+            'action': 'add',
             'params': {
-                'score': str(self.score),
                 'term': term,
-                'amount': amount
             }
         }
 
         expected_event_log = [{
-            "scoreAddress": str(self.to),
+            "scoreAddress": str(self.score),
             "indexed": [
                 "DepositAdded(bytes,Address,Address,int,int)",
                 f"0x{tx_hash_hex}",
@@ -92,13 +90,13 @@ class TestFeeSharing(unittest.TestCase):
                 str(self.from_)
             ],
             "data": [
-                amount,
+                hex(amount),
                 term
             ]
         }]
 
         request = create_request([
-            ReqData(tx_hash_hex, self.from_, self.to, 'call', data),
+            ReqData(tx_hash_hex, self.from_, self.score, amount, 'deposit', data),
         ])
 
         result = self._inner_task_invoke(request)
@@ -121,14 +119,14 @@ class TestFeeSharing(unittest.TestCase):
             Mock(return_value={self.from_: 9000})
 
         data = {
-            'method': 'withdrawDeposit',
+            'action': 'withdraw',
             'params': {
                 'depositId': f"0x{bytes.hex(deposit_id)}"
             }
         }
 
         expected_event_log = [{
-            "scoreAddress": str(self.to),
+            "scoreAddress": str(self.score),
             "indexed": [
                 "DepositWithdrawn(bytes,Address,Address,int,int)",
                 f"0x{bytes.hex(deposit_id)}",
@@ -142,7 +140,7 @@ class TestFeeSharing(unittest.TestCase):
         }]
 
         request = create_request([
-            ReqData(tx_hash_hex, self.from_, self.to, 'call', data),
+            ReqData(tx_hash_hex, self.from_, self.score, 0, 'deposit', data),
         ])
 
         result = self._inner_task_invoke(request)
@@ -242,7 +240,7 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), 0, "call", data)])
         result = self._inner_task_invoke(request)
 
         expected_event_log = [{
@@ -282,7 +280,7 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), 0, "call", data)])
         result = self._inner_task_invoke(request)
 
         expected_event_log = [{
@@ -318,7 +316,7 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_request([ReqData(tx_hash, self.from_, str(self.score), "call", data)])
+        request = create_request([ReqData(tx_hash, self.from_, str(self.score), 0, "call", data)])
         result = self._inner_task_invoke(request)
 
         expected_event_log = [{
@@ -356,5 +354,5 @@ class TestFeeSharing(unittest.TestCase):
             }
         }
 
-        request = create_transaction_req(ReqData(tx_hash, self.from_, str(self.score), "call", data))
+        request = create_transaction_req(ReqData(tx_hash, self.from_, str(self.score), 0, "call", data))
         result = self._validate_transaction(request)
