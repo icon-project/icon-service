@@ -21,15 +21,17 @@ class ScoreDepositInfo(object):
     """
     SScoreDepositInfo Class implementing functions to serialize and deserialize.
     """
+
     def __init__(self, head_id: bytes = None, tail_id: bytes = None,
                  available_head_id_of_virtual_step: bytes = None, available_head_id_of_deposit: bytes = None,
-                 expires_of_virtual_step: int = -1, expires_of_deposit: int = -1):
+                 expires_of_virtual_step: int = -1, expires_of_deposit: int = -1, version: int = 0):
         self.head_id = head_id
         self.tail_id = tail_id
         self.available_head_id_of_virtual_step = available_head_id_of_virtual_step
         self.available_head_id_of_deposit = available_head_id_of_deposit
         self.expires_of_virtual_step = expires_of_virtual_step
         self.expires_of_deposit = expires_of_deposit
+        self.version = version
 
     @staticmethod
     def from_bytes(buf: bytes):
@@ -47,6 +49,7 @@ class ScoreDepositInfo(object):
         score_deposit_info.available_head_id_of_deposit = data[3]
         score_deposit_info.expires_of_virtual_step = data[4]
         score_deposit_info.expires_of_deposit = data[5]
+        score_deposit_info.version = data[6]
 
         return score_deposit_info
 
@@ -57,7 +60,7 @@ class ScoreDepositInfo(object):
         """
         data: list = [self.head_id, self.tail_id,
                       self.available_head_id_of_virtual_step, self.available_head_id_of_deposit,
-                      self.expires_of_virtual_step, self.expires_of_deposit]
+                      self.expires_of_virtual_step, self.expires_of_deposit, self.version]
         return MsgPackForDB.dumps(data)
 
     def __eq__(self, other) -> bool:
@@ -71,7 +74,8 @@ class ScoreDepositInfo(object):
                and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
                and self.available_head_id_of_deposit == other.available_head_id_of_deposit \
                and self.expires_of_virtual_step == other.expires_of_virtual_step \
-               and self.expires_of_deposit == other.expires_of_deposit
+               and self.expires_of_deposit == other.expires_of_deposit \
+               and self.version == other.version
 
     def __ne__(self, other) -> bool:
         """operator != overriding

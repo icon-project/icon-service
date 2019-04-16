@@ -14,6 +14,7 @@ class TestFee(TestCase):
         score_deposit_info.available_head_id_of_virtual_step = create_tx_hash()
         score_deposit_info.expires_of_deposit = 1
         score_deposit_info.expires_of_virtual_step = 200
+        score_deposit_info.version = 3
 
         score_deposit_info_in_bytes = score_deposit_info.to_bytes()
         self.assertIsInstance(score_deposit_info_in_bytes, bytes)

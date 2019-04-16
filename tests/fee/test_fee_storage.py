@@ -95,6 +95,7 @@ class TestFeeStorage(TestCase):
         deposit.virtual_step_used = 200000000000
         deposit.prev_id = create_tx_hash()
         deposit.next_id = create_tx_hash()
+        deposit.version = 2
         self.storage.put_deposit(context, deposit.id, deposit)
 
         deposit2 = self.storage.get_deposit(context, deposit.id)
@@ -118,6 +119,7 @@ class TestFeeStorage(TestCase):
         deposit.expires = 1000000
         deposit.virtual_step_issued = 100000000000
         deposit.virtual_step_used = 200000000000
+        deposit.version = 1
         self.storage.put_deposit(context, deposit.id, deposit)
 
         deposit2 = self.storage.get_deposit(context, deposit.id)

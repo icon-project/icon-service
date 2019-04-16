@@ -29,7 +29,7 @@ class Deposit(object):
     def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
                  deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = -1,
                  virtual_step_issued: int = 0, virtual_step_used: int = 0, prev_id: bytes = None,
-                 next_id: bytes = None):
+                 next_id: bytes = None, version: int = 0):
         # deposit id, should be tx hash of deposit transaction
         self.id = deposit_id
         # target SCORE address
@@ -52,6 +52,7 @@ class Deposit(object):
         self.prev_id = prev_id
         # next id of this deposit
         self.next_id = next_id
+        self.version = version
 
     @staticmethod
     def from_bytes(buf: bytes):
@@ -73,6 +74,7 @@ class Deposit(object):
         deposit.virtual_step_used = data[7]
         deposit.prev_id = data[8]
         deposit.next_id = data[9]
+        deposit.version = data[10]
 
         return deposit
 
@@ -90,7 +92,8 @@ class Deposit(object):
                       self.virtual_step_issued,
                       self.virtual_step_used,
                       self.prev_id,
-                      self.next_id]
+                      self.next_id,
+                      self.version]
 
         return MsgPackForDB.dumps(data)
 
@@ -126,7 +129,8 @@ class Deposit(object):
                and self.virtual_step_issued == other.virtual_step_issued \
                and self.virtual_step_used == other.virtual_step_used \
                and self.prev_id == other.prev_id \
-               and self.next_id == other.next_id
+               and self.next_id == other.next_id \
+               and self.version == other.version
 
     def __ne__(self, other) -> bool:
         """operator != overriding
