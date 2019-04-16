@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from threading import Lock
-from typing import TYPE_CHECKING, List
+from operator import lt, gt
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..base.address import Address
@@ -41,6 +41,14 @@ class PRepCandidateInfoForSort(object):
     def total_delegated(self) -> int:
         return self._total_delegated
 
+    @property
+    def block_height(self) -> int:
+        return self._block_height
+
+    @property
+    def tx_index(self) -> int:
+        return self._tx_index
+
     def update(self, total_delegated: int):
         self._total_delegated: int = total_delegated
 
@@ -51,43 +59,40 @@ class PRepCandidateInfoForSort(object):
                       tx_index: int) -> 'PRepCandidateInfoForSort':
         return PRepCandidateInfoForSort(address, name, block_height, tx_index)
 
+    def to_order_list(self) -> list:
+        return [self._total_delegated, self._block_height,  self._tx_index]
 
-class PRepCandiateInfoMapper(object):
-    def __init__(self):
-        self._prep_candidate_objects: dict = {}
-        self._lock = Lock()
+    def __gt__(self, other: 'PRepCandidateInfoForSort') -> bool:
+        x: list = self.to_order_list()
+        y: list = other.to_order_list()
+        is_reverse: list = [False, True, True]
 
-    def __setitem__(self, key: 'Address', value: 'PRepCandidateInfoForSort'):
-        with self._lock:
-            self._prep_candidate_objects[key] = value
+        for i in range(len(x)):
+            first_operator = gt
+            second_operator = lt
 
-    def __getitem__(self, key: 'Address') -> 'PRepCandidateInfoForSort':
-        with self._lock:
-            return self._prep_candidate_objects[key]
+            if is_reverse[i]:
+                first_operator = lt
+                second_operator = gt
 
-    def __delitem__(self, key: 'Address'):
-        with self._lock:
-            del self._prep_candidate_objects[key]
+            if first_operator(x[i], y[i]):
+                return True
+            elif second_operator(x[i], y[i]):
+                return False
+            else:
+                if i != len(x):
+                    continue
+                else:
+                    return False
 
-    def __contains__(self, address: 'Address') -> bool:
-        with self._lock:
-            return address in self._prep_candidate_objects
+    def __lt__(self, other: 'PRepCandidateInfoForSort') -> bool:
+        return not self.__gt__(other)
 
-    def to_sorted_list(self) -> List['PRepCandidateInfoForSort']:
-        with self._lock:
-            return list(self._prep_candidate_objects.values())
-
-
-class PRepCandidateSortedInfos(object):
-
-    def __init__(self):
-        self._prep_candidate_objects: List['PRepCandidateInfoForSort'] = []
-        self._lock = Lock()
-
-    def update(self, prep_objs: List['PRepCandidateInfoForSort']):
-        with self._lock:
-            self._prep_candidate_objects = prep_objs
-
-    def get(self) -> list:
-        with self._lock:
-            return self._prep_candidate_objects.copy()
+    @staticmethod
+    def compare_key(x: 'PRepCandidateInfoForSort', y: 'PRepCandidateInfoForSort') -> int:
+        if x < y:
+            return 1
+        elif x > y:
+            return -1
+        else:
+            return 0
