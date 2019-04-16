@@ -16,7 +16,7 @@
 
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, List, Optional
 
 from ..icon_constant import DATA_BYTE_ORDER
 from ..utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
@@ -75,15 +75,14 @@ class IissHeader(IissData):
 
 
 class IissGovernanceVariable(IissData):
-    _PREFIX = b'gv'
+    _PREFIX = b'GV'
 
     def __init__(self):
         # key
         self.block_height: int = 0
 
         # value
-        self.icx_price: int = 0
-        self.incentive_rep: int = 0
+        self.calculated_incentive_rep: int = 0
         self.reward_rep: int = 0
 
     def make_key(self) -> bytes:
@@ -92,8 +91,7 @@ class IissGovernanceVariable(IissData):
 
     def make_value(self) -> bytes:
         data = [
-            self.icx_price,
-            self.incentive_rep,
+            self.calculated_incentive_rep,
             self.reward_rep
         ]
         return MsgPackForIpc.dumps(data)
@@ -103,30 +101,27 @@ class IissGovernanceVariable(IissData):
         data_list: list = MsgPackForIpc.loads(value)
         obj = IissGovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
-        obj.icx_price: int = data_list[0]
-        obj.incentive_rep: int = data_list[1]
-        obj.reward_rep: int = data_list[2]
+        obj.calculated_incentive_rep: int = data_list[0]
+        obj.reward_rep: int = data_list[1]
         return obj
 
 
-class PrepsData(IissData):
-    _PREFIX = b'prep'
+class IissBlockProduceInfoData(IissData):
+    _PREFIX = b'BP'
 
     def __init__(self):
         # key
         self.block_height: int = 0
 
         # value
-        self.block_generator: 'Address' = None
-        # todo: need to change type check
-        self.block_validator_list: list = None
+        self.block_generator: Optional['Address'] = None
+        self.block_validator_list: Optional[List['Address']] = None
 
     def make_key(self) -> bytes:
         block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return self._PREFIX + block_height
 
     def make_value(self) -> bytes:
-
         data = [
             MsgPackForIpc.encode(self.block_generator),
             [MsgPackForIpc.encode(validator_address) for validator_address in self.block_validator_list]
@@ -134,14 +129,59 @@ class PrepsData(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(key: bytes, value: bytes) -> 'PrepsData':
+    def from_bytes(key: bytes, value: bytes) -> 'IissBlockProduceInfoData':
         data_list: list = MsgPackForIpc.loads(value)
-        obj = PrepsData()
-        obj.block_height: int = int.from_bytes(key[4:], DATA_BYTE_ORDER)
+        obj = IissBlockProduceInfoData()
+        obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.block_generator: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
 
         obj.block_validator_list: list = [MsgPackForIpc.decode(TypeTag.ADDRESS, bytes_address)
                                           for bytes_address in data_list[1]]
+        return obj
+
+
+class PrepsData(IissData):
+    _PREFIX = b'PR'
+
+    def __init__(self):
+        # key
+        self.block_height: int = 0
+
+        # value
+        self.total_delegation: int = 0
+        self.prep_list: Optional[List['DelegationInfo']] = None
+
+    def make_key(self) -> bytes:
+        block_height: bytes = self.block_height.to_bytes(8, byteorder=DATA_BYTE_ORDER)
+        return self._PREFIX + block_height
+
+    def make_value(self) -> bytes:
+        # todo: check int to bytes...
+        encoded_prep_list = [[MsgPackForIpc.encode(delegation_info.address),
+                              MsgPackForIpc.encode(delegation_info.value)] for delegation_info in self.prep_list]
+        data = [
+            MsgPackForIpc.encode(self.total_delegation),
+            encoded_prep_list
+        ]
+        return MsgPackForIpc.dumps(data)
+
+    @staticmethod
+    def from_bytes(key: bytes, value: bytes) -> 'PrepsData':
+        data_list: list = MsgPackForIpc.loads(value)
+        obj = PrepsData()
+        obj.prep_list = []
+        obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
+        obj.total_delegation = MsgPackForIpc.decode(TypeTag.INT, data_list[0])
+        prep_list: list = [
+            [MsgPackForIpc.decode(TypeTag.ADDRESS, delegation_info[0]),
+             MsgPackForIpc.decode(TypeTag.INT, delegation_info[1])]
+            for delegation_info in data_list[1]
+        ]
+        for prep in prep_list:
+            del_info = DelegationInfo()
+            del_info.address = prep[0]
+            del_info.value = prep[1]
+            obj.prep_list.append(del_info)
         return obj
 
 
@@ -219,7 +259,7 @@ class IissTx(object, metaclass=ABCMeta):
 
 class DelegationTx(IissTx):
     def __init__(self):
-        self.delegation_info: list = []
+        self.delegation_info: List['DelegationInfo'] = []
 
     def get_type(self) -> 'IissTxType':
         return IissTxType.DELEGATION
