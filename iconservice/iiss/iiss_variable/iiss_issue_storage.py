@@ -59,10 +59,10 @@ class IissIssueStorage(object):
         version = 0
         data: list = [version, calc_period]
         value: bytes = MsgPackForDB.dumps(data)
-        self._db.put(context, self.CALC_NEXT_BLOCK_HEIGHT_KEY, value)
+        self._db.put(context, self.CALC_PERIOD_KEY, value)
 
     def get_calc_period(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.CALC_NEXT_BLOCK_HEIGHT_KEY)
+        value: bytes = self._db.get(context, self.CALC_PERIOD_KEY)
         if value:
             data: list = MsgPackForDB.loads(value)
             version: int = data[0]

@@ -36,25 +36,21 @@ class IissIssueVariable(object):
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
         self._storage.put_calc_next_block_height(context, calc_block_height)
 
-    def get_calc_next_block_height(self, context: 'IconScoreContext') -> int:
+    def get_calc_next_block_height(self, context: 'IconScoreContext') -> Optional[int]:
         value: Optional[int] = self._storage.get_calc_next_block_height(context)
-        if value is None:
-            return 0
         return value
 
     def put_calc_period(self, context: 'IconScoreContext', calc_period: int):
         self._storage.put_calc_period(context, calc_period)
 
-    def get_calc_period(self, context: 'IconScoreContext') -> int:
+    def get_calc_period(self, context: 'IconScoreContext') -> Optional[int]:
         value: Optional[int] = self._storage.get_calc_period(context)
-        if value is None:
-            return 0
         return value
 
     def put_total_candidate_delegated(self, context: 'IconScoreContext', total_candidate_delegated: int):
         self._storage.put_total_candidate_delegated(context, total_candidate_delegated)
 
-    def get_total_candidate_delegated(self, context: 'IconScoreContext') -> Optional[int]:
+    def get_total_candidate_delegated(self, context: 'IconScoreContext') -> int:
         value: Optional[int] = self._storage.get_total_candidate_delegated(context)
         if value is None:
             return 0
