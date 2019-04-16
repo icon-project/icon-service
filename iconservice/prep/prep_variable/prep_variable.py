@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from ...icon_constant import ConfigKey
 from .prep_variable_storage import GovernanceVariable, PRepVariableStorage
@@ -20,7 +20,7 @@ from .prep_variable_storage import GovernanceVariable, PRepVariableStorage
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
     from ...database.db import ContextDatabase
-    from .prep_variable_storage import PReps
+    from .prep_variable_storage import PReps, PRep
     from iconcommons import IconConfig
 
 
@@ -46,7 +46,7 @@ class PRepVariable(object):
     def put_preps(self, context: 'IconScoreContext', preps: 'PReps'):
         self._storage.put_preps(context, preps)
 
-    def get_preps(self, context: 'IconScoreContext') -> list:
+    def get_preps(self, context: 'IconScoreContext') -> List['PRep']:
         value: Optional['PReps'] = self._storage.get_preps(context)
         if value is None:
             return []
