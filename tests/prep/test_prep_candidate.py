@@ -23,8 +23,6 @@ from iconservice.prep.prep_candidate_container import PRepCandidateSortedInfos, 
 from iconservice.prep.prep_candidate_info_for_sort import PRepCandidateInfoForSort
 from tests import create_address
 
-from random import randint
-
 
 class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate(self):
@@ -48,14 +46,15 @@ class TestPrepCandidate(unittest.TestCase):
         actual_prep: 'PRepCandidate' = prep.from_bytes(data, address)
         self.assertEqual(prep, actual_prep)
 
-    def test_prep_candidate_info_for_sort(self):
+    def _make_sorted_list(self, count: int, list1: list, list2: list, list3: list) -> 'PRepCandidateSortedInfos':
         mapper = PRepCandiateInfoMapper()
-        for i in range(5):
+
+        for i in range(count):
             addr: 'Address' = create_address()
             name: str = f'name{i}'
-            total_delegated: int = randint(1, 10)
-            block_height: int = randint(1, 10)
-            tx_index: int = i
+            total_delegated: int = list1[i]
+            block_height: int = list2[i]
+            tx_index: int = list3[i]
             info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(addr,
                                                                         name,
                                                                         block_height,
@@ -67,67 +66,108 @@ class TestPrepCandidate(unittest.TestCase):
 
         infos = PRepCandidateSortedInfos()
         infos.genesis_update(sorted_list)
-        self._custom_prt(infos.get())
+        return infos
 
-        info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(create_address(),
-                                                                    "new_name1",
-                                                                    30,
-                                                                    0)
-        infos.add_info(info)
-        infos.update_info(info.address, 50)
-        self._custom_prt(infos.get())
+    def test_prep_candidate_info_for_sort1(self):
+        count = 5
+        total_delegateds = [i for i in range(0, count)]
+        block_heights = [0] * count
+        tx_indexs = [0] * count
 
-        infos.update_info(info.address, 40)
-        self._custom_prt(infos.get())
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
 
-        infos.update_info(info.address, 5)
-        self._custom_prt(infos.get())
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(f'name{count - i - 1}', info.name)
 
-        infos.update_info(info.address, 10)
-        self._custom_prt(infos.get())
+    def test_prep_candidate_info_for_sort1_rev(self):
+        count = 5
+        total_delegateds = [i for i in range(count, 0, -1)]
+        block_heights = [0] * count
+        tx_indexs = [0] * count
 
-        infos.del_info(info.address)
-        self._custom_prt(infos.get())
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+
+        for i, info in enumerate(infos):
+            self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort2(self):
-        mapper = PRepCandiateInfoMapper()
+        count = 5
+        total_delegateds = [0] * count
+        block_heights = [i for i in range(0, count)]
+        tx_indexs = [0] * count
 
-        total_delegatedes = [10, 8, 7, 7, 2]
-        block_heights = [3, 10, 3, 4, 9]
-        tx_indexes = [2, 0, 1, 4, 3]
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
 
-        for i in range(5):
-            addr: 'Address' = create_address()
-            name: str = f'name{i}'
-            total_delegated: int = total_delegatedes[i]
-            block_height: int = block_heights[i]
-            tx_index: int = tx_indexes[i]
-            info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(addr,
-                                                                        name,
-                                                                        block_height,
-                                                                        tx_index)
-            info.update(total_delegated)
-            mapper[addr] = info
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(f'name{i}', info.name)
 
-        sorted_list: list = mapper.to_genesis_sorted_list()
+    def test_prep_candidate_info_for_sort2_rev(self):
+        count = 5
+        total_delegateds = [0] * count
+        block_heights = [i for i in range(count, 0, -1)]
+        tx_indexs = [0] * count
 
-        infos = PRepCandidateSortedInfos()
-        infos.genesis_update(sorted_list)
-        self._custom_prt(infos.get())
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(f'name{count - i - 1}', info.name)
+
+    def test_prep_candidate_info_for_sort3(self):
+        count = 5
+        total_delegateds = [0] * count
+        block_heights = [0] * count
+        tx_indexs = [i for i in range(0, count)]
+
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(f'name{i}', info.name)
+
+    def test_prep_candidate_info_for_sort3_rev(self):
+        count = 5
+        total_delegateds = [0] * count
+        block_heights = [0] * count
+        tx_indexs = [i for i in range(count, 0, -1)]
+
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(f'name{count - i - 1}', info.name)
+
+    def test_prep_candidate_info_for_sort4(self):
+        count = 5
+        total_delegateds = [0] * count
+        block_heights = [0] * count
+        tx_indexs = [0] * count
+
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
+
+        for i, info in enumerate(infos.get()):
+            self.assertEqual(f'name{i}', info.name)
+
+    def test_prep_candidate_info_for_update_info(self):
+        count = 5
+        total_delegateds = [i for i in range(0, count)]
+        block_heights = [0] * count
+        tx_indexs = [0] * count
+
+        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs)
 
         info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(create_address(),
                                                                     "new_name1",
-                                                                    30,
-                                                                    0)
+                                                                    1,
+                                                                    1)
         infos.add_info(info)
-        infos.update_info(info.address, 10)
-        self._custom_prt(infos.get())
+        infos.update_info(info.address, count)
+        self.assertEqual(info.name, infos.get()[0].name)
 
-    def _custom_prt(self, infos: list):
-        print("======")
-        for info in infos:
-            print(info.name, info.to_order_list())
+        infos.update_info(info.address, 0)
+        self.assertEqual(info.name, infos.get()[count].name)
 
+        for i in range(5):
+            infos.update_info(info.address, count - i - 1)
+            self.assertEqual(info.name, infos.get()[i + 1].name)
+            
 
 if __name__ == '__main__':
     unittest.main()
