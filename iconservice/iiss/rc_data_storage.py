@@ -24,7 +24,6 @@ from ..icon_constant import DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
     from .iiss_msg_data import IissData
-    from .database.iiss_db import IissDatabase
 
 
 class RcDataStorage(object):
