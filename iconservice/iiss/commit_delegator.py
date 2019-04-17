@@ -16,8 +16,8 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
-from ..base.exception import InvalidParamsException
 from .iiss_data_creator import IissDataCreator
+from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -25,13 +25,13 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address
     from ..prep.prep_variable.prep_variable_storage import GovernanceVariable, PRep
-    from .reward_calc_proxy import RewardCalcProxy
+    from .ipc.reward_calc_proxy import RewardCalcProxy
     from .rc_data_storage import RcDataStorage
     from .iiss_msg_data import IissHeader, IissBlockProduceInfoData, PrepsData
     from .iiss_variable.iiss_variable import IissVariable
 
 
-class CommitDelegator:
+class CommitDelegator(object):
     icx_storage: 'IcxStorage' = None
     reward_calc_proxy: 'RewardCalcProxy' = None
     rc_storage: 'RcDataStorage' = None

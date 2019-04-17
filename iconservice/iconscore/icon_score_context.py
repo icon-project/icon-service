@@ -110,6 +110,7 @@ class IconScoreContext(object):
     iiss_engine: 'IissEngine' = None
     prep_candidate_engine: 'PRepCandidateEngine' = None
 
+
     """Contains the useful information to process user's JSON-RPC request
     """
 
