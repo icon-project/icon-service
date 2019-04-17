@@ -22,20 +22,30 @@ from iconservice.fee.deposit import Deposit
 from iconservice.fee.fee_engine import VirtualStepCalculator
 
 
+STEP_PRICE = 10 ** 10
+
+
+VIRTUAL_STEP_ISSUANCE_INFO = [
+    # [deposit_amount, deposit_term, virtual_step_issuance(in loop unit)]
+    # virtual step issuance is based on the virtual_step output table in the Yellow Paper.
+    # virtual_step_issuance = f(a,d) * deposit_amount (Function returns rate of virtual step issuance)
+    (5_000, 7_776_000, 681050000000000000000), (50_000, 7_776_000, 9729000000000000000000),
+    (100_000, 7_776_000, 25944000000000000000000), (5_000, 15_552_000, 2029800000000000000000),
+    (50_000, 15_552_000, 28997000000000000000000), (100_000, 15_552_000, 77325000000000000000000),
+    (5_000, 31_104_000, 6305800000000000000000), (50_000, 31_104_000, 90083000000000000000000),
+    (100_000, 31_104_000, 240221000000000000000000)
+]
+
+
 class TestVirtualStepCalculator(TestCase):
 
     def test_calculate_issuance_virtual_step(self):
-        icx_amount_in_loop = 5_000 * 10 ** 18
-        deposit_term = 1_296_000
-        expected_issuance = 6_263_460_000
-        result = VirtualStepCalculator.calculate_virtual_step_issuance(icx_amount_in_loop, 0, deposit_term)
-        self.assertEqual(expected_issuance, result)
-
-        icx_amount_in_loop = 5_000 * 10 ** 18
-        deposit_term = 1_296_000 * 2
-        expected_issuance = 14_627_340_000
-        result = VirtualStepCalculator.calculate_virtual_step_issuance(icx_amount_in_loop, 0, deposit_term)
-        self.assertEqual(expected_issuance, result)
+        for virtual_step_issuance_info in VIRTUAL_STEP_ISSUANCE_INFO:
+            expected_issuance = virtual_step_issuance_info[2] // STEP_PRICE
+            icx_amount_in_loop = virtual_step_issuance_info[0] * 10 ** 18
+            term = virtual_step_issuance_info[1]
+            result = VirtualStepCalculator.calculate_virtual_step_issuance(icx_amount_in_loop, 0, term)
+            self.assertAlmostEqual(expected_issuance/result, 1, 4)
 
     def test_calculate_penalty(self):
         icx_amount_in_loop = 5_000 * 10 ** 18

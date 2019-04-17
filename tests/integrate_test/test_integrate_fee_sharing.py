@@ -174,13 +174,17 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         return tx_results[0]
 
     def test_deposit_fee(self):
+        before_deposit_user_balance = self._query({"address": self._admin}, "icx_getBalance")
         deposit_tx_result = self._deposit_icx(self.score_address, 5000 * 10 ** 18, 1_296_000)
+        deposit_fee = deposit_tx_result.step_price * deposit_tx_result.step_used
 
         deposit_id = deposit_tx_result.tx_hash
         score_info = self._query_score_info(self.score_address)
         self.assertIn('depositInfo', score_info)
         self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
-        # TODO must check user balance
+        after_deposit_user_balance = self._query({"address": self._admin}, "icx_getBalance")
+
+        self.assertEqual(before_deposit_user_balance-5000*10**18-deposit_fee, after_deposit_user_balance)
 
     def test_deposit_fee_icx_range(self):
         deposit_tx_result = self._deposit_icx(self.score_address, 100_001 * 10 ** 18, 1_296_000)
