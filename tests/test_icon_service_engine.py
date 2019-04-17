@@ -242,7 +242,6 @@ class TestIconServiceEngine(unittest.TestCase):
             return ret
 
         self._engine._invoke_request = Mock(side_effect=intercept_invoke_req)
-
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -368,7 +367,6 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_hash,
                       block_timestamp,
                       self.genesis_block.hash)
-
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)

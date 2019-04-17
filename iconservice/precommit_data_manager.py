@@ -48,7 +48,8 @@ class PrecommitData(object):
                  block_result: list,
                  rc_block_batch: list,
                  prep_candidate_block_batch: 'PRepCandidateBatch',
-                 score_mapper: Optional['IconScoreMapper']=None,
+                 prev_block_contributors: Optional[dict],
+                 score_mapper: Optional['IconScoreMapper'] = None,
                  precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
 
@@ -62,10 +63,12 @@ class PrecommitData(object):
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch
         self.prep_candidate_block_batch = prep_candidate_block_batch
+        self.prev_block_contributors = prev_block_contributors
         self.score_mapper = score_mapper
         self.precommit_flag = precommit_flag
-        self.block = block_batch.block
+
         self.state_root_hash: bytes = self.block_batch.digest()
+        self.block = block_batch.block
 
 
 class PrecommitDataManager(object):

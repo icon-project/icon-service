@@ -44,24 +44,39 @@ class TestIntegrateIISS(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-    def _stake(self, address: 'Address', value: int):
+    def _stake(self, address: 'Address', value: int, revision: int = 5):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_list = [tx]
+        if revision >= 5:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+
         self._write_precommit_state(prev_block)
 
-    def _delegate(self, address: 'Address', delegations: list):
+    def _delegate(self, address: 'Address', delegations: list, revision: int = 5):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_list = [tx]
+        if revision >= 5:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _reg_candidate(self, address: 'Address', data: dict):
+    def _reg_candidate(self, address: 'Address', data: dict, revision: int = 5):
 
         data = deepcopy(data)
         value: str = hex(data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP])
         data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP] = value
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRepCandidate', data)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        if revision >= 5:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
     def test_reg_prep_candidate(self):
@@ -80,7 +95,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
             }
-            self._reg_candidate(create_address(), reg_data)
+            self._reg_candidate(create_address(), reg_data, 4)
 
         self._set_revision(5)
 
@@ -119,7 +134,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
             }
-            self._reg_candidate(self._addr_array[i + 10], reg_data)
+            self._reg_candidate(self._addr_array[i + 10], reg_data, 4)
 
         self._set_revision(5)
 
@@ -127,7 +142,9 @@ class TestIntegrateIISS(TestIntegrateBase):
         balance: int = 10 * 10 ** 18
         for i in range(5):
             tx = self._make_icx_send_tx(self._genesis, self._addr_array[i], balance)
-            prev_block, tx_results = self._make_and_req_block([tx])
+            # issue tx must be exists after revision 5
+            issue_tx = self._make_dummy_issue_tx()
+            prev_block, tx_results = self._make_and_req_block([issue_tx, tx])
             self._write_precommit_state(prev_block)
 
         # set stake 10 icx
