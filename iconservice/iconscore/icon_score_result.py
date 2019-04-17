@@ -85,6 +85,10 @@ class TransactionResult(object):
         self.logs_bloom = logs_bloom
         self.status = status
 
+        # Details of the used step. This is set if the SCORE pays fees.
+        # Otherwise left as `None` and not passed to transaction result.
+        self.step_used_details: Optional[dict] = None
+
         # failure object which has code(int) and message(str) attributes
         # It is only available on self.status == FAILURE
         self.failure = None

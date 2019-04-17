@@ -130,7 +130,7 @@ class FeeEngine:
 
         return score_deposit_info
 
-    def deposit_fee(self,
+    def add_deposit(self,
                     context: 'IconScoreContext',
                     tx_hash: bytes,
                     sender: 'Address',
@@ -214,12 +214,12 @@ class FeeEngine:
         score_deposit_info.tail_id = deposit.id
         self._fee_storage.put_score_deposit_info(context, deposit.score_address, score_deposit_info)
 
-    def withdraw_fee(self,
-                     context: 'IconScoreContext',
-                     sender: 'Address',
-                     deposit_id: bytes,
-                     block_number: int,
-                     step_price: int) -> ('Address', int, int):
+    def withdraw_deposit(self,
+                         context: 'IconScoreContext',
+                         sender: 'Address',
+                         deposit_id: bytes,
+                         block_number: int,
+                         step_price: int) -> ('Address', int, int):
         """
         Withdraws deposited ICXs from given id.
         It may be paid the penalty if the expiry has not been met.
@@ -771,9 +771,9 @@ class VirtualStepCalculator:
                Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_4) * Decimal(adjusted_expire)
 
 
-class FeeHandler:
+class DepositHandler:
     """
-    Fee Handler
+    Deposit Handler
     """
 
     # For eventlog emitting
@@ -788,17 +788,17 @@ class FeeHandler:
 
     @staticmethod
     def get_signature_and_index_count(event_type: EventType):
-        return FeeHandler.SIGNATURE_AND_INDEX[event_type]
+        return DepositHandler.SIGNATURE_AND_INDEX[event_type]
 
     def __init__(self, fee_engine: 'FeeEngine'):
         self.fee_engine = fee_engine
 
-        self.fee_handler = {
-            'add': self._deposit_fee,
-            'withdraw': self._withdraw_fee,
+        self.deposit_handler = {
+            'add': self._add_deposit,
+            'withdraw': self._withdraw_deposit,
         }
 
-    def handle_fee_request(self, context: 'IconScoreContext', data: dict):
+    def handle_deposit_request(self, context: 'IconScoreContext', data: dict):
         """
         Handles fee request(querying or invoking)
 
@@ -807,44 +807,44 @@ class FeeHandler:
         :return:
         """
         converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
-        method = converted_data['action']
+        action = converted_data['action']
 
         try:
-            handler = self.fee_handler[method]
+            handler = self.deposit_handler[action]
             params = converted_data.get('params', {})
             return handler(context, **params)
         except KeyError:
-            # Case of invoking handler functions with unknown method name
-            raise MethodNotFoundException(f"Method not found: {method}")
+            # Case of invoking handler functions with unknown action name
+            raise InvalidRequestException(f"Invalid action: {action}")
         except TypeError:
             # Case of invoking handler functions with invalid parameter
             # e.g. 'missing required params' or 'unknown params'
             raise InvalidParamsException(f"Invalid params")
 
-    def _deposit_fee(self, context: 'IconScoreContext', term: int):
+    def _add_deposit(self, context: 'IconScoreContext', term: int):
 
-        self.fee_engine.deposit_fee(context, context.tx.hash, context.msg.sender, context.tx.to,
+        self.fee_engine.add_deposit(context, context.tx.hash, context.msg.sender, context.tx.to,
                                     context.msg.value, context.block.height, term)
 
         event_log_args = [context.tx.hash, context.tx.to, context.msg.sender, context.msg.value, term]
-        self._emit_event(context, FeeHandler.EventType.DEPOSIT, event_log_args)
+        self._emit_event(context, DepositHandler.EventType.DEPOSIT, event_log_args)
 
     # noinspection PyPep8Naming
-    def _withdraw_fee(self, context: 'IconScoreContext', depositId: bytes):
+    def _withdraw_deposit(self, context: 'IconScoreContext', depositId: bytes):
         # return deposit_id, (score_address), context.msg.sender, (return_icx, penalty)
         if context.msg.value != 0:
             raise InvalidRequestException(f'Invalid value. value must be zero')
-        score_address, return_icx, penalty = self.fee_engine.withdraw_fee(
+        score_address, return_icx, penalty = self.fee_engine.withdraw_deposit(
             context, context.msg.sender, depositId, context.block.height, context.step_counter.step_price)
 
         event_log_args = [depositId, score_address, context.msg.sender, return_icx, penalty]
-        self._emit_event(context, FeeHandler.EventType.WITHDRAW, event_log_args)
+        self._emit_event(context, DepositHandler.EventType.WITHDRAW, event_log_args)
 
     @staticmethod
     def _emit_event(
-            context: 'IconScoreContext', event_type: 'FeeHandler.EventType', event_log_args: list):
+            context: 'IconScoreContext', event_type: 'DepositHandler.EventType', event_log_args: list):
 
-        signature, index_count = FeeHandler.get_signature_and_index_count(event_type)
+        signature, index_count = DepositHandler.get_signature_and_index_count(event_type)
 
         EventLogEmitter.emit_event_log(
             context, context.tx.to, signature, event_log_args, index_count)

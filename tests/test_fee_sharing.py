@@ -69,7 +69,7 @@ class TestFeeSharing(unittest.TestCase):
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = Mock(return_value={})
         self._inner_task._icon_service_engine._fee_engine.can_charge_fee_from_score = Mock()
 
-        self._inner_task._icon_service_engine._fee_engine.deposit_fee = Mock(
+        self._inner_task._icon_service_engine._fee_engine.add_deposit = Mock(
             return_value=[tx_hash, self.score, self.from_, amount, term])
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
             Mock(return_value={self.from_: 9000})
@@ -113,7 +113,7 @@ class TestFeeSharing(unittest.TestCase):
         deposit_id = self.test_add_deposit()
         amount, penalty = 4700, 300
 
-        self._inner_task._icon_service_engine._fee_engine.withdraw_fee = Mock(
+        self._inner_task._icon_service_engine._fee_engine.withdraw_deposit = Mock(
             return_value=(self.score, amount, penalty))
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
             Mock(return_value={self.from_: 9000})

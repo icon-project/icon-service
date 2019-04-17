@@ -30,7 +30,7 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from .fee.fee_engine import FeeEngine, FeeHandler
+from .fee.fee_engine import FeeEngine, DepositHandler
 from .fee.fee_storage import FeeStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     REVISION_3
@@ -80,7 +80,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = None
         self._fee_storage = None
         self._fee_engine = None
-        self._fee_handler = None
+        self._deposit_handler = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -125,7 +125,7 @@ class IconServiceEngine(ContextContainer):
         self._step_counter_factory = IconScoreStepCounterFactory()
         self._fee_engine = FeeEngine(
             icon_score_deploy_storage, self._fee_storage, self._icx_storage, self._icx_engine)
-        self._fee_handler = FeeHandler(self._fee_engine)
+        self._deposit_handler = DepositHandler(self._fee_engine)
         self._icon_pre_validator = \
             IconPreValidator(self._icx_engine, self._fee_engine, icon_score_deploy_storage)
 
@@ -474,7 +474,7 @@ class IconServiceEngine(ContextContainer):
                                  origin=from_,
                                  timestamp=params.get('timestamp', context.block.timestamp),
                                  nonce=params.get('nonce', None),
-                                 to=params['to'])
+                                 to=to)
 
         context.msg = Message(sender=from_, value=params.get('value', 0))
         context.current_address = to
@@ -898,7 +898,7 @@ class IconServiceEngine(ContextContainer):
 
         # Charge a fee to from account
         try:
-            detail_used_step = self._fee_engine.charge_transaction_fee(
+            step_used_details = self._fee_engine.charge_transaction_fee(
                 context, from_, to, step_price, step_used, context.block.height)
         except BaseException as e:
             if hasattr(e, 'message'):
@@ -906,10 +906,10 @@ class IconServiceEngine(ContextContainer):
             else:
                 message = str(e)
             Logger.exception(message, ICON_SERVICE_LOG_TAG)
-            detail_used_step = {from_: 0, to: 0}
+            step_used_details = {from_: 0, to: 0}
 
         # final step_used and step_price
-        return detail_used_step, step_price
+        return step_used_details, step_price
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',
@@ -958,7 +958,7 @@ class IconServiceEngine(ContextContainer):
                 data=data)
             return score_address
         elif data_type == 'deposit':
-            self._fee_handler.handle_fee_request(context, data)
+            self._deposit_handler.handle_deposit_request(context, data)
         else:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
@@ -966,7 +966,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _append_step_results(
-            tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_details: dict)->int:
+            tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_details: dict) -> int:
         """
         Appends step usage information to TransactionResult
         """
