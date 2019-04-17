@@ -156,7 +156,6 @@ class PrepsData(IissData):
         return self._PREFIX + block_height
 
     def make_value(self) -> bytes:
-        # todo: check int to bytes...
         encoded_prep_list = [[MsgPackForIpc.encode(delegation_info.address),
                               MsgPackForIpc.encode(delegation_info.value)] for delegation_info in self.prep_list]
         data = [

@@ -373,9 +373,9 @@ class IconServiceEngine(ContextContainer):
             block_result,
             context.rc_block_batch,
             context.prep_candidate_block_batch,
+            prev_block_contributors,
             context.new_icon_score_mapper,
-            precommit_flag,
-            prev_block_contributors)
+            precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
@@ -1282,7 +1282,6 @@ class IconServiceEngine(ContextContainer):
                                     context: 'IconScoreContext',
                                     _) -> dict:
         # todo: get issue related info from iiss engine
-        # todo: consider order of dict data (should I have to use OrderedDict?)
         if context.revision < REVISION_5:
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
