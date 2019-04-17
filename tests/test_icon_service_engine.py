@@ -242,7 +242,6 @@ class TestIconServiceEngine(unittest.TestCase):
             return ret
 
         self._engine._invoke_request = Mock(side_effect=intercept_invoke_req)
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -307,7 +306,6 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_timestamp,
                       self.genesis_block.hash)
 
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -369,7 +367,6 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_hash,
                       block_timestamp,
                       self.genesis_block.hash)
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -429,7 +426,6 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_timestamp,
                       self.genesis_block.hash)
 
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -508,7 +504,6 @@ class TestIconServiceEngine(unittest.TestCase):
         before_from_balance: int = \
             self._engine._icx_engine.get_balance(context, self.from_)
 
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -591,7 +586,6 @@ class TestIconServiceEngine(unittest.TestCase):
             Mock(return_value=None, side_effect=IconScoreException("force revert"))
 
         raise_exception_start_tag("test_score_invoke_with_revert")
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         raise_exception_end_tag("test_score_invoke_with_revert")
         self.assertIsInstance(state_root_hash, bytes)
@@ -715,7 +709,6 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_timestamp,
                       self.genesis_block.hash)
 
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -804,7 +797,6 @@ class TestIconServiceEngine(unittest.TestCase):
 
         transactions: list = params['transactions']
         self.assertIsInstance(transactions[0]['params']['to'], MalformedAddress)
-        self._engine._check_is_issue_transaction = Mock(return_value=False)
 
         tx_results, state_root_hash = self._engine.invoke(block, transactions)
         self.assertIsInstance(state_root_hash, bytes)

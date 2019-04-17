@@ -18,7 +18,7 @@
 """
 from copy import deepcopy, copy
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix
+from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import IconServiceBaseException, IllegalFormatException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER
 from tests import create_tx_hash, create_address
@@ -27,6 +27,20 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
+    def _update_governance(self):
+        tx = self._make_deploy_tx("test_builtin",
+                                  "latest_version/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+    def _set_revision(self, revision: int):
+        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
 
     def _make_dummy_tx(self):
         return self._make_icx_send_tx(self._genesis, create_address(), 1)
@@ -35,6 +49,8 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
         super().setUp()
+        self._update_governance()
+        self._set_revision(5)
         self.prep = {
             "incentive": 1,
             "rewardRate": 1,
@@ -68,7 +84,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         invalid_tx_list = [
             self._make_dummy_tx()
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list, None, True)
+        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
 
         # failure case: when first transaction is not a issue transaction
         # but 2nd is a issue transaction, should raise error
@@ -76,14 +92,14 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_issue_tx(self.issue_data_in_tx)
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list, None, True)
+        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
             self._make_issue_tx(self.issue_data_in_tx),
             self._make_issue_tx(self.issue_data_in_tx)
         ]
-        self.assertRaises(KeyError, self._make_and_req_block, invalid_tx_list, None, True)
+        self.assertRaises(KeyError, self._make_and_req_block, invalid_tx_list)
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [
@@ -91,7 +107,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list, None, True)
+        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
 
     def test_validate_issue_transaction_format(self):
         # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with
@@ -107,7 +123,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
+            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
             copied_issue_data[group_key] = temp
 
         # more than
@@ -118,7 +134,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
+        self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
 
         # failure case: when group's inner data key (i.e. incentiveRep, rewardRep, etc) is different
         # with stateDB (except value), should raise error
@@ -132,7 +148,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
+            self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
             del data['dummy_key']
 
         # less than
@@ -146,7 +162,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                     self._make_dummy_tx(),
                     self._make_dummy_tx()
                 ]
-                self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list, None, True)
+                self.assertRaises(IllegalFormatException, self._make_and_req_block, tx_list)
                 data[key] = temp
 
     def test_validate_issue_transaction_value(self):
@@ -169,7 +185,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                     self._make_dummy_tx(),
                     self._make_dummy_tx()
                 ]
-                _, tx_results = self._make_and_req_block(tx_list, None, True)
+                _, tx_results = self._make_and_req_block(tx_list)
                 self.assertEqual(expected_tx_status, tx_results[0].status)
                 self.assertEqual(expected_failure_msg, tx_results[0].failure.message)
                 self.assertEqual(expected_event_logs, tx_results[0].event_logs)
@@ -186,7 +202,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block(tx_list, None, True)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
         expected_tx_status = 1
         expected_failure = None

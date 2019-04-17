@@ -352,7 +352,9 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if self._check_is_issue_transaction(index, tx_request['params'].get('dataType', None)):
+                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
+                    if not tx_request['params'].get('dataType') == "issue":
+                        raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request, index)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
@@ -377,17 +379,6 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
-
-    @staticmethod
-    def _check_is_issue_transaction(index: int, data_type: Optional[str]) -> bool:
-        if index is ICX_ISSUE_TRANSACTION_INDEX:
-            if not data_type == "issue":
-                # invalid block. raise Exception to propagate a negative vote on the block
-                raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
-            else:
-                return True
-        else:
-            return False
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
@@ -1292,6 +1283,9 @@ class IconServiceEngine(ContextContainer):
                                     _) -> dict:
         # todo: get issue related info from iiss engine
         # todo: consider order of dict data (should I have to use OrderedDict?)
+        if context.revision < REVISION_5:
+            iiss_data_for_issue = {"prep": {"value": 0}}
+            return iiss_data_for_issue
         # dummy data
         iiss_data_for_issue: dict = \
             {
