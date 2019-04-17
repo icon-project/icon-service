@@ -66,7 +66,7 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def get_issue_info(self):
-        if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
             loop = get_event_loop()
             return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
                                               self._get_issue_info)
