@@ -835,7 +835,8 @@ class IconServiceEngine(ContextContainer):
         input_size = get_input_data_size(context.revision, params.get('data', None))
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
-        if to != ZERO_SCORE_ADDRESS:
+        data_type: str = params.get('dataType')
+        if data_type in (None, 'call', 'message'):
             self._transfer_coin(context, params)
 
         score_address = None

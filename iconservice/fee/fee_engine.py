@@ -174,7 +174,7 @@ class FeeEngine:
         deposit.created = block_number
         deposit.expires = block_number + term
         deposit.virtual_step_issued = \
-            VirtualStepCalculator.calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
+            self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
         deposit.prev_id = score_deposit_info.tail_id
 
         self._insert_deposit(context, deposit)
@@ -725,7 +725,7 @@ class VirtualStepCalculator:
         assert expires_in is not None
         assert block_number is not None
 
-        if block_number >= expires_in:
+        if block_number > expires_in:
             return 0
 
         excess_profit = VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, expires_in) - \
@@ -744,6 +744,7 @@ class VirtualStepCalculator:
     def calculate_withdrawal_amount(deposit: 'Deposit', penalty: int, step_price: int):
         remaining_virtual_step_in_loop = (deposit.virtual_step_issued - deposit.virtual_step_used) * step_price
         remaining_penalty = penalty - remaining_virtual_step_in_loop
+        remaining_penalty = 0 if remaining_penalty <= 0 else remaining_penalty
         withdrawal_amount = deposit.deposit_amount - deposit.deposit_used - remaining_penalty
 
         if withdrawal_amount < 0:
