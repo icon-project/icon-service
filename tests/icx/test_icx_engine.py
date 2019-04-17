@@ -41,6 +41,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.genesis_address = Address.from_string('hx' + '0' * 40)
         self.fee_treasury_address = Address.from_string('hx' + '1' * 40)
         self.total_supply = 10 ** 20  # 100 icx
+        self.fee_treasury_address_icx_amount = 0
 
         self.context = IconScoreContext(IconScoreContextType.DIRECT)
 
@@ -203,6 +204,26 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             self.total_supply,
             from_balance + to_balance + fee_treasury_balance)
 
+    def test_issue(self):
+        context = self.context
+        issue_amount = 10 ** 18
+        to = self.fee_treasury_address
+
+        # failure case: when input amount equal 0 or less than 0, should raise AssertionError
+        for invalid_amount in range(-2, 1):
+            self.assertRaises(AssertionError, self.engine.issue, context, to, invalid_amount)
+
+        # success case: when input amount more than 0, icx should be issued
+        self.engine.issue(context, to, issue_amount)
+        actual_total_supply = self.engine.get_total_supply(context)
+        self.assertEqual(self.total_supply + issue_amount, actual_total_supply)
+
+        actual_treasury_icx_amount = self.engine.get_balance(context,
+                                                             self.fee_treasury_address)
+
+        self.assertEqual(self.fee_treasury_address_icx_amount + issue_amount,
+                         actual_treasury_icx_amount)
+
 
 class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
     def setUp(self):
@@ -231,7 +252,7 @@ class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
         block = Mock(spec=Block)
         block.attach_mock(Mock(return_value=0), 'height')
         self.context.block = block
-    
+
         icx_storage = IcxStorage(db)
         self.engine.open(icx_storage)
 

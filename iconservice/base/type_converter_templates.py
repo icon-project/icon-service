@@ -26,6 +26,7 @@ class ParamType(IntEnum):
     DEPLOY_DATA = 103
     TRANSACTION_PARAMS_DATA = 104
     DEPOSIT_DATA = 105
+    ISSUE_DATA = 106
 
     INVOKE = 200
 
@@ -111,6 +112,25 @@ class ConstantKeys:
     CALL = "call"
     DEPLOY = "deploy"
 
+    ISSUE = "issue"
+    PREP = "prep"
+    PREP_INCENTIVE = "incentive"
+    PREP_REWARD_RATE = "rewardRate"
+    PREP_TOTAL_DELEGATION = "totalDelegation"
+    PREP_VALUE = "value"
+
+    EEP = "eep"
+    EEP_INCENTIVE = "incentive"
+    EEP_REWARD_RATE = "rewardRate"
+    EEP_TOTAL_DELEGATION = "totalDelegation"
+    EEP_VALUE = "value"
+
+    DAPP = "dapp"
+    DAPP_INCENTIVE = "incentive"
+    DAPP_REWARD_RATE = "rewardRate"
+    DAPP_TOTAL_DELEGATION = "totalDelegation"
+    DAPP_VALUE = "value"
+
     OLD_TX_HASH = "tx_hash"
 
     GENESIS_DATA = "genesisData"
@@ -119,6 +139,10 @@ class ConstantKeys:
 
     BLOCK = "block"
     TRANSACTIONS = "transactions"
+
+    PREV_BLOCK_CONTRIBUTORS = "prevBlockContributors"
+    GENERATOR = "generator"
+    VALIDATORS = "validators"
 
     FILTER = "filter"
 
@@ -167,6 +191,27 @@ type_convert_templates[ParamType.DEPLOY_DATA] = {
     ConstantKeys.PARAMS: ValueType.LATER
 }
 
+type_convert_templates[ParamType.ISSUE_DATA] = {
+    ConstantKeys.PREP: {
+        ConstantKeys.PREP_INCENTIVE: ValueType.INT,
+        ConstantKeys.PREP_REWARD_RATE: ValueType.INT,
+        ConstantKeys.PREP_TOTAL_DELEGATION: ValueType.INT,
+        ConstantKeys.PREP_VALUE: ValueType.INT
+    },
+    ConstantKeys.EEP: {
+        ConstantKeys.EEP_INCENTIVE: ValueType.INT,
+        ConstantKeys.EEP_REWARD_RATE: ValueType.INT,
+        ConstantKeys.EEP_TOTAL_DELEGATION: ValueType.INT,
+        ConstantKeys.EEP_VALUE: ValueType.INT
+    },
+    ConstantKeys.DAPP: {
+        ConstantKeys.DAPP_INCENTIVE: ValueType.INT,
+        ConstantKeys.DAPP_REWARD_RATE: ValueType.INT,
+        ConstantKeys.DAPP_TOTAL_DELEGATION: ValueType.INT,
+        ConstantKeys.DAPP_VALUE: ValueType.INT
+    }
+}
+
 type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
     ConstantKeys.VERSION: ValueType.INT,
     ConstantKeys.TX_HASH: ValueType.BYTES,
@@ -183,7 +228,8 @@ type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
         CONVERT_USING_SWITCH_KEY: {
             SWITCH_KEY: ConstantKeys.DATA_TYPE,
             ConstantKeys.CALL: type_convert_templates[ParamType.CALL_DATA],
-            ConstantKeys.DEPLOY: type_convert_templates[ParamType.DEPLOY_DATA]
+            ConstantKeys.DEPLOY: type_convert_templates[ParamType.DEPLOY_DATA],
+            ConstantKeys.ISSUE: type_convert_templates[ParamType.ISSUE_DATA]
         }
     },
     KEY_CONVERTER: {
@@ -206,7 +252,11 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.BLOCK: type_convert_templates[ParamType.BLOCK],
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
-    ]
+    ],
+    ConstantKeys.PREV_BLOCK_CONTRIBUTORS: {
+        ConstantKeys.GENERATOR: ValueType.ADDRESS,
+        ConstantKeys.VALIDATORS: [ValueType.ADDRESS]
+    }
 }
 
 type_convert_templates[ParamType.ICX_CALL] = {
