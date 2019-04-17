@@ -46,6 +46,12 @@ class FeeStorage(object):
         """
         return self._db
 
+    def _generate_key(self, key_data: bytes):
+        """
+        Generates a db key
+        """
+        return self._FEE_PREFIX + sha3_256(key_data).digest()
+
     def get_score_deposit_info(self, context: 'IconScoreContext', score_address: 'Address') -> 'ScoreDepositInfo':
         """Returns the score deposit information.
 
@@ -53,7 +59,7 @@ class FeeStorage(object):
         :param score_address: SCORE address
         :return: ScoreDepositInfo object
         """
-        key = self._FEE_PREFIX + sha3_256(score_address.to_bytes()).digest()
+        key = self._generate_key(score_address.to_bytes())
         value = self._db.get(context, key)
         return ScoreDepositInfo.from_bytes(value) if value else value
 
@@ -66,7 +72,7 @@ class FeeStorage(object):
         :param score_deposit_info: ScoreDepositInfo object
         :return: None
         """
-        key = self._FEE_PREFIX + sha3_256(score_address.to_bytes()).digest()
+        key = self._generate_key(score_address.to_bytes())
         value = score_deposit_info.to_bytes()
         self._db.put(context, key, value)
 
@@ -77,7 +83,7 @@ class FeeStorage(object):
         :param score_address: SCORE address
         :return: None
         """
-        key = self._FEE_PREFIX + sha3_256(score_address.to_bytes()).digest()
+        key = self._generate_key(score_address.to_bytes())
         self._db.delete(context, key)
 
     def get_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> 'Deposit':
@@ -87,7 +93,7 @@ class FeeStorage(object):
         :param deposit_id: Deposit id
         :return: Deposit Object
         """
-        key = self._FEE_PREFIX + sha3_256(deposit_id).digest()
+        key = self._generate_key(deposit_id)
         value = self._db.get(context, key)
 
         if value:
@@ -104,7 +110,7 @@ class FeeStorage(object):
         :param deposit: Deposit Object
         :return: None
         """
-        key = self._FEE_PREFIX + sha3_256(deposit_id).digest()
+        key = self._generate_key(deposit_id)
         value = deposit.to_bytes()
         self._db.put(context, key, value)
 
@@ -115,7 +121,7 @@ class FeeStorage(object):
         :param deposit_id: Deposit id
         :return: None
         """
-        key = self._FEE_PREFIX + sha3_256(deposit_id).digest()
+        key = self._generate_key(deposit_id)
         self._db.delete(context, key)
 
     def close(self,
