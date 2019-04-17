@@ -158,7 +158,7 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg=f"claim_iscore() end: iscore({response.iscore})")
         print(f"claim_iscore() end: iscore({response.iscore})")
 
-        return response.iscore
+        return response.iscore, response.block_height
 
     async def _claim_iscore(self, address: 'Address',
                             block_height: int, block_hash: bytes) -> int:

@@ -84,7 +84,7 @@ class TestTypeConverter(unittest.TestCase):
 
         request = {}
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_CLAIM_I_SCORE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_CLAIM_ISCORE)
         self.assertEqual({}, ret_params)
 
     def test_query_i_score(self):
@@ -94,7 +94,7 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.ADDRESS: str(address),
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_QUERY_I_SCORE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_QUERY_ISCORE)
         self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
 
     def test_reg_prep_candidate(self):
