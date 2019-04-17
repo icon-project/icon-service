@@ -410,6 +410,9 @@ class TestTypeConverter(unittest.TestCase):
         data_value = 1 * 10 ** 18
         fixed_fee = 10 ** 16
 
+        prev_block_generator = create_address()
+        prev_block_validators = [create_address() for _ in range(0, 10)]
+
         request = {
             ConstantKeys.BLOCK: {
                 ConstantKeys.BLOCK_HEIGHT: hex(block_height),
@@ -454,7 +457,11 @@ class TestTypeConverter(unittest.TestCase):
                         ConstantKeys.SIGNATURE: signature,
                     }
                 }
-            ]
+            ],
+            ConstantKeys.PREV_BLOCK_CONTRIBUTORS: {
+                ConstantKeys.GENERATOR: str(prev_block_generator),
+                ConstantKeys.VALIDATORS: [str(addr) for addr in prev_block_validators]
+            }
         }
 
         ret_params = TypeConverter.convert(request, ParamType.INVOKE)
@@ -499,6 +506,11 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(timestamp, transaction_params_params[ConstantKeys.TIMESTAMP])
         self.assertEqual(nonce, transaction_params_params[ConstantKeys.NONCE])
         self.assertEqual(signature, transaction_params_params[ConstantKeys.SIGNATURE])
+
+        # Check the previous block contributors
+        ret_prev_block_contributors_params = ret_params[ConstantKeys.PREV_BLOCK_CONTRIBUTORS]
+        self.assertEqual(prev_block_generator, ret_prev_block_contributors_params[ConstantKeys.GENERATOR])
+        self.assertEqual(prev_block_validators, ret_prev_block_contributors_params[ConstantKeys.VALIDATORS])
 
     def test_genesis_invoke_convert(self):
         block_height = 1001
