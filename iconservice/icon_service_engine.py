@@ -384,8 +384,9 @@ class IconServiceEngine(ContextContainer):
                                       flags: 'PrecommitFlag',
                                       context: 'IconScoreContext',
                                       tx_result: 'TransactionResult'):
-        """
-        Updates the revision code of given context if governance or its states has been updated
+        """Updates the revision code of given context
+        if governance or its state has been updated
+
         :param context: current context
         :param tx_result: transaction result
         :return:
@@ -429,7 +430,7 @@ class IconServiceEngine(ContextContainer):
             step_price: int = self._get_step_price_from_governance(context, governance_score)
             context.step_counter.set_step_price(step_price)
 
-            step_costs: int = self._get_step_costs_from_governance(governance_score)
+            step_costs: dict = self._get_step_costs_from_governance(governance_score)
             context.step_counter.set_step_costs(step_costs)
 
             max_step_limits: dict = self._get_step_max_limits_from_governance(governance_score)
