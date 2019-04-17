@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class FeeStorage(object):
     """Fee and Deposit state manager embedding a state db wrapper"""
 
-    _FEE_PREFIX = b'02'
+    _FEE_PREFIX = b'\x02'
 
     def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
