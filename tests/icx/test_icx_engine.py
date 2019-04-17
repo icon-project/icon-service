@@ -209,16 +209,9 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         issue_amount = 10 ** 18
         to = self.fee_treasury_address
 
-        # success case: when input amount equal 0 or less than 0, icx should not be issued
+        # failure case: when input amount equal 0 or less than 0, should raise AssertionError
         for invalid_amount in range(-2, 1):
-            self.engine.issue(context, to, invalid_amount)
-            actual_total_supply = self.engine.get_total_supply(context)
-            self.assertEqual(self.total_supply, actual_total_supply)
-
-            actual_treasury_icx_amount = self.engine.get_balance(context,
-                                                                 self.fee_treasury_address)
-
-            self.assertEqual(self.fee_treasury_address_icx_amount, actual_treasury_icx_amount)
+            self.assertRaises(AssertionError, self.engine.issue, context, to, invalid_amount)
 
         # success case: when input amount more than 0, icx should be issued
         self.engine.issue(context, to, issue_amount)

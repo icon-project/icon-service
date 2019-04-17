@@ -245,6 +245,7 @@ class IcxEngine(object):
               context: 'IconScoreContext',
               to: Address,
               amount: int):
+        assert amount > 0
 
         if amount > 0:
             to_account = self._storage.get_account(context, to)
