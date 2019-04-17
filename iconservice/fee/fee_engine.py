@@ -62,7 +62,11 @@ class DepositInfo:
                 # Excludes properties which have `None` value
                 continue
 
-            new_dict[casing(key) if casing else key] = value
+            new_key = casing(key) if casing else key
+            if isinstance(value, list):
+                new_dict[new_key] = [v.to_dict(casing) for v in value if isinstance(v, Deposit)]
+            else:
+                new_dict[new_key] = value
 
         return new_dict
 

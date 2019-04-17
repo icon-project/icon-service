@@ -31,6 +31,17 @@ class Deposit(object):
     # The minimum remaining amount of a single deposit is 10 percent of amount of the deposit
     _MIN_REMAINING_PROPORTION = 10
 
+    _EXPOSING_ITEM_KEYS = (
+        'id',
+        'sender',
+        'deposit_amount',
+        'deposit_used',
+        'created',
+        'expires',
+        'virtual_step_issued',
+        'virtual_step_used'
+    )
+
     def __init__(self, deposit_id: bytes = None, score_address: 'Address' = None, sender: 'Address' = None,
                  deposit_amount: int = 0, deposit_used: int = 0, created: int = 0, expires: int = -1,
                  virtual_step_issued: int = 0, virtual_step_used: int = 0,
@@ -112,6 +123,9 @@ class Deposit(object):
         for key, value in self.__dict__.items():
             # Excludes properties which have `None` value
             if value is None:
+                continue
+
+            if key not in self._EXPOSING_ITEM_KEYS:
                 continue
 
             new_key = casing(key) if casing else key

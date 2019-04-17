@@ -181,7 +181,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_id = deposit_tx_result.tx_hash
         score_info = self._query_score_info(self.score_address)
         self.assertIn('depositInfo', score_info)
-        self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
+        self.assertIn(deposit_id, map(lambda d: d['id'], score_info['depositInfo']['deposits']))
         after_deposit_user_balance = self._query({"address": self._admin}, "icx_getBalance")
 
         self.assertEqual(before_deposit_user_balance-5000*10**18-deposit_fee, after_deposit_user_balance)
@@ -373,7 +373,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertIn('depositInfo', score_info)
         deposit_info = score_info['depositInfo']
         self.assertEqual(deposit_info["scoreAddress"], self.score_address)
-        self.assertEqual(deposit_id1, deposit_info["deposits"][0].id)
+        self.assertEqual(deposit_id1, deposit_info["deposits"][0]['id'])
         self.assertEqual(len(deposit_info["deposits"]), 1)
         self.assertEqual(deposit_info["availableVirtualStep"], virtual_step_issuance1)
         self.assertEqual(deposit_info["availableDeposit"], amount_deposit * 90 // 100)
@@ -386,14 +386,14 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertIn('depositInfo', score_info)
         deposit_info = score_info['depositInfo']
         self.assertEqual(deposit_info["scoreAddress"], self.score_address)
-        self.assertEqual(deposit_id1, deposit_info["deposits"][0].id)
-        self.assertEqual(deposit_id2, deposit_info["deposits"][1].id)
+        self.assertEqual(deposit_id1, deposit_info["deposits"][0]['id'])
+        self.assertEqual(deposit_id2, deposit_info["deposits"][1]['id'])
         self.assertEqual(len(deposit_info["deposits"]), 2)
         self.assertEqual(deposit_info["availableVirtualStep"], virtual_step_issuance1 + virtual_step_issuance2)
 
         sum_of_available_deposit = 0
         for i in range(len(deposit_info["deposits"])):
-            sum_of_available_deposit += deposit_info["deposits"][i].deposit_amount * 90 // 100
+            sum_of_available_deposit += deposit_info["deposits"][i]['depositAmount'] * 90 // 100
         self.assertEqual(deposit_info["availableDeposit"], sum_of_available_deposit)
 
     def test_add_multiple_deposits(self):
@@ -427,7 +427,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
         score_info = self._query_score_info(self.score_address)
         self.assertIn('depositInfo', score_info)
-        self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
+        self.assertIn(deposit_id, map(lambda d: d['id'], score_info['depositInfo']['deposits']))
 
     def test_withdraw_deposit_after_deposit(self):
         """
@@ -440,7 +440,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
 
         score_info = self._query_score_info(self.score_address)
         self.assertIn('depositInfo', score_info)
-        self.assertIn(deposit_id, map(lambda d: d.id, score_info['depositInfo']['deposits']))
+        self.assertIn(deposit_id, map(lambda d: d['id'], score_info['depositInfo']['deposits']))
 
         withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertTrue(withdraw_tx_result.status)
