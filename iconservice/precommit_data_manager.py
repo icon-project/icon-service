@@ -48,8 +48,9 @@ class PrecommitData(object):
                  block_result: list,
                  rc_block_batch: list,
                  prep_candidate_block_batch: 'PRepCandidateBatch',
-                 score_mapper: Optional['IconScoreMapper']=None,
-                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
+                 score_mapper: Optional['IconScoreMapper'] = None,
+                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE,
+                 prev_block_contributors: dict = None):
         """
 
         :param block_batch: changed states for a block
@@ -66,6 +67,8 @@ class PrecommitData(object):
         self.precommit_flag = precommit_flag
         self.block = block_batch.block
         self.state_root_hash: bytes = self.block_batch.digest()
+        # todo: Q. at this point, is there no need to setting defailt param value?
+        self.prev_block_contributors = prev_block_contributors
 
 
 class PrecommitDataManager(object):

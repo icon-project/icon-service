@@ -55,6 +55,45 @@ BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': "cx0000000000000000000000000000000
 
 ZERO_TX_HASH = bytes(32)
 
+
+class IssueDataKey:
+    PREP = "prep"
+    EEP = "eep"
+    DAPP = "dapp"
+    TOTAL = "total"
+
+    INCENTIVE = "incentive"
+    REWARD_RATE = "rewardRate"
+    TOTAL_DELEGATION = "totalDelegation"
+    VALUE = "value"
+
+
+ISSUE_EVENT_LOG_MAPPER = {
+    IssueDataKey.PREP: {
+        "indexed": "PRepIssue(int, int, int, int)",
+        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
+                 IssueDataKey.VALUE]
+    },
+    IssueDataKey.EEP: {
+        "indexed": "EEPIssue(int, int, int, int)",
+        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
+                 IssueDataKey.VALUE]
+    },
+    IssueDataKey.DAPP: {
+        "indexed": "DappIssue(int, int, int, int)",
+        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
+                 IssueDataKey.VALUE]
+    },
+    IssueDataKey.TOTAL: {
+        "indexed": "ICXIssue(int)",
+        "data": []
+    }
+}
+
+ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP, IssueDataKey.EEP, IssueDataKey.DAPP]
+
+ICX_ISSUE_TRANSACTION_INDEX = 0
+
 REVISION_2 = 2
 REVISION_3 = 3
 REVISION_4 = 4

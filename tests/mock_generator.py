@@ -108,6 +108,8 @@ def generate_inner_task(
     # Ignores revision
     inner_task._icon_service_engine._set_revision_to_context = Mock()
 
+    # Ignores issue logic
+    inner_task._icon_service_engine._check_is_issue_transaction = Mock(return_value=False)
     return inner_task
 
 
@@ -130,6 +132,7 @@ def generate_service_engine(
         db_factory_create_by_name,
         icx_engine_open):
     service_engine = IconServiceEngine()
+    service_engine._check_issue_transaction = Mock(return_value=False)
 
     service_engine._load_builtin_scores = Mock()
 

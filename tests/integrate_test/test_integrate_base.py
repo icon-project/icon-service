@@ -263,7 +263,29 @@ class TestIntegrateBase(TestCase):
             self.icon_service_engine.validate_transaction(tx)
         return tx
 
-    def _make_and_req_block(self, tx_list: list, block_height: int = None) -> tuple:
+    def _make_issue_tx(self,
+                       data: dict):
+        timestamp_us = create_timestamp()
+
+        request_params = {
+            "version": self._version,
+            "timestamp": timestamp_us,
+            "dataType": "issue",
+            "data": data
+        }
+        method = 'icx_sendTransaction'
+        request_params['txHash'] = create_tx_hash()
+        tx = {
+            'method': method,
+            'params': request_params
+        }
+
+        return tx
+
+    def _make_and_req_block(self, tx_list: list,
+                            block_height: int = None,
+                            is_issue_test: bool = False,
+                            prev_block_contributor: Optional[dict] = None) -> tuple:
         if block_height is None:
             block_height: int = self._block_height
         block_hash = create_block_hash()
@@ -271,7 +293,38 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
 
-        invoke_response, _ = self.icon_service_engine.invoke(block, tx_list)
+        # this code is for tests which is implemented before issue transaction validation logic.
+        # if these check logic is not exists, most of tests will be broken
+        if not is_issue_test:
+            # todo: change hard coded issue data
+            issue_tx = self._make_issue_tx({
+                "prep": {
+                    "incentive": 1,
+                    "rewardRate": 1,
+                    "totalDelegation": 1,
+                    "value": 1
+                },
+                "eep": {
+                    "incentive": 2,
+                    "rewardRate": 2,
+                    "totalDelegation": 2,
+                    "value": 2
+                },
+                "dapp": {
+                    "incentive": 3,
+                    "rewardRate": 3,
+                    "totalDelegation": 3,
+                    "value": 3
+                }
+            })
+            tx_list.insert(0, issue_tx)
+
+        invoke_response, _ = self.icon_service_engine.invoke(block=block,
+                                                             tx_requests=tx_list,
+                                                             prev_block_contributors=prev_block_contributor)
+        if not is_issue_test:
+            invoke_response.pop(0)
+
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:

@@ -44,8 +44,10 @@ class IcxEngine(object):
         """Constructor
         """
         self._storage: 'IcxStorage' = None
+        # todo: refactoring
         self._total_supply_amount: int = 0
         self._genesis_address: 'Address' = None
+        # todo: refactoring
         self._fee_treasury_address: 'Address' = None
 
     def open(self, storage: 'IcxStorage') -> None:
@@ -215,13 +217,15 @@ class IcxEngine(object):
         account: 'Account' = self._storage.get_account(context, address)
         return account.balance
 
+    # todo: need to be refactoring
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply of icx coin
 
         :param context:
         :return: (int) amount in loop (1 icx == 1e18 loop)
         """
-        return self._total_supply_amount
+        # todo: to be refactored (using memory)
+        return self._storage.get_total_supply(context)
 
     def charge_fee(self,
                    context: 'IconScoreContext',
@@ -236,6 +240,19 @@ class IcxEngine(object):
         :return:
         """
         self._transfer(context, from_, self._fee_treasury_address, fee)
+
+    def issue(self,
+              context: 'IconScoreContext',
+              to: Address,
+              amount: int):
+
+        if amount > 0:
+            to_account = self._storage.get_account(context, to)
+            to_account.deposit(amount)
+            current_total_supply = self._storage.get_total_supply(context)
+
+            self._storage.put_account(context, to_account)
+            self._storage.put_total_supply(context, current_total_supply + amount)
 
     def transfer(self,
                  context: 'IconScoreContext',
