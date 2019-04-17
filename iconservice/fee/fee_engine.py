@@ -124,7 +124,7 @@ class FeeEngine:
             deposit_info.deposits.append(deposit)
 
             # Retrieves available virtual STEPs and deposits
-            if block_height <= deposit.expires:
+            if block_height < deposit.expires:
                 deposit_info.available_virtual_step += deposit.remaining_virtual_step
                 deposit_info.available_deposit += \
                     max(deposit.remaining_deposit - deposit.min_remaining_deposit, 0)
@@ -288,7 +288,7 @@ class FeeEngine:
         if deposit_meta.available_head_id_of_virtual_step == deposit.id:
             # Search for next deposit id which is available to use virtual step
             gen = self._deposit_generator(context, deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height <= d.expires, gen), None)
+            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
             next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
             deposit_meta.available_head_id_of_virtual_step = next_deposit_id
             deposit_meta_changed = True
@@ -296,7 +296,7 @@ class FeeEngine:
         if deposit_meta.available_head_id_of_deposit == deposit.id:
             # Search for next deposit id which is available to use the deposited ICX
             gen = self._deposit_generator(context, deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height <= d.expires, gen), None)
+            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
             next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
             deposit_meta.available_head_id_of_deposit = next_deposit_id
             deposit_meta_changed = True
@@ -358,11 +358,11 @@ class FeeEngine:
 
         if self._is_score_sharing_fee(deposit_meta):
             virtual_step_available = \
-                block_height <= deposit_meta.expires_of_virtual_step \
+                block_height < deposit_meta.expires_of_virtual_step \
                 and deposit_meta.available_head_id_of_virtual_step is not None
 
             deposit_available = \
-                block_height <= deposit_meta.expires_of_deposit \
+                block_height < deposit_meta.expires_of_deposit \
                 and deposit_meta.available_head_id_of_deposit is not None
 
             if not virtual_step_available and not deposit_available:
@@ -467,7 +467,7 @@ class FeeEngine:
         last_paid_deposit = None
 
         gen = self._deposit_generator(context, deposit_meta.available_head_id_of_virtual_step)
-        for deposit in filter(lambda d: block_height <= d.expires, gen):
+        for deposit in filter(lambda d: block_height < d.expires, gen):
             available_virtual_step = deposit.remaining_virtual_step
 
             if remaining_required_step < available_virtual_step:
@@ -509,7 +509,7 @@ class FeeEngine:
             # All virtual steps have been consumed in the current deposit
             # so should find the next available virtual steps
             gen = self._deposit_generator(context, last_paid_deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height <= d.expires, gen), None)
+            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
 
         next_available_deposit_id = next_available_deposit.id \
             if next_available_deposit is not None else None
@@ -547,7 +547,7 @@ class FeeEngine:
 
         # Search for next available deposit id
         gen = self._deposit_generator(context, deposit_meta.available_head_id_of_deposit)
-        for deposit in filter(lambda d: block_height <= d.expires, gen):
+        for deposit in filter(lambda d: block_height < d.expires, gen):
             available_deposit = deposit.remaining_deposit - deposit.min_remaining_deposit
 
             if remaining_required_icx < available_deposit:
@@ -598,7 +598,7 @@ class FeeEngine:
             # All available deposits have been consumed in the current deposit
             # so should find the next available deposits
             gen = self._deposit_generator(context, last_paid_deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height <= d.expires, gen), None)
+            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
 
         next_available_deposit_id = next_available_deposit.id if next_available_deposit else None
         next_expires = deposit_meta.expires_of_deposit
