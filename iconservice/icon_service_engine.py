@@ -393,8 +393,9 @@ class IconServiceEngine(ContextContainer):
                                       flags: 'PrecommitFlag',
                                       context: 'IconScoreContext',
                                       tx_result: 'TransactionResult'):
-        """
-        Updates the revision code of given context if governance or its states has been updated
+        """Updates the revision code of given context
+        if governance or its state has been updated
+
         :param context: current context
         :param tx_result: transaction result
         :return:
