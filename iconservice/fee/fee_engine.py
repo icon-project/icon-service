@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import typing
+from decimal import Decimal
 from enum import IntEnum
 from typing import List, Dict, Optional
 
@@ -173,7 +174,7 @@ class FeeEngine:
         deposit.created = block_number
         deposit.expires = block_number + term
         deposit.virtual_step_issued = \
-            self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
+            VirtualStepCalculator.calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
         deposit.prev_id = score_deposit_info.tail_id
 
         self._insert_deposit(context, deposit)
@@ -217,7 +218,8 @@ class FeeEngine:
                      context: 'IconScoreContext',
                      sender: 'Address',
                      deposit_id: bytes,
-                     block_number: int) -> ('Address', int, int):
+                     block_number: int,
+                     step_price: int) -> ('Address', int, int):
         """
         Withdraws deposited ICXs from given id.
         It may be paid the penalty if the expiry has not been met.
@@ -226,6 +228,7 @@ class FeeEngine:
         :param sender: msg sender address
         :param deposit_id: deposit id, should be tx hash of deposit transaction
         :param block_number: current block height
+        :param step_price: step price
         :return: score_address, returning amount of icx, penalty amount of icx
         """
         # [Sub Task]
@@ -247,14 +250,14 @@ class FeeEngine:
 
         # Deposits to sender's account
         penalty = self._calculate_penalty(
-            deposit.deposit_amount, deposit.created, deposit.expires, block_number)
+            deposit.deposit_amount, deposit.created, deposit.expires, block_number, step_price)
 
         if penalty > 0:
             treasury_account = self._icx_engine.get_treasury_account(context)
             treasury_account.deposit(penalty)
             self._icx_storage.put_account(context, treasury_account.address, treasury_account)
 
-        return_amount = deposit.deposit_amount - deposit.deposit_used - penalty
+        return_amount = self._calculate_withdrawal_amount(deposit, penalty, step_price)
         if return_amount > 0:
             sender_account = self._icx_storage.get_account(context, sender)
             sender_account.deposit(return_amount)
@@ -674,21 +677,97 @@ class FeeEngine:
         assert created_at is not None
         assert expires_in is not None
 
-        # TODO implement functionality
-        return 0
+        return VirtualStepCalculator.calculate_virtual_step_issuance(deposit_amount, created_at, expires_in)
 
     @staticmethod
     def _calculate_penalty(deposit_amount: int,
                            created_at: int,
                            expires_in: int,
-                           block_number: int) -> int:
+                           block_number: int,
+                           step_price: int) -> int:
+        assert deposit_amount is not None
+        assert created_at is not None
+        assert expires_in is not None
+        assert block_number is not None
+        assert step_price is not None
+
+        return VirtualStepCalculator.calculate_penalty(deposit_amount, created_at, expires_in, block_number, step_price)
+
+    @staticmethod
+    def _calculate_withdrawal_amount(deposit: 'Deposit', penalty: int, step_price: int) -> int:
+        return VirtualStepCalculator.calculate_withdrawal_amount(deposit, penalty, step_price)
+
+
+class VirtualStepCalculator:
+    _VIRTUAL_STEP_ISSUANCE_PARAM_1 = 1_000
+    _VIRTUAL_STEP_ISSUANCE_PARAM_2 = 100
+    _VIRTUAL_STEP_ISSUANCE_PARAM_3 = 0
+    _VIRTUAL_STEP_ISSUANCE_PARAM_4 = 8_249
+    _VIRTUAL_STEP_ISSUANCE_PARAM_5 = 1_706
+    _VIRTUAL_STEP_ISSUANCE_PARAM_6 = -13
+    _VIRTUAL_STEP_SCALE_ADJUST_VARIABLE = 1_200
+    _DEPOSIT_ADJUSTMENT_VARIABLE = 10_000
+    _TERM_ADJUSTMENT_VARIABLE = 1_296_000
+
+    @staticmethod
+    def calculate_virtual_step_issuance(deposit_amount: int, created_at: int, term: int) -> int:
+        assert deposit_amount is not None
+        assert created_at is not None
+        assert term is not None
+
+        return int(VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, term))
+
+    @staticmethod
+    def calculate_penalty(deposit_amount: int, created_at: int, expires_in: int,
+                          block_number: int, step_price: int) -> int:
         assert deposit_amount is not None
         assert created_at is not None
         assert expires_in is not None
         assert block_number is not None
 
-        # TODO implement functionality
-        return 0
+        if block_number >= expires_in:
+            return 0
+
+        excess_profit = VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, expires_in) - \
+                        VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, block_number)
+        excess_profit_in_loop = excess_profit * step_price
+        breach_penalty = deposit_amount // 100
+        return int(excess_profit_in_loop + breach_penalty)
+
+    @staticmethod
+    def _calculate_issuance_virtual_step(deposit_amount: int, expires_in: int) -> int:
+        return VirtualStepCalculator._VIRTUAL_STEP_SCALE_ADJUST_VARIABLE * \
+               VirtualStepCalculator._deposit_func(deposit_amount) * \
+               VirtualStepCalculator._term_func(expires_in)
+
+    @staticmethod
+    def calculate_withdrawal_amount(deposit: 'Deposit', penalty: int, step_price: int):
+        remaining_virtual_step_in_loop = (deposit.virtual_step_issued - deposit.virtual_step_used) * step_price
+        remaining_penalty = penalty - remaining_virtual_step_in_loop
+        withdrawal_amount = deposit.deposit_amount - deposit.deposit_used - remaining_penalty
+
+        if withdrawal_amount < 0:
+            raise InvalidRequestException("Can not withdraw deposit")
+
+        return withdrawal_amount
+
+    @staticmethod
+    def _deposit_func(amount: int) -> int:
+        deposit_in_icx = amount // 10 ** 18
+        adjusted_deposit = Decimal(deposit_in_icx) / Decimal(VirtualStepCalculator._DEPOSIT_ADJUSTMENT_VARIABLE)
+
+        result = Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_3) * Decimal(adjusted_deposit) ** 3 + \
+                 Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_2) * Decimal(adjusted_deposit) ** 2 + \
+                 Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_1) * Decimal(adjusted_deposit)
+
+        return result
+
+    @staticmethod
+    def _term_func(term: int) -> int:
+        adjusted_expire = term // VirtualStepCalculator._TERM_ADJUSTMENT_VARIABLE
+        return Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_6) * Decimal(adjusted_expire) ** 3 + \
+               Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_5) * Decimal(adjusted_expire) ** 2 + \
+               Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_4) * Decimal(adjusted_expire)
 
 
 class FeeHandler:
@@ -755,7 +834,7 @@ class FeeHandler:
         if context.msg.value != 0:
             raise InvalidRequestException(f'Invalid value. value must be zero')
         score_address, return_icx, penalty = self.fee_engine.withdraw_fee(
-            context, context.msg.sender, depositId, context.block.height)
+            context, context.msg.sender, depositId, context.block.height, context.step_counter.step_price)
 
         event_log_args = [depositId, score_address, context.msg.sender, return_icx, penalty]
         self._emit_event(context, FeeHandler.EventType.WITHDRAW, event_log_args)
