@@ -20,13 +20,12 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
-from iconservice.fee.deposit import Deposit
 from iconservice.fee.fee_engine import DepositInfo
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
-from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, create_query_request, \
-    QueryData, create_transaction_req
+from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
+    create_transaction_req
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
