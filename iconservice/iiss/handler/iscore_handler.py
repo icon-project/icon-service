@@ -16,11 +16,10 @@
 
 from typing import TYPE_CHECKING
 
-from ...iconscore.icon_score_event_log import EventLogEmitter
 from ...base.address import ZERO_SCORE_ADDRESS
-from ...base.exception import InvalidParamsException
-from ...base.type_converter_templates import ParamType, ConstantKeys
 from ...base.type_converter import TypeConverter
+from ...base.type_converter_templates import ParamType, ConstantKeys
+from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_result import TransactionResult
@@ -28,9 +27,13 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..reward_calc_proxy import RewardCalcProxy
+    from ..ipc.reward_calc_proxy import RewardCalcProxy
     from ..rc_data_storage import RcDataStorage
     from ..iiss_variable.iiss_variable import IissVariable
+
+
+def _iscore_to_icx(iscore: int) -> int:
+    return iscore // 10 ** 3
 
 
 class IScoreHandler:
@@ -41,75 +44,39 @@ class IScoreHandler:
 
     @classmethod
     def handle_claim_iscore(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
-
         address: 'Address' = context.tx.origin
-        # ret_params: dict = TypeConverter.convert(params, ParamType.IISS_CLAIM_I_SCORE)
-        cls._put_claim_iscore_for_state_db(context, address)
 
-    @classmethod
-    def _put_claim_iscore_for_state_db(cls, context: 'IconScoreContext', address: 'Address'):
+        # TODO: error handling
+        iscore, block_height = cls.reward_calc_proxy.claim_iscore(
+            address, context.block.height, context.block.hash)
 
-        iscore: int = 1000 * 10 ** 18
-        block_height: int = 100
-
-        ret_data: list = [address, iscore, block_height]
-        # TODO invoke to RC
-        # ret_data: list = cls.reward_calc_proxy.claim(address, context.block.height, context.block.hash)
-
-        ret_address: 'Address' = ret_data[0]
-
-        if address != ret_address:
-            raise InvalidParamsException(f"Mismatch claim IScore input: {address}, ret: {ret_address}")
-
-        ret_iscore: int = ret_data[1]
-        ret_icx: int = ret_iscore // 10 ** 3
-        ret_block_height: int = ret_data[2]
+        icx: int = _iscore_to_icx(iscore)
 
         from_account: 'Account' = cls.icx_storage.get_account(context, address)
-        from_account.deposit(ret_icx)
+        from_account.deposit(icx)
 
-        cls._create_tx_result(context, ret_iscore, ret_icx)
+        cls._create_tx_result(context, iscore, icx)
 
     @classmethod
     def _create_tx_result(cls, context: 'IconScoreContext', iscore: int, icx: int):
         # make tx result
-        event_signature: str = 'claimIScore(int,int)'
+        event_signature: str = 'IScoreClaimed(int,int)'
         arguments = [iscore, icx]
-        index = 2
+        index = 0
         EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, event_signature, arguments, index)
 
     @classmethod
     def handle_query_iscore(cls, context: 'IconScoreContext', params: dict) -> dict:
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_I_SCORE)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-        return cls._get_i_score_from_rc(address)
 
-    @classmethod
-    def _get_i_score_from_rc(cls, address: 'Address') -> dict:
-
-        address: 'Address' = None
-        iscore: int = 1000 * 10 ** 18
-        icx: int = iscore // 10 ** 3
-        block_height: int = 100
-
-        ret_data: list = [address, iscore, icx, block_height]
-        # TODO query from RC
-        # ret_data: list = cls.reward_calc_proxy.query(address)
-
-        ret_address: 'Address' = ret_data[0]
-
-        if address != ret_address:
-            raise InvalidParamsException(f"Mismatch claim IScore input: {address}, ret: {ret_address}")
-
-        ret_iscore: int = ret_data[1]
-        ret_icx: int = iscore // 10 ** 3
-        ret_block_height: int = ret_data[2]
+        # TODO: error handling
+        iscore, block_height = cls.reward_calc_proxy.query_iscore(address)
 
         data = {
-            "iscore": ret_iscore,
-            "icx": ret_icx,
-            "blockHeight": ret_block_height
+            "iscore": iscore,
+            "icx": _iscore_to_icx(iscore),
+            "blockHeight": block_height
         }
 
         return data
-

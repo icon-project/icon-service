@@ -48,8 +48,8 @@ class ParamType(IntEnum):
     IISS_GET_STAKE = 702
     IISS_SET_DELEGATION = 703
     IISS_GET_DELEGATION = 704
-    IISS_CLAIM_I_SCORE = 705
-    IISS_QUERY_I_SCORE = 706
+    IISS_CLAIM_ISCORE = 705
+    IISS_QUERY_ISCORE = 706
     IISS_REG_PREP_CANDIDATE = 707
     IISS_UNREG_PREP_CANDIDATE = 708
     IISS_SET_PREP_CANDIDATE = 709
@@ -326,9 +326,9 @@ type_convert_templates[ParamType.IISS_SET_DELEGATION] = {
 
 type_convert_templates[ParamType.IISS_GET_DELEGATION] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_CLAIM_I_SCORE] = {}
+type_convert_templates[ParamType.IISS_CLAIM_ISCORE] = {}
 
-type_convert_templates[ParamType.IISS_QUERY_I_SCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
+type_convert_templates[ParamType.IISS_QUERY_ISCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
 type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
     ConstantKeys.NAME: ValueType.STRING,
@@ -341,7 +341,7 @@ type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
     }
 }
 
-type_convert_templates[ParamType.IISS_UNREG_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
+type_convert_templates[ParamType.IISS_UNREG_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
 
 type_convert_templates[ParamType.IISS_SET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE]
 
@@ -350,7 +350,7 @@ type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE] = type_convert_templat
 type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO] = \
     type_convert_templates[ParamType.IISS_GET_STAKE]
 
-type_convert_templates[ParamType.IISS_GET_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_I_SCORE]
+type_convert_templates[ParamType.IISS_GET_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
 
 type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_LIST] = {
     ConstantKeys.START_RANK: ValueType.INT,
