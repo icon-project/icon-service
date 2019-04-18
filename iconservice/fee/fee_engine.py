@@ -189,7 +189,7 @@ class FeeEngine:
 
         # Link to previous item
         if deposit.prev_id is not None:
-            prev_deposit = self._fee_storage.get_deposit(context, deposit_meta.tail_id)
+            prev_deposit = self._fee_storage.get_deposit(context, deposit.prev_id)
             prev_deposit.next_id = deposit.id
             self._fee_storage.put_deposit(context, prev_deposit)
 
