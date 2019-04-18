@@ -239,26 +239,28 @@ class FeeEngine:
         if deposit.sender != sender:
             raise InvalidRequestException('Invalid sender')
 
-        self._delete_deposit(context, deposit, block_height)
-
         # Deposits to sender's account
         penalty = self._calculate_penalty(
             deposit, deposit.created, deposit.expires, block_height, step_price)
+
+        withdrawal_amount = deposit.remaining_deposit - penalty
+
+        if withdrawal_amount < 0:
+            raise InvalidRequestException(f"Failed to withdraw deposit")
 
         if penalty > 0:
             treasury_account = self._icx_engine.get_treasury_account(context)
             treasury_account.deposit(penalty)
             self._icx_storage.put_account(context, treasury_account.address, treasury_account)
 
-        return_amount = deposit.deposit_amount - deposit.deposit_used - penalty
-        if return_amount > 0:
+        if withdrawal_amount > 0:
             sender_account = self._icx_storage.get_account(context, sender)
-            sender_account.deposit(return_amount)
+            sender_account.deposit(withdrawal_amount)
             self._icx_storage.put_account(context, sender, sender_account)
-        elif return_amount < 0:
-            raise InvalidRequestException(f"Can not withdraw Deposit")
 
-        return deposit.score_address, return_amount, penalty
+        self._delete_deposit(context, deposit, block_height)
+
+        return deposit.score_address, withdrawal_amount, penalty
 
     def _delete_deposit(self, context: 'IconScoreContext', deposit: 'Deposit', block_height: int) -> None:
         """
@@ -736,10 +738,11 @@ class VirtualStepCalculator(object):
             cls.calculate_virtual_step(deposit_amount, agreement_term) - \
             cls.calculate_virtual_step(deposit_amount, current_term)
 
-        remaining_excess_profit = max(0, excess_profit - remaining_virtual_step) * step_price
+        # redemption amount for over-used step in ICX(loop)
+        redemption_amount = max(0, excess_profit - remaining_virtual_step) * step_price
         breach_penalty = deposit_amount // 100
 
-        return remaining_excess_profit + breach_penalty
+        return redemption_amount + breach_penalty
 
     @classmethod
     def _deposit_func(cls, amount: int) -> int:
