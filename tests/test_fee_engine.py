@@ -32,6 +32,7 @@ from iconservice.icx import IcxEngine
 from iconservice.icx.icx_account import AccountType, Account
 from iconservice.icx.icx_storage import IcxStorage
 from tests.mock_generator import clear_inner_task
+from iconservice.fee.fee_engine import VirtualStepCalculator
 
 
 def create_context_db():
@@ -1069,7 +1070,8 @@ class TestFeeEngine(unittest.TestCase):
             block_height = deposit[1]
             term = deposit[2] - block_height
 
-            self._engine._calculate_virtual_step_issuance = Mock(return_value=deposit[4])
+            # self._engine._calculate_virtual_step_issuance = Mock(return_value=deposit[4])
+            VirtualStepCalculator.calculate_virtual_step = Mock(return_value=deposit[4])
 
             self._engine.add_deposit(
                 context, tx_hash, self._sender, self._score_address, amount, block_height, term)

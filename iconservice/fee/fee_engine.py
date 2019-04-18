@@ -20,8 +20,8 @@ from enum import IntEnum
 from typing import List, Dict, Optional
 
 from .deposit import Deposit
-from .fee_storage import FeeStorage
 from .deposit_meta import DepositMeta
+from .fee_storage import FeeStorage
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
@@ -173,7 +173,7 @@ class FeeEngine:
         deposit.created = block_height
         deposit.expires = block_height + term
         deposit.virtual_step_issued = \
-            self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
+            VirtualStepCalculator.calculate_virtual_step(amount, term)
 
         self._insert_deposit(context, deposit)
 
@@ -666,18 +666,6 @@ class FeeEngine:
         return deposit_meta
 
     @staticmethod
-    def _calculate_virtual_step_issuance(deposit_amount: int,
-                                         created_at: int,
-                                         expires_in: int) -> int:
-        assert isinstance(deposit_amount, int)
-        assert isinstance(created_at, int)
-        assert isinstance(expires_in, int)
-        # term
-
-        term: int = expires_in - created_at
-        return VirtualStepCalculator.calculate_virtual_step(deposit_amount, term)
-
-    @staticmethod
     def _calculate_penalty(deposit: Deposit,
                            created_at: int,
                            expires_in: int,
@@ -692,13 +680,14 @@ class FeeEngine:
         if block_height >= expires_in:
             return 0
 
-        agreement_term: int = expires_in - created_at
-        current_term: int = block_height - created_at
-        deposit_amount = deposit.deposit_amount
-        remaining_virtual_step = deposit.remaining_virtual_step
+        elapsed_term = block_height - created_at
 
         return VirtualStepCalculator.calculate_penalty(
-            deposit_amount, remaining_virtual_step, agreement_term, current_term, step_price)
+            deposit.deposit_amount,
+            deposit.remaining_virtual_step,
+            deposit.virtual_step_issued,
+            elapsed_term,
+            step_price)
 
 
 class VirtualStepCalculator(object):
@@ -723,21 +712,21 @@ class VirtualStepCalculator(object):
         return int(cls._SCALE * cls._deposit_func(deposit_amount) * cls._term_func(term))
 
     @classmethod
-    def calculate_penalty(cls, deposit_amount: int, remaining_virtual_step: int,
-                          agreement_term: int, current_term: int,
+    def calculate_penalty(cls, deposit_amount: int,
+                          remaining_virtual_step: int, virtual_step_issued: int,
+                          elapsed_term: int,
                           step_price: int) -> int:
         """Returns penalty according to given parameters
 
         :param deposit_amount:
         :param remaining_virtual_step:
-        :param agreement_term:
-        :param current_term:
+        :param virtual_step_issued:
+        :param elapsed_term:
         :param step_price:
         """
 
-        excess_profit: int = \
-            cls.calculate_virtual_step(deposit_amount, agreement_term) - \
-            cls.calculate_virtual_step(deposit_amount, current_term)
+        excess_profit: int = virtual_step_issued - \
+            cls.calculate_virtual_step(deposit_amount, elapsed_term)
 
         # redemption amount for over-used step in ICX(loop)
         redemption_amount = max(0, excess_profit - remaining_virtual_step) * step_price

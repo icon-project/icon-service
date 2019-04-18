@@ -119,7 +119,7 @@ class TestVirtualStepCalculator(TestCase):
     def _assert_penalty(self, agreement_info, current_agreement_info, remaining_virtual_step=0):
         deposit_amount = agreement_info.deposit_icx * 10 ** 18
         agreement_term = agreement_info.term
-        current_agreement_term = current_agreement_info.term
+        elapsed_term = current_agreement_info.term
 
         expected_agreement_issuance_virtual_step = TestVirtualStepCalculator. \
             _get_expected_issuance(agreement_info.deposit_icx, agreement_info[2])
@@ -131,7 +131,11 @@ class TestVirtualStepCalculator(TestCase):
             (expected_agreement_issuance_virtual_step - expected_withdraw_issuance_virtual_step -
              remaining_virtual_step) * STEP_PRICE + breach_penalty
 
-        result = VirtualStepCalculator.calculate_penalty(deposit_amount, remaining_virtual_step, agreement_term,
-                                                         current_agreement_term, STEP_PRICE)
+        virtual_step_issued: int = \
+            VirtualStepCalculator.calculate_virtual_step(deposit_amount, agreement_term)
+
+        result = VirtualStepCalculator.calculate_penalty(
+            deposit_amount, remaining_virtual_step, virtual_step_issued,
+            elapsed_term, STEP_PRICE)
         error_rate = abs((expected_penalty - result) / result)
         self.assertLessEqual(error_rate * 100, 0.1)

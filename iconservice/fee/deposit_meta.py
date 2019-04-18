@@ -70,13 +70,13 @@ class DepositMeta(object):
         :param other: (DepositMeta)
         """
         return isinstance(other, DepositMeta) \
-               and self.version == other.version \
-               and self.head_id == other.head_id \
-               and self.tail_id == other.tail_id \
-               and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
-               and self.available_head_id_of_deposit == other.available_head_id_of_deposit \
-               and self.expires_of_virtual_step == other.expires_of_virtual_step \
-               and self.expires_of_deposit == other.expires_of_deposit
+            and self.version == other.version \
+            and self.head_id == other.head_id \
+            and self.tail_id == other.tail_id \
+            and self.available_head_id_of_virtual_step == other.available_head_id_of_virtual_step \
+            and self.available_head_id_of_deposit == other.available_head_id_of_deposit \
+            and self.expires_of_virtual_step == other.expires_of_virtual_step \
+            and self.expires_of_deposit == other.expires_of_deposit
 
     def __ne__(self, other) -> bool:
         """operator != overriding
