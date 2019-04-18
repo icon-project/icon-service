@@ -120,16 +120,11 @@ class Deposit(object):
         :return: deposit info in dict
         """
         new_dict = {}
-        for key, value in self.__dict__.items():
-            # Excludes properties which have `None` value
-            if value is None:
-                continue
-
-            if key not in self._EXPOSING_ITEM_KEYS:
-                continue
-
-            new_key = casing(key) if casing else key
-            new_dict[new_key] = value
+        for key in self._EXPOSING_ITEM_KEYS:
+            value = self.__dict__[key]
+            if value is not None:
+                new_key = casing(key) if casing else key
+                new_dict[new_key] = value
 
         return new_dict
 
@@ -139,17 +134,17 @@ class Deposit(object):
         :param other: (Deposit)
         """
         return isinstance(other, Deposit) \
-               and self.version == other.version \
-               and self.score_address == other.score_address \
-               and self.sender == other.sender \
-               and self.deposit_amount == other.deposit_amount \
-               and self.deposit_used == other.deposit_used \
-               and self.created == other.created \
-               and self.expires == other.expires \
-               and self.virtual_step_issued == other.virtual_step_issued \
-               and self.virtual_step_used == other.virtual_step_used \
-               and self.prev_id == other.prev_id \
-               and self.next_id == other.next_id
+            and self.version == other.version \
+            and self.score_address == other.score_address \
+            and self.sender == other.sender \
+            and self.deposit_amount == other.deposit_amount \
+            and self.deposit_used == other.deposit_used \
+            and self.created == other.created \
+            and self.expires == other.expires \
+            and self.virtual_step_issued == other.virtual_step_issued \
+            and self.virtual_step_used == other.virtual_step_used \
+            and self.prev_id == other.prev_id \
+            and self.next_id == other.next_id
 
     def __ne__(self, other) -> bool:
         """operator != overriding
