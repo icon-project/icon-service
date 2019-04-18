@@ -243,18 +243,20 @@ class FeeEngine:
 
         # Deposits to sender's account
         penalty = self._calculate_penalty(
-            deposit.deposit_amount, deposit.created, deposit.expires, block_height, step_price)
+            deposit, deposit.created, deposit.expires, block_height, step_price)
 
         if penalty > 0:
             treasury_account = self._icx_engine.get_treasury_account(context)
             treasury_account.deposit(penalty)
             self._icx_storage.put_account(context, treasury_account.address, treasury_account)
 
-        return_amount = self._calculate_withdrawal_amount(deposit, penalty, step_price)
+        return_amount = deposit.deposit_amount - deposit.deposit_used - penalty
         if return_amount > 0:
             sender_account = self._icx_storage.get_account(context, sender)
             sender_account.deposit(return_amount)
             self._icx_storage.put_account(context, sender, sender_account)
+        elif return_amount < 0:
+            raise InvalidRequestException(f"Can not withdraw Deposit")
 
         return deposit.score_address, return_amount, penalty
 
@@ -664,102 +666,98 @@ class FeeEngine:
     def _calculate_virtual_step_issuance(deposit_amount: int,
                                          created_at: int,
                                          expires_in: int) -> int:
-        assert deposit_amount is not None
-        assert created_at is not None
-        assert expires_in is not None
+        assert isinstance(deposit_amount, int)
+        assert isinstance(created_at, int)
+        assert isinstance(expires_in, int)
+        # term
 
-        return VirtualStepCalculator.calculate_virtual_step_issuance(deposit_amount, created_at, expires_in)
+        term: int = expires_in - created_at
+        return VirtualStepCalculator.calculate_virtual_step(deposit_amount, term)
 
     @staticmethod
-    def _calculate_penalty(deposit_amount: int,
+    def _calculate_penalty(deposit: Deposit,
                            created_at: int,
                            expires_in: int,
                            block_height: int,
                            step_price: int) -> int:
-        assert deposit_amount is not None
-        assert created_at is not None
-        assert expires_in is not None
-        assert block_height is not None
-        assert step_price is not None
+        assert isinstance(deposit, Deposit)
+        assert isinstance(created_at, int)
+        assert isinstance(expires_in, int)
+        assert isinstance(block_height, int)
+        assert isinstance(step_price, int)
 
-        return VirtualStepCalculator.calculate_penalty(deposit_amount, created_at, expires_in, block_height, step_price)
-
-    @staticmethod
-    def _calculate_withdrawal_amount(deposit: 'Deposit', penalty: int, step_price: int) -> int:
-        return VirtualStepCalculator.calculate_withdrawal_amount(deposit, penalty, step_price)
-
-
-class VirtualStepCalculator:
-    _VIRTUAL_STEP_ISSUANCE_PARAM_1 = 1_000
-    _VIRTUAL_STEP_ISSUANCE_PARAM_2 = 100
-    _VIRTUAL_STEP_ISSUANCE_PARAM_3 = 0
-    _VIRTUAL_STEP_ISSUANCE_PARAM_4 = 8_249
-    _VIRTUAL_STEP_ISSUANCE_PARAM_5 = 1_706
-    _VIRTUAL_STEP_ISSUANCE_PARAM_6 = -13
-    _VIRTUAL_STEP_SCALE_ADJUST_VARIABLE = 1_200
-    _DEPOSIT_ADJUSTMENT_VARIABLE = 10_000
-    _TERM_ADJUSTMENT_VARIABLE = 1_296_000
-
-    @staticmethod
-    def calculate_virtual_step_issuance(deposit_amount: int, created_at: int, term: int) -> int:
-        assert deposit_amount is not None
-        assert created_at is not None
-        assert term is not None
-
-        return int(VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, term))
-
-    @staticmethod
-    def calculate_penalty(deposit_amount: int, created_at: int, expires_in: int,
-                          block_height: int, step_price: int) -> int:
-        assert deposit_amount is not None
-        assert created_at is not None
-        assert expires_in is not None
-        assert block_height is not None
-
-        if block_height > expires_in:
+        if block_height >= expires_in:
             return 0
 
-        excess_profit = VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, expires_in) - \
-                        VirtualStepCalculator._calculate_issuance_virtual_step(deposit_amount, block_height)
-        excess_profit_in_loop = excess_profit * step_price
+        agreement_term: int = expires_in - created_at
+        current_term: int = block_height - created_at
+        deposit_amount = deposit.deposit_amount
+        remaining_virtual_step = deposit.remaining_virtual_step
+
+        return VirtualStepCalculator.calculate_penalty(
+            deposit_amount, remaining_virtual_step, agreement_term, current_term, step_price)
+
+
+class VirtualStepCalculator(object):
+    _PARAM_A1 = Decimal(1_000)
+    _PARAM_A2 = Decimal(100)
+    _PARAM_A3 = Decimal(0)
+    _PARAM_A4 = Decimal(8_249)
+    _PARAM_A5 = Decimal(1_706)
+    _PARAM_A6 = Decimal(-13)
+    _SCALE = Decimal(1_200)
+    _DEFAULT_DEPOSIT_UNIT = Decimal(10_000)
+    # The number of blocks generated for 30 days at 0.5 block per second
+    _DEFAULT_TERM_UNIT = Decimal(1_296_000)  # = 30 * 24 * 60 * 60 / 2
+
+    @classmethod
+    def calculate_virtual_step(cls, deposit_amount: int, term: int) -> int:
+        """Returns issuance of virtual-step according to deposit_amount and term
+
+        :param deposit_amount: deposit amount in loop unit
+        :param term: deposit term
+        """
+        return int(cls._SCALE * cls._deposit_func(deposit_amount) * cls._term_func(term))
+
+    @classmethod
+    def calculate_penalty(cls, deposit_amount: int, remaining_virtual_step: int,
+                          agreement_term: int, current_term: int,
+                          step_price: int) -> int:
+        """Returns penalty according to given parameters
+
+        :param deposit_amount:
+        :param remaining_virtual_step:
+        :param agreement_term:
+        :param current_term:
+        :param step_price:
+        """
+
+        excess_profit: int = \
+            cls.calculate_virtual_step(deposit_amount, agreement_term) - \
+            cls.calculate_virtual_step(deposit_amount, current_term)
+
+        remaining_excess_profit = max(0, excess_profit - remaining_virtual_step) * step_price
         breach_penalty = deposit_amount // 100
-        return int(excess_profit_in_loop + breach_penalty)
 
-    @staticmethod
-    def _calculate_issuance_virtual_step(deposit_amount: int, expires_in: int) -> int:
-        return VirtualStepCalculator._VIRTUAL_STEP_SCALE_ADJUST_VARIABLE * \
-               VirtualStepCalculator._deposit_func(deposit_amount) * \
-               VirtualStepCalculator._term_func(expires_in)
+        return remaining_excess_profit + breach_penalty
 
-    @staticmethod
-    def calculate_withdrawal_amount(deposit: 'Deposit', penalty: int, step_price: int):
-        remaining_virtual_step_in_loop = (deposit.virtual_step_issued - deposit.virtual_step_used) * step_price
-        remaining_penalty = penalty - remaining_virtual_step_in_loop
-        remaining_penalty = 0 if remaining_penalty <= 0 else remaining_penalty
-        withdrawal_amount = deposit.deposit_amount - deposit.deposit_used - remaining_penalty
+    @classmethod
+    def _deposit_func(cls, amount: int) -> int:
+        deposit_in_icx = Decimal(amount // 10 ** 18)
+        adjusted_deposit: Decimal = deposit_in_icx / cls._DEFAULT_DEPOSIT_UNIT
 
-        if withdrawal_amount < 0:
-            raise InvalidRequestException("Can not withdraw deposit")
+        return \
+            cls._PARAM_A3 * adjusted_deposit ** 3 + \
+            cls._PARAM_A2 * adjusted_deposit ** 2 + \
+            cls._PARAM_A1 * adjusted_deposit
 
-        return withdrawal_amount
-
-    @staticmethod
-    def _deposit_func(amount: int) -> int:
-        deposit_in_icx = amount // 10 ** 18
-        adjusted_deposit = Decimal(deposit_in_icx) / Decimal(VirtualStepCalculator._DEPOSIT_ADJUSTMENT_VARIABLE)
-
-        result = Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_3) * Decimal(adjusted_deposit) ** 3 + \
-                 Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_2) * Decimal(adjusted_deposit) ** 2 + \
-                 Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_1) * Decimal(adjusted_deposit)
-
-        return result
-
-    @staticmethod
-    def _term_func(term: int) -> int:
-        adjusted_expire = term // VirtualStepCalculator._TERM_ADJUSTMENT_VARIABLE
-        return Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_6) * Decimal(adjusted_expire) ** 3 + \
-               Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_5) * Decimal(adjusted_expire) ** 2 + \
-               Decimal(VirtualStepCalculator._VIRTUAL_STEP_ISSUANCE_PARAM_4) * Decimal(adjusted_expire)
+    @classmethod
+    def _term_func(cls, term: int) -> int:
+        adjusted_expire = Decimal(term) / cls._DEFAULT_TERM_UNIT
+        return \
+            cls._PARAM_A6 * adjusted_expire ** 3 + \
+            cls._PARAM_A5 * adjusted_expire ** 2 + \
+            cls._PARAM_A4 * adjusted_expire
 
 
 class DepositHandler:

@@ -14,67 +14,124 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import namedtuple
 from decimal import Decimal
 from unittest import TestCase
 
-from iconservice.base.exception import InvalidRequestException
-from iconservice.fee.deposit import Deposit
 from iconservice.fee.fee_engine import VirtualStepCalculator
-
 
 STEP_PRICE = 10 ** 10
 
+VirtualStepInfo = namedtuple('VirtualStepInfo', 'deposit_icx, term, rate')
 
-VIRTUAL_STEP_ISSUANCE_INFO = [
-    # [deposit_amount, deposit_term, virtual_step_issuance(in loop unit)]
-    # virtual step issuance is based on the virtual_step output table in the Yellow Paper.
-    # virtual_step_issuance = f(a,d) * deposit_amount (Function returns rate of virtual step issuance)
-    (5_000, 7_776_000, 681050000000000000000), (50_000, 7_776_000, 9729000000000000000000),
-    (100_000, 7_776_000, 25944000000000000000000), (5_000, 15_552_000, 2029800000000000000000),
-    (50_000, 15_552_000, 28997000000000000000000), (100_000, 15_552_000, 77325000000000000000000),
-    (5_000, 31_104_000, 6305800000000000000000), (50_000, 31_104_000, 90083000000000000000000),
-    (100_000, 31_104_000, 240221000000000000000000)
+VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER = [
+    # (deposit_amount(in icx unit), deposit_term(block), virtual_step_issuance_rate)
+    # virtual step issuance rate is based on the virtual_step output table in the Yellow Paper.
+    VirtualStepInfo(5_000, 1_296_000, 0.01253),
+    VirtualStepInfo(50_000, 1_296_000, 0.01790),
+    VirtualStepInfo(100_000, 1_296_000, 0.02386),
+    VirtualStepInfo(5_000, 7_776_000, 0.13621),
+    VirtualStepInfo(50_000, 7_776_000, 0.19458),
+    VirtualStepInfo(100_000, 7_776_000, 0.25944),
+    VirtualStepInfo(5_000, 15_552_000, 0.40596),
+    VirtualStepInfo(50_000, 15_552_000, 0.57994),
+    VirtualStepInfo(100_000, 15_552_000, 0.77326),
+    VirtualStepInfo(5_000, 23_328_000, 0.78802),
+    VirtualStepInfo(50_000, 23_328_000, 1.12574),
+    VirtualStepInfo(100_000, 23_328_000, 1.50098),
+    VirtualStepInfo(5_000, 31_104_000, 1.26116),
+    VirtualStepInfo(50_000, 31_104_000, 1.80166),
+    VirtualStepInfo(100_000, 31_104_000, 2.40221)
 ]
 
 
 class TestVirtualStepCalculator(TestCase):
 
     def test_calculate_issuance_virtual_step(self):
-        for virtual_step_issuance_info in VIRTUAL_STEP_ISSUANCE_INFO:
-            expected_issuance = virtual_step_issuance_info[2] // STEP_PRICE
-            icx_amount_in_loop = virtual_step_issuance_info[0] * 10 ** 18
-            term = virtual_step_issuance_info[1]
-            result = VirtualStepCalculator.calculate_virtual_step_issuance(icx_amount_in_loop, 0, term)
-            self.assertAlmostEqual(expected_issuance/result, 1, 4)
+        for virtual_step_issuance_info in VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER:
+            expected_issuance = self._get_expected_issuance(virtual_step_issuance_info.deposit_icx,
+                                                            virtual_step_issuance_info.rate)
+            icx_amount_in_loop = virtual_step_issuance_info.deposit_icx * 10 ** 18
+            term = virtual_step_issuance_info.term
+            result = VirtualStepCalculator.calculate_virtual_step(icx_amount_in_loop, term)
+            error_rate = abs((expected_issuance - result) / result)
+            self.assertLessEqual(error_rate * 100, 0.1)
 
     def test_calculate_penalty(self):
-        icx_amount_in_loop = 5_000 * 10 ** 18
-        deposit_factor = 1_296_000
-        deposit_term = deposit_factor * 2
-        step_price = 10 ** 10
-        expected_penalty = Decimal(14_627_340_000 - 6_263_460_000) * step_price + Decimal(icx_amount_in_loop * 0.01)
-        result = VirtualStepCalculator.calculate_penalty(icx_amount_in_loop, 0, deposit_term, deposit_factor, 10**10)
-        self.assertEqual(result, expected_penalty)
+        # case when remaining-virtual-step is 0
+        deposit_info_pair1 = VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[3], \
+                             VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[0]
+        deposit_icx1 = deposit_info_pair1[0].deposit_icx
+        deposit_rate1 = deposit_info_pair1[0].rate
+        current_rate1 = deposit_info_pair1[1].rate
+        remaining_virtual_step1 = \
+            self._get_expected_issuance(deposit_icx1, deposit_rate1) - \
+            self._get_expected_issuance(deposit_icx1, current_rate1)
 
-    def test_calculate_withdrawal_amount_success_case(self):
-        deposit = Deposit(deposit_amount=1000, deposit_used=100)
-        step_price = 10 ** 10
-        penalty = 100
-        expected_amount = 800
-        result = VirtualStepCalculator.calculate_withdrawal_amount(deposit, penalty, step_price)
-        self.assertEqual(result, expected_amount)
+        deposit_info_pair2 = VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[11], \
+                             VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[2]
+        deposit_icx2 = deposit_info_pair2[0].deposit_icx
+        deposit_rate2 = deposit_info_pair2[0].rate
+        current_rate2 = deposit_info_pair2[1].rate
+        remaining_virtual_step2 =\
+            self._get_expected_issuance(deposit_icx2, deposit_rate2) - \
+            self._get_expected_issuance(deposit_icx2, current_rate2)
 
-    def test_calculate_withdrawal_amount_success_case2(self):
-        deposit = Deposit(deposit_amount=1000, deposit_used=200, virtual_step_issued=1000, virtual_step_used=100)
-        step_price = 10 ** 10
-        penalty = 100
-        expected_amount = 800
-        result = VirtualStepCalculator.calculate_withdrawal_amount(deposit, penalty, step_price)
-        self.assertGreater(result, expected_amount)
+        deposit_info_pair3 = VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[10], \
+                             VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[4]
+        deposit_icx3 = deposit_info_pair3[0].deposit_icx
+        deposit_rate3 = deposit_info_pair3[0].rate
+        current_rate3 = deposit_info_pair3[1].rate
+        remaining_virtual_step3 = \
+            self._get_expected_issuance(deposit_icx3, deposit_rate3) - \
+            self._get_expected_issuance(deposit_icx3, current_rate3)
 
-    def test_calculate_withdrawal_amount_fail_case(self):
-        deposit = Deposit(deposit_amount=1000, deposit_used=100)
-        step_price = 10 ** 10
-        penalty = 950
-        self.assertRaises(InvalidRequestException, VirtualStepCalculator.calculate_withdrawal_amount,
-                          deposit, penalty, step_price)
+        # case when remaining_virtual_step is 0
+        self._assert_penalty(*deposit_info_pair1)
+        self._assert_penalty(*deposit_info_pair2)
+        self._assert_penalty(*deposit_info_pair3)
+
+        # case when remaining_virtual_step == agreement_virtual_step - current_virtual_step
+        self._assert_penalty(deposit_info_pair1[0], deposit_info_pair1[1], remaining_virtual_step1)
+        self._assert_penalty(deposit_info_pair2[0], deposit_info_pair2[1], remaining_virtual_step2)
+        self._assert_penalty(deposit_info_pair3[0], deposit_info_pair3[1], remaining_virtual_step3)
+
+        # case when remaining_virtual_step < agreement_virtual_step - current_virtual_step
+        self._assert_penalty(
+            deposit_info_pair1[0], deposit_info_pair1[1], remaining_virtual_step1 * Decimal(0.9))
+        self._assert_penalty(
+            deposit_info_pair2[0], deposit_info_pair2[1], remaining_virtual_step2 * Decimal(0.9))
+        self._assert_penalty(
+            deposit_info_pair3[0], deposit_info_pair3[1], remaining_virtual_step3 * Decimal(0.9))
+
+        # case when remaining_virtual_step > agreement_virtual_step - current_virtual_step
+        self._assert_penalty(
+            deposit_info_pair1[0], deposit_info_pair1[1], remaining_virtual_step1 * Decimal(1.1))
+        self._assert_penalty(
+            deposit_info_pair2[0], deposit_info_pair2[1], remaining_virtual_step2 * Decimal(1.1))
+        self._assert_penalty(
+            deposit_info_pair3[0], deposit_info_pair3[1], remaining_virtual_step3 * Decimal(1.1))
+
+    @staticmethod
+    def _get_expected_issuance(deposit_icx, rate):
+        return Decimal(deposit_icx) * Decimal(10 ** 18) * Decimal(rate) / Decimal(STEP_PRICE)
+
+    def _assert_penalty(self, agreement_info, current_agreement_info, remaining_virtual_step=0):
+        deposit_amount = agreement_info.deposit_icx * 10 ** 18
+        agreement_term = agreement_info.term
+        current_agreement_term = current_agreement_info.term
+
+        expected_agreement_issuance_virtual_step = TestVirtualStepCalculator. \
+            _get_expected_issuance(agreement_info.deposit_icx, agreement_info[2])
+        expected_withdraw_issuance_virtual_step = TestVirtualStepCalculator. \
+            _get_expected_issuance(current_agreement_info.deposit_icx, current_agreement_info.rate)
+        breach_penalty = Decimal(agreement_info.deposit_icx * 0.01 * 10 ** 18)
+        remaining_virtual_step = remaining_virtual_step - remaining_virtual_step
+        expected_penalty = \
+            (expected_agreement_issuance_virtual_step - expected_withdraw_issuance_virtual_step -
+             remaining_virtual_step) * STEP_PRICE + breach_penalty
+
+        result = VirtualStepCalculator.calculate_penalty(deposit_amount, remaining_virtual_step, agreement_term,
+                                                         current_agreement_term, STEP_PRICE)
+        error_rate = abs((expected_penalty - result) / result)
+        self.assertLessEqual(error_rate * 100, 0.1)
