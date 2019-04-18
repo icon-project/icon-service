@@ -164,8 +164,6 @@ class FeeEngine:
 
         self._check_score_ownership(context, sender, score_address)
 
-        deposit_meta = self._get_or_create_deposit_meta(context, score_address)
-
         # Withdraws from sender's account
         sender_account = self._icx_storage.get_account(context, sender)
         sender_account.withdraw(amount)
@@ -176,7 +174,6 @@ class FeeEngine:
         deposit.expires = block_height + term
         deposit.virtual_step_issued = \
             self._calculate_virtual_step_issuance(amount, deposit.created, deposit.expires)
-        deposit.prev_id = deposit_meta.tail_id
 
         self._insert_deposit(context, deposit)
 
@@ -188,13 +185,13 @@ class FeeEngine:
         deposit_meta = self._get_or_create_deposit_meta(context, deposit.score_address)
 
         deposit.prev_id = deposit_meta.tail_id
-        self._fee_storage.put_deposit(context, deposit.id, deposit)
+        self._fee_storage.put_deposit(context, deposit)
 
-        # Link to old last item
-        if deposit_meta.tail_id is not None:
+        # Link to previous item
+        if deposit.prev_id is not None:
             prev_deposit = self._fee_storage.get_deposit(context, deposit_meta.tail_id)
             prev_deposit.next_id = deposit.id
-            self._fee_storage.put_deposit(context, prev_deposit.id, prev_deposit)
+            self._fee_storage.put_deposit(context, prev_deposit)
 
         # Update head info
         if deposit_meta.head_id is None:
@@ -269,13 +266,13 @@ class FeeEngine:
         if deposit.prev_id is not None:
             prev_deposit = self._fee_storage.get_deposit(context, deposit.prev_id)
             prev_deposit.next_id = deposit.next_id
-            self._fee_storage.put_deposit(context, prev_deposit.id, prev_deposit)
+            self._fee_storage.put_deposit(context, prev_deposit)
 
         # Updates the next link
         if deposit.next_id is not None:
             next_deposit = self._fee_storage.get_deposit(context, deposit.next_id)
             next_deposit.prev_id = deposit.prev_id
-            self._fee_storage.put_deposit(context, next_deposit.id, next_deposit)
+            self._fee_storage.put_deposit(context, next_deposit)
 
         # Update index info
         deposit_meta = self._fee_storage.get_deposit_meta(context, deposit.score_address)
@@ -482,7 +479,7 @@ class FeeEngine:
 
             if charged_step > 0:
                 deposit.virtual_step_used += charged_step
-                self._fee_storage.put_deposit(context, deposit.id, deposit)
+                self._fee_storage.put_deposit(context, deposit)
                 last_paid_deposit = deposit
 
                 remaining_required_step -= charged_step
@@ -561,7 +558,7 @@ class FeeEngine:
                     should_update_expire = True
 
             deposit.deposit_used += charged_icx
-            self._fee_storage.put_deposit(context, deposit.id, deposit)
+            self._fee_storage.put_deposit(context, deposit)
             last_paid_deposit = deposit
 
             remaining_required_icx -= charged_icx
@@ -574,7 +571,7 @@ class FeeEngine:
             available_deposit = last_paid_deposit.deposit_amount - last_paid_deposit.deposit_used
             charged_icx = min(available_deposit, remaining_required_icx)
             last_paid_deposit.deposit_used += charged_icx
-            self._fee_storage.put_deposit(context, last_paid_deposit.id, last_paid_deposit)
+            self._fee_storage.put_deposit(context, last_paid_deposit)
             remaining_required_icx -= charged_icx
 
         indices_changed = self._update_deposit_indices(

@@ -298,7 +298,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertIn('depositInfo', score_info)
         deposit_info = score_info['depositInfo']
         initial_available_deposit = deposit_info['availableDeposit']
-        self.assertNotEqual(initial_available_deposit, 0)
+        self.assertGreater(initial_available_deposit, 0)
 
         # increase block_height
         send_icx_tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 10 ** 18)
@@ -306,10 +306,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # invoke score method
-        score_call_tx = self._make_score_call_tx(self._admin, self.score_address, 'set_value',
-                                 {"value": hex(100), "proportion": hex(100)})
-        prev_block, tx_results = self._make_and_req_block([score_call_tx])
-        self._write_precommit_state(prev_block)
+        with self.assertRaises(InvalidRequestException) as e:
+            self._make_score_call_tx(self._admin, self.score_address, 'set_value',
+                                     {"value": hex(100), "proportion": hex(100)})
+        self.assertEqual(e.exception.message, "Out of deposit balance")
 
         # check result
         score_info = self._query_score_info(self.score_address)

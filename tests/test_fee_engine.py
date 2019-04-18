@@ -70,6 +70,10 @@ def patch_fee_storage(fee_storage: FeeStorage):
         memory_db[key] = value
 
     # noinspection PyUnusedLocal
+    def put_deposit(context, deposit):
+        memory_db[deposit.id] = deposit
+
+    # noinspection PyUnusedLocal
     def get(context, key):
         return memory_db[key] if key in memory_db else None
 
@@ -80,7 +84,7 @@ def patch_fee_storage(fee_storage: FeeStorage):
     fee_storage.put_deposit_meta = put
     fee_storage.get_deposit_meta = get
     fee_storage.delete_deposit_meta = delete
-    fee_storage.put_deposit = put
+    fee_storage.put_deposit = put_deposit
     fee_storage.get_deposit = get
     fee_storage.delete_deposit = delete
 

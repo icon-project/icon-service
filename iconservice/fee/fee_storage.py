@@ -102,15 +102,14 @@ class FeeStorage(object):
 
         return value
 
-    def put_deposit(self, context: 'IconScoreContext', deposit_id: bytes, deposit: 'Deposit') -> None:
+    def put_deposit(self, context: 'IconScoreContext', deposit: 'Deposit') -> None:
         """Puts the deposit data into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
-        :param deposit_id: Deposit id
         :param deposit: Deposit Object
         :return: None
         """
-        key = self._generate_key(deposit_id)
+        key = self._generate_key(deposit.id)
         value = deposit.to_bytes()
         self._db.put(context, key, value)
 
