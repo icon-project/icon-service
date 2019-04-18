@@ -128,13 +128,12 @@ class TestFeeEngine(unittest.TestCase):
         ContextContainer._clear_context()
         clear_inner_task()
 
-    def test_deposit_fee(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        block_height = 0
+    def _deposit_bulk(self, count):
+        self.context = IconScoreContext(IconScoreContextType.INVOKE)
+        self.block_height = 0
+        input_params = []
 
-        size = randrange(10, 100)
-        input_param = []
-        for i in range(size):
+        for i in range(count):
             tx_hash = os.urandom(32)
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
             block_height = randrange(100, 10000)
@@ -142,15 +141,59 @@ class TestFeeEngine(unittest.TestCase):
 
             before_sender_balance = self._icx_engine.get_balance(None, self._sender)
             self._engine.add_deposit(
-                context, tx_hash, self._sender, self._score_address, amount, block_height, term)
+                self.context, tx_hash, self._sender, self._score_address, amount, block_height, term)
             after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
             self.assertEqual(amount, before_sender_balance - after_sender_balance)
-            input_param.append((tx_hash, amount, block_height, term))
+            input_params.append((tx_hash, amount, block_height, term))
+
+        return input_params
+
+    def test_deposit_fee(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        block_height = 0
+
+        size = randrange(10, 100)
+        input_param = self._deposit_bulk(size)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
 
         self.assertEqual(size, len(deposit_info.deposits))
+
+        for i in range(size):
+            tx_hash, amount, block_height, term = input_param[i]
+            deposit = deposit_info.deposits[i]
+            self.assertEqual(tx_hash, deposit.id)
+            self.assertEqual(self._sender, deposit.sender)
+            self.assertEqual(self._score_address, deposit.score_address)
+            self.assertEqual(amount, deposit.deposit_amount)
+            self.assertEqual(block_height, deposit.created)
+            self.assertEqual(block_height + term, deposit.expires)
+
+    def test_deposit_append_and_delete(self):
+        size = randrange(10, 100)
+        deposit_list = self._deposit_bulk(size)
+
+        for i in range(size):
+            index = randrange(0, size)
+            size -= 1
+            withdrawal_deposit_id = deposit_list.pop(index)[0]
+            self._engine.withdraw_deposit(self.context, self._sender, withdrawal_deposit_id, 1, 1)
+
+            deposit_info = self._engine.get_deposit_info(self.context, self._score_address, 1)
+            for j in range(size):
+                deposit = deposit_info.deposits[j]
+                self.assertEqual(deposit.id, deposit_list[j][0])
+                self.assertEqual(self._sender, deposit.sender)
+                self.assertEqual(self._score_address, deposit.score_address)
+                self.assertEqual(deposit.deposit_amount, deposit_list[j][1])
+                self.assertEqual(deposit.created, deposit_list[j][2])
+                self.assertEqual(deposit.expires, deposit_list[j][2] + deposit_list[j][3])
+
+        input_param = self._deposit_bulk(100)
+        deposit_info = self._engine.get_deposit_info(self.context, self._score_address, self.block_height)
+
+        self.assertEqual(100, len(deposit_info.deposits))
 
         for i in range(size):
             tx_hash, amount, block_height, term = input_param[i]
