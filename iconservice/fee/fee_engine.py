@@ -239,7 +239,6 @@ class FeeEngine:
         if deposit.sender != sender:
             raise InvalidRequestException('Invalid sender')
 
-        # Deposits to sender's account
         penalty = self._calculate_penalty(
             deposit, deposit.created, deposit.expires, block_height, step_price)
 
@@ -249,11 +248,13 @@ class FeeEngine:
             raise InvalidRequestException(f"Failed to withdraw deposit")
 
         if penalty > 0:
+            # Move the penalty amount to the treasury account
             treasury_account = self._icx_engine.get_treasury_account(context)
             treasury_account.deposit(penalty)
             self._icx_storage.put_account(context, treasury_account.address, treasury_account)
 
         if withdrawal_amount > 0:
+            # Send the withdrawal amount of ICX to sender account
             sender_account = self._icx_storage.get_account(context, sender)
             sender_account.deposit(withdrawal_amount)
             self._icx_storage.put_account(context, sender, sender_account)
@@ -315,7 +316,7 @@ class FeeEngine:
             deposit_meta_changed = True
 
         if deposit_meta.tail_id == deposit.id:
-            deposit_meta.available_head_id_of_deposit = deposit.prev_id
+            deposit_meta.tail_id = deposit.prev_id
             deposit_meta_changed = True
 
         if deposit_meta_changed:

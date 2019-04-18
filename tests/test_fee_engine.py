@@ -316,10 +316,10 @@ class TestFeeEngine(unittest.TestCase):
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
 
-    def test_withdraw_fee_and_updates_previous_and_next_link(self):
+    def test_withdraw_fee_and_updates_previous_and_next_link_ascending(self):
         """
         Given: There are four deposits.
-        When : Withdraws all of them sequentially.
+        When : Withdraws all of them sequentially(ascending).
         Then : Checks if the previous and next link update correctly.
         """
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -345,6 +345,42 @@ class TestFeeEngine(unittest.TestCase):
 
             next_deposit = self._engine.get_deposit(context, target_deposit.next_id)
             self.assertEqual(next_deposit.prev_id, None)
+
+            deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+            self.assertEqual(next_deposit.id, deposit_meta.head_id)
+
+    def test_withdraw_fee_and_updates_previous_and_next_link_descending(self):
+        """
+        Given: There are four deposits.
+        When : Withdraws all of them sequentially(descending).
+        Then : Checks if the previous and next link update correctly.
+        """
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+
+        cnt_deposit = 4
+        block_height = randrange(100, 10000)
+        arr_tx_hash = []
+        for i in range(cnt_deposit):
+            arr_tx_hash.append(os.urandom(32))
+            amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
+            term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+            block_height += 1
+            self._engine.add_deposit(
+                context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
+
+        for i in range(cnt_deposit - 1, -1, -1):
+            target_deposit = self._engine.get_deposit(context, arr_tx_hash[i])
+            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2, 1)
+
+            if i == 0:
+                self.assertIsNone(target_deposit.prev_id)
+                break
+
+            prev_deposit = self._engine.get_deposit(context, target_deposit.prev_id)
+            self.assertEqual(prev_deposit.next_id, None)
+
+            deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
+            self.assertEqual(prev_deposit.id, deposit_meta.tail_id)
 
     def test_withdraw_fee_when_available_head_id_of_virtual_step_is_same_as_deposit_id(self):
         """
