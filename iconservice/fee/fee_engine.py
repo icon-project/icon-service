@@ -819,13 +819,14 @@ class DepositHandler:
         event_log_args = [context.tx.hash, context.tx.to, context.msg.sender, context.msg.value, term]
         self._emit_event(context, DepositHandler.EventType.DEPOSIT, event_log_args)
 
-    def _withdraw_deposit(self, context: 'IconScoreContext', deposit_id: bytes):
+    # noinspection PyPep8Naming
+    def _withdraw_deposit(self, context: 'IconScoreContext', depositId: bytes):
         if context.msg.value != 0:
             raise InvalidRequestException(f'Invalid value: must be zero')
         score_address, return_icx, penalty = self.fee_engine.withdraw_deposit(
-            context, context.msg.sender, deposit_id, context.block.height, context.step_counter.step_price)
+            context, context.msg.sender, depositId, context.block.height, context.step_counter.step_price)
 
-        event_log_args = [deposit_id, score_address, context.msg.sender, return_icx, penalty]
+        event_log_args = [depositId, score_address, context.msg.sender, return_icx, penalty]
         self._emit_event(context, DepositHandler.EventType.WITHDRAW, event_log_args)
 
     @staticmethod
