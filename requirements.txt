@@ -7,3 +7,4 @@ cryptography==2.3.1
 hypothesis
 pytest
 msgpack
+prometheus_client

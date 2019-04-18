@@ -26,6 +26,7 @@ from .iiss_variable.iiss_variable import IissVariable
 from .ipc.reward_calc_proxy import RewardCalcProxy
 from .rc_data_storage import RcDataStorage
 from ..icon_constant import ConfigKey, IISS_SOCKET_PATH
+from ..utils.metric import PrometheusMetric
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_result import TransactionResult
@@ -118,6 +119,10 @@ class IissEngine:
         CommitDelegator.genesis_send_ipc(context, precommit_data)
 
     def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        PrometheusMetric.set_block_height(precommit_data.block.height)
+        # push monitoring data
+        PrometheusMetric.push_iiss()
+
         CommitDelegator.update_db(context, precommit_data)
         self._rc_storage.commit(precommit_data.rc_block_batch)
         CommitDelegator.send_ipc(context, precommit_data)
