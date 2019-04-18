@@ -489,7 +489,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         # withdraw again
         withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)
         self.assertFalse(withdraw_tx_result.status)
-        self.assertEqual(withdraw_tx_result.failure.message, "Deposit info not found")
+        self.assertEqual(withdraw_tx_result.failure.message, "Deposit not found")
 
     def test_inter_call_fee_sharing_proportion100(self):
         # deposit icx

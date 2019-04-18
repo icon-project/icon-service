@@ -175,11 +175,11 @@ class FeeEngine:
         deposit.virtual_step_issued = \
             VirtualStepCalculator.calculate_virtual_step(amount, term)
 
-        self._insert_deposit(context, deposit)
+        self._append_deposit(context, deposit)
 
-    def _insert_deposit(self, context, deposit):
+    def _append_deposit(self, context, deposit):
         """
-        Inserts deposit data to storage
+        Append deposit data to storage
         """
 
         deposit_meta = self._get_or_create_deposit_meta(context, deposit.score_address)
@@ -245,7 +245,7 @@ class FeeEngine:
         withdrawal_amount = deposit.remaining_deposit - penalty
 
         if withdrawal_amount < 0:
-            raise InvalidRequestException(f"Failed to withdraw deposit")
+            raise InvalidRequestException("Failed to withdraw deposit")
 
         if penalty > 0:
             # Move the penalty amount to the treasury account
@@ -287,20 +287,21 @@ class FeeEngine:
             deposit_meta.head_id = deposit.next_id
             deposit_meta_changed = True
 
-        if deposit_meta.available_head_id_of_virtual_step == deposit.id:
-            # Search for next deposit id which is available to use virtual step
+        if deposit.id in (deposit_meta.available_head_id_of_virtual_step, deposit_meta.available_head_id_of_deposit):
             gen = self._deposit_generator(context, deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
-            next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
-            deposit_meta.available_head_id_of_virtual_step = next_deposit_id
-            deposit_meta_changed = True
+            next_available_deposit = \
+                next(filter(lambda d: block_height < d.expires, gen), None)
+            next_deposit_id = \
+                next_available_deposit.id if next_available_deposit is not None else None
 
-        if deposit_meta.available_head_id_of_deposit == deposit.id:
-            # Search for next deposit id which is available to use the deposited ICX
-            gen = self._deposit_generator(context, deposit.next_id)
-            next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
-            next_deposit_id = next_available_deposit.id if next_available_deposit is not None else None
-            deposit_meta.available_head_id_of_deposit = next_deposit_id
+            if deposit_meta.available_head_id_of_virtual_step == deposit.id:
+                # Search for next deposit id which is available to use virtual step
+                deposit_meta.available_head_id_of_virtual_step = next_deposit_id
+
+            if deposit_meta.available_head_id_of_deposit == deposit.id:
+                # Search for next deposit id which is available to use the deposited ICX
+                deposit_meta.available_head_id_of_deposit = next_deposit_id
+
             deposit_meta_changed = True
 
         if deposit_meta.expires_of_virtual_step == deposit.expires:
@@ -341,7 +342,7 @@ class FeeEngine:
         deposit = self._fee_storage.get_deposit(context, deposit_id)
 
         if deposit is None:
-            raise InvalidRequestException('Deposit info not found')
+            raise InvalidRequestException('Deposit not found')
 
         return deposit
 
@@ -374,7 +375,7 @@ class FeeEngine:
     def _is_score_sharing_fee(deposit_meta: 'DepositMeta') -> bool:
         return deposit_meta is not None and deposit_meta.head_id is not None
 
-    def _get_fee_sharing_ratio(self, context: 'IconScoreContext', deposit_meta: 'DepositMeta'):
+    def _get_fee_sharing_proportion(self, context: 'IconScoreContext', deposit_meta: 'DepositMeta'):
 
         if not self._is_score_sharing_fee(deposit_meta):
             # If there are no deposits, ignores the fee sharing ratio that the SCORE set.
@@ -411,15 +412,15 @@ class FeeEngine:
         sender_step = used_step - recipient_step
         self._icx_engine.charge_fee(context, sender, sender_step * step_price)
 
-        detail_step_used = {}
+        step_used_details = {}
 
         if sender_step > 0:
-            detail_step_used[sender] = sender_step
+            step_used_details[sender] = sender_step
 
         if recipient_step > 0:
-            detail_step_used[to] = recipient_step
+            step_used_details[to] = recipient_step
 
-        return detail_step_used
+        return step_used_details
 
     def _charge_fee_from_score(self,
                                context: 'IconScoreContext',
@@ -435,20 +436,24 @@ class FeeEngine:
         deposit_meta = self._fee_storage.get_deposit_meta(context, score_address)
 
         # Amount of STEPs that SCORE will pay
-        score_step = used_step * self._get_fee_sharing_ratio(context, deposit_meta) // 100
+        score_step = used_step * self._get_fee_sharing_proportion(context, deposit_meta) // 100
         score_used_step = 0
 
         if score_step > 0:
-            charged_step, virtual_step_indices_changed = self._charge_fee_by_virtual_step(
+            charged_step, deposit_meta_changed = self._charge_fee_by_virtual_step(
                 context, deposit_meta, score_step, block_height)
 
-            icx_required = (score_step - charged_step) * step_price
-            charged_icx, deposit_indices_changed = self._charge_fee_by_deposit(
-                context, deposit_meta, icx_required, block_height)
+            score_used_step = charged_step
 
-            score_used_step = charged_step + charged_icx // step_price
+            if charged_step < score_step:
+                icx_required = (score_step - charged_step) * step_price
+                charged_icx, deposit_indices_changed = self._charge_fee_by_deposit(
+                    context, deposit_meta, icx_required, block_height)
 
-            if virtual_step_indices_changed or deposit_indices_changed:
+                score_used_step += charged_icx // step_price
+                deposit_meta_changed: bool = deposit_meta_changed or deposit_indices_changed
+
+            if deposit_meta_changed:
                 # Updates if the information has been changed
                 self._fee_storage.put_deposit_meta(context, score_address, deposit_meta)
 
@@ -463,8 +468,7 @@ class FeeEngine:
         Charges fees by available virtual STEPs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
         """
-
-        remaining_required_step = step_required
+        charged_step = 0
         should_update_expire = False
         last_paid_deposit = None
 
@@ -472,29 +476,31 @@ class FeeEngine:
         for deposit in filter(lambda d: block_height < d.expires, gen):
             available_virtual_step = deposit.remaining_virtual_step
 
-            if remaining_required_step < available_virtual_step:
-                charged_step = remaining_required_step
+            if step_required < available_virtual_step:
+                step = step_required
             else:
-                charged_step = available_virtual_step
+                step = available_virtual_step
 
                 # All virtual steps are consumed in this loop.
                 # So if this `expires` is the `max expires`, should find the next `max expires`.
                 if deposit.expires == deposit_meta.expires_of_virtual_step:
                     should_update_expire = True
 
-            if charged_step > 0:
-                deposit.virtual_step_used += charged_step
+            if step > 0:
+                deposit.virtual_step_used += step
                 self._fee_storage.put_deposit(context, deposit)
                 last_paid_deposit = deposit
 
-                remaining_required_step -= charged_step
-                if remaining_required_step == 0:
+                charged_step += step
+                step_required -= step
+
+                if step_required == 0:
                     break
 
         indices_changed = self._update_virtual_step_indices(
             context, deposit_meta, last_paid_deposit, should_update_expire, block_height)
 
-        return step_required - remaining_required_step, indices_changed
+        return charged_step, indices_changed
 
     def _update_virtual_step_indices(self,
                                      context: 'IconScoreContext',
@@ -543,6 +549,11 @@ class FeeEngine:
         Charges fees by available deposit ICXs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
         """
+        assert icx_required > 0
+
+        if icx_required == 0:
+            return 0, False
+
         remaining_required_icx = icx_required
         should_update_expire = False
         last_paid_deposit = None
@@ -562,13 +573,14 @@ class FeeEngine:
                 if deposit.expires == deposit_meta.expires_of_deposit:
                     should_update_expire = True
 
-            deposit.deposit_used += charged_icx
-            self._fee_storage.put_deposit(context, deposit)
-            last_paid_deposit = deposit
+            if charged_icx > 0:
+                deposit.deposit_used += charged_icx
+                self._fee_storage.put_deposit(context, deposit)
+                last_paid_deposit = deposit
 
-            remaining_required_icx -= charged_icx
-            if remaining_required_icx == 0:
-                break
+                remaining_required_icx -= charged_icx
+                if remaining_required_icx == 0:
+                    break
 
         if remaining_required_icx > 0 and last_paid_deposit is not None:
             # This is the last chargeable deposit
@@ -655,15 +667,13 @@ class FeeEngine:
 
     @staticmethod
     def _check_deposit_id(deposit_id) -> None:
-        if deposit_id is None or not isinstance(deposit_id, bytes) or len(deposit_id) != 32:
+        if not (isinstance(deposit_id, bytes) and len(deposit_id) == 32):
             raise InvalidRequestException('Invalid deposit ID')
 
     def _get_or_create_deposit_meta(
             self, context: 'IconScoreContext', score_address: 'Address') -> 'DepositMeta':
         deposit_meta = self._fee_storage.get_deposit_meta(context, score_address)
-        if deposit_meta is None:
-            deposit_meta = DepositMeta()
-        return deposit_meta
+        return DepositMeta() if deposit_meta is None else deposit_meta
 
     @staticmethod
     def _calculate_penalty(deposit: Deposit,
