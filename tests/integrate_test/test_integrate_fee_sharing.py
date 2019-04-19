@@ -116,7 +116,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
     def _make_deposit_tx(self,
                          addr_from: Optional['Address'],
                          addr_to: 'Address',
-                         method: str,
+                         action: str,
                          params: dict,
                          value: int = 0,
                          pre_validation_enabled: bool = True):
@@ -135,10 +135,12 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
             "signature": self._signature,
             "dataType": "deposit",
             "data": {
-                "action": method,
-                "params": params
+                "action": action,
             }
         }
+
+        for k, v in params.items():
+            request_params["data"][k] = v
 
         method = 'icx_sendTransaction'
         # Insert txHash into request params
@@ -168,7 +170,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         if sender is None:
             sender = self._admin
         withdraw_tx_hash = self._make_deposit_tx(sender, score_address, "withdraw",
-                                                 {"depositId": f"0x{bytes.hex(deposit_id)}"})
+                                                 {"id": f"0x{bytes.hex(deposit_id)}"})
         prev_block, tx_results = self._make_and_req_block([withdraw_tx_hash])
         self._write_precommit_state(prev_block)
         return tx_results[0]

@@ -128,7 +128,7 @@ class ConstantKeys:
 
     FEE2_SCORE_ADDRESS = "score"
     FEE2_TERM = "term"
-    FEE2_ID = "depositId"
+    FEE2_ID = "id"
     FEE2_AMOUNT = "amount"
 
     # IISS
@@ -255,12 +255,8 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
 
 # FEE v2
 type_convert_templates[ParamType.FEE2_PARAMS_DATA] = {
-    ConstantKeys.PARAMS: {
-        ConstantKeys.FEE2_ID: ValueType.BYTES,
-        ConstantKeys.FEE2_SCORE_ADDRESS: ValueType.ADDRESS,
-        ConstantKeys.FEE2_TERM: ValueType.INT,
-        ConstantKeys.FEE2_AMOUNT: ValueType.INT
-    }
+    ConstantKeys.FEE2_ID: ValueType.BYTES,
+    ConstantKeys.FEE2_TERM: ValueType.INT,
 }
 
 # IISS

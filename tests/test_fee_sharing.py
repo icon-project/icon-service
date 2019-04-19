@@ -75,9 +75,7 @@ class TestFeeSharing(unittest.TestCase):
 
         data = {
             'action': 'add',
-            'params': {
-                'term': term,
-            }
+            'term': term,
         }
 
         expected_event_log = [{
@@ -119,9 +117,7 @@ class TestFeeSharing(unittest.TestCase):
 
         data = {
             'action': 'withdraw',
-            'params': {
-                'depositId': f"0x{bytes.hex(deposit_id)}"
-            }
+            'id': f"0x{bytes.hex(deposit_id)}"
         }
 
         expected_event_log = [{
