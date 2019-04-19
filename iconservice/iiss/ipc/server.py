@@ -17,9 +17,11 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 from typing import Optional
 
-from .message import MessageType, Request, NoneRequest, NoneResponse
+from .message import MessageType, Request, NoneRequest, NoneResponse, VersionResponse
 from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker
+
+from iconcommons import Logger
 
 
 class IPCServer(object):
@@ -107,7 +109,10 @@ class IPCServer(object):
             self._unpacker.feed(data)
 
             for response in self._unpacker:
-                self._queue.put_response(response)
+                if not isinstance(response, VersionResponse):
+                    self._queue.put_response(response)
+                else:
+                    Logger.debug(f"{response.version}", "RCP")
 
         await self._queue.put(NoneRequest())
 

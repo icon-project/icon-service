@@ -54,7 +54,7 @@ class IScoreHandler:
 
         from_account: 'Account' = cls.icx_storage.get_account(context, address)
         from_account.deposit(icx)
-
+        cls.icx_storage.put_account(context, from_account)
         cls._create_tx_result(context, iscore, icx)
 
     @classmethod

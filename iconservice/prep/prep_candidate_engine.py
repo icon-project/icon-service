@@ -83,8 +83,8 @@ class PRepCandidateEngine(object):
 
     def load_prep_candidates(self, context: 'IconScoreContext', icx_storage: 'IcxStorage'):
         for key, value in self._storage.get_prep_candiates():
-            address: 'Address' = Address.from_bytes(key)
-            account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATION)
+            address: 'Address' = Address.from_bytes_including_prefix(key)
+            account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
             self._add_prep_candidate_objects(address, value, account.delegated_amount)
         sorted_objs: list = self._candidate_info_mapper.to_genesis_sorted_list()
         self._candidate_sorted_infos.genesis_update(sorted_objs)
@@ -164,6 +164,9 @@ class PRepCandidateEngine(object):
 
     def get_preps(self, context: 'IconScoreContext') -> List['PRep']:
         return self._variable.get_preps(context)
+
+    def get_candidates(self) -> List['PRepCandidateInfoForSort']:
+        return self._candidate_sorted_infos.get()
 
     def update_preps(self, context: 'IconScoreContext'):
         candidates: list = self._candidate_sorted_infos.get()
