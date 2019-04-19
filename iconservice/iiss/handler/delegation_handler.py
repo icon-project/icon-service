@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from ...icx.icx_account import Account
     from ...base.address import Address
     from ..rc_data_storage import RcDataStorage
-    from ..reward_calc_proxy import RewardCalcProxy
+    from ..ipc.reward_calc_proxy import RewardCalcProxy
     from ..iiss_msg_data import DelegationInfo, DelegationTx, IissTxData
     from ..iiss_variable.iiss_variable import IissVariable
 
@@ -116,7 +116,6 @@ class DelegationHandler:
             if context.prep_candidate_engine.is_candidate(context, address):
                 total: int = cls.variable.issue.get_total_candidate_delegated(context)
                 cls.variable.issue.put_total_candidate_delegated(context, total + offset)
-
         return dirty_accounts
 
     @classmethod
@@ -124,8 +123,9 @@ class DelegationHandler:
 
         delegation_list: list = []
 
-        for address, value in delegations:
-            info: 'DelegationInfo' = IissDataCreator.create_delegation_info(address, value)
+        for delegation in delegations:
+            delegation_address, delegation_value = delegation.values()
+            info: 'DelegationInfo' = IissDataCreator.create_delegation_info(delegation_address, delegation_value)
             delegation_list.append(info)
 
         delegation_tx: 'DelegationTx' = IissDataCreator.create_tx_delegation(delegation_list)

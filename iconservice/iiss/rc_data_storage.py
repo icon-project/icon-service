@@ -17,6 +17,7 @@
 import os
 from typing import TYPE_CHECKING, Optional
 
+from iconcommons import Logger
 from .database.iiss_db import IissDatabase
 from .iiss_msg_data import IissTxData
 from ..base.exception import DatabaseException
@@ -59,6 +60,7 @@ class RcDataStorage(object):
             self._db = None
 
     def put(self, batch: list, iiss_data: 'IissData'):
+        Logger.debug(f"put data: {str(iiss_data)}", "iiss")
         batch.append(iiss_data)
 
     def commit(self, rc_block_batch: list):

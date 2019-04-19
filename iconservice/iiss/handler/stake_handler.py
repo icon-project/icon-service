@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..reward_calc_proxy import RewardCalcProxy
+    from ..ipc.reward_calc_proxy import RewardCalcProxy
     from ..rc_data_storage import RcDataStorage
     from ..iiss_variable.iiss_variable import IissVariable
 

@@ -18,6 +18,7 @@ from functools import cmp_to_key
 from threading import Lock
 from typing import TYPE_CHECKING, List
 
+from iconcommons import Logger
 from .prep_candidate_info_for_sort import PRepCandidateInfoForSort
 from .prep_candidate_linked_list import PRepCandidateLinkedList
 from ..base.exception import InvalidParamsException
@@ -72,6 +73,7 @@ class PRepCandidateSortedInfos(object):
         with self._lock:
             tmp: list = []
             for n in self._prep_candidate_objects:
+                Logger.debug(f"get: {n.data.address}", "iiss")
                 tmp.append(n.data)
             return tmp
 
