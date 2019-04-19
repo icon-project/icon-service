@@ -165,11 +165,11 @@ class IconServiceEngine(ContextContainer):
         PRepCandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage
         self._prep_candidate_engine.open(context, conf, self._icx_context_db)
 
+        self._precommit_data_manager.last_block = self._icx_storage.last_block
+
         self._load_builtin_scores()
         self._init_global_value_by_governance_score()
         self._load_prep_candidate()
-
-        self._precommit_data_manager.last_block = self._icx_storage.last_block
 
     @staticmethod
     def _make_service_flag(flag_table: dict) -> int:
@@ -183,7 +183,7 @@ class IconServiceEngine(ContextContainer):
 
     def _load_builtin_scores(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.block = self._precommit_data_manager.last_block
+        context.block = self._get_last_block()
         try:
             self._push_context(context)
             IconBuiltinScoreLoader.load_builtin_scores(
@@ -203,7 +203,7 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         context = IconScoreContext(IconScoreContextType.QUERY)
-        context.block = self._precommit_data_manager.last_block
+        context.block = self._get_last_block()
         # Clarifies this context does not count steps
         context.step_counter = None
 
@@ -361,12 +361,13 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
-                    if not tx_request['params'].get('dataType') == "issue":
-                        raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
-                    tx_result = self._invoke_issue_request(context, tx_request, index)
-                else:
-                    tx_result = self._invoke_request(context, tx_request, index)
+                # if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
+                #     if not tx_request['params'].get('dataType') == "issue":
+                #         raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
+                #     tx_result = self._invoke_issue_request(context, tx_request, index)
+                # else:
+                #     tx_result = self._invoke_request(context, tx_request, index)
+                tx_result = self._invoke_request(context, tx_request, index)
 
                 block_result.append(tx_result)
                 context.update_batch()

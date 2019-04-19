@@ -73,6 +73,10 @@ class IissHeader(IissData):
         obj.block_height: int = data_list[1]
         return obj
 
+    def __str__(self):
+        return f"[{self._PREFIX}] " \
+            f"version: {self.version}, block_height: {self.block_height}"
+
 
 class IissGovernanceVariable(IissData):
     _PREFIX = b'GV'
@@ -104,6 +108,10 @@ class IissGovernanceVariable(IissData):
         obj.calculated_incentive_rep: int = data_list[0]
         obj.reward_rep: int = data_list[1]
         return obj
+
+    def __str__(self):
+        return f"[{self._PREFIX}] " \
+            f"key: {self.block_height}, calculated_incentive_rep: {self.calculated_incentive_rep}, reward_rep: {self.reward_rep}"
 
 
 class IissBlockProduceInfoData(IissData):
@@ -138,6 +146,10 @@ class IissBlockProduceInfoData(IissData):
         obj.block_validator_list: list = [MsgPackForIpc.decode(TypeTag.ADDRESS, bytes_address)
                                           for bytes_address in data_list[1]]
         return obj
+
+    def __str__(self):
+        return f"[{self._PREFIX}] " \
+            f"key: {self.block_height}, block_generator: {str(self.block_generator)}"
 
 
 class PrepsData(IissData):
@@ -182,6 +194,10 @@ class PrepsData(IissData):
             del_info.value = prep[1]
             obj.prep_list.append(del_info)
         return obj
+
+    def __str__(self):
+        return f"[{self._PREFIX}] " \
+            f"key: {self.block_height}, total_delegation: {str(self.total_delegation)}"
 
 
 class IissTxData(IissData):
