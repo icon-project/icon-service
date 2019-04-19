@@ -84,7 +84,6 @@ class CommitDelegator(object):
     def _check_update_calc_period(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData') -> bool:
         block_height: int = precommit_data.block.height
         check_next_block_height: Optional[int] = cls.variable.issue.get_calc_next_block_height(context)
-        # Logger.debug(f"block_height: {block_height}, check_next_block_height: {check_next_block_height}", "iiss")
         if check_next_block_height is None:
             return False
 

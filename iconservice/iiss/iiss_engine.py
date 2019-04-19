@@ -58,6 +58,7 @@ class IissEngine:
         self._reward_calc_proxy: 'RewardCalcProxy' = None
         self._rc_storage: 'RcDataStorage' = None
         self._variable: 'IissVariable' = None
+        self._formula: 'IcxIssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
         self._init_reward_calc_proxy()
@@ -78,6 +79,10 @@ class IissEngine:
         self._reward_calc_proxy.open(path=IISS_SOCKET_PATH)
         self._reward_calc_proxy.start()
 
+    def _close_reward_calc_proxy(self):
+        self._reward_calc_proxy.stop()
+        self._reward_calc_proxy.close()
+
     def _init_handlers(self, handlers: list):
         for handler in handlers:
             handler.icx_storage = self.icx_storage
@@ -93,9 +98,7 @@ class IissEngine:
 
     def close(self):
         self._rc_storage.close()
-
-        self._reward_calc_proxy.stop()
-        self._reward_calc_proxy.close()
+        self._close_reward_calc_proxy()
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
         method: str = data['method']

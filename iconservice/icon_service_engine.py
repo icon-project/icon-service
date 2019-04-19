@@ -361,13 +361,12 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                # if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
-                #     if not tx_request['params'].get('dataType') == "issue":
-                #         raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
-                #     tx_result = self._invoke_issue_request(context, tx_request, index)
-                # else:
-                #     tx_result = self._invoke_request(context, tx_request, index)
-                tx_result = self._invoke_request(context, tx_request, index)
+                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
+                    if not tx_request['params'].get('dataType') == "issue":
+                        raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
+                    tx_result = self._invoke_issue_request(context, tx_request, index)
+                else:
+                    tx_result = self._invoke_request(context, tx_request, index)
 
                 block_result.append(tx_result)
                 context.update_batch()
