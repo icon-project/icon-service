@@ -480,7 +480,7 @@ class IconServiceEngine(ContextContainer):
 
         for key in sorted_db_data_keys:
             diff_set = tx_data[key].keys() ^ db_data[key].keys()
-            if not len(diff_set) == 1 or diff_set.pop() != "value":
+            if not len(diff_set) == 0:
                 raise IllegalFormatException("invalid issue transaction format")
 
     @staticmethod
@@ -511,30 +511,11 @@ class IconServiceEngine(ContextContainer):
         context.event_log_stack.clear()
 
         # todo: get issue related data from iiss engine
-        issue_data_in_db: dict = \
-            {
-                "prep": {
-                    "incentive": 1,
-                    "rewardRate": 1,
-                    "totalDelegation": 1,
-                },
-                "eep": {
-                    "incentive": 2,
-                    "rewardRate": 2,
-                    "totalDelegation": 2,
-                },
-                "dapp": {
-                    "incentive": 3,
-                    "rewardRate": 3,
-                    "totalDelegation": 3,
-                }
-            }
+        issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info()
         # format check
         self._issue_transaction_format_check(issue_data_in_tx, issue_data_in_db)
 
-        formula = IcxIssueFormula()
         total_issue_amount = 0
-
         tx_result = TransactionResult(context.tx, context.block)
         # todo: treasury address should be assigned when icon service open.
         tx_result.to = TREASURY_ADDRESS
@@ -542,10 +523,6 @@ class IconServiceEngine(ContextContainer):
         for group_key in ISSUE_CALCULATE_ORDER:
             if group_key not in issue_data_in_db:
                 continue
-
-            calculated_issue_amount = formula.calculate(group_key, issue_data_in_db[group_key])
-            issue_data_in_db[group_key]["value"] = calculated_issue_amount
-
             if issue_data_in_tx[group_key] != issue_data_in_db[group_key]:
                 # todo: consider about trace (if need)
                 tx_failure_exception = IconServiceBaseException("Have difference between "
@@ -561,7 +538,7 @@ class IconServiceEngine(ContextContainer):
             data = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
             event_log = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
             context.event_logs.append(event_log)
-            total_issue_amount += calculated_issue_amount
+            total_issue_amount += issue_data_in_db[group_key]["value"]
         else:
             # case of break being not called
             # todo : issue amount = total_issue_amount - prev total transaction fee
@@ -1285,32 +1262,8 @@ class IconServiceEngine(ContextContainer):
         if context.revision < REVISION_5:
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
-        # dummy data
-        iiss_data_for_issue: dict = \
-            {
-                "prep": {
-                    "incentive": 1,
-                    "rewardRate": 1,
-                    "totalDelegation": 10,
-                },
-                "eep": {
-                    "incentive": 2,
-                    "rewardRate": 2,
-                    "totalDelegation": 100,
-                },
-                "dapp": {
-                    "incentive": 3,
-                    "rewardRate": 3,
-                    "totalDelegation": 1000,
-                }
-            }
 
-        # calculate issue amount using formula method
-        formula = IcxIssueFormula()
-        for group in iiss_data_for_issue.keys():
-            issue_amount_per_group = formula.calculate(group, iiss_data_for_issue[group])
-            iiss_data_for_issue[group]["value"] = issue_amount_per_group
-
+        iiss_data_for_issue: dict = self._iiss_engine.create_icx_issue_info()
         return iiss_data_for_issue
 
     def _make_last_block_status(self) -> Optional[dict]:

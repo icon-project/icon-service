@@ -62,7 +62,14 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def hello(self):
+        # todo: 해당 값을 config로 이동
+        response = MakeResponse.make_response({"isIssuable": True,
+                                               "pRepList": ["hx0000000000000000000000000000000000000000",
+                                                            "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb",
+                                                            "hx1000000000000000000000000000000000000000"]
+                                               })
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
+        return response
 
     @message_queue_task
     async def get_issue_info(self):
