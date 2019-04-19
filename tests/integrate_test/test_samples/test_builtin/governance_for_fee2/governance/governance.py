@@ -117,7 +117,7 @@ class Governance(IconSystemScoreBase):
     _REVISION_NAME = 'revision_name'
 
     @eventlog(indexed=1)
-    def Accepted(self, txHash: str, warning: str):
+    def Accepted(self, txHash: str):
         pass
 
     @eventlog(indexed=1)
@@ -235,11 +235,9 @@ class Governance(IconSystemScoreBase):
         self._set_initial_step_costs()
 
     def _migrate_v0_0_3(self):
-        # set initial import white list
+        self._set_initial_max_step_limits()
         self._set_initial_import_white_list()
         self._set_initial_service_config()
-
-        self._set_initial_max_step_limits()
 
     def _migrate_v0_0_4(self):
         pass
@@ -359,7 +357,7 @@ class Governance(IconSystemScoreBase):
             self.StepPriceChanged(stepPrice)
 
     @external
-    def acceptScore(self, txHash: bytes, warning: str = ""):
+    def acceptScore(self, txHash: bytes):
         # check message sender
         Logger.debug(f'acceptScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
@@ -389,14 +387,14 @@ class Governance(IconSystemScoreBase):
 
         self._audit_status[txHash] = self.tx.hash
 
-        self.Accepted('0x' + txHash.hex(), warning)
+        self.Accepted('0x' + txHash.hex())
 
     def _deploy(self, tx_hash: bytes, score_addr: Address):
         owner = self.get_owner(score_addr)
         tmp_sender = self.msg.sender
         self.msg.sender = owner
         try:
-            self.deploy(tx_hash)
+            self._context.deploy(tx_hash)
         finally:
             self.msg.sender = tmp_sender
 
