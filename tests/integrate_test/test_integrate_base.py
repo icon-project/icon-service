@@ -20,12 +20,14 @@
 from unittest import TestCase
 
 from typing import TYPE_CHECKING, Union, Optional, Any
+from unittest.mock import Mock
 
 from iconcommons import IconConfig
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iiss.ipc.reward_calc_proxy import RewardCalcProxy
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
@@ -71,9 +73,22 @@ class TestIntegrateBase(TestCase):
         config.update_conf(self._make_init_config())
 
         self.icon_service_engine = IconServiceEngine()
+
+        self._mock_ipc()
         self.icon_service_engine.open(config)
 
         self._genesis_invoke()
+
+    def _mock_ipc(self):
+        RewardCalcProxy.open = Mock()
+        RewardCalcProxy.start = Mock()
+        RewardCalcProxy.stop = Mock()
+        RewardCalcProxy.close = Mock()
+        RewardCalcProxy.get_version = Mock()
+        RewardCalcProxy.calculate = Mock()
+        RewardCalcProxy.claim_iscore = Mock()
+        RewardCalcProxy.query_iscore = Mock()
+        RewardCalcProxy.commit_block = Mock()
 
     def tearDown(self):
         self.icon_service_engine.close()
