@@ -216,7 +216,11 @@ class IconPreValidator:
 
         self._check_balance(context, from_, value, fee)
 
-        if to.is_contract:
+        data_type: str = params.get('dataType')
+        if to.is_contract and data_type in (None, 'call', 'message'):
+            # Check if the SCORE can be called when fee-sharing ON.
+            # If data_type is None or message and the recipient is SCORE,
+            # it works like `call`.(calling fallback)
             self._fee_engine.check_score_available(context, to, context.block.height)
 
     def _validate_call_transaction(self, params: dict):
