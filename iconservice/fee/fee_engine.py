@@ -570,7 +570,8 @@ class FeeEngine:
 
                 # All available deposits are consumed in this loop.
                 # So if this `expires` is the `max expires`, should find the next `max expires`.
-                should_update_expire: bool = deposit.expires == deposit_meta.expires_of_deposit
+                if deposit.expires == deposit_meta.expires_of_deposit:
+                    should_update_expire = True
 
             if charged_icx > 0:
                 deposit.deposit_used += charged_icx
