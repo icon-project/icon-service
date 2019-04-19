@@ -71,7 +71,7 @@ def _handle_get_score_deposit_info(context: 'IconScoreContext', value: int, addr
             - Deposit contracts in list
     """
     deposit_info = context.fee_engine.get_deposit_info(context, address, context.block.height)
-    return deposit_info.to_dict(to_camel_case)
+    return None if deposit_info is None else deposit_info.to_dict(to_camel_case)
 
 
 # System Address

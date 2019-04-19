@@ -339,7 +339,8 @@ class Governance(IconSystemScoreBase):
 
             system = self.create_interface_score(ZERO_SCORE_ADDRESS, SystemInterface)
             deposit_info = system.getScoreDepositInfo(address)
-            result[DEPOSIT_INFO] = deposit_info
+            if deposit_info is not None:
+                result[DEPOSIT_INFO] = deposit_info
 
         return result
 

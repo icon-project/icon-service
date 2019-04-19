@@ -203,6 +203,9 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertFalse(deposit_tx_result.status)
 
     def test_sharing_fee_case_score_0(self):
+        # deposit icx
+        deposit_tx_result = self._deposit_icx(self.score_address, 15000 * 10 ** 18, 1_296_000)
+        self.assertEqual(deposit_tx_result.status, 1)
         user_balance = self._query({"address": self._admin}, "icx_getBalance")
         score_info = self._query_score_info(self.score_address)
         self.assertIn('depositInfo', score_info)
@@ -350,12 +353,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                 and all of values like sharing proportion, available virtual step and available deposit is 0.
         """
         score_info = self._query_score_info(self.score_address)
-        self.assertIn('depositInfo', score_info)
-        deposit_info = score_info['depositInfo']
-        self.assertEqual(deposit_info["scoreAddress"], self.score_address)
-        self.assertEqual(deposit_info["deposits"], [])
-        self.assertEqual(deposit_info["availableVirtualStep"], 0)
-        self.assertEqual(deposit_info["availableDeposit"], 0)
+        self.assertNotIn('depositInfo', score_info)
 
     def test_get_score_info_with_deposits(self):
         """
@@ -448,9 +446,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertTrue(withdraw_tx_result.status)
 
         score_info = self._query_score_info(self.score_address)
-        self.assertIn('depositInfo', score_info)
-        self.assertEqual(len(score_info['depositInfo']["deposits"]), 0)
-        self.assertEqual(score_info['depositInfo']["availableDeposit"], 0)
+        self.assertNotIn('depositInfo', score_info)
 
     def test_withdraw_deposit_by_not_owner(self):
         """
@@ -484,9 +480,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertTrue(withdraw_tx_result.status)
 
         score_info = self._query_score_info(self.score_address)
-        self.assertIn('depositInfo', score_info)
-        deposit_info = score_info['depositInfo']
-        self.assertEqual(len(deposit_info["deposits"]), 0)
+        self.assertNotIn('depositInfo', score_info)
 
         # withdraw again
         withdraw_tx_result = self._withdraw_deposit(deposit_id, self.score_address)

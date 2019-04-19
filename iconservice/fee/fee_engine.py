@@ -129,7 +129,7 @@ class FeeEngine:
                 deposit_info.available_deposit += \
                     max(deposit.remaining_deposit - deposit.min_remaining_deposit, 0)
 
-        return deposit_info
+        return deposit_info if len(deposit_info.deposits) > 0 else None
 
     def add_deposit(self,
                     context: 'IconScoreContext',

@@ -337,7 +337,7 @@ class TestFeeEngine(unittest.TestCase):
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
-        self.assertEqual(0, len(deposit_info.deposits))
+        self.assertIsNone(deposit_info)
         self.assertEqual(amount, after_sender_balance - before_sender_balance)
 
     def test_withdraw_fee_with_penalty(self):
@@ -356,7 +356,7 @@ class TestFeeEngine(unittest.TestCase):
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
-        self.assertEqual(0, len(deposit_info.deposits))
+        self.assertIsNone(deposit_info)
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
 
