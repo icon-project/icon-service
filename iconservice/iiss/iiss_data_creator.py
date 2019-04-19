@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, List
 
+from iconcommons import Logger
 from .iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, IissBlockProduceInfoData
 
@@ -40,7 +41,7 @@ class IissDataCreator:
         data = IissGovernanceVariable()
         data.block_height: int = block_height
         data.calculated_incentive_rep: int = calculated_incentive_rep
-        data.reward_reg: int = reward_rep
+        data.reward_rep: int = reward_rep
         return data
 
     @staticmethod
@@ -58,6 +59,7 @@ class IissDataCreator:
 
         converted_preps: List['DelegationInfo'] = []
         for prep in preps:
+            Logger.debug(f"create_prep_data: {str(prep.address)}", "iiss")
             info = IissDataCreator.create_delegation_info(prep.address, prep.total_delegated)
             converted_preps.append(info)
 
@@ -87,6 +89,7 @@ class IissDataCreator:
         info = DelegationInfo()
         info.address: 'Address' = address
         info.value: int = value
+        Logger.debug(f"create_delegation_info: {str(info.address)}", "iiss")
         return info
 
     @staticmethod
