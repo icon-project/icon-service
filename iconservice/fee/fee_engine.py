@@ -446,9 +446,9 @@ class FeeEngine:
             score_used_step = charged_step
 
             if charged_step < score_step:
-                icx_required = (score_step - charged_step) * step_price
+                required_icx = (score_step - charged_step) * step_price
                 charged_icx, deposit_indices_changed = self._charge_fee_by_deposit(
-                    context, deposit_meta, icx_required, block_height)
+                    context, deposit_meta, required_icx, block_height)
 
                 score_used_step += charged_icx // step_price
                 deposit_meta_changed: bool = deposit_meta_changed or deposit_indices_changed
@@ -462,7 +462,7 @@ class FeeEngine:
     def _charge_fee_by_virtual_step(self,
                                     context: 'IconScoreContext',
                                     deposit_meta: 'DepositMeta',
-                                    step_required: int,
+                                    required_step: int,
                                     block_height: int) -> (int, bytes):
         """
         Charges fees by available virtual STEPs
@@ -476,8 +476,8 @@ class FeeEngine:
         for deposit in filter(lambda d: block_height < d.expires, gen):
             available_virtual_step = deposit.remaining_virtual_step
 
-            if step_required < available_virtual_step:
-                step = step_required
+            if required_step < available_virtual_step:
+                step = required_step
             else:
                 step = available_virtual_step
 
@@ -492,9 +492,9 @@ class FeeEngine:
                 last_paid_deposit = deposit
 
                 charged_step += step
-                step_required -= step
+                required_step -= step
 
-                if step_required == 0:
+                if required_step == 0:
                     break
 
         indices_changed = self._update_virtual_step_indices(
@@ -533,7 +533,7 @@ class FeeEngine:
 
         if deposit_meta.available_head_id_of_virtual_step != next_available_deposit_id \
                 or deposit_meta.expires_of_virtual_step != next_expires:
-            # Updates and return True if changes are exist
+            # Updates and return True if some changes exist
             deposit_meta.available_head_id_of_virtual_step = next_available_deposit_id
             deposit_meta.expires_of_virtual_step = next_expires
             return True
@@ -543,18 +543,18 @@ class FeeEngine:
     def _charge_fee_by_deposit(self,
                                context: 'IconScoreContext',
                                deposit_meta: 'DepositMeta',
-                               icx_required: int,
-                               block_height: int) -> (int, bytes):
+                               required_icx: int,
+                               block_height: int) -> (int, bool):
         """
         Charges fees by available deposit ICXs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
         """
-        assert icx_required > 0
+        assert required_icx > 0
 
-        if icx_required == 0:
+        if required_icx == 0:
             return 0, False
 
-        remaining_required_icx = icx_required
+        remaining_required_icx = required_icx
         should_update_expire = False
         last_paid_deposit = None
 
@@ -570,8 +570,7 @@ class FeeEngine:
 
                 # All available deposits are consumed in this loop.
                 # So if this `expires` is the `max expires`, should find the next `max expires`.
-                if deposit.expires == deposit_meta.expires_of_deposit:
-                    should_update_expire = True
+                should_update_expire: bool = deposit.expires == deposit_meta.expires_of_deposit
 
             if charged_icx > 0:
                 deposit.deposit_used += charged_icx
@@ -582,19 +581,24 @@ class FeeEngine:
                 if remaining_required_icx == 0:
                     break
 
-        if remaining_required_icx > 0 and last_paid_deposit is not None:
-            # This is the last chargeable deposit
-            # so, charges all remaining fee regardless minimum remaining amount.
-            available_deposit = last_paid_deposit.deposit_amount - last_paid_deposit.deposit_used
-            charged_icx = min(available_deposit, remaining_required_icx)
-            last_paid_deposit.deposit_used += charged_icx
-            self._fee_storage.put_deposit(context, last_paid_deposit)
-            remaining_required_icx -= charged_icx
+        if remaining_required_icx > 0:
+            # Charges all remaining fee regardless minimum remaining amount.
+            gen = self._deposit_generator(context, deposit_meta.head_id)
+            for deposit in filter(lambda d: block_height < d.expires, gen):
+                charged_icx = min(remaining_required_icx, deposit.remaining_deposit)
+
+                if charged_icx > 0:
+                    deposit.deposit_used += charged_icx
+                    self._fee_storage.put_deposit(context, deposit)
+
+                    remaining_required_icx -= charged_icx
+                    if remaining_required_icx == 0:
+                        break
 
         indices_changed = self._update_deposit_indices(
             context, deposit_meta, last_paid_deposit, should_update_expire, block_height)
 
-        return icx_required - remaining_required_icx, indices_changed
+        return required_icx - remaining_required_icx, indices_changed
 
     def _update_deposit_indices(self,
                                 context: 'IconScoreContext',
@@ -638,14 +642,13 @@ class FeeEngine:
         next_id = start_id
         while next_id is not None:
             deposit = self._fee_storage.get_deposit(context, next_id)
-            if deposit is not None:
-                next_id = deposit.next_id
-
-                yield deposit
-            else:
+            if deposit is None:
                 break
 
-    def _get_score_deploy_info(self, context, score_address) -> 'IconScoreDeployInfo':
+            yield deposit
+            next_id = deposit.next_id
+
+    def _get_score_deploy_info(self, context, score_address: 'Address') -> 'IconScoreDeployInfo':
         deploy_info: 'IconScoreDeployInfo' = \
             self._deploy_storage.get_deploy_info(context, score_address)
 
@@ -654,12 +657,11 @@ class FeeEngine:
 
         return deploy_info
 
-    def _check_score_valid(self, context, score_address) -> None:
+    def _check_score_valid(self, context, score_address: 'Address') -> None:
         deploy_info = self._get_score_deploy_info(context, score_address)
-
         assert deploy_info is not None
 
-    def _check_score_ownership(self, context, sender, score_address) -> None:
+    def _check_score_ownership(self, context, sender, score_address: 'Address') -> None:
         deploy_info = self._get_score_deploy_info(context, score_address)
 
         if deploy_info.owner != sender:
@@ -745,7 +747,7 @@ class VirtualStepCalculator(object):
         return redemption_amount + breach_penalty
 
     @classmethod
-    def _deposit_func(cls, amount: int) -> int:
+    def _deposit_func(cls, amount: int) -> Decimal:
         deposit_in_icx = Decimal(amount // 10 ** 18)
         adjusted_deposit: Decimal = deposit_in_icx / cls._DEFAULT_DEPOSIT_UNIT
 
@@ -755,7 +757,7 @@ class VirtualStepCalculator(object):
             cls._PARAM_A1 * adjusted_deposit
 
     @classmethod
-    def _term_func(cls, term: int) -> int:
+    def _term_func(cls, term: int) -> Decimal:
         adjusted_expire = Decimal(term) / cls._DEFAULT_TERM_UNIT
         return \
             cls._PARAM_A6 * adjusted_expire ** 3 + \
@@ -773,17 +775,17 @@ class DepositHandler:
         DEPOSIT = 0
         WITHDRAW = 1
 
-    SIGNATURE_AND_INDEX = [
+    SIGNATURE_AND_INDEX = (
         ('DepositAdded(bytes,Address,Address,int,int)', 3),
         ('DepositWithdrawn(bytes,Address,Address,int,int)', 3)
-    ]
+    )
 
     @staticmethod
-    def get_signature_and_index_count(event_type: EventType):
+    def get_signature_and_index_count(event_type: EventType) -> (str, int):
         return DepositHandler.SIGNATURE_AND_INDEX[event_type]
 
     def __init__(self, fee_engine: 'FeeEngine'):
-        self.fee_engine = fee_engine
+        self._fee_engine = fee_engine
 
     def handle_deposit_request(self, context: 'IconScoreContext', data: dict):
         """
@@ -805,11 +807,11 @@ class DepositHandler:
                 raise InvalidRequestException(f"Invalid action: {action}")
         except KeyError:
             # missing required params for the action
-            raise InvalidParamsException("Invalid params: missing required params")
+            raise InvalidParamsException("Required params not found")
 
     def _add_deposit(self, context: 'IconScoreContext', term: int):
-        self.fee_engine.add_deposit(context, context.tx.hash, context.msg.sender, context.tx.to,
-                                    context.msg.value, context.block.height, term)
+        self._fee_engine.add_deposit(context, context.tx.hash, context.msg.sender, context.tx.to,
+                                     context.msg.value, context.block.height, term)
 
         event_log_args = [context.tx.hash, context.tx.to, context.msg.sender, context.msg.value, term]
         self._emit_event(context, DepositHandler.EventType.DEPOSIT, event_log_args)
@@ -817,10 +819,10 @@ class DepositHandler:
     def _withdraw_deposit(self, context: 'IconScoreContext', deposit_id: bytes):
         if context.msg.value != 0:
             raise InvalidRequestException(f'Invalid value: must be zero')
-        score_address, return_icx, penalty = self.fee_engine.withdraw_deposit(
+        score_address, withdrawal_amount, penalty = self._fee_engine.withdraw_deposit(
             context, context.msg.sender, deposit_id, context.block.height, context.step_counter.step_price)
 
-        event_log_args = [deposit_id, score_address, context.msg.sender, return_icx, penalty]
+        event_log_args = [deposit_id, score_address, context.msg.sender, withdrawal_amount, penalty]
         self._emit_event(context, DepositHandler.EventType.WITHDRAW, event_log_args)
 
     @staticmethod
