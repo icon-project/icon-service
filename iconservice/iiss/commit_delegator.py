@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
+from iconcommons import Logger
 from .iiss_data_creator import IissDataCreator
 from ..base.exception import InvalidParamsException
 
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from ..prep.prep_variable.prep_variable_storage import GovernanceVariable, PRep
     from .ipc.reward_calc_proxy import RewardCalcProxy
     from .rc_data_storage import RcDataStorage
-    from .iiss_msg_data import IissHeader, IissBlockProduceInfoData, PrepsData
+    from .iiss_msg_data import IissHeader, IissBlockProduceInfoData, PrepsData, IissGovernanceVariable
     from .iiss_variable.iiss_variable import IissVariable
 
 
@@ -48,12 +49,13 @@ class CommitDelegator(object):
 
     @classmethod
     def genesis_send_ipc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        pass
+        block_height: int = precommit_data.block.height
+        path: str = cls.rc_storage.create_db_for_calc(precommit_data.block.height)
+        cls.reward_calc_proxy.commit_block(True, block_height, precommit_data.block.hash)
+        cls.reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
     def update_db(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        # TODO UpdateCheck PrepList
-        # cls._put_preps_for_rc(context, precommit_data)
 
         # every block time
         cls._put_block_produce_info_for_rc(context, precommit_data)
@@ -61,24 +63,32 @@ class CommitDelegator(object):
         if not cls._check_update_calc_period(context, precommit_data):
             return
 
-        cls._put_next_calc_block_height(context, precommit_data.block.height)
-
         cls._put_header_for_rc(context, precommit_data)
         cls._put_gv_for_rc(context, precommit_data)
+        cls._put_preps_for_rc(context, precommit_data)
 
     @classmethod
     def send_ipc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        # every block
+        cls.reward_calc_proxy.commit_block(True, precommit_data.block.height, precommit_data.block.hash)
+
         if not cls._check_update_calc_period(context, precommit_data):
-            pass
+            return
+
+        block_height: int = precommit_data.block.height
+        path: str = cls.rc_storage.create_db_for_calc(precommit_data.block.height)
+        cls.reward_calc_proxy.calculate(path, block_height)
+        cls._put_next_calc_block_height(context, precommit_data.block.height)
 
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData') -> bool:
         block_height: int = precommit_data.block.height
         check_next_block_height: Optional[int] = cls.variable.issue.get_calc_next_block_height(context)
+        # Logger.debug(f"block_height: {block_height}, check_next_block_height: {check_next_block_height}", "iiss")
         if check_next_block_height is None:
             return False
 
-        return block_height > check_next_block_height
+        return block_height == check_next_block_height
 
     @classmethod
     def _put_next_calc_block_height(cls, context: 'IconScoreContext', block_height: int):
@@ -99,9 +109,9 @@ class CommitDelegator(object):
 
         # TODO converted_incentive_rep
         calculated_incentive_rep: int = gv.incentive_rep
-        data: 'IissHeader' = IissDataCreator.create_gv_variable(precommit_data.block.height,
-                                                                calculated_incentive_rep,
-                                                                reward_rep)
+        data: 'IissGovernanceVariable' = IissDataCreator.create_gv_variable(precommit_data.block.height,
+                                                                            calculated_incentive_rep,
+                                                                            reward_rep)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -114,8 +124,9 @@ class CommitDelegator(object):
         if len(preps) == 0:
             return
 
+        Logger.debug(f"put_block_produce_info_for_rc", "iiss")
         generator: 'Address' = preps[0].address
-        validator_list: list = [prep.address for prep in preps]
+        validator_list: list = [] # [prep.address for prep in preps[1:]]
 
         data: 'IissBlockProduceInfoData' = IissDataCreator.create_block_produce_info_data(precommit_data.block.height,
                                                                                           generator,
@@ -124,14 +135,14 @@ class CommitDelegator(object):
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        # tmp implement
-
-        preps: List['PRep'] = context.prep_candidate_engine.get_preps(context)
+        preps: List['PRep'] = context.prep_candidate_engine.get_candidates()
 
         if len(preps) == 0:
             return
 
         total_candidate_delegated: int = cls.variable.issue.get_total_candidate_delegated(context)
+        Logger.debug(f"put_preps_for_rc: total_candidate_delegated{total_candidate_delegated}", "iiss")
+
         data: 'PrepsData' = IissDataCreator.create_prep_data(precommit_data.block.height,
                                                              total_candidate_delegated,
                                                              preps)
