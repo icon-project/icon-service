@@ -139,6 +139,7 @@ class IconScoreContext(object):
 
         self.msg_stack = []
         self.event_log_stack = []
+        self.data_for_monitoring = {}
 
     @property
     def readonly(self):

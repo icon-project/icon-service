@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
+from iconservice.utils.metric import PrometheusMetric
 from .iiss.icx_issue_formula import IcxIssueFormula
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
@@ -376,6 +377,7 @@ class IconServiceEngine(ContextContainer):
             prev_block_contributors,
             context.new_icon_score_mapper,
             precommit_flag)
+        precommit_data.data_for_monitoring.update(context.data_for_monitoring)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
@@ -567,6 +569,12 @@ class IconServiceEngine(ContextContainer):
             # case of break being not called
             # todo : issue amount = total_issue_amount - prev total transaction fee
             self._icx_engine.issue(context, TREASURY_ADDRESS, total_issue_amount)
+
+            # temporal logic for monitoring
+            total_supply = self._icx_engine.get_total_supply(context)
+            context.data_for_monitoring["set_total_supply"] = total_supply
+            context.data_for_monitoring["set_icx_issue_amount"] = total_issue_amount
+
             total_issue_indexed = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
             total_issue_data = [total_issue_amount]
             total_issue_event_log = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
@@ -1373,6 +1381,17 @@ class IconServiceEngine(ContextContainer):
             self._iiss_engine.genesis_commit(context, precommit_data)
         else:
             self._iiss_engine.commit(context, precommit_data)
+
+        total_del = self._iiss_engine._variable._issue.get_total_candidate_delegated(context)
+        r_rate = self._iiss_engine._variable._common.get_reward_rep(context)
+        i_rep = self._prep_candidate_engine._variable._storage.get_gv(context).incentive_rep
+        PrometheusMetric.set_iiss_total_delegation(total_del)
+        PrometheusMetric.set_iiss_delegation_reward_rate(r_rate)
+        PrometheusMetric.set_iiss_representative_incentive(i_rep)
+        # total supply, issue amount
+        for set_method_name, value in precommit_data.data_for_monitoring.items():
+            getattr(PrometheusMetric, set_method_name)(value)
+        PrometheusMetric.push_iiss()
 
     def rollback(self, block: 'Block') -> None:
         """Throw away a precommit state

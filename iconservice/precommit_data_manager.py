@@ -70,6 +70,9 @@ class PrecommitData(object):
         self.state_root_hash: bytes = self.block_batch.digest()
         self.block = block_batch.block
 
+        # temporal variable for monitoring
+        self.data_for_monitoring = {}
+
 
 class PrecommitDataManager(object):
     """Manages multiple precommit data made from next candidate block
