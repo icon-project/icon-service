@@ -796,7 +796,7 @@ class DepositHandler:
         :param data: data field
         :return:
         """
-        converted_data = TypeConverter.convert(data, ParamType.FEE2_PARAMS_DATA)
+        converted_data = TypeConverter.convert(data, ParamType.DEPOSIT_DATA)
         action = converted_data['action']
 
         try:
