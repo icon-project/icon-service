@@ -24,7 +24,7 @@ from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
-    EnableThreadFlag, ENABLE_THREAD_FLAG
+    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case
 
@@ -62,11 +62,8 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def hello(self):
-        # todo: 해당 값을 config로 이동
         response = MakeResponse.make_response({"isIssuable": True,
-                                               "pRepList": ["hx0000000000000000000000000000000000000000",
-                                                            "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb",
-                                                            "hx1000000000000000000000000000000000000000"]
+                                               "pRepList": self._conf[ConfigKey.IISS_PREP_LIST]
                                                })
         Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
         return response
