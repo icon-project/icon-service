@@ -177,8 +177,8 @@ class TestFeeSharing(unittest.TestCase):
         }]
 
         expected_detail_step_used = {
-                self.from_: hex(9000),
-                self.score: hex(9000)
+                str(self.from_): hex(9000),
+                str(self.score): hex(9000)
         }
 
         tx_result = result['txResults'][tx_hash]

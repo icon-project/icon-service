@@ -116,12 +116,19 @@ class TransactionResult(object):
                                      isinstance(v, EventLog)]
             elif isinstance(value, BloomFilter):
                 new_dict[new_key] = int(value).to_bytes(256, byteorder=DATA_BYTE_ORDER)
-            elif key == 'failure' and value:
+            elif key == 'failure':
                 if self.status == self.FAILURE:
                     new_dict[new_key] = {
                         'code': value.code,
                         'message': value.message
                     }
+            elif key == 'step_used_details':
+                assert isinstance(value, dict)
+                step_used_details = {}
+                new_dict[new_key] = step_used_details
+
+                for address in value:
+                    step_used_details[str(address)] = value[address]
             elif key == 'traces':
                 # traces are excluded from dict property
                 continue
