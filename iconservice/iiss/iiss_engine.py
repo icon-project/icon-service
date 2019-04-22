@@ -18,16 +18,15 @@ from typing import TYPE_CHECKING, Any
 
 from ..iiss.icx_issue_formula import IcxIssueFormula
 from ..iiss.iiss_msg_data import PRepUnregisterTx
-from .iiss_data_creator import IissDataCreator
-from .rc_data_storage import RcDataStorage
-from .handler.stake_handler import StakeHandler
+from .commit_delegator import CommitDelegator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
+from .handler.stake_handler import StakeHandler
+from .iiss_data_creator import IissDataCreator
 from .iiss_variable.iiss_variable import IissVariable
-from .commit_delegator import CommitDelegator
-
-from .reward_calc_proxy import RewardCalcProxy
-from ..icon_constant import ConfigKey
+from .ipc.reward_calc_proxy import RewardCalcProxy
+from .rc_data_storage import RcDataStorage
+from ..icon_constant import ConfigKey, IISS_SOCKET_PATH
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_result import TransactionResult
@@ -60,9 +59,10 @@ class IissEngine:
         self._reward_calc_proxy: 'RewardCalcProxy' = None
         self._rc_storage: 'RcDataStorage' = None
         self._variable: 'IissVariable' = None
+        self._formula: 'IcxIssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
-        self._reward_calc_proxy = RewardCalcProxy()
+        self._init_reward_calc_proxy()
 
         self._rc_storage: 'RcDataStorage' = RcDataStorage()
         self._rc_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
@@ -75,6 +75,15 @@ class IissEngine:
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)
+
+    def _init_reward_calc_proxy(self):
+        self._reward_calc_proxy = RewardCalcProxy()
+        self._reward_calc_proxy.open(path=IISS_SOCKET_PATH)
+        self._reward_calc_proxy.start()
+
+    def _close_reward_calc_proxy(self):
+        self._reward_calc_proxy.stop()
+        self._reward_calc_proxy.close()
 
     def _init_handlers(self, handlers: list):
         for handler in handlers:
@@ -91,6 +100,7 @@ class IissEngine:
 
     def close(self):
         self._rc_storage.close()
+        self._close_reward_calc_proxy()
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
         method: str = data['method']

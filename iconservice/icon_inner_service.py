@@ -91,6 +91,28 @@ class IconScoreInnerTask(object):
             Logger.info(f'icx issue response with {response}', ICON_INNER_LOG_TAG)
             return response
 
+    @message_queue_task
+    async def get_issue_info(self):
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+            loop = get_event_loop()
+            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                              self._get_issue_info)
+        else:
+            return self._get_issue_info()
+
+    def _get_issue_info(self):
+        query_method_name = "iiss_get_issue_info"
+        try:
+            value = self._icon_service_engine.query(query_method_name, {})
+            response = MakeResponse.make_response(value)
+        # todo: add except after implement formular method
+        except Exception as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        finally:
+            Logger.info(f'icx issue response with {response}', ICON_INNER_LOG_TAG)
+            return response
+
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
 

@@ -16,6 +16,7 @@
 
 from typing import Optional
 
+from iconcommons import Logger
 from ..base.exception import InvalidParamsException
 from ..base.address import Address
 from .prep_candidate_info_for_sort import PRepCandidateInfoForSort
@@ -23,6 +24,7 @@ from .prep_candidate_info_for_sort import PRepCandidateInfoForSort
 
 class Node:
     def __init__(self, data: 'PRepCandidateInfoForSort'):
+        Logger.debug(f"Node: {type(data)}, {data}", "iiss")
         self._data: 'PRepCandidateInfoForSort' = data
         self.next: 'Node' = None
         self.prev: 'Node' = None
