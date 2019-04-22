@@ -65,7 +65,7 @@ class PrometheusMetric(object):
         Set ICX total supply
         :param value: total supply
         """
-        cls.icon_total_supply.set(value)
+        cls.total_supply.set(value)
 
     @classmethod
     def set_icx_issue_amount(cls, value) -> None:
@@ -74,7 +74,7 @@ class PrometheusMetric(object):
         :param value: issued ICX amount
         :return:
         """
-        cls.icon_icx_issue_amount.set(value)
+        cls.icx_issue_amount.set(value)
 
     @classmethod
     def set_iiss_total_delegation(cls, value) -> None:

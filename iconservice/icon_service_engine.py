@@ -571,8 +571,6 @@ class IconServiceEngine(ContextContainer):
             self._icx_engine.issue(context, TREASURY_ADDRESS, total_issue_amount)
 
             # temporal logic for monitoring
-            total_supply = self._icx_engine.get_total_supply(context)
-            context.data_for_monitoring["set_total_supply"] = total_supply
             context.data_for_monitoring["set_icx_issue_amount"] = total_issue_amount
 
             total_issue_indexed = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
@@ -1300,17 +1298,17 @@ class IconServiceEngine(ContextContainer):
                 "prep": {
                     "incentive": 1,
                     "rewardRate": 1,
-                    "totalDelegation": 10,
+                    "totalDelegation": 1,
                 },
                 "eep": {
                     "incentive": 2,
                     "rewardRate": 2,
-                    "totalDelegation": 100,
+                    "totalDelegation": 2,
                 },
                 "dapp": {
                     "incentive": 3,
                     "rewardRate": 3,
-                    "totalDelegation": 1000,
+                    "totalDelegation": 3,
                 }
             }
 
@@ -1382,15 +1380,22 @@ class IconServiceEngine(ContextContainer):
         else:
             self._iiss_engine.commit(context, precommit_data)
 
+        total_supply = self._icx_engine.get_total_supply(context)
         total_del = self._iiss_engine._variable._issue.get_total_candidate_delegated(context)
         r_rate = self._iiss_engine._variable._common.get_reward_rep(context)
         i_rep = self._prep_candidate_engine._variable._storage.get_gv(context).incentive_rep
+
+        PrometheusMetric.set_block_height(precommit_data.block.height)
+        PrometheusMetric.set_total_supply(total_supply)
+        PrometheusMetric.set_icx_issue_amount(0)    # reset issue_amount
         PrometheusMetric.set_iiss_total_delegation(total_del)
         PrometheusMetric.set_iiss_delegation_reward_rate(r_rate)
         PrometheusMetric.set_iiss_representative_incentive(i_rep)
         # total supply, issue amount
         for set_method_name, value in precommit_data.data_for_monitoring.items():
+            Logger.info(f'Monitoring value : {set_method_name} : {value}', ICON_SERVICE_LOG_TAG)
             getattr(PrometheusMetric, set_method_name)(value)
+        # push monitoring data
         PrometheusMetric.push_iiss()
 
     def rollback(self, block: 'Block') -> None:
