@@ -18,13 +18,14 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from .iiss.icx_issue_formula import IcxIssueFormula
+from .icx.icx_issue_engine import IcxIssueEngine
+from .icx.issue_data_checker import IssueDataValidator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .iconscore.icon_score_event_log import EventLog
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException
+    AccessDeniedException, IconScoreException, InvalidParamsException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -34,7 +35,7 @@ from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REVISION_4, REVISION_5, \
-    ICX_ISSUE_TRANSACTION_INDEX, ISSUE_EVENT_LOG_MAPPER, ISSUE_CALCULATE_ORDER, IssueDataKey
+    ICX_ISSUE_TRANSACTION_INDEX
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -84,6 +85,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = None
         self._iiss_engine: 'IissEngine' = None
         self._prep_candidate_engine: 'PRepCandidateEngine' = None
+        self._icx_issue_engine: 'IcxIssueEngine' = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -123,6 +125,7 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._icx_engine = IcxEngine()
+        self._icx_issue_engine = IcxIssueEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
@@ -147,6 +150,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
 
         self._icx_engine.open(self._icx_storage)
+        self._icx_issue_engine.open(self._icx_storage)
         self._icon_score_deploy_engine.open(icon_score_deploy_storage)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
@@ -355,7 +359,7 @@ class IconServiceEngine(ContextContainer):
                 if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
                     if not tx_request['params'].get('dataType') == "issue":
                         raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
-                    tx_result = self._invoke_issue_request(context, tx_request, index)
+                    tx_result = self._invoke_issue_request(context, tx_request)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -473,110 +477,56 @@ class IconServiceEngine(ContextContainer):
 
         return tx_result
 
-    @staticmethod
-    def _issue_transaction_format_check(tx_data, db_data):
-        sorted_db_data_keys = sorted(db_data.keys())
-        if not sorted(tx_data.keys()) == sorted_db_data_keys:
-            raise IllegalFormatException("invalid issue transaction format")
+    def _process_issue_transaction(self,
+                                   context: 'IconScoreContext',
+                                   issue_data_in_tx: dict,
+                                   issue_data_in_db: dict):
 
-        for key in sorted_db_data_keys:
-            diff_set = tx_data[key].keys() ^ db_data[key].keys()
-            if not len(diff_set) == 1 or diff_set.pop() != "value":
-                raise IllegalFormatException("invalid issue transaction format")
+        tx_result = TransactionResult(context.tx, context.block)
+        # todo: treasury address should be assigned when icon service open.
+        tx_result.to = TREASURY_ADDRESS
+        try:
+            self._icx_issue_engine.iiss_issue(context,
+                                              TREASURY_ADDRESS,
+                                              issue_data_in_tx,
+                                              issue_data_in_db)
 
-    @staticmethod
-    def _create_issue_event_log(indexed: list, data: list) -> dict:
-        event_log_format = {
-            "scoreAddress": str(ZERO_SCORE_ADDRESS),
-            "indexed": indexed,
-            "data": data
-        }
-        return event_log_format
+            tx_result.status = TransactionResult.SUCCESS
+        except IconServiceBaseException as tx_failure_exception:
+            tx_result.failure = self._get_failure_from_exception(tx_failure_exception)
+            # todo: consider about trace (if need)
+            trace = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
+            context.traces.append(trace)
+            context.event_logs.clear()
+        finally:
+            tx_result.event_logs = context.event_logs
+            tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
+            tx_result.traces = context.traces
+
+            return tx_result
 
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
-                              request: dict,
-                              index: int) -> 'TransactionResult':
-        tx_hash = request['params']['txHash']
+                              request: dict) -> 'TransactionResult':
         issue_data_in_tx = request['params']['data']
+        issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info()
+        IssueDataValidator.validate_iiss_issue_data_format(issue_data_in_tx, issue_data_in_db)
 
-        # issue transaction 생성
-        context.tx = Transaction(tx_hash=tx_hash,
-                                 index=index,
+        context.tx = Transaction(tx_hash=request['params']['txHash'],
+                                 index=ICX_ISSUE_TRANSACTION_INDEX,
                                  origin=None,
                                  timestamp=context.block.timestamp,
                                  nonce=None)
 
         context.event_logs: List['EventLog'] = []
         context.traces: List['Trace'] = []
+        context.msg_stack.clear()
         context.event_log_stack.clear()
 
         # todo: get issue related data from iiss engine
-        issue_data_in_db: dict = \
-            {
-                "prep": {
-                    "incentive": 1,
-                    "rewardRate": 1,
-                    "totalDelegation": 1,
-                },
-                "eep": {
-                    "incentive": 2,
-                    "rewardRate": 2,
-                    "totalDelegation": 2,
-                },
-                "dapp": {
-                    "incentive": 3,
-                    "rewardRate": 3,
-                    "totalDelegation": 3,
-                }
-            }
-        # format check
-        self._issue_transaction_format_check(issue_data_in_tx, issue_data_in_db)
-
-        formula = IcxIssueFormula()
-        total_issue_amount = 0
-
-        tx_result = TransactionResult(context.tx, context.block)
-        # todo: treasury address should be assigned when icon service open.
-        tx_result.to = TREASURY_ADDRESS
-
-        for group_key in ISSUE_CALCULATE_ORDER:
-            if group_key not in issue_data_in_db:
-                continue
-
-            calculated_issue_amount = formula.calculate(group_key, issue_data_in_db[group_key])
-            issue_data_in_db[group_key]["value"] = calculated_issue_amount
-
-            if issue_data_in_tx[group_key] != issue_data_in_db[group_key]:
-                # todo: consider about trace (if need)
-                tx_failure_exception = IconServiceBaseException("Have difference between "
-                                                                "issue transaction and actual db data")
-                tx_result.failure = self._get_failure_from_exception(tx_failure_exception)
-                # todo: consider about trace (if need)
-                trace = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
-                context.traces.append(trace)
-                context.event_logs.clear()
-                break
-
-            indexed = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
-            data = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
-            event_log = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
-            context.event_logs.append(event_log)
-            total_issue_amount += calculated_issue_amount
-        else:
-            # case of break being not called
-            # todo : issue amount = total_issue_amount - prev total transaction fee
-            self._icx_engine.issue(context, TREASURY_ADDRESS, total_issue_amount)
-            total_issue_indexed = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
-            total_issue_data = [total_issue_amount]
-            total_issue_event_log = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
-            context.event_logs.append(total_issue_event_log)
-            tx_result.status = TransactionResult.SUCCESS
-
-        tx_result.event_logs = context.event_logs
-        tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
-        tx_result.traces = context.traces
-
+        tx_result = self._process_issue_transaction(context,
+                                                    issue_data_in_tx,
+                                                    issue_data_in_db)
         return tx_result
 
     def _invoke_request(self,
@@ -1286,32 +1236,8 @@ class IconServiceEngine(ContextContainer):
         if context.revision < REVISION_5:
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
-        # dummy data
-        iiss_data_for_issue: dict = \
-            {
-                "prep": {
-                    "incentive": 1,
-                    "rewardRate": 1,
-                    "totalDelegation": 10,
-                },
-                "eep": {
-                    "incentive": 2,
-                    "rewardRate": 2,
-                    "totalDelegation": 100,
-                },
-                "dapp": {
-                    "incentive": 3,
-                    "rewardRate": 3,
-                    "totalDelegation": 1000,
-                }
-            }
 
-        # calculate issue amount using formula method
-        formula = IcxIssueFormula()
-        for group in iiss_data_for_issue.keys():
-            issue_amount_per_group = formula.calculate(group, iiss_data_for_issue[group])
-            iiss_data_for_issue[group]["value"] = issue_amount_per_group
-
+        iiss_data_for_issue: dict = self._iiss_engine.create_icx_issue_info()
         return iiss_data_for_issue
 
     def _make_last_block_status(self) -> Optional[dict]:
