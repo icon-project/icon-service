@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class TestIntegratePrep(TestIntegrateBase):
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -220,3 +220,8 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
+        total_delegated: int = response['totalDelegated']
+        prepList: list = response['prepList']
+
+        self.assertEqual(0, total_delegated)
+        self.assertEqual(0, len(prepList))

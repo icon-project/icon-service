@@ -204,25 +204,26 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
             self.total_supply,
             from_balance + to_balance + fee_treasury_balance)
 
-    def test_issue(self):
-        context = self.context
-        issue_amount = 10 ** 18
-        to = self.fee_treasury_address
-
-        # failure case: when input amount equal 0 or less than 0, should raise AssertionError
-        for invalid_amount in range(-2, 1):
-            self.assertRaises(AssertionError, self.engine.issue, context, to, invalid_amount)
-
-        # success case: when input amount more than 0, icx should be issued
-        self.engine.issue(context, to, issue_amount)
-        actual_total_supply = self.engine.get_total_supply(context)
-        self.assertEqual(self.total_supply + issue_amount, actual_total_supply)
-
-        actual_treasury_icx_amount = self.engine.get_balance(context,
-                                                             self.fee_treasury_address)
-
-        self.assertEqual(self.fee_treasury_address_icx_amount + issue_amount,
-                         actual_treasury_icx_amount)
+    # todo: move these tests to test_icx_issue_engine
+    # def test_issue(self):
+    #     context = self.context
+    #     issue_amount = 10 ** 18
+    #     to = self.fee_treasury_address
+    #
+    #     # failure case: when input amount equal 0 or less than 0, should raise AssertionError
+    #     for invalid_amount in range(-2, 1):
+    #         self.assertRaises(AssertionError, self.engine.issue, context, to, invalid_amount)
+    #
+    #     # success case: when input amount more than 0, icx should be issued
+    #     self.engine.issue(context, to, issue_amount)
+    #     actual_total_supply = self.engine.get_total_supply(context)
+    #     self.assertEqual(self.total_supply + issue_amount, actual_total_supply)
+    #
+    #     actual_treasury_icx_amount = self.engine.get_balance(context,
+    #                                                          self.fee_treasury_address)
+    #
+    #     self.assertEqual(self.fee_treasury_address_icx_amount + issue_amount,
+    #                      actual_treasury_icx_amount)
 
 
 class TestIcxEngineForMalformedAddress(unittest.TestCase, ContextContainer):
