@@ -220,3 +220,8 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
+        total_delegated: int = response['totalDelegated']
+        prepList: list = response['prepList']
+
+        self.assertEqual(0, total_delegated)
+        self.assertEqual(0, len(prepList))

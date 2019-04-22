@@ -79,6 +79,7 @@ class IconScoreInnerTask(object):
 
     def _get_issue_info(self):
         query_method_name = "iiss_get_issue_info"
+        response = None
         try:
             value = self._icon_service_engine.query(query_method_name, {})
             response = MakeResponse.make_response(value)
@@ -285,7 +286,7 @@ class MakeResponse:
             return TypeConverter.convert_type_reverse(response)
 
     @staticmethod
-    def make_error_response(code: Any, message: str):
+    def make_error_response(code: Any, message: str) -> dict:
         _code: int = int(code) + 32000
         return {'error': {'code': _code, 'message': message}}
 

@@ -355,7 +355,7 @@ class IconServiceEngine(ContextContainer):
                 if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
                     if not tx_request['params'].get('dataType') == "issue":
                         raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
-                    tx_result = self._invoke_issue_request(context, tx_request, index)
+                    tx_result = self._invoke_issue_request(context, tx_request)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -494,14 +494,13 @@ class IconServiceEngine(ContextContainer):
 
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
-                              request: dict,
-                              index: int) -> 'TransactionResult':
+                              request: dict) -> 'TransactionResult':
         tx_hash = request['params']['txHash']
         issue_data_in_tx = request['params']['data']
 
         # issue transaction 생성
         context.tx = Transaction(tx_hash=tx_hash,
-                                 index=index,
+                                 index=ICX_ISSUE_TRANSACTION_INDEX,
                                  origin=None,
                                  timestamp=context.block.timestamp,
                                  nonce=None)
