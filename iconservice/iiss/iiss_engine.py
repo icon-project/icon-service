@@ -16,7 +16,8 @@
 
 from typing import TYPE_CHECKING, Any
 
-from iconservice.iiss.iiss_msg_data import PRepUnregisterTx
+from ..iiss.icx_issue_formula import IcxIssueFormula
+from ..iiss.iiss_msg_data import PRepUnregisterTx
 from .commit_delegator import CommitDelegator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
@@ -70,6 +71,7 @@ class IissEngine:
         self._variable.init_config(context, conf)
 
         self._init_commit_delegator()
+        self._formula = IcxIssueFormula()
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)
@@ -124,6 +126,31 @@ class IissEngine:
         CommitDelegator.update_db(context, precommit_data)
         self._rc_storage.commit(precommit_data.rc_block_batch)
         CommitDelegator.send_ipc(context, precommit_data)
+
+    def create_icx_issue_info(self):
+        # todo: get iiss data from db
+        iiss_data_for_issue = {
+            "prep": {
+                "incentive": 1,
+                "rewardRate": 1,
+                "totalDelegation": 1,
+            },
+            "eep": {
+                "incentive": 2,
+                "rewardRate": 2,
+                "totalDelegation": 2,
+            },
+            "dapp": {
+                "incentive": 3,
+                "rewardRate": 3,
+                "totalDelegation": 3,
+            }
+        }
+        for group in iiss_data_for_issue:
+            issue_amount_per_group = self._formula.calculate(group, iiss_data_for_issue[group])
+            iiss_data_for_issue[group]["value"] = issue_amount_per_group
+
+        return iiss_data_for_issue
 
     def rollback(self):
         pass

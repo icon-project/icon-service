@@ -241,20 +241,6 @@ class IcxEngine(object):
         """
         self._transfer(context, from_, self._fee_treasury_address, fee)
 
-    def issue(self,
-              context: 'IconScoreContext',
-              to: Address,
-              amount: int):
-        assert amount > 0
-
-        if amount > 0:
-            to_account = self._storage.get_account(context, to)
-            to_account.deposit(amount)
-            current_total_supply = self._storage.get_total_supply(context)
-
-            self._storage.put_account(context, to_account)
-            self._storage.put_total_supply(context, current_total_supply + amount)
-
     def transfer(self,
                  context: 'IconScoreContext',
                  from_: 'Address',

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class TestIntegrateIISSStake(TestIntegrateBase):
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
