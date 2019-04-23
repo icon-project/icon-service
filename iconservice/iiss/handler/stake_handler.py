@@ -54,7 +54,7 @@ class StakeHandler:
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
         account: 'Account' = cls.icx_storage.get_account(context, address, Intent.STAKE)
-        unstake_lock_period = 10
+        unstake_lock_period = cls.variable.common.get_unstake_lock_period(context)
         account.set_stake(value, unstake_lock_period)
         cls.icx_storage.put_account(context, account)
 
