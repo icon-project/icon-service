@@ -31,7 +31,8 @@ default_icon_config = {
         ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False
     },
     ConfigKey.IISS_DB_ROOT_PATH: ".iissdb",
-    ConfigKey.IISS_VARIABLE: {"rewardRep": 1},
+    ConfigKey.REWARD_REP: 1,
+    ConfigKey.LINER_POINT: 7000,
     ConfigKey.GOVERNANCE_VARIABLE: {"incentiveRep": 1},
     ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 10,
     ConfigKey.IISS_CALCULATE_PERIOD: 10,

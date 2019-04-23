@@ -29,9 +29,35 @@ class IissIssueVariable(object):
         self._storage: 'IissIssueStorage' = IissIssueStorage(db)
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
+        if self._storage.get_reward_rep(context) is None:
+            reward_rep: int = conf[ConfigKey.REWARD_REP]
+            self._storage.put_reward_rep(context, reward_rep)
+
+        if self._storage.get_liner_point(context) is None:
+            liner_point: int = conf[ConfigKey.LINER_POINT]
+            self._storage.put_liner_point(context, liner_point)
+
         if self._storage.get_calc_period(context) is None:
             calc_period: int = conf[ConfigKey.IISS_CALCULATE_PERIOD]
             self._storage.put_calc_period(context, calc_period)
+
+    def put_reward_rep(self, context: 'IconScoreContext', reward_rep: int):
+        self._storage.put_reward_rep(context, reward_rep)
+
+    def get_reward_rep(self, context: 'IconScoreContext') -> int:
+        value: Optional[int] = self._storage.get_reward_rep(context)
+        if value is None:
+            return 0
+        return value
+
+    def put_liner_point(self, context: 'IconScoreContext', liner_point: int):
+        self._storage.put_reward_rep(context, liner_point)
+
+    def get_liner_point(self, context: 'IconScoreContext') -> Optional[int]:
+        value: Optional[int] = self._storage.get_liner_point(context)
+        if value is None:
+            return 0
+        return value
 
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
         self._storage.put_calc_next_block_height(context, calc_block_height)

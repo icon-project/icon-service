@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 class IissCommonStorage(object):
     PREFIX: bytes = b'common'
-    REWARD_REP_KEY: bytes = PREFIX + b'rr'
     UNSTAKE_LOCK_PERIOD_KEY: bytes = PREFIX + b'ulp'
 
     def __init__(self, db: 'ContextDatabase'):
@@ -38,21 +37,6 @@ class IissCommonStorage(object):
         """
         if self._db:
             self._db = None
-
-    def put_reward_rep(self, context: 'IconScoreContext', reward_rep: int):
-        version = 0
-        data: bytes = MsgPackForDB.dumps([version, reward_rep])
-        self._db.put(context, self.REWARD_REP_KEY, data)
-
-    def get_reward_rep(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.REWARD_REP_KEY)
-        if value:
-            data = MsgPackForDB.loads(value)
-            version: int = data[0]
-            reward_rep: int = data[1]
-            return reward_rep
-        else:
-            return None
 
     def put_unstake_lock_period(self, context: 'IconScoreContext', unstake_lock_period: int):
         version = 0

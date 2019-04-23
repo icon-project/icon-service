@@ -116,15 +116,14 @@ class ConfigKey:
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
     IISS_DB_ROOT_PATH = "iissDbRootPath"
-    IISS_VARIABLE = "iissVariable"
     GOVERNANCE_VARIABLE = "governanceVariable"
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
 
     # IISS VARIABLE
-    IISS_VERIABLE = "iissVariable"
     REWARD_REP = "rewardRep"
+    LINER_POINT = 'linerPoint'
 
 
 class EnableThreadFlag(IntFlag):
@@ -189,3 +188,6 @@ PREP_MAX_PREPS = 100
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_SOCKET_PATH = "/tmp/iiss.sock"
+
+IISS_ANNUAL_BLOCK = 15_768_000
+IISS_MONTH = 12

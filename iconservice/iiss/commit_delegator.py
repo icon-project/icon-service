@@ -104,10 +104,11 @@ class CommitDelegator(object):
     @classmethod
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
-        reward_rep: int = cls.variable.common.get_reward_rep(context)
 
-        # TODO converted_incentive_rep
+        # TODO calc variable
+        reward_rep: int = cls.variable.issue.get_reward_rep(context)
         calculated_incentive_rep: int = gv.incentive_rep
+
         data: 'IissGovernanceVariable' = IissDataCreator.create_gv_variable(precommit_data.block.height,
                                                                             calculated_incentive_rep,
                                                                             reward_rep)
