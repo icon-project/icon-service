@@ -126,6 +126,7 @@ def generate_service_engine(revision=0):
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
+@patch(f'{SERVICE_ENGINE_PATH}._load_prep_candidate')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
 @patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
@@ -136,7 +137,8 @@ def _create_service_engine(
         iiss_init_config,
         iiss_db_from_path,
         db_factory_create_by_name,
-        icx_engine_open):
+        icx_engine_open,
+        service_engine_load_prep_candidate):
     service_engine = IconServiceEngine()
 
     service_engine._load_builtin_scores = Mock()
