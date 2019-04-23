@@ -116,10 +116,10 @@ class ConfigKey:
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
     IISS_DB_ROOT_PATH = "iissDbRootPath"
-    IISS_VARIABLE = "iissVariable",
-    GOVERNANCE_VARIABLE = "governanceVariable",
-    IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod",
-    IISS_PREP_LIST = "iissPRepList",
+    IISS_VARIABLE = "iissVariable"
+    GOVERNANCE_VARIABLE = "governanceVariable"
+    IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
+    IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
 
     # IISS VARIABLE

@@ -180,6 +180,11 @@ class TestIntegrateIISS(TestIntegrateBase):
         response = self._query(query_request)
         print(response)
 
+        self._make_and_req_block([])
+        self._make_and_req_block([])
+        self._make_and_req_block([])
+        self._make_and_req_block([])
+
 
 if __name__ == '__main__':
     unittest.main()

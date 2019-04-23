@@ -80,7 +80,11 @@ class PRepCandidateLinkedList:
                 it: 'Node' = it.prev
 
         self._insert_next_src_node(node, update_node)
-        a = 10
+
+    def clear(self):
+        self._head = None
+        self._tail = None
+        self._size = 0
 
     def _append(self, new_node: 'Node'):
         if self._tail is None:
