@@ -32,6 +32,8 @@ class PRepVariable(object):
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
         if self._storage.get_gv(context) is None:
             gv: 'GovernanceVariable' = GovernanceVariable.from_config_data(conf[ConfigKey.GOVERNANCE_VARIABLE])
+            if gv.incentive_rep <= 0:
+                raise Exception
             self._storage.put_gv(context, gv)
 
     def put_gv(self, context: 'IconScoreContext', gv: 'GovernanceVariable'):
