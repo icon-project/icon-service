@@ -69,13 +69,28 @@ class PRepCandidateSortedInfos(object):
                 self._prep_candidate_objects.append(obj)
             self._init = True
 
-    def get(self) -> list:
+    def to_list(self) -> list:
         with self._lock:
             tmp: list = []
             for n in self._prep_candidate_objects:
-                Logger.debug(f"get: {n.data.address}", "iiss")
+                Logger.debug(f"to_list: {n.data.address}", "iiss")
                 tmp.append(n.data)
             return tmp
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            tmp: dict = {}
+            for n in self._prep_candidate_objects:
+                Logger.debug(f"to_infos_dict: {n.data.address}", "iiss")
+                tmp[n.data.address] = n.data
+            return tmp
+
+    def get(self, address: 'Address') -> tuple:
+        with self._lock:
+            for index, n in enumerate(self._prep_candidate_objects):
+                if n.data.address == address:
+                    return index, n.data
+            return None, None
 
     def add_info(self, new_info: 'PRepCandidateInfoForSort'):
         with self._lock:
@@ -88,3 +103,7 @@ class PRepCandidateSortedInfos(object):
     def update_info(self, address: 'Address', update_total_delegated: int):
         with self._lock:
             self._prep_candidate_objects.update(address, update_total_delegated)
+
+    def clear(self):
+        with self._lock:
+            self._prep_candidate_objects.clear()

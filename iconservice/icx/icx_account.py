@@ -139,7 +139,7 @@ class Account(object):
         total: int = self.balance + self.total_stake
 
         if total < value:
-            raise InvalidParamsException('Failed to stake: total < stake')
+            raise InvalidParamsException(f'Failed to stake: total{total} < stake{value}')
 
         offset: int = value - self.total_stake
 

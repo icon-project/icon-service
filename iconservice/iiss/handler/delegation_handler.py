@@ -98,7 +98,8 @@ class DelegationHandler:
         delegating.set_delegations(new_delegations)
 
         if delegating.delegations_amount > delegating.stake:
-            raise InvalidParamsException("Failed to delegation: delegation_amount > stake")
+                raise InvalidParamsException(
+                    f"Failed to delegation: delegation_amount{delegating.delegated_amount} > stake{delegating.stake}")
 
     @classmethod
     def _delegated_candidates(cls, context: 'IconScoreContext', delegating: 'Account', candidates: dict) -> list:
