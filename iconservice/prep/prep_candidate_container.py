@@ -85,6 +85,13 @@ class PRepCandidateSortedInfos(object):
                 tmp[n.data.address] = n.data
             return tmp
 
+    def get(self, address: 'Address') -> tuple:
+        with self._lock:
+            for index, n in enumerate(self._prep_candidate_objects):
+                if n.data.address == address:
+                    return index, n.data
+            return None, None
+
     def add_info(self, new_info: 'PRepCandidateInfoForSort'):
         with self._lock:
             self._prep_candidate_objects.append(new_info)
