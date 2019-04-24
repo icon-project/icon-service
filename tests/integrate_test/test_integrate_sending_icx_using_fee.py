@@ -17,11 +17,12 @@
 """IconScoreEngine testcase
 """
 
+import json
 import unittest
 
-from iconservice.icon_constant import REVISION_2, REVISION_3, REVISION_4
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, Address, AddressPrefix
 from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import REVISION_2, REVISION_3, LATEST_REVISION
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -61,7 +62,6 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-        # Checks SCORE balance. It should be 0
         response = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
         self.assertEqual(icx, response)
 
@@ -87,7 +87,6 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-        # Checks SCORE balance. It should be 0
         response = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
         self.assertEqual(icx, response)
 
@@ -110,33 +109,35 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
 
         self._update_governance("0_0_6")
 
-        for revision in range(REVISION_2, REVISION_4 + 1):
+        for revision in range(REVISION_2, LATEST_REVISION + 1):
             self._set_revision_to_governance(revision, name="")
 
             # Create a new to address every block
             to = Address.from_data(AddressPrefix.EOA, f"to{revision}".encode())
 
-            # Checks SCORE balance. It should be 0
             genesis_balance0: int = self._query({"address": self._genesis}, 'icx_getBalance')
             self.assertTrue(genesis_balance0 > 0)
 
+            # Check "to" address balance. It should be 0
             to_balance0: int = self._query({"address": to}, 'icx_getBalance')
             self.assertEqual(0, to_balance0)
 
-            tx = self._make_icx_send_tx(self._genesis, to, value=value, step_limit=1 * 10 ** 6)
+            if revision == REVISION_3:
+                # Check backward compatibility on TestNet Database
+                # step_used increases by input_step_cost * len(json.dumps(None))
+                # because of None parameter handling error on get_input_data_size()
+                step_limit = default_step_cost + input_step_cost * len(json.dumps(None))
+                self.assertEqual(default_step_cost + input_step_cost * 4, step_limit)
+            else:
+                step_limit = default_step_cost
+
+            tx = self._make_icx_send_tx(self._genesis, to, value=value, step_limit=step_limit)
             prev_block, tx_results = self._make_and_req_block([tx])
             self._write_precommit_state(prev_block)
 
             tx_result: 'TransactionResult' = tx_results[0]
             self.assertEqual(1, tx_result.status)
-
-            if revision == REVISION_3:
-                # Check backward compatibility on TestNet Database
-                # step_used increases by input_step_cost * 4 because of input data calculation bug
-                self.assertEqual(default_step_cost + input_step_cost * 4, tx_result.step_used)
-            else:
-                self.assertEqual(default_step_cost, tx_result.step_used)
-
+            self.assertEqual(step_limit, tx_result.step_used)
             self.assertEqual(to, tx_result.to)
             self.assertIsNone(tx_result.failure)
             self.assertIsNone(tx_result.score_address)
@@ -144,7 +145,6 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
             fee: int = tx_result.step_used * step_price
             self.assertTrue(fee > 0)
 
-            # Checks SCORE balance. It should be 0
             to_balance: int = self._query({"address": to}, 'icx_getBalance')
             self.assertEqual(value, to_balance)
 
