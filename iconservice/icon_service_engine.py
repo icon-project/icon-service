@@ -518,7 +518,7 @@ class IconServiceEngine(ContextContainer):
                               context: 'IconScoreContext',
                               request: dict) -> 'TransactionResult':
         issue_data_in_tx = request['params']['data']
-        issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info()
+        issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info(context)
         IssueDataValidator.validate_iiss_issue_data_format(issue_data_in_tx, issue_data_in_db)
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
@@ -1259,7 +1259,7 @@ class IconServiceEngine(ContextContainer):
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
 
-        iiss_data_for_issue: dict = self._iiss_engine.create_icx_issue_info()
+        iiss_data_for_issue: dict = self._iiss_engine.create_icx_issue_info(context)
         return iiss_data_for_issue
 
     def _make_last_block_status(self) -> Optional[dict]:
