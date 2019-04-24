@@ -29,22 +29,9 @@ class IissCommonVariable(object):
         self._storage: 'IissCommonStorage' = IissCommonStorage(db)
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
-        if self._storage.get_reward_rep(context) is None:
-            reward_rep: int = conf[ConfigKey.IISS_VARIABLE][ConfigKey.REWARD_REP]
-            self._storage.put_reward_rep(context, reward_rep)
-
         if self._storage.get_unstake_lock_period(context) is None:
             unstake_lock_period: int = conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD]
             self._storage.put_unstake_lock_period(context, unstake_lock_period)
-
-    def put_reward_rep(self, context: 'IconScoreContext', reward_rep: int):
-        self._storage.put_reward_rep(context, reward_rep)
-
-    def get_reward_rep(self, context: 'IconScoreContext') -> int:
-        value: Optional[int] = self._storage.get_reward_rep(context)
-        if value is None:
-            return 0
-        return value
 
     def put_unstake_lock_period(self, context: 'IconScoreContext', unstake_lock_period: int):
         self._storage.put_unstake_lock_period(context, unstake_lock_period)

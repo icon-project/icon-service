@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
     from ..database.db import ContextDatabase
     from iconcommons import IconConfig
+    from ..prep.prep_variable.prep_variable_storage import GovernanceVariable
 
     from ..base.address import Address
     from .iiss_msg_data import PRepRegisterTx, IissTxData
@@ -71,6 +72,7 @@ class IissEngine:
         self._variable.init_config(context, conf)
 
         self._init_commit_delegator()
+        # todo: formula 가 min, max l point값을 가지고 있는게 좋을까?
         self._formula = IcxIssueFormula()
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
@@ -127,23 +129,14 @@ class IissEngine:
         self._rc_storage.commit(precommit_data.rc_block_batch)
         CommitDelegator.send_ipc(context, precommit_data)
 
-    def create_icx_issue_info(self):
-        # todo: get iiss data from db
+    def create_icx_issue_info(self, context: 'IconScoreContext'):
+        gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
+
         iiss_data_for_issue = {
             "prep": {
-                "incentive": 1,
-                "rewardRate": 1,
-                "totalDelegation": 1,
-            },
-            "eep": {
-                "incentive": 2,
-                "rewardRate": 2,
-                "totalDelegation": 2,
-            },
-            "dapp": {
-                "incentive": 3,
-                "rewardRate": 3,
-                "totalDelegation": 3,
+                "incentive": gv.incentive_rep,
+                "rewardRate": self._variable.issue.get_reward_rep(context),
+                "totalDelegation": self._variable.issue.get_total_candidate_delegated(context),
             }
         }
         for group in iiss_data_for_issue:
