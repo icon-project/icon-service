@@ -168,19 +168,14 @@ class PRepCandidateHandler:
     @classmethod
     def _get_prep_candidate_delegation_info(cls, context: 'IconScoreContext', address: 'Address') -> dict:
 
-        candidates: list = cls.prep_candidates.get()
-        ranking_infos: list = [ranking for ranking in range(len(candidates)) if candidates[ranking].address == address]
+        index, candidate = cls.prep_candidates.get(address)
 
-        ranking: int = 0
-        total_delegated: int = 0
-
-        if ranking_infos:
-            ranking = ranking_infos[0] + 1
-            total_delegated: int = candidates[ranking].total_delegated
+        if candidate is None:
+            raise InvalidParamsException(f"this EOA is not Candidate: {address}")
 
         data = {
-            "ranking": ranking,
-            "totalDelegated": total_delegated,
+            "ranking": index + 1,
+            "totalDelegated": candidate.total_delegated,
         }
         return data
 
@@ -220,7 +215,7 @@ class PRepCandidateHandler:
     @classmethod
     def _get_prep_candidate_list(cls, context: 'IconScoreContext', params: dict) -> dict:
 
-        prep_list: list = cls.prep_candidates.get()
+        prep_list: list = cls.prep_candidates.to_list()
         data: dict = {}
         total_delegated: int = 0
 
