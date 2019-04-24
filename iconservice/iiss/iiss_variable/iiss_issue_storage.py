@@ -23,6 +23,10 @@ if TYPE_CHECKING:
 
 class IissIssueStorage(object):
     PREFIX: bytes = b'issue'
+    REWARD_REP_KEY: bytes = PREFIX + b'rr'
+    REWARD_MIN_KEY: bytes = PREFIX + b'rmin'
+    REWARD_MAX_KEY: bytes = PREFIX + b'rmax'
+    LINER_POINT_KEY: bytes = PREFIX + b'lp'
     CALC_NEXT_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cnbh'
     CALC_PERIOD_KEY: bytes = PREFIX + b'pk'
     TOTAL_CANDIDATE_DELEGATED_KEY: bytes = PREFIX + b'tcd'
@@ -39,6 +43,54 @@ class IissIssueStorage(object):
         """
         if self._db:
             self._db = None
+
+    def put_reward_rep(self, context: 'IconScoreContext', reward_rep: int):
+        version = 0
+        data: bytes = MsgPackForDB.dumps([version, reward_rep])
+        self._db.put(context, self.REWARD_REP_KEY, data)
+
+    def get_reward_rep(self, context: 'IconScoreContext') -> Optional[int]:
+        value: bytes = self._db.get(context, self.REWARD_REP_KEY)
+        data = MsgPackForDB.loads(value)
+        version: int = data[0]
+        reward_rep: int = data[1]
+        return reward_rep
+
+    def put_reward_min(self, context: 'IconScoreContext', reward_min: int):
+        version = 0
+        data: bytes = MsgPackForDB.dumps([version, reward_min])
+        self._db.put(context, self.REWARD_MIN_KEY, data)
+
+    def get_reward_min(self, context: 'IconScoreContext') -> Optional[int]:
+        value: bytes = self._db.get(context, self.REWARD_MIN_KEY)
+        data = MsgPackForDB.loads(value)
+        version: int = data[0]
+        reward_min: int = data[1]
+        return reward_min
+
+    def put_reward_max(self, context: 'IconScoreContext', reward_max: int):
+        version = 0
+        data: bytes = MsgPackForDB.dumps([version, reward_max])
+        self._db.put(context, self.REWARD_MAX_KEY, data)
+
+    def get_reward_max(self, context: 'IconScoreContext') -> Optional[int]:
+        value: bytes = self._db.get(context, self.REWARD_MAX_KEY)
+        data = MsgPackForDB.loads(value)
+        version: int = data[0]
+        reward_max: int = data[1]
+        return reward_max
+
+    def put_liner_point(self, context: 'IconScoreContext', liner_point: int):
+        version = 0
+        data: bytes = MsgPackForDB.dumps([version, liner_point])
+        self._db.put(context, self.LINER_POINT_KEY, data)
+
+    def get_liner_point(self, context: 'IconScoreContext') -> Optional[int]:
+        value: bytes = self._db.get(context, self.LINER_POINT_KEY)
+        data = MsgPackForDB.loads(value)
+        version: int = data[0]
+        liner_point: int = data[1]
+        return liner_point
 
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
         version = 0

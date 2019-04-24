@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from iconservice.icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
 
 
 class IcxIssueFormula(object):
@@ -26,18 +27,12 @@ class IcxIssueFormula(object):
 
     def __init__(self,
                  prep_count: int = 23,
-                 sub_prep_count: int = 100,
-                 month: int = 12,
-                 block_generation_amount_per_year: int = 1000):
+                 sub_prep_count: int = 100):
         self._handler = {'prep': self.handle_icx_issue_formula_for_prep,
                          'eep': self.handle_icx_issue_formula_for_eep,
                          'dapp': self.handle_icx_issue_formula_for_dapp}
-
-        # todo: allocate these variable when initiate formula, formula instance is created when iiss engine is opend
-        self._prep_count = prep_count
-        self._sub_prep_count = sub_prep_count
-        self._month = month
-        self._block_generation_amount_per_year = block_generation_amount_per_year
+        self._prep_count: int = prep_count
+        self._sub_prep_count: int = sub_prep_count
 
     def calculate(self, group: str, data: dict) -> int:
         handler = self._handler[group]
@@ -45,8 +40,24 @@ class IcxIssueFormula(object):
         return value
 
     @staticmethod
-    def handle_icx_issue_formula_for_prep(data: dict) -> int:
-        return 1
+    def calculate_r_rep(r_min, r_max, r_point, total_supply, total_delegated):
+        stake_percentage = int(total_delegated / total_supply * IISS_MAX_REWARD_RATE)
+
+        left = (r_max - r_min) / pow(r_point, 2)
+        right = pow(stake_percentage - r_point, 2)
+
+        return int(left * right + r_min)
+
+    @staticmethod
+    def calculate_i_rep_per_block_contributor(i_rep):
+        return int(int(i_rep * 0.5) * IISS_MONTH / IISS_ANNUAL_BLOCK)
+
+    def handle_icx_issue_formula_for_prep(self, data: dict) -> int:
+        calculated_i_rep = self.calculate_i_rep_per_block_contributor(data["incentive"])
+        beta_1 = calculated_i_rep * self._prep_count
+        beta_2 = calculated_i_rep * self._sub_prep_count
+        beta_3 = data["rewardRate"] * data["totalDelegation"] // IISS_ANNUAL_BLOCK
+        return beta_1 + beta_2 + beta_3
 
     @staticmethod
     def handle_icx_issue_formula_for_eep(data: dict) -> int:
