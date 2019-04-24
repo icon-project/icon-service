@@ -51,10 +51,13 @@ class IissIssueStorage(object):
 
     def get_reward_rep(self, context: 'IconScoreContext') -> Optional[int]:
         value: bytes = self._db.get(context, self.REWARD_REP_KEY)
-        data = MsgPackForDB.loads(value)
-        version: int = data[0]
-        reward_rep: int = data[1]
-        return reward_rep
+        if value:
+            data = MsgPackForDB.loads(value)
+            version: int = data[0]
+            reward_rep: int = data[1]
+            return reward_rep
+        else:
+            return None
 
     def put_reward_min(self, context: 'IconScoreContext', reward_min: int):
         version = 0
@@ -63,10 +66,13 @@ class IissIssueStorage(object):
 
     def get_reward_min(self, context: 'IconScoreContext') -> Optional[int]:
         value: bytes = self._db.get(context, self.REWARD_MIN_KEY)
-        data = MsgPackForDB.loads(value)
-        version: int = data[0]
-        reward_min: int = data[1]
-        return reward_min
+        if value:
+            data = MsgPackForDB.loads(value)
+            version: int = data[0]
+            reward_min: int = data[1]
+            return reward_min
+        else:
+            return None
 
     def put_reward_max(self, context: 'IconScoreContext', reward_max: int):
         version = 0
@@ -75,10 +81,13 @@ class IissIssueStorage(object):
 
     def get_reward_max(self, context: 'IconScoreContext') -> Optional[int]:
         value: bytes = self._db.get(context, self.REWARD_MAX_KEY)
-        data = MsgPackForDB.loads(value)
-        version: int = data[0]
-        reward_max: int = data[1]
-        return reward_max
+        if value:
+            data = MsgPackForDB.loads(value)
+            version: int = data[0]
+            reward_max: int = data[1]
+            return reward_max
+        else:
+            return None
 
     def put_liner_point(self, context: 'IconScoreContext', liner_point: int):
         version = 0
@@ -87,10 +96,13 @@ class IissIssueStorage(object):
 
     def get_liner_point(self, context: 'IconScoreContext') -> Optional[int]:
         value: bytes = self._db.get(context, self.LINER_POINT_KEY)
-        data = MsgPackForDB.loads(value)
-        version: int = data[0]
-        liner_point: int = data[1]
-        return liner_point
+        if value:
+            data = MsgPackForDB.loads(value)
+            version: int = data[0]
+            liner_point: int = data[1]
+            return liner_point
+        else:
+            return None
 
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
         version = 0
