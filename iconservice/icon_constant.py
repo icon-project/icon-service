@@ -122,8 +122,10 @@ class ConfigKey:
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
 
     # IISS VARIABLE
-    REWARD_REP = "rewardRep"
+    IISS_REWARD_VARIABLE = "rewardVariable"
     LINER_POINT = 'linerPoint'
+    REWARD_MIN = "rewardMin"
+    REWARD_MAX = "rewardMAX"
 
 
 class EnableThreadFlag(IntFlag):

@@ -17,6 +17,8 @@
 from typing import TYPE_CHECKING, List, Optional
 
 from iconcommons import Logger
+
+from iconservice.iiss.icx_issue_formula import IcxIssueFormula
 from .iiss_data_creator import IissDataCreator
 from ..base.exception import InvalidParamsException
 
@@ -105,9 +107,17 @@ class CommitDelegator(object):
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
 
-        # TODO calc variable
-        reward_rep: int = cls.variable.issue.get_reward_rep(context)
-        calculated_incentive_rep: int = gv.incentive_rep
+        current_total_supply = cls.icx_storage.get_total_supply(context)
+        current_total_candidate_delegated = cls.variable.issue.get_total_candidate_delegated(context)
+        # todo: after demo, should consider about record these variable to formula (i.e. record in memory)
+        r_min = cls.variable.issue.get_reward_min(context)
+        r_max = cls.variable.issue.get_reward_max(context)
+        l_point = cls.variable.issue.get_liner_point(context)
+        reward_rep: int = IcxIssueFormula.calculate_r_rep(r_min, r_max, l_point,
+                                                          current_total_supply,
+                                                          current_total_candidate_delegated)
+        calculated_incentive_rep: int = IcxIssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
+        cls.variable.issue.put_reward_rep(context, reward_rep)
 
         data: 'IissGovernanceVariable' = IissDataCreator.create_gv_variable(precommit_data.block.height,
                                                                             calculated_incentive_rep,
