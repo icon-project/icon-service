@@ -34,12 +34,11 @@ def get_input_data_size(revision: int, input_data: Any) -> int:
     :param input_data: input data of transaction
     :return: size of input data
     """
-    if revision >= REVISION_4:
-        if input_data is None:
-            return 0
-
     if revision < REVISION_3:
         return get_data_size_recursively(input_data)
+
+    if revision >= REVISION_4 and input_data is None:
+        return 0
 
     data = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
     return len(data.encode())
