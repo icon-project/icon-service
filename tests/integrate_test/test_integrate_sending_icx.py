@@ -29,8 +29,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
 
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -69,8 +69,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
 
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -108,8 +108,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_eoa(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -147,8 +147,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_eoa_out_of_balance(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -183,12 +183,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_send_to_ca(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -232,12 +232,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_send_to_ca_out_of_balance(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -282,12 +282,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_send_to_ca_has_no_payable(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_no_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_no_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -332,12 +332,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_send_to_ca_has_revert(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_revert",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_revert",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -382,12 +382,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_ca(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -431,12 +431,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_ca_out_of_balance(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -475,12 +475,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_ca_has_no_payable(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_no_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_no_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -519,12 +519,12 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_ca_has_revert(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_revert",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_revert",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
         ])
@@ -563,8 +563,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_send_to_self(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -602,8 +602,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_send_to_self_payable(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -644,8 +644,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_self(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -677,8 +677,8 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def test_transfer_to_self_payable(self):
         # Deploys SCORE, and receiving SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_sending_icx",
-                                 "test_score_send_payable",
+            self._make_deploy_tx("sample_score_sending_icx",
+                                 "sample_score_send_payable",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])

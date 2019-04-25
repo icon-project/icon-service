@@ -28,8 +28,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
     def test_invoke_chain(self):
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -42,8 +42,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -58,8 +58,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -75,8 +75,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -91,8 +91,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -210,8 +210,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
     def test_invoke_query_mixed(self):
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -224,8 +224,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -240,8 +240,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -257,8 +257,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {
@@ -273,8 +273,8 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_deploy_tx(
-                "test_score_call_state_reversion",
-                "test_score",
+                "sample_score_call_state_reversion",
+                "sample_score",
                 self._addr_array[0],
                 ZERO_SCORE_ADDRESS,
                 {

@@ -25,7 +25,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
 
     def test_onupdate_parameters_success(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
@@ -50,7 +50,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         total_supply = self._query(query_request)
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    score_addr1, deploy_params={"update_supply": hex(2000), "decimal": "0x12"})
@@ -65,7 +65,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         self.assertEqual(total_supply, 2000 * 10 ** 18)
 
     def test_more_parameters_onupdate(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
@@ -90,7 +90,7 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         total_supply = self._query(query_request)
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    score_addr1, deploy_params={"update_supply": hex(1000), "decimal": "0x12",
                                                                "additional_param": hex(123)})
 
@@ -108,17 +108,17 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
 
     def test_missing_parameters_onupdate(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install",
+        tx2 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
-        tx3 = self._make_deploy_tx("test_deploy_scores/install",
+        tx3 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
@@ -154,11 +154,11 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         total_supply = self._query(query_request)
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    score_addr1, deploy_params={"decimal": "0x12"})
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    score_addr2, deploy_params={"update_supply": hex(1000)})
-        tx3 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx3 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    score_addr3, deploy_params={})
 
         prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
@@ -191,10 +191,10 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
     def test_invalid_parameter_value_onupdate(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1, tx2])
@@ -222,11 +222,11 @@ class TestIntegrateOnUpdateParameters(TestIntegrateBase):
         total_supply = self._query(query_request)
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    score_addr1, deploy_params={"update_supply": str(self._addr_array[0]),
                                                                "decimal": "0x12"})
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    score_addr2, deploy_params={"update_supply": hex(2000), "decimal": "0x12",
                                                                "address_param": "0x12"})
 

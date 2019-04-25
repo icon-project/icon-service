@@ -61,7 +61,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.token_initial_params = {"init_supply": hex(1000), "decimal": "0x12"}
 
     def _update_governance(self, governance_path):
-        tx = self._make_deploy_tx("test_builtin", governance_path, self._admin, GOVERNANCE_SCORE_ADDRESS)
+        tx = self._make_deploy_tx("sample_builtin", governance_path, self._admin, GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
@@ -119,7 +119,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self._setUp_audit()
 
         # deploy SCORE
-        tx1 = self._deploy_score('test_deploy_scores/install', 'sample_token', self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx1 = self._deploy_score('sample_deploy_scores/install', 'sample_token', self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
@@ -130,7 +130,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         # update governance SCORE(revision2)
         self._update_governance('0_0_4')
         # deploy
-        tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx2 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
@@ -148,7 +148,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self._set_revision(3)
 
         # deploy SCORE
-        tx1 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx1 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -175,7 +175,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(response, 1000 * 10 ** 18)
 
         # deploy SCORE(update)
-        tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], score_addr1,
+        tx2 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], score_addr1,
                                  {"update_supply": hex(3000), "decimal": "0x12"})
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
@@ -194,7 +194,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self._setUp_audit()
 
         # deploy (revision0 must be fail)
-        tx1 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx1 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
@@ -207,7 +207,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         tx2 = self._update_governance('0_0_4')
         self._accept_score(tx2)
         # deploy (revision2 must be success)
-        tx2 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx2 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
@@ -218,7 +218,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self._set_revision(3)
 
         # deploy (revision4 must be success)
-        tx4 = self._deploy_score("test_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx4 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                  self.token_initial_params)
 
         prev_block, tx_results = self._make_and_req_block([tx4])
@@ -236,7 +236,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         sample_score_params = {"value": hex(1000)}
 
         # deploy SCORE(not python)
-        tx1 = self._deploy_score("test_deploy_scores/install", "test_score_no_python", self._addr_array[0],
+        tx1 = self._deploy_score("sample_deploy_scores/install", "test_score_no_python", self._addr_array[0],
                                  ZERO_SCORE_ADDRESS, sample_score_params)
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -245,7 +245,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(has no external function)
-        tx2 = self._deploy_score("test_deploy_scores/install", "test_score_no_external_func", self._addr_array[0],
+        tx2 = self._deploy_score("sample_deploy_scores/install", "test_score_no_external_func", self._addr_array[0],
                                  ZERO_SCORE_ADDRESS, sample_score_params)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -254,7 +254,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(no scorebase)
-        tx3 = self._deploy_score("test_deploy_scores/install", "test_score_no_scorebase", self._addr_array[0],
+        tx3 = self._deploy_score("sample_deploy_scores/install", "test_score_no_scorebase", self._addr_array[0],
                                  ZERO_SCORE_ADDRESS, sample_score_params)
         prev_block, tx_results = self._make_and_req_block([tx3])
         self._write_precommit_state(prev_block)
@@ -262,7 +262,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(on install error)
-        tx4 = self._deploy_score("test_deploy_scores/install", "test_on_install_error", self._addr_array[0],
+        tx4 = self._deploy_score("sample_deploy_scores/install", "test_on_install_error", self._addr_array[0],
                                  ZERO_SCORE_ADDRESS, sample_score_params)
 
         prev_block, tx_results = self._make_and_req_block([tx4])
@@ -271,7 +271,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self.assertEqual(accept_result[0].status, int(False))
 
         # deploy SCORE(different encoding)
-        tx5 = self._deploy_score("test_deploy_scores/install", "test_score_with_korean_comment", self._addr_array[0],
+        tx5 = self._deploy_score("sample_deploy_scores/install", "test_score_with_korean_comment", self._addr_array[0],
                                  ZERO_SCORE_ADDRESS, sample_score_params)
         prev_block, tx_results = self._make_and_req_block([tx5])
         self._write_precommit_state(prev_block)

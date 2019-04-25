@@ -21,7 +21,7 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_G
 
 class TestIntegrateChargeStep(TestIntegrateBase):
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   LATEST_GOVERNANCE,
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)

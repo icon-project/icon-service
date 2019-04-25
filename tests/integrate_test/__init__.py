@@ -16,7 +16,7 @@ TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
 
 def get_score_path(score_root: str, package_name: str):
-    return os.path.join(TEST_ROOT_PATH, 'integrate_test/test_samples', score_root, package_name)
+    return os.path.join(TEST_ROOT_PATH, 'integrate_test/samples', score_root, package_name)
 
 
 def root_clear(score_path: str, state_db_path: str):

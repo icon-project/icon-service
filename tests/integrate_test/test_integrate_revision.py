@@ -35,7 +35,7 @@ class TestIntegrateRevision(TestIntegrateBase):
     """
 
     def _update_governance_0_0_4(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -48,7 +48,7 @@ class TestIntegrateRevision(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   self._addr_array[0],
                                   address,
@@ -107,8 +107,8 @@ class TestIntegrateRevision(TestIntegrateBase):
         # so don't need to add unit test whenever governance version is increased.
         self._update_governance_0_0_4()
 
-        tx = self._make_deploy_tx("test_scores",
-                                  "test_revision_checker",
+        tx = self._make_deploy_tx("sample_scores",
+                                  "sample_revision_checker",
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 

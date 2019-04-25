@@ -29,8 +29,8 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
         self._update_governance()
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  LATEST_GOVERNANCE,
+        tx = self._make_deploy_tx("sample_builtin",
+                                  "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -39,12 +39,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_invoke_loop(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_termination",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_termination",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -81,12 +81,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_invoke_loop_over(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_termination",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_termination",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -123,12 +123,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_invoke_query_loop(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_termination",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_termination",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -155,12 +155,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_invoke_query_loop_over(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_termination",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_termination",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -188,12 +188,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_query_loop(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_termination",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_termination",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -224,12 +224,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_query_loop_over(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_termination",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_termination",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -263,12 +263,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
 
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_reflex",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_reflex",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -296,12 +296,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
 
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_reflex",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_reflex",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])
@@ -328,12 +328,12 @@ class TestIntegrateExternalCallLimit(TestIntegrateBase):
     def test_query_recursive(self):
         # Deploys SCORE
         prev_block, tx_results = self._make_and_req_block([
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_start",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_start",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS),
-            self._make_deploy_tx("test_score_external_call_limit",
-                                 "test_score_call_reflex",
+            self._make_deploy_tx("sample_score_external_call_limit",
+                                 "sample_score_call_reflex",
                                  self._addr_array[0],
                                  ZERO_SCORE_ADDRESS)
         ])

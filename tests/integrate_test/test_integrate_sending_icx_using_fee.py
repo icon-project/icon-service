@@ -32,13 +32,11 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
     def _make_init_config(self) -> dict:
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: True}}
 
-    def _update_governance(self, version_path: str = "0_0_4"):
-        tx = self._make_deploy_tx(
-            "test_builtin",
-            f"{version_path}/governance",
-            self._admin,
-            GOVERNANCE_SCORE_ADDRESS
-        )
+    def _update_governance(self):
+        tx = self._make_deploy_tx("sample_builtin",
+                                  "0_0_4/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
@@ -107,10 +105,10 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         input_step_cost = 200
         value = 10 ** 18
 
-        self._update_governance("0_0_6")
+        self._update_governance()
 
         for revision in range(REVISION_2, LATEST_REVISION + 1):
-            self._set_revision_to_governance(revision, name="")
+            self._set_revision_to_governance(revision, name=f"1.1.{revision}")
 
             # Create a new to address every block
             to = Address.from_data(AddressPrefix.EOA, f"to{revision}".encode())

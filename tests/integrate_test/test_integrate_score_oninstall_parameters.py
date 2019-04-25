@@ -25,8 +25,8 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_G
 
 class TestIntegrateOnInstallParameters(TestIntegrateBase):
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  LATEST_GOVERNANCE,
+        tx = self._make_deploy_tx("sample_builtin",
+                                  "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -41,7 +41,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
 
     def test_oninstall_parameters_success(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
@@ -67,7 +67,7 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
     def test_more_parameters_oninstall(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12",
                                                                       "additional_param": hex(123)})
 
@@ -81,11 +81,11 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
     def test_missing_parameters_oninstall(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"decimal": "0x12"})
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000)})
-        tx3 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx3 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={})
 
         prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
@@ -108,16 +108,16 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self.assertEqual(tx_results[2].status, int(False))
 
     def test_invalid_parameter_value_oninstall(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": str(self._addr_array[0]),
                                                                       "decimal": "0x12"})
 
-        tx2 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx2 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": str(self._addr_array[0]),
                                                                       "decimal": "0x12",
                                                                       "address_param": "0x12"})
 
-        tx3 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx3 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000),
                                                                       "decimal": "0x12",
                                                                       "address_param": f"hx{'1234' * 5}"})
@@ -138,8 +138,8 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
         self._update_governance()
         self._set_revision(2)
 
-        tx = self._make_deploy_tx("test_deploy_scores/install",
-                                  "test_legacy_kwargs_params",
+        tx = self._make_deploy_tx("sample_deploy_scores/install",
+                                  "sample_legacy_kwargs_params",
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 
@@ -161,13 +161,13 @@ class TestIntegrateOnInstallParameters(TestIntegrateBase):
 
         self._set_revision(3)
 
-        tx = self._make_deploy_tx("test_deploy_scores/install",
-                                  "test_legacy_kwargs_params",
+        tx = self._make_deploy_tx("sample_deploy_scores/install",
+                                  "sample_legacy_kwargs_params",
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 
-        raise_exception_start_tag("test_invalid_kwargs_parameter_value_oninstall")
+        raise_exception_start_tag("sample_invalid_kwargs_parameter_value_oninstall")
         prev_block, tx_results = self._make_and_req_block([tx])
-        raise_exception_end_tag("test_invalid_kwargs_parameter_value_oninstall")
+        raise_exception_end_tag("sample_invalid_kwargs_parameter_value_oninstall")
 
         self.assertEqual(tx_results[0].status, int(False))

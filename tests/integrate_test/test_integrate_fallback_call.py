@@ -28,7 +28,7 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 class TestIntegrateFallbackCall(TestIntegrateBase):
 
     def _update_governance(self, governance_path):
-        tx = self._make_deploy_tx("test_builtin", governance_path, self._admin, GOVERNANCE_SCORE_ADDRESS)
+        tx = self._make_deploy_tx("sample_builtin", governance_path, self._admin, GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
@@ -42,8 +42,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
 
     def test_score_pass(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_pass",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -68,8 +68,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, value)
 
     def test_score_send_to_eoa(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_to_eoa",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_to_eoa",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -105,8 +105,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, value)
 
     def test_score_revert(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_revert",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -135,8 +135,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_score_no_payable(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_no_payable",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -169,8 +169,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self._update_governance('0_0_4')
         self._set_revision(3)
 
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_no_payable",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -199,12 +199,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_score_pass_link_transfer(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_pass",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_transfer",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -240,12 +240,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, value)
 
     def test_score_pass_link_send(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_pass",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_send",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -281,12 +281,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, value)
 
     def test_score_no_payable_link_transfer(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_no_payable",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_transfer",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -328,12 +328,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self._update_governance('0_0_4')
         self._set_revision(3)
 
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_no_payable",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_transfer",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -371,12 +371,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_score_no_payable_link_send(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_no_payable",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_no_payable",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_send",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -414,12 +414,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_score_revert_link_transfer(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_revert",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_transfer",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_transfer",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -457,12 +457,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_score_revert_link_send(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_revert",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_send",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -500,12 +500,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_score_revert_link_send_fail(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_revert",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_revert",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send_fail",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_send_fail",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -550,12 +550,12 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         response = self._query(query_request, 'icx_getBalance')
         self.assertEqual(response, 1_000_000 * self._icx_factor)
 
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send_A",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_send_A",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
-        tx2 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_link_score_send_B",
+        tx2 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_link_score_send_B",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -624,8 +624,8 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(response, 5 * self._icx_factor)
 
     def test_base_fallback_send_0_and_1(self):
-        tx = self._make_deploy_tx("test_fallback_call_scores",
-                                  "test_base_fallback",
+        tx = self._make_deploy_tx("sample_fallback_call_scores",
+                                  "sample_base_fallback",
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 
@@ -638,7 +638,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr = tx_results[0].score_address
 
-        raise_exception_start_tag("test_base_fallback_send_0_and_1")
+        raise_exception_start_tag("sample_base_fallback_send_0_and_1")
         value = 0 * self._icx_factor
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -654,11 +654,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
-        raise_exception_end_tag("test_base_fallback_send_0_and_1")
+        raise_exception_end_tag("sample_base_fallback_send_0_and_1")
 
     def test_non_payable_fallback_send_0_and_1(self):
-        tx = self._make_deploy_tx("test_fallback_call_scores",
-                                  "test_non_payable_fallback",
+        tx = self._make_deploy_tx("sample_fallback_call_scores",
+                                  "sample_non_payable_fallback",
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 
@@ -671,7 +671,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr = tx_results[0].score_address
 
-        raise_exception_start_tag("test_non_payable_fallback_send_0_and_1")
+        raise_exception_start_tag("sample_non_payable_fallback_send_0_and_1")
         value = 0 * self._icx_factor
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -687,11 +687,11 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
-        raise_exception_end_tag("test_non_payable_fallback_send_0_and_1")
+        raise_exception_end_tag("sample_non_payable_fallback_send_0_and_1")
 
     def test_payable_external_send_0_and_1(self):
-        tx = self._make_deploy_tx("test_fallback_call_scores",
-                                  "test_payable_external",
+        tx = self._make_deploy_tx("sample_fallback_call_scores",
+                                  "sample_payable_external",
                                   self._addr_array[0],
                                   ZERO_SCORE_ADDRESS)
 
