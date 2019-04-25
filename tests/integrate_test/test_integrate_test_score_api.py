@@ -34,7 +34,7 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
     def _test_deploy_score(self):
         # Deploys test SCORE
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("test_score_base", value1, self._addr_array[0])
+        tx_result = self._deploy_score("sample_score_base", value1, self._addr_array[0])
 
         # Uses it when testing `test_get_tx_hashes_by_score_address`
         self.tx_result = tx_result
@@ -68,7 +68,7 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_score_api",
+        tx = self._make_deploy_tx("sample_score_api",
                                   score_path,
                                   from_addr,
                                   address,

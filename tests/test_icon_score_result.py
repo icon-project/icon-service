@@ -16,7 +16,7 @@
 import hashlib
 import unittest
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
@@ -32,7 +32,6 @@ from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
 from iconservice.iconscore.icon_score_context import IconScoreContext, \
     ContextContainer, IconScoreContextType
-from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_event_log import EventLog
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
 from iconservice.utils import to_camel_case
@@ -105,10 +104,11 @@ class TestTransactionResult(unittest.TestCase):
         self.assertNotIn('failure', camel_dict)
         self.assertNotIn('scoreAddress', camel_dict)
 
-    def test_tx_failure(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_tx_failure(self, score_invoke):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
-        IconScoreEngine.invoke = Mock(side_effect=IconServiceBaseException("error"))
+        score_invoke.side_effect = IconServiceBaseException("error")
 
         from_ = Mock(spec=Address)
         to_ = Mock(spec=Address)
@@ -216,7 +216,8 @@ class TestTransactionResult(unittest.TestCase):
         self.assertTrue(converted_result['logsBloom'].startswith('0x'))
         self.assertTrue(converted_result['status'].startswith('0x'))
 
-    def test_request(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_request(self, score_invoke):
         inner_task = generate_inner_task()
 
         # noinspection PyUnusedLocal
@@ -233,7 +234,7 @@ class TestTransactionResult(unittest.TestCase):
 
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         from_ = create_address(AddressPrefix.EOA, b'from')
         to_ = create_address(AddressPrefix.CONTRACT, b'score')

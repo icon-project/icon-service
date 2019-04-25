@@ -37,7 +37,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
 
     def _update_governance_0_0_5(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "0_0_5/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -47,7 +47,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self._accept_score(tx_hash1)
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -75,7 +75,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   self._addr_array[0],
                                   address,
@@ -130,7 +130,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -166,7 +166,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
@@ -179,7 +179,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
@@ -197,7 +197,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
@@ -211,7 +211,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
@@ -228,7 +228,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
@@ -247,7 +247,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1)
+        tx_result = self._deploy_score("install/sample_score", value1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash1 = tx_result.tx_hash
 
@@ -263,14 +263,14 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         # 1. deploy same SCORE address (wait audit)
         timestamp = 1
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    timestamp_us=timestamp,
                                    deploy_params={'value': hex(value1)})
         tx2 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    timestamp_us=timestamp,
@@ -330,14 +330,14 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         # 1. deploy same SCORE address (wait audit)
         timestamp = 1
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    timestamp_us=timestamp,
                                    deploy_params={'value': hex(value1)})
-        tx2 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx2 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    timestamp_us=timestamp,
@@ -396,8 +396,8 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    data=b'invalid',
@@ -421,7 +421,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score_no_scorebase", value1)
+        tx_result = self._deploy_score("install/sample_score_no_scorebase", value1)
         tx_hash1 = tx_result.tx_hash
 
         # 2. accept SCORE : tx_hash1
@@ -431,14 +431,14 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
+        self.assertEqual(tx_result.failure.message, "'SampleScore' object has no attribute 'owner'")
 
     def test_score_on_install_error(self):
         self._update_governance()
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score_on_install_error", value1)
+        tx_result = self._deploy_score("install/sample_score_on_install_error", value1)
         tx_hash1 = tx_result.tx_hash
 
         # 2. accept SCORE : tx_hash1
@@ -455,7 +455,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score_no_external_func", value1)
+        tx_result = self._deploy_score("install/sample_score_no_external_func", value1)
         tx_hash1 = tx_result.tx_hash
 
         # 2. accept SCORE : tx_hash1
@@ -472,7 +472,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score_with_korean_comments", value1)
+        tx_result = self._deploy_score("install/sample_score_with_korean_comments", value1)
         tx_hash1 = tx_result.tx_hash
 
         # 2. accept SCORE : tx_hash1
@@ -488,7 +488,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
         # 1. deploy same SCORE address (wait audit)
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score_no_python", value1)
+        tx_result = self._deploy_score("install/sample_score_no_python", value1)
         tx_hash1 = tx_result.tx_hash
 
         # 2. accept SCORE : tx_hash1

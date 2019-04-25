@@ -16,7 +16,7 @@
 
 import unittest
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRESS_BYTES_SIZE
@@ -161,7 +161,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_internal_transfer_step(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_internal_transfer_step(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -178,10 +179,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score.transfer()
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
-        IconScoreEngine.invoke.assert_called()
+        score_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -198,7 +199,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_set_db(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_set_db(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -215,7 +217,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score.set_db(100)
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         # for StepType.SET
         result = self._inner_task_invoke(request)
@@ -223,7 +225,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # for StepType.REPLACE
         result = self._inner_task_invoke(request)
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
-        IconScoreEngine.invoke.assert_called()
+        score_invoke.assert_called()
 
         call_args_for_apply_step = self.step_counter.apply_step.call_args_list
 
@@ -242,7 +244,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used_replace, request, tx_hash)
 
-    def test_get_db(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_get_db(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -264,10 +267,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
-        IconScoreEngine.invoke.assert_called()
+        score_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -284,7 +287,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_query_db(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.query')
+    def test_query_db(self, score_query):
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
 
@@ -308,10 +312,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ContextContainer._pop_context()
             return ret
 
-        IconScoreEngine.query = Mock(side_effect=intercept_query)
+        score_query.side_effect = intercept_query
 
         result = self._inner_task._query(request)
-        IconScoreEngine.query.assert_called()
+        score_query.assert_called()
 
         self.assertIsNotNone(result)
 
@@ -320,7 +324,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.GET, 100), call_args_for_apply_step[1][0])
 
-    def test_remove_db(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_remove_db(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -340,7 +345,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score.remove_db()
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
@@ -360,7 +365,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_event_log_step(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_event_log_step(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -388,10 +394,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 len(text_param.encode('utf-8'))
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
-        IconScoreEngine.invoke.assert_called()
+        score_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -408,7 +414,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_event_log_step_revision3(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_event_log_step_revision3(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -439,10 +446,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
-        IconScoreEngine.invoke.assert_called()
+        score_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -459,7 +466,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_hash_readonly(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_hash_readonly(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -480,10 +488,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
-        IconScoreEngine.invoke.assert_called()
+        score_invoke.assert_called()
 
         self.assertEqual(result['txResults'][tx_hash]['status'], '0x1')
 
@@ -500,7 +508,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_hash_writable(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_hash_writable(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -519,7 +528,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score.hash_writable(data_to_hash)
             ContextContainer._pop_context()
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         result = self._inner_task_invoke(request)
         IconScoreEngine.invoke.assert_called()
@@ -539,7 +548,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # check stepUsed value
         self._assert_step_used(step_used, request, tx_hash)
 
-    def test_out_of_step(self):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_out_of_step(self, score_invoke):
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -555,7 +565,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(b'1234')
 
-        IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
+        score_invoke.side_effect = intercept_invoke
 
         raw_step_costs = {
             governance.STEP_TYPE_DEFAULT: 4000,

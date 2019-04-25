@@ -34,7 +34,7 @@ BOOL_VAL = hex(False)
 class TestIntegrateMethodParamters(TestIntegrateBase):
 
     def test_int_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={"value": str(self._addr_array[1]),
                                                   "value1": str(self._addr_array[1])})
@@ -161,7 +161,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
     def test_str_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={"value": str(self._addr_array[1]),
                                                   "value1": str(self._addr_array[1])},
@@ -287,7 +287,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, hex(False))
 
     def test_byte_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={"value": str(self._addr_array[1]),
                                                   "value1": str(self._addr_array[1])},
@@ -405,7 +405,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
     def test_address_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={"value": str(self._addr_array[1]),
                                                   "value1": str(self._addr_array[1])})
@@ -514,7 +514,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(False))
 
     def test_bool_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={"value": str(self._addr_array[1]),
                                                   "value1": str(self._addr_array[1])})

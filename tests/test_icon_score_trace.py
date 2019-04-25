@@ -32,8 +32,6 @@ from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, interface
 from iconservice.iconscore.icon_score_base2 import InterfaceScore
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext, IconScoreContextType
-from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
-from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
@@ -41,6 +39,10 @@ from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case
 from tests import create_address
 from tests import raise_exception_start_tag, raise_exception_end_tag
+
+OTHER_CALL = InternalCall._other_score_call
+ICX_ENGINE = IconScoreContext.icx_engine
+ICON_SCORE_DEPLOY_ENGINE = IconScoreContext.icon_score_deploy_engine
 
 
 class TestTrace(unittest.TestCase):
@@ -72,6 +74,9 @@ class TestTrace(unittest.TestCase):
         self._score = TestScore(db)
 
     def tearDown(self):
+        InternalCall._other_score_call = OTHER_CALL
+        IconScoreContext.icx_engine = ICX_ENGINE
+        IconScoreContext.icon_score_deploy_engine = ICON_SCORE_DEPLOY_ENGINE
         ContextContainer._clear_context()
         self._mock_icon_score = None
 
@@ -133,7 +138,8 @@ class TestTrace(unittest.TestCase):
 
     @patch('iconservice.icon_service_engine.IconServiceEngine.'
            '_charge_transaction_fee')
-    def test_revert(self, IconServiceEngine_charge_transaction_fee):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_revert(self, score_invoke, IconServiceEngine_charge_transaction_fee):
         context = ContextContainer._get_context()
 
         self._icon_service_engine = IconServiceEngine()
@@ -160,7 +166,7 @@ class TestTrace(unittest.TestCase):
         reason = Mock(spec=str)
         code = ExceptionCode.SCORE_ERROR
         mock_revert = Mock(side_effect=IconScoreException(reason))
-        IconScoreEngine.invoke = Mock(side_effect=mock_revert)
+        score_invoke.side_effect = mock_revert
 
         raise_exception_start_tag("test_revert")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
@@ -177,7 +183,8 @@ class TestTrace(unittest.TestCase):
 
     @patch('iconservice.icon_service_engine.IconServiceEngine.'
            '_charge_transaction_fee')
-    def test_throw(self, IconServiceEngine_charge_transaction_fee):
+    @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
+    def test_throw(self, score_invoke, IconServiceEngine_charge_transaction_fee):
         context = ContextContainer._get_context()
 
         self._icon_service_engine = IconServiceEngine()
@@ -204,7 +211,7 @@ class TestTrace(unittest.TestCase):
         error = Mock(spec=str)
         code = ExceptionCode.INVALID_PARAMETER
         mock_exception = Mock(side_effect=InvalidParamsException(error))
-        IconScoreEngine.invoke = Mock(side_effect=mock_exception)
+        score_invoke.side_effect = mock_exception
 
         raise_exception_start_tag("test_throw")
         tx_result = self._icon_service_engine._handle_icx_send_transaction(

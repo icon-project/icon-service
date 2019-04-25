@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 class TestIntegrateDeployUpdate(TestIntegrateBase):
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -58,7 +58,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   self._addr_array[0],
                                   address,
@@ -94,7 +94,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
     def _install_normal_score(self, value: int):
         # 1. deploy
 
-        tx_result = self._deploy_score("install/test_score", value)
+        tx_result = self._deploy_score("install/sample_score", value)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -122,7 +122,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
             self.Changed(value)
         """
         value2 = 2 * self._icx_factor
-        tx_result = self._deploy_score("update/test_score", value2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", value2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
 
         # 4. assert get value: value1 + value2
@@ -143,8 +143,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "update/sample_score",
                                    self._addr_array[1],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)})
@@ -178,8 +178,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "update/sample_score",
                                    self._addr_array[0],
                                    score_addr1,
                                    data=b'invalid',
@@ -213,8 +213,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_no_scorebase",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score_no_scorebase",
                                    self._addr_array[0],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)})
@@ -226,7 +226,7 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_results[0].failure.message, "'TestScore' object has no attribute 'owner'")
+        self.assertEqual(tx_results[0].failure.message, "'SampleScore' object has no attribute 'owner'")
 
         # 3. assert get value: value1
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
@@ -247,8 +247,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "update/test_score_on_update_error",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "update/sample_score_on_update_error",
                                    self._addr_array[0],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)})
@@ -281,8 +281,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_no_external_func",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score_no_external_func",
                                    self._addr_array[0],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)})
@@ -315,8 +315,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_with_korean_comments",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score_with_korean_comments",
                                    self._addr_array[0],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)})
@@ -348,8 +348,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score_no_python",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score_no_python",
                                    self._addr_array[0],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)})
@@ -381,8 +381,8 @@ class TestIntegrateDeployUpdate(TestIntegrateBase):
 
         # 2. deploy update
         value2 = 2 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    score_addr1,
                                    deploy_params={'value': hex(value2)},

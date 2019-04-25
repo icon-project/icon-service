@@ -28,7 +28,7 @@ class TestScoreMemberVariable(TestIntegrateBase):
 
     def _update_governance(self) -> bytes:
         tx = self._make_deploy_tx(
-            "test_builtin", "latest_version/governance", self._admin, GOVERNANCE_SCORE_ADDRESS)
+            "sample_builtin", "latest_version/governance", self._admin, GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         tx_hash: bytes = tx_results[0].tx_hash
@@ -64,7 +64,7 @@ class TestScoreMemberVariable(TestIntegrateBase):
         _from: 'Address' = self._addr_array[0]
 
         tx: dict = self._make_deploy_tx(
-            "test_scores", "test_member_variable_score", _from, ZERO_SCORE_ADDRESS)
+            "sample_scores", "sample_member_variable_score", _from, ZERO_SCORE_ADDRESS)
 
         block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(block)
@@ -92,7 +92,7 @@ class TestScoreMemberVariable(TestIntegrateBase):
         _from: 'Address' = self._addr_array[0]
 
         tx: dict = self._make_deploy_tx(
-            "test_scores", "test_member_variable_score", _from, ZERO_SCORE_ADDRESS)
+            "sample_scores", "sample_member_variable_score", _from, ZERO_SCORE_ADDRESS)
 
         block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(block)

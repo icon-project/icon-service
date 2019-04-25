@@ -34,7 +34,7 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
         self._update_governance()
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -84,9 +84,9 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
                                       'updateServiceConfig',
                                       params=params)
 
-        raise_exception_start_tag("test_invalid_owner")
+        raise_exception_start_tag("sample_invalid_owner")
         prev_block, tx_results = self._make_and_req_block([tx])
-        raise_exception_end_tag("test_invalid_owner")
+        raise_exception_end_tag("sample_invalid_owner")
 
         self._write_precommit_state(prev_block)
 

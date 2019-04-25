@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 class TestIntegrateDeployInstall(TestIntegrateBase):
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -63,7 +63,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   from_addr,
                                   address,
@@ -99,7 +99,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
     def test_score(self):
         # 1. deploy
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
 
@@ -121,7 +121,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 1. deploy
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -174,16 +174,16 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         # 1. deploy
         timestamp = 1
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    timestamp_us=timestamp,
                                    deploy_params={'value': hex(value1)})
 
         value2 = 2 * self._icx_factor
-        tx2 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx2 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    timestamp_us=timestamp,
@@ -330,8 +330,8 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 1. deploy
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    data=b'invalid',
@@ -351,12 +351,12 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         # 1. deploy
         value1 = 1 * self._icx_factor
         raise_exception_start_tag("test_score_no_scorebase")
-        tx_result = self._deploy_score("install/test_score_no_scorebase", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score_no_scorebase", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_no_scorebase")
 
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
-        self.assertEqual(tx_result.failure.message, "'TestScore' object has no attribute 'owner'")
+        self.assertEqual(tx_result.failure.message, "'SampleScore' object has no attribute 'owner'")
 
     def test_score_on_install_error(self):
         self._update_governance()
@@ -364,7 +364,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         # 1. deploy
         value1 = 1 * self._icx_factor
         raise_exception_start_tag("test_score_on_install_error")
-        tx_result = self._deploy_score("install/test_score_on_install_error", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score_on_install_error", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_on_install_error")
 
         self.assertEqual(tx_result.status, int(False))
@@ -377,7 +377,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         # 1. deploy
         value1 = 1 * self._icx_factor
         raise_exception_start_tag("test_score_no_external_func")
-        tx_result = self._deploy_score("install/test_score_no_external_func", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score_no_external_func", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_no_external_func")
 
         self.assertEqual(tx_result.status, int(False))
@@ -390,7 +390,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         # 1. deploy
         value1 = 1 * self._icx_factor
         raise_exception_start_tag("test_score_with_korean_comments")
-        tx_result = self._deploy_score("install/test_score_with_korean_comments", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score_with_korean_comments", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_with_korean_comments")
 
         self.assertEqual(tx_result.status, int(False))
@@ -401,9 +401,9 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 1. deploy
         value1 = 1 * self._icx_factor
-        raise_exception_start_tag("test_deploy_scores")
-        tx_result = self._deploy_score("install/test_score_no_python", value1, self._addr_array[0])
-        raise_exception_end_tag("test_deploy_scores")
+        raise_exception_start_tag("sample_deploy_scores")
+        tx_result = self._deploy_score("install/sample_score_no_python", value1, self._addr_array[0])
+        raise_exception_end_tag("sample_deploy_scores")
 
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
@@ -412,8 +412,8 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
         # 1. deploy
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_deploy_scores",
-                                   "install/test_score",
+        tx1 = self._make_deploy_tx("sample_deploy_scores",
+                                   "install/sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={'value': hex(value1)},

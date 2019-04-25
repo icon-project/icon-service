@@ -1,1 +1,0 @@
-from .test_score_payable import TestScorePayable

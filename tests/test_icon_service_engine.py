@@ -20,7 +20,7 @@ import hashlib
 import os
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from iconcommons.icon_config import IconConfig
 
@@ -151,7 +151,8 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertTrue(isinstance(balance, int))
         self.assertEqual(self._total_supply, balance)
 
-    def test_call_on_invoke(self):
+    @patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil._get_service_flag')
+    def test_call_on_invoke(self, get_service_flag):
         context = _create_context(IconScoreContextType.INVOKE)
 
         from_ = self._genesis_address
@@ -188,7 +189,7 @@ class TestIconServiceEngine(unittest.TestCase):
             self._engine._step_counter_factory.create(context.type)
         context.step_counter.reset(step_limit)
 
-        IconScoreContextUtil._get_service_flag = Mock(return_value=IconScoreContext.icon_service_flag)
+        get_service_flag.return_value = 0
         self._engine._call(context, method, params)
 
         # from(genesis), to

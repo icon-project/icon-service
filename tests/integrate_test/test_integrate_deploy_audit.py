@@ -40,7 +40,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: True}}
 
     def _update_governance(self) -> bytes:
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -69,7 +69,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   self._addr_array[0],
                                   address,
@@ -311,7 +311,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
 
     def test_normal_score(self):
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -341,7 +341,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -370,7 +370,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     # call acceptScore with non - existing deploy txHash
     def test_normal_score_fail1(self):
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -393,7 +393,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -415,7 +415,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     # call acceptScore with the second latest pending deploy txHash
     def test_normal_score_fail2(self):
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -442,7 +442,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 3. update (wait audit)
-        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
@@ -459,7 +459,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 4. overwrite
-        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
 
@@ -485,7 +485,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -512,7 +512,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 3. update (wait audit)
-        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
@@ -529,7 +529,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 4. overwrite
-        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
 
@@ -554,7 +554,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     # call acceptScore with the deploy txHash of active SCORE
     def test_normal_score_fail3(self):
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -589,7 +589,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     def test_normal_score_fail3_fix_update_governance(self):
         self._update_governance()
 
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -624,7 +624,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     # call acceptScore with the deploy txHash of SCORE which was active
     def test_normal_score_fail4(self):
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -651,7 +651,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 3. update (wait audit)
-        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
@@ -668,7 +668,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 4. overwrite
-        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
 
@@ -702,7 +702,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -729,7 +729,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 3. update (wait audit)
-        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
@@ -746,7 +746,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 4. overwrite
-        tx_result = self._deploy_score("update/test_score", 3, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
 
@@ -777,7 +777,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
     # call acceptScore with the already rejected deploy txHash
     def test_normal_score_fail5(self):
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -804,7 +804,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 3. update (wait audit)
-        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
@@ -848,7 +848,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy (wait audit)
-        tx_result = self._deploy_score("install/test_score", 1)
+        tx_result = self._deploy_score("install/sample_score", 1)
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
         tx_hash1 = tx_result.tx_hash
@@ -875,7 +875,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
         # 3. update (wait audit)
-        tx_result = self._deploy_score("update/test_score", 2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", 2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 

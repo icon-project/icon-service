@@ -93,7 +93,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   from_addr,
                                   address,
@@ -129,7 +129,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
     def test_score(self):
         # 1. deploy
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
 
@@ -172,8 +172,8 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(estimate, tx_results[0].step_used)
 
     def test_estimate_step_when_transfer_coin_to_score(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_pass",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -210,8 +210,8 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(estimate, tx_results[0].step_used)
 
     def test_estimate_step_when_transfer_coin_to_score_2(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_to_eoa",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_to_eoa",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -246,7 +246,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
     def test_estimate_step_when_call_score_function(self):
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
 
@@ -305,7 +305,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
     def test_estimate_step_when_transfer_message_without_sending_coin_to_score(self):
         value1 = 1 * self._icx_factor
-        tx_result = self._deploy_score("install/test_score", value1, self._addr_array[0])
+        tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
 
@@ -336,8 +336,8 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(estimate, tx_results[0].step_used)
 
     def test_estimate_step_when_transfer_message_with_sending_coin_to_score(self):
-        tx1 = self._make_deploy_tx("test_fallback_call_scores",
-                                   "test_score_pass",
+        tx1 = self._make_deploy_tx("sample_fallback_call_scores",
+                                   "sample_score_pass",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -465,7 +465,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         }
 
     def _update_governance_0_0_4(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)

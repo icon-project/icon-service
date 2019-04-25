@@ -30,7 +30,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_FEE: True}}
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)

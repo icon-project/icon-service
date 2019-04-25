@@ -37,7 +37,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         return {ConfigKey.SERVICE: {ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: True}}
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -256,8 +256,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
 
         with self.assertRaises(BaseException) as e:
             self._deploy_score(self._addr_array[0],
-                               "test_deploy_scores",
-                               "install/test_score",
+                               "sample_deploy_scores",
+                               "install/sample_score",
                                value)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
         self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
@@ -269,8 +269,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
         tx_result = self._deploy_score(self._addr_array[0],
-                                       "test_deploy_scores",
-                                       "install/test_score",
+                                       "sample_deploy_scores",
+                                       "install/sample_score",
                                        value)
 
         self.assertEqual(tx_result.status, int(True))
@@ -286,8 +286,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
 
         with self.assertRaises(BaseException) as e:
             self._deploy_score(self._addr_array[0],
-                               "test_deploy_scores",
-                               "install/test_score",
+                               "sample_deploy_scores",
+                               "install/sample_score",
                                value)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
         self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
@@ -299,8 +299,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
         tx_result = self._deploy_score(self._addr_array[0],
-                                       "test_deploy_scores",
-                                       "install/test_score",
+                                       "sample_deploy_scores",
+                                       "install/sample_score",
                                        value)
 
         self.assertEqual(tx_result.status, int(True))
@@ -325,8 +325,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
         tx_result = self._deploy_score(self._addr_array[0],
-                                       "test_deploy_scores",
-                                       "install/test_score",
+                                       "sample_deploy_scores",
+                                       "install/sample_score",
                                        value)
 
         self.assertEqual(tx_result.status, int(True))
@@ -342,7 +342,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
         with self.assertRaises(BaseException) as e:
-            self._deploy_score(self._addr_array[0], "test_deploy_scores", "update/test_score", value, score_addr1)
+            self._deploy_score(self._addr_array[0], "sample_deploy_scores", "update/sample_score", value, score_addr1)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
         self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
 
@@ -358,8 +358,8 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
         tx_result = self._deploy_score(self._addr_array[0],
-                                       "test_deploy_scores",
-                                       "install/test_score",
+                                       "sample_deploy_scores",
+                                       "install/sample_score",
                                        value)
 
         self.assertEqual(tx_result.status, int(True))
@@ -381,7 +381,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.status, int(True))
 
         with self.assertRaises(BaseException) as e:
-            self._deploy_score(self._addr_array[0], "test_deploy_scores", "update/test_score", value, score_addr1)
+            self._deploy_score(self._addr_array[0], "sample_deploy_scores", "update/sample_score", value, score_addr1)
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
         self.assertTrue(e.exception.message.startswith("Invalid deployer: no permission"))
 

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 class TestIntegrateArrayDBPatch(TestIntegrateBase):
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "0_0_4/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -41,8 +41,8 @@ class TestIntegrateArrayDBPatch(TestIntegrateBase):
 
     def _deploy_score(self) -> Any:
         address = ZERO_SCORE_ADDRESS
-        tx = self._make_deploy_tx("test_scores",
-                                  "test_array_db",
+        tx = self._make_deploy_tx("sample_scores",
+                                  "sample_array_db",
                                   self._addr_array[0],
                                   address,
                                   deploy_params={})
