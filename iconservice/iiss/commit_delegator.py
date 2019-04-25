@@ -131,7 +131,6 @@ class CommitDelegator(object):
         
         generator: 'Address' = precommit_data.prev_block_contributors.get("generator")
         validators: List['Address'] = precommit_data.prev_block_contributors.get("validators")
-        validators: list = []
 
         if generator is None or validators is None:
             return
