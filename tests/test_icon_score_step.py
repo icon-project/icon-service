@@ -22,7 +22,9 @@ from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
+from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_constant import REVISION_3
+from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
 from iconservice.iconscore.icon_score_base2 import sha3_256
@@ -38,6 +40,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     def setUp(self):
         self._inner_task = generate_inner_task()
+
+        self._inner_task._icon_service_engine._icon_pre_validator = \
+            Mock(spec=IconPreValidator)
 
         factory = self._inner_task._icon_service_engine._step_counter_factory
         self.step_counter = Mock(spec=IconScoreStepCounter)
@@ -67,7 +72,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         }
 
         request1 = create_request([
-            ReqData(tx_hash1, from_, to_, 'deploy', data),
+            ReqData(tx_hash1, from_, to_, 0, 'deploy', data),
         ])
 
         # for StepType.CONTRACT_CREATE
@@ -79,7 +84,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         tx_hash2 = bytes.hex(create_tx_hash())
 
         request2 = create_request([
-            ReqData(tx_hash2, from_, to_, 'deploy', data),
+            ReqData(tx_hash2, from_, to_, 0, 'deploy', data),
         ])
 
         result = self._inner_task_invoke(request2)
@@ -120,7 +125,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         data = '0x01234abcde01234abcde01234abcde01234abcde01234abcde'
 
         request = create_request([
-            ReqData(tx_hash1, from_, to_, 'message', data),
+            ReqData(tx_hash1, from_, to_, 0, 'message', data),
         ])
 
         result = self._inner_task_invoke(request)
@@ -144,7 +149,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.EOA)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, "", ""),
+            ReqData(tx_hash, from_, to_, 0, "", ""),
         ])
 
         result = self._inner_task_invoke(request)
@@ -167,7 +172,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -204,7 +209,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -248,11 +253,25 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         self._inner_task._icon_service_engine.\
             _icx_context_db.get = Mock(return_value=b'1' * 100)
+
+        self._inner_task._icon_service_engine._fee_engine = Mock(spec=FeeEngine)
+
+        def charge_transaction_fee(*args, **kwargs):
+            return {args[1]: args[4]}
+
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee \
+            = Mock(side_effect=charge_transaction_fee)
+
+        def get_total_available_step(*args, **kwargs):
+            return args[2]
+
+        self._inner_task._icon_service_engine._fee_engine.get_total_available_step \
+            = Mock(side_effect=get_total_available_step)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
@@ -326,11 +345,25 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         self._inner_task._icon_service_engine.\
             _icx_context_db.get = Mock(return_value=b'1' * 100)
+
+        self._inner_task._icon_service_engine._fee_engine = Mock(spec=FeeEngine)
+
+        def charge_transaction_fee(*args, **kwargs):
+            return {args[1]: args[4]}
+
+        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee \
+            = Mock(side_effect=charge_transaction_fee)
+
+        def get_total_available_step(*args, **kwargs):
+            return args[2]
+
+        self._inner_task._icon_service_engine._fee_engine.get_total_available_step \
+            = Mock(side_effect=get_total_available_step)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
@@ -366,7 +399,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -414,7 +447,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal
@@ -465,7 +498,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         data_to_hash = b'1234'
@@ -508,7 +541,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         data_to_hash = b'1234'
@@ -549,7 +582,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         to_ = create_address(AddressPrefix.CONTRACT)
 
         request = create_request([
-            ReqData(tx_hash, from_, to_, 'call', {})
+            ReqData(tx_hash, from_, to_, 0, 'call', {})
         ])
 
         # noinspection PyUnusedLocal

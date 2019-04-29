@@ -1,0 +1,5 @@
+{
+    "version": "0.0.2",
+    "main_file": "test_score_fee_sharing_inter_call",
+    "main_score": "TestScoreFeeSharingInterCall"
+}
