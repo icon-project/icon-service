@@ -70,6 +70,12 @@ class Account(object):
         return 0
 
     @property
+    def voting_weight(self) -> int:
+        if self.stake_part:
+            return self.stake_part.voting_weight
+        return 0
+
+    @property
     def unstake(self) -> int:
         if self.stake_part:
             return self.stake_part.unstake
@@ -103,6 +109,12 @@ class Account(object):
     def delegations_amount(self) -> int:
         if self.delegation_part:
             return self.delegation_part.delegations_amount
+        return 0
+
+    @property
+    def voting_power(self) -> int:
+        if self.stake_part and self.delegation_part:
+            return self.stake_part.voting_weight - self.delegation_part.delegations_amount
         return 0
 
     def deposit(self, value: int):
