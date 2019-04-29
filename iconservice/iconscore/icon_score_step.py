@@ -19,7 +19,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
-from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3
+from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3, REVISION_4
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
 if TYPE_CHECKING:
@@ -36,6 +36,9 @@ def get_input_data_size(revision: int, input_data: Any) -> int:
     """
     if revision < REVISION_3:
         return get_data_size_recursively(input_data)
+
+    if revision >= REVISION_4 and input_data is None:
+        return 0
 
     data = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
     return len(data.encode())
