@@ -134,8 +134,8 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         with self.assertRaises(BaseException) as e:
             self._query(query_request)
 
-        self.assertEqual(e.exception.code, ExceptionCode.SERVER_ERROR)
-        self.assertEqual(e.exception.message, "put is not allowed")
+        self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
+        self.assertEqual(e.exception.message, "No permission to write")
 
         value2 = 1 * self._icx_factor
         tx4 = self._make_score_call_tx(self._addr_array[0],

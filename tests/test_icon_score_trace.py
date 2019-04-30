@@ -22,7 +22,7 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.block import Block
-from iconservice.base.exception import RevertException, ExceptionCode, IconScoreException
+from iconservice.base.exception import ExceptionCode, IconScoreException, InvalidParamsException
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
@@ -159,7 +159,7 @@ class TestTrace(unittest.TestCase):
 
         reason = Mock(spec=str)
         code = ExceptionCode.SCORE_ERROR
-        mock_revert = Mock(side_effect=RevertException(reason))
+        mock_revert = Mock(side_effect=IconScoreException(reason))
         IconScoreEngine.invoke = Mock(side_effect=mock_revert)
 
         raise_exception_start_tag("test_revert")
@@ -202,8 +202,8 @@ class TestTrace(unittest.TestCase):
             Mock(return_value=False), 'is_data_type_supported')
 
         error = Mock(spec=str)
-        code = ExceptionCode.SCORE_ERROR
-        mock_exception = Mock(side_effect=IconScoreException(error, code))
+        code = ExceptionCode.INVALID_PARAMETER
+        mock_exception = Mock(side_effect=InvalidParamsException(error))
         IconScoreEngine.invoke = Mock(side_effect=mock_exception)
 
         raise_exception_start_tag("test_throw")

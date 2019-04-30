@@ -17,10 +17,11 @@
 """on_update parameters testcase"""
 
 from iconservice import ZERO_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
-class TestIntegrateOnUpdateParamters(TestIntegrateBase):
+class TestIntegrateOnUpdateParameters(TestIntegrateBase):
 
     def test_onupdate_parameters_success(self):
         # deploy
@@ -97,7 +98,7 @@ class TestIntegrateOnUpdateParamters(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertTrue(tx_results[0].failure.message.find("on_update() got an unexpected keyword argument "
                                                            "'additional_param'") != -1)
         self.assertEqual(tx_results[0].status, int(False))
@@ -164,9 +165,9 @@ class TestIntegrateOnUpdateParamters(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
-        self.assertEqual(tx_results[1].failure.code, 32000)
-        self.assertEqual(tx_results[2].failure.code, 32000)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[2].failure.code, ExceptionCode.SYSTEM_ERROR)
 
         self.assertTrue(tx_results[0].failure.message.find("on_update() missing 1 required positional argument:") != -1)
         self.assertTrue(tx_results[1].failure.message.find("on_update() missing 1 required positional argument:") != -1)
@@ -189,7 +190,7 @@ class TestIntegrateOnUpdateParamters(TestIntegrateBase):
         total_supply = self._query(query_request)
         self.assertEqual(total_supply, 1000 * 10 ** 18)
 
-    def test_invalid_paramter_value_onupdate(self):
+    def test_invalid_parameter_value_onupdate(self):
         tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
@@ -233,8 +234,8 @@ class TestIntegrateOnUpdateParamters(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-        self.assertEqual(tx_results[0].failure.code, 32000)
-        self.assertEqual(tx_results[1].failure.code, 32602)
+        self.assertEqual(tx_results[0].failure.code, ExceptionCode.SYSTEM_ERROR)
+        self.assertEqual(tx_results[1].failure.code, ExceptionCode.INVALID_PARAMETER)
 
         self.assertTrue(tx_results[0].failure.message.find("invalid literal for int()") != -1)
         self.assertTrue(tx_results[1].failure.message.find("Invalid address") != -1)

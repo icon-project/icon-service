@@ -176,6 +176,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.transfer()
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -212,6 +213,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.set_db(100)
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -255,9 +257,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
+
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.get_db()
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -299,7 +304,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
-            return score.query_db()
+            ret = score.query_db()
+            ContextContainer._pop_context()
+            return ret
 
         IconScoreEngine.query = Mock(side_effect=intercept_query)
 
@@ -331,6 +338,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.remove_db()
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -378,6 +386,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 len(address.body) + \
                 len(data_param) + \
                 len(text_param.encode('utf-8'))
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -412,6 +421,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             args[0].revision = REVISION_3
             ContextContainer._push_context(args[0])
+
             context_db = self._inner_task._icon_service_engine._icx_context_db
             address = create_address(AddressPrefix.EOA)
             score = SampleScore(IconScoreDatabase(address, context_db))
@@ -426,6 +436,8 @@ class TestIconScoreStepCounter(unittest.TestCase):
                 ICON_CONTRACT_ADDRESS_BYTES_SIZE + \
                 len(data_param) + \
                 len(text_param.encode('utf-8'))
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -461,9 +473,12 @@ class TestIconScoreStepCounter(unittest.TestCase):
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
+
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_readonly(data_to_hash)
+
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -477,8 +492,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.API_CALL, 1 + len(data_to_hash)), call_args_for_apply_step[3][0])
-        self.assertEqual(4, len(call_args_for_apply_step))
+        self.assertEqual(3, len(call_args_for_apply_step))
+
+        # step_counter.consume_step should called in sha3_256() only if context.revision is more than 2
+        self.step_counter.consume_step.assert_not_called()
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
 
@@ -502,6 +519,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             context_db = self._inner_task._icon_service_engine._icx_context_db
             score = SampleScore(IconScoreDatabase(to_, context_db))
             score.hash_writable(data_to_hash)
+            ContextContainer._pop_context()
 
         IconScoreEngine.invoke = Mock(side_effect=intercept_invoke)
 
@@ -515,8 +533,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.assertEqual((StepType.DEFAULT, 1), call_args_for_apply_step[0][0])
         self.assertEqual((StepType.INPUT, 0), call_args_for_apply_step[1][0])
         self.assertEqual((StepType.CONTRACT_CALL, 1), call_args_for_apply_step[2][0])
-        self.assertEqual((StepType.API_CALL, 1 + len(data_to_hash)), call_args_for_apply_step[3][0])
-        self.assertEqual(4, len(call_args_for_apply_step))
+        self.assertEqual(3, len(call_args_for_apply_step))
+
+        # step_counter.consume_step() should be called in sha3_256() only if context.revision is more than 2
+        self.step_counter.consume_step.assert_not_called()
 
         step_used = self._calc_step_used(0, len(call_args_for_apply_step))
 
@@ -640,7 +660,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
             governance.STEP_TYPE_DELETE: -15,
             governance.STEP_TYPE_INPUT: 20,
             governance.STEP_TYPE_EVENT_LOG: 10,
-            governance.STEP_TYPE_API_CALL: 0
+            governance.STEP_TYPE_API_CALL: 10000
         }
         step_costs = {}
 
@@ -731,5 +751,3 @@ class SampleScore(IconScoreBase):
     @external
     def hash_writable(self, data: bytes) -> bytes:
         return sha3_256(data)
-
-

@@ -18,8 +18,7 @@
 
 import unittest
 
-from iconservice.base.address import Address
-from iconservice.base.exception import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException, OutOfBalanceException
 from iconservice.icx.icx_account import AccountType, Account
 from tests import create_address
 
@@ -71,7 +70,7 @@ class TestAccount(unittest.TestCase):
         self.assertEqual(old, account1.icx)
 
         self.assertRaises(InvalidParamsException, account1.withdraw, -11234)
-        self.assertRaises(InvalidParamsException, account1.withdraw, 1)
+        self.assertRaises(OutOfBalanceException, account1.withdraw, 1)
 
         old = account1.icx
         account1.withdraw(0)

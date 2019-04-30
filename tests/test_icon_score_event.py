@@ -21,7 +21,7 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice.base.address import Address, AddressPrefix, ICON_ADDRESS_BYTES_SIZE
-from iconservice.base.exception import EventLogException, ScoreErrorException
+from iconservice.base.exception import InvalidEventLogException
 from iconservice.database.batch import TransactionBatch
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
@@ -148,7 +148,7 @@ class TestEventlog(unittest.TestCase):
         age = "10"
         # The hint of 'age' is int type but argument is str type
 
-        self.assertRaises(ScoreErrorException, self._mock_score.OneIndexEvent,
+        self.assertRaises(InvalidEventLogException, self._mock_score.OneIndexEvent,
                           name, address, age)
 
         logs_bloom = IconServiceEngine._generate_logs_bloom(context.event_logs)
@@ -292,7 +292,7 @@ class TestEventlog(unittest.TestCase):
         context = ContextContainer._get_context()
         context.func_type = IconScoreFuncType.READONLY
 
-        with self.assertRaises(EventLogException):
+        with self.assertRaises(InvalidEventLogException):
             self._mock_score.BoolIndexEvent(False)
 
     def test_reserved_event_log(self):
@@ -300,7 +300,7 @@ class TestEventlog(unittest.TestCase):
         context.func_type = IconScoreFuncType.READONLY
 
         address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        with self.assertRaises(EventLogException):
+        with self.assertRaises(InvalidEventLogException):
             self._mock_score.ICXTransfer(address, address, 0)
 
     def test_icx_transfer_event(self):

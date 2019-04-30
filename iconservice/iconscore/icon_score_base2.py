@@ -17,17 +17,20 @@
 import hashlib
 import json
 from abc import ABC, ABCMeta
-from typing import TYPE_CHECKING, Optional, Union, Any
+from enum import IntEnum
+from typing import TYPE_CHECKING, Optional, Any
 
-from secp256k1 import PublicKey, ALL_FLAGS, FLAG_VERIFY
+from secp256k1 import PublicKey, ALL_FLAGS, NO_FLAGS
 
 from ..base.address import Address, AddressPrefix
-from ..base.exception import RevertException, ExceptionCode, IconScoreException
+from ..base.exception import InvalidParamsException, IconScoreException
+from ..icon_constant import REVISION_3, CHARSET_ENCODING
 from ..iconscore.icon_score_context import ContextContainer
 from ..iconscore.icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
+    from .icon_score_context import IconScoreContext
 
 """
 The explanation below are extracted
@@ -95,8 +98,33 @@ class Block(object):
         return self._timestamp
 
 
-def revert(message: Optional[str] = None,
-           code: Union[ExceptionCode, int] = ExceptionCode.SCORE_ERROR) -> None:
+class ScoreApiStepRatio(IntEnum):
+    SHA3_256 = 1000
+    CREATE_ADDRESS_WITH_COMPRESSED_KEY = 15000
+    CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY = 1500
+    JSON_DUMPS = 5000
+    JSON_LOADS = 4000
+    RECOVER_KEY = 70000
+
+
+def _get_api_call_step_cost(context: 'IconScoreContext', ratio: ScoreApiStepRatio) -> int:
+    """Returns the step cost for a given SCORE API
+
+    API CALL step cost in context.step_counter means the step cost of sha3_256(b'')
+    Each step cost for other APIs is calculated from the relative ratio based on sha3_256(b'')
+
+    other_api_call_step_cost =
+        API_CALL_STEP_COST * other_api_call_ratio // ScoreApiStepRatio.SHA3_256
+
+    :param context: IconScoreContext instance
+    :param ratio: The ratio of a given SCORE API based on ScoreApiStepRatio.SHA3_256
+    :return: step_cost for a given SCORE API
+    """
+    api_call_step: int = context.step_counter.get_step_cost(StepType.API_CALL)
+    return api_call_step * ratio // ScoreApiStepRatio.SHA3_256
+
+
+def revert(message: Optional[str] = None, code: int = 0) -> None:
     """
     Reverts the transaction and breaks.
     All the changes of state DB in current transaction will be rolled back.
@@ -105,17 +133,15 @@ def revert(message: Optional[str] = None,
     :param code: code
     """
     try:
-        if not isinstance(code, (int, ExceptionCode)):
+        if not isinstance(code, int):
             code = int(code)
 
         if not isinstance(message, str):
             message = str(message)
     except:
-        raise IconScoreException(
-            message=f"Revert error: code or message is invalid",
-            code=ExceptionCode.SCORE_ERROR)
+        raise InvalidParamsException("Revert error: code or message is invalid")
     else:
-        raise RevertException(message, code)
+        raise IconScoreException(message, code)
 
 
 def sha3_256(data: bytes) -> bytes:
@@ -125,45 +151,98 @@ def sha3_256(data: bytes) -> bytes:
     :param data: input data
     :return: hashed data in bytes
     """
+    if not isinstance(data, bytes):
+        raise InvalidParamsException("Invalid dataType")
+
     context = ContextContainer._get_context()
-    if context.step_counter:
-        step_count = 1
-        if data:
-            step_count += len(data)
-        context.step_counter.apply_step(StepType.API_CALL, step_count)
+    assert context
+
+    if context and context.revision >= REVISION_3:
+        size = len(data)
+        chunks = size // 32
+        if size % 32 > 0:
+            chunks += 1
+
+        step_cost: int = context.step_counter.get_step_cost(StepType.API_CALL)
+        step: int = step_cost + step_cost * chunks // 10
+
+        context.step_counter.consume_step(StepType.API_CALL, step)
 
     return hashlib.sha3_256(data).digest()
 
 
-def json_dumps(obj: Any, **kwargs) -> str:
+def json_dumps(obj: Any) -> str:
     """
     Converts a python object `obj` to a JSON string
 
     :param obj: a python object to be converted
-    :param kwargs: json options (see https://docs.python.org/3/library/json.html#json.dumps)
     :return: json string
     """
-    return json.dumps(obj, **kwargs)
+    context = ContextContainer._get_context()
+    assert context
+
+    if context and context.revision >= REVISION_3:
+        ret: str = json.dumps(obj, separators=(',', ':'))
+
+        step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_DUMPS)
+        step: int = step_cost + step_cost * len(ret.encode(CHARSET_ENCODING)) // 100
+
+        context.step_counter.consume_step(StepType.API_CALL, step)
+    else:
+        ret: str = json.dumps(obj)
+
+    return ret
 
 
-def json_loads(src: str, **kwargs) -> Any:
+def json_loads(src: str) -> Any:
     """
     Parses a JSON string `src` and converts it to a python object
 
     :param src: a JSON string to be converted
-    :param kwargs: kwargs: json options (see https://docs.python.org/3/library/json.html#json.loads)
     :return: a python object
     """
-    return json.loads(src, **kwargs)
+    if not isinstance(src, str):
+        return None
+
+    context = ContextContainer._get_context()
+    assert context
+
+    if context and context.revision >= REVISION_3:
+        step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.JSON_LOADS)
+        step: int = step_cost + step_cost * len(src.encode(CHARSET_ENCODING)) // 100
+
+        context.step_counter.consume_step(StepType.API_CALL, step)
+
+    return json.loads(src)
 
 
 def create_address_with_key(public_key: bytes) -> Optional['Address']:
-    """Create an address with a given public key, charging a fee
+    """Create an address with a given public key
 
     :param public_key: Public key based on secp256k1
     :return: Address created from a given public key or None if failed
     """
-    # FIXME: Add step calculation code
+    if not isinstance(public_key, bytes):
+        return None
+
+    # 33: prefix(1 byte) + keyBody(32 bytes)
+    # 65: prefix(1 byte) + keyBody(64 bytes)
+    key_size: int = len(public_key)
+    if key_size not in (33, 65):
+        return None
+
+    context = ContextContainer._get_context()
+    assert context
+
+    if context and context.revision >= REVISION_3:
+        if key_size == 33:
+            ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_COMPRESSED_KEY
+        else:
+            ratio = ScoreApiStepRatio.CREATE_ADDRESS_WITH_UNCOMPRESSED_KEY
+
+        step: int = _get_api_call_step_cost(context, ratio)
+        context.step_counter.consume_step(StepType.API_CALL, step)
+
     try:
         return _create_address_with_key(public_key)
     except:
@@ -171,63 +250,34 @@ def create_address_with_key(public_key: bytes) -> Optional['Address']:
 
 
 def _create_address_with_key(public_key: bytes) -> Optional['Address']:
-    """Create an address with a given public key
+    assert isinstance(public_key, bytes)
+    assert len(public_key) in (33, 65)
 
-    :param public_key: Public key based on secp256k1
-    :return: Address created from a given public key or None if failed
-    """
-    if isinstance(public_key, bytes):
-        size = len(public_key)
-        prefix: bytes = public_key[0]
+    size = len(public_key)
+    prefix: int = public_key[0]
 
-        if size == 33 and prefix in (0x02, 0x03):
-            uncompressed_public_key: bytes = _convert_key(public_key)
-        elif size == 65 and prefix == 0x04:
-            uncompressed_public_key: bytes = public_key
-        else:
-            return None
+    if size == 33 and prefix in (0x02, 0x03):
+        uncompressed_public_key: bytes = _convert_key(public_key, compressed=True)
+    elif size == 65 and prefix == 0x04:
+        uncompressed_public_key: bytes = public_key
+    else:
+        return None
 
-        body: bytes = hashlib.sha3_256(uncompressed_public_key[1:]).digest()[-20:]
-        return Address(AddressPrefix.EOA, body)
-
-    return None
+    body: bytes = hashlib.sha3_256(uncompressed_public_key[1:]).digest()[-20:]
+    return Address(AddressPrefix.EOA, body)
 
 
-def _convert_key(public_key: bytes) -> Optional[bytes]:
+def _convert_key(public_key: bytes, compressed: bool) -> Optional[bytes]:
     """Convert key between compressed and uncompressed keys
 
     :param public_key: compressed or uncompressed key
     :return: the counterpart key of a given public_key
     """
-    size = len(public_key)
-    if size == 33:
-        compressed = True
-    elif size == 65:
-        compressed = False
-    else:
-        return None
-
-    public_key = PublicKey(public_key, raw=True, flags=FLAG_VERIFY)
+    public_key = PublicKey(public_key, raw=True, flags=NO_FLAGS, ctx=_public_key.ctx)
     return public_key.serialize(compressed=not compressed)
 
 
 def recover_key(msg_hash: bytes, signature: bytes, compressed: bool = True) -> Optional[bytes]:
-    """Returns the public key from message hash and recoverable signature, charging a fee
-
-    :param msg_hash: 32 bytes data
-    :param signature: signature_data(64) + recovery_id(1)
-    :param compressed: the type of public key to return
-    :return: public key recovered from msg_hash and signature
-        (compressed: 33 bytes key, uncompressed: 65 bytes key)
-    """
-    # FIXME: Add step calculation code
-    try:
-        return _recover_key(msg_hash, signature, compressed)
-    except:
-        return None
-
-
-def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optional[bytes]:
     """Returns the public key from message hash and recoverable signature
 
     :param msg_hash: 32 bytes data
@@ -236,6 +286,20 @@ def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optiona
     :return: public key recovered from msg_hash and signature
         (compressed: 33 bytes key, uncompressed: 65 bytes key)
     """
+    context = ContextContainer._get_context()
+    assert context
+
+    if context and context.revision >= REVISION_3:
+        step_cost: int = _get_api_call_step_cost(context, ScoreApiStepRatio.RECOVER_KEY)
+        context.step_counter.consume_step(StepType.API_CALL, step_cost)
+
+    try:
+        return _recover_key(msg_hash, signature, compressed)
+    except:
+        return None
+
+
+def _recover_key(msg_hash: bytes, signature: bytes, compressed: bool) -> Optional[bytes]:
     if isinstance(msg_hash, bytes) \
             and len(msg_hash) == 32 \
             and isinstance(signature, bytes) \

@@ -115,9 +115,10 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
@@ -151,9 +152,10 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
@@ -179,7 +181,7 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'write_precommit_state response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -207,7 +209,7 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'remove_precommit_state response with {response}', ICON_INNER_LOG_TAG)
             return response
@@ -234,9 +236,10 @@ class IconScoreInnerTask(object):
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SERVER_ERROR, str(e))
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'pre_validate_check response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
             return response
 
     @message_queue_task
@@ -254,7 +257,8 @@ class MakeResponse:
 
     @staticmethod
     def make_error_response(code: Any, message: str):
-        return {'error': {'code': int(code), 'message': message}}
+        _code: int = int(code) + 32000
+        return {'error': {'code': _code, 'message': message}}
 
 
 class IconScoreInnerService(MessageQueueService[IconScoreInnerTask]):

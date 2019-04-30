@@ -19,14 +19,14 @@ from typing import TYPE_CHECKING, Optional
 import plyvel
 
 from iconcommons.logger import Logger
-from iconservice.base.exception import DatabaseException
-from iconservice.icon_constant import ICON_DB_LOG_TAG
-from iconservice.iconscore.icon_score_context import ContextGetter
-from iconservice.iconscore.icon_score_context import IconScoreContextType
+from ..base.exception import DatabaseException, InvalidParamsException
+from ..icon_constant import ICON_DB_LOG_TAG
+from ..iconscore.icon_score_context import ContextGetter
+from ..iconscore.icon_score_context import IconScoreContextType
 
 if TYPE_CHECKING:
-    from iconservice.iconscore.icon_score_context import IconScoreContext
-    from iconservice.base.address import Address
+    from ..base.address import Address
+    from ..iconscore.icon_score_context import IconScoreContext
 
 
 def _get_context_type(context: 'IconScoreContext') -> 'IconScoreContextType':
@@ -249,7 +249,7 @@ class ContextDatabase(object):
         :param value:
         """
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('put is not allowed')
+            raise DatabaseException('No permission to write')
 
         context_type = _get_context_type(context)
 
@@ -265,7 +265,7 @@ class ContextDatabase(object):
         :param key: key to delete from db
         """
         if not _is_db_writable_on_context(context):
-            raise DatabaseException('delete is not allowed')
+            raise DatabaseException('No permission to delete')
 
         context_type = _get_context_type(context)
 
@@ -280,8 +280,7 @@ class ContextDatabase(object):
         :param context:
         """
         if not _is_db_writable_on_context(context):
-            raise DatabaseException(
-                'close is not allowed on readonly context')
+            raise DatabaseException('No permission to close')
 
         if not self._is_shared:
             return self.key_value_db.close()
@@ -361,7 +360,7 @@ class IconScoreDatabase(ContextGetter):
         :return: sub db
         """
         if prefix is None:
-            raise DatabaseException(
+            raise InvalidParamsException(
                 'Invalid params: '
                 'prefix is None in IconScoreDatabase.get_sub_db()')
 

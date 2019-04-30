@@ -345,7 +345,8 @@ class TestIntegrateImportWhiteList(TestIntegrateBase):
             'import_test/as_test/test_in_indirect_submodule',
             'import_test/as_test/test_in_indirect_submodule_method',
             'import_test/import_builtin',
-            'import_test/import_builtin2'
+            'import_test/import_builtin2',
+            'import_test/import_builtin3'
         ]
 
         tx_list = [self._make_deploy_tx('test_deploy_scores', deploy_name,
