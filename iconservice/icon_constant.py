@@ -14,6 +14,8 @@
 
 from enum import IntFlag, unique, IntEnum
 
+GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
+
 ICON_SERVICE_LOG_TAG = 'IconService'
 ICON_EXCEPTION_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Exception'
 ICON_DEPLOY_LOG_TAG = f'{ICON_SERVICE_LOG_TAG}_Deploy'
@@ -51,13 +53,14 @@ ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{channel}.{amqpKey}." \
                                 "{amqpTarget}"
 
-BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': "cx0000000000000000000000000000000000000001"}
+BUILTIN_SCORE_ADDRESS_MAPPER = {'governance': GOVERNANCE_ADDRESS}
 
 ZERO_TX_HASH = bytes(32)
 
 REVISION_2 = 2
 REVISION_3 = 3
-LATEST_REVISION = REVISION_3
+REVISION_4 = 4
+LATEST_REVISION = REVISION_4
 
 
 class ConfigKey:

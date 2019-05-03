@@ -19,7 +19,7 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from ..base.exception import ExceptionCode, IconServiceBaseException, InvalidRequestException
-from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3
+from ..icon_constant import MAX_EXTERNAL_CALL_COUNT, REVISION_3, REVISION_4
 from ..utils import to_camel_case, is_lowercase_hex_string, byte_length_of_int
 
 if TYPE_CHECKING:
@@ -36,6 +36,9 @@ def get_input_data_size(revision: int, input_data: Any) -> int:
     """
     if revision < REVISION_3:
         return get_data_size_recursively(input_data)
+
+    if revision >= REVISION_4 and input_data is None:
+        return 0
 
     data = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
     return len(data.encode())
@@ -327,16 +330,22 @@ class IconScoreStepCounter(object):
             if self._external_call_count > MAX_EXTERNAL_CALL_COUNT:
                 raise InvalidRequestException('Too many external calls')
 
-        step_to_apply = self._step_costs.get(step_type, 0) * count
-        if step_to_apply + self._step_used > self._step_limit:
+        step: int = self._step_costs.get(step_type, 0) * count
+
+        return self.consume_step(step_type, step)
+
+    def consume_step(self, step_type: StepType, step: int) -> int:
+        step_used: int = self._step_used + step
+
+        if step_used > self._step_limit:
             step_used = self._step_used
             self._step_used = self._step_limit
             raise OutOfStepException(
-                self._step_limit, step_used, step_to_apply, step_type)
+                self._step_limit, step_used, step, step_type)
 
-        self._step_used += step_to_apply
+        self._step_used = step_used
 
-        return self.step_used
+        return step_used
 
     def reset(self, step_limit: int):
         """
@@ -367,3 +376,6 @@ class IconScoreStepCounter(object):
         :param max_step_limit: max step limit
         """
         self._max_step_limit = max_step_limit
+
+    def get_step_cost(self, step_type: StepType) -> int:
+        return self._step_costs.get(step_type, 0)

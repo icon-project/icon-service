@@ -54,7 +54,6 @@ class TestIcxStorage(unittest.TestCase):
         account = Account()
         account.address = create_address(AddressPrefix.EOA)
         account.deposit(10 ** 19)
-
         self.storage.put_account(context, account.address, account)
 
         account2 = self.storage.get_account(context, account.address)

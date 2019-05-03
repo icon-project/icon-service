@@ -25,6 +25,7 @@ class ParamType(IntEnum):
     CALL_DATA = 102
     DEPLOY_DATA = 103
     TRANSACTION_PARAMS_DATA = 104
+    DEPOSIT_DATA = 105
 
     INVOKE = 200
 
@@ -77,7 +78,7 @@ SWITCH_KEY = "SWITCH_KEY"
 KEY_CONVERTER = 'KEY_CONVERTER'
 
 
-class ConstantKeys(object):
+class ConstantKeys:
     BLOCK_HEIGHT = "blockHeight"
     BLOCK_HASH = "blockHash"
     TIMESTAMP = "timestamp"
@@ -124,6 +125,9 @@ class ConstantKeys(object):
     ICX_GET_TOTAL_SUPPLY = "icx_getTotalSupply"
     ICX_GET_SCORE_API = "icx_getScoreApi"
     ISE_GET_STATUS = "ise_getStatus"
+
+    DEPOSIT_TERM = "term"
+    DEPOSIT_ID = "id"
 
     # IISS
     DELEGATIONS = "delegations"
@@ -247,6 +251,11 @@ type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
     ConstantKeys.PARAMS: type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA]
 }
 
+# DEPOSIT
+type_convert_templates[ParamType.DEPOSIT_DATA] = {
+    ConstantKeys.DEPOSIT_ID: ValueType.BYTES,
+    ConstantKeys.DEPOSIT_TERM: ValueType.INT,
+}
 
 # IISS
 type_convert_templates[ParamType.IISS_SET_STAKE] = {
