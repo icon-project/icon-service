@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Any, Optional
 from iconcommons.logger import Logger
 
 from .icx.icx_issue_engine import IcxIssueEngine
-from .icx.issue_data_checker import IssueDataValidator
+from .icx.issue_data_validator import IssueDataValidator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .iconscore.icon_score_event_log import EventLog
@@ -486,10 +486,10 @@ class IconServiceEngine(ContextContainer):
         # todo: treasury address should be assigned when icon service open.
         tx_result.to = TREASURY_ADDRESS
         try:
-            self._icx_issue_engine.iiss_issue(context,
-                                              TREASURY_ADDRESS,
-                                              issue_data_in_tx,
-                                              issue_data_in_db)
+            self._icx_issue_engine.issue(context,
+                                         TREASURY_ADDRESS,
+                                         issue_data_in_tx,
+                                         issue_data_in_db)
 
             tx_result.status = TransactionResult.SUCCESS
         except IconServiceBaseException as tx_failure_exception:
@@ -510,7 +510,7 @@ class IconServiceEngine(ContextContainer):
                               request: dict) -> 'TransactionResult':
         issue_data_in_tx = request['params']['data']
         issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info(context)
-        IssueDataValidator.validate_iiss_issue_data_format(issue_data_in_tx, issue_data_in_db)
+        IssueDataValidator.validate_format(issue_data_in_tx, issue_data_in_db)
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=ICX_ISSUE_TRANSACTION_INDEX,

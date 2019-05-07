@@ -15,11 +15,11 @@
 
 from typing import TYPE_CHECKING
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
-from iconservice.base.exception import IconServiceBaseException
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
-from iconservice.iconscore.icon_score_event_log import EventLog
-from iconservice.icx.issue_data_checker import IssueDataValidator
+from .. import ZERO_SCORE_ADDRESS, Address
+from ..base.exception import IconServiceBaseException
+from ..icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ..iconscore.icon_score_event_log import EventLog
+from ..icx.issue_data_validator import IssueDataValidator
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -70,11 +70,12 @@ class IcxIssueEngine:
         total_issue_event_log = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
         return total_issue_event_log
 
-    def iiss_issue(self,
-                   context: 'IconScoreContext',
-                   to_address: 'Address',
-                   issue_data_in_tx: dict,
-                   issue_data_in_db: dict):
+    # todo: consider name: issue_for_iiss
+    def issue(self,
+              context: 'IconScoreContext',
+              to_address: 'Address',
+              issue_data_in_tx: dict,
+              issue_data_in_db: dict):
         total_issue_amount = 0
 
         for group_key in ISSUE_CALCULATE_ORDER:
@@ -82,7 +83,7 @@ class IcxIssueEngine:
                 continue
 
             if IssueDataValidator. \
-                    check_difference_of_iiss_issue_data_value(issue_data_in_tx[group_key], issue_data_in_db[group_key]):
+                    validate_value(issue_data_in_tx[group_key], issue_data_in_db[group_key]):
                 raise IconServiceBaseException("Have difference between "
                                                "issue transaction and actual db data")
             issue_event_log = self._create_issue_event_log(group_key, issue_data_in_db)
