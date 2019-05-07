@@ -50,7 +50,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_issue_engine import IcxIssueEngine
 from .icx.icx_storage import IcxStorage
-from .icx.issue_data_checker import IssueDataValidator
+from .icx.issue_data_validator import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
@@ -495,10 +495,10 @@ class IconServiceEngine(ContextContainer):
         # todo: treasury address should be assigned when icon service open.
         tx_result.to = TREASURY_ADDRESS
         try:
-            self._icx_issue_engine.iiss_issue(context,
-                                              TREASURY_ADDRESS,
-                                              issue_data_in_tx,
-                                              issue_data_in_db)
+            self._icx_issue_engine.issue(context,
+                                         TREASURY_ADDRESS,
+                                         issue_data_in_tx,
+                                         issue_data_in_db)
 
             tx_result.status = TransactionResult.SUCCESS
         except IconServiceBaseException as tx_failure_exception:
@@ -519,7 +519,7 @@ class IconServiceEngine(ContextContainer):
                               request: dict) -> 'TransactionResult':
         issue_data_in_tx = request['params']['data']
         issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info(context)
-        IssueDataValidator.validate_iiss_issue_data_format(issue_data_in_tx, issue_data_in_db)
+        IssueDataValidator.validate_format(issue_data_in_tx, issue_data_in_db)
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=ICX_ISSUE_TRANSACTION_INDEX,

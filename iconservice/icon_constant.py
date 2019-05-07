@@ -72,17 +72,17 @@ class IssueDataKey:
 
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
-        "indexed": "PRepIssue(int, int, int, int)",
+        "indexed": "PRepIssue(int,int,int,int)",
         "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.EEP: {
-        "indexed": "EEPIssue(int, int, int, int)",
+        "indexed": "EEPIssue(int,int,int,int)",
         "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.DAPP: {
-        "indexed": "DappIssue(int, int, int, int)",
+        "indexed": "DappIssue(int,int,int,int)",
         "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
