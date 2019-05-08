@@ -18,7 +18,7 @@ import plyvel
 import unittest
 from typing import TYPE_CHECKING
 
-from iconservice.iiss.msg_data import Header, GovernanceVariable, PrepsData, TxData, TxType, \
+from iconservice.iiss.msg_data import Header, GovernanceVariable, PRepsData, TxData, TxType, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 from tests import create_address, rmtree
 
@@ -50,7 +50,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
             list_of_address.append(create_address(data=b'address' + x.to_bytes(1, 'big')))
         self.iiss_block_produce_info.block_validator_list = list_of_address
 
-        self.iiss_prep: 'PrepsData' = PrepsData()
+        self.iiss_prep: 'PRepsData' = PRepsData()
         self.iiss_prep.block_height = 20
         self.iiss_prep.total_delegation = 10_000
 
@@ -128,7 +128,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
     def test_preps_data(self):
         key: bytes = self.iiss_prep.make_key()
         value: bytes = self.iiss_prep.make_value()
-        ret_p: 'PrepsData' = self.iiss_prep.from_bytes(key, value)
+        ret_p: 'PRepsData' = self.iiss_prep.from_bytes(key, value)
 
         self.assertEqual(self.iiss_prep.block_height, ret_p.block_height)
         self.assertEqual(self.iiss_prep.total_delegation, ret_p.total_delegation)
@@ -299,7 +299,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         key: bytes = self.iiss_prep.make_key()
         value = self.db.get(key)
-        ret_p: 'PrepsData' = self.iiss_prep.from_bytes(key, value)
+        ret_p: 'PRepsData' = self.iiss_prep.from_bytes(key, value)
 
         self.assertEqual(self.iiss_prep.block_height, ret_p.block_height)
         self.assertEqual(self.iiss_prep.total_delegation, ret_p.total_delegation)

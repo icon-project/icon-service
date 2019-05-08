@@ -46,7 +46,7 @@ class TestRcDataStorage(unittest.TestCase):
         self.dummy_gv.icx_price = 1
         self.dummy_gv.incentive_rep = 10
 
-        self.dummy_prep = PrepsData()
+        self.dummy_prep = PRepsData()
         self.dummy_prep.block_height = dummy_block_height
         self.dummy_prep.block_generator = create_address()
         self.dummy_prep.block_validator_list = [create_address()]

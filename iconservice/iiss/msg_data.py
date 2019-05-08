@@ -152,7 +152,7 @@ class BlockProduceInfoData(Data):
             f"key: {self.block_height}, block_generator: {str(self.block_generator)}"
 
 
-class PrepsData(Data):
+class PRepsData(Data):
     _PREFIX = b'PR'
 
     def __init__(self):
@@ -177,9 +177,9 @@ class PrepsData(Data):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(key: bytes, value: bytes) -> 'PrepsData':
+    def from_bytes(key: bytes, value: bytes) -> 'PRepsData':
         data_list: list = MsgPackForIpc.loads(value)
-        obj = PrepsData()
+        obj = PRepsData()
         obj.prep_list = []
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.total_delegation = MsgPackForIpc.decode(TypeTag.INT, data_list[0])

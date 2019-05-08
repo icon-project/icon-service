@@ -27,10 +27,10 @@ if TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address
-    from ..prep.prep_variable.prep_variable_storage import GovernanceVariable, PRep
+    from ..prep.variable.variable_storage import GovernanceVariable, PRep
     from .ipc.reward_calc_proxy import RewardCalcProxy
     from .reward_calc_data_storage import RewardCalcDataStorage
-    from .msg_data import Header, BlockProduceInfoData, PrepsData, GovernanceVariable
+    from .msg_data import Header, BlockProduceInfoData, PRepsData, GovernanceVariable
     from .variable.variable import Variable
 
 
@@ -157,7 +157,7 @@ class CommitDelegator(object):
 
         Logger.debug(f"put_preps_for_rc: total_candidate_delegated{total_candidate_delegated}", "iiss")
 
-        data: 'PrepsData' = DataCreator.create_prep_data(precommit_data.block.height,
+        data: 'PRepsData' = DataCreator.create_prep_data(precommit_data.block.height,
                                                          total_candidate_delegated,
                                                          preps)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
