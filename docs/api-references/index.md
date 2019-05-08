@@ -16,5 +16,5 @@ This document does not describe all APIs of `ICONService`, it contains the speci
 
 ### References
 
-- [SCORE Guide]()
-- [T-Bears]()
+- [SCORE Guide](https://www.icondev.io/docs/overview)
+- [T-Bears](https://www.icondev.io/docs/development-environment)
