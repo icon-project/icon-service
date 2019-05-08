@@ -81,9 +81,8 @@ class TestFeeSharing(unittest.TestCase):
         expected_event_log = [{
             "scoreAddress": str(self.score),
             "indexed": [
-                "DepositAdded(bytes,Address,Address,int,int)",
+                "DepositAdded(bytes,Address,int,int)",
                 f"0x{tx_hash_hex}",
-                str(self.score),
                 str(self.from_)
             ],
             "data": [
@@ -111,7 +110,7 @@ class TestFeeSharing(unittest.TestCase):
         amount, penalty = 4700, 300
 
         self._inner_task._icon_service_engine._fee_engine.withdraw_deposit = Mock(
-            return_value=(self.score, amount, penalty))
+            return_value=(amount, penalty))
         self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee = \
             Mock(return_value={self.from_: 9000})
 
@@ -123,9 +122,8 @@ class TestFeeSharing(unittest.TestCase):
         expected_event_log = [{
             "scoreAddress": str(self.score),
             "indexed": [
-                "DepositWithdrawn(bytes,Address,Address,int,int)",
+                "DepositWithdrawn(bytes,Address,int,int)",
                 f"0x{bytes.hex(deposit_id)}",
-                str(self.score),
                 str(self.from_)
             ],
             "data": [

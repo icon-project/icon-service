@@ -217,7 +217,7 @@ class FeeEngine:
                          sender: 'Address',
                          deposit_id: bytes,
                          block_height: int,
-                         step_price: int) -> ('Address', int, int):
+                         step_price: int) -> (int, int):
         """
         Withdraws deposited ICXs from given id.
         It may be paid the penalty if the expiry has not been met.
@@ -227,7 +227,7 @@ class FeeEngine:
         :param deposit_id: deposit id, should be tx hash of deposit transaction
         :param block_height: current block height
         :param step_price: step price
-        :return: score_address, returning amount of icx, penalty amount of icx
+        :return: returning amount of icx, penalty amount of icx
         """
         # [Sub Task]
         # - Checks if the contract term has expired
@@ -261,7 +261,7 @@ class FeeEngine:
 
         self._delete_deposit(context, deposit, block_height)
 
-        return deposit.score_address, withdrawal_amount, penalty
+        return withdrawal_amount, penalty
 
     def _delete_deposit(self, context: 'IconScoreContext', deposit: 'Deposit', block_height: int) -> None:
         """
@@ -777,8 +777,10 @@ class DepositHandler:
         WITHDRAW = 1
 
     SIGNATURE_AND_INDEX = (
-        ('DepositAdded(bytes,Address,Address,int,int)', 3),
-        ('DepositWithdrawn(bytes,Address,Address,int,int)', 3)
+        # DepositAdded(id: bytes, from_: Address, amount: int, term: int)
+        ('DepositAdded(bytes,Address,int,int)', 2),
+        # DepositWithdrawn(id: bytes, from_: Address, returnAmount: int, penalty: int)
+        ('DepositWithdrawn(bytes,Address,int,int)', 2)
     )
 
     @staticmethod
@@ -814,16 +816,16 @@ class DepositHandler:
         self._fee_engine.add_deposit(context, context.tx.hash, context.msg.sender, context.tx.to,
                                      context.msg.value, context.block.height, term)
 
-        event_log_args = [context.tx.hash, context.tx.to, context.msg.sender, context.msg.value, term]
+        event_log_args = [context.tx.hash, context.msg.sender, context.msg.value, term]
         self._emit_event(context, DepositHandler.EventType.DEPOSIT, event_log_args)
 
     def _withdraw_deposit(self, context: 'IconScoreContext', deposit_id: bytes):
         if context.msg.value != 0:
             raise InvalidRequestException(f'Invalid value: must be zero')
-        score_address, withdrawal_amount, penalty = self._fee_engine.withdraw_deposit(
+        withdrawal_amount, penalty = self._fee_engine.withdraw_deposit(
             context, context.msg.sender, deposit_id, context.block.height, context.step_counter.step_price)
 
-        event_log_args = [deposit_id, score_address, context.msg.sender, withdrawal_amount, penalty]
+        event_log_args = [deposit_id, context.msg.sender, withdrawal_amount, penalty]
         self._emit_event(context, DepositHandler.EventType.WITHDRAW, event_log_args)
 
     @staticmethod
