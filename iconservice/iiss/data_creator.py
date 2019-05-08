@@ -18,13 +18,13 @@ from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
 
-from .msg_data import Header, GovernanceVariable, PrepsData, TxData, \
+from .msg_data import Header, GovernanceVariable, PRepsData, TxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 
 if TYPE_CHECKING:
     from ..base.address import Address
     from .msg_data import Tx
-    from ..prep.prep_variable.prep_variable_storage import PRep
+    from ..prep.variable.variable_storage import PRep
 
 
 class DataCreator:
@@ -56,7 +56,7 @@ class DataCreator:
         return data
 
     @staticmethod
-    def create_prep_data(block_height: int, total_delegation: int, preps: List['PRep']) -> 'PrepsData':
+    def create_prep_data(block_height: int, total_delegation: int, preps: List['PRep']) -> 'PRepsData':
 
         converted_preps: List['DelegationInfo'] = []
         for prep in preps:
@@ -64,7 +64,7 @@ class DataCreator:
             info = DataCreator.create_delegation_info(prep.address, prep.total_delegated)
             converted_preps.append(info)
 
-        data = PrepsData()
+        data = PRepsData()
         data.block_height: int = block_height
         data.total_delegation: int = total_delegation
         data.prep_list: List['DelegationInfo'] = converted_preps

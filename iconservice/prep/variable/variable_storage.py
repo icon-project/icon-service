@@ -14,8 +14,8 @@
 
 from typing import TYPE_CHECKING, Optional, List
 
-from ...utils.msgpack_for_db import MsgPackForDB
 from ...base.type_converter_templates import ConstantKeys
+from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
     from ...database.db import ContextDatabase
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ...base.address import Address
 
 
-class PRepVariableStorage(object):
+class VariableStorage(object):
     PREFIX: bytes = b'prep'
     GOVERNANCE_VARIABLE_KEY: bytes = PREFIX + b'gv'
     PREPS_KEY: bytes = PREFIX + b'preps'

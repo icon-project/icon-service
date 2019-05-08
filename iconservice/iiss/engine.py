@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
     from ..database.db import ContextDatabase
     from iconcommons import IconConfig
-    from ..prep.prep_variable.prep_variable_storage import GovernanceVariable
+    from ..prep.variable.variable_storage import GovernanceVariable
 
     from ..base.address import Address
     from .msg_data import PRepRegisterTx, TxData

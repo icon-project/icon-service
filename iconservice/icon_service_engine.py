@@ -52,8 +52,8 @@ from .icx.icx_storage import IcxStorage
 from .icx.issue_data_checker import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
-from .prep.prep_candidate_batch import PRepCandidateBatch
-from .prep.prep_candidate_engine import PRepCandidateEngine
+from .prep.candidate_batch import CandidateBatch
+from .prep.candidate_engine import CandidateEngine
 from .utils import sha3_256, int_to_bytes, is_flags_on
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
@@ -83,7 +83,7 @@ class IconServiceEngine(ContextContainer):
         self._step_counter_factory = None
         self._icon_pre_validator = None
         self._iiss_engine: 'IISSEngine' = None
-        self._prep_candidate_engine: 'PRepCandidateEngine' = None
+        self._prep_candidate_engine: 'CandidateEngine' = None
         self._icx_issue_engine: 'IcxIssueEngine' = None
 
         # JSON-RPC handlers
@@ -136,7 +136,7 @@ class IconServiceEngine(ContextContainer):
             IconPreValidator(self._icx_engine, icon_score_deploy_storage)
 
         self._iiss_engine = IISSEngine()
-        self._prep_candidate_engine: 'PRepCandidateEngine' = PRepCandidateEngine()
+        self._prep_candidate_engine: 'CandidateEngine' = CandidateEngine()
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
@@ -146,7 +146,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
         IconScoreContext.iiss_engine: 'IISSEngine' = self._iiss_engine
-        IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
+        IconScoreContext.prep_candidate_engine: 'CandidateEngine' = self._prep_candidate_engine
 
         self._icx_engine.open(self._icx_storage)
         self._icx_issue_engine.open(self._icx_storage)
@@ -156,7 +156,7 @@ class IconServiceEngine(ContextContainer):
         IISSEngine.icx_storage: 'IcxStorage' = self._icx_storage
         self._iiss_engine.open(context, conf, self._icx_context_db)
 
-        PRepCandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage
+        CandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage
         self._prep_candidate_engine.open(context, conf, self._icx_context_db)
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
@@ -341,8 +341,8 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.prep_candidate_tx_batch = PRepCandidateBatch()
-        context.prep_candidate_block_batch = PRepCandidateBatch()
+        context.prep_candidate_tx_batch = CandidateBatch()
+        context.prep_candidate_block_batch = CandidateBatch()
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
