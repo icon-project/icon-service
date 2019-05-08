@@ -21,7 +21,6 @@ from iconcommons import Logger
 
 from .database.db import Database
 from .msg_data import TxData
-from .. import iiss
 from ..base.exception import DatabaseException
 from ..icon_constant import DATA_BYTE_ORDER
 
@@ -37,12 +36,12 @@ class RewardCalcDataStorage(object):
 
     def __init__(self):
         self._path: str = ""
-        self._db: 'iiss.database.db.Database' = None
+        self._db: Optional['Database'] = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
     @property
-    def db(self) -> 'Database':
+    def db(self) -> Optional['Database']:
         return self._db
 
     def open(self, path: str):
@@ -61,7 +60,8 @@ class RewardCalcDataStorage(object):
             self._db.close()
             self._db = None
 
-    def put(self, batch: list, iiss_data: 'Data'):
+    @staticmethod
+    def put(batch: list, iiss_data: 'Data'):
         Logger.debug(f"put data: {str(iiss_data)}", "iiss")
         batch.append(iiss_data)
 
