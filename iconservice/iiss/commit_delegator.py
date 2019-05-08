@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Optional
 from iconcommons import Logger
 
 from iconservice.iiss.icx_issue_formula import IcxIssueFormula
-from .iiss_data_creator import IissDataCreator
+from .data_creator import DataCreator
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -29,16 +29,16 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.prep_variable.prep_variable_storage import GovernanceVariable, PRep
     from .ipc.reward_calc_proxy import RewardCalcProxy
-    from .rc_data_storage import RcDataStorage
-    from .iiss_msg_data import IissHeader, IissBlockProduceInfoData, PrepsData, IissGovernanceVariable
-    from .iiss_variable.iiss_variable import IissVariable
+    from .reward_calc_data_storage import RewardCalcDataStorage
+    from .msg_data import Header, BlockProduceInfoData, PrepsData, GovernanceVariable
+    from .variable.variable import Variable
 
 
 class CommitDelegator(object):
     icx_storage: 'IcxStorage' = None
     reward_calc_proxy: 'RewardCalcProxy' = None
-    rc_storage: 'RcDataStorage' = None
-    variable: 'IissVariable' = None
+    rc_storage: 'RewardCalcDataStorage' = None
+    variable: 'Variable' = None
 
     @classmethod
     def genesis_update_db(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
@@ -100,7 +100,7 @@ class CommitDelegator(object):
 
     @classmethod
     def _put_header_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        data: 'IissHeader' = IissDataCreator.create_header(0, precommit_data.block.height)
+        data: 'Header' = DataCreator.create_header(0, precommit_data.block.height)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -119,9 +119,9 @@ class CommitDelegator(object):
         calculated_incentive_rep: int = IcxIssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
         cls.variable.issue.put_reward_rep(context, reward_rep)
 
-        data: 'IissGovernanceVariable' = IissDataCreator.create_gv_variable(precommit_data.block.height,
-                                                                            calculated_incentive_rep,
-                                                                            reward_rep)
+        data: 'GovernanceVariable' = DataCreator.create_gv_variable(precommit_data.block.height,
+                                                                    calculated_incentive_rep,
+                                                                    reward_rep)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -136,9 +136,9 @@ class CommitDelegator(object):
             return
 
         Logger.debug(f"put_block_produce_info_for_rc", "iiss")
-        data: 'IissBlockProduceInfoData' = IissDataCreator.create_block_produce_info_data(precommit_data.block.height,
-                                                                                          generator,
-                                                                                          validators)
+        data: 'BlockProduceInfoData' = DataCreator.create_block_produce_info_data(precommit_data.block.height,
+                                                                                  generator,
+                                                                                  validators)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -157,7 +157,7 @@ class CommitDelegator(object):
 
         Logger.debug(f"put_preps_for_rc: total_candidate_delegated{total_candidate_delegated}", "iiss")
 
-        data: 'PrepsData' = IissDataCreator.create_prep_data(precommit_data.block.height,
-                                                             total_candidate_delegated,
-                                                             preps)
+        data: 'PrepsData' = DataCreator.create_prep_data(precommit_data.block.height,
+                                                         total_candidate_delegated,
+                                                         preps)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)

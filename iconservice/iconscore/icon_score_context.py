@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from ..prep.prep_candidate_batch import PRepCandidateBatch
     from ..prep.prep_candidate_engine import PRepCandidateEngine
-    from ..iiss.iiss_engine import IissEngine
+    from ..iiss.engine import Engine
 
 _thread_local_data = threading.local()
 
@@ -105,7 +105,7 @@ class IconScoreContext(object):
     icon_service_flag: int = 0
     legacy_tbears_mode = False
 
-    iiss_engine: 'IissEngine' = None
+    iiss_engine: 'Engine' = None
     prep_candidate_engine: 'PRepCandidateEngine' = None
 
     """Contains the useful information to process user's JSON-RPC request

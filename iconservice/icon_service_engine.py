@@ -48,7 +48,7 @@ from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, get_input_data_size, \
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
-from .iiss.iiss_engine import IissEngine
+from .iiss.engine import Engine
 from .prep.prep_candidate_engine import PRepCandidateEngine
 from .prep.prep_candidate_batch import PRepCandidateBatch
 
@@ -83,7 +83,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
-        self._iiss_engine: 'IissEngine' = None
+        self._iiss_engine: 'Engine' = None
         self._prep_candidate_engine: 'PRepCandidateEngine' = None
         self._icx_issue_engine: 'IcxIssueEngine' = None
 
@@ -136,7 +136,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = \
             IconPreValidator(self._icx_engine, icon_score_deploy_storage)
 
-        self._iiss_engine = IissEngine()
+        self._iiss_engine = Engine()
         self._prep_candidate_engine: 'PRepCandidateEngine' = PRepCandidateEngine()
 
         IconScoreClassLoader.init(score_root_path)
@@ -146,7 +146,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
-        IconScoreContext.iiss_engine: 'IissEngine' = self._iiss_engine
+        IconScoreContext.iiss_engine: 'Engine' = self._iiss_engine
         IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
 
         self._icx_engine.open(self._icx_storage)
@@ -154,7 +154,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine.open(icon_score_deploy_storage)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        IissEngine.icx_storage: 'IcxStorage' = self._icx_storage
+        Engine.icx_storage: 'IcxStorage' = self._icx_storage
         self._iiss_engine.open(context, conf, self._icx_context_db)
 
         PRepCandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage

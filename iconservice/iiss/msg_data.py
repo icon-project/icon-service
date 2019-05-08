@@ -18,22 +18,22 @@ from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Any, TYPE_CHECKING, List, Optional
 
+from ..base.exception import InvalidParamsException
 from ..icon_constant import DATA_BYTE_ORDER
 from ..utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
-from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from ..base.address import Address
 
 
-class IissTxType(IntEnum):
+class TxType(IntEnum):
     DELEGATION = 0
     PREP_REGISTER = 1
     PREP_UNREGISTER = 2
     INVALID = 99
 
 
-class IissData(object):
+class Data(object):
     @abstractmethod
     def make_key(self, *args, **kwargs) -> bytes:
         pass
@@ -43,11 +43,11 @@ class IissData(object):
         pass
 
     @staticmethod
-    def from_bytes(*args, **kwargs) -> 'IissData':
+    def from_bytes(*args, **kwargs) -> 'Data':
         pass
 
 
-class IissHeader(IissData):
+class Header(Data):
     _PREFIX = b'HD'
 
     def __init__(self):
@@ -66,9 +66,9 @@ class IissHeader(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(value: bytes) -> 'IissHeader':
+    def from_bytes(value: bytes) -> 'Header':
         data_list: list = MsgPackForIpc.loads(value)
-        obj = IissHeader()
+        obj = Header()
         obj.version: int = data_list[0]
         obj.block_height: int = data_list[1]
         return obj
@@ -78,7 +78,7 @@ class IissHeader(IissData):
             f"version: {self.version}, block_height: {self.block_height}"
 
 
-class IissGovernanceVariable(IissData):
+class GovernanceVariable(Data):
     _PREFIX = b'GV'
 
     def __init__(self):
@@ -101,9 +101,9 @@ class IissGovernanceVariable(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(key: bytes, value: bytes) -> 'IissGovernanceVariable':
+    def from_bytes(key: bytes, value: bytes) -> 'GovernanceVariable':
         data_list: list = MsgPackForIpc.loads(value)
-        obj = IissGovernanceVariable()
+        obj = GovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.calculated_incentive_rep: int = data_list[0]
         obj.reward_rep: int = data_list[1]
@@ -114,7 +114,7 @@ class IissGovernanceVariable(IissData):
             f"key: {self.block_height}, calculated_incentive_rep: {self.calculated_incentive_rep}, reward_rep: {self.reward_rep}"
 
 
-class IissBlockProduceInfoData(IissData):
+class BlockProduceInfoData(Data):
     _PREFIX = b'BP'
 
     def __init__(self):
@@ -137,9 +137,9 @@ class IissBlockProduceInfoData(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(key: bytes, value: bytes) -> 'IissBlockProduceInfoData':
+    def from_bytes(key: bytes, value: bytes) -> 'BlockProduceInfoData':
         data_list: list = MsgPackForIpc.loads(value)
-        obj = IissBlockProduceInfoData()
+        obj = BlockProduceInfoData()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
         obj.block_generator: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
 
@@ -152,7 +152,7 @@ class IissBlockProduceInfoData(IissData):
             f"key: {self.block_height}, block_generator: {str(self.block_generator)}"
 
 
-class PrepsData(IissData):
+class PrepsData(Data):
     _PREFIX = b'PR'
 
     def __init__(self):
@@ -200,26 +200,26 @@ class PrepsData(IissData):
             f"key: {self.block_height}, total_delegation: {str(self.total_delegation)}"
 
 
-class IissTxData(IissData):
+class TxData(Data):
     _PREFIX = b'TX'
 
     def __init__(self):
         self.address: 'Address' = None
         self.block_height: int = 0
-        self.type: 'IissTxType' = IissTxType.INVALID
-        self.data: 'IissTx' = None
+        self.type: 'TxType' = TxType.INVALID
+        self.data: 'Tx' = None
 
     def make_key(self, index: int) -> bytes:
         tx_index: bytes = index.to_bytes(8, byteorder=DATA_BYTE_ORDER)
         return self._PREFIX + tx_index
 
     def make_value(self) -> bytes:
-        tx_type: 'IissTxType' = self.type
-        tx_data: 'IissTx' = self.data
+        tx_type: 'TxType' = self.type
+        tx_data: 'Tx' = self.data
 
-        if isinstance(tx_data, IissTx):
+        if isinstance(tx_data, Tx):
             tx_data_type = tx_data.get_type()
-            if tx_type == IissTxType.INVALID:
+            if tx_type == TxType.INVALID:
                 tx_type = tx_data_type
             elif tx_type != tx_data_type:
                 raise InvalidParamsException(f"Mismatch TxType: {tx_type}")
@@ -236,30 +236,30 @@ class IissTxData(IissData):
         return MsgPackForIpc.dumps(data)
 
     @staticmethod
-    def from_bytes(value: bytes) -> 'IissTxData':
+    def from_bytes(value: bytes) -> 'TxData':
         data_list: list = MsgPackForIpc.loads(value)
-        obj = IissTxData()
+        obj = TxData()
         obj.address: 'Address' = MsgPackForIpc.decode(TypeTag.ADDRESS, data_list[0])
         obj.block_height: int = data_list[1]
-        obj.type: 'IissTxType' = IissTxType(data_list[2])
-        obj.data: 'IissTx' = IissTxData._covert_tx_data(obj.type, data_list[3])
+        obj.type: 'TxType' = TxType(data_list[2])
+        obj.data: 'Tx' = TxData._covert_tx_data(obj.type, data_list[3])
         return obj
 
     @staticmethod
-    def _covert_tx_data(tx_type: 'IissTxType', data: tuple) -> Any:
-        if tx_type == IissTxType.DELEGATION:
+    def _covert_tx_data(tx_type: 'TxType', data: tuple) -> Any:
+        if tx_type == TxType.DELEGATION:
             return DelegationTx.decode(data)
-        elif tx_type == IissTxType.PREP_REGISTER:
+        elif tx_type == TxType.PREP_REGISTER:
             return PRepRegisterTx.decode(data)
-        elif tx_type == IissTxType.PREP_UNREGISTER:
+        elif tx_type == TxType.PREP_UNREGISTER:
             return PRepUnregisterTx.decode(data)
         else:
             raise InvalidParamsException(f"InvalidParams TxType: {tx_type}")
 
 
-class IissTx(object, metaclass=ABCMeta):
+class Tx(object, metaclass=ABCMeta):
     @abstractmethod
-    def get_type(self) -> 'IissTxType':
+    def get_type(self) -> 'TxType':
         pass
 
     @abstractmethod
@@ -272,12 +272,12 @@ class IissTx(object, metaclass=ABCMeta):
         pass
 
 
-class DelegationTx(IissTx):
+class DelegationTx(Tx):
     def __init__(self):
         self.delegation_info: List['DelegationInfo'] = []
 
-    def get_type(self) -> 'IissTxType':
-        return IissTxType.DELEGATION
+    def get_type(self) -> 'TxType':
+        return TxType.DELEGATION
 
     def encode(self) -> tuple:
         data = [x.encode() for x in self.delegation_info]
@@ -307,12 +307,12 @@ class DelegationInfo(object):
         return obj
 
 
-class PRepRegisterTx(IissTx):
+class PRepRegisterTx(Tx):
     def __init__(self):
         pass
 
-    def get_type(self) -> 'IissTxType':
-        return IissTxType.PREP_REGISTER
+    def get_type(self) -> 'TxType':
+        return TxType.PREP_REGISTER
 
     def encode(self) -> tuple:
         return MsgPackForIpc.encode_any(None)
@@ -323,12 +323,12 @@ class PRepRegisterTx(IissTx):
         return obj
 
 
-class PRepUnregisterTx(IissTx):
+class PRepUnregisterTx(Tx):
     def __init__(self):
         pass
 
-    def get_type(self) -> 'IissTxType':
-        return IissTxType.PREP_UNREGISTER
+    def get_type(self) -> 'TxType':
+        return TxType.PREP_UNREGISTER
 
     def encode(self) -> tuple:
         return MsgPackForIpc.encode_any(None)

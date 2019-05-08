@@ -14,30 +14,29 @@
 
 from typing import TYPE_CHECKING
 
+from .common_variable import CommonVariable
+from .issue_variable import IssueVariable
 from ...database.db import ContextDatabase
-
-from .iiss_common_variable import IissCommonVariable
-from .iiss_issue_variable import IissIssueVariable
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
     from iconcommons import IconConfig
 
 
-class IissVariable(object):
+class Variable(object):
 
     def __init__(self, db: 'ContextDatabase'):
-        self._common: 'IissCommonVariable' = IissCommonVariable(db)
-        self._issue: 'IissIssueVariable' = IissIssueVariable(db)
+        self._common: 'CommonVariable' = CommonVariable(db)
+        self._issue: 'IssueVariable' = IssueVariable(db)
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
         self._common.init_config(context, conf)
         self._issue.init_config(context, conf)
 
     @property
-    def common(self) -> 'IissCommonVariable':
+    def common(self) -> 'CommonVariable':
         return self._common
 
     @property
-    def issue(self) -> 'IissIssueVariable':
+    def issue(self) -> 'IssueVariable':
         return self._issue

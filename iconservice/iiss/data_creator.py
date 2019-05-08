@@ -17,19 +17,20 @@
 from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
-from .iiss_msg_data import IissHeader, IissGovernanceVariable, PrepsData, IissTxData, \
-    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, IissBlockProduceInfoData
+
+from .msg_data import Header, GovernanceVariable, PrepsData, TxData, \
+    DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 
 if TYPE_CHECKING:
     from ..base.address import Address
-    from .iiss_msg_data import IissTx
+    from .msg_data import Tx
     from ..prep.prep_variable.prep_variable_storage import PRep
 
 
-class IissDataCreator:
+class DataCreator:
     @staticmethod
-    def create_header(version: int, block_height: int) -> 'IissHeader':
-        data = IissHeader()
+    def create_header(version: int, block_height: int) -> 'Header':
+        data = Header()
         data.version: int = version
         data.block_height: int = block_height
         return data
@@ -37,8 +38,8 @@ class IissDataCreator:
     @staticmethod
     def create_gv_variable(block_height: int,
                            calculated_incentive_rep: int,
-                           reward_rep: int) -> 'IissGovernanceVariable':
-        data = IissGovernanceVariable()
+                           reward_rep: int) -> 'GovernanceVariable':
+        data = GovernanceVariable()
         data.block_height: int = block_height
         data.calculated_incentive_rep: int = calculated_incentive_rep
         data.reward_rep: int = reward_rep
@@ -47,8 +48,8 @@ class IissDataCreator:
     @staticmethod
     def create_block_produce_info_data(block_height: int,
                                        block_generator: 'Address',
-                                       block_validators: List['Address']) -> 'IissBlockProduceInfoData':
-        data = IissBlockProduceInfoData()
+                                       block_validators: List['Address']) -> 'BlockProduceInfoData':
+        data = BlockProduceInfoData()
         data.block_height: int = block_height
         data.block_generator: 'Address' = block_generator
         data.block_validator_list: list = block_validators
@@ -60,7 +61,7 @@ class IissDataCreator:
         converted_preps: List['DelegationInfo'] = []
         for prep in preps:
             Logger.debug(f"create_prep_data: {str(prep.address)}", "iiss")
-            info = IissDataCreator.create_delegation_info(prep.address, prep.total_delegated)
+            info = DataCreator.create_delegation_info(prep.address, prep.total_delegated)
             converted_preps.append(info)
 
         data = PrepsData()
@@ -70,11 +71,11 @@ class IissDataCreator:
         return data
 
     @staticmethod
-    def create_tx(address: 'Address', block_height: int, tx_data: 'IissTx') -> 'IissTxData':
-        data = IissTxData()
+    def create_tx(address: 'Address', block_height: int, tx_data: 'Tx') -> 'TxData':
+        data = TxData()
         data.address: 'Address' = address
         data.block_height: int = block_height
-        data.data: 'IissTx' = tx_data
+        data.data: 'Tx' = tx_data
         return data
 
     @staticmethod
