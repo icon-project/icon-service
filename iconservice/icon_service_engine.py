@@ -18,11 +18,8 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from .icx.icx_issue_engine import IcxIssueEngine
-from .icx.issue_data_checker import IssueDataValidator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from .iconscore.icon_score_event_log import EventLog
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
     AccessDeniedException, IconScoreException, InvalidParamsException
@@ -42,19 +39,21 @@ from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, C
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_event_log import EventLog
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
 from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, get_input_data_size, \
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
-from .iiss.iiss_engine import IissEngine
-from .prep.prep_candidate_engine import PRepCandidateEngine
-from .prep.prep_candidate_batch import PRepCandidateBatch
-
 from .icx.icx_engine import IcxEngine
+from .icx.icx_issue_engine import IcxIssueEngine
 from .icx.icx_storage import IcxStorage
+from .icx.issue_data_checker import IssueDataValidator
+from .iiss.engine import Engine as IISSEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
+from .prep.prep_candidate_batch import PRepCandidateBatch
+from .prep.prep_candidate_engine import PRepCandidateEngine
 from .utils import sha3_256, int_to_bytes, is_flags_on
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
@@ -83,7 +82,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
-        self._iiss_engine: 'IissEngine' = None
+        self._iiss_engine: 'IISSEngine' = None
         self._prep_candidate_engine: 'PRepCandidateEngine' = None
         self._icx_issue_engine: 'IcxIssueEngine' = None
 
@@ -136,7 +135,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_pre_validator = \
             IconPreValidator(self._icx_engine, icon_score_deploy_storage)
 
-        self._iiss_engine = IissEngine()
+        self._iiss_engine = IISSEngine()
         self._prep_candidate_engine: 'PRepCandidateEngine' = PRepCandidateEngine()
 
         IconScoreClassLoader.init(score_root_path)
@@ -146,7 +145,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
-        IconScoreContext.iiss_engine: 'IissEngine' = self._iiss_engine
+        IconScoreContext.iiss_engine: 'IISSEngine' = self._iiss_engine
         IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
 
         self._icx_engine.open(self._icx_storage)
@@ -154,7 +153,7 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine.open(icon_score_deploy_storage)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        IissEngine.icx_storage: 'IcxStorage' = self._icx_storage
+        IISSEngine.icx_storage: 'IcxStorage' = self._icx_storage
         self._iiss_engine.open(context, conf, self._icx_context_db)
 
         PRepCandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage

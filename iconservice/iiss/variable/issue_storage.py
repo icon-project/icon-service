@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
 
 
-class IissIssueStorage(object):
+class IssueStorage(object):
     PREFIX: bytes = b'issue'
     REWARD_REP_KEY: bytes = PREFIX + b'rr'
     REWARD_MIN_KEY: bytes = PREFIX + b'rmin'

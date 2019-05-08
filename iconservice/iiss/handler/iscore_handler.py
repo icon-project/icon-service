@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from ...icx.icx_account import Account
     from ...base.address import Address
     from ..ipc.reward_calc_proxy import RewardCalcProxy
-    from ..rc_data_storage import RcDataStorage
-    from ..iiss_variable.iiss_variable import IissVariable
+    from ..reward_calc_data_storage import RewardCalcDataStorage
+    from ..variable.variable import Variable
 
 
 def _iscore_to_icx(iscore: int) -> int:
@@ -39,8 +39,8 @@ def _iscore_to_icx(iscore: int) -> int:
 class IScoreHandler:
     icx_storage: 'IcxStorage' = None
     reward_calc_proxy: 'RewardCalcProxy' = None
-    rc_storage: 'RcDataStorage' = None
-    variable: 'IissVariable' = None
+    rc_storage: 'RewardCalcDataStorage' = None
+    variable: 'Variable' = None
 
     @classmethod
     def handle_claim_iscore(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):

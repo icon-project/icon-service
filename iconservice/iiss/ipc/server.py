@@ -17,11 +17,11 @@ import asyncio
 from asyncio import StreamReader, StreamWriter
 from typing import Optional
 
+from iconcommons import Logger
+
 from .message import MessageType, Request, NoneRequest, NoneResponse, VersionResponse
 from .message_queue import MessageQueue
 from .message_unpacker import MessageUnpacker
-
-from iconcommons import Logger
 
 
 class IPCServer(object):
