@@ -25,7 +25,7 @@ from .ipc.reward_calc_proxy import RewardCalcProxy
 from .reward_calc_data_storage import RewardCalcDataStorage
 from .variable.variable import Variable
 from ..icon_constant import ConfigKey, IISS_SOCKET_PATH
-from ..iiss.icx_issue_formula import IcxIssueFormula
+from ..iiss.icx_issue_formula import IssueFormula
 from ..iiss.msg_data import PRepUnregisterTx
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class Engine:
         self._reward_calc_proxy: 'RewardCalcProxy' = None
         self._rc_storage: 'RewardCalcDataStorage' = None
         self._variable: 'Variable' = None
-        self._formula: 'IcxIssueFormula' = None
+        self._formula: 'IssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
         self._init_reward_calc_proxy()
@@ -73,7 +73,7 @@ class Engine:
 
         self._init_commit_delegator()
         # todo: formula 가 min, max l point값을 가지고 있는게 좋을까?
-        self._formula = IcxIssueFormula()
+        self._formula = IssueFormula()
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)

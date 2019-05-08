@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from iconcommons import Logger
 
-from iconservice.iiss.icx_issue_formula import IcxIssueFormula
+from iconservice.iiss.icx_issue_formula import IssueFormula
 from .data_creator import DataCreator
 from ..base.exception import InvalidParamsException
 
@@ -112,11 +112,11 @@ class CommitDelegator(object):
         # todo: after demo, should consider about record these variable to formula (i.e. record in memory)
         r_min = cls.variable.issue.get_reward_min(context)
         r_max = cls.variable.issue.get_reward_max(context)
-        l_point = cls.variable.issue.get_liner_point(context)
-        reward_rep: int = IcxIssueFormula.calculate_r_rep(r_min, r_max, l_point,
-                                                          current_total_supply,
-                                                          current_total_candidate_delegated)
-        calculated_incentive_rep: int = IcxIssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
+        r_point = cls.variable.issue.get_reward_point(context)
+        reward_rep: int = IssueFormula.calculate_r_rep(r_min, r_max, r_point,
+                                                       current_total_supply,
+                                                       current_total_candidate_delegated)
+        calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
         cls.variable.issue.put_reward_rep(context, reward_rep)
 
         data: 'GovernanceVariable' = DataCreator.create_gv_variable(precommit_data.block.height,

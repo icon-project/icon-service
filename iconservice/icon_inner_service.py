@@ -83,7 +83,7 @@ class IconScoreInnerTask(object):
         try:
             value = self._icon_service_engine.query(query_method_name, {})
             response = MakeResponse.make_response(value)
-        # todo: add except after implement formular method
+        # todo: add except after implement formula method
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))

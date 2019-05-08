@@ -16,13 +16,13 @@
 
 """IconScoreEngine testcase
 """
-from copy import deepcopy, copy
+from copy import deepcopy
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import IconServiceBaseException, IllegalFormatException
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER
-from tests import create_tx_hash, create_address
-from tests.integrate_test import create_timestamp
+from iconservice.icon_config import default_icon_config
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey
+from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -48,36 +48,16 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
     def setUp(self):
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
+        default_icon_config[ConfigKey.GOVERNANCE_VARIABLE]["incentiveRep"] = 100_000_000
         super().setUp()
         self._update_governance()
         self._set_revision(5)
-        self.prep = {
-            "incentive": 1,
-            "rewardRate": 1,
-            "totalDelegation": 1,
-            "value": 1
 
-        }
-        self.eep = {
-            "incentive": 2,
-            "rewardRate": 2,
-            "totalDelegation": 2,
-            "value": 2
-
-        }
-        self.dapp = {
-            "incentive": 3,
-            "rewardRate": 3,
-            "totalDelegation": 3,
-            "value": 3
-        }
-        self.issue_data_in_tx = {
-            "prep": self.prep,
-            "eep": self.eep,
-            "dapp": self.dapp
-        }
-
-        self.icx_issue_value = self.prep['value'] + self.eep['value'] + self.dapp['value']
+        # todo: if get_issue_info is redundant, should fix this method
+        self.issue_data = self.icon_service_engine.query("iiss_get_issue_info", {})
+        self.total_issue_amount = 0
+        for _, group_dict in self.issue_data.items():
+            self.total_issue_amount += group_dict["value"]
 
     def test_validate_issue_transaction_position(self):
         # failure case: when first transaction is not a issue transaction, should raise error
@@ -90,14 +70,14 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # but 2nd is a issue transaction, should raise error
         invalid_tx_list = [
             self._make_dummy_tx(),
-            self._make_issue_tx(self.issue_data_in_tx)
+            self._make_issue_tx(self.issue_data)
         ]
         self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
-            self._make_issue_tx(self.issue_data_in_tx),
-            self._make_issue_tx(self.issue_data_in_tx)
+            self._make_issue_tx(self.issue_data),
+            self._make_issue_tx(self.issue_data)
         ]
         self.assertRaises(KeyError, self._make_and_req_block, invalid_tx_list)
 
@@ -114,8 +94,8 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # stateDB, should raise error
 
         # less than
-        copied_issue_data = deepcopy(self.issue_data_in_tx)
-        for group_key in self.issue_data_in_tx.keys():
+        copied_issue_data = deepcopy(self.issue_data)
+        for group_key in self.issue_data.keys():
             temp = copied_issue_data[group_key]
             del copied_issue_data[group_key]
             tx_list = [
@@ -127,7 +107,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             copied_issue_data[group_key] = temp
 
         # more than
-        copied_issue_data = deepcopy(self.issue_data_in_tx)
+        copied_issue_data = deepcopy(self.issue_data)
         copied_issue_data['dummy_key'] = {}
         tx_list = [
             self._make_issue_tx(copied_issue_data),
@@ -140,7 +120,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # with stateDB (except value), should raise error
 
         # more than
-        copied_issue_data = deepcopy(self.issue_data_in_tx)
+        copied_issue_data = deepcopy(self.issue_data)
         for _, data in copied_issue_data.items():
             data['dummy_key'] = ""
             tx_list = [
@@ -152,9 +132,9 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             del data['dummy_key']
 
         # less than
-        copied_issue_data = deepcopy(self.issue_data_in_tx)
+        copied_issue_data = deepcopy(self.issue_data)
         for group, data in copied_issue_data.items():
-            for key in self.issue_data_in_tx[group].keys():
+            for key in self.issue_data[group].keys():
                 temp = data[key]
                 del data[key]
                 tx_list = [
@@ -168,7 +148,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
     def test_validate_issue_transaction_value(self):
         # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with
         # stateDB, transaction result should be failure
-        copied_issue_data = deepcopy(self.issue_data_in_tx)
+        copied_issue_data = deepcopy(self.issue_data)
         invalid_value = 999999999999999999
 
         expected_tx_status = 0
@@ -177,7 +157,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         expected_step_price = 0
         expected_step_used = 0
         for group, data in copied_issue_data.items():
-            for key in self.issue_data_in_tx[group].keys():
+            for key in self.issue_data[group].keys():
                 temp = data[key]
                 data[key] = invalid_value
                 tx_list = [
@@ -198,7 +178,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
         tx_list = [
-            self._make_issue_tx(self.issue_data_in_tx),
+            self._make_issue_tx(self.issue_data),
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
@@ -214,9 +194,11 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self.assertEqual(expected_trace, tx_results[0].traces)
 
         for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
+            if group_key not in self.issue_data:
+                continue
             expected_score_address = ZERO_SCORE_ADDRESS
             expected_indexed = ISSUE_EVENT_LOG_MAPPER[group_key]['indexed']
-            expected_data = [self.issue_data_in_tx[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
+            expected_data = [self.issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
             self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
@@ -224,5 +206,5 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         after_total_supply = self._query({}, "icx_getTotalSupply")
         after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
-        self.assertEqual(before_total_supply + self.icx_issue_value, after_total_supply)
-        self.assertEqual(before_treasury_icx_amount + self.icx_issue_value, after_treasury_icx_amount)
+        self.assertEqual(before_total_supply + self.total_issue_amount, after_total_supply)
+        self.assertEqual(before_treasury_icx_amount + self.total_issue_amount, after_treasury_icx_amount)
