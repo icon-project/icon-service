@@ -18,9 +18,9 @@ import os
 import unittest
 from unittest.mock import patch
 
-from iconservice.iiss.iiss_data_creator import *
-from iconservice.iiss.iiss_msg_data import IissTxType
-from iconservice.iiss.rc_data_storage import RcDataStorage
+from iconservice.iiss.data_creator import *
+from iconservice.iiss.msg_data import TxType
+from iconservice.iiss.reward_calc_data_storage import RewardCalcDataStorage
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
 from tests.mock_db import MockPlyvelDB
@@ -32,29 +32,29 @@ class TestRcDataStorage(unittest.TestCase):
     def setUp(self, _, mocked_iiss_db_from_path) -> None:
         self.path = ""
         mocked_iiss_db_from_path.side_effect = MockIissDataBase.from_path
-        self.rc_data_storage = RcDataStorage()
+        self.rc_data_storage = RewardCalcDataStorage()
         self.rc_data_storage.open(self.path)
 
         dummy_block_height = 1
 
-        self.dummy_header = IissHeader()
+        self.dummy_header = Header()
         self.dummy_header.block_height = dummy_block_height
         self.dummy_header.version = 1
 
-        self.dummy_gv = IissGovernanceVariable()
+        self.dummy_gv = GovernanceVariable()
         self.dummy_gv.block_height = dummy_block_height
         self.dummy_gv.icx_price = 1
         self.dummy_gv.incentive_rep = 10
 
-        self.dummy_prep = PrepsData()
+        self.dummy_prep = PRepsData()
         self.dummy_prep.block_height = dummy_block_height
         self.dummy_prep.block_generator = create_address()
         self.dummy_prep.block_validator_list = [create_address()]
 
-        self.dummy_tx = IissTxData()
+        self.dummy_tx = TxData()
         self.dummy_tx.address = create_address()
         self.dummy_tx.block_height = dummy_block_height
-        self.dummy_tx.type = IissTxType.PREP_REGISTER
+        self.dummy_tx.type = TxType.PREP_REGISTER
         self.dummy_tx.data = PRepRegisterTx()
 
     def tearDown(self):
@@ -65,10 +65,10 @@ class TestRcDataStorage(unittest.TestCase):
     def test_open(self, mocked_path_exists, mocked_iiss_db_from_path):
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
-        rc_data_storage = RcDataStorage()
+        rc_data_storage = RewardCalcDataStorage()
         test_db_path: str = os.path.join(os.getcwd(), ".storage_test_db")
 
-        expected_current_db_path = os.path.join(test_db_path, RcDataStorage._CURRENT_IISS_DB_NAME)
+        expected_current_db_path = os.path.join(test_db_path, RewardCalcDataStorage._CURRENT_IISS_DB_NAME)
 
         def from_path(path: str,
                       create_if_missing: bool = True) -> 'MockIissDataBase':
@@ -119,7 +119,7 @@ class TestRcDataStorage(unittest.TestCase):
     def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_iiss_db_from_path):
         # success case: when input valid block height, should create iiss_db and return path
         mocked_iiss_db_from_path.side_effect = MockIissDataBase.from_path
-        current_db_path = os.path.join(self.path, RcDataStorage._CURRENT_IISS_DB_NAME)
+        current_db_path = os.path.join(self.path, RewardCalcDataStorage._CURRENT_IISS_DB_NAME)
 
         # todo: to be refactored
         def path_exists(path):
@@ -131,7 +131,7 @@ class TestRcDataStorage(unittest.TestCase):
 
         valid_block_height = 1
         expected_iiss_db_path = os.path.join(self.path,
-                                             RcDataStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
+                                             RewardCalcDataStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
         actual_ret_path = self.rc_data_storage.create_db_for_calc(valid_block_height)
         self.assertEqual(expected_iiss_db_path, actual_ret_path)
 

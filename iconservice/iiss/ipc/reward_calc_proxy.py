@@ -19,11 +19,12 @@ import asyncio
 import concurrent.futures
 from typing import Optional
 
+from iconcommons.logger import Logger
+
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
 from ...base.address import Address
-from iconcommons.logger import Logger
 
 _TAG = "RCP"
 

@@ -25,7 +25,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_inner_service import IconScoreInnerTask
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iiss.database.iiss_db import IissDatabase
+from iconservice.iiss.database.db import Database
 from tests import create_block_hash, rmtree
 
 SERVICE_ENGINE_PATH = 'iconservice.icon_service_engine.IconServiceEngine'
@@ -33,9 +33,9 @@ ICX_ENGINE_PATH = 'iconservice.icx.icx_engine.IcxEngine'
 DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, value, data_type, data")
 QueryData = namedtuple("QueryData", "from_, to_, data_type, data")
-IISS_DB_PATH = 'iconservice.iiss.database.iiss_db'
-IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.rc_data_storage'
-IISS_VARIABLE_PATH = 'iconservice.iiss.iiss_variable.iiss_variable'
+IISS_DB_PATH = 'iconservice.iiss.database.db'
+IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.reward_calc_data_storage'
+IISS_VARIABLE_PATH = 'iconservice.iiss.variable.variable'
 PREP_VARIABLE_PATH = 'iconservice.prep.prep_variable.prep_variable'
 
 
@@ -54,9 +54,9 @@ def generate_inner_task(revision=0):
 @patch(f'{SERVICE_ENGINE_PATH}._load_prep_candidate')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
-@patch(f'{IISS_RC_DATA_STORAGE_PATH}.RcDataStorage._load_last_transaction_index')
-@patch(f'{IISS_VARIABLE_PATH}.IissVariable.init_config')
+@patch(f'{IISS_DB_PATH}.Database.from_path')
+@patch(f'{IISS_RC_DATA_STORAGE_PATH}.RewardCalcDataStorage._load_last_transaction_index')
+@patch(f'{IISS_VARIABLE_PATH}.Variable.init_config')
 @patch(f'{PREP_VARIABLE_PATH}.PRepVariable.init_config')
 def _create_inner_task(
         prep_init_config,
@@ -87,7 +87,7 @@ def _create_inner_task(
     context_db.get = state_get
     context_db.put = state_put
 
-    iiss_db = Mock(spec=IissDatabase)
+    iiss_db = Mock(spec=Database)
     iiss_db.get = iiss_get
     iiss_db.put = iiss_put
 
@@ -129,8 +129,8 @@ def generate_service_engine(revision=0):
 @patch(f'{SERVICE_ENGINE_PATH}._load_prep_candidate')
 @patch(f'{ICX_ENGINE_PATH}.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{IISS_DB_PATH}.IissDatabase.from_path')
-@patch(f'{IISS_VARIABLE_PATH}.IissVariable.init_config')
+@patch(f'{IISS_DB_PATH}.Database.from_path')
+@patch(f'{IISS_VARIABLE_PATH}.Variable.init_config')
 @patch(f'{PREP_VARIABLE_PATH}.PRepVariable.init_config')
 def _create_service_engine(
         prep_init_config,
