@@ -21,7 +21,7 @@ class IcxIssueFormula(object):
 
     def __new__(cls, *args, **kwargs):
         if not isinstance(cls._instance, cls):
-            cls._instance = object.__new__(cls, *args, **kwargs)
+            cls._instance = super().__new__(cls, *args, **kwargs)
 
         return cls._instance
 
@@ -36,33 +36,34 @@ class IcxIssueFormula(object):
 
     def calculate(self, group: str, data: dict) -> int:
         handler = self._handler[group]
-        value = handler(data)
+        value = handler(incentive=data["incentive"],
+                        reward_rate=data["rewardRate"],
+                        total_delegation=data["totalDelegation"])
         return value
 
     @staticmethod
     def calculate_r_rep(r_min, r_max, l_point, total_supply, total_delegated):
         stake_percentage = int(total_delegated / total_supply * IISS_MAX_REWARD_RATE)
 
-        left = (r_max - r_min) / pow(l_point, 2)
-        right = pow(stake_percentage - l_point, 2)
+        left_operand = (r_max - r_min) / pow(l_point, 2)
+        right_operand = pow(stake_percentage - l_point, 2)
 
-        return int(left * right + r_min)
+        return int(left_operand * right_operand + r_min)
 
     @staticmethod
     def calculate_i_rep_per_block_contributor(i_rep):
         return int(i_rep * 0.5 * IISS_MONTH / IISS_ANNUAL_BLOCK)
 
-    def _handle_icx_issue_formula_for_prep(self, data: dict) -> int:
-        calculated_i_rep = self.calculate_i_rep_per_block_contributor(data["incentive"])
+    def _handle_icx_issue_formula_for_prep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
+        calculated_i_rep = self.calculate_i_rep_per_block_contributor(incentive)
         beta_1 = calculated_i_rep * self._prep_count
         beta_2 = calculated_i_rep * self._sub_prep_count
-        beta_3 = data["rewardRate"] * data["totalDelegation"] // IISS_ANNUAL_BLOCK
+        beta_3 = reward_rate * total_delegation // IISS_ANNUAL_BLOCK
         return beta_1 + beta_2 + beta_3
 
-    @staticmethod
-    def _handle_icx_issue_formula_for_eep(data: dict) -> int:
+    def _handle_icx_issue_formula_for_eep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
         return 2
 
-    @staticmethod
-    def _handle_icx_issue_formula_for_dapp(data: dict) -> int:
+    def _handle_icx_issue_formula_for_dapp(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
         return 3
+
