@@ -21,7 +21,8 @@ if TYPE_CHECKING:
 
 
 class Transaction(object):
-    """Contains transaction info
+    """
+    Holds information of the transaction
     """
 
     def __init__(self,
