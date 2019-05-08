@@ -14,8 +14,8 @@
 
 from typing import TYPE_CHECKING, Optional
 
+from .issue_storage import IssueStorage
 from ...icon_constant import ConfigKey, IISS_MAX_REWARD_RATE
-from .iiss_issue_storage import IissIssueStorage
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
@@ -23,10 +23,10 @@ if TYPE_CHECKING:
     from iconcommons import IconConfig
 
 
-class IissIssueVariable(object):
+class IssueVariable(object):
 
     def __init__(self, db: 'ContextDatabase'):
-        self._storage: 'IissIssueStorage' = IissIssueStorage(db)
+        self._storage: 'IssueStorage' = IssueStorage(db)
 
     @staticmethod
     def check_config_before_init(reward_variable: dict):

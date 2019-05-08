@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
 
 
-class IissCommonStorage(object):
+class CommonStorage(object):
     PREFIX: bytes = b'common'
     UNSTAKE_LOCK_PERIOD_KEY: bytes = PREFIX + b'ulp'
 
