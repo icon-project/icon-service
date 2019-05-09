@@ -18,12 +18,12 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
+from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import IconScoreContextType, IconScoreFuncType
-from .icon_score_trace import Trace
 
 if TYPE_CHECKING:
     from ..base.address import Address

@@ -39,7 +39,6 @@ from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, C
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore.icon_score_event_log import EventLog
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
