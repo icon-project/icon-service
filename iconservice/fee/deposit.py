@@ -153,6 +153,18 @@ class Deposit(object):
         """
         return not self.__eq__(other)
 
+    def consume_virtual_step(self, step: int):
+        """
+        Consume the given step from the virtual step
+        """
+        self.virtual_step_used += step
+
+    def consume_deposit(self, icx: int):
+        """
+        Consume the given icx from the deposit
+        """
+        self.deposit_used += icx
+
     @property
     def remaining_virtual_step(self):
         """

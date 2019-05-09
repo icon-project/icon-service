@@ -36,6 +36,12 @@ if typing.TYPE_CHECKING:
     from ..icx.icx_storage import IcxStorage
 
 
+FIXED_TERM = True
+FIXED_RATIO_PER_MONTH = '0.08'
+BLOCKS_IN_ONE_MONTH = 1_296_000
+ICX_IN_LOOP = 10 ** 18
+
+
 class DepositInfo:
     """
     Deposit information of a SCORE
@@ -80,10 +86,10 @@ class FeeEngine:
     - Business logic (inc. Calculation)
     """
 
-    _MAX_DEPOSIT_AMOUNT = 100_000 * 10 ** 18
-    _MIN_DEPOSIT_AMOUNT = 5_000 * 10 ** 18
-    _MAX_DEPOSIT_TERM = 31_104_000
-    _MIN_DEPOSIT_TERM = 1_296_000
+    _MIN_DEPOSIT_AMOUNT = 5_000 * ICX_IN_LOOP
+    _MAX_DEPOSIT_AMOUNT = 100_000 * ICX_IN_LOOP
+    _MIN_DEPOSIT_TERM = BLOCKS_IN_ONE_MONTH
+    _MAX_DEPOSIT_TERM = _MIN_DEPOSIT_TERM if FIXED_TERM else BLOCKS_IN_ONE_MONTH * 24
 
     def __init__(self,
                  deploy_storage: 'IconScoreDeployStorage',
@@ -156,7 +162,8 @@ class FeeEngine:
         # - Calculates Virtual Step
         # - Updates Deposit Data
 
-        if not (self._MIN_DEPOSIT_AMOUNT <= amount <= self._MAX_DEPOSIT_AMOUNT):
+        if (FIXED_TERM and amount < self._MIN_DEPOSIT_AMOUNT) \
+                or not (self._MIN_DEPOSIT_AMOUNT <= amount <= self._MAX_DEPOSIT_AMOUNT):
             raise InvalidRequestException('Invalid deposit amount')
 
         if not (self._MIN_DEPOSIT_TERM <= term <= self._MAX_DEPOSIT_TERM):
@@ -172,8 +179,10 @@ class FeeEngine:
         deposit = Deposit(tx_hash, score_address, sender, amount)
         deposit.created = block_height
         deposit.expires = block_height + term
+
+        step_price = context.step_counter.step_price
         deposit.virtual_step_issued = \
-            VirtualStepCalculator.calculate_virtual_step(amount, term)
+            VirtualStepCalculator.calculate_virtual_step(amount, term, step_price)
 
         self._append_deposit(context, deposit)
 
@@ -216,8 +225,7 @@ class FeeEngine:
                          context: 'IconScoreContext',
                          sender: 'Address',
                          deposit_id: bytes,
-                         block_height: int,
-                         step_price: int) -> (int, int):
+                         block_height: int) -> (int, int):
         """
         Withdraws deposited ICXs from given id.
         It may be paid the penalty if the expiry has not been met.
@@ -226,7 +234,6 @@ class FeeEngine:
         :param sender: msg sender address
         :param deposit_id: deposit id, should be tx hash of deposit transaction
         :param block_height: current block height
-        :param step_price: step price
         :return: returning amount of icx, penalty amount of icx
         """
         # [Sub Task]
@@ -238,9 +245,11 @@ class FeeEngine:
 
         if deposit.sender != sender:
             raise InvalidRequestException('Invalid sender')
+        if deposit.score_address != context.tx.to:
+            raise InvalidRequestException('Invalid SCORE address')
 
-        penalty = self._calculate_penalty(
-            deposit, deposit.created, deposit.expires, block_height, step_price)
+        step_price = context.step_counter.step_price
+        penalty = self._calculate_penalty(deposit, block_height, step_price)
 
         withdrawal_amount = deposit.remaining_deposit - penalty
 
@@ -340,7 +349,6 @@ class FeeEngine:
         self._check_deposit_id(deposit_id)
 
         deposit = self._fee_storage.get_deposit(context, deposit_id)
-
         if deposit is None:
             raise InvalidRequestException('Deposit not found')
 
@@ -436,18 +444,16 @@ class FeeEngine:
         deposit_meta = self._fee_storage.get_deposit_meta(context, score_address)
 
         # Amount of STEPs that SCORE will pay
-        score_step = used_step * self._get_fee_sharing_proportion(context, deposit_meta) // 100
+        required_step = used_step * self._get_fee_sharing_proportion(context, deposit_meta) // 100
         score_used_step = 0
 
-        if score_step > 0:
-            charged_step, deposit_meta_changed = self._charge_fee_by_virtual_step(
-                context, deposit_meta, score_step, block_height)
+        if required_step > 0:
+            score_used_step, deposit_meta_changed = self._charge_fee_from_virtual_step(
+                context, deposit_meta, required_step, block_height)
 
-            score_used_step = charged_step
-
-            if charged_step < score_step:
-                required_icx = (score_step - charged_step) * step_price
-                charged_icx, deposit_indices_changed = self._charge_fee_by_deposit(
+            if score_used_step < required_step:
+                required_icx = (required_step - score_used_step) * step_price
+                charged_icx, deposit_indices_changed = self._charge_fee_from_deposit(
                     context, deposit_meta, required_icx, block_height)
 
                 score_used_step += charged_icx // step_price
@@ -459,13 +465,13 @@ class FeeEngine:
 
         return score_used_step
 
-    def _charge_fee_by_virtual_step(self,
-                                    context: 'IconScoreContext',
-                                    deposit_meta: 'DepositMeta',
-                                    required_step: int,
-                                    block_height: int) -> (int, bytes):
+    def _charge_fee_from_virtual_step(self,
+                                      context: 'IconScoreContext',
+                                      deposit_meta: 'DepositMeta',
+                                      required_step: int,
+                                      block_height: int) -> (int, bytes):
         """
-        Charges fees by available virtual STEPs
+        Charges fees from available virtual STEPs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
         """
         charged_step = 0
@@ -487,7 +493,7 @@ class FeeEngine:
                     should_update_expire = True
 
             if step > 0:
-                deposit.virtual_step_used += step
+                deposit.consume_virtual_step(step)
                 self._fee_storage.put_deposit(context, deposit)
                 last_paid_deposit = deposit
 
@@ -519,8 +525,7 @@ class FeeEngine:
             gen = self._deposit_generator(context, last_paid_deposit.next_id)
             next_available_deposit = next(filter(lambda d: block_height < d.expires, gen), None)
 
-        next_available_deposit_id = next_available_deposit.id \
-            if next_available_deposit is not None else None
+        next_available_deposit_id = next_available_deposit.id if next_available_deposit else None
         next_expires = deposit_meta.expires_of_virtual_step
 
         if next_available_deposit_id is None:
@@ -540,13 +545,13 @@ class FeeEngine:
 
         return False
 
-    def _charge_fee_by_deposit(self,
-                               context: 'IconScoreContext',
-                               deposit_meta: 'DepositMeta',
-                               required_icx: int,
-                               block_height: int) -> (int, bool):
+    def _charge_fee_from_deposit(self,
+                                 context: 'IconScoreContext',
+                                 deposit_meta: 'DepositMeta',
+                                 required_icx: int,
+                                 block_height: int) -> (int, bool):
         """
-        Charges fees by available deposit ICXs
+        Charges fees from available deposit ICXs
         Returns total charged amount and whether the properties of 'deposit_meta' are changed
         """
         assert required_icx > 0
@@ -574,7 +579,7 @@ class FeeEngine:
                     should_update_expire = True
 
             if charged_icx > 0:
-                deposit.deposit_used += charged_icx
+                deposit.consume_deposit(charged_icx)
                 self._fee_storage.put_deposit(context, deposit)
                 last_paid_deposit = deposit
 
@@ -583,13 +588,13 @@ class FeeEngine:
                     break
 
         if remaining_required_icx > 0:
-            # Charges all remaining fee regardless minimum remaining amount.
+            # Charges all remaining fee regardless of the minimum remaining amount.
             gen = self._deposit_generator(context, deposit_meta.head_id)
             for deposit in filter(lambda d: block_height < d.expires, gen):
                 charged_icx = min(remaining_required_icx, deposit.remaining_deposit)
 
                 if charged_icx > 0:
-                    deposit.deposit_used += charged_icx
+                    deposit.consume_deposit(charged_icx)
                     self._fee_storage.put_deposit(context, deposit)
 
                     remaining_required_icx -= charged_icx
@@ -676,94 +681,53 @@ class FeeEngine:
     def _get_or_create_deposit_meta(
             self, context: 'IconScoreContext', score_address: 'Address') -> 'DepositMeta':
         deposit_meta = self._fee_storage.get_deposit_meta(context, score_address)
-        return DepositMeta() if deposit_meta is None else deposit_meta
+        return deposit_meta if deposit_meta else DepositMeta()
 
     @staticmethod
     def _calculate_penalty(deposit: Deposit,
-                           created_at: int,
-                           expires_in: int,
                            block_height: int,
                            step_price: int) -> int:
         assert isinstance(deposit, Deposit)
-        assert isinstance(created_at, int)
-        assert isinstance(expires_in, int)
         assert isinstance(block_height, int)
         assert isinstance(step_price, int)
 
-        if block_height >= expires_in:
+        if block_height >= deposit.expires:
             return 0
 
-        elapsed_term = block_height - created_at
-
         return VirtualStepCalculator.calculate_penalty(
-            deposit.deposit_amount,
-            deposit.remaining_virtual_step,
-            deposit.virtual_step_issued,
-            elapsed_term,
+            deposit.virtual_step_used,
             step_price)
 
 
-class VirtualStepCalculator(object):
-    _PARAM_A1 = Decimal(1_000)
-    _PARAM_A2 = Decimal(100)
-    _PARAM_A3 = Decimal(0)
-    _PARAM_A4 = Decimal(8_249)
-    _PARAM_A5 = Decimal(1_706)
-    _PARAM_A6 = Decimal(-13)
-    _SCALE = Decimal(1_200)
-    _DEFAULT_DEPOSIT_UNIT = Decimal(10_000)
-    # The number of blocks generated for 30 days at 0.5 block per second
-    _DEFAULT_TERM_UNIT = Decimal(1_296_000)  # = 30 * 24 * 60 * 60 / 2
+class VirtualStepCalculator:
+    """
+    Calculator for generating Virtual Step
+    """
 
     @classmethod
-    def calculate_virtual_step(cls, deposit_amount: int, term: int) -> int:
+    def calculate_virtual_step(cls,
+                               deposit_amount: int,
+                               term: int,
+                               step_price: int) -> int:
         """Returns issuance of virtual-step according to deposit_amount and term
 
         :param deposit_amount: deposit amount in loop unit
         :param term: deposit term
+        :param step_price:
         """
-        return int(cls._SCALE * cls._deposit_func(deposit_amount) * cls._term_func(term))
+        assert term == BLOCKS_IN_ONE_MONTH
+        return int(Decimal(deposit_amount) * Decimal(FIXED_RATIO_PER_MONTH) / Decimal(step_price))
 
     @classmethod
-    def calculate_penalty(cls, deposit_amount: int,
-                          remaining_virtual_step: int, virtual_step_issued: int,
-                          elapsed_term: int,
+    def calculate_penalty(cls,
+                          virtual_step_used: int,
                           step_price: int) -> int:
         """Returns penalty according to given parameters
 
-        :param deposit_amount:
-        :param remaining_virtual_step:
-        :param virtual_step_issued:
-        :param elapsed_term:
+        :param virtual_step_used:
         :param step_price:
         """
-
-        excess_profit: int = virtual_step_issued - \
-            cls.calculate_virtual_step(deposit_amount, elapsed_term)
-
-        # redemption amount for over-used step in ICX(loop)
-        redemption_amount = max(0, excess_profit - remaining_virtual_step) * step_price
-        breach_penalty = deposit_amount // 100
-
-        return redemption_amount + breach_penalty
-
-    @classmethod
-    def _deposit_func(cls, amount: int) -> Decimal:
-        deposit_in_icx = Decimal(amount // 10 ** 18)
-        adjusted_deposit: Decimal = deposit_in_icx / cls._DEFAULT_DEPOSIT_UNIT
-
-        return \
-            cls._PARAM_A3 * adjusted_deposit ** 3 + \
-            cls._PARAM_A2 * adjusted_deposit ** 2 + \
-            cls._PARAM_A1 * adjusted_deposit
-
-    @classmethod
-    def _term_func(cls, term: int) -> Decimal:
-        adjusted_expire = Decimal(term) / cls._DEFAULT_TERM_UNIT
-        return \
-            cls._PARAM_A6 * adjusted_expire ** 3 + \
-            cls._PARAM_A5 * adjusted_expire ** 2 + \
-            cls._PARAM_A4 * adjusted_expire
+        return virtual_step_used * step_price
 
 
 class DepositHandler:
@@ -803,7 +767,8 @@ class DepositHandler:
 
         try:
             if action == 'add':
-                self._add_deposit(context, converted_data['term'])
+                term: int = BLOCKS_IN_ONE_MONTH if FIXED_TERM else converted_data['term']
+                self._add_deposit(context, term)
             elif action == 'withdraw':
                 self._withdraw_deposit(context, converted_data['id'])
             else:
@@ -823,7 +788,7 @@ class DepositHandler:
         if context.msg.value != 0:
             raise InvalidRequestException(f'Invalid value: must be zero')
         withdrawal_amount, penalty = self._fee_engine.withdraw_deposit(
-            context, context.msg.sender, deposit_id, context.block.height, context.step_counter.step_price)
+            context, context.msg.sender, deposit_id, context.block.height)
 
         event_log_args = [deposit_id, context.msg.sender, withdrawal_amount, penalty]
         self._emit_event(context, DepositHandler.EventType.WITHDRAW, event_log_args)
