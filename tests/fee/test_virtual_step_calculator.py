@@ -16,9 +16,9 @@
 # limitations under the License.
 from collections import namedtuple
 from decimal import Decimal
-from unittest import TestCase
+import unittest
 
-from iconservice.fee.fee_engine import VirtualStepCalculator
+from iconservice.fee.fee_engine import VirtualStepCalculator, FIXED_TERM, ICX_IN_LOOP, BLOCKS_IN_ONE_MONTH
 
 STEP_PRICE = 10 ** 10
 
@@ -45,9 +45,25 @@ VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER = [
 ]
 
 
-class TestVirtualStepCalculator(TestCase):
+class TestVirtualStepCalculator(unittest.TestCase):
 
-    def test_calculate_issuance_virtual_step(self):
+    def test_calculate_issuance_virtual_step_fixed_term(self):
+        virtual_step_table = {
+            (5_000 * ICX_IN_LOOP, 400 * 10**8),
+            (10_000 * ICX_IN_LOOP, 800 * 10**8),
+            (15_000 * ICX_IN_LOOP, 1200 * 10**8),
+            (25_200 * ICX_IN_LOOP, 2016 * 10**8),
+            (40_000 * ICX_IN_LOOP, 3200 * 10**8),
+            (5123456789000000000000, 40987654312),
+            (5001234567891200000000, 40009876543),
+        }
+        for amount_in_loop, expected in virtual_step_table:
+            issued = VirtualStepCalculator.calculate_virtual_step(amount_in_loop,
+                                                                  BLOCKS_IN_ONE_MONTH, STEP_PRICE)
+            self.assertEqual(expected, issued)
+
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
+    def test_calculate_issuance_virtual_step_yellow_paper(self):
         for virtual_step_issuance_info in VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER:
             expected_issuance = self._get_expected_issuance(virtual_step_issuance_info.deposit_icx,
                                                             virtual_step_issuance_info.rate)
@@ -57,7 +73,8 @@ class TestVirtualStepCalculator(TestCase):
             error_rate = abs((expected_issuance - result) / result)
             self.assertLessEqual(error_rate * 100, 0.1)
 
-    def test_calculate_penalty(self):
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
+    def test_calculate_penalty_yellow_paper(self):
         # case when remaining-virtual-step is 0
         deposit_info_pair1 = VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[3], \
                              VIRTUAL_STEP_ISSUANCE_TABLE_FROM_YELLOW_PAPER[0]

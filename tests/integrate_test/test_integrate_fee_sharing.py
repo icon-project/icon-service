@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from typing import Any, Optional
+import unittest
 
 from iconcommons import IconConfig
 
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.address import Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidRequestException
-from iconservice.fee.fee_engine import FeeEngine
+from iconservice.fee.fee_engine import FeeEngine, FIXED_TERM
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
@@ -164,7 +165,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                      sender: Address = None) -> TransactionResult:
         if sender is None:
             sender = self._admin
-        deposit_req = self._make_deposit_tx(sender, score_address, "add", {"term": hex(period)})
+        if FIXED_TERM:
+            deposit_req = self._make_deposit_tx(sender, score_address, "add", {})
+        else:
+            deposit_req = self._make_deposit_tx(sender, score_address, "add", {"term": hex(period)})
         deposit_req['params']['value'] = amount
         prev_block, tx_results = self._make_and_req_block([deposit_req])
         self._write_precommit_state(prev_block)
@@ -212,16 +216,16 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_tx_result = self._deposit_icx(self.score_address,
                                               MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_TERM)
         self.assertTrue(deposit_tx_result.status)
-        deposit_tx_result = self._deposit_icx(self.score_address,
-                                              MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_TERM + 1)
-        self.assertFalse(deposit_tx_result.status)
+        # deposit_tx_result = self._deposit_icx(self.score_address,
+        #                                       MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_TERM + 1)
+        # self.assertFalse(deposit_tx_result.status)
 
         deposit_tx_result = self._deposit_icx(self.score_address,
                                               MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM)
         self.assertTrue(deposit_tx_result.status)
-        deposit_tx_result = self._deposit_icx(self.score_address,
-                                              MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM - 1)
-        self.assertFalse(deposit_tx_result.status)
+        # deposit_tx_result = self._deposit_icx(self.score_address,
+        #                                       MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM - 1)
+        # self.assertFalse(deposit_tx_result.status)
 
     def test_sharing_fee_case_score_0(self):
         # deposit icx
@@ -313,9 +317,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(user_balance, after_call_user_balance)
         self.assertFalse(tx_results[0].step_used_details.get(self._admin))
 
+    @unittest.skip("Will take over 8 minutes")
     def test_score_call_after_deposit_expired(self):
-        # change min_deposit_term
-        self.icon_service_engine._fee_engine._MIN_DEPOSIT_TERM = 1
         # deposit icx
         deposit_tx_result = self._deposit_icx(self.score_address, 3 * MIN_DEPOSIT_AMOUNT, 1)
         self.assertEqual(deposit_tx_result.status, 1)
@@ -327,9 +330,10 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertGreater(initial_available_deposit, 0)
 
         # increase block_height
-        send_icx_tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 10 ** 18)
-        prev_block, tx_results = self._make_and_req_block([send_icx_tx])
-        self._write_precommit_state(prev_block)
+        for i in range(1296000):
+            send_icx_tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 10 ** 8)
+            prev_block, tx_results = self._make_and_req_block([send_icx_tx])
+            self._write_precommit_state(prev_block)
 
         # invoke score method
         with self.assertRaises(InvalidRequestException) as e:
@@ -343,9 +347,6 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         deposit_info = score_info['depositInfo']
         after_destroyed_available_deposit = deposit_info['availableDeposit']
         self.assertEqual(after_destroyed_available_deposit, 0)
-
-        # restore min_deposit_term
-        self.icon_service_engine._fee_engine._MIN_DEPOSIT_TERM = MIN_DEPOSIT_TERM
 
     def test_deposit_unauthorized_account(self):
         # give icx to tester
@@ -388,8 +389,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         Then  : Checks if values like sharing proportion, available virtual step and available deposit is correct.
         """
         amount_deposit = 5000 * 10 ** 18
-        virtual_step_issuance1 = 6_263_460_000
-        virtual_step_issuance2 = 13_123_440_000
+        virtual_step_issuance1 = 40_000_000_000
+        virtual_step_issuance2 = 80_000_000_000
 
         # Creates a deposit with 5000 ICX
         deposit_tx_result = self._deposit_icx(self.score_address, amount_deposit, MIN_DEPOSIT_TERM)
