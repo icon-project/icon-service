@@ -41,7 +41,6 @@ from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, C
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore.icon_score_event_log import EventLog
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
@@ -54,8 +53,8 @@ from .icx.icx_storage import IcxStorage
 from .icx.issue_data_checker import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
-from .prep.prep_candidate_batch import PRepCandidateBatch
-from .prep.prep_candidate_engine import PRepCandidateEngine
+from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
+from .prep.candidate_engine import CandidateEngine as PRepCandidateEngine
 from .utils import sha3_256, int_to_bytes, is_flags_on
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter

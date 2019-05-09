@@ -16,12 +16,12 @@
 
 from typing import TYPE_CHECKING
 
+from ..candidate import Candidate
+from ..candidate_utils import CandidateUtils
 from ...base.exception import InvalidParamsException
-from ...base.type_converter_templates import ParamType, ConstantKeys
 from ...base.type_converter import TypeConverter
+from ...base.type_converter_templates import ParamType, ConstantKeys
 from ...icx.icx_storage import Intent
-from ..prep_candidate import PRepCandidate
-from ..prep_candidate_utils import PRepCandidateUtils
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_result import TransactionResult
@@ -29,16 +29,16 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..prep_candidate_storage import PRepCandidateStorage
-    from ..prep_candidate_container import PRepCandidateSortedInfos
-    from ..prep_variable.prep_variable import PRepVariable
+    from ..candidate_storage import CandidateStorage
+    from ..candidate_container import CandidateSortedInfos
+    from ..variable.variable import Variable
 
 
-class PRepCandidateHandler:
+class CandidateHandler:
     icx_storage: 'IcxStorage' = None
-    prep_storage: 'PRepCandidateStorage' = None
-    prep_variable: 'PRepVariable' = None
-    prep_candidates: 'PRepCandidateSortedInfos' = None
+    prep_storage: 'CandidateStorage' = None
+    prep_variable: 'Variable' = None
+    prep_candidates: 'CandidateSortedInfos' = None
 
     @classmethod
     def handle_reg_prep_candidate(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
@@ -55,15 +55,15 @@ class PRepCandidateHandler:
         if cls.prep_storage.is_candidate(context, address):
             raise InvalidParamsException(f'Failed to register candidate: already register')
 
-        prep_candidate: PRepCandidate = \
-            PRepCandidate.from_dict(params, context.block.height, context.tx.index, address)
+        prep_candidate: Candidate = \
+            Candidate.from_dict(params, context.block.height, context.tx.index, address)
         cls.prep_storage.put_candidate(context, prep_candidate)
 
         account: 'Account' = cls.icx_storage.get_account(context, address, Intent.DELEGATED)
-        PRepCandidateUtils.register_prep_candidate_info_for_sort(context,
-                                                                 address,
-                                                                 prep_candidate.name,
-                                                                 account.delegated_amount)
+        CandidateUtils.register_prep_candidate_info_for_sort(context,
+                                                             address,
+                                                             prep_candidate.name,
+                                                             account.delegated_amount)
 
         cls._apply_candidate_delegated_offset_for_iiss_variable(context, account.delegated_amount)
         # TODO tx_result make if needs
@@ -97,7 +97,7 @@ class PRepCandidateHandler:
         if not cls.prep_storage.is_candidate(context, address):
             raise InvalidParamsException(f'Failed to set candidate: no register')
 
-        prep_candidate: 'PRepCandidate' = cls.prep_storage.get_candidate(context, address)
+        prep_candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
         prep_candidate.update_dict(params)
         cls.prep_storage.put_candidate(context, prep_candidate)
         # TODO tx_result make if needs
@@ -116,7 +116,7 @@ class PRepCandidateHandler:
             raise InvalidParamsException(f'Failed to un register candidate: no register')
 
         cls.prep_storage.delete_candidate(context, address)
-        PRepCandidateUtils.unregister_prep_candidate_info_for_sort(context, address)
+        CandidateUtils.unregister_prep_candidate_info_for_sort(context, address)
 
         account: 'Account' = cls.icx_storage.get_account(context, address, Intent.DELEGATED)
         cls._apply_candidate_delegated_offset_for_iiss_variable(context, -account.delegated_amount)
@@ -144,7 +144,7 @@ class PRepCandidateHandler:
         if not cls.prep_storage.is_candidate(context, address):
             raise InvalidParamsException(f'Failed to get candidate: no register')
 
-        prep_candidate: 'PRepCandidate' = cls.prep_storage.get_candidate(context, address)
+        prep_candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
 
         data = {
             ConstantKeys.NAME: prep_candidate.name,

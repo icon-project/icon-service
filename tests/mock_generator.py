@@ -36,7 +36,7 @@ QueryData = namedtuple("QueryData", "from_, to_, data_type, data")
 IISS_DB_PATH = 'iconservice.iiss.database.db'
 IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.reward_calc_data_storage'
 IISS_VARIABLE_PATH = 'iconservice.iiss.variable.variable'
-PREP_VARIABLE_PATH = 'iconservice.prep.prep_variable.prep_variable'
+PREP_VARIABLE_PATH = 'iconservice.prep.variable.variable'
 
 
 # noinspection PyProtectedMember
@@ -57,7 +57,7 @@ def generate_inner_task(revision=0):
 @patch(f'{IISS_DB_PATH}.Database.from_path')
 @patch(f'{IISS_RC_DATA_STORAGE_PATH}.RewardCalcDataStorage._load_last_transaction_index')
 @patch(f'{IISS_VARIABLE_PATH}.Variable.init_config')
-@patch(f'{PREP_VARIABLE_PATH}.PRepVariable.init_config')
+@patch(f'{PREP_VARIABLE_PATH}.Variable.init_config')
 def _create_inner_task(
         prep_init_config,
         iiss_init_config,
@@ -131,7 +131,7 @@ def generate_service_engine(revision=0):
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
 @patch(f'{IISS_DB_PATH}.Database.from_path')
 @patch(f'{IISS_VARIABLE_PATH}.Variable.init_config')
-@patch(f'{PREP_VARIABLE_PATH}.PRepVariable.init_config')
+@patch(f'{PREP_VARIABLE_PATH}.Variable.init_config')
 def _create_service_engine(
         prep_init_config,
         iiss_init_config,

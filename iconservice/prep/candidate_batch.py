@@ -23,7 +23,7 @@ class BatchSlotType(Enum):
     UPDATE = 1
 
 
-class PRepCandidateBatch(OrderedDict):
+class CandidateBatch(OrderedDict):
     pass
 
 

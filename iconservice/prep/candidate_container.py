@@ -19,24 +19,25 @@ from threading import Lock
 from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
-from .prep_candidate_info_for_sort import PRepCandidateInfoForSort
-from .prep_candidate_linked_list import PRepCandidateLinkedList
+
+from .candidate_info_for_sort import CandidateInfoForSort
+from .candidate_linked_list import CandidateLinkedList
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from ..base.address import Address
 
 
-class PRepCandiateInfoMapper(object):
+class CandidateInfoMapper(object):
     def __init__(self):
         self._prep_candidate_objects: dict = {}
         self._lock = Lock()
 
-    def __setitem__(self, key: 'Address', value: 'PRepCandidateInfoForSort'):
+    def __setitem__(self, key: 'Address', value: 'CandidateInfoForSort'):
         with self._lock:
             self._prep_candidate_objects[key] = value
 
-    def __getitem__(self, key: 'Address') -> 'PRepCandidateInfoForSort':
+    def __getitem__(self, key: 'Address') -> 'CandidateInfoForSort':
         with self._lock:
             return self._prep_candidate_objects[key]
 
@@ -48,19 +49,19 @@ class PRepCandiateInfoMapper(object):
         with self._lock:
             return address in self._prep_candidate_objects
 
-    def to_genesis_sorted_list(self) -> List['PRepCandidateInfoForSort']:
+    def to_genesis_sorted_list(self) -> List['CandidateInfoForSort']:
         with self._lock:
-            return sorted(self._prep_candidate_objects.values(), key=cmp_to_key(PRepCandidateInfoForSort.compare_key))
+            return sorted(self._prep_candidate_objects.values(), key=cmp_to_key(CandidateInfoForSort.compare_key))
 
 
-class PRepCandidateSortedInfos(object):
+class CandidateSortedInfos(object):
 
     def __init__(self):
-        self._prep_candidate_objects: 'PRepCandidateLinkedList' = PRepCandidateLinkedList()
+        self._prep_candidate_objects: 'CandidateLinkedList' = CandidateLinkedList()
         self._lock = Lock()
         self._init = False
 
-    def genesis_update(self, prep_objs: List['PRepCandidateInfoForSort']):
+    def genesis_update(self, prep_objs: List['CandidateInfoForSort']):
         with self._lock:
             if self._init:
                 raise InvalidParamsException(f'Invalid instance update : init is already True')
@@ -92,7 +93,7 @@ class PRepCandidateSortedInfos(object):
                     return index, n.data
             return None, None
 
-    def add_info(self, new_info: 'PRepCandidateInfoForSort'):
+    def add_info(self, new_info: 'CandidateInfoForSort'):
         with self._lock:
             self._prep_candidate_objects.append(new_info)
 
