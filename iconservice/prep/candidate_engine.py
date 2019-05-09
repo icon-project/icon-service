@@ -14,73 +14,72 @@
 
 from typing import TYPE_CHECKING, Any, List
 
-from ..icon_constant import PREP_MAX_PREPS
-from ..database.db import ContextDatabase
+from .candidate import Candidate
+from .candidate_batch import BatchSlotType, RegPRep, UpdatePRep, UnregPRep
+from .candidate_container import CandidateInfoMapper, CandidateSortedInfos
+from .candidate_info_for_sort import CandidateInfoForSort
+from .candidate_storage import CandidateStorage
+from .candidate_utils import CandidateUtils
+from .handler.candidate_handler import CandidateHandler
+from .variable.variable import Variable
+from .variable.variable_storage import PReps
 from ..base.address import Address
-from ..icx.icx_storage import Intent
+from ..database.db import ContextDatabase
+from ..icon_constant import PREP_MAX_PREPS
 from ..iconscore.icon_score_result import TransactionResult
-
-from .prep_candidate_info_for_sort import PRepCandidateInfoForSort
-from .prep_candidate_container import PRepCandiateInfoMapper, PRepCandidateSortedInfos
-from .prep_candidate import PRepCandidate
-from .prep_candidate_storage import PRepCandidateStorage
-from .prep_variable.prep_variable import PRepVariable
-from .handler.prep_candidate_handler import PRepCandidateHandler
-from .prep_candidate_batch import BatchSlotType, RegPRep, UpdatePRep, UnregPRep
-from .prep_candidate_utils import PRepCandidateUtils
-from .prep_variable.prep_variable_storage import PReps
+from ..icx.icx_storage import Intent
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icx.icx_storage import IcxStorage
     from ..icx.icx_account import Account
-    from .prep_candidate_batch import PRepCandidateBatch
-    from .prep_variable.prep_variable_storage import GovernanceVariable
-    from .prep_variable.prep_variable_storage import PRep
+    from .candidate_batch import CandidateBatch
+    from .variable.variable_storage import GovernanceVariable
+    from .variable.variable_storage import PRep
     from iconcommons import IconConfig
 
 
-class PRepCandidateEngine(object):
+class CandidateEngine(object):
     icx_storage: 'IcxStorage' = None
 
     def __init__(self) -> None:
         self._invoke_handlers: dict = {
-            'registerPRepCandidate': PRepCandidateHandler.handle_reg_prep_candidate,
-            'unregisterPRepCandidate': PRepCandidateHandler.handle_unreg_prep_candidate,
-            'setPRepCandidate': PRepCandidateHandler.handle_set_prep_candidate
+            'registerPRepCandidate': CandidateHandler.handle_reg_prep_candidate,
+            'unregisterPRepCandidate': CandidateHandler.handle_unreg_prep_candidate,
+            'setPRepCandidate': CandidateHandler.handle_set_prep_candidate
         }
 
         self._query_handler: dict = {
-            'getPRepCandidate': PRepCandidateHandler.handle_get_prep_candidate,
-            'getPRepCandidateDelegationInfo': PRepCandidateHandler.handle_get_prep_candidate_delegation_info,
-            'getPRepList': PRepCandidateHandler.handle_get_prep_list,
-            'getPRepCandidateList': PRepCandidateHandler.handle_get_prep_candidate_list
+            'getPRepCandidate': CandidateHandler.handle_get_prep_candidate,
+            'getPRepCandidateDelegationInfo': CandidateHandler.handle_get_prep_candidate_delegation_info,
+            'getPRepList': CandidateHandler.handle_get_prep_list,
+            'getPRepCandidateList': CandidateHandler.handle_get_prep_candidate_list
         }
 
-        self._storage: 'PRepCandidateStorage' = None
-        self._variable: 'PRepVariable' = None
-        self._candidate_info_mapper: 'PRepCandiateInfoMapper' = None
-        self._candidate_sorted_infos: 'PRepCandidateSortedInfos' = None
+        self._storage: 'CandidateStorage' = None
+        self._variable: 'Variable' = None
+        self._candidate_info_mapper: 'CandidateInfoMapper' = None
+        self._candidate_sorted_infos: 'CandidateSortedInfos' = None
 
         self._prep_infos_dirty_include_sub_prep: bool = False
 
         # read only
         self._prep_mapper_include_sub_prep: dict = None
-        self._prep_infos_include_sub_prep: 'PRepCandidateSortedInfos' = None
+        self._prep_infos_include_sub_prep: 'CandidateSortedInfos' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase') -> None:
-        self._storage = PRepCandidateStorage(db)
+        self._storage = CandidateStorage(db)
 
-        self._variable = PRepVariable(db)
+        self._variable = Variable(db)
         self._variable.init_config(context, conf)
 
-        self._candidate_info_mapper: 'PRepCandiateInfoMapper' = PRepCandiateInfoMapper()
-        self._candidate_sorted_infos: 'PRepCandidateSortedInfos' = PRepCandidateSortedInfos()
+        self._candidate_info_mapper: 'CandidateInfoMapper' = CandidateInfoMapper()
+        self._candidate_sorted_infos: 'CandidateSortedInfos' = CandidateSortedInfos()
 
         self._prep_mapper_include_sub_prep: dict = {}
-        self._prep_infos_include_sub_prep: 'PRepCandidateSortedInfos' = PRepCandidateSortedInfos()
+        self._prep_infos_include_sub_prep: 'CandidateSortedInfos' = CandidateSortedInfos()
 
-        handlers: list = [PRepCandidateHandler]
+        handlers: list = [CandidateHandler]
         self._init_handlers(handlers)
 
     def _init_handlers(self, handlers: list):
@@ -91,7 +90,7 @@ class PRepCandidateEngine(object):
             handler.prep_candidates = self._candidate_sorted_infos
 
     def load_prep_candidates(self, context: 'IconScoreContext', icx_storage: 'IcxStorage'):
-        for key, value in self._storage.get_prep_candiates():
+        for key, value in self._storage.get_prep_candidates():
             address: 'Address' = Address.from_bytes_including_prefix(key)
             account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
             self._add_prep_candidate_objects(address, value, account.delegated_amount)
@@ -100,11 +99,11 @@ class PRepCandidateEngine(object):
         self._update_prep_infos_include_sub_prep(context)
 
     def _add_prep_candidate_objects(self, address: 'Address', value: bytes, total_delegated: int):
-        candidate: 'PRepCandidate' = PRepCandidate.from_bytes(value, address)
-        obj: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort.create_object(address,
-                                                                                 candidate.name,
-                                                                                 candidate.block_height,
-                                                                                 candidate.tx_index)
+        candidate: 'Candidate' = Candidate.from_bytes(value, address)
+        obj: 'CandidateInfoForSort' = CandidateInfoForSort.create_object(address,
+                                                                         candidate.name,
+                                                                         candidate.block_height,
+                                                                         candidate.tx_index)
         obj.update(total_delegated)
         self._candidate_info_mapper[address] = obj
 
@@ -128,22 +127,22 @@ class PRepCandidateEngine(object):
             self._storage.close()
             self._storage = None
 
-    def commit(self, prep_candiate_block_batch: 'PRepCandidateBatch'):
+    def commit(self, prep_candiate_block_batch: 'CandidateBatch'):
         # TODO calc Batch
         self._update_prep_candidates(prep_candiate_block_batch)
         # state DB write DB
 
-    def _update_prep_candidates(self, prep_candiate_block_batch: 'PRepCandidateBatch'):
+    def _update_prep_candidates(self, prep_candiate_block_batch: 'CandidateBatch'):
         self._prep_infos_dirty_include_sub_prep = False
 
         for address, batch in prep_candiate_block_batch.items():
             put_obj = batch.get(BatchSlotType.PUT)
             if put_obj:
                 if isinstance(put_obj, RegPRep):
-                    info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort.create_object(address,
-                                                                                              put_obj.name,
-                                                                                              put_obj.block_height,
-                                                                                              put_obj.tx_index)
+                    info: 'CandidateInfoForSort' = CandidateInfoForSort.create_object(address,
+                                                                                      put_obj.name,
+                                                                                      put_obj.block_height,
+                                                                                      put_obj.tx_index)
                     self._candidate_info_mapper[address] = info
                     self._candidate_sorted_infos.add_info(info)
                 elif isinstance(put_obj, UnregPRep):
@@ -153,7 +152,7 @@ class PRepCandidateEngine(object):
             update_obj = batch.get(BatchSlotType.UPDATE)
             if update_obj:
                 if isinstance(update_obj, UpdatePRep):
-                    obj: 'PRepCandidateInfoForSort' = self._candidate_info_mapper[address]
+                    obj: 'CandidateInfoForSort' = self._candidate_info_mapper[address]
                     obj.update(update_obj.total_delegated)
                     self._candidate_sorted_infos.update_info(address, update_obj.total_delegated)
                     if obj.address in self._prep_mapper_include_sub_prep:
@@ -168,7 +167,7 @@ class PRepCandidateEngine(object):
                                             context: 'IconScoreContext',
                                             address: 'Address',
                                             total_delegated: int):
-        PRepCandidateUtils.update_prep_candidate_info_for_sort(context, address, total_delegated)
+        CandidateUtils.update_prep_candidate_info_for_sort(context, address, total_delegated)
 
     def is_candidate(self, context: 'IconScoreContext', address: 'Address') -> bool:
         return self._storage.is_candidate(context, address)
@@ -195,7 +194,7 @@ class PRepCandidateEngine(object):
         table: dict = self._candidate_sorted_infos.to_dict()
 
         for prep in self._variable.get_preps(context):
-            info: 'PRepCandidateInfoForSort' = table[prep.address]
+            info: 'CandidateInfoForSort' = table[prep.address]
             self._prep_infos_include_sub_prep.add_info(info)
 
         self._prep_infos_dirty_include_sub_prep: bool = True

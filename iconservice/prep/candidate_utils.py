@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from typing import TYPE_CHECKING
-from .prep_candidate_batch import BatchSlotType, RegPRep, UpdatePRep, UnregPRep
+
+from .candidate_batch import BatchSlotType, RegPRep, UpdatePRep, UnregPRep
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..base.address import Address
 
 
-class PRepCandidateUtils:
+class CandidateUtils:
     @classmethod
     def register_prep_candidate_info_for_sort(cls,
                                               context: 'IconScoreContext',

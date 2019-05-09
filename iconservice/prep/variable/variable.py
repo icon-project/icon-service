@@ -14,20 +14,20 @@
 
 from typing import TYPE_CHECKING, Optional, List
 
+from .variable_storage import GovernanceVariable, VariableStorage
 from ...icon_constant import ConfigKey
-from .prep_variable_storage import GovernanceVariable, PRepVariableStorage
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
     from ...database.db import ContextDatabase
-    from .prep_variable_storage import PReps, PRep
+    from .variable_storage import PReps, PRep
     from iconcommons import IconConfig
 
 
-class PRepVariable(object):
+class Variable(object):
 
     def __init__(self, db: 'ContextDatabase'):
-        self._storage: 'PRepVariableStorage' = PRepVariableStorage(db)
+        self._storage: 'VariableStorage' = VariableStorage(db)
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
         if self._storage.get_gv(context) is None:

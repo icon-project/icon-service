@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..utils.msgpack_for_db import MsgPackForDB
+from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..base.type_converter_templates import ConstantKeys
-from ..base.address import Address
+from ..utils.msgpack_for_db import MsgPackForDB
 
 
-class PRepCandidate(object):
+class Candidate(object):
     """PrepCandidate Register Info class
     Contains information of the PrepCandidate indicated by address.
     """
@@ -44,7 +44,7 @@ class PRepCandidate(object):
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:
-        return PRepCandidate.prefix + Address.to_bytes_including_prefix(address)
+        return Candidate.prefix + Address.to_bytes_including_prefix(address)
 
     def to_bytes(self) -> bytes:
         """Convert PrepCandidate object to bytes
@@ -66,7 +66,7 @@ class PRepCandidate(object):
         return MsgPackForDB.dumps(data)
 
     @staticmethod
-    def from_bytes(data: bytes, address: 'Address') -> 'PRepCandidate':
+    def from_bytes(data: bytes, address: 'Address') -> 'Candidate':
         """Create PrepCandidate object from bytes data
 
         :param address:
@@ -77,12 +77,12 @@ class PRepCandidate(object):
         data_list: list = MsgPackForDB.loads(data)
         version: int = data_list[0]
 
-        assert version == PRepCandidate._VERSION
+        assert version == Candidate._VERSION
 
-        if version != PRepCandidate._VERSION:
+        if version != Candidate._VERSION:
             raise InvalidParamsException(f"Invalid PrepCandidate version: {version}")
 
-        obj: 'PRepCandidate' = PRepCandidate(address)
+        obj: 'Candidate' = Candidate(address)
         obj.name: str = data_list[1]
         obj.email: str = data_list[2]
         obj.website: str = data_list[3]
@@ -94,8 +94,8 @@ class PRepCandidate(object):
         return obj
 
     @staticmethod
-    def from_dict(data: dict, block_height: int, tx_index: int, address: 'Address') -> 'PRepCandidate':
-        obj: 'PRepCandidate' = PRepCandidate(address)
+    def from_dict(data: dict, block_height: int, tx_index: int, address: 'Address') -> 'Candidate':
+        obj: 'Candidate' = Candidate(address)
         obj.name: str = data[ConstantKeys.NAME]
         obj.email: str = data[ConstantKeys.EMAIL]
         obj.website: str = data[ConstantKeys.WEBSITE]
@@ -123,7 +123,7 @@ class PRepCandidate(object):
 
         :param other: (PrepCandidate)
         """
-        return isinstance(other, PRepCandidate) \
+        return isinstance(other, Candidate) \
             and self.address == other.address \
             and self.name == other.name \
             and self.email == other.email \
