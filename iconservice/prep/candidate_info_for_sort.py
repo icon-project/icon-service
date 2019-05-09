@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
 
 
-class PRepCandidateInfoForSort(object):
+class CandidateInfoForSort(object):
     def __init__(self, address: 'Address', name: str, block_height: int, tx_index: int):
         self._address: 'Address' = address
         self._name: str = name
@@ -56,13 +56,13 @@ class PRepCandidateInfoForSort(object):
     def create_object(address: 'Address',
                       name: str,
                       block_height: int,
-                      tx_index: int) -> 'PRepCandidateInfoForSort':
-        return PRepCandidateInfoForSort(address, name, block_height, tx_index)
+                      tx_index: int) -> 'CandidateInfoForSort':
+        return CandidateInfoForSort(address, name, block_height, tx_index)
 
     def to_order_list(self) -> list:
         return [self._total_delegated, self._block_height,  self._tx_index]
 
-    def __gt__(self, other: 'PRepCandidateInfoForSort') -> bool:
+    def __gt__(self, other: 'CandidateInfoForSort') -> bool:
         x: list = self.to_order_list()
         y: list = other.to_order_list()
         is_reverse: list = [False, True, True]
@@ -85,11 +85,11 @@ class PRepCandidateInfoForSort(object):
                 else:
                     return False
 
-    def __lt__(self, other: 'PRepCandidateInfoForSort') -> bool:
+    def __lt__(self, other: 'CandidateInfoForSort') -> bool:
         return not self.__gt__(other)
 
     @staticmethod
-    def compare_key(x: 'PRepCandidateInfoForSort', y: 'PRepCandidateInfoForSort') -> int:
+    def compare_key(x: 'CandidateInfoForSort', y: 'CandidateInfoForSort') -> int:
         if x < y:
             return 1
         elif x > y:

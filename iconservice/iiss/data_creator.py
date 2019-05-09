@@ -24,7 +24,7 @@ from .msg_data import Header, GovernanceVariable, PRepsData, TxData, \
 if TYPE_CHECKING:
     from ..base.address import Address
     from .msg_data import Tx
-    from ..prep.prep_variable.prep_variable_storage import PRep
+    from ..prep.variable.variable_storage import PRep
 
 
 class DataCreator:

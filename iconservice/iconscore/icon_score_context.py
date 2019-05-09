@@ -18,12 +18,12 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
+from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import IconScoreContextType, IconScoreFuncType
-from .icon_score_trace import Trace
 
 if TYPE_CHECKING:
     from ..base.address import Address
@@ -33,8 +33,8 @@ if TYPE_CHECKING:
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
-    from ..prep.prep_candidate_batch import PRepCandidateBatch
-    from ..prep.prep_candidate_engine import PRepCandidateEngine
+    from ..prep.candidate_batch import CandidateBatch as PRepCandidateBatch
+    from ..prep.candidate_engine import CandidateEngine as PRepCandidateEngine
     from ..iiss.engine import Engine as IISSEngine
 
 _thread_local_data = threading.local()

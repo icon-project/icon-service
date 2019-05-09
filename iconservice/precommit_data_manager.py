@@ -24,7 +24,7 @@ from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
 
 if TYPE_CHECKING:
-    from .prep.prep_candidate_batch import PRepCandidateBatch
+    from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
 
 
 class PrecommitFlag(IntFlag):

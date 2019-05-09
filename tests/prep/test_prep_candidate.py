@@ -18,9 +18,9 @@
 import unittest
 
 from iconservice import Address
-from iconservice.prep.prep_candidate import PRepCandidate
-from iconservice.prep.prep_candidate_container import PRepCandidateSortedInfos, PRepCandiateInfoMapper
-from iconservice.prep.prep_candidate_info_for_sort import PRepCandidateInfoForSort
+from iconservice.prep.candidate import Candidate
+from iconservice.prep.candidate_container import CandidateSortedInfos, CandidateInfoMapper
+from iconservice.prep.candidate_info_for_sort import CandidateInfoForSort
 from tests import create_address
 
 
@@ -28,9 +28,9 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate(self):
         address: 'Address' = create_address()
 
-        prep: 'PRepCandidate' = PRepCandidate(address)
+        prep: 'Candidate' = Candidate(address)
         data: bytes = prep.to_bytes()
-        actual_prep: 'PRepCandidate' = prep.from_bytes(data, address)
+        actual_prep: 'Candidate' = prep.from_bytes(data, address)
         self.assertEqual(prep, actual_prep)
 
         prep.name = "name"
@@ -43,7 +43,7 @@ class TestPrepCandidate(unittest.TestCase):
         prep.gv.incentiveRep = 200
 
         data: bytes = prep.to_bytes()
-        actual_prep: 'PRepCandidate' = prep.from_bytes(data, address)
+        actual_prep: 'Candidate' = prep.from_bytes(data, address)
         self.assertEqual(prep, actual_prep)
 
     def _make_sorted_list(self,
@@ -51,8 +51,8 @@ class TestPrepCandidate(unittest.TestCase):
                           list1: list,
                           list2: list,
                           list3: list,
-                          addresses: list) -> 'PRepCandidateSortedInfos':
-        mapper = PRepCandiateInfoMapper()
+                          addresses: list) -> 'CandidateSortedInfos':
+        mapper = CandidateInfoMapper()
 
         for i in range(count):
             addr: 'Address' = addresses[i]
@@ -60,16 +60,16 @@ class TestPrepCandidate(unittest.TestCase):
             total_delegated: int = list1[i]
             block_height: int = list2[i]
             tx_index: int = list3[i]
-            info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(addr,
-                                                                        name,
-                                                                        block_height,
-                                                                        tx_index)
+            info: 'CandidateInfoForSort' = CandidateInfoForSort(addr,
+                                                                name,
+                                                                block_height,
+                                                                tx_index)
             info.update(total_delegated)
             mapper[addr] = info
 
         sorted_list: list = mapper.to_genesis_sorted_list()
 
-        infos = PRepCandidateSortedInfos()
+        infos = CandidateSortedInfos()
         infos.genesis_update(sorted_list)
         return infos
 
@@ -166,10 +166,10 @@ class TestPrepCandidate(unittest.TestCase):
 
         infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(create_address(),
+        info: 'CandidateInfoForSort' = CandidateInfoForSort(create_address(),
                                                                     "new_name1",
-                                                                    1,
-                                                                    1)
+                                                            1,
+                                                            1)
         infos.add_info(info)
         infos.update_info(info.address, count)
         self.assertEqual(info.name, infos.to_list()[0].name)
@@ -197,16 +197,16 @@ class TestPrepCandidate(unittest.TestCase):
             self.assertEqual(info.total_delegated, count - i - 1)
 
     def test_prep_candidate_info_for_sort(self):
-        infos = PRepCandidateSortedInfos()
+        infos = CandidateSortedInfos()
 
         data_list: list = []
         data: tuple = (create_address(), "name0", 0, 0, 10)
         data_list.append(data)
 
-        info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(data[0],
-                                                                    data[1],
-                                                                    data[2],
-                                                                    data[3])
+        info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
+                                                            data[1],
+                                                            data[2],
+                                                            data[3])
         infos.add_info(info)
         infos.update_info(data[0], data[4])
 
@@ -221,10 +221,10 @@ class TestPrepCandidate(unittest.TestCase):
         data: tuple = (create_address(), "name1", 0, 0, 20)
         data_list.append(data)
 
-        info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(data[0],
-                                                                    data[1],
-                                                                    data[2],
-                                                                    data[3])
+        info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
+                                                            data[1],
+                                                            data[2],
+                                                            data[3])
         infos.add_info(info)
         infos.update_info(data[0], data[4])
 
@@ -239,10 +239,10 @@ class TestPrepCandidate(unittest.TestCase):
         data: tuple = (create_address(), "name2", 0, 0, 0)
         data_list.append(data)
 
-        info: 'PRepCandidateInfoForSort' = PRepCandidateInfoForSort(data[0],
-                                                                    data[1],
-                                                                    data[2],
-                                                                    data[3])
+        info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
+                                                            data[1],
+                                                            data[2],
+                                                            data[3])
         infos.add_info(info)
         infos.update_info(data[0], data[4])
 
