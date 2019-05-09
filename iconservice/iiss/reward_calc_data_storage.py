@@ -40,6 +40,7 @@ class RewardCalcDataStorage(object):
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
+    @property
     def db(self) -> Optional['Database']:
         return self._db
 

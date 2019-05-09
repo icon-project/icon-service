@@ -33,8 +33,8 @@ if TYPE_CHECKING:
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
-    from ..prep.candidate_batch import CandidateBatch
-    from ..prep.candidate_engine import CandidateEngine
+    from ..prep.candidate_batch import CandidateBatch as PRepCandidateBatch
+    from ..prep.candidate_engine import CandidateEngine as PRepCandidateEngine
     from ..iiss.engine import Engine as IISSEngine
 
 _thread_local_data = threading.local()
@@ -106,7 +106,7 @@ class IconScoreContext(object):
     legacy_tbears_mode = False
 
     iiss_engine: 'IISSEngine' = None
-    prep_candidate_engine: 'CandidateEngine' = None
+    prep_candidate_engine: 'PRepCandidateEngine' = None
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -128,8 +128,8 @@ class IconScoreContext(object):
         self.tx_batch: 'TransactionBatch' = None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
-        self.prep_candidate_tx_batch: 'CandidateBatch' = None
-        self.prep_candidate_block_batch: 'CandidateBatch' = None
+        self.prep_candidate_tx_batch: 'PRepCandidateBatch' = None
+        self.prep_candidate_block_batch: 'PRepCandidateBatch' = None
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
