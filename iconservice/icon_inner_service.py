@@ -189,6 +189,43 @@ class IconScoreInnerTask(object):
             return response
 
     @message_queue_task
+    async def call(self, request: dict):
+        """Used for data sharing between loopchain and iconservice internally
+
+        :param request:
+        :return:
+        """
+        Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+            loop = get_event_loop()
+            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                              self._call, request)
+        else:
+            return self._call(request)
+
+    def _call(self, request: dict):
+        """
+        Response is only shared internally with loopchain, keep the value type of response without type converting
+
+        :param request:
+        :return:
+        """
+        response = None
+
+        try:
+            response = self._icon_service_engine.call(request)
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        finally:
+            Logger.info(f'call response with {response}', ICON_INNER_LOG_TAG)
+            self._icon_service_engine.clear_context_stack()
+            return response
+
+    @message_queue_task
     async def write_precommit_state(self, request: dict):
         Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):

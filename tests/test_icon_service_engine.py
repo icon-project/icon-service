@@ -861,6 +861,21 @@ class TestIconServiceEngine(unittest.TestCase):
                 converted_request['method'], converted_request['params'])
             self.assertEqual(0, balance)
 
+    def test_get_preps_in_inner_call(self):
+        request = {
+            "method": "ise_getPreps"
+        }
+
+        response: dict = self._engine.call(request)
+        self.assertIsInstance(response, dict)
+
+        result: dict = response["result"]
+        self.assertEqual(1028, result["blockHeight"])
+
+        preps: list = result["preps"]
+        self.assertIsInstance(preps, list)
+        self.assertEqual(2, len(preps))
+
 
 if __name__ == '__main__':
     unittest.main()

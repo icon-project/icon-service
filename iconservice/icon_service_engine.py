@@ -52,6 +52,7 @@ from .icx.icx_issue_engine import IcxIssueEngine
 from .icx.icx_storage import IcxStorage
 from .icx.issue_data_checker import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
+from .inner_call.engine import Engine as InnerCallEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
 from .prep.candidate_engine import CandidateEngine as PRepCandidateEngine
@@ -89,6 +90,7 @@ class IconServiceEngine(ContextContainer):
         self._iiss_engine: 'IISSEngine' = None
         self._prep_candidate_engine: 'PRepCandidateEngine' = None
         self._icx_issue_engine: 'IcxIssueEngine' = None
+        self._inner_call_engine: Optional['InnerCallEngine'] = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -168,6 +170,8 @@ class IconServiceEngine(ContextContainer):
 
         PRepCandidateEngine.icx_storage: 'IcxStorage' = self._icx_storage
         self._prep_candidate_engine.open(context, conf, self._icx_context_db)
+
+        self._inner_call_engine = InnerCallEngine()
 
         self._precommit_data_manager.last_block = self._icx_storage.last_block
 
@@ -1350,3 +1354,11 @@ class IconServiceEngine(ContextContainer):
             return self._precommit_data_manager.last_block
 
         return None
+
+    def call(self, request: dict) -> dict:
+        """Returns the result of internal call from loopchain
+
+        :return:
+        """
+        context = IconScoreContext(IconScoreContextType.QUERY)
+        return self._inner_call_engine.query(context, request)
