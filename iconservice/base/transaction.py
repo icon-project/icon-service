@@ -80,7 +80,7 @@ class Transaction(object):
         return self._nonce
 
     @property
-    def to(self):
+    def to(self) -> 'Address':
         """
         The account of tx to.
         """

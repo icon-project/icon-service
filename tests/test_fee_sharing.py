@@ -61,7 +61,7 @@ class TestFeeSharing(unittest.TestCase):
     def test_add_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
-        term, amount = hex(50), 5000
+        term, amount = hex(1296000), 5000
 
         mock_score_info = Mock(spec=DepositInfo)
         mock_score_info.configure_mock(sharing_ratio=50)
@@ -75,7 +75,6 @@ class TestFeeSharing(unittest.TestCase):
 
         data = {
             'action': 'add',
-            'term': term,
         }
 
         expected_event_log = [{

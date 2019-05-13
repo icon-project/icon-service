@@ -61,7 +61,7 @@ class FeeStorage(object):
         """
         key = self._generate_key(score_address.to_bytes())
         value = self._db.get(context, key)
-        return DepositMeta.from_bytes(value) if value else value
+        return DepositMeta.from_bytes(value) if value else None
 
     def put_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address',
                          deposit_meta: 'DepositMeta') -> None:

@@ -21,6 +21,7 @@ from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import InvalidRequestException, OutOfBalanceException
+from iconservice.base.transaction import Transaction
 from iconservice.database.db import ContextDatabase
 from iconservice.deploy import DeployState
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
@@ -28,6 +29,7 @@ from iconservice.fee.fee_engine import FeeEngine
 from iconservice.fee.fee_storage import FeeStorage
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
+from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.icx.icx_account import AccountType, Account
 from iconservice.icx.icx_storage import IcxStorage
@@ -128,8 +130,16 @@ class TestFeeEngine(unittest.TestCase):
         ContextContainer._clear_context()
         clear_inner_task()
 
+    def get_context(self):
+        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context.step_counter = Mock(spec=IconScoreStepCounter)
+        context.step_counter.step_price = 10 ** 10
+        context.tx = Mock(spec=Transaction)
+        context.tx.to = self._score_address
+        return context
+
     def _deposit_bulk(self, count):
-        self.context = IconScoreContext(IconScoreContextType.INVOKE)
+        self.context = self.get_context()
         self.block_height = 0
         input_params = []
 
@@ -150,7 +160,7 @@ class TestFeeEngine(unittest.TestCase):
         return input_params
 
     def test_deposit_fee(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
         block_height = 0
 
         size = randrange(10, 100)
@@ -178,7 +188,7 @@ class TestFeeEngine(unittest.TestCase):
             index = randrange(0, size)
             size -= 1
             withdrawal_deposit_id = deposit_list.pop(index)[0]
-            self._engine.withdraw_deposit(self.context, self._sender, withdrawal_deposit_id, 1, 1)
+            self._engine.withdraw_deposit(self.context, self._sender, withdrawal_deposit_id, 1)
 
             deposit_info = self._engine.get_deposit_info(self.context, self._score_address, 1)
             for j in range(size):
@@ -206,7 +216,7 @@ class TestFeeEngine(unittest.TestCase):
             self.assertEqual(block_height + term, deposit.expires)
 
     def test_deposit_fee_invalid_param(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
@@ -261,7 +271,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual('Invalid SCORE owner', e.exception.message)
 
     def test_deposit_fee_out_of_balance(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         self._icx_engine.init_account(
             context, AccountType.GENERAL, 'sender', self._sender, 10000 * 10 ** 18)
@@ -280,7 +290,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual('Out of balance', e.exception.message)
 
     def test_deposit_fee_available_head_ids(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
         tx_hash = os.urandom(32)
         amount = 10000 * 10 ** 18
         block_height = 1000
@@ -301,7 +311,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.available_head_id_of_deposit, tx_hash)
 
     def test_deposit_fee_expires_updated(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
         tx_hash = os.urandom(32)
         amount = 10000 * 10 ** 18
         block_height = 1000
@@ -322,7 +332,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_deposit, block_height + term)
 
     def test_withdraw_fee_without_penalty(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
@@ -333,7 +343,7 @@ class TestFeeEngine(unittest.TestCase):
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term + 1, 1)
+        self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term + 1)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
@@ -341,7 +351,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(amount, after_sender_balance - before_sender_balance)
 
     def test_withdraw_fee_with_penalty(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
@@ -352,7 +362,7 @@ class TestFeeEngine(unittest.TestCase):
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
-        self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term - 1, 1)
+        self._engine.withdraw_deposit(context, self._sender, tx_hash, block_height + term - 1)
         after_sender_balance = self._icx_engine.get_balance(None, self._sender)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
@@ -366,7 +376,7 @@ class TestFeeEngine(unittest.TestCase):
         When : Withdraws all of them sequentially(ascending).
         Then : Checks if the previous and next link update correctly.
         """
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         cnt_deposit = 4
         block_height = randrange(100, 10000)
@@ -381,7 +391,7 @@ class TestFeeEngine(unittest.TestCase):
 
         for i in range(cnt_deposit):
             target_deposit = self._engine.get_deposit(context, arr_tx_hash[i])
-            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2, 1)
+            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2)
 
             if cnt_deposit - 1 == i:
                 self.assertIsNone(target_deposit.next_id)
@@ -399,7 +409,7 @@ class TestFeeEngine(unittest.TestCase):
         When : Withdraws all of them sequentially(descending).
         Then : Checks if the previous and next link update correctly.
         """
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         cnt_deposit = 4
         block_height = randrange(100, 10000)
@@ -414,7 +424,7 @@ class TestFeeEngine(unittest.TestCase):
 
         for i in range(cnt_deposit - 1, -1, -1):
             target_deposit = self._engine.get_deposit(context, arr_tx_hash[i])
-            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2, 1)
+            self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[i], block_height + term // 2)
 
             if i == 0:
                 self.assertIsNone(target_deposit.prev_id)
@@ -434,7 +444,7 @@ class TestFeeEngine(unittest.TestCase):
                and where expires of the deposit is more than current block height.
                In the test, only the last deposit is available.
         """
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         cnt_deposit = 4
         block_height = randrange(100, 10000)
@@ -456,7 +466,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[0])
 
         self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[0],
-                                      block_height + FeeEngine._MAX_DEPOSIT_TERM // 2, 1)
+                                      block_height + FeeEngine._MAX_DEPOSIT_TERM // 2)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
         self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[len(arr_tx_hash) - 1])
@@ -469,7 +479,7 @@ class TestFeeEngine(unittest.TestCase):
                and where expires of the deposit is more than current block height.
                In the test, only the third deposit is available.
         """
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         cnt_deposit = 4
         block_height = randrange(100, 10000)
@@ -491,7 +501,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.available_head_id_of_deposit, arr_tx_hash[0])
 
         self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[0],
-                                      block_height + FeeEngine._MAX_DEPOSIT_TERM // 2, 1)
+                                      block_height + FeeEngine._MAX_DEPOSIT_TERM // 2)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
         self.assertEqual(deposit_meta.available_head_id_of_deposit, arr_tx_hash[len(arr_tx_hash) - 2])
@@ -502,7 +512,7 @@ class TestFeeEngine(unittest.TestCase):
         When : Expires of the withdrawal deposit is same as expires.
         Then : Searches for max expires which is more than current block height.
         """
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         cnt_deposit = 4
         block_height = randrange(100, 10000)
@@ -530,7 +540,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_deposit, org_last_expires)
 
         self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[0],
-                                      block_height + FeeEngine._MIN_DEPOSIT_TERM // 2, 1)
+                                      block_height + FeeEngine._MIN_DEPOSIT_TERM // 2)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
         self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
@@ -542,7 +552,7 @@ class TestFeeEngine(unittest.TestCase):
         When : Expires of the withdrawal deposit which is the last one is same as expires.
         Then : Searches for max expires which is more than current block height.
         """
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         cnt_deposit = 4
         block_height = randrange(100, 10000)
@@ -572,14 +582,14 @@ class TestFeeEngine(unittest.TestCase):
 
         # Withdraws the last one
         self._engine.withdraw_deposit(context, self._sender, arr_tx_hash[cnt_deposit - 1],
-                                      block_height + FeeEngine._MIN_DEPOSIT_TERM // 2, 1)
+                                      block_height + FeeEngine._MIN_DEPOSIT_TERM // 2)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
         self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
         self.assertEqual(deposit_meta.expires_of_deposit, last_expires)
 
     def test_get_deposit_info(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
@@ -603,7 +613,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(block_height + term, deposit.expires)
 
     def test_charge_transaction_fee_without_sharing(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         step_price = 10 ** 10
         used_step = 10 ** 10
@@ -626,7 +636,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(step_price * used_step, before_sender_balance - after_sender_balance)
 
     def test_charge_transaction_fee_sharing_deposit(self):
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         step_price = 10 ** 10
         used_step = 10 ** 10
@@ -661,7 +671,7 @@ class TestFeeEngine(unittest.TestCase):
                 update indices to 2nd
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -700,7 +710,7 @@ class TestFeeEngine(unittest.TestCase):
                 update indices to 3rd
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -739,7 +749,7 @@ class TestFeeEngine(unittest.TestCase):
                 update indices to 5th
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -779,7 +789,7 @@ class TestFeeEngine(unittest.TestCase):
                 should update indices but there are no more available deposits
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -819,7 +829,7 @@ class TestFeeEngine(unittest.TestCase):
                 update indices to 4th
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -860,7 +870,7 @@ class TestFeeEngine(unittest.TestCase):
                 update indices to 2nd
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -901,7 +911,7 @@ class TestFeeEngine(unittest.TestCase):
                 2nd deposit is fully consumed so update indices to 3rd
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -942,7 +952,7 @@ class TestFeeEngine(unittest.TestCase):
                 4th deposit is fully consumed so update indices to 5th
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -984,7 +994,7 @@ class TestFeeEngine(unittest.TestCase):
                 All available deposits are consumed so make the SCORE disabled
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -1025,7 +1035,7 @@ class TestFeeEngine(unittest.TestCase):
                 Pays remaining fee by deposit through 2nd and 3rd deposit.
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [
@@ -1068,7 +1078,7 @@ class TestFeeEngine(unittest.TestCase):
                 and make the SCORE disabled
         """
 
-        context = IconScoreContext(IconScoreContextType.INVOKE)
+        context = self.get_context()
 
         # tx_hash, from_block, to_block, deposit_amount, virtual_step_amount
         deposits = [

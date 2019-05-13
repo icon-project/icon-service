@@ -96,7 +96,7 @@ class TestFeeStorage(TestCase):
         deposit.prev_id = create_tx_hash()
         deposit.next_id = create_tx_hash()
         deposit.version = 2
-        self.storage.put_deposit(context, deposit.id, deposit)
+        self.storage.put_deposit(context, deposit)
 
         deposit2 = self.storage.get_deposit(context, deposit.id)
         self.assertEqual(deposit, deposit2)
@@ -120,7 +120,7 @@ class TestFeeStorage(TestCase):
         deposit.virtual_step_issued = 100000000000
         deposit.virtual_step_used = 200000000000
         deposit.version = 1
-        self.storage.put_deposit(context, deposit.id, deposit)
+        self.storage.put_deposit(context, deposit)
 
         deposit2 = self.storage.get_deposit(context, deposit.id)
         self.assertEqual(deposit, deposit2)
