@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from ..data_creator import DataCreator
+from ..reward_calc.data_creator import DataCreator
 from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
@@ -29,9 +29,9 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..reward_calc_data_storage import RewardCalcDataStorage
+    from ..reward_calc.data_storage import DataStorage as RewardCalcDataStorage
     from ..ipc.reward_calc_proxy import RewardCalcProxy
-    from ..msg_data import DelegationInfo, DelegationTx, TxData
+    from ..reward_calc.msg_data import DelegationInfo, DelegationTx, TxData
     from ..variable.variable import Variable
 
 

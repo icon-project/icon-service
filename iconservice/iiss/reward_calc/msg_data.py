@@ -18,12 +18,12 @@ from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Any, TYPE_CHECKING, List, Optional
 
-from ..base.exception import InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER
-from ..utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
+from ...base.exception import InvalidParamsException
+from ...icon_constant import DATA_BYTE_ORDER
+from ...utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
 if TYPE_CHECKING:
-    from ..base.address import Address
+    from ...base.address import Address
 
 
 class TxType(IntEnum):

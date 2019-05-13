@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 from iconcommons import Logger
 
-from .icx_issue_formula import IssueFormula
-from .data_creator import DataCreator
+from .issue_formula import IssueFormula
+from .reward_calc.data_creator import DataCreator
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -29,8 +29,8 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.variable.variable_storage import GovernanceVariable, PRep
     from .ipc.reward_calc_proxy import RewardCalcProxy
-    from .reward_calc_data_storage import RewardCalcDataStorage
-    from .msg_data import Header, BlockProduceInfoData, PRepsData, GovernanceVariable
+    from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
+    from .reward_calc.msg_data import Header, BlockProduceInfoData, PRepsData, GovernanceVariable
     from .variable.variable import Variable
 
 

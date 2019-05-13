@@ -16,15 +16,15 @@
 
 from typing import TYPE_CHECKING, Any
 
-from ..iiss.icx_issue_formula import IssueFormula
-from ..iiss.msg_data import PRepUnregisterTx
+from ..iiss.issue_formula import IssueFormula
+from .reward_calc.msg_data import PRepUnregisterTx
 from .commit_delegator import CommitDelegator
-from .data_creator import DataCreator
+from .reward_calc.data_creator import DataCreator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
 from .handler.stake_handler import StakeHandler
 from .ipc.reward_calc_proxy import RewardCalcProxy
-from .reward_calc_data_storage import RewardCalcDataStorage
+from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
 from .variable.variable import Variable
 from ..icon_constant import ConfigKey, IISS_SOCKET_PATH
 
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from ..prep.variable.variable_storage import GovernanceVariable
 
     from ..base.address import Address
-    from .msg_data import PRepRegisterTx, TxData
+    from .reward_calc.msg_data import PRepRegisterTx, TxData
 
 
 class Engine:
