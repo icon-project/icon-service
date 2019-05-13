@@ -34,7 +34,7 @@ class IcxIssueEngine:
         self.close()
         self._storage = storage
 
-    def close(self) -> None:
+    def close(self):
         """Close resources
         """
         if self._storage:

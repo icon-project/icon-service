@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING, Any
 
-from ..iiss.icx_issue_formula import IcxIssueFormula
+from ..iiss.icx_issue_formula import IssueFormula
 from ..iiss.iiss_msg_data import PRepUnregisterTx
 from .commit_delegator import CommitDelegator
 from .handler.delegation_handler import DelegationHandler
@@ -60,7 +60,7 @@ class IissEngine:
         self._reward_calc_proxy: 'RewardCalcProxy' = None
         self._rc_storage: 'RcDataStorage' = None
         self._variable: 'IissVariable' = None
-        self._formula: 'IcxIssueFormula' = None
+        self._formula: 'IssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
         self._init_reward_calc_proxy()
@@ -73,7 +73,7 @@ class IissEngine:
 
         self._init_commit_delegator()
         # todo: formula 가 min, max l point값을 가지고 있는게 좋을까?
-        self._formula = IcxIssueFormula()
+        self._formula = IssueFormula()
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)

@@ -16,7 +16,7 @@
 from ..icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
 
 
-class IcxIssueFormula(object):
+class IssueFormula(object):
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -42,23 +42,22 @@ class IcxIssueFormula(object):
         return value
 
     @staticmethod
-    def calculate_r_rep(r_min, r_max, l_point, total_supply, total_delegated):
-        stake_percentage = int(total_delegated / total_supply * IISS_MAX_REWARD_RATE)
+    def calculate_r_rep(r_min, r_max, r_point, total_supply, total_delegated) -> int:
+        stake_percentage: float = total_delegated / total_supply * IISS_MAX_REWARD_RATE
 
-        left_operand = (r_max - r_min) / pow(l_point, 2)
-        right_operand = pow(stake_percentage - l_point, 2)
-
-        return int(left_operand * right_operand + r_min)
+        first_operand: float = (r_max - r_min) / (r_point ** 2)
+        second_operand: float = (stake_percentage - r_point) ** 2
+        return int(first_operand * second_operand + r_min)
 
     @staticmethod
-    def calculate_i_rep_per_block_contributor(i_rep):
-        return int(i_rep * 0.5 * IISS_MONTH / IISS_ANNUAL_BLOCK)
+    def calculate_i_rep_per_block_contributor(i_rep) -> int:
+        return int(i_rep * 0.5 * IISS_MONTH // IISS_ANNUAL_BLOCK)
 
     def _handle_icx_issue_formula_for_prep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
-        calculated_i_rep = self.calculate_i_rep_per_block_contributor(incentive)
-        beta_1 = calculated_i_rep * self._prep_count
-        beta_2 = calculated_i_rep * self._sub_prep_count
-        beta_3 = reward_rate * total_delegation // IISS_ANNUAL_BLOCK
+        calculated_i_rep: int = self.calculate_i_rep_per_block_contributor(incentive)
+        beta_1: int = calculated_i_rep * self._prep_count
+        beta_2: int = calculated_i_rep * self._sub_prep_count
+        beta_3: int = int(reward_rate * total_delegation / IISS_ANNUAL_BLOCK / IISS_MAX_REWARD_RATE)
         return beta_1 + beta_2 + beta_3
 
     def _handle_icx_issue_formula_for_eep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:

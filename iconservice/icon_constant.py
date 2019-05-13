@@ -122,8 +122,8 @@ class ConfigKey:
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
 
     # IISS VARIABLE
-    IISS_REWARD_VARIABLE = "rewardVariable"
-    LINER_POINT = 'linerPoint'
+    IISS_REWARD_VARIABLE = "iissRewardVariable"
+    REWARD_POINT = 'rewardPoint'
     REWARD_MIN = "rewardMin"
     REWARD_MAX = "rewardMAX"
 
