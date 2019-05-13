@@ -17,15 +17,15 @@
 from typing import TYPE_CHECKING, Any
 
 from ..iiss.icx_issue_formula import IssueFormula
-from ..iiss.iiss_msg_data import PRepUnregisterTx
+from ..iiss.msg_data import PRepUnregisterTx
 from .commit_delegator import CommitDelegator
+from .data_creator import DataCreator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
 from .handler.stake_handler import StakeHandler
-from .iiss_data_creator import IissDataCreator
-from .iiss_variable.iiss_variable import IissVariable
 from .ipc.reward_calc_proxy import RewardCalcProxy
-from .rc_data_storage import RcDataStorage
+from .reward_calc_data_storage import RewardCalcDataStorage
+from .variable.variable import Variable
 from ..icon_constant import ConfigKey, IISS_SOCKET_PATH
 
 if TYPE_CHECKING:
@@ -35,13 +35,13 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
     from ..database.db import ContextDatabase
     from iconcommons import IconConfig
-    from ..prep.prep_variable.prep_variable_storage import GovernanceVariable
+    from ..prep.variable.variable_storage import GovernanceVariable
 
     from ..base.address import Address
-    from .iiss_msg_data import PRepRegisterTx, IissTxData
+    from .msg_data import PRepRegisterTx, TxData
 
 
-class IissEngine:
+class Engine:
     icx_storage: 'IcxStorage' = None
 
     def __init__(self):
@@ -58,17 +58,17 @@ class IissEngine:
         }
 
         self._reward_calc_proxy: 'RewardCalcProxy' = None
-        self._rc_storage: 'RcDataStorage' = None
-        self._variable: 'IissVariable' = None
+        self._rc_storage: 'RewardCalcDataStorage' = None
+        self._variable: 'Variable' = None
         self._formula: 'IssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
         self._init_reward_calc_proxy()
 
-        self._rc_storage: 'RcDataStorage' = RcDataStorage()
+        self._rc_storage: 'RewardCalcDataStorage' = RewardCalcDataStorage()
         self._rc_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
 
-        self._variable = IissVariable(db)
+        self._variable = Variable(db)
         self._variable.init_config(context, conf)
 
         self._init_commit_delegator()
@@ -153,16 +153,16 @@ class IissEngine:
                                            batch: list,
                                            address: 'Address',
                                            block_height: int):
-        tx: 'PRepRegisterTx' = IissDataCreator.create_tx_prep_reg()
-        iiss_tx_data: 'IissTxData' = IissDataCreator.create_tx(address, block_height, tx)
+        tx: 'PRepRegisterTx' = DataCreator.create_tx_prep_reg()
+        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, tx)
         self._rc_storage.put(batch, iiss_tx_data)
 
     def put_unreg_prep_candidate_for_iiss_db(self,
                                              batch: list,
                                              address: 'Address',
                                              block_height: int):
-        tx: 'PRepUnregisterTx' = IissDataCreator.create_tx_prep_unreg()
-        iiss_tx_data: 'IissTxData' = IissDataCreator.create_tx(address, block_height, tx)
+        tx: 'PRepUnregisterTx' = DataCreator.create_tx_prep_unreg()
+        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, tx)
         self._rc_storage.put(batch, iiss_tx_data)
 
     def apply_candidate_delegated_offset_for_iiss_variable(self,

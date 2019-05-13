@@ -16,12 +16,12 @@
 
 from typing import TYPE_CHECKING
 
-from ...icon_constant import IISS_MAX_DELEGATIONS
+from ..data_creator import DataCreator
 from ...base.exception import InvalidParamsException
-from ...base.type_converter_templates import ParamType, ConstantKeys
 from ...base.type_converter import TypeConverter
+from ...base.type_converter_templates import ParamType, ConstantKeys
+from ...icon_constant import IISS_MAX_DELEGATIONS
 from ...icx.icx_storage import Intent
-from ..iiss_data_creator import IissDataCreator
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_result import TransactionResult
@@ -29,17 +29,17 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..rc_data_storage import RcDataStorage
+    from ..reward_calc_data_storage import RewardCalcDataStorage
     from ..ipc.reward_calc_proxy import RewardCalcProxy
-    from ..iiss_msg_data import DelegationInfo, DelegationTx, IissTxData
-    from ..iiss_variable.iiss_variable import IissVariable
+    from ..msg_data import DelegationInfo, DelegationTx, TxData
+    from ..variable.variable import Variable
 
 
 class DelegationHandler:
     icx_storage: 'IcxStorage' = None
     reward_calc_proxy: 'RewardCalcProxy' = None
-    rc_storage: 'RcDataStorage' = None
-    variable: 'IissVariable' = None
+    rc_storage: 'RewardCalcDataStorage' = None
+    variable: 'Variable' = None
 
     @classmethod
     def handle_set_delegation(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
@@ -99,7 +99,7 @@ class DelegationHandler:
 
         if delegating.delegations_amount > delegating.stake:
                 raise InvalidParamsException(
-                    f"Failed to delegation: delegation_amount{delegating.delegated_amount} > stake{delegating.stake}")
+                    f"Failed to delegation: delegation_amount{delegating.delegations_amount} > stake{delegating.stake}")
 
     @classmethod
     def _delegated_candidates(cls, context: 'IconScoreContext', delegating: 'Account', candidates: dict) -> list:
@@ -126,11 +126,11 @@ class DelegationHandler:
 
         for delegation in delegations:
             delegation_address, delegation_value = delegation.values()
-            info: 'DelegationInfo' = IissDataCreator.create_delegation_info(delegation_address, delegation_value)
+            info: 'DelegationInfo' = DataCreator.create_delegation_info(delegation_address, delegation_value)
             delegation_list.append(info)
 
-        delegation_tx: 'DelegationTx' = IissDataCreator.create_tx_delegation(delegation_list)
-        iiss_tx_data: 'IissTxData' = IissDataCreator.create_tx(address, block_height, delegation_tx)
+        delegation_tx: 'DelegationTx' = DataCreator.create_tx_delegation(delegation_list)
+        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, delegation_tx)
         cls.rc_storage.put(batch, iiss_tx_data)
 
     @classmethod

@@ -14,8 +14,8 @@
 
 from typing import TYPE_CHECKING, Optional
 
+from .common_storage import CommonStorage
 from ...icon_constant import ConfigKey
-from .iiss_common_storage import IissCommonStorage
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
@@ -23,10 +23,10 @@ if TYPE_CHECKING:
     from iconcommons import IconConfig
 
 
-class IissCommonVariable(object):
+class CommonVariable(object):
 
     def __init__(self, db: 'ContextDatabase'):
-        self._storage: 'IissCommonStorage' = IissCommonStorage(db)
+        self._storage: 'CommonStorage' = CommonStorage(db)
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
         if self._storage.get_unstake_lock_period(context) is None:

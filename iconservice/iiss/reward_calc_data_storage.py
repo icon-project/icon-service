@@ -18,16 +18,17 @@ import os
 from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
-from .database.iiss_db import IissDatabase
-from .iiss_msg_data import IissTxData
+
+from .database.db import Database
+from .msg_data import TxData
 from ..base.exception import DatabaseException
 from ..icon_constant import DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
-    from .iiss_msg_data import IissData
+    from .msg_data import Data
 
 
-class RcDataStorage(object):
+class RewardCalcDataStorage(object):
     _CURRENT_IISS_DB_NAME = "current_db"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
@@ -35,12 +36,12 @@ class RcDataStorage(object):
 
     def __init__(self):
         self._path: str = ""
-        self._db: 'IissDatabase' = None
+        self._db: Optional['Database'] = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
     @property
-    def db(self) -> 'IissDatabase':
+    def db(self) -> Optional['Database']:
         return self._db
 
     def open(self, path: str):
@@ -49,7 +50,7 @@ class RcDataStorage(object):
         self._path = path
 
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
-        self._db = IissDatabase.from_path(current_db_path, create_if_missing=True)
+        self._db = Database.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
 
     def close(self):
@@ -59,7 +60,8 @@ class RcDataStorage(object):
             self._db.close()
             self._db = None
 
-    def put(self, batch: list, iiss_data: 'IissData'):
+    @staticmethod
+    def put(batch: list, iiss_data: 'Data'):
         Logger.debug(f"put data: {str(iiss_data)}", "iiss")
         batch.append(iiss_data)
 
@@ -69,7 +71,7 @@ class RcDataStorage(object):
 
         batch_dict = {}
         for iiss_data in rc_block_batch:
-            if isinstance(iiss_data, IissTxData):
+            if isinstance(iiss_data, TxData):
                 self._db_iiss_tx_index += 1
                 key: bytes = iiss_data.make_key(self._db_iiss_tx_index)
             else:
@@ -104,7 +106,7 @@ class RcDataStorage(object):
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
 
-        self._db = IissDatabase.from_path(current_db_path)
+        self._db = Database.from_path(current_db_path)
         self._db_iiss_tx_index = -1
 
         return iiss_rc_db_path
