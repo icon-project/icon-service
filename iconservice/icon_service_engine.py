@@ -22,7 +22,7 @@ from .base.address import Address, generate_score_address, generate_score_addres
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException
+    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -504,7 +504,7 @@ class IconServiceEngine(ContextContainer):
         except IconServiceBaseException as tx_failure_exception:
             tx_result.failure = self._get_failure_from_exception(tx_failure_exception)
             # todo: consider about trace (if need)
-            trace = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
+            trace: 'Trace' = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
             context.traces.append(trace)
             context.event_logs.clear()
         finally:
@@ -517,7 +517,10 @@ class IconServiceEngine(ContextContainer):
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
                               request: dict) -> 'TransactionResult':
-        issue_data_in_tx = request['params']['data']
+        if not isinstance(request['params']['data'], dict):
+            raise IllegalFormatException("invalid issue transaction format")
+
+        issue_data_in_tx: dict = request['params']['data']
         issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info(context)
         IssueDataValidator.validate_format(issue_data_in_tx, issue_data_in_db)
 

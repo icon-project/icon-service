@@ -18,16 +18,16 @@ import os
 import unittest
 from unittest.mock import patch
 
-from iconservice.iiss.data_creator import *
-from iconservice.iiss.msg_data import TxType
-from iconservice.iiss.reward_calc_data_storage import RewardCalcDataStorage
+from iconservice.iiss.reward_calc.data_creator import *
+from iconservice.iiss.reward_calc.msg_data import TxType
+from iconservice.iiss.reward_calc.data_storage import DataStorage as RewardCalcDataStorage
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
 from tests.mock_db import MockPlyvelDB
 
 
 class TestRcDataStorage(unittest.TestCase):
-    @patch('iconservice.iiss.database.iiss_db.IissDatabase.from_path')
+    @patch('iconservice.iiss.reward_calc.db.Database.from_path')
     @patch('os.path.exists')
     def setUp(self, _, mocked_iiss_db_from_path) -> None:
         self.path = ""
@@ -43,13 +43,13 @@ class TestRcDataStorage(unittest.TestCase):
 
         self.dummy_gv = GovernanceVariable()
         self.dummy_gv.block_height = dummy_block_height
-        self.dummy_gv.icx_price = 1
-        self.dummy_gv.incentive_rep = 10
+        self.dummy_gv.calculated_incentive_rep = 1
+        self.dummy_gv.reward_rep = 1000
 
         self.dummy_prep = PRepsData()
         self.dummy_prep.block_height = dummy_block_height
-        self.dummy_prep.block_generator = create_address()
-        self.dummy_prep.block_validator_list = [create_address()]
+        self.dummy_prep.total_delegation = 10
+        self.dummy_prep.prep_list = []
 
         self.dummy_tx = TxData()
         self.dummy_tx.address = create_address()
@@ -60,7 +60,7 @@ class TestRcDataStorage(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @patch('iconservice.iiss.database.iiss_db.IissDatabase.from_path')
+    @patch('iconservice.iiss.reward_calc.db.Database.from_path')
     @patch('os.path.exists')
     def test_open(self, mocked_path_exists, mocked_iiss_db_from_path):
         # success case: when input existing path, make path of current_db and iiss_rc_db
@@ -113,7 +113,7 @@ class TestRcDataStorage(unittest.TestCase):
         for block_height in range(-2, 1):
             self.assertRaises(AssertionError, self.rc_data_storage.create_db_for_calc, block_height)
 
-    @patch('iconservice.iiss.database.iiss_db.IissDatabase.from_path')
+    @patch('iconservice.iiss.reward_calc.db.Database.from_path')
     @patch('os.rename')
     @patch('os.path.exists')
     def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_iiss_db_from_path):

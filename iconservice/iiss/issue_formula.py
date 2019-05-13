@@ -28,9 +28,9 @@ class IssueFormula(object):
     def __init__(self,
                  prep_count: int = 22,
                  sub_prep_count: int = 100):
-        self._handler = {'prep': self._handle_icx_issue_formula_for_prep,
-                         'eep': self._handle_icx_issue_formula_for_eep,
-                         'dapp': self._handle_icx_issue_formula_for_dapp}
+        self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep,
+                               'eep': self._handle_icx_issue_formula_for_eep,
+                               'dapp': self._handle_icx_issue_formula_for_dapp}
         self._prep_count: int = prep_count
         self._sub_prep_count: int = sub_prep_count
 
@@ -42,7 +42,7 @@ class IssueFormula(object):
         return value
 
     @staticmethod
-    def calculate_r_rep(r_min, r_max, r_point, total_supply, total_delegated) -> int:
+    def calculate_r_rep(r_min: int, r_max: int, r_point: int, total_supply: int, total_delegated: int) -> int:
         stake_percentage: float = total_delegated / total_supply * IISS_MAX_REWARD_RATE
 
         first_operand: float = (r_max - r_min) / (r_point ** 2)
@@ -50,7 +50,7 @@ class IssueFormula(object):
         return int(first_operand * second_operand + r_min)
 
     @staticmethod
-    def calculate_i_rep_per_block_contributor(i_rep) -> int:
+    def calculate_i_rep_per_block_contributor(i_rep: int) -> int:
         return int(i_rep * 0.5 * IISS_MONTH // IISS_ANNUAL_BLOCK)
 
     def _handle_icx_issue_formula_for_prep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
@@ -65,4 +65,3 @@ class IssueFormula(object):
 
     def _handle_icx_issue_formula_for_dapp(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
         return 3
-

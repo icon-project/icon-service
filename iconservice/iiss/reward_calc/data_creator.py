@@ -18,13 +18,13 @@ from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
 
-from .msg_data import Header, GovernanceVariable, PRepsData, TxData, \
+from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
 
 if TYPE_CHECKING:
-    from ..base.address import Address
-    from .msg_data import Tx
-    from ..prep.variable.variable_storage import PRep
+    from ...base.address import Address
+    from ..reward_calc.msg_data import Tx
+    from ...prep.variable.variable_storage import PRep
 
 
 class DataCreator:

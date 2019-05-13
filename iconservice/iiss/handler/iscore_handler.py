@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ...icx.icx_account import Account
     from ...base.address import Address
     from ..ipc.reward_calc_proxy import RewardCalcProxy
-    from ..reward_calc_data_storage import RewardCalcDataStorage
+    from ..reward_calc.data_storage import DataStorage as RewardCalcDataStorage
     from ..variable.variable import Variable
 
 

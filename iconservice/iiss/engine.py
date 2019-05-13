@@ -16,17 +16,17 @@
 
 from typing import TYPE_CHECKING, Any
 
+from ..iiss.issue_formula import IssueFormula
+from .reward_calc.msg_data import PRepUnregisterTx
 from .commit_delegator import CommitDelegator
-from .data_creator import DataCreator
+from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
 from .handler.stake_handler import StakeHandler
 from .ipc.reward_calc_proxy import RewardCalcProxy
-from .reward_calc_data_storage import RewardCalcDataStorage
+from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
 from .variable.variable import Variable
 from ..icon_constant import ConfigKey, IISS_SOCKET_PATH
-from ..iiss.icx_issue_formula import IssueFormula
-from ..iiss.msg_data import PRepUnregisterTx
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_result import TransactionResult
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from ..prep.variable.variable_storage import GovernanceVariable
 
     from ..base.address import Address
-    from .msg_data import PRepRegisterTx, TxData
+    from .reward_calc.msg_data import PRepRegisterTx, TxData
 
 
 class Engine:
@@ -153,16 +153,16 @@ class Engine:
                                            batch: list,
                                            address: 'Address',
                                            block_height: int):
-        tx: 'PRepRegisterTx' = DataCreator.create_tx_prep_reg()
-        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, tx)
+        tx: 'PRepRegisterTx' = RewardCalcDataCreator.create_tx_prep_reg()
+        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         self._rc_storage.put(batch, iiss_tx_data)
 
     def put_unreg_prep_candidate_for_iiss_db(self,
                                              batch: list,
                                              address: 'Address',
                                              block_height: int):
-        tx: 'PRepUnregisterTx' = DataCreator.create_tx_prep_unreg()
-        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, tx)
+        tx: 'PRepUnregisterTx' = RewardCalcDataCreator.create_tx_prep_unreg()
+        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         self._rc_storage.put(batch, iiss_tx_data)
 
     def apply_candidate_delegated_offset_for_iiss_variable(self,
