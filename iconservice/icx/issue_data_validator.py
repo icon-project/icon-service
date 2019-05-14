@@ -20,7 +20,7 @@ from ..base.exception import IllegalFormatException
 
 class IssueDataValidator:
     @staticmethod
-    def validate_format(tx_data: Any, db_data: dict):
+    def validate_format(tx_data: dict, db_data: dict):
         try:
             if not tx_data.keys() == db_data.keys():
                 raise IllegalFormatException("invalid issue transaction format")
