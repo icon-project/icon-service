@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from ..reward_calc.data_creator import DataCreator
+from ..reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
@@ -126,11 +126,11 @@ class DelegationHandler:
 
         for delegation in delegations:
             delegation_address, delegation_value = delegation.values()
-            info: 'DelegationInfo' = DataCreator.create_delegation_info(delegation_address, delegation_value)
+            info: 'DelegationInfo' = RewardCalcDataCreator.create_delegation_info(delegation_address, delegation_value)
             delegation_list.append(info)
 
-        delegation_tx: 'DelegationTx' = DataCreator.create_tx_delegation(delegation_list)
-        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, delegation_tx)
+        delegation_tx: 'DelegationTx' = RewardCalcDataCreator.create_tx_delegation(delegation_list)
+        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, delegation_tx)
         cls.rc_storage.put(batch, iiss_tx_data)
 
     @classmethod
