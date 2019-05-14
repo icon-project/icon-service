@@ -60,8 +60,6 @@ ZERO_TX_HASH = bytes(32)
 
 class IssueDataKey:
     PREP = "prep"
-    EEP = "eep"
-    DAPP = "dapp"
     TOTAL = "total"
 
     INCENTIVE = "incentive"
@@ -76,23 +74,13 @@ ISSUE_EVENT_LOG_MAPPER = {
         "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
-    IssueDataKey.EEP: {
-        "indexed": "EEPIssue(int,int,int,int)",
-        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
-                 IssueDataKey.VALUE]
-    },
-    IssueDataKey.DAPP: {
-        "indexed": "DappIssue(int,int,int,int)",
-        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
-                 IssueDataKey.VALUE]
-    },
     IssueDataKey.TOTAL: {
         "indexed": "ICXIssue(int)",
         "data": []
     }
 }
 
-ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP, IssueDataKey.EEP, IssueDataKey.DAPP]
+ISSUE_CALCULATE_ORDER = [IssueDataKey.PREP]
 
 ICX_ISSUE_TRANSACTION_INDEX = 0
 

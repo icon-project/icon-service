@@ -28,9 +28,7 @@ class IssueFormula(object):
     def __init__(self,
                  prep_count: int = 22,
                  sub_prep_count: int = 100):
-        self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep,
-                               'eep': self._handle_icx_issue_formula_for_eep,
-                               'dapp': self._handle_icx_issue_formula_for_dapp}
+        self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep}
         self._prep_count: int = prep_count
         self._sub_prep_count: int = sub_prep_count
 
