@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
+from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
@@ -491,12 +491,13 @@ class IconServiceEngine(ContextContainer):
                                    issue_data_in_tx: dict,
                                    issue_data_in_db: dict):
 
+        treasury_address: 'Address' = self._icx_engine.fee_treasury_address
         tx_result = TransactionResult(context.tx, context.block)
-        # todo: treasury address should be assigned when icon service open.
-        tx_result.to = TREASURY_ADDRESS
+        tx_result.to = treasury_address
+
         try:
             self._icx_issue_engine.issue(context,
-                                         TREASURY_ADDRESS,
+                                         treasury_address,
                                          issue_data_in_tx,
                                          issue_data_in_db)
 
