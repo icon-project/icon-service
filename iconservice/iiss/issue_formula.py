@@ -28,9 +28,7 @@ class IssueFormula(object):
     def __init__(self,
                  prep_count: int = 22,
                  sub_prep_count: int = 100):
-        self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep,
-                               'eep': self._handle_icx_issue_formula_for_eep,
-                               'dapp': self._handle_icx_issue_formula_for_dapp}
+        self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep}
         self._prep_count: int = prep_count
         self._sub_prep_count: int = sub_prep_count
 
@@ -59,10 +57,3 @@ class IssueFormula(object):
         beta_2: int = calculated_i_rep * self._sub_prep_count
         beta_3: int = int(reward_rate * total_delegation / IISS_ANNUAL_BLOCK / IISS_MAX_REWARD_RATE)
         return beta_1 + beta_2 + beta_3
-
-    def _handle_icx_issue_formula_for_eep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
-        return 2
-
-    def _handle_icx_issue_formula_for_dapp(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
-        return 3
-
