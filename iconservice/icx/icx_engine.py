@@ -71,6 +71,10 @@ class IcxEngine(object):
     def storage(self) -> 'IcxStorage':
         return self._storage
 
+    @property
+    def fee_treasury_address(self) -> 'Address':
+        return self._fee_treasury_address
+
     def close(self) -> None:
         """Close resources
         """
