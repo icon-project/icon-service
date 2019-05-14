@@ -493,7 +493,7 @@ class IconServiceEngine(ContextContainer):
         except IconServiceBaseException as tx_failure_exception:
             tx_result.failure = self._get_failure_from_exception(tx_failure_exception)
             # todo: consider about trace (if need)
-            trace = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
+            trace: 'Trace' = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
             context.traces.append(trace)
             context.event_logs.clear()
         finally:
@@ -506,7 +506,7 @@ class IconServiceEngine(ContextContainer):
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
                               request: dict) -> 'TransactionResult':
-        issue_data_in_tx = request['params']['data']
+        issue_data_in_tx: Any = request['params']['data']
         issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info(context)
         IssueDataValidator.validate_format(issue_data_in_tx, issue_data_in_db)
 
