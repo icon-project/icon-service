@@ -171,6 +171,7 @@ class IconScoreInnerTask(object):
 
     @staticmethod
     def _get_block_info_for_precommit_state(converted_block_params: dict):
+        # todo: implement unit tests
         block_height = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
         block_hash = None
         if ConstantKeys.BLOCK_HASH in converted_block_params:

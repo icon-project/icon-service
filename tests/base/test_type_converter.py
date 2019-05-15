@@ -651,6 +651,24 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(block_height, ret_params[ConstantKeys.BLOCK_HEIGHT])
         self.assertEqual(block_hash, ret_params[ConstantKeys.BLOCK_HASH])
 
+    def test_write_precommit_convert_new_format(self):
+        # newly defined interface (jira issue LC-306)
+        block_height = 1001
+        old_block_hash = create_block_hash()
+        new_block_hash = create_block_hash()
+
+        request = {
+            ConstantKeys.BLOCK_HEIGHT: hex(block_height),
+            ConstantKeys.OLD_BLOCK_HASH: bytes.hex(old_block_hash),
+            ConstantKeys.NEW_BLOCK_HASH: bytes.hex(new_block_hash)
+        }
+
+        ret_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
+
+        self.assertEqual(block_height, ret_params[ConstantKeys.BLOCK_HEIGHT])
+        self.assertEqual(old_block_hash, ret_params[ConstantKeys.OLD_BLOCK_HASH])
+        self.assertEqual(new_block_hash, ret_params[ConstantKeys.NEW_BLOCK_HASH])
+
     def test_remove_precommit_convert(self):
         block_height = 1001
         block_hash = create_block_hash()

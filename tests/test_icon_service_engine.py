@@ -724,6 +724,37 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertEqual(ExceptionCode.INVALID_PARAMETER, e.code)
         self.assertTrue(e.message.startswith('No precommit data'))
 
+    def test_commit_change_block_hash(self):
+        block_height = 1
+        instant_block_hash = create_block_hash()
+        block_timestamp = 0
+        tx_hash = create_tx_hash()
+
+        dummy_tx = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'nid': 3,
+                'version': 3,
+                'from': self._genesis_address,
+                'to': self._to,
+                'value': 1 * 10 ** 18,
+                'stepLimit': 1000000,
+                'timestamp': 1234567890,
+                'txHash': tx_hash
+            }
+        }
+        block = Block(block_height,
+                      instant_block_hash,
+                      block_timestamp,
+                      self.genesis_block.hash)
+
+        self._engine.invoke(block, [dummy_tx])
+        block_hash = create_block_hash()
+        self._engine.commit(block.height, block.hash, block_hash)
+
+        self.assertEqual(self._engine._get_last_block().hash, block_hash)
+        self.assertEqual(self._engine._icx_storage.last_block.hash, block_hash)
+
     def test_rollback(self):
         block = Block(
             block_height=1,
