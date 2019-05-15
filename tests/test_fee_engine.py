@@ -144,6 +144,9 @@ class TestFeeEngine(unittest.TestCase):
         context.step_counter.step_price = 10 ** 10
         context.tx = Mock(spec=Transaction)
         context.tx.to = self._score_address
+        block = Mock(spec=Block)
+        block.attach_mock(Mock(return_value=0), 'height')
+        context.block = block
         return context
 
     def _deposit_bulk(self, count):
@@ -306,8 +309,10 @@ class TestFeeEngine(unittest.TestCase):
         amount = 10000 * 10 ** 18
         block_height = 1000
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, amount)
+        self._icx_engine._put_genesis_data_account(context,
+                                                   CoinPartType.GENERAL,
+                                                   self._sender,
+                                                   amount)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
 
@@ -328,8 +333,10 @@ class TestFeeEngine(unittest.TestCase):
         block_height = 1000
         term = FeeEngine._MIN_DEPOSIT_TERM
 
-        self._icx_engine.init_account(
-            context, AccountType.GENERAL, 'sender', self._sender, amount)
+        self._icx_engine._put_genesis_data_account(context,
+                                                   CoinPartType.GENERAL,
+                                                   self._sender,
+                                                   amount)
 
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
 

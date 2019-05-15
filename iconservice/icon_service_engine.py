@@ -993,12 +993,6 @@ class IconServiceEngine(ContextContainer):
                 params,
                 step_price=context.step_counter.step_price)
 
-        # Every send_transaction are calculated DEFAULT STEP at first
-        context.step_counter.apply_step(StepType.DEFAULT, 1)
-
-        input_size = get_input_data_size(context.revision, params.get('data', None))
-        context.step_counter.apply_step(StepType.INPUT, input_size)
-
         data_type: str = params.get('dataType')
         if data_type in (None, 'call', 'message'):
             self._transfer_coin(context, params)

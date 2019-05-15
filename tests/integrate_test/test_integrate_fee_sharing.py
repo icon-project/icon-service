@@ -41,8 +41,7 @@ MIN_DEPOSIT_TERM = FeeEngine._MIN_DEPOSIT_TERM
 class TestIntegrateFeeSharing(TestIntegrateBase):
 
     def setUp(self):
-        super().setUp()
-        root_clear(self._score_root_path, self._state_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
 
         self._block_height = 0
         self._prev_block_hash = None
