@@ -1092,18 +1092,21 @@ class IconServiceEngine(ContextContainer):
         prev_block_hash = block_hash
         return Block(block_height, block_hash, timestamp, prev_block_hash)
 
-    def commit(self, block: 'Block') -> None:
+    def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
         """
         # Check for block validation before commit
-        self._precommit_data_manager.validate_precommit_block(block)
+        self._precommit_data_manager.validate_precommit_block(instant_block_hash)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         precommit_data: 'PrecommitData' = \
-            self._precommit_data_manager.get(block.hash)
+            self._precommit_data_manager.get(instant_block_hash)
         block_batch = precommit_data.block_batch
+        if block_hash:
+            block_batch.block.set_hash(block_hash)
+
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
             context.icon_score_mapper.update(new_icon_score_mapper)
@@ -1117,13 +1120,13 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
-    def rollback(self, block: 'Block') -> None:
+    def rollback(self, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         """
         # Check for block validation before rollback
-        self._precommit_data_manager.validate_precommit_block(block)
-        self._precommit_data_manager.rollback(block)
+        self._precommit_data_manager.validate_precommit_block(instant_block_hash)
+        self._precommit_data_manager.rollback(instant_block_hash)
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks

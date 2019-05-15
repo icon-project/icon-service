@@ -120,7 +120,7 @@ class TestIntegrateBase(TestCase):
             block,
             [tx]
         )
-        self.icon_service_engine.commit(block)
+        self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block_hash
 
@@ -273,7 +273,7 @@ class TestIntegrateBase(TestCase):
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.commit(block)
+        self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block.hash
 

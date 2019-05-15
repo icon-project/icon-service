@@ -54,6 +54,9 @@ class Block(object):
     def hash(self) -> bytes:
         return self._hash
 
+    def set_hash(self, block_hash: bytes):
+        self._hash = block_hash
+
     @property
     def timestamp(self) -> int:
         return self._timestamp
