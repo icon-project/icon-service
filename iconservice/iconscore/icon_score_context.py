@@ -170,6 +170,9 @@ class IconScoreContext(object):
         self.prep_candidate_tx_batch.clear()
 
     def clear_batch(self):
-        self.tx_batch.clear()
-        self.rc_tx_batch.clear()
-        self.prep_candidate_tx_batch.clear()
+        if self.tx_batch:
+            self.tx_batch.clear()
+        if self.rc_tx_batch:
+            self.rc_tx_batch.clear()
+        if self.prep_candidate_tx_batch:
+            self.prep_candidate_tx_batch.clear()
