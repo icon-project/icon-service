@@ -26,6 +26,7 @@ from iconservice.database.db import ContextDatabase
 from iconservice.deploy import DeployState
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
 from iconservice.fee.fee_engine import FeeEngine
+from iconservice.fee.fee_engine import VirtualStepCalculator, FIXED_TERM
 from iconservice.fee.fee_storage import FeeStorage
 from iconservice.icon_constant import IconScoreContextType
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
@@ -34,7 +35,6 @@ from iconservice.icx import IcxEngine
 from iconservice.icx.icx_account import AccountType, Account
 from iconservice.icx.icx_storage import IcxStorage
 from tests.mock_generator import clear_inner_task
-from iconservice.fee.fee_engine import VirtualStepCalculator
 
 
 def create_context_db():
@@ -159,6 +159,7 @@ class TestFeeEngine(unittest.TestCase):
 
         return input_params
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_fee(self):
         context = self.get_context()
         block_height = 0
@@ -167,7 +168,6 @@ class TestFeeEngine(unittest.TestCase):
         input_param = self._deposit_bulk(size)
 
         deposit_info = self._engine.get_deposit_info(context, self._score_address, block_height)
-
         self.assertEqual(size, len(deposit_info.deposits))
 
         for i in range(size):
@@ -180,6 +180,7 @@ class TestFeeEngine(unittest.TestCase):
             self.assertEqual(block_height, deposit.created)
             self.assertEqual(block_height + term, deposit.expires)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_append_and_delete(self):
         size = randrange(10, 100)
         deposit_list = self._deposit_bulk(size)
@@ -215,6 +216,7 @@ class TestFeeEngine(unittest.TestCase):
             self.assertEqual(block_height, deposit.created)
             self.assertEqual(block_height + term, deposit.expires)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_fee_invalid_param(self):
         context = self.get_context()
 
@@ -270,6 +272,7 @@ class TestFeeEngine(unittest.TestCase):
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid SCORE owner', e.exception.message)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_fee_out_of_balance(self):
         context = self.get_context()
 
@@ -331,6 +334,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_virtual_step, block_height + term)
         self.assertEqual(deposit_meta.expires_of_deposit, block_height + term)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_without_penalty(self):
         context = self.get_context()
 
@@ -350,6 +354,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertIsNone(deposit_info)
         self.assertEqual(amount, after_sender_balance - before_sender_balance)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_with_penalty(self):
         context = self.get_context()
 
@@ -370,6 +375,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_and_updates_previous_and_next_link_ascending(self):
         """
         Given: There are four deposits.
@@ -403,6 +409,7 @@ class TestFeeEngine(unittest.TestCase):
             deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
             self.assertEqual(next_deposit.id, deposit_meta.head_id)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_and_updates_previous_and_next_link_descending(self):
         """
         Given: There are four deposits.
@@ -436,6 +443,7 @@ class TestFeeEngine(unittest.TestCase):
             deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
             self.assertEqual(prev_deposit.id, deposit_meta.tail_id)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_when_available_head_id_of_virtual_step_is_same_as_deposit_id(self):
         """
         Given: There are four deposits. Only the last deposit has enough to long term.
@@ -471,6 +479,7 @@ class TestFeeEngine(unittest.TestCase):
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
         self.assertEqual(deposit_meta.available_head_id_of_virtual_step, arr_tx_hash[len(arr_tx_hash) - 1])
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_when_available_head_id_of_deposit_is_same_as_deposit_id(self):
         """
         Given: There are four deposits. Only the third deposit has enough long term.
@@ -506,6 +515,7 @@ class TestFeeEngine(unittest.TestCase):
         deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
         self.assertEqual(deposit_meta.available_head_id_of_deposit, arr_tx_hash[len(arr_tx_hash) - 2])
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_to_check_setting_on_next_max_expires(self):
         """
         Given: There are four deposits.
@@ -546,6 +556,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
         self.assertEqual(deposit_meta.expires_of_deposit, last_expires)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_of_last_deposit_to_check_setting_on_next_max_expires(self):
         """
         Given: There are four deposits.
@@ -588,6 +599,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
         self.assertEqual(deposit_meta.expires_of_deposit, last_expires)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_get_deposit_info(self):
         context = self.get_context()
 
@@ -612,6 +624,7 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(block_height, deposit.created)
         self.assertEqual(block_height + term, deposit.expires)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_charge_transaction_fee_without_sharing(self):
         context = self.get_context()
 
@@ -635,6 +648,7 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(step_price * used_step, before_sender_balance - after_sender_balance)
 
+    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_charge_transaction_fee_sharing_deposit(self):
         context = self.get_context()
 
