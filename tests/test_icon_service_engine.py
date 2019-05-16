@@ -86,10 +86,8 @@ class TestIconServiceEngine(unittest.TestCase):
         # engine._init_global_value_by_governance_score = Mock()
         self.send_ipc = CommitDelegator.send_ipc
         self.genesis_send_ipc = CommitDelegator.genesis_send_ipc
-        self._check_update_calc_period = CommitDelegator._check_update_calc_period
         CommitDelegator.send_ipc = Mock()
         CommitDelegator.genesis_send_ipc = Mock()
-        CommitDelegator._check_update_calc_period = Mock(return_value=True)
         engine.open(conf)
         self._engine = engine
 
@@ -129,7 +127,6 @@ class TestIconServiceEngine(unittest.TestCase):
     def tearDown(self):
         CommitDelegator.send_ipc = self.send_ipc
         CommitDelegator.genesis_send_ipc = self.genesis_send_ipc
-        CommitDelegator._check_update_calc_period = self._check_update_calc_period
         self._engine.close()
 
         rmtree(self._score_root_path)
