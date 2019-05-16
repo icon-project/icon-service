@@ -37,6 +37,10 @@ STR_FALLBACK = 'fallback'
 STR_ON_INSTALL = 'on_install'
 STR_ON_UPDATE = 'on_update'
 
+ATTR_SCORE_GET_API = "_IconScoreBase__get_api"
+ATTR_SCORE_CALL = "_IconScoreBase__call"
+ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_method"
+
 
 @unique
 class ConstBitFlag(IntEnum):

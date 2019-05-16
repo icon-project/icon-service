@@ -25,6 +25,7 @@ from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
 from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
+from iconservice.iconscore.icon_score_constant import ATTR_SCORE_CALL
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreFuncType
 
@@ -130,7 +131,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.INVOKE
         self.context.func_type = IconScoreFuncType.READONLY
         test_score = ExternalCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 0
         func('func1', (), {})
@@ -139,7 +140,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.QUERY
         self.context.func_type = IconScoreFuncType.READONLY
         test_score = ExternalCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 0
         func('func1', (), {})
@@ -148,7 +149,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.INVOKE
         self.context.func_type = IconScoreFuncType.WRITABLE
         test_score = ExternalCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 0
         func('func2', (), {"value": 1})
@@ -157,7 +158,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.QUERY
         self.context.func_type = IconScoreFuncType.WRITABLE
         test_score = ExternalCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 0
         func('func2', (), {"value": 1})
@@ -166,7 +167,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.INVOKE
         self.context.func_type = IconScoreFuncType.WRITABLE
         test_score = ExternalPayableCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 0
         func('func1', (), {})
@@ -175,7 +176,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.INVOKE
         self.context.func_type = IconScoreFuncType.WRITABLE
         test_score = ExternalPayableCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 1
         func('func1', (), {})
@@ -184,7 +185,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.INVOKE
         self.context.func_type = IconScoreFuncType.WRITABLE
         test_score = ExternalPayableCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 0
         func('func2', (), {})
@@ -193,7 +194,7 @@ class TestExternalPayableCall(unittest.TestCase):
         self.context.context_type = IconScoreContextType.INVOKE
         self.context.func_type = IconScoreFuncType.WRITABLE
         test_score = ExternalPayableCallClass(Mock())
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
 
         self.context.msg.value = 1
         with self.assertRaises(BaseException) as e:
@@ -207,7 +208,7 @@ class TestExternalPayableCall(unittest.TestCase):
         test_score = ChildCallClass(Mock())
 
         self.context.msg.value = 0
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
         func('func1', (), {})
 
     def test_inherit_call2(self):
@@ -216,7 +217,7 @@ class TestExternalPayableCall(unittest.TestCase):
         test_score = ChildCallClass(Mock())
 
         self.context.msg.value = 0
-        func = getattr(test_score, '_IconScoreBase__call')
+        func = getattr(test_score, ATTR_SCORE_CALL)
         with self.assertRaises(BaseException) as e:
             func('func2', (), {})
         self.assertEqual(e.exception.code, ExceptionCode.METHOD_NOT_FOUND)

@@ -19,7 +19,8 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from .icon_score_constant import STR_FALLBACK
+from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_GET_API, ATTR_SCORE_CALL, \
+    ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD
 from .icon_score_context import IconScoreContext
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.address import Address, ZERO_SCORE_ADDRESS
@@ -79,7 +80,8 @@ class IconScoreEngine(object):
         IconScoreEngine._validate_score_blacklist(context, icon_score_address)
 
         icon_score = IconScoreEngine._get_icon_score(context, icon_score_address)
-        return icon_score.get_api()
+        get_api = getattr(icon_score, ATTR_SCORE_GET_API)
+        return get_api()
 
     @staticmethod
     def _validate_score_blacklist(context: 'IconScoreContext', icon_score_address: 'Address'):
@@ -108,14 +110,15 @@ class IconScoreEngine(object):
         converted_params = IconScoreEngine._convert_score_params_by_annotations(icon_score, func_name, kw_params)
         context.set_func_type_by_icon_score(icon_score, func_name)
 
-        score_func = getattr(icon_score, '_IconScoreBase__call')
+        score_func = getattr(icon_score, ATTR_SCORE_CALL)
         return score_func(func_name=func_name, kw_params=converted_params)
 
     @staticmethod
     def _convert_score_params_by_annotations(icon_score: 'IconScoreBase', func_name: str, kw_params: dict) -> dict:
         tmp_params = deepcopy(kw_params)
 
-        icon_score.validate_external_method(func_name)
+        validate_external_method = getattr(icon_score, ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD)
+        validate_external_method(func_name)
 
         score_func = getattr(icon_score, func_name)
         annotation_params = TypeConverter.make_annotations_from_method(score_func)
@@ -132,7 +135,7 @@ class IconScoreEngine(object):
         """
         icon_score = IconScoreEngine._get_icon_score(context, score_address)
 
-        score_func = getattr(icon_score, '_IconScoreBase__call')
+        score_func = getattr(icon_score, ATTR_SCORE_CALL)
         score_func(STR_FALLBACK)
 
     @staticmethod

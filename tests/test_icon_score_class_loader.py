@@ -24,10 +24,12 @@ from unittest.mock import Mock
 from iconservice.deploy.utils import convert_path_to_package_name
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
+from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address, create_tx_hash, rmtree
+
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -54,7 +56,7 @@ class TestIconScoreClassLoader(unittest.TestCase):
             os.makedirs(dir_path)
 
     def load_proj(self, proj: str) -> callable:
-        score_address: 'Address' = create_address(1, data=proj.encode())
+        score_address = create_address(1, data=proj.encode())
         score_path = os.path.join(self._score_root_path, score_address.to_bytes().hex())
         os.makedirs(score_path, exist_ok=True)
 
@@ -69,9 +71,12 @@ class TestIconScoreClassLoader(unittest.TestCase):
         self.__ensure_dir(self._score_root_path)
 
         score = self.load_proj('test_score01')
-        print('test_score01', score.get_api())
+
+        get_api = getattr(score, ATTR_SCORE_GET_API)
+        print('test_score01', get_api())
         score = self.load_proj('test_score02')
-        print('test_score02', score.get_api())
+        get_api = getattr(score, ATTR_SCORE_GET_API)
+        print('test_score02', get_api())
 
         ins_score = score(Mock())
 
