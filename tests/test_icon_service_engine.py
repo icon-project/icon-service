@@ -180,10 +180,10 @@ class TestIconServiceEngine(unittest.TestCase):
                                  timestamp=params['timestamp'],
                                  nonce=params.get('nonce', None))
 
+        context.msg = Message(from_)
+
         context.block = Mock(spec=Block)
         context.event_logs = []
-        context.cumulative_step_used = Mock(spec=int)
-        context.cumulative_step_used.attach_mock(Mock(), '__add__')
         context.step_counter: IconScoreStepCounter = \
             self._engine._step_counter_factory.create(context.type)
         context.step_counter.reset(step_limit)

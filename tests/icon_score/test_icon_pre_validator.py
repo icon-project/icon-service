@@ -21,6 +21,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException, OutOfBalanceException
 from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.fee.fee_engine import FeeEngine
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.icx.icx_engine import IcxEngine
@@ -30,7 +31,8 @@ from tests import create_address
 class TestTransactionValidator(unittest.TestCase):
 
     def setUp(self):
-        self.validator = IconPreValidator(Mock(spec=IcxEngine), Mock(spec=IconScoreDeployStorage))
+        self.validator = IconPreValidator(
+            Mock(spec=IcxEngine), Mock(spec=FeeEngine), Mock(spec=IconScoreDeployStorage))
 
     def test_excute_v2(self):
         self.validator._check_data_size = Mock()
@@ -284,13 +286,14 @@ class TestTransactionValidator(unittest.TestCase):
             self.validator._validate_transaction_v3(None, params, ANY, ANY)
         self.assertEqual(ke.exception.args[0], 'to')
 
-        self.validator._check_minimum_step.assert_called_once_with(params, ANY)
+        self.validator._check_minimum_step.asserd_not_called()
         self.validator._check_from_can_charge_fee_v3(None, {}, ANY)
 
         self.validator._check_minimum_step.reset_mock()
         self.validator._check_from_can_charge_fee_v3.reset_mock()
 
         self.validator._is_inactive_score = Mock(return_value=True)
+        self.validator._get_total_available_step = Mock()
         to = ANY
         params = {"to": to}
         with self.assertRaises(InvalidRequestException) as e:
@@ -350,7 +353,8 @@ class TestTransactionValidator(unittest.TestCase):
 
         self.validator._check_balance.reset_mock()
         _from = create_address()
-        params = {'from': _from}
+        to = create_address()
+        params = {'from': _from, 'to': to}
         self.validator._check_from_can_charge_fee_v3(None, params, step_price)
         self.validator._check_balance.assert_called_once_with(None, _from, 0, 0)
 
@@ -359,7 +363,7 @@ class TestTransactionValidator(unittest.TestCase):
         value = 123
         step_limit = 456
         fee = step_limit * step_price
-        params = {'from': _from, 'value': value, 'stepLimit': step_limit}
+        params = {'from': _from, 'to': to, 'value': value, 'stepLimit': step_limit}
         self.validator._check_from_can_charge_fee_v3(None, params, step_price)
         self.validator._check_balance.assert_called_once_with(None, _from, value, fee)
 

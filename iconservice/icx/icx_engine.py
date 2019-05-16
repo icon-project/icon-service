@@ -281,3 +281,22 @@ class IcxEngine(object):
             self._storage.put_account(context, to_account)
 
         return True
+
+    def get_account(self,
+                    context: 'IconScoreContext',
+                    address: Address) -> Account:
+        """Returns the instance of Account indicated by address
+
+        :param context:
+        :param address:
+        :return: Account
+        """
+        return self._storage.get_account(context, address)
+
+    def get_treasury_account(self, context: 'IconScoreContext') -> Account:
+        """Returns the instance of treasury account
+
+        :param context:
+        :return: Account
+        """
+        return self._storage.get_account(context, self._fee_treasury_address)

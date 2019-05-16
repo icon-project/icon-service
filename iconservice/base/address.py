@@ -61,10 +61,17 @@ def split_icon_address(address: str) -> (str, str):
 
 
 class AddressPrefix(IntEnum):
-    """Address prefix class
     """
-    # Externally Owned Account
+    Enumeration of Address prefix
+
+    - CONTRACT: Contract Account
+    - EOA: Externally Owned Account
+
+
+    """
+
     EOA = 0
+
     CONTRACT = 1
 
     def __str__(self) -> str:
@@ -118,7 +125,7 @@ class Address(object):
     def prefix(self) -> AddressPrefix:
         """Returns address prefix part
 
-        :return: AddressPrefix.EOA(0) or AddressPrefix.CONTRACT(1)
+        :return: :class:`.AddressPrefix` AddressPrefix.EOA(0) or AddressPrefix.CONTRACT(1)
         """
         return self.__prefix
 
@@ -193,11 +200,11 @@ class Address(object):
     @staticmethod
     def from_data(prefix: AddressPrefix, data: bytes) -> Optional['Address']:
         """
-        creates an address object using given bytes
+        creates an address object using given body bytes
 
-        :param prefix:
-        :param data:
-        :return:
+        :param prefix: address prefix
+        :param data: 20-bytes address body
+        :return: :class:`.Address`
         """
         try:
             hash_value = hashlib.sha3_256(data).digest()

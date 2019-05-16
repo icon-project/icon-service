@@ -1,0 +1,5 @@
+{
+    "version": "0.0.6",
+    "main_module": "governance",
+    "main_score": "Governance"
+}

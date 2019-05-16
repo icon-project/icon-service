@@ -97,7 +97,7 @@ class TestIntegrateBase(TestCase):
     def _make_init_config(self) -> dict:
         return {}
 
-    def _genesis_invoke(self) -> dict:
+    def _genesis_invoke(self) -> tuple:
         tx_hash = create_tx_hash()
         timestamp_us = create_timestamp()
         request_params = {
@@ -132,7 +132,7 @@ class TestIntegrateBase(TestCase):
 
         block_hash = create_block_hash()
         block = Block(self._block_height, block_hash, timestamp_us, None)
-        invoke_response: dict = self.icon_service_engine.invoke(
+        invoke_response: tuple = self.icon_service_engine.invoke(
             block,
             [tx]
         )

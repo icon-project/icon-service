@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
     from ..icx.icx_engine import IcxEngine
+    from ..fee.fee_engine import FeeEngine
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
@@ -102,6 +103,7 @@ class IconScoreContext(object):
     icon_score_mapper: 'IconScoreMapper' = None
     icon_score_deploy_engine: 'IconScoreDeployEngine' = None
     icx_engine: 'IcxEngine' = None
+    fee_engine: 'FeeEngine' = None
     icon_service_flag: int = 0
     legacy_tbears_mode = False
 
@@ -135,6 +137,7 @@ class IconScoreContext(object):
         self.step_counter: 'IconScoreStepCounter' = None
         self.event_logs: List['EventLog'] = None
         self.traces: List['Trace'] = None
+        self.fee_sharing_proportion = 0  # The proportion of fee by SCORE in percent (0-100)
 
         self.msg_stack = []
         self.event_log_stack = []
@@ -167,6 +170,9 @@ class IconScoreContext(object):
         self.prep_candidate_tx_batch.clear()
 
     def clear_batch(self):
-        self.tx_batch.clear()
-        self.rc_tx_batch.clear()
-        self.prep_candidate_tx_batch.clear()
+        if self.tx_batch:
+            self.tx_batch.clear()
+        if self.rc_tx_batch:
+            self.rc_tx_batch.clear()
+        if self.prep_candidate_tx_batch:
+            self.prep_candidate_tx_batch.clear()

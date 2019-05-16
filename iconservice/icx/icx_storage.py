@@ -48,10 +48,11 @@ class Intent(IntEnum):
 
 
 class IcxStorage(object):
-    _LAST_BLOCK_KEY = b'last_block'
+    """Icx coin state manager embedding a state db wrapper"""
 
-    """Icx coin state manager embedding a state db wrapper
-    """
+    # Level db keys
+    _LAST_BLOCK_KEY = b'last_block'
+    _TOTAL_SUPPLY_KEY = b'total_supply'
 
     def __init__(self, db: 'ContextDatabase') -> None:
         """Constructor
@@ -85,7 +86,7 @@ class IcxStorage(object):
         self._last_block = block
 
     def get_text(self, context: 'IconScoreContext', name: str) -> Optional[str]:
-        """Return text format value from db
+        """Returns text format value from db
 
         :return: (str or None)
             text value mapped by name
@@ -102,7 +103,7 @@ class IcxStorage(object):
                  context: 'IconScoreContext',
                  name: str,
                  text: str) -> None:
-        """save text to db with name as a key
+        """Saves text to db with name as a key
         All text are utf8 encoded.
 
         :param context:
@@ -162,6 +163,7 @@ class IcxStorage(object):
     def put_account(self,
                     context: 'IconScoreContext',
                     account: 'Account') -> None:
+
         """Put account into to db.
 
         :param context:
@@ -190,13 +192,26 @@ class IcxStorage(object):
         """
         raise Exception("not implemented")
 
+    def is_address_present(self,
+                           context: 'IconScoreContext',
+                           address: 'Address') -> bool:
+        """Checks whether value indicated by address is present or not.
+
+        :param context:
+        :param address: account address
+        :return: True(present) False(not present)
+        """
+        key = address.to_bytes()
+        value = self._db.get(context, key)
+
+        return bool(value)
+
     def get_total_supply(self, context: 'IconScoreContext') -> int:
-        """Get the total supply
+        """Returns the total supply.
 
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
-        key = b'total_supply'
-        value = self._db.get(context, key)
+        value = self._db.get(context, self._TOTAL_SUPPLY_KEY)
 
         amount = 0
         if value:
@@ -207,14 +222,13 @@ class IcxStorage(object):
     def put_total_supply(self,
                          context: 'IconScoreContext',
                          value: int) -> None:
-        """Save the total supply to db
+        """Saves the total supply to db.
 
         :param context:
         :param value: coin total supply
         """
-        key = b'total_supply'
         value = value.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER)
-        self._db.put(context, key, value)
+        self._db.put(context, self._TOTAL_SUPPLY_KEY, value)
 
     def close(self,
               context: 'IconScoreContext') -> None:

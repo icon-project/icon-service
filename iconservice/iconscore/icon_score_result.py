@@ -85,6 +85,10 @@ class TransactionResult(object):
         self.logs_bloom = logs_bloom
         self.status = status
 
+        # Details of the used step. This is set if the SCORE pays fees.
+        # Otherwise left as `None` and not passed to transaction result.
+        self.step_used_details: Optional[dict] = None
+
         # failure object which has code(int) and message(str) attributes
         # It is only available on self.status == FAILURE
         self.failure = None
@@ -112,12 +116,19 @@ class TransactionResult(object):
                                      isinstance(v, EventLog)]
             elif isinstance(value, BloomFilter):
                 new_dict[new_key] = int(value).to_bytes(256, byteorder=DATA_BYTE_ORDER)
-            elif key == 'failure' and value:
+            elif key == 'failure':
                 if self.status == self.FAILURE:
                     new_dict[new_key] = {
                         'code': value.code,
                         'message': value.message
                     }
+            elif key == 'step_used_details':
+                assert isinstance(value, dict)
+                step_used_details = {}
+                new_dict[new_key] = step_used_details
+
+                for address in value:
+                    step_used_details[str(address)] = value[address]
             elif key == 'traces':
                 # traces are excluded from dict property
                 continue

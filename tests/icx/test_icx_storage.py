@@ -60,6 +60,14 @@ class TestIcxStorage(unittest.TestCase):
         shutil.rmtree(self.db_name)
 
     def test_get_put_account(self):
+        context = self.context
+
+        address = create_address(AddressPrefix.EOA)
+        coin_part: 'CoinPart' = CoinPart()
+        account: 'Account' = Account(address, 0, coin_part=coin_part)
+        account.deposit(10 ** 19)
+
+        self.storage.put_account(context, account)
 
         address: 'Address' = create_address(AddressPrefix.EOA)
         coin_part: 'CoinPart' = CoinPart()
