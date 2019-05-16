@@ -81,6 +81,8 @@ KEY_CONVERTER = 'KEY_CONVERTER'
 class ConstantKeys:
     BLOCK_HEIGHT = "blockHeight"
     BLOCK_HASH = "blockHash"
+    OLD_BLOCK_HASH = "oldBlockHash"
+    NEW_BLOCK_HASH = "newBlockHash"
     TIMESTAMP = "timestamp"
     PREV_BLOCK_HASH = "prevBlockHash"
 
@@ -242,8 +244,11 @@ type_convert_templates[ParamType.QUERY] = {
 
 type_convert_templates[ParamType.WRITE_PRECOMMIT] = {
     ConstantKeys.BLOCK_HEIGHT: ValueType.INT,
-    ConstantKeys.BLOCK_HASH: ValueType.BYTES
+    ConstantKeys.BLOCK_HASH: ValueType.BYTES,
+    ConstantKeys.OLD_BLOCK_HASH: ValueType.BYTES,
+    ConstantKeys.NEW_BLOCK_HASH: ValueType.BYTES
 }
+
 type_convert_templates[ParamType.REMOVE_PRECOMMIT] = type_convert_templates[ParamType.WRITE_PRECOMMIT]
 
 type_convert_templates[ParamType.VALIDATE_TRANSACTION] = {
