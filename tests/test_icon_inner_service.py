@@ -37,7 +37,7 @@ class TestIconInnerService(unittest.TestCase):
 
         self.assertEqual(block_height, actual_block_height)
         self.assertEqual(instant_block_hash, actual_instant_block_hash)
-        self.assertEqual(None, actual_block_hash)
+        self.assertIsNone(None, actual_block_hash)
 
         # success case: when input new write-pre-commit data format, block_hash should be hash
         new_precommit_data_format = {
@@ -57,4 +57,6 @@ class TestIconInnerService(unittest.TestCase):
             ConstantKeys.BLOCK_HEIGHT: block_height,
             ConstantKeys.OLD_BLOCK_HASH: instant_block_hash,
         }
-        self.assertRaises(KeyError, IconScoreInnerTask._get_block_info_for_precommit_state, invalid_precommit_data_format)
+        self.assertRaises(KeyError,
+                          IconScoreInnerTask._get_block_info_for_precommit_state,
+                          invalid_precommit_data_format)
