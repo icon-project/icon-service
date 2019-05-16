@@ -74,7 +74,6 @@ class TransactionResult(object):
         """
         self.tx_hash = tx.hash
         self.block_height = block.height
-        self.block_hash = block.hash
         self.tx_index = tx.index
         self.to = to
         self.score_address = score_address

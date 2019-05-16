@@ -136,7 +136,7 @@ class TestIntegrateBase(TestCase):
             block,
             [tx]
         )
-        self.icon_service_engine.commit(block)
+        self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block_hash
 
@@ -337,12 +337,12 @@ class TestIntegrateBase(TestCase):
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.commit(block)
+        self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block.hash
 
-    def _remove_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.rollback(block)
+    def _remove_precommit_state(self, instant_block_hash: bytes) -> None:
+        self.icon_service_engine.rollback(instant_block_hash)
 
     def _query(self, request: dict, method: str = 'icx_call') -> Any:
         response = self.icon_service_engine.query(method, request)

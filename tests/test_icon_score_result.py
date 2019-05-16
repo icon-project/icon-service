@@ -254,7 +254,6 @@ class TestTransactionResult(unittest.TestCase):
             self.assertIn('txHash', result)
             self.assertIn('txIndex', result)
             self.assertIn('blockHeight', result)
-            self.assertIn('blockHash', result)
             self.assertIn('cumulativeStepUsed', result)
             self.assertIn('stepUsed', result)
             self.assertEqual(1, len(result['eventLogs']))
