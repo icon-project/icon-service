@@ -16,7 +16,7 @@ from asyncio import get_event_loop
 from concurrent.futures.thread import ThreadPoolExecutor
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional, Tuple
 
 from iconcommons.logger import Logger
 from iconservice.base.address import Address
@@ -170,23 +170,22 @@ class IconScoreInnerTask(object):
             return self._write_precommit_state(request)
 
     @staticmethod
-    def _get_block_info_for_precommit_state(converted_block_params: dict):
-        # todo: implement unit tests
-        block_height = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
-        block_hash = None
+    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, Optional[bytes], bytes]:
+        block_height: int = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
+        block_hash: Optional[bytes] = None
         if ConstantKeys.BLOCK_HASH in converted_block_params:
-            instant_block_hash = converted_block_params[ConstantKeys.BLOCK_HASH]
+            instant_block_hash: bytes = converted_block_params[ConstantKeys.BLOCK_HASH]
         else:
-            instant_block_hash = converted_block_params[ConstantKeys.OLD_BLOCK_HASH]
+            instant_block_hash: bytes = converted_block_params[ConstantKeys.OLD_BLOCK_HASH]
             block_hash = converted_block_params[ConstantKeys.NEW_BLOCK_HASH]
 
-        return block_height, block_hash, instant_block_hash
+        return block_height, instant_block_hash, block_hash
 
     def _write_precommit_state(self, request: dict):
         response = None
         try:
             converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            block_height, block_hash, instant_block_hash = \
+            block_height, instant_block_hash, block_hash = \
                 self._get_block_info_for_precommit_state(converted_block_params)
 
             self._icon_service_engine.commit(block_height, instant_block_hash, block_hash)
@@ -215,10 +214,10 @@ class IconScoreInnerTask(object):
         response = None
         try:
             converted_block_params = TypeConverter.convert(request, ParamType.WRITE_PRECOMMIT)
-            _, _, instant_block_hash = \
+            block_height, instant_block_hash, _ = \
                 self._get_block_info_for_precommit_state(converted_block_params)
 
-            self._icon_service_engine.rollback(instant_block_hash)
+            self._icon_service_engine.rollback(block_height, instant_block_hash)
             response = MakeResponse.make_response(ExceptionCode.OK)
         except IconServiceBaseException as icon_e:
             self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)

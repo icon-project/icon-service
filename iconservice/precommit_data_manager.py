@@ -133,9 +133,9 @@ class PrecommitDataManager(object):
         """Check block validation
         before write_precommit_state() or remove_precommit_state()
 
-        :param instant_block_hash:
+        :param instant_block_hash: hash data which is used for retrieving block instance from the pre-commit data mapper
         """
-        # assert isinstance(precommit_block, Block)
+        assert isinstance(instant_block_hash, bytes)
 
         precommit_data = self._precommit_data_mapper.get(instant_block_hash)
         if precommit_data is None:

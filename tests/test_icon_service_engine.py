@@ -749,8 +749,9 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash)
 
         self._engine.invoke(block, [dummy_tx])
+        instant_block_hash = block.hash
         block_hash = create_block_hash()
-        self._engine.commit(block.height, block.hash, block_hash)
+        self._engine.commit(block.height, instant_block_hash, block_hash)
 
         self.assertEqual(self._engine._get_last_block().hash, block_hash)
         self.assertEqual(self._engine._icx_storage.last_block.hash, block_hash)
@@ -766,7 +767,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsInstance(block_result, list)
         self.assertEqual(state_root_hash, hashlib.sha3_256(b'').digest())
 
-        self._engine.rollback(block.hash)
+        self._engine.rollback(block.height, block.hash)
         self.assertIsNone(self._engine._precommit_data_manager.get(block))
 
     def test_invoke_v2_with_malformed_to_address_and_type_converter(self):
