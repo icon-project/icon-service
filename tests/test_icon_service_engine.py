@@ -248,7 +248,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -310,7 +309,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -371,7 +369,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -430,7 +427,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -506,7 +502,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -588,7 +583,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 0)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -707,7 +701,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 0)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
@@ -827,7 +820,6 @@ class TestIconServiceEngine(unittest.TestCase):
         self.assertIsNone(tx_result.score_address)
         self.assertEqual(tx_result.status, 1)
         self.assertEqual(tx_result.block_height, block_height)
-        self.assertEqual(tx_result.block_hash, block_hash)
         self.assertEqual(tx_result.tx_index, 0)
         self.assertEqual(tx_result.tx_hash, tx_hash)
 
