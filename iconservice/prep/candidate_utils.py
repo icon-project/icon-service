@@ -54,7 +54,7 @@ class CandidateUtils:
                                                 address: 'Address'):
         data: dict = \
             {
-                BatchSlotType.PUT: UnregPRep
+                BatchSlotType.PUT: UnregPRep()
             }
         cls._add_batch_item(context, address, data)
 
