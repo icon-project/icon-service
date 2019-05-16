@@ -37,7 +37,7 @@ class TestIconInnerService(unittest.TestCase):
 
         self.assertEqual(block_height, actual_block_height)
         self.assertEqual(instant_block_hash, actual_instant_block_hash)
-        self.assertIsNone(None, actual_block_hash)
+        self.assertIsNone(actual_block_hash)
 
         # success case: when input new write-pre-commit data format, block_hash should be hash
         new_precommit_data_format = {
