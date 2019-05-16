@@ -1361,4 +1361,5 @@ class IconServiceEngine(ContextContainer):
         :return:
         """
         context = IconScoreContext(IconScoreContextType.QUERY)
+        context.block = self._get_last_block()
         return self._inner_call_engine.query(context, request)

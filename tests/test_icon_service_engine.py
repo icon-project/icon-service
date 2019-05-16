@@ -41,6 +41,8 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_result import TransactionResult
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import StepType
+from iconservice.iiss.commit_delegator import CommitDelegator
+from iconservice.precommit_data_manager import PrecommitFlag
 from tests import create_block_hash, create_address, rmtree, create_tx_hash, \
     raise_exception_start_tag, raise_exception_end_tag
 
@@ -82,6 +84,12 @@ class TestIconServiceEngine(unittest.TestCase):
         )
         # engine._load_builtin_scores = Mock()
         # engine._init_global_value_by_governance_score = Mock()
+        self.send_ipc = CommitDelegator.send_ipc
+        self.genesis_send_ipc = CommitDelegator.genesis_send_ipc
+        self._check_update_calc_period = CommitDelegator._check_update_calc_period
+        CommitDelegator.send_ipc = Mock()
+        CommitDelegator.genesis_send_ipc = Mock()
+        CommitDelegator._check_update_calc_period = Mock(return_value=True)
         engine.open(conf)
         self._engine = engine
 
@@ -119,6 +127,9 @@ class TestIconServiceEngine(unittest.TestCase):
         self.genesis_block = block
 
     def tearDown(self):
+        CommitDelegator.send_ipc = self.send_ipc
+        CommitDelegator.genesis_send_ipc = self.genesis_send_ipc
+        CommitDelegator._check_update_calc_period = self._check_update_calc_period
         self._engine.close()
 
         rmtree(self._score_root_path)
@@ -863,18 +874,110 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_get_preps_in_inner_call(self):
         request = {
-            "method": "ise_getPreps"
+            "method": "ise_getPreps",
+            "params": {}
         }
 
-        response: dict = self._engine.call(request)
-        self.assertIsInstance(response, dict)
+        original_invoke_request = self._engine._invoke_request
 
-        result: dict = response["result"]
-        self.assertEqual(1028, result["blockHeight"])
+        def intercept_invoke_req(*args, **kwargs):
+            context: 'IconScoreContext' = args[0]
+            context.revision = 5
+            request: dict = args[1]
+            index: int = args[2]
+            ret = original_invoke_request(context, request, index)
 
-        preps: list = result["preps"]
-        self.assertIsInstance(preps, list)
-        self.assertEqual(2, len(preps))
+            return ret
+
+        self._engine._invoke_request = intercept_invoke_req
+        self._engine._update_revision_if_necessary = Mock(return_value=PrecommitFlag.GENESIS_IISS_CALC)
+
+        block = Block(1, create_block_hash(), 2134567890, self.genesis_block.hash)
+        prep_list = [Address.from_string(f"hx{str(i)*40}") for i in range(10)]
+
+        register_prep_requests = []
+
+        for index, prep_address in enumerate(prep_list):
+            register_prep_request = {
+                'method': 'icx_sendTransaction',
+                'params': {
+                    'txHash': create_tx_hash(),
+                    'nid': 3,
+                    'version': 3,
+                    'from': prep_address,
+                    'to': Address.from_string(f"cx{'0'*40}"),
+                    'value': 0,
+                    'stepLimit': 2000000,
+                    'timestamp': 1234567890,
+                    'dataType': 'call',
+                    'data': {
+                        'method': 'registerPRepCandidate',
+                        'params': {
+                            "publicKey": bytes.hex(index.to_bytes(1, 'big')),
+                            "url": f"target://210.34.56.{index}:7100"
+                        }
+                    },
+                    'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
+                }
+            }
+            register_prep_requests.append(register_prep_request)
+
+        self._engine.invoke(block, register_prep_requests)
+        self._engine.commit(block)
+
+        response = self._engine.call(request)
+        response_prep_list = response['result']['preps']
+        for index, prep_info in enumerate(response_prep_list):
+            self.assertEqual(str(prep_list[index]), prep_info['id'])
+            self.assertEqual(index.to_bytes(1, 'big'), prep_info['publicKey'])
+            self.assertEqual(f"target://210.34.56.{index}:7100", prep_info['url'])
+
+        self._engine._update_revision_if_necessary = Mock(return_value=PrecommitFlag.NONE)
+        block = self.unregister_prep(prep_list[0], block)
+        response = self._engine.call(request)
+        response_prep_list = response['result']['preps']
+        response_prep_list = [prep['id'] for prep in response_prep_list]
+        self.assertNotIn(prep_list[0], response_prep_list)
+
+        block = self.unregister_prep(prep_list[2], block)
+        response = self._engine.call(request)
+        response_prep_list = response['result']['preps']
+        response_prep_list = [prep['id'] for prep in response_prep_list]
+        self.assertNotIn(prep_list[2], response_prep_list)
+
+        block = self.unregister_prep(prep_list[5], block)
+        response = self._engine.call(request)
+        response_prep_list = response['result']['preps']
+        response_prep_list = [prep['id'] for prep in response_prep_list]
+        self.assertNotIn(prep_list[5], response_prep_list)
+
+        self._engine._invoke_request = original_invoke_request
+
+    def unregister_prep(self, prep_address: Address, block: Block) -> Block:
+        block = Block(block.height+1, create_block_hash(), 2134567891, block.hash)
+        unregister_prep_request = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'txHash': create_tx_hash(),
+                'nid': 3,
+                'version': 3,
+                'from': prep_address,
+                'to': Address.from_string(f"cx{'0'*40}"),
+                'value': 0,
+                'stepLimit': 2000000,
+                'timestamp': 1234567890,
+                'dataType': 'call',
+                'data': {
+                    'method': 'unregisterPRepCandidate',
+                    'params': {
+                    }
+                },
+                'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
+            }
+        }
+        self._engine.invoke(block, [unregister_prep_request])
+        self._engine.commit(block)
+        return block
 
 
 if __name__ == '__main__':

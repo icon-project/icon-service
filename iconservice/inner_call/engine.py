@@ -14,10 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from ..iconscore.icon_score_context import IconScoreContext
 from ..base.exception import MethodNotFoundException
+from ..iconscore.icon_score_context import IconScoreContext
+from ..prep.handler.candidate_handler import CandidateHandler
+
+if TYPE_CHECKING:
+    from ..prep.candidate import Candidate
 
 
 class Engine(object):
@@ -30,29 +34,27 @@ class Engine(object):
         method: str = request["method"]
         params: Optional[dict] = request.get("params")
 
-        if method in self._handler:
+        if method not in self._handler:
             raise MethodNotFoundException(f"Method not found: {method}")
 
         return self._handler[method](context, params)
 
     @staticmethod
     def _handle_get_preps(context: 'IconScoreContext', params: dict) -> dict:
-        public_key: bytes = bytes.fromhex("1234567890abcdef")
+        prep_list = context.prep_candidate_engine.get_preps(context)
+        prep_result = []
+        for prep in prep_list:
+            candidate: 'Candidate' = CandidateHandler.prep_storage.get_candidate(context, prep.address)
+            data = {
+                "id": str(candidate.address),
+                "publicKey": candidate.public_key,
+                "url": candidate.url
+            }
+            prep_result.append(data)
 
         return {
             "result": {
-                "blockHeight": 1028,
-                "preps": [
-                    {
-                        "id": "hx86aba2210918a9b116973f3c4b27c41a54d5dafe",
-                        "publicKey": public_key,
-                        "url": "target://210.34.56.17:7100"
-                    },
-                    {
-                        "id": "hx86aba2210918a9b116973f3c4b27c41a54d5dafe",
-                        "publicKey": public_key,
-                        "url": "target://210.34.56.17:7100"
-                    }
-                ]
+                "blockHeight": context.block.height,
+                "preps": prep_result
             }
         }

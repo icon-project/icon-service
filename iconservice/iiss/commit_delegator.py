@@ -58,6 +58,7 @@ class CommitDelegator(object):
 
     @classmethod
     def update_db(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        context.prep_candidate_engine.update_preps_from_variable(context)
 
         # every block time
         cls._put_block_produce_info_for_rc(context, precommit_data)

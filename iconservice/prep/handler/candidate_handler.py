@@ -151,7 +151,7 @@ class CandidateHandler:
             ConstantKeys.EMAIL: prep_candidate.email,
             ConstantKeys.WEBSITE: prep_candidate.website,
             ConstantKeys.JSON: prep_candidate.json,
-            ConstantKeys.IP: prep_candidate.ip,
+            ConstantKeys.URL: prep_candidate.url,
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: prep_candidate.gv.incentiveRep
             }

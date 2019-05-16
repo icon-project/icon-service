@@ -85,6 +85,7 @@ class ConstantKeys:
     TIMESTAMP = "timestamp"
     PREV_BLOCK_HASH = "prevBlockHash"
 
+    PUBLIC_KEY = "publicKey"
     NAME = "name"
     ADDRESS = "address"
     BALANCE = "balance"
@@ -158,7 +159,7 @@ class ConstantKeys:
     EMAIL = 'email'
     WEBSITE = 'website'
     JSON = 'json'
-    IP = 'ip'
+    URL = 'url'
     GOVERNANCE_VARIABLE = "governanceVariable"
     INCENTIVE_REP = "incentiveRep"
     START_RANK = "startRank"
@@ -331,11 +332,12 @@ type_convert_templates[ParamType.IISS_CLAIM_ISCORE] = {}
 type_convert_templates[ParamType.IISS_QUERY_ISCORE] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
 type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
+    ConstantKeys.PUBLIC_KEY: ValueType.BYTES,
     ConstantKeys.NAME: ValueType.STRING,
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.JSON: ValueType.STRING,
-    ConstantKeys.IP: ValueType.STRING,
+    ConstantKeys.URL: ValueType.STRING,
     ConstantKeys.GOVERNANCE_VARIABLE: {
         ConstantKeys.INCENTIVE_REP: ValueType.INT
     }

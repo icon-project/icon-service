@@ -20,10 +20,9 @@
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS
-from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
 from iconservice.base.type_converter_templates import ConstantKeys
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice import Address
@@ -80,7 +79,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
             ConstantKeys.EMAIL: "email",
             ConstantKeys.WEBSITE: "website",
             ConstantKeys.JSON: "json",
-            ConstantKeys.IP: "ip",
+            ConstantKeys.URL: "ip",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(200)
             }
@@ -107,7 +106,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
         self.assertEqual(expected_response[ConstantKeys.EMAIL], response[ConstantKeys.EMAIL])
         self.assertEqual(expected_response[ConstantKeys.WEBSITE], response[ConstantKeys.WEBSITE])
         self.assertEqual(expected_response[ConstantKeys.JSON], response[ConstantKeys.JSON])
-        self.assertEqual(expected_response[ConstantKeys.IP], response[ConstantKeys.IP])
+        self.assertEqual(expected_response[ConstantKeys.URL], response[ConstantKeys.URL])
         self.assertEqual(expected_response[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP],
                          hex(response[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP]))
 
@@ -149,7 +148,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.URL: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: hex(200+i)
                 }
@@ -185,7 +184,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.URL: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: hex(200+i)
                 }

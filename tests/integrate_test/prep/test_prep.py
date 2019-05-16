@@ -19,12 +19,10 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-from iconservice.base.exception import InvalidParamsException
-
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice import Address
@@ -85,7 +83,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.URL: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -116,7 +114,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.URL: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -149,7 +147,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.URL: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 300
             }
@@ -165,7 +163,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.URL: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -200,7 +198,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.URL: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }

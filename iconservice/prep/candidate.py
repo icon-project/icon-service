@@ -33,11 +33,12 @@ class Candidate(object):
         self.address: 'Address' = address
 
         # value
+        self.public_key: str = ""
         self.name: str = ""
         self.email: str = ""
         self.website: str = ""
         self.json: str = ""
-        self.ip: str = ""
+        self.url: str = ""
         self.block_height: int = 0
         self.tx_index: int = 0
         self.gv: 'GovernanceVariables' = GovernanceVariables()
@@ -54,11 +55,12 @@ class Candidate(object):
 
         data = [
             self._VERSION,
+            self.public_key,
             self.name,
             self.email,
             self.website,
             self.json,
-            self.ip,
+            self.url,
             self.block_height,
             self.tx_index,
             self.gv.encode()
@@ -83,26 +85,28 @@ class Candidate(object):
             raise InvalidParamsException(f"Invalid PrepCandidate version: {version}")
 
         obj: 'Candidate' = Candidate(address)
-        obj.name: str = data_list[1]
-        obj.email: str = data_list[2]
-        obj.website: str = data_list[3]
-        obj.json: str = data_list[4]
-        obj.ip: str = data_list[5]
-        obj.block_height: int = data_list[6]
-        obj.tx_index: int = data_list[7]
-        obj.gv: 'GovernanceVariables' = GovernanceVariables.decode(data_list[8])
+        obj.public_key: bytes = data_list[1]
+        obj.name: str = data_list[2]
+        obj.email: str = data_list[3]
+        obj.website: str = data_list[4]
+        obj.json: str = data_list[5]
+        obj.url: str = data_list[6]
+        obj.block_height: int = data_list[7]
+        obj.tx_index: int = data_list[8]
+        obj.gv: 'GovernanceVariables' = GovernanceVariables.decode(data_list[9])
         return obj
 
     @staticmethod
     def from_dict(data: dict, block_height: int, tx_index: int, address: 'Address') -> 'Candidate':
         obj: 'Candidate' = Candidate(address)
-        obj.name: str = data[ConstantKeys.NAME]
-        obj.email: str = data[ConstantKeys.EMAIL]
-        obj.website: str = data[ConstantKeys.WEBSITE]
-        obj.json: str = data[ConstantKeys.JSON]
-        obj.ip: str = data[ConstantKeys.IP]
-        gv: dict = data[ConstantKeys.GOVERNANCE_VARIABLE]
-        obj.gv.incentiveRep: int = gv[ConstantKeys.INCENTIVE_REP]
+        obj.public_key: bytes = data.get(ConstantKeys.PUBLIC_KEY, b'')
+        obj.name: str = data.get(ConstantKeys.NAME, "")
+        obj.email: str = data.get(ConstantKeys.EMAIL, "")
+        obj.website: str = data.get(ConstantKeys.WEBSITE, "")
+        obj.json: str = data.get(ConstantKeys.JSON, "")
+        obj.url: str = data.get(ConstantKeys.URL, "")
+        gv: dict = data.get(ConstantKeys.GOVERNANCE_VARIABLE, {})
+        obj.gv.incentiveRep: int = gv.get(ConstantKeys.INCENTIVE_REP, 0)
         obj.block_height: int = block_height
         obj.tx_index: int = tx_index
         return obj
@@ -112,7 +116,7 @@ class Candidate(object):
         self.email: str = data.get(ConstantKeys.EMAIL, self.email)
         self.website: str = data.get(ConstantKeys.WEBSITE, self.website)
         self.json: str = data.get(ConstantKeys.JSON, self.json)
-        self.ip: str = data.get(ConstantKeys.IP, self.ip)
+        self.url: str = data.get(ConstantKeys.URL, self.url)
         gv: dict = data.get(ConstantKeys.GOVERNANCE_VARIABLE)
         if gv:
             self.gv.incentiveRep: int = \
@@ -124,15 +128,15 @@ class Candidate(object):
         :param other: (PrepCandidate)
         """
         return isinstance(other, Candidate) \
-            and self.address == other.address \
-            and self.name == other.name \
-            and self.email == other.email \
-            and self.website == other.website \
-            and self.json == other.json \
-            and self.ip == other.ip \
-            and self.block_height == other.block_height \
-            and self.tx_index == other.tx_index \
-            and self.gv == other.gv
+               and self.address == other.address \
+               and self.name == other.name \
+               and self.email == other.email \
+               and self.website == other.website \
+               and self.json == other.json \
+               and self.url == other.url \
+               and self.block_height == other.block_height \
+               and self.tx_index == other.tx_index \
+               and self.gv == other.gv
 
     def __ne__(self, other) -> bool:
         """operator != overriding
