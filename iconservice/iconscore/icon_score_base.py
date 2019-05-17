@@ -556,11 +556,11 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     @property
     def block(self) -> 'Block':
         """
-        Duplicated function
+        Deprecated property
 
-        Use block_height, now() instead.
+        Use block_height and now() instead.
         """
-        warnings.warn("Use block_height, now() instead", DeprecationWarning, stacklevel=2)
+        warnings.warn("Use block_height and now() instead", DeprecationWarning, stacklevel=2)
         return Block(self._context.block.height, self._context.block.timestamp)
 
     @property
@@ -641,19 +641,19 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     @staticmethod
     def revert(message: Optional[str] = None, code: int = 0):
         """
-        Duplicated function
+        Deprecated method
 
         Use global function `revert()` instead.
         """
-        warnings.warn("Use static revert() instead.", DeprecationWarning, stacklevel=2)
+        warnings.warn("Use global function revert() instead.", DeprecationWarning, stacklevel=2)
         revert(message, code)
 
-    def is_score_active(self, score_address: 'Address')-> bool:
-        warnings.warn("Forbidden function.", DeprecationWarning, stacklevel=2)
+    def is_score_active(self, score_address: 'Address') -> bool:
+        warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         return IconScoreContextUtil.is_score_active(self._context, score_address)
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
-        warnings.warn("Forbidden function.", DeprecationWarning, stacklevel=2)
+        warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         if not score_address:
             score_address = self.address
         return IconScoreContextUtil.get_owner(self._context, score_address)
@@ -674,7 +674,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         return interface_cls(addr_to, self)
 
     def deploy(self, tx_hash: bytes):
-        warnings.warn("Forbidden function.", DeprecationWarning, stacklevel=2)
+        warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         if self.address == GOVERNANCE_SCORE_ADDRESS:
             # switch
             score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
@@ -691,12 +691,12 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def get_tx_hashes_by_score_address(self,
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
-        warnings.warn("Forbidden function.", DeprecationWarning, stacklevel=2)
+        warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
 
     def get_score_address_by_tx_hash(self,
                                      tx_hash: bytes) -> Optional['Address']:
-        warnings.warn("Forbidden function.", DeprecationWarning, stacklevel=2)
+        warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
         return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
 
     def get_fee_sharing_proportion(self):
