@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
 from enum import IntEnum, unique
+from typing import TypeVar
+
 from ..base.address import Address
 
 T = TypeVar('T')

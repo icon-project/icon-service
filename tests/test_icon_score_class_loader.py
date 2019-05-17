@@ -16,9 +16,9 @@
 
 
 import inspect
-import unittest
 import os
 import sys
+import unittest
 from unittest.mock import Mock
 
 from iconservice.deploy.utils import convert_path_to_package_name
@@ -29,7 +29,6 @@ from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address, create_tx_hash, rmtree
-
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
