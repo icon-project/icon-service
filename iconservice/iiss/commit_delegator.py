@@ -107,7 +107,7 @@ class CommitDelegator(object):
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
 
-        current_total_supply = context.total_supply
+        current_total_supply = precommit_data.total_supply
         current_total_candidate_delegated = cls.variable.issue.get_total_candidate_delegated(context)
         # todo: after demo, should consider about record these variable to formula (i.e. record in memory)
         r_min = cls.variable.issue.get_reward_min(context)
