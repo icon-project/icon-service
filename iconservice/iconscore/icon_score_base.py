@@ -371,7 +371,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         super().__init__(db)
         self.__db = db
         self.__address = db.address
-        self.__owner = self.get_owner(self.__address)
+        self.__owner = IconScoreContextUtil.get_owner(self._context, self.__address)
         self.__icx = None
 
         if not self.__get_attr_dict(CONST_CLASS_EXTERNALS):
@@ -649,13 +649,17 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def is_score_active(self, score_address: 'Address') -> bool:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        return IconScoreContextUtil.is_score_active(self._context, score_address)
+        if self._context.revision < REVISION_3:
+            return IconScoreContextUtil.is_score_active(self._context, score_address)
+        else:
+            raise AccessDeniedException('No permission')
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if not score_address:
-            score_address = self.address
-        return IconScoreContextUtil.get_owner(self._context, score_address)
+        if self._context.revision < REVISION_3:
+            return IconScoreContextUtil.get_owner(self._context, score_address)
+        else:
+            raise AccessDeniedException('No permission')
 
     def create_interface_score(self,
                                addr_to: 'Address',
@@ -674,29 +678,38 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def deploy(self, tx_hash: bytes):
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self.address == GOVERNANCE_SCORE_ADDRESS:
-            # switch
-            score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
-            owner: 'Address' = self.get_owner(score_addr)
-            tmp_sender: 'Address' = self._context.msg.sender
+        if self._context.revision < REVISION_3:
+            if self.address == GOVERNANCE_SCORE_ADDRESS:
+                # switch
+                score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
+                owner: 'Address' = self.get_owner(score_addr)
+                tmp_sender: 'Address' = self._context.msg.sender
 
-            self._context.msg.sender = owner
-            try:
-                IconScoreContextUtil.deploy(self._context, tx_hash)
-            finally:
-                self._context.msg.sender = tmp_sender
+                self._context.msg.sender = owner
+                try:
+                    IconScoreContextUtil.deploy(self._context, tx_hash)
+                finally:
+                    self._context.msg.sender = tmp_sender
+            else:
+                raise AccessDeniedException('No permission')
         else:
             raise AccessDeniedException('No permission')
 
     def get_tx_hashes_by_score_address(self,
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
+        if self._context.revision < REVISION_3:
+            return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
+        else:
+            raise AccessDeniedException('No permission')
 
     def get_score_address_by_tx_hash(self,
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
+        if self._context.revision < REVISION_3:
+            return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
+        else:
+            raise AccessDeniedException('No permission')
 
     def get_fee_sharing_proportion(self):
         return self._context.fee_sharing_proportion

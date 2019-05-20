@@ -29,6 +29,7 @@ from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
 from iconservice.iconscore.icon_score_base2 import sha3_256
 from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
@@ -278,7 +279,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
             ContextContainer._push_context(args[0])
 
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            ori_func = IconScoreContextUtil.get_owner
+            IconScoreContextUtil.get_owner = Mock()
             score = SampleScore(IconScoreDatabase(to_, context_db))
+            IconScoreContextUtil.get_owner = ori_func
             score.get_db()
 
             ContextContainer._pop_context()
@@ -322,7 +326,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_query(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            ori_func = IconScoreContextUtil.get_owner
+            IconScoreContextUtil.get_owner = Mock()
             score = SampleScore(IconScoreDatabase(to_, context_db))
+            IconScoreContextUtil.get_owner = ori_func
             ret = score.query_db()
             ContextContainer._pop_context()
             return ret
@@ -369,7 +376,10 @@ class TestIconScoreStepCounter(unittest.TestCase):
         def intercept_invoke(*args, **kwargs):
             ContextContainer._push_context(args[0])
             context_db = self._inner_task._icon_service_engine._icx_context_db
+            ori_func = IconScoreContextUtil.get_owner
+            IconScoreContextUtil.get_owner = Mock()
             score = SampleScore(IconScoreDatabase(to_, context_db))
+            IconScoreContextUtil.get_owner = ori_func
             score.remove_db()
             ContextContainer._pop_context()
 
@@ -745,10 +755,6 @@ class SampleScore(IconScoreBase):
 
     def on_update(self) -> None:
         pass
-
-    def get_owner(self,
-                  score_address: Optional['Address']) -> Optional['Address']:
-        return None
 
     @eventlog(indexed=2)
     def SampleEvent(
