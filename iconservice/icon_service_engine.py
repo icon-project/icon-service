@@ -518,6 +518,9 @@ class IconServiceEngine(ContextContainer):
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
                               request: dict) -> 'TransactionResult':
+        assert 'params' in request
+        assert 'data' in request['params']
+
         if not isinstance(request['params']['data'], dict):
             raise IllegalFormatException("invalid issue transaction format")
 

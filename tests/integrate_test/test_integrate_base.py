@@ -17,12 +17,12 @@
 """IconServiceEngine testcase
 """
 
-from unittest import TestCase
-
 from typing import TYPE_CHECKING, Union, Optional, Any
+from unittest import TestCase
 from unittest.mock import Mock
 
 from iconcommons import IconConfig
+
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey

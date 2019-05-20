@@ -21,7 +21,7 @@ from iconcommons.logger import Logger
 
 from .coin_part import CoinPartType, CoinPart
 from .icx_account import Account
-from .icx_storage import IcxStorage, Intent
+from .icx_storage import IcxStorage
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import ICX_LOG_TAG
