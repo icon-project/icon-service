@@ -34,7 +34,7 @@ from .internal_call import InternalCall
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import *
 from ..database.db import IconScoreDatabase, DatabaseObserver
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_3
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, REVISION_3, REVISION_4
 from ..utils import get_main_type_from_annotations_type
 
 if TYPE_CHECKING:
@@ -649,14 +649,14 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def is_score_active(self, score_address: 'Address') -> bool:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision < REVISION_3:
+        if self._context.revision < REVISION_4:
             return IconScoreContextUtil.is_score_active(self._context, score_address)
         else:
             raise AccessDeniedException('No permission')
 
     def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision < REVISION_3:
+        if self._context.revision < REVISION_4:
             return IconScoreContextUtil.get_owner(self._context, score_address)
         else:
             raise AccessDeniedException('No permission')
@@ -678,7 +678,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
     def deploy(self, tx_hash: bytes):
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision < REVISION_3:
+        if self._context.revision < REVISION_4:
             if self.address == GOVERNANCE_SCORE_ADDRESS:
                 # switch
                 score_addr: 'Address' = self.get_score_address_by_tx_hash(tx_hash)
@@ -698,7 +698,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_tx_hashes_by_score_address(self,
                                        score_address: 'Address') -> Tuple[Optional[bytes], Optional[bytes]]:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision < REVISION_3:
+        if self._context.revision < REVISION_4:
             return IconScoreContextUtil.get_tx_hashes_by_score_address(self._context, score_address)
         else:
             raise AccessDeniedException('No permission')
@@ -706,7 +706,7 @@ class IconScoreBase(IconScoreObject, ContextGetter,
     def get_score_address_by_tx_hash(self,
                                      tx_hash: bytes) -> Optional['Address']:
         warnings.warn("Forbidden function", DeprecationWarning, stacklevel=2)
-        if self._context.revision < REVISION_3:
+        if self._context.revision < REVISION_4:
             return IconScoreContextUtil.get_score_address_by_tx_hash(self._context, tx_hash)
         else:
             raise AccessDeniedException('No permission')
