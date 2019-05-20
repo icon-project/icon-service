@@ -110,7 +110,7 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.EMAIL: email,
             ConstantKeys.WEBSITE: website,
             ConstantKeys.JSON: json,
-            ConstantKeys.URL: ip,
+            ConstantKeys.TARGET: ip,
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
             }
@@ -121,7 +121,7 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
         self.assertEqual(json, ret_params[ConstantKeys.JSON])
-        self.assertEqual(ip, ret_params[ConstantKeys.URL])
+        self.assertEqual(ip, ret_params[ConstantKeys.TARGET])
         governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
         self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
 

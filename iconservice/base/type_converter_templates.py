@@ -161,7 +161,7 @@ class ConstantKeys:
     EMAIL = 'email'
     WEBSITE = 'website'
     JSON = 'json'
-    URL = 'url'
+    TARGET = 'target'
     GOVERNANCE_VARIABLE = "governanceVariable"
     INCENTIVE_REP = "incentiveRep"
     START_RANK = "startRank"
@@ -342,7 +342,7 @@ type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.JSON: ValueType.STRING,
-    ConstantKeys.URL: ValueType.STRING,
+    ConstantKeys.TARGET: ValueType.STRING,
     ConstantKeys.GOVERNANCE_VARIABLE: {
         ConstantKeys.INCENTIVE_REP: ValueType.INT
     }

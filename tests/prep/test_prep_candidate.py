@@ -37,7 +37,7 @@ class TestPrepCandidate(unittest.TestCase):
         prep.email = "email"
         prep.website = "website"
         prep.json = "json"
-        prep.url = "192.168.0.1"
+        prep.target = "192.168.0.1"
         prep.block_height = 10
         prep.tx_index = 1000
         prep.gv.incentiveRep = 200

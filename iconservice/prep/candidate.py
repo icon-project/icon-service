@@ -38,7 +38,7 @@ class Candidate(object):
         self.email: str = ""
         self.website: str = ""
         self.json: str = ""
-        self.url: str = ""
+        self.target: str = ""
         self.block_height: int = 0
         self.tx_index: int = 0
         self.gv: 'GovernanceVariables' = GovernanceVariables()
@@ -60,7 +60,7 @@ class Candidate(object):
             self.email,
             self.website,
             self.json,
-            self.url,
+            self.target,
             self.block_height,
             self.tx_index,
             self.gv.encode()
@@ -90,7 +90,7 @@ class Candidate(object):
         obj.email: str = data_list[3]
         obj.website: str = data_list[4]
         obj.json: str = data_list[5]
-        obj.url: str = data_list[6]
+        obj.target: str = data_list[6]
         obj.block_height: int = data_list[7]
         obj.tx_index: int = data_list[8]
         obj.gv: 'GovernanceVariables' = GovernanceVariables.decode(data_list[9])
@@ -104,7 +104,7 @@ class Candidate(object):
         obj.email: str = data.get(ConstantKeys.EMAIL, "")
         obj.website: str = data.get(ConstantKeys.WEBSITE, "")
         obj.json: str = data.get(ConstantKeys.JSON, "")
-        obj.url: str = data.get(ConstantKeys.URL, "")
+        obj.target: str = data.get(ConstantKeys.TARGET, "")
         gv: dict = data.get(ConstantKeys.GOVERNANCE_VARIABLE, {})
         obj.gv.incentiveRep: int = gv.get(ConstantKeys.INCENTIVE_REP, 0)
         obj.block_height: int = block_height
@@ -116,7 +116,7 @@ class Candidate(object):
         self.email: str = data.get(ConstantKeys.EMAIL, self.email)
         self.website: str = data.get(ConstantKeys.WEBSITE, self.website)
         self.json: str = data.get(ConstantKeys.JSON, self.json)
-        self.url: str = data.get(ConstantKeys.URL, self.url)
+        self.target: str = data.get(ConstantKeys.TARGET, self.target)
         gv: dict = data.get(ConstantKeys.GOVERNANCE_VARIABLE)
         if gv:
             self.gv.incentiveRep: int = \
@@ -133,7 +133,7 @@ class Candidate(object):
                and self.email == other.email \
                and self.website == other.website \
                and self.json == other.json \
-               and self.url == other.url \
+               and self.target == other.target \
                and self.block_height == other.block_height \
                and self.tx_index == other.tx_index \
                and self.gv == other.gv

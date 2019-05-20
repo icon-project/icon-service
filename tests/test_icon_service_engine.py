@@ -935,7 +935,7 @@ class TestIconServiceEngine(unittest.TestCase):
                         'method': 'registerPRepCandidate',
                         'params': {
                             "publicKey": bytes.hex(index.to_bytes(1, 'big')),
-                            "url": f"target://210.34.56.{index}:7100"
+                            "target": f"210.34.56.{index}:7100"
                         }
                     },
                     'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
@@ -951,7 +951,7 @@ class TestIconServiceEngine(unittest.TestCase):
         for index, prep_info in enumerate(response_prep_list):
             self.assertEqual(str(prep_list[index]), prep_info['id'])
             self.assertEqual(index.to_bytes(1, 'big'), prep_info['publicKey'])
-            self.assertEqual(f"target://210.34.56.{index}:7100", prep_info['url'])
+            self.assertEqual(f"210.34.56.{index}:7100", prep_info['target'])
 
         self._engine._update_revision_if_necessary = Mock(return_value=PrecommitFlag.NONE)
         block = self.unregister_prep(prep_list[0], block)

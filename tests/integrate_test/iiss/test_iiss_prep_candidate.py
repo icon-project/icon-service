@@ -79,7 +79,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
             ConstantKeys.EMAIL: "email",
             ConstantKeys.WEBSITE: "website",
             ConstantKeys.JSON: "json",
-            ConstantKeys.URL: "ip",
+            ConstantKeys.TARGET: "ip",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(200)
             }
@@ -106,7 +106,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
         self.assertEqual(expected_response[ConstantKeys.EMAIL], response[ConstantKeys.EMAIL])
         self.assertEqual(expected_response[ConstantKeys.WEBSITE], response[ConstantKeys.WEBSITE])
         self.assertEqual(expected_response[ConstantKeys.JSON], response[ConstantKeys.JSON])
-        self.assertEqual(expected_response[ConstantKeys.URL], response[ConstantKeys.URL])
+        self.assertEqual(expected_response[ConstantKeys.TARGET], response[ConstantKeys.TARGET])
         self.assertEqual(expected_response[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP],
                          hex(response[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP]))
 
@@ -148,7 +148,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.URL: f"ip{i}",
+                ConstantKeys.TARGET: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: hex(200+i)
                 }
@@ -184,7 +184,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.URL: f"ip{i}",
+                ConstantKeys.TARGET: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: hex(200+i)
                 }

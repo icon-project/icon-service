@@ -50,13 +50,12 @@ class Engine(object):
             data = {
                 "id": str(candidate.address),
                 "publicKey": candidate.public_key,
-                "url": candidate.url
+                "target": candidate.target
             }
             prep_result.append(data)
 
             if len(prep_result) == MAIN_PREP_COUNT:
                 break
-
         return {
             "result": {
                 "blockHeight": context.block.height,

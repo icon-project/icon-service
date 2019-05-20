@@ -83,7 +83,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.URL: "ip1",
+            ConstantKeys.TARGET: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -114,7 +114,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.URL: "ip1",
+            ConstantKeys.TARGET: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -147,7 +147,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.URL: "ip1",
+            ConstantKeys.TARGET: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 300
             }
@@ -163,7 +163,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.JSON: "json1",
-            ConstantKeys.URL: "ip1",
+            ConstantKeys.TARGET: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -198,7 +198,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.URL: f"ip{i}",
+                ConstantKeys.TARGET: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
