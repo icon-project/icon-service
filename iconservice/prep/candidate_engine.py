@@ -109,7 +109,7 @@ class CandidateEngine(object):
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
         method: str = data['method']
-        params: dict = data['params']
+        params: dict = data.get('params', {})
 
         handler: callable = self._invoke_handlers[method]
         handler(context, params, tx_result)

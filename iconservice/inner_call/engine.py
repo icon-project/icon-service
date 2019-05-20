@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class Engine(object):
     def __init__(self):
         self._handler = {
-            "ise_getPreps": self._handle_get_preps
+            "ise_getPReps": self._handle_get_preps
         }
 
     def query(self, context: 'IconScoreContext', request: dict) -> dict:

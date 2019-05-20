@@ -1328,8 +1328,14 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
+        self._prep_candidate_engine.commit(precommit_data.prep_candidate_block_batch)
 
-    def rollback(self,block_height: int, instant_block_hash: bytes) -> None:
+        if is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC):
+            self._iiss_engine.genesis_commit(context, precommit_data)
+        else:
+            self._iiss_engine.commit(context, precommit_data)
+
+    def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         :param block_height: height of block which is needed to be removed from the pre-commit data manager

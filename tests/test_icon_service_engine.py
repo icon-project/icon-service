@@ -895,7 +895,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
     def test_get_preps_in_inner_call(self):
         request = {
-            "method": "ise_getPreps",
+            "method": "ise_getPReps",
             "params": {}
         }
 
