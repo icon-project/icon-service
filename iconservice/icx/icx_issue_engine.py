@@ -50,10 +50,12 @@ class IcxIssueEngine:
         if amount > 0:
             to_account = self._storage.get_account(context, to)
             to_account.deposit(amount)
-            current_total_supply = self._storage.get_total_supply(context)
+            current_total_supply = context.total_supply()
+            total_supply_after_issuing = current_total_supply + amount
 
             self._storage.put_account(context, to_account)
-            self._storage.put_total_supply(context, current_total_supply + amount)
+            self._storage.put_total_supply(context, total_supply_after_issuing)
+            context.total_supply = total_supply_after_issuing
 
     @staticmethod
     def _create_issue_event_log(group_key, issue_data_in_db) -> 'EventLog':

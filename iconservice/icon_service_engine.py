@@ -353,6 +353,7 @@ class IconServiceEngine(ContextContainer):
         context.new_icon_score_mapper = IconScoreMapper()
         context.prep_candidate_tx_batch = PRepCandidateBatch()
         context.prep_candidate_block_batch = PRepCandidateBatch()
+        context.total_supply = self._icx_engine.get_total_supply()
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
@@ -388,7 +389,8 @@ class IconServiceEngine(ContextContainer):
             context.prep_candidate_block_batch,
             prev_block_contributors,
             context.new_icon_score_mapper,
-            precommit_flag)
+            precommit_flag,
+            context.total_supply)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
@@ -810,7 +812,7 @@ class IconServiceEngine(ContextContainer):
         :param context:
         :return: icx amount in loop (1 icx == 1e18 loop)
         """
-        return self._icx_engine.get_total_supply(context)
+        return self._icx_engine.get_total_supply()
 
     def _handle_icx_call(self,
                          context: 'IconScoreContext',
@@ -1309,6 +1311,8 @@ class IconServiceEngine(ContextContainer):
         self._icx_context_db.write_batch(
             context=context, states=block_batch)
 
+        if precommit_data.total_supply > self._icx_engine.get_total_supply():
+            self._icx_engine.set_total_supply(precommit_data.total_supply)
         self._icx_storage.put_block_info(context, block_batch.block)
         self._precommit_data_manager.commit(block_batch.block)
 

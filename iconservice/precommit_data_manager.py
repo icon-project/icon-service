@@ -50,7 +50,8 @@ class PrecommitData(object):
                  prep_candidate_block_batch: 'PRepCandidateBatch',
                  prev_block_contributors: Optional[dict],
                  score_mapper: Optional['IconScoreMapper'] = None,
-                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
+                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE,
+                 total_supply: int = 0):
         """
 
         :param block_batch: changed states for a block
@@ -69,6 +70,7 @@ class PrecommitData(object):
 
         self.state_root_hash: bytes = self.block_batch.digest()
         self.block = block_batch.block
+        self.total_supply = total_supply
 
 
 class PrecommitDataManager(object):

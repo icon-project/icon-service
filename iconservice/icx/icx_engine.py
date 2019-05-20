@@ -24,7 +24,7 @@ from .icx_account import Account
 from .icx_storage import IcxStorage, Intent
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
-from ..icon_constant import ICX_LOG_TAG
+from ..icon_constant import ICX_LOG_TAG, IconScoreContextType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -218,14 +218,17 @@ class IcxEngine(object):
         return account.balance
 
     # todo: need to be refactoring
-    def get_total_supply(self, context: 'IconScoreContext') -> int:
+    def get_total_supply(self) -> int:
         """Get the total supply of icx coin
 
         :param context:
         :return: (int) amount in loop (1 icx == 1e18 loop)
         """
-        # todo: to be refactored (using memory)
-        return self._storage.get_total_supply(context)
+
+        return self._total_supply_amount
+
+    def set_total_supply(self, total_supply: int):
+        self._total_supply_amount = total_supply
 
     def charge_fee(self,
                    context: 'IconScoreContext',

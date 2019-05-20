@@ -206,11 +206,13 @@ class IcxStorage(object):
 
         return bool(value)
 
+    # This method being called only when open period
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Returns the total supply.
 
         :return: (int) coin total supply in loop (1 icx == 1e18 loop)
         """
+
         value = self._db.get(context, self._TOTAL_SUPPLY_KEY)
 
         amount = 0
