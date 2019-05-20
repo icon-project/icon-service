@@ -54,6 +54,12 @@ INITIAL_STEP_COST_KEYS = [STEP_TYPE_DEFAULT,
 CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
 
+ZERO_TX_HASH = bytes(32)
+
+
+def _is_tx_hash_valid(tx_hash: bytes) -> bool:
+    return tx_hash is not None and tx_hash != ZERO_TX_HASH
+
 
 class SystemInterface(InterfaceScore):
     @interface
@@ -216,7 +222,7 @@ class Governance(IconSystemScoreBase):
         if self.is_less_than_target_version('0.0.6'):
             self._migrate_v0_0_6()
 
-        self._version.set('0.0.6')
+        self._version.set('0.0.7')
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -282,7 +288,9 @@ class Governance(IconSystemScoreBase):
         active = self.is_score_active(address)
 
         # install audit
-        if current_tx_hash is None and next_tx_hash and active is False:
+        if not _is_tx_hash_valid(current_tx_hash) \
+                and _is_tx_hash_valid(next_tx_hash) \
+                and active is False:
             reject_tx_hash = self._reject_status[next_tx_hash]
             if reject_tx_hash:
                 result = {
@@ -297,7 +305,9 @@ class Governance(IconSystemScoreBase):
                         STATUS: STATUS_PENDING,
                         DEPLOY_TX_HASH: next_tx_hash
                     }}
-        elif current_tx_hash and next_tx_hash is None and active is True:
+        elif _is_tx_hash_valid(current_tx_hash) \
+                and not _is_tx_hash_valid(next_tx_hash) \
+                and active is True:
             audit_tx_hash = self._audit_status[current_tx_hash]
             result = {
                 CURRENT: {
@@ -308,7 +318,9 @@ class Governance(IconSystemScoreBase):
                 result[CURRENT][AUDIT_TX_HASH] = audit_tx_hash
         else:
             # update audit
-            if current_tx_hash and next_tx_hash and active is True:
+            if _is_tx_hash_valid(current_tx_hash) \
+                    and _is_tx_hash_valid(next_tx_hash) \
+                    and active is True:
                 current_audit_tx_hash = self._audit_status[current_tx_hash]
                 next_reject_tx_hash = self._reject_status[next_tx_hash]
                 if next_reject_tx_hash:
@@ -337,10 +349,10 @@ class Governance(IconSystemScoreBase):
             else:
                 result = {}
 
-            system = self.create_interface_score(ZERO_SCORE_ADDRESS, SystemInterface)
-            deposit_info = system.getScoreDepositInfo(address)
-            if deposit_info is not None:
-                result[DEPOSIT_INFO] = deposit_info
+        system = self.create_interface_score(ZERO_SCORE_ADDRESS, SystemInterface)
+        deposit_info = system.getScoreDepositInfo(address)
+        if deposit_info is not None:
+            result[DEPOSIT_INFO] = deposit_info
 
         return result
 

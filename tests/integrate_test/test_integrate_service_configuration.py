@@ -24,7 +24,7 @@ from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, Address, AddressP
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IconServiceFlag
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
 
 
 class TestIntegrateServiceConfiguration(TestIntegrateBase):
@@ -35,7 +35,7 @@ class TestIntegrateServiceConfiguration(TestIntegrateBase):
 
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "latest_version/governance",
+                                  LATEST_GOVERNANCE,
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
