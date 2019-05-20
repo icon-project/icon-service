@@ -221,7 +221,6 @@ class IcxEngine(object):
     def get_total_supply(self) -> int:
         """Get the total supply of icx coin
 
-        :param context:
         :return: (int) amount in loop (1 icx == 1e18 loop)
         """
 

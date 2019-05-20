@@ -171,7 +171,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.assertEqual(0, balance)
 
     def test_get_total_supply(self):
-        total_supply = self.engine.get_total_supply(self.context)
+        total_supply = self.engine.get_total_supply()
 
         self.assertEqual(self.total_supply, total_supply)
 

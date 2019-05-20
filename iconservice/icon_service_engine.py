@@ -1303,6 +1303,7 @@ class IconServiceEngine(ContextContainer):
 
         precommit_data: 'PrecommitData' = \
             self._precommit_data_manager.get(block.hash)
+        context.total_supply = precommit_data.total_supply
         block_batch = precommit_data.block_batch
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:

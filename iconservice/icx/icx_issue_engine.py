@@ -50,7 +50,7 @@ class IcxIssueEngine:
         if amount > 0:
             to_account = self._storage.get_account(context, to)
             to_account.deposit(amount)
-            current_total_supply = context.total_supply()
+            current_total_supply = context.total_supply
             total_supply_after_issuing = current_total_supply + amount
 
             self._storage.put_account(context, to_account)
