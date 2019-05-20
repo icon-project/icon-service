@@ -18,14 +18,13 @@
 """
 
 import unittest
+from typing import TYPE_CHECKING, Any, Union
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any, Union
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -48,7 +47,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
 
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "latest_version/governance",
+                                  LATEST_GOVERNANCE,
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -190,6 +189,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         self.assertEqual(tx_result.failure.code, ExceptionCode.SYSTEM_ERROR)
         self.assertEqual(tx_result.failure.message, "acceptScore() got an unexpected keyword argument 'warning'")
 
+    @unittest.skip('This issue (IS-243) has been cancelled.')
     def test_accept_score_with_warning_message(self):
         # inputting message when accepting score is available as of governance version 0.0.6
         # previous version(below 0.0.5) raise error when trying this test
@@ -240,6 +240,7 @@ class TestIntegrateDeployAuditInstall(TestIntegrateBase):
         expected_warning_message = ""
         self.assertEqual(tx_result.event_logs[0].data, [])
 
+    @unittest.skip('This issue (IS-243) has been cancelled.')
     def test_accept_score_without_warning_message(self):
         # inputting message when accepting score is available as of governance version 0.0.6
         # previous version(below 0.0.5) raise error when trying this test

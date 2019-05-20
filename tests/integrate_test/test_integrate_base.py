@@ -33,6 +33,8 @@ from tests.integrate_test.in_memory_zip import InMemoryZip
 if TYPE_CHECKING:
     from iconservice.base.address import Address, MalformedAddress
 
+LATEST_GOVERNANCE = "0_0_6/governance"
+
 
 class TestIntegrateBase(TestCase):
     @classmethod
