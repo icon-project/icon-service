@@ -16,6 +16,7 @@
 
 from typing import Optional, TYPE_CHECKING
 
+from ..icon_constant import MAIN_PREP_COUNT
 from ..base.exception import MethodNotFoundException
 from ..iconscore.icon_score_context import IconScoreContext
 from ..prep.handler.candidate_handler import CandidateHandler
@@ -41,9 +42,10 @@ class Engine(object):
 
     @staticmethod
     def _handle_get_preps(context: 'IconScoreContext', params: dict) -> dict:
-        prep_list = context.prep_candidate_engine.get_preps(context)
+        preps: list = context.prep_candidate_engine.get_preps(context)
         prep_result = []
-        for prep in prep_list:
+
+        for prep in preps:
             candidate: 'Candidate' = CandidateHandler.prep_storage.get_candidate(context, prep.address)
             data = {
                 "id": str(candidate.address),
@@ -51,6 +53,9 @@ class Engine(object):
                 "url": candidate.url
             }
             prep_result.append(data)
+
+            if len(prep_result) == MAIN_PREP_COUNT:
+                break
 
         return {
             "result": {
