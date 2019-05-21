@@ -49,9 +49,9 @@ class PrecommitData(object):
                  rc_block_batch: list,
                  prep_candidate_block_batch: 'PRepCandidateBatch',
                  prev_block_contributors: Optional[dict],
+                 total_supply: int,
                  score_mapper: Optional['IconScoreMapper'] = None,
-                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE,
-                 total_supply: int = 0):
+                 precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
 
         :param block_batch: changed states for a block

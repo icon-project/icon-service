@@ -388,9 +388,9 @@ class IconServiceEngine(ContextContainer):
             context.rc_block_batch,
             context.prep_candidate_block_batch,
             prev_block_contributors,
+            context.total_supply,
             context.new_icon_score_mapper,
-            precommit_flag,
-            context.total_supply)
+            precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
