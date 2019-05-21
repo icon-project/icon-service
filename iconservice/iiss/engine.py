@@ -63,7 +63,7 @@ class Engine:
         self._formula: 'IcxIssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
-        self._init_reward_calc_proxy()
+        # self._init_reward_calc_proxy()
 
         self._rc_storage: 'RewardCalcDataStorage' = RewardCalcDataStorage()
         self._rc_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
@@ -102,7 +102,7 @@ class Engine:
 
     def close(self):
         self._rc_storage.close()
-        self._close_reward_calc_proxy()
+        # self._close_reward_calc_proxy()
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
         method: str = data['method']
@@ -122,12 +122,12 @@ class Engine:
     def genesis_commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         CommitDelegator.genesis_update_db(context, precommit_data)
         self._rc_storage.commit(precommit_data.rc_block_batch)
-        CommitDelegator.genesis_send_ipc(context, precommit_data)
+        # CommitDelegator.genesis_send_ipc(context, precommit_data)
 
     def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         CommitDelegator.update_db(context, precommit_data)
         self._rc_storage.commit(precommit_data.rc_block_batch)
-        CommitDelegator.send_ipc(context, precommit_data)
+        # CommitDelegator.send_ipc(context, precommit_data)
 
     def create_icx_issue_info(self, context: 'IconScoreContext'):
         gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)

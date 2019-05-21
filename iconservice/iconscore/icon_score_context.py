@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
@@ -125,7 +125,7 @@ class IconScoreContext(object):
         self.tx: 'Transaction' = None
         self.msg: 'Message' = None
         self.current_address: 'Address' = None
-        self.revision: int = 0
+        self.revision: int = int(os.getenv("ICON_REVISION", 0))
         self.block_batch: 'BlockBatch' = None
         self.tx_batch: 'TransactionBatch' = None
         self.rc_block_batch: list = []
