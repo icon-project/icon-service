@@ -44,10 +44,8 @@ class IcxEngine(object):
         """Constructor
         """
         self._storage: 'IcxStorage' = None
-        # todo: refactoring
         self._total_supply_amount: int = 0
         self._genesis_address: 'Address' = None
-        # todo: refactoring
         self._fee_treasury_address: 'Address' = None
 
     def open(self, storage: 'IcxStorage') -> None:
@@ -70,6 +68,10 @@ class IcxEngine(object):
     @property
     def storage(self) -> 'IcxStorage':
         return self._storage
+
+    @property
+    def total_supply_amount(self) -> int:
+        return self._total_supply_amount
 
     def close(self) -> None:
         """Close resources
@@ -217,16 +219,13 @@ class IcxEngine(object):
         account: 'Account' = self._storage.get_account(context, address)
         return account.balance
 
-    # todo: need to be refactoring
-    def get_total_supply(self) -> int:
-        """Get the total supply of icx coin
-
-        :return: (int) amount in loop (1 icx == 1e18 loop)
-        """
-
-        return self._total_supply_amount
-
     def set_total_supply(self, total_supply: int):
+        """Set total supply of icx coin
+
+        :param total_supply: total icx coin supply amount
+        """
+        assert total_supply > self._total_supply_amount
+
         self._total_supply_amount = total_supply
 
     def charge_fee(self,

@@ -226,3 +226,4 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
 
         self.assertEqual(before_total_supply + self.icx_issue_value, after_total_supply)
         self.assertEqual(before_treasury_icx_amount + self.icx_issue_value, after_treasury_icx_amount)
+
