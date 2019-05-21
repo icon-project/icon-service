@@ -277,8 +277,8 @@ class TestIntegrateBase(TestCase):
         self._block_height += 1
         self._prev_block_hash = block.hash
 
-    def _remove_precommit_state(self, block_height: int, instant_block_hash: bytes) -> None:
-        self.icon_service_engine.rollback(block_height, instant_block_hash)
+    def _remove_precommit_state(self, block: 'Block') -> None:
+        self.icon_service_engine.rollback(block.height, block.hash)
 
     def _query(self, request: dict, method: str = 'icx_call') -> Any:
         response = self.icon_service_engine.query(method, request)
