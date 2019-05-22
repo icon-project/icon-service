@@ -16,7 +16,7 @@
 
 from abc import abstractmethod
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from .icon_score_context_util import IconScoreContextUtil
 from ..base.exception import AccessDeniedException
@@ -66,3 +66,9 @@ class IconSystemScoreBase(IconScoreBase):
 
     def get_deploy_info(self, address: 'Address') -> Optional['IconScoreDeployInfo']:
         return IconScoreContextUtil.get_deploy_info(self._context, address)
+
+    def is_score_active(self, score_address: 'Address') -> bool:
+        return IconScoreContextUtil.is_score_active(self._context, score_address)
+
+    def get_owner(self, score_address: Optional['Address']) -> Optional['Address']:
+        return IconScoreContextUtil.get_owner(self._context, score_address)
