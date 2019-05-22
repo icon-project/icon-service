@@ -348,7 +348,9 @@ type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
     }
 }
 
-type_convert_templates[ParamType.IISS_UNREG_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
+type_convert_templates[ParamType.IISS_UNREG_PREP_CANDIDATE] = {
+    ConstantKeys.ADDRESS: ValueType.ADDRESS
+}
 
 type_convert_templates[ParamType.IISS_SET_PREP_CANDIDATE] = type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE]
 

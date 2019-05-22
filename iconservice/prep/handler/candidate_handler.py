@@ -105,8 +105,11 @@ class CandidateHandler:
     @classmethod
     def handle_unreg_prep_candidate(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
 
-        address: 'Address' = context.tx.origin
-        # ret_params: dict = TypeConverter.convert(params, ParamType.IISS_UNREG_PREP_CANDIDATE)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_UNREG_PREP_CANDIDATE)
+        address = context.tx.origin
+        input_address = ret_params.get('address')
+        if context.tx.origin == context.builtin_owner and input_address:
+            address = input_address
         cls._del_prep_candidate_for_state_db(context, address)
         cls._put_unreg_prep_candidate_for_iiss_db(context, address)
 

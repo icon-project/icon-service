@@ -106,6 +106,7 @@ class IconScoreContext(object):
     fee_engine: 'FeeEngine' = None
     icon_service_flag: int = 0
     legacy_tbears_mode = False
+    builtin_owner: 'Address' = None
 
     iiss_engine: 'IISSEngine' = None
     prep_candidate_engine: 'PRepCandidateEngine' = None

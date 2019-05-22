@@ -159,6 +159,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
         IconScoreContext.iiss_engine: 'IISSEngine' = self._iiss_engine
         IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
+        IconScoreContext.builtin_owner: 'Address' = Address.from_string(conf.get("builtinScoreOwner"))
 
         self._icx_engine.open(self._icx_storage)
         self._icx_issue_engine.open(self._icx_storage)

@@ -25,7 +25,7 @@ from .variable.variable import Variable
 from .variable.variable_storage import PReps
 from ..base.address import Address
 from ..database.db import ContextDatabase
-from ..icon_constant import PREP_MAX_PREPS
+from ..icon_constant import PREP_MAX_PREPS, ConfigKey
 from ..iconscore.icon_score_result import TransactionResult
 from ..icx.icx_storage import Intent
 
@@ -62,6 +62,7 @@ class CandidateEngine(object):
         self._candidate_sorted_infos: 'CandidateSortedInfos' = None
 
         self._prep_infos_dirty_include_sub_prep: bool = False
+        self._builtin_owner: Address = None
 
         # read only
         self._prep_mapper_include_sub_prep: dict = None
@@ -81,6 +82,7 @@ class CandidateEngine(object):
 
         handlers: list = [CandidateHandler]
         self._init_handlers(handlers)
+        self._builtin_owner = Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER])
 
     def _init_handlers(self, handlers: list):
         for handler in handlers:
