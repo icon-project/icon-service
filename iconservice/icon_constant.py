@@ -70,12 +70,12 @@ class IssueDataKey:
 
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
-        "indexed": "PRepIssue(int,int,int,int)",
+        "indexed": ["PRepIssue(int,int,int,int)"],
         "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": "ICXIssue(int)",
+        "indexed": ["ICXIssue(int)"],
         "data": []
     }
 }
