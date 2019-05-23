@@ -28,8 +28,7 @@ from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
-    IconScoreContextType, IconScoreFuncType, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS,
-    TERM_PERIOD, PRepGrade
+    IconScoreContextType, IconScoreFuncType, TERM_PERIOD, PRepGrade, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 )
 
 if TYPE_CHECKING:
