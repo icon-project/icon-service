@@ -669,8 +669,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
         else:
             raise AccessDeniedException('No permission')
 
-    def create_interface_score(self,
-                               addr_to: 'Address',
+    @staticmethod
+    def create_interface_score(addr_to: 'Address',
                                interface_cls: Callable[['Address'], T]) -> T:
         """
         Creates an object, through which you have an access to the designated SCORE’s external functions.
