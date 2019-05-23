@@ -166,7 +166,7 @@ class Engine(EngineBase):
 
         backup_msg = context.msg
         backup_tx = context.tx
-        new_score_mapper: 'IconScoreMapper' = context.new_icon_score_mapper
+        new_tx_score_mapper: dict = {}
 
         try:
             IconScoreContextUtil.validate_score_package(context, score_address, next_tx_hash)
@@ -183,13 +183,18 @@ class Engine(EngineBase):
             context.tx = None
 
             self._initialize_score(tx_params.deploy_type, score, params)
-            new_score_mapper[score_address] = score_info
+            new_tx_score_mapper[score_address] = score_info
         except BaseException as e:
             Logger.warning(f'Failed to deploy a SCORE: {score_address}', ICON_DEPLOY_LOG_TAG)
             raise e
         finally:
             context.msg = backup_msg
             context.tx = backup_tx
+            self._update_new_score_mapper(context.new_icon_score_mapper, new_tx_score_mapper)
+
+    def _update_new_score_mapper(self, block_mapper: 'IconScoreMapper', tx_mapper: dict):
+        for address, score_info in tx_mapper.items():
+            block_mapper[address] = score_info
 
     def _write_score_to_filesystem(self, context: 'IconScoreContext',
                                    score_address: 'Address', tx_hash: bytes, deploy_data: dict):
