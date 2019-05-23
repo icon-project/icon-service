@@ -57,7 +57,7 @@ class IcxIssueEngine:
 
     @staticmethod
     def _create_issue_event_log(group_key: str, issue_data_in_db: dict) -> 'EventLog':
-        indexed: str = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
+        indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
         data: list = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
         event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
 
@@ -65,7 +65,7 @@ class IcxIssueEngine:
 
     @staticmethod
     def _create_total_issue_amount_event_log(total_issue_amount: int) -> 'EventLog':
-        total_issue_indexed: str = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
+        total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
         total_issue_data: list = [total_issue_amount]
         total_issue_event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
         return total_issue_event_log

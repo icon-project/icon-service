@@ -56,7 +56,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # todo: if get_issue_info is redundant, should fix this method
         self.issue_data = self.icon_service_engine.query("iiss_get_issue_info", {})
         self.total_issue_amount = 0
-        for _, group_dict in self.issue_data.items():
+        for group_dict in self.issue_data.values():
             self.total_issue_amount += group_dict["value"]
 
     def test_validate_issue_transaction_position(self):
@@ -197,8 +197,8 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             if group_key not in self.issue_data:
                 continue
             expected_score_address = ZERO_SCORE_ADDRESS
-            expected_indexed = ISSUE_EVENT_LOG_MAPPER[group_key]['indexed']
-            expected_data = [self.issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
+            expected_indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]['indexed']
+            expected_data: list = [self.issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
             self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
