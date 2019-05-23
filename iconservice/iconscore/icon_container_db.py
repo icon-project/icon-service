@@ -163,7 +163,7 @@ class DictDB(object):
     DictDB does not maintain order.
 
     :K: [int, str, Address, bytes]
-    :V: [int, str, Address, bytes, Bool]
+    :V: [int, str, Address, bytes, bool]
     """
 
     def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type, depth: int = 1) -> None:
@@ -215,10 +215,10 @@ class DictDB(object):
 class ArrayDB(object):
     """
     Utility classes wrapping the state DB.
-    supports length and iterator, maintains order.
+    ArrayDB supports length and iterator, maintains order.
 
     :K: [int, str, Address, bytes]
-    :V: [int, str, Address, bytes, Bool]
+    :V: [int, str, Address, bytes, bool]
     """
     __SIZE = 'size'
     __SIZE_BYTE_KEY = get_encoded_key(__SIZE)
@@ -342,10 +342,10 @@ class ArrayDB(object):
 class VarDB(object):
     """
     Utility classes wrapping the state DB.
-    can be used to store simple key-value state.
+    VarDB can be used to store simple key-value state.
 
     :K: [int, str, Address, bytes]
-    :V: [int, str, Address, bytes, Bool]
+    :V: [int, str, Address, bytes, bool]
     """
 
     def __init__(self, var_key: K, db: 'IconScoreDatabase', value_type: type) -> None:
