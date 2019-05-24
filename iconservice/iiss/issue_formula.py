@@ -50,11 +50,11 @@ class IssueFormula(object):
 
     @staticmethod
     def calculate_i_rep_per_block_contributor(i_rep: int) -> int:
-        return int(i_rep * 0.5 * IISS_MONTH // IISS_ANNUAL_BLOCK)
+        return int(i_rep * IISS_MONTH // (IISS_ANNUAL_BLOCK * 2))
 
     def _handle_icx_issue_formula_for_prep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
         calculated_i_rep: int = self.calculate_i_rep_per_block_contributor(incentive)
         beta_1: int = calculated_i_rep * self._prep_count
         beta_2: int = calculated_i_rep * self._sub_prep_count
-        beta_3: int = int(reward_rate * total_delegation / IISS_ANNUAL_BLOCK / IISS_MAX_REWARD_RATE)
+        beta_3: int = reward_rate * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
         return beta_1 + beta_2 + beta_3
