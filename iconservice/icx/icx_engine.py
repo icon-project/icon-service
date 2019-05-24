@@ -192,7 +192,7 @@ class IcxEngine(object):
             self,
             context: Optional['IconScoreContext'],
             storage: IcxStorage) -> None:
-        """Load total coin supply amount from state db
+        """Load total coin supply from state db
 
         :param context:
         :param storage: state db manager
