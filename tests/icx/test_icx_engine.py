@@ -81,7 +81,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
         self.engine._storage.put_account.assert_called()
         self.engine._put_special_account.assert_called()
-        self.assertEqual(self.total_supply, self.engine._total_supply_amount)
+        self.assertEqual(self.total_supply, self.engine._total_supply)
 
         # general
         self.engine._put_special_account = Mock()
@@ -93,7 +93,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
         self.engine._storage.put_account.assert_called()
         self.engine._put_special_account.assert_not_called()
-        self.assertEqual(self.total_supply, self.engine._total_supply_amount)
+        self.assertEqual(self.total_supply, self.engine._total_supply)
 
     def test_put_special_account(self):
         # failure case: input general account
@@ -171,7 +171,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.assertEqual(0, balance)
 
     def test_get_total_supply(self):
-        total_supply = self.engine.total_supply_amount
+        total_supply = self.engine.total_supply
 
         self.assertEqual(self.total_supply, total_supply)
 

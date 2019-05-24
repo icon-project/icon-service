@@ -44,7 +44,7 @@ class IcxEngine(object):
         """Constructor
         """
         self._storage: 'IcxStorage' = None
-        self._total_supply_amount: int = 0
+        self._total_supply: int = 0
         self._genesis_address: 'Address' = None
         self._fee_treasury_address: 'Address' = None
 
@@ -63,15 +63,15 @@ class IcxEngine(object):
         self._storage.load_last_block_info(context)
         self._load_address_from_storage(context, storage, self._GENESIS_DB_KEY)
         self._load_address_from_storage(context, storage, self._TREASURY_DB_KEY)
-        self._load_total_supply_amount_from_storage(context, storage)
+        self._load_total_supply_from_storage(context, storage)
 
     @property
     def storage(self) -> 'IcxStorage':
         return self._storage
 
     @property
-    def total_supply_amount(self) -> int:
-        return self._total_supply_amount
+    def total_supply(self) -> int:
+        return self._total_supply
 
     def close(self) -> None:
         """Close resources
@@ -128,8 +128,8 @@ class IcxEngine(object):
         self._storage.put_account(context, account)
 
         if account.balance > 0:
-            self._total_supply_amount += account.balance
-            self._storage.put_total_supply(context, self._total_supply_amount)
+            self._total_supply += account.balance
+            self._storage.put_total_supply(context, self._total_supply)
 
         if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
             self._put_special_account(context, account)
@@ -188,7 +188,7 @@ class IcxEngine(object):
             Logger.info(f'{db_key}: {address}', ICX_LOG_TAG)
         Logger.debug(f'_load_address_from_storage() end(address type: {db_key})', ICX_LOG_TAG)
 
-    def _load_total_supply_amount_from_storage(
+    def _load_total_supply_from_storage(
             self,
             context: Optional['IconScoreContext'],
             storage: IcxStorage) -> None:
@@ -199,9 +199,9 @@ class IcxEngine(object):
         """
         Logger.debug('_load_total_supply_amount() start', ICX_LOG_TAG)
 
-        total_supply_amount = storage.get_total_supply(context)
-        self._total_supply_amount = total_supply_amount
-        Logger.info(f'total_supply: {total_supply_amount}', ICX_LOG_TAG)
+        total_supply = storage.get_total_supply(context)
+        self._total_supply = total_supply
+        Logger.info(f'total_supply: {total_supply}', ICX_LOG_TAG)
         Logger.debug('_load_total_supply_amount() end', ICX_LOG_TAG)
 
     def get_balance(self,
@@ -224,9 +224,9 @@ class IcxEngine(object):
 
         :param total_supply: total icx coin supply amount
         """
-        assert total_supply > self._total_supply_amount
+        assert total_supply > self._total_supply
 
-        self._total_supply_amount = total_supply
+        self._total_supply = total_supply
 
     def charge_fee(self,
                    context: 'IconScoreContext',
