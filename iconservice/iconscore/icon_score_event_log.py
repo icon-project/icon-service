@@ -34,8 +34,8 @@ class EventLog(object):
     def __init__(
             self,
             score_address: 'Address',
-            indexed: List['BaseType'] = None,
-            data: List['BaseType'] = None) -> None:
+            indexed: List['BaseType'],
+            data: List['BaseType']) -> None:
         """
         Constructor
 
@@ -43,6 +43,10 @@ class EventLog(object):
         :param indexed: a list of indexed arguments including a event signature
         :param data: a list of normal arguments
         """
+        assert isinstance(score_address, Address)
+        assert isinstance(indexed, list)
+        assert isinstance(data, list)
+
         self.score_address: 'Address' = score_address
         self.indexed: 'List[BaseType]' = indexed
         self.data: 'List[BaseType]' = data

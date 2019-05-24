@@ -19,16 +19,16 @@ from typing import TYPE_CHECKING, Optional
 
 from iconcommons import Logger
 
-from .database.db import Database
-from .msg_data import TxData
-from ..base.exception import DatabaseException
-from ..icon_constant import DATA_BYTE_ORDER
+from ..reward_calc.db import Database as RewardCalcDatabase
+from ..reward_calc.msg_data import TxData
+from ...base.exception import DatabaseException
+from ...icon_constant import DATA_BYTE_ORDER
 
 if TYPE_CHECKING:
-    from .msg_data import Data
+    from ..reward_calc.msg_data import Data
 
 
-class RewardCalcDataStorage(object):
+class DataStorage(object):
     _CURRENT_IISS_DB_NAME = "current_db"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
@@ -36,12 +36,12 @@ class RewardCalcDataStorage(object):
 
     def __init__(self):
         self._path: str = ""
-        self._db: Optional['Database'] = None
+        self._db: Optional['RewardCalcDatabase'] = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
 
     @property
-    def db(self) -> Optional['Database']:
+    def db(self) -> Optional['RewardCalcDatabase']:
         return self._db
 
     def open(self, path: str):
@@ -50,7 +50,7 @@ class RewardCalcDataStorage(object):
         self._path = path
 
         current_db_path = os.path.join(path, self._CURRENT_IISS_DB_NAME)
-        self._db = Database.from_path(current_db_path, create_if_missing=True)
+        self._db = RewardCalcDatabase.from_path(current_db_path, create_if_missing=True)
         self._db_iiss_tx_index = self._load_last_transaction_index()
 
     def close(self):
@@ -106,7 +106,7 @@ class RewardCalcDataStorage(object):
             raise DatabaseException("Cannot create IISS DB because of invalid path. Check both IISS "
                                     "current DB path and IISS DB path")
 
-        self._db = Database.from_path(current_db_path)
+        self._db = RewardCalcDatabase.from_path(current_db_path)
         self._db_iiss_tx_index = -1
 
         return iiss_rc_db_path

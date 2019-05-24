@@ -15,11 +15,11 @@
 
 from typing import TYPE_CHECKING
 
-from iconservice import ZERO_SCORE_ADDRESS, Address
-from iconservice.base.exception import IconServiceBaseException
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
-from iconservice.iconscore.icon_score_event_log import EventLog
-from iconservice.icx.issue_data_checker import IssueDataValidator
+from .. import ZERO_SCORE_ADDRESS, Address
+from ..base.exception import IconServiceBaseException
+from ..icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ..iconscore.icon_score_event_log import EventLog
+from ..icx.issue_data_validator import IssueDataValidator
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -34,7 +34,7 @@ class IcxIssueEngine:
         self.close()
         self._storage = storage
 
-    def close(self) -> None:
+    def close(self):
         """Close resources
         """
         if self._storage:
@@ -43,7 +43,7 @@ class IcxIssueEngine:
 
     def _issue(self,
                context: 'IconScoreContext',
-               to: Address,
+               to: 'Address',
                amount: int):
         assert amount > 0
 
@@ -56,25 +56,26 @@ class IcxIssueEngine:
             self._storage.put_total_supply(context, current_total_supply + amount)
 
     @staticmethod
-    def _create_issue_event_log(group_key, issue_data_in_db) -> 'EventLog':
-        indexed = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
-        data = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
-        event_log = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
+    def _create_issue_event_log(group_key: str, issue_data_in_db: dict) -> 'EventLog':
+        indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
+        data: list = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
+        event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
 
         return event_log
 
     @staticmethod
-    def _create_total_issue_amount_event_log(total_issue_amount) -> 'EventLog':
-        total_issue_indexed = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
-        total_issue_data = [total_issue_amount]
-        total_issue_event_log = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
+    def _create_total_issue_amount_event_log(total_issue_amount: int) -> 'EventLog':
+        total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
+        total_issue_data: list = [total_issue_amount]
+        total_issue_event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
         return total_issue_event_log
 
-    def iiss_issue(self,
-                   context: 'IconScoreContext',
-                   to_address: 'Address',
-                   issue_data_in_tx: dict,
-                   issue_data_in_db: dict):
+    # todo: consider name: issue_for_iiss
+    def issue(self,
+              context: 'IconScoreContext',
+              to_address: 'Address',
+              issue_data_in_tx: dict,
+              issue_data_in_db: dict):
         total_issue_amount = 0
 
         for group_key in ISSUE_CALCULATE_ORDER:
@@ -82,10 +83,10 @@ class IcxIssueEngine:
                 continue
 
             if IssueDataValidator. \
-                    check_difference_of_iiss_issue_data_value(issue_data_in_tx[group_key], issue_data_in_db[group_key]):
+                    validate_value(issue_data_in_tx[group_key], issue_data_in_db[group_key]):
                 raise IconServiceBaseException("Have difference between "
                                                "issue transaction and actual db data")
-            issue_event_log = self._create_issue_event_log(group_key, issue_data_in_db)
+            issue_event_log: 'EventLog' = self._create_issue_event_log(group_key, issue_data_in_db)
             context.event_logs.append(issue_event_log)
 
             total_issue_amount += issue_data_in_db[group_key]["value"]
@@ -93,5 +94,5 @@ class IcxIssueEngine:
         # todo : issue amount = total_issue_amount - prev total transaction fee
         # to_address: Address to be deposited
         self._issue(context, to_address, total_issue_amount)
-        total_issue_event_log = self._create_total_issue_amount_event_log(total_issue_amount)
+        total_issue_event_log: 'EventLog' = self._create_total_issue_amount_event_log(total_issue_amount)
         context.event_logs.append(total_issue_event_log)

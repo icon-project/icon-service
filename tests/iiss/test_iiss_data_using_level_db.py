@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import plyvel
 import unittest
 from typing import TYPE_CHECKING
 
-from iconservice.iiss.msg_data import Header, GovernanceVariable, PRepsData, TxData, TxType, \
+import plyvel
+
+from iconservice.iiss.reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, TxType, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
-from tests import create_address, rmtree
+from tests import create_address
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address

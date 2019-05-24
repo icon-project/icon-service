@@ -259,6 +259,7 @@ type_convert_templates[ParamType.INVOKE] = {
     }
 }
 
+# todo: check if version parameter is redundant
 type_convert_templates[ParamType.ICX_CALL] = {
     ConstantKeys.VERSION: ValueType.INT,
     ConstantKeys.FROM: ValueType.ADDRESS,
