@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from .base.address import Address, generate_score_address, generate_score_address_for_tbears, TREASURY_ADDRESS
+from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException
+    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -50,7 +50,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_engine import IcxEngine
 from .icx.icx_issue_engine import IcxIssueEngine
 from .icx.icx_storage import IcxStorage
-from .icx.issue_data_checker import IssueDataValidator
+from .icx.issue_data_validator import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
@@ -491,20 +491,21 @@ class IconServiceEngine(ContextContainer):
                                    issue_data_in_tx: dict,
                                    issue_data_in_db: dict):
 
+        treasury_address: 'Address' = self._icx_engine.fee_treasury_address
         tx_result = TransactionResult(context.tx, context.block)
-        # todo: treasury address should be assigned when icon service open.
-        tx_result.to = TREASURY_ADDRESS
+        tx_result.to = treasury_address
+
         try:
-            self._icx_issue_engine.iiss_issue(context,
-                                              TREASURY_ADDRESS,
-                                              issue_data_in_tx,
-                                              issue_data_in_db)
+            self._icx_issue_engine.issue(context,
+                                         treasury_address,
+                                         issue_data_in_tx,
+                                         issue_data_in_db)
 
             tx_result.status = TransactionResult.SUCCESS
         except IconServiceBaseException as tx_failure_exception:
             tx_result.failure = self._get_failure_from_exception(tx_failure_exception)
             # todo: consider about trace (if need)
-            trace = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
+            trace: 'Trace' = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
             context.traces.append(trace)
             context.event_logs.clear()
         finally:
@@ -517,9 +518,15 @@ class IconServiceEngine(ContextContainer):
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
                               request: dict) -> 'TransactionResult':
-        issue_data_in_tx = request['params']['data']
+        assert 'params' in request
+        assert 'data' in request['params']
+
+        if not isinstance(request['params']['data'], dict):
+            raise IllegalFormatException("invalid issue transaction format")
+
+        issue_data_in_tx: dict = request['params']['data']
         issue_data_in_db: dict = self._iiss_engine.create_icx_issue_info(context)
-        IssueDataValidator.validate_iiss_issue_data_format(issue_data_in_tx, issue_data_in_db)
+        IssueDataValidator.validate_format(issue_data_in_tx, issue_data_in_db)
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=ICX_ISSUE_TRANSACTION_INDEX,

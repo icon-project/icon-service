@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 from iconcommons import Logger
 
-from iconservice.iiss.icx_issue_formula import IcxIssueFormula
-from .data_creator import DataCreator
+from .issue_formula import IssueFormula
+from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -29,8 +29,8 @@ if TYPE_CHECKING:
     from ..base.address import Address
     from ..prep.variable.variable_storage import GovernanceVariable, PRep
     from .ipc.reward_calc_proxy import RewardCalcProxy
-    from .reward_calc_data_storage import RewardCalcDataStorage
-    from .msg_data import Header, BlockProduceInfoData, PRepsData, GovernanceVariable
+    from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
+    from .reward_calc.msg_data import Header, BlockProduceInfoData, PRepsData, GovernanceVariable
     from .variable.variable import Variable
 
 
@@ -100,7 +100,7 @@ class CommitDelegator(object):
 
     @classmethod
     def _put_header_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        data: 'Header' = DataCreator.create_header(0, precommit_data.block.height)
+        data: 'Header' = RewardCalcDataCreator.create_header(0, precommit_data.block.height)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -112,16 +112,16 @@ class CommitDelegator(object):
         # todo: after demo, should consider about record these variable to formula (i.e. record in memory)
         r_min = cls.variable.issue.get_reward_min(context)
         r_max = cls.variable.issue.get_reward_max(context)
-        l_point = cls.variable.issue.get_liner_point(context)
-        reward_rep: int = IcxIssueFormula.calculate_r_rep(r_min, r_max, l_point,
-                                                          current_total_supply,
-                                                          current_total_candidate_delegated)
-        calculated_incentive_rep: int = IcxIssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
+        r_point = cls.variable.issue.get_reward_point(context)
+        reward_rep: int = IssueFormula.calculate_r_rep(r_min, r_max, r_point,
+                                                       current_total_supply,
+                                                       current_total_candidate_delegated)
+        calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
         cls.variable.issue.put_reward_rep(context, reward_rep)
 
-        data: 'GovernanceVariable' = DataCreator.create_gv_variable(precommit_data.block.height,
-                                                                    calculated_incentive_rep,
-                                                                    reward_rep)
+        data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(precommit_data.block.height,
+                                                                              calculated_incentive_rep,
+                                                                              reward_rep)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -136,9 +136,9 @@ class CommitDelegator(object):
             return
 
         Logger.debug(f"put_block_produce_info_for_rc", "iiss")
-        data: 'BlockProduceInfoData' = DataCreator.create_block_produce_info_data(precommit_data.block.height,
-                                                                                  generator,
-                                                                                  validators)
+        data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(precommit_data.block.height,
+                                                                                            generator,
+                                                                                            validators)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)
 
     @classmethod
@@ -157,7 +157,7 @@ class CommitDelegator(object):
 
         Logger.debug(f"put_preps_for_rc: total_candidate_delegated{total_candidate_delegated}", "iiss")
 
-        data: 'PRepsData' = DataCreator.create_prep_data(precommit_data.block.height,
-                                                         total_candidate_delegated,
-                                                         preps)
+        data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(precommit_data.block.height,
+                                                                   total_candidate_delegated,
+                                                                   preps)
         cls.rc_storage.put(precommit_data.rc_block_batch, data)

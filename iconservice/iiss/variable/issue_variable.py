@@ -45,9 +45,9 @@ class IssueVariable(object):
             reward_max: int = reward_variable[ConfigKey.REWARD_MAX]
             self._storage.put_reward_max(context, reward_max)
 
-        if self._storage.get_liner_point(context) is None:
-            liner_point: int = reward_variable[ConfigKey.LINER_POINT]
-            self._storage.put_liner_point(context, liner_point)
+        if self._storage.get_reward_point(context) is None:
+            reward_point: int = reward_variable[ConfigKey.REWARD_POINT]
+            self._storage.put_reward_point(context, reward_point)
 
         if self._storage.get_calc_period(context) is None:
             calc_period: int = conf[ConfigKey.IISS_CALCULATE_PERIOD]
@@ -74,11 +74,11 @@ class IssueVariable(object):
         value: Optional[int] = self._storage.get_reward_max(context)
         return value
 
-    def put_liner_point(self, context: 'IconScoreContext', liner_point: int):
+    def put_reward_point(self, context: 'IconScoreContext', liner_point: int):
         self._storage.put_reward_rep(context, liner_point)
 
-    def get_liner_point(self, context: 'IconScoreContext') -> Optional[int]:
-        value: Optional[int] = self._storage.get_liner_point(context)
+    def get_reward_point(self, context: 'IconScoreContext') -> Optional[int]:
+        value: Optional[int] = self._storage.get_reward_point(context)
         return value
 
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):

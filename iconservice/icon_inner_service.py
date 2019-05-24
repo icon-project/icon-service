@@ -56,7 +56,8 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
-    def _log_exception(self, e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
+    @staticmethod
+    def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
         Logger.error(e, tag)
 
@@ -83,7 +84,7 @@ class IconScoreInnerTask(object):
         try:
             value = self._icon_service_engine.query(query_method_name, {})
             response = MakeResponse.make_response(value)
-        # todo: add except after implement formular method
+        # todo: add except after implementing formula method
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
