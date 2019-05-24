@@ -301,26 +301,10 @@ class TestIntegrateBase(TestCase):
         return tx
 
     def _make_dummy_issue_tx(self):
-        issue_tx = self._make_issue_tx({
-            "prep": {
-                "incentive": 1,
-                "rewardRate": 1,
-                "totalDelegation": 1,
-                "value": 1
-            },
-            "eep": {
-                "incentive": 2,
-                "rewardRate": 2,
-                "totalDelegation": 2,
-                "value": 2
-            },
-            "dapp": {
-                "incentive": 3,
-                "rewardRate": 3,
-                "totalDelegation": 3,
-                "value": 3
-            }
-        })
+        # todo: if get_issue_info is redundant, should fix this method
+        # todo: warning! if the value is less then 0, issue transaction will be failed when testing
+        issue_data = self.icon_service_engine.query("iiss_get_issue_info", {})
+        issue_tx = self._make_issue_tx(issue_data)
         return issue_tx
 
     def _make_and_req_block(self, tx_list: list,

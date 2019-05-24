@@ -16,7 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from ..data_creator import DataCreator
+from ..reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
@@ -29,9 +29,9 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..reward_calc_data_storage import RewardCalcDataStorage
+    from ..reward_calc.data_storage import DataStorage as RewardCalcDataStorage
     from ..ipc.reward_calc_proxy import RewardCalcProxy
-    from ..msg_data import DelegationInfo, DelegationTx, TxData
+    from ..reward_calc.msg_data import DelegationInfo, DelegationTx, TxData
     from ..variable.variable import Variable
 
 
@@ -98,8 +98,8 @@ class DelegationHandler:
         delegating.set_delegations(new_delegations)
 
         if delegating.delegations_amount > delegating.stake:
-                raise InvalidParamsException(
-                    f"Failed to delegation: delegation_amount{delegating.delegations_amount} > stake{delegating.stake}")
+            raise InvalidParamsException(
+                f"Failed to delegation: delegation_amount{delegating.delegations_amount} > stake{delegating.stake}")
 
     @classmethod
     def _delegated_candidates(cls, context: 'IconScoreContext', delegating: 'Account', candidates: dict) -> list:
@@ -126,11 +126,11 @@ class DelegationHandler:
 
         for delegation in delegations:
             delegation_address, delegation_value = delegation.values()
-            info: 'DelegationInfo' = DataCreator.create_delegation_info(delegation_address, delegation_value)
+            info: 'DelegationInfo' = RewardCalcDataCreator.create_delegation_info(delegation_address, delegation_value)
             delegation_list.append(info)
 
-        delegation_tx: 'DelegationTx' = DataCreator.create_tx_delegation(delegation_list)
-        iiss_tx_data: 'TxData' = DataCreator.create_tx(address, block_height, delegation_tx)
+        delegation_tx: 'DelegationTx' = RewardCalcDataCreator.create_tx_delegation(delegation_list)
+        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, delegation_tx)
         cls.rc_storage.put(batch, iiss_tx_data)
 
     @classmethod
