@@ -197,12 +197,12 @@ class IcxEngine(object):
         :param context:
         :param storage: state db manager
         """
-        Logger.debug('_load_total_supply_amount() start', ICX_LOG_TAG)
+        Logger.debug('_load_total_supply() start', ICX_LOG_TAG)
 
         total_supply = storage.get_total_supply(context)
         self._total_supply = total_supply
         Logger.info(f'total_supply: {total_supply}', ICX_LOG_TAG)
-        Logger.debug('_load_total_supply_amount() end', ICX_LOG_TAG)
+        Logger.debug('_load_total_supply() end', ICX_LOG_TAG)
 
     def get_balance(self,
                     context: 'IconScoreContext',
