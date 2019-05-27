@@ -44,10 +44,7 @@ class IcxEngine(object):
         """Constructor
         """
         self._storage: 'IcxStorage' = None
-        # todo: refactoring
-        self._total_supply_amount: int = 0
         self._genesis_address: 'Address' = None
-        # todo: refactoring
         self._fee_treasury_address: 'Address' = None
 
     def open(self, storage: 'IcxStorage') -> None:
@@ -65,7 +62,6 @@ class IcxEngine(object):
         self._storage.load_last_block_info(context)
         self._load_address_from_storage(context, storage, self._GENESIS_DB_KEY)
         self._load_address_from_storage(context, storage, self._TREASURY_DB_KEY)
-        self._load_total_supply_amount_from_storage(context, storage)
 
     @property
     def storage(self) -> 'IcxStorage':
@@ -130,8 +126,9 @@ class IcxEngine(object):
         self._storage.put_account(context, account)
 
         if account.balance > 0:
-            self._total_supply_amount += account.balance
-            self._storage.put_total_supply(context, self._total_supply_amount)
+            total_supply = self.get_total_supply(context)
+            total_supply += account.balance
+            self._storage.put_total_supply(context, total_supply)
 
         if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
             self._put_special_account(context, account)
@@ -190,22 +187,6 @@ class IcxEngine(object):
             Logger.info(f'{db_key}: {address}', ICX_LOG_TAG)
         Logger.debug(f'_load_address_from_storage() end(address type: {db_key})', ICX_LOG_TAG)
 
-    def _load_total_supply_amount_from_storage(
-            self,
-            context: Optional['IconScoreContext'],
-            storage: IcxStorage) -> None:
-        """Load total coin supply amount from state db
-
-        :param context:
-        :param storage: state db manager
-        """
-        Logger.debug('_load_total_supply_amount() start', ICX_LOG_TAG)
-
-        total_supply_amount = storage.get_total_supply(context)
-        self._total_supply_amount = total_supply_amount
-        Logger.info(f'total_supply: {total_supply_amount}', ICX_LOG_TAG)
-        Logger.debug('_load_total_supply_amount() end', ICX_LOG_TAG)
-
     def get_balance(self,
                     context: 'IconScoreContext',
                     address: Address) -> int:
@@ -221,14 +202,12 @@ class IcxEngine(object):
         account: 'Account' = self._storage.get_account(context, address)
         return account.balance
 
-    # todo: need to be refactoring
     def get_total_supply(self, context: 'IconScoreContext') -> int:
         """Get the total supply of icx coin
 
         :param context:
         :return: (int) amount in loop (1 icx == 1e18 loop)
         """
-        # todo: to be refactored (using memory)
         return self._storage.get_total_supply(context)
 
     def charge_fee(self,
