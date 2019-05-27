@@ -71,6 +71,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
                 raise Exception("invalid type of params was set when calling put_account")
 
         self.engine._storage.put_account = Mock(side_effect=intercept_storage_put_account)
+        query_context = IconScoreContext(IconScoreContextType.QUERY)
 
         # genesis
         self.engine._put_special_account = Mock()
@@ -81,7 +82,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
         self.engine._storage.put_account.assert_called()
         self.engine._put_special_account.assert_called()
-        self.assertEqual(self.total_supply, self.engine._total_supply_amount)
+        self.assertEqual(self.total_supply, self.engine.get_total_supply(query_context))
 
         # general
         self.engine._put_special_account = Mock()
@@ -93,7 +94,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
 
         self.engine._storage.put_account.assert_called()
         self.engine._put_special_account.assert_not_called()
-        self.assertEqual(self.total_supply, self.engine._total_supply_amount)
+        self.assertEqual(self.total_supply, self.engine.get_total_supply(query_context))
 
     def test_put_special_account(self):
         # failure case: input general account
@@ -160,9 +161,6 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
                                                icx_storage_mock,
                                                self.engine._GENESIS_DB_KEY)
         self.assertEqual(None, self.engine._genesis_address)
-
-    def test_load_total_supply_amount_from_storage(self):
-        pass
 
     def test_get_balance(self):
         address = Address.from_string('hx0123456789012345678901234567890123456789')
