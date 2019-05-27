@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
-from iconservice.fee.fee_engine import DepositInfo
+from iconservice.fee.fee_engine import DepositInfo, BLOCKS_IN_ONE_MONTH
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
@@ -61,7 +61,7 @@ class TestFeeSharing(unittest.TestCase):
     def test_add_deposit(self):
         tx_hash = os.urandom(32)
         tx_hash_hex = bytes.hex(tx_hash)
-        term, amount = hex(1296000), 5000
+        term, amount = hex(BLOCKS_IN_ONE_MONTH), 5000
 
         mock_score_info = Mock(spec=DepositInfo)
         mock_score_info.configure_mock(sharing_ratio=50)

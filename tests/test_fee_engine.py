@@ -92,6 +92,13 @@ def patch_fee_storage(fee_storage: FeeStorage):
     fee_storage.delete_deposit = delete
 
 
+def get_rand_term():
+    if FIXED_TERM:
+        return FeeEngine._MIN_DEPOSIT_TERM
+    else:
+        return randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+
+
 class TestFeeEngine(unittest.TestCase):
 
     def setUp(self):
@@ -147,7 +154,7 @@ class TestFeeEngine(unittest.TestCase):
             tx_hash = os.urandom(32)
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
             block_height = randrange(100, 10000)
-            term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+            term = get_rand_term()
 
             before_sender_balance = self._icx_engine.get_balance(None, self._sender)
             self._engine.add_deposit(
@@ -159,7 +166,6 @@ class TestFeeEngine(unittest.TestCase):
 
         return input_params
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_fee(self):
         context = self.get_context()
         block_height = 0
@@ -180,7 +186,6 @@ class TestFeeEngine(unittest.TestCase):
             self.assertEqual(block_height, deposit.created)
             self.assertEqual(block_height + term, deposit.expires)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_append_and_delete(self):
         size = randrange(10, 100)
         deposit_list = self._deposit_bulk(size)
@@ -216,14 +221,13 @@ class TestFeeEngine(unittest.TestCase):
             self.assertEqual(block_height, deposit.created)
             self.assertEqual(block_height + term, deposit.expires)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_fee_invalid_param(self):
         context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
 
         # invalid amount (underflow)
         # noinspection PyTypeChecker
@@ -272,7 +276,6 @@ class TestFeeEngine(unittest.TestCase):
         # noinspection PyUnresolvedReferences
         self.assertEqual('Invalid SCORE owner', e.exception.message)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_deposit_fee_out_of_balance(self):
         context = self.get_context()
 
@@ -282,7 +285,7 @@ class TestFeeEngine(unittest.TestCase):
         tx_hash = os.urandom(32)
         amount = 10001 * 10 ** 18
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
 
         # out of balance
         # noinspection PyTypeChecker
@@ -334,14 +337,13 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_virtual_step, block_height + term)
         self.assertEqual(deposit_meta.expires_of_deposit, block_height + term)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_without_penalty(self):
         context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
 
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
@@ -354,14 +356,13 @@ class TestFeeEngine(unittest.TestCase):
         self.assertIsNone(deposit_info)
         self.assertEqual(amount, after_sender_balance - before_sender_balance)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_with_penalty(self):
         context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
 
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
@@ -375,7 +376,6 @@ class TestFeeEngine(unittest.TestCase):
         self.assertGreater(after_sender_balance - before_sender_balance, 0)
         self.assertLessEqual(after_sender_balance - before_sender_balance, amount)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_and_updates_previous_and_next_link_ascending(self):
         """
         Given: There are four deposits.
@@ -390,7 +390,7 @@ class TestFeeEngine(unittest.TestCase):
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+            term = get_rand_term()
             block_height += 1
             self._engine.add_deposit(
                 context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
@@ -409,7 +409,6 @@ class TestFeeEngine(unittest.TestCase):
             deposit_meta = self._engine._get_or_create_deposit_meta(context, self._score_address)
             self.assertEqual(next_deposit.id, deposit_meta.head_id)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_withdraw_fee_and_updates_previous_and_next_link_descending(self):
         """
         Given: There are four deposits.
@@ -424,7 +423,7 @@ class TestFeeEngine(unittest.TestCase):
         for i in range(cnt_deposit):
             arr_tx_hash.append(os.urandom(32))
             amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
-            term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+            term = get_rand_term()
             block_height += 1
             self._engine.add_deposit(
                 context, arr_tx_hash[i], self._sender, self._score_address, amount, block_height, term)
@@ -599,14 +598,13 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(deposit_meta.expires_of_virtual_step, last_expires)
         self.assertEqual(deposit_meta.expires_of_deposit, last_expires)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_get_deposit_info(self):
         context = self.get_context()
 
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
 
         before_sender_balance = self._icx_engine.get_balance(None, self._sender)
         self._engine.add_deposit(
@@ -624,7 +622,6 @@ class TestFeeEngine(unittest.TestCase):
         self.assertEqual(block_height, deposit.created)
         self.assertEqual(block_height + term, deposit.expires)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_charge_transaction_fee_without_sharing(self):
         context = self.get_context()
 
@@ -634,7 +631,7 @@ class TestFeeEngine(unittest.TestCase):
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
 
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
@@ -648,7 +645,6 @@ class TestFeeEngine(unittest.TestCase):
 
         self.assertEqual(step_price * used_step, before_sender_balance - after_sender_balance)
 
-    @unittest.skipIf(FIXED_TERM is True, "FIXED_TERM is true")
     def test_charge_transaction_fee_sharing_deposit(self):
         context = self.get_context()
 
@@ -658,7 +654,7 @@ class TestFeeEngine(unittest.TestCase):
         tx_hash = os.urandom(32)
         amount = randrange(FeeEngine._MIN_DEPOSIT_AMOUNT, FeeEngine._MAX_DEPOSIT_AMOUNT)
         block_height = randrange(100, 10000)
-        term = randrange(FeeEngine._MIN_DEPOSIT_TERM, FeeEngine._MAX_DEPOSIT_TERM)
+        term = get_rand_term()
         self._engine.add_deposit(
             context, tx_hash, self._sender, self._score_address, amount, block_height, term)
 

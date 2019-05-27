@@ -330,7 +330,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertGreater(initial_available_deposit, 0)
 
         # increase block_height
-        for i in range(1296000):
+        for i in range(MIN_DEPOSIT_TERM):
             send_icx_tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 10 ** 8)
             prev_block, tx_results = self._make_and_req_block([send_icx_tx])
             self._write_precommit_state(prev_block)
