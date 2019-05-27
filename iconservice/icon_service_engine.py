@@ -1125,7 +1125,7 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
-    def rollback(self,block_height: int, instant_block_hash: bytes) -> None:
+    def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
         :param block_height: height of block which is needed to be removed from the pre-commit data manager

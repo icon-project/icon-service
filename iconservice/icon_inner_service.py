@@ -170,7 +170,7 @@ class IconScoreInnerTask(object):
             return self._write_precommit_state(request)
 
     @staticmethod
-    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, Optional[bytes], bytes]:
+    def _get_block_info_for_precommit_state(converted_block_params: dict) -> Tuple[int, bytes, Optional[bytes]]:
         block_height: int = converted_block_params[ConstantKeys.BLOCK_HEIGHT]
         block_hash: Optional[bytes] = None
         if ConstantKeys.BLOCK_HASH in converted_block_params:
