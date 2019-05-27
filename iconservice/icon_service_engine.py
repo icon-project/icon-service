@@ -494,10 +494,12 @@ class IconServiceEngine(ContextContainer):
         treasury_address: 'Address' = self._icx_engine.fee_treasury_address
         tx_result = TransactionResult(context.tx, context.block)
         tx_result.to = treasury_address
-
+        # temp data
+        i_score = 1_000_000
         try:
             self._icx_issue_engine.issue(context,
                                          treasury_address,
+                                         i_score,
                                          issue_data_in_tx,
                                          issue_data_in_db)
 
