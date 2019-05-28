@@ -28,7 +28,7 @@ class IcxIssueStorage(object):
     _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
     _PREV_CALC_PERIOD_ISSUED_ICX_KEY = b'prev_calc_period_issued_icx'
     _OVER_ISSUED_ICX_KEY = b'over_issued_icx'
-    _REMAIN_I_SCORE_KEY = b'remain_i_score'
+    _OVER_ISSUED_I_SCORE_KEY = b'over_issued_i_score'
 
     def __init__(self, db: 'ContextDatabase'):
         self._db: 'ContextDatabase' = db
@@ -50,10 +50,12 @@ class IcxIssueStorage(object):
         encoded_current_issued_amount = MsgPackForDB.dumps(current_calc_period_issued_amount)
         self._db.put(context, self._CURRENT_CALC_PERIOD_ISSUED_ICX_KEY, encoded_current_issued_amount)
 
-    def get_current_calc_period_issued_icx(self, context: 'IconScoreContext'):
+    def get_current_calc_period_issued_icx(self, context: 'IconScoreContext') -> int:
 
         encoded_current_issued_amount = self._db.get(context, self._CURRENT_CALC_PERIOD_ISSUED_ICX_KEY)
         current_issued_amount = MsgPackForDB.loads(encoded_current_issued_amount)
+        if current_issued_amount is None:
+            current_issued_amount = 0
         return current_issued_amount
 
     def put_prev_calc_period_issued_icx(self, context: 'IconScoreContext', prev_calc_period_issued_amount: int):
@@ -78,10 +80,10 @@ class IcxIssueStorage(object):
 
     def put_over_issued_i_score(self, context: 'IconScoreContext', over_issued_i_score: int):
         encoded_over_issued_i_score = MsgPackForDB.dumps(over_issued_i_score)
-        self._db.put(context, self._REMAIN_I_SCORE_KEY, encoded_over_issued_i_score)
+        self._db.put(context, self._OVER_ISSUED_I_SCORE_KEY, encoded_over_issued_i_score)
 
     def get_over_issued_i_score(self, context: 'IconScoreContext') -> Optional[int]:
-        encoded_over_issued_i_score = self._db.get(context, self._REMAIN_I_SCORE_KEY)
+        encoded_over_issued_i_score = self._db.get(context, self._OVER_ISSUED_I_SCORE_KEY)
         over_issued_i_score = MsgPackForDB.loads(encoded_over_issued_i_score)
         if over_issued_i_score is None:
             over_issued_i_score = 0

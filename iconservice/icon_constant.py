@@ -75,7 +75,7 @@ ISSUE_EVENT_LOG_MAPPER = {
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": ["ICXIssue(int)"],
+        "indexed": ["ICXIssue(int,int,int,int)"],
         "data": []
     }
 }
