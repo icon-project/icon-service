@@ -97,7 +97,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort1(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [i for i in range(0, count)]
         block_heights = [0] * count
         tx_indexs = [0] * count
@@ -109,7 +109,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort1_rev(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [i for i in range(count, 0, -1)]
         block_heights = [0] * count
         tx_indexs = [0] * count
@@ -121,7 +121,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort2(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [0] * count
         block_heights = [i for i in range(0, count)]
         tx_indexs = [0] * count
@@ -133,7 +133,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort2_rev(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [0] * count
         block_heights = [i for i in range(count, 0, -1)]
         tx_indexs = [0] * count
@@ -145,7 +145,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort3(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [i for i in range(0, count)]
@@ -157,7 +157,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort3_rev(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [i for i in range(count, 0, -1)]
@@ -169,7 +169,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_sort4(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [0] * count
@@ -181,7 +181,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_update_info(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [i for i in range(0, count)]
         block_heights = [0] * count
         tx_indexs = [0] * count
@@ -205,7 +205,7 @@ class TestPrepCandidate(unittest.TestCase):
 
     def test_prep_candidate_info_for_updates(self):
         count = 5
-        addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
+        addresses = [create_address() for _ in range(count)]
         delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [0] * count
@@ -280,6 +280,27 @@ class TestPrepCandidate(unittest.TestCase):
 
         ret = candidates.to_list()
         self.assertEqual(0, len(ret))
+
+    # def test_speed(self):
+    #     count = 3000
+    #     addresses = [create_address() for _ in range(count)]
+    #     delegateds = [i for i in range(count)]
+    #     block_heights = [i for i in range(count)]
+    #     tx_indexs = [i for i in range(count)]
+    #
+    #     infos = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
+    #
+    #     data: tuple = (create_address(), "name0", 0, 0, 0)
+    #     info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
+    #                                                         data[1],
+    #                                                         data[2],
+    #                                                         data[3])
+    #     infos.add_info(info)
+    #     for i in range(count):
+    #         infos.update_info(data[0], i)
+    #
+    #     for i in range(count, 0, -1):
+    #         infos.update_info(data[0], i)
 
 
 if __name__ == '__main__':

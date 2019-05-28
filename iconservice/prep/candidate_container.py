@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
 from .candidate import Candidate
-from .candidate_linked_list import CandidateLinkedList
+from .candidate_list import CandidateList
 from .candidate_utils import CandidateUtils
 from ..base.exception import InvalidParamsException
 
@@ -57,7 +57,7 @@ class CandidateInfoMapper(object):
 class SortedCandidates(object):
 
     def __init__(self):
-        self._candidates: 'CandidateLinkedList' = CandidateLinkedList()
+        self._candidates: 'CandidateList' = CandidateList()
         self._lock = Lock()
         self._init = False
 
@@ -73,16 +73,16 @@ class SortedCandidates(object):
     def to_list(self) -> list:
         with self._lock:
             tmp: list = []
-            for n in self._candidates:
-                Logger.debug(f"to_list: {n.data.address}", "iiss")
-                tmp.append(n.data)
+            for data in self._candidates:
+                Logger.debug(f"to_list: {data.address}", "iiss")
+                tmp.append(data)
             return tmp
 
     def get_candidate(self, address: 'Address') -> tuple:
         with self._lock:
-            for index, n in enumerate(self._candidates):
-                if n.data.address == address:
-                    return index, n.data
+            for index, data in enumerate(self._candidates):
+                if data.address == address:
+                    return index, data
             return None, None
 
     def add_candidate(self, new_info: 'Candidate'):
