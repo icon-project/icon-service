@@ -26,6 +26,8 @@ setup_options = {
         'icon_service.json',
         'builtin_scores/*/package.json'
     ]},
+    'setup_requires': ['pytest-runner'],
+    'tests_require': ['pytest'],
     'license': "Apache License 2.0",
     'install_requires': requires,
     'entry_points': {
