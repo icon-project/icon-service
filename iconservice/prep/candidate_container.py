@@ -19,9 +19,9 @@ from threading import Lock
 from typing import TYPE_CHECKING, List
 
 from iconcommons import Logger
-
-from .candidate_info_for_sort import CandidateInfoForSort
+from .candidate import Candidate
 from .candidate_linked_list import CandidateLinkedList
+from .candidate_utils import CandidateUtils
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -30,81 +30,73 @@ if TYPE_CHECKING:
 
 class CandidateInfoMapper(object):
     def __init__(self):
-        self._prep_candidate_objects: dict = {}
+        self._candidates: dict = {}
         self._lock = Lock()
 
-    def __setitem__(self, key: 'Address', value: 'CandidateInfoForSort'):
+    def __setitem__(self, key: 'Address', value: 'Candidate'):
         with self._lock:
-            self._prep_candidate_objects[key] = value
+            self._candidates[key] = value
 
-    def __getitem__(self, key: 'Address') -> 'CandidateInfoForSort':
+    def __getitem__(self, key: 'Address') -> 'Candidate':
         with self._lock:
-            return self._prep_candidate_objects[key]
+            return self._candidates[key]
 
     def __delitem__(self, key: 'Address'):
         with self._lock:
-            del self._prep_candidate_objects[key]
+            del self._candidates[key]
 
     def __contains__(self, address: 'Address') -> bool:
         with self._lock:
-            return address in self._prep_candidate_objects
+            return address in self._candidates
 
-    def to_genesis_sorted_list(self) -> List['CandidateInfoForSort']:
+    def to_genesis_sorted_list(self) -> List['Candidate']:
         with self._lock:
-            return sorted(self._prep_candidate_objects.values(), key=cmp_to_key(CandidateInfoForSort.compare_key))
+            return sorted(self._candidates.values(), key=cmp_to_key(CandidateUtils.compare_key))
 
 
-class CandidateSortedInfos(object):
+class SortedCandidates(object):
 
     def __init__(self):
-        self._prep_candidate_objects: 'CandidateLinkedList' = CandidateLinkedList()
+        self._candidates: 'CandidateLinkedList' = CandidateLinkedList()
         self._lock = Lock()
         self._init = False
 
-    def genesis_update(self, prep_objs: List['CandidateInfoForSort']):
+    def genesis_update(self, prep_objs: List['Candidate']):
         with self._lock:
             if self._init:
                 raise InvalidParamsException(f'Invalid instance update : init is already True')
 
             for obj in prep_objs:
-                self._prep_candidate_objects.append(obj)
+                self._candidates.append(obj)
             self._init = True
 
     def to_list(self) -> list:
         with self._lock:
             tmp: list = []
-            for n in self._prep_candidate_objects:
+            for n in self._candidates:
                 Logger.debug(f"to_list: {n.data.address}", "iiss")
                 tmp.append(n.data)
             return tmp
 
-    def to_dict(self) -> dict:
+    def get_candidate(self, address: 'Address') -> tuple:
         with self._lock:
-            tmp: dict = {}
-            for n in self._prep_candidate_objects:
-                Logger.debug(f"to_infos_dict: {n.data.address}", "iiss")
-                tmp[n.data.address] = n.data
-            return tmp
-
-    def get(self, address: 'Address') -> tuple:
-        with self._lock:
-            for index, n in enumerate(self._prep_candidate_objects):
+            for index, n in enumerate(self._candidates):
                 if n.data.address == address:
                     return index, n.data
             return None, None
 
-    def add_info(self, new_info: 'CandidateInfoForSort'):
+    def add_candidate(self, new_info: 'Candidate'):
         with self._lock:
-            self._prep_candidate_objects.append(new_info)
+            self._candidates.append(new_info)
 
-    def del_info(self, address: 'Address'):
+    def del_candidate(self, address: 'Address'):
         with self._lock:
-            self._prep_candidate_objects.remove(address)
+            self._candidates.remove(address)
 
-    def update_info(self, address: 'Address', update_total_delegated: int):
+    def update_candidate(self, address: 'Address', update_total_delegated: int):
         with self._lock:
-            self._prep_candidate_objects.update(address, update_total_delegated)
+            self._candidates.update(address, update_total_delegated)
 
     def clear(self):
         with self._lock:
-            self._prep_candidate_objects.clear()
+            self._candidates.clear()

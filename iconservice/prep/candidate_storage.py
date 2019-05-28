@@ -53,15 +53,15 @@ class CandidateStorage(object):
         value: bytes = self._db.get(context, key)
         if value is None:
             raise InvalidParamsException("get_candidate: value is None")
-        candidate: 'Candidate' = Candidate.from_bytes(value, address)
-        return candidate
+        return Candidate.from_bytes(address, value)
 
     def put_candidate(self,
                       context: 'IconScoreContext',
-                      prep_candidate: 'Candidate'):
+                      address: 'Address',
+                      candidate: 'Candidate'):
 
-        key: bytes = Candidate.make_key(prep_candidate.address)
-        value: bytes = prep_candidate.to_bytes()
+        key: bytes = Candidate.make_key(candidate.address)
+        value: bytes = candidate.to_bytes()
         self._db.put(context, key, value)
 
     def delete_candidate(self,

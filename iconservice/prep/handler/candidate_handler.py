@@ -55,15 +55,16 @@ class CandidateHandler:
         if cls.prep_storage.is_candidate(context, address):
             raise InvalidParamsException(f'Failed to register candidate: already register')
 
-        prep_candidate: Candidate = \
-            Candidate.from_dict(params, context.block.height, context.tx.index, address)
-        cls.prep_storage.put_candidate(context, prep_candidate)
+        candidate: 'Candidate' = Candidate.from_dict(address,
+                                                     params,
+                                                     context.block.height,
+                                                     context.tx.index)
+        cls.prep_storage.put_candidate(context, address, candidate)
 
         account: 'Account' = cls.icx_storage.get_account(context, address, Intent.DELEGATED)
-        CandidateUtils.register_prep_candidate_info_for_sort(context,
-                                                             address,
-                                                             prep_candidate.name,
-                                                             account.delegated_amount)
+        CandidateUtils.register_candidate(context,
+                                          address,
+                                          account.delegated_amount)
 
         cls._apply_candidate_delegated_offset_for_iiss_variable(context, account.delegated_amount)
         # TODO tx_result make if needs
@@ -97,9 +98,9 @@ class CandidateHandler:
         if not cls.prep_storage.is_candidate(context, address):
             raise InvalidParamsException(f'Failed to set candidate: no register')
 
-        prep_candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
-        prep_candidate.update_dict(params)
-        cls.prep_storage.put_candidate(context, prep_candidate)
+        candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
+        candidate.update_dict(params)
+        cls.prep_storage.put_candidate(context, address, candidate)
         # TODO tx_result make if needs
 
     @classmethod
@@ -116,7 +117,7 @@ class CandidateHandler:
             raise InvalidParamsException(f'Failed to un register candidate: no register')
 
         cls.prep_storage.delete_candidate(context, address)
-        CandidateUtils.unregister_prep_candidate_info_for_sort(context, address)
+        CandidateUtils.unregister_candidate(context, address)
 
         account: 'Account' = cls.icx_storage.get_account(context, address, Intent.DELEGATED)
         cls._apply_candidate_delegated_offset_for_iiss_variable(context, -account.delegated_amount)
@@ -144,16 +145,16 @@ class CandidateHandler:
         if not cls.prep_storage.is_candidate(context, address):
             raise InvalidParamsException(f'Failed to get candidate: no register')
 
-        prep_candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
+        candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
 
         data = {
-            ConstantKeys.NAME: prep_candidate.name,
-            ConstantKeys.EMAIL: prep_candidate.email,
-            ConstantKeys.WEBSITE: prep_candidate.website,
-            ConstantKeys.JSON: prep_candidate.json,
-            ConstantKeys.IP: prep_candidate.ip,
+            ConstantKeys.NAME: candidate.name,
+            ConstantKeys.EMAIL: candidate.email,
+            ConstantKeys.WEBSITE: candidate.website,
+            ConstantKeys.JSON: candidate.json,
+            ConstantKeys.IP: candidate.ip,
             ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: prep_candidate.gv.incentiveRep
+                ConstantKeys.INCENTIVE_REP: candidate.gv.incentive_rep
             }
         }
         return data

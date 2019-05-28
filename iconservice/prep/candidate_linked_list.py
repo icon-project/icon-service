@@ -17,21 +17,20 @@
 from typing import Optional
 
 from iconcommons import Logger
-
-from .candidate_info_for_sort import CandidateInfoForSort
+from .candidate import Candidate
 from ..base.address import Address
 from ..base.exception import InvalidParamsException
 
 
 class Node:
-    def __init__(self, data: 'CandidateInfoForSort'):
+    def __init__(self, data: 'Candidate'):
         Logger.debug(f"Node: {type(data)}, {data}", "iiss")
-        self._data: 'CandidateInfoForSort' = data
+        self._data: 'Candidate' = data
         self.next: 'Node' = None
         self.prev: 'Node' = None
 
     @property
-    def data(self) -> 'CandidateInfoForSort':
+    def data(self) -> 'Candidate':
         return self._data
 
 
@@ -41,7 +40,7 @@ class CandidateLinkedList:
         self._tail: 'Node' = None
         self._size: int = 0
 
-    def append(self, data: 'CandidateInfoForSort'):
+    def append(self, data: 'Candidate'):
         node = Node(data)
         if self._is_empty():
             self._add_init_node(node)

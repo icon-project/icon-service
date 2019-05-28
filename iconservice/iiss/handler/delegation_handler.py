@@ -69,10 +69,9 @@ class DelegationHandler:
 
         for dirty_account in dirty_accounts:
             cls.icx_storage.put_account(context, dirty_account)
-            if context.prep_candidate_engine.is_candidate(context, dirty_account.address):
-                context.prep_candidate_engine.update_prep_candidate_info_for_sort(context,
-                                                                                  dirty_account.address,
-                                                                                  dirty_account.delegated_amount)
+            if context.is_candidate(dirty_account.address):
+                context.update_sorted_candidates(dirty_account.address,
+                                                 dirty_account.delegated_amount)
         # TODO tx_result make if needs
 
     @classmethod
@@ -114,7 +113,7 @@ class DelegationHandler:
             offset: int = new - before
             candidate.update_delegated_amount(offset)
 
-            if context.prep_candidate_engine.is_candidate(context, address):
+            if context.is_candidate(address):
                 total: int = cls.variable.issue.get_total_candidate_delegated(context)
                 cls.variable.issue.put_total_candidate_delegated(context, total + offset)
         return dirty_accounts

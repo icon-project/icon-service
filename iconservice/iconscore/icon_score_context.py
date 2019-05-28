@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from .icon_score_step import IconScoreStepCounter
     from ..prep.candidate_batch import CandidateBatch as PRepCandidateBatch
     from ..prep.candidate_engine import CandidateEngine as PRepCandidateEngine
+    from ..prep.variable.variable_storage import PRep
     from ..iiss.engine import Engine as IISSEngine
 
 _thread_local_data = threading.local()
@@ -142,6 +143,10 @@ class IconScoreContext(object):
         self.msg_stack = []
         self.event_log_stack = []
 
+        # preps
+        self.preps_dirty: bool = False
+        self.updated_preps: List['PRep'] = []
+
     @property
     def readonly(self):
         return self.type == IconScoreContextType.QUERY or \
@@ -180,3 +185,21 @@ class IconScoreContext(object):
             self.rc_tx_batch.clear()
         if self.prep_candidate_tx_batch:
             self.prep_candidate_tx_batch.clear()
+
+    # interface
+    def update_preps_to_variable(self):
+        self.prep_candidate_engine.update_preps_to_variable(self)
+
+    def get_gv(self):
+        return self.prep_candidate_engine.get_gv(self)
+
+    def is_candidate(self, address: 'Address') -> bool:
+        return self.prep_candidate_engine.is_candidate(self, address)
+
+    def get_preps(self) -> List['PRep']:
+        return self.prep_candidate_engine.get_preps(self)
+
+    def update_sorted_candidates(self,
+                                 address: 'Address',
+                                 total_delegated: int):
+        self.prep_candidate_engine.update_sorted_candidates(self, address, total_delegated)

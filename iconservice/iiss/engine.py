@@ -130,13 +130,13 @@ class Engine:
         CommitDelegator.send_ipc(context, precommit_data)
 
     def create_icx_issue_info(self, context: 'IconScoreContext'):
-        gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
+        gv: 'GovernanceVariable' = context.get_gv()
 
         iiss_data_for_issue = {
             "prep": {
                 "incentive": gv.incentive_rep,
                 "rewardRate": self._variable.issue.get_reward_rep(context),
-                "totalDelegation": self._variable.issue.get_total_candidate_delegated(context),
+                "totalDelegation": self._variable.issue.get_total_candidate_delegated(context)
             }
         }
         for group in iiss_data_for_issue:

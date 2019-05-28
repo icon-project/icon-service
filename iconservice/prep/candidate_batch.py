@@ -28,10 +28,8 @@ class CandidateBatch(OrderedDict):
 
 
 class RegPRep(object):
-    def __init__(self, name: str, block_height: int, tx_index: int):
-        self.name: str = name
-        self.block_height: int = block_height
-        self.tx_index: int = tx_index
+    def __init__(self):
+        pass
 
 
 class UpdatePRep(object):

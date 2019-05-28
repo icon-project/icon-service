@@ -1322,7 +1322,7 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
-        self._prep_candidate_engine.commit(precommit_data.prep_candidate_block_batch)
+        self._prep_candidate_engine.commit(context, precommit_data.prep_candidate_block_batch)
 
         if is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC):
             self._iiss_engine.genesis_commit(context, precommit_data)

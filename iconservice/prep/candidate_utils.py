@@ -23,25 +23,22 @@ if TYPE_CHECKING:
 
 class CandidateUtils:
     @classmethod
-    def register_prep_candidate_info_for_sort(cls,
-                                              context: 'IconScoreContext',
-                                              address: 'Address',
-                                              name: str,
-                                              total_delegated: int):
+    def register_candidate(cls,
+                           context: 'IconScoreContext',
+                           address: 'Address',
+                           total_delegated: int):
         data: dict = \
             {
-                BatchSlotType.PUT: RegPRep(name,
-                                           context.block.height,
-                                           context.tx.index),
+                BatchSlotType.PUT: RegPRep(),
                 BatchSlotType.UPDATE: UpdatePRep(total_delegated)
             }
         cls._add_batch_item(context, address, data)
 
     @classmethod
-    def update_prep_candidate_info_for_sort(cls,
-                                            context: 'IconScoreContext',
-                                            address: 'Address',
-                                            total_delegated: int):
+    def update_candidate(cls,
+                         context: 'IconScoreContext',
+                         address: 'Address',
+                         total_delegated: int):
         data: dict = \
             {
                 BatchSlotType.UPDATE: UpdatePRep(total_delegated)
@@ -49,9 +46,9 @@ class CandidateUtils:
         cls._add_batch_item(context, address, data)
 
     @classmethod
-    def unregister_prep_candidate_info_for_sort(cls,
-                                                context: 'IconScoreContext',
-                                                address: 'Address'):
+    def unregister_candidate(cls,
+                             context: 'IconScoreContext',
+                             address: 'Address'):
         data: dict = \
             {
                 BatchSlotType.PUT: UnregPRep()
@@ -68,3 +65,12 @@ class CandidateUtils:
         else:
             prev: dict = context.prep_candidate_tx_batch[address]
             prev.update(items)
+
+    @staticmethod
+    def compare_key(x, y) -> int:
+        if x < y:
+            return 1
+        elif x > y:
+            return -1
+        else:
+            return 0

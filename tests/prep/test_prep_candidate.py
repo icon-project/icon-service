@@ -18,40 +18,62 @@
 import unittest
 
 from iconservice import Address
+from iconservice.prep.candidate_container import SortedCandidates, CandidateInfoMapper
 from iconservice.prep.candidate import Candidate
-from iconservice.prep.candidate_container import CandidateSortedInfos, CandidateInfoMapper
-from iconservice.prep.candidate_info_for_sort import CandidateInfoForSort
 from tests import create_address
 
 
 class TestPrepCandidate(unittest.TestCase):
-    def test_prep_candidate(self):
+    def test_candidate_encode_decode(self):
         address: 'Address' = create_address()
 
-        prep: 'Candidate' = Candidate(address)
-        data: bytes = prep.to_bytes()
-        actual_prep: 'Candidate' = prep.from_bytes(data, address)
-        self.assertEqual(prep, actual_prep)
+        candidate: 'Candidate' = Candidate(address=address)
+        data: bytes = candidate.to_bytes()
+        actual: 'Candidate' = Candidate.from_bytes(address, data)
+        self.assertEqual(candidate, actual)
 
-        prep.name = "name"
-        prep.email = "email"
-        prep.website = "website"
-        prep.json = "json"
-        prep.ip = "192.168.0.1"
-        prep.block_height = 10
-        prep.tx_index = 1000
-        prep.gv.incentiveRep = 200
+        candidate: 'Candidate' = Candidate(address=address,
+                                           name="name",
+                                           email="email",
+                                           website="website",
+                                           json="json",
+                                           ip="192.168.0.1",
+                                           block_height=10,
+                                           tx_index=1000,
+                                           incentive_rep=200)
 
-        data: bytes = prep.to_bytes()
-        actual_prep: 'Candidate' = prep.from_bytes(data, address)
-        self.assertEqual(prep, actual_prep)
+        data: bytes = candidate.to_bytes()
+        actual: 'Candidate' = Candidate.from_bytes(address, data)
+        self.assertEqual(candidate, actual)
+
+    def test_candidate_encode_decode2(self):
+        address: 'Address' = create_address()
+
+        candidate: 'Candidate' = Candidate(address=address)
+        data: bytes = candidate.to_bytes()
+        actual: 'Candidate' = Candidate.from_bytes(address, data)
+        self.assertEqual(candidate, actual)
+
+        candidate: 'Candidate' = Candidate(address=address,
+                                           name="name",
+                                           email="email",
+                                           website="website",
+                                           json="json",
+                                           ip="192.168.0.1",
+                                           block_height=10,
+                                           tx_index=1000,
+                                           incentive_rep=200)
+
+        data: bytes = candidate.to_bytes()
+        actual: 'Candidate' = Candidate.from_bytes(address, data)
+        self.assertEqual(candidate, actual)
 
     def _make_sorted_list(self,
                           count: int,
                           list1: list,
                           list2: list,
                           list3: list,
-                          addresses: list) -> 'CandidateSortedInfos':
+                          addresses: list) -> 'SortedCandidates':
         mapper = CandidateInfoMapper()
 
         for i in range(count):
@@ -60,16 +82,16 @@ class TestPrepCandidate(unittest.TestCase):
             total_delegated: int = list1[i]
             block_height: int = list2[i]
             tx_index: int = list3[i]
-            info: 'CandidateInfoForSort' = CandidateInfoForSort(addr,
-                                                                name,
-                                                                block_height,
-                                                                tx_index)
-            info.update(total_delegated)
-            mapper[addr] = info
+            candidate: 'Candidate' = Candidate(address=addr,
+                                               name=name,
+                                               block_height=block_height,
+                                               tx_index=tx_index)
+            candidate.update(total_delegated)
+            mapper[addr] = candidate
 
         sorted_list: list = mapper.to_genesis_sorted_list()
 
-        infos = CandidateSortedInfos()
+        infos = SortedCandidates()
         infos.genesis_update(sorted_list)
         return infos
 
@@ -80,9 +102,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{count - i - 1}', info.name)
 
     def test_prep_candidate_info_for_sort1_rev(self):
@@ -92,9 +114,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort2(self):
@@ -104,9 +126,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [i for i in range(0, count)]
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort2_rev(self):
@@ -116,9 +138,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [i for i in range(count, 0, -1)]
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{count - i - 1}', info.name)
 
     def test_prep_candidate_info_for_sort3(self):
@@ -128,9 +150,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [i for i in range(0, count)]
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_sort3_rev(self):
@@ -140,9 +162,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [i for i in range(count, 0, -1)]
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{count - i - 1}', info.name)
 
     def test_prep_candidate_info_for_sort4(self):
@@ -152,9 +174,9 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
 
     def test_prep_candidate_info_for_update_info(self):
@@ -164,22 +186,22 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        info: 'CandidateInfoForSort' = CandidateInfoForSort(create_address(),
-                                                                    "new_name1",
-                                                            1,
-                                                            1)
-        infos.add_info(info)
-        infos.update_info(info.address, count)
-        self.assertEqual(info.name, infos.to_list()[0].name)
+        candidate: 'Candidate' = Candidate(address=create_address(),
+                                           name="new_name1",
+                                           block_height=1,
+                                           tx_index=1)
+        candidates.add_candidate(candidate)
+        candidates.update_candidate(candidate.address, count)
+        self.assertEqual(candidate.name, candidates.to_list()[0].name)
 
-        infos.update_info(info.address, 0)
-        self.assertEqual(info.name, infos.to_list()[count].name)
+        candidates.update_candidate(candidate.address, 0)
+        self.assertEqual(candidate.name, candidates.to_list()[count].name)
 
         for i in range(count):
-            infos.update_info(info.address, count - i - 1)
-            self.assertEqual(info.name, infos.to_list()[i + 1].name)
+            candidates.update_candidate(candidate.address, count - i - 1)
+            self.assertEqual(candidate.name, candidates.to_list()[i + 1].name)
 
     def test_prep_candidate_info_for_updates(self):
         count = 5
@@ -188,75 +210,75 @@ class TestPrepCandidate(unittest.TestCase):
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        infos = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
 
-        for i, info in enumerate(infos.to_list()):
-            infos.update_info(info.address, i)
+        for i, candidate in enumerate(candidates.to_list()):
+            candidates.update_candidate(candidate.address, i)
 
-        for i, info in enumerate(infos.to_list()):
+        for i, info in enumerate(candidates.to_list()):
             self.assertEqual(info.total_delegated, count - i - 1)
 
     def test_prep_candidate_info_for_sort(self):
-        infos = CandidateSortedInfos()
+        candidates = SortedCandidates()
 
         data_list: list = []
         data: tuple = (create_address(), "name0", 0, 0, 10)
         data_list.append(data)
 
-        info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
-                                                            data[1],
-                                                            data[2],
-                                                            data[3])
-        infos.add_info(info)
-        infos.update_info(data[0], data[4])
+        candidate: 'Candidate' = Candidate(address=data[0],
+                                           name=data[1],
+                                           block_height=data[2],
+                                           tx_index=data[3])
+        candidates.add_candidate(candidate)
+        candidates.update_candidate(data[0], data[4])
 
-        info = infos.to_list()[0]
-        self.assertEqual(data[0], info.address)
-        self.assertEqual(data[1], info.name)
-        self.assertEqual(data[2], info.block_height)
-        self.assertEqual(data[3], info.tx_index)
-        self.assertEqual(data[4], info.total_delegated)
+        actual = candidates.to_list()[0]
+        self.assertEqual(data[0], actual.address)
+        self.assertEqual(data[1], actual.name)
+        self.assertEqual(data[2], actual.block_height)
+        self.assertEqual(data[3], actual.tx_index)
+        self.assertEqual(data[4], actual.total_delegated)
 
         # insert head
         data: tuple = (create_address(), "name1", 0, 0, 20)
         data_list.append(data)
 
-        info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
-                                                            data[1],
-                                                            data[2],
-                                                            data[3])
-        infos.add_info(info)
-        infos.update_info(data[0], data[4])
+        candidate: 'Candidate' = Candidate(address=data[0],
+                                           name=data[1],
+                                           block_height=data[2],
+                                           tx_index=data[3])
+        candidates.add_candidate(candidate)
+        candidates.update_candidate(data[0], data[4])
 
-        info = infos.to_list()[0]
-        self.assertEqual(data[0], info.address)
-        self.assertEqual(data[1], info.name)
-        self.assertEqual(data[2], info.block_height)
-        self.assertEqual(data[3], info.tx_index)
-        self.assertEqual(data[4], info.total_delegated)
+        actual = candidates.to_list()[0]
+        self.assertEqual(data[0], actual.address)
+        self.assertEqual(data[1], actual.name)
+        self.assertEqual(data[2], actual.block_height)
+        self.assertEqual(data[3], actual.tx_index)
+        self.assertEqual(data[4], actual.total_delegated)
 
         # append
         data: tuple = (create_address(), "name2", 0, 0, 0)
         data_list.append(data)
 
-        info: 'CandidateInfoForSort' = CandidateInfoForSort(data[0],
-                                                            data[1],
-                                                            data[2],
-                                                            data[3])
-        infos.add_info(info)
-        infos.update_info(data[0], data[4])
+        candidate: 'Candidate' = Candidate(address=data[0],
+                                           name=data[1],
+                                           block_height=data[2],
+                                           tx_index=data[3])
+        candidates.add_candidate(candidate)
+        candidates.update_candidate(data[0], data[4])
 
-        info = infos.to_list()[-1]
-        self.assertEqual(data[0], info.address)
-        self.assertEqual(data[1], info.name)
-        self.assertEqual(data[2], info.block_height)
-        self.assertEqual(data[3], info.tx_index)
-        self.assertEqual(data[4], info.total_delegated)
+        actual = candidates.to_list()[-1]
+        self.assertEqual(data[0], actual.address)
+        self.assertEqual(data[1], actual.name)
+        self.assertEqual(data[2], actual.block_height)
+        self.assertEqual(data[3], actual.tx_index)
+        self.assertEqual(data[4], actual.total_delegated)
 
         for data in data_list:
-            infos.del_info(data[0])
+            candidates.del_candidate(data[0])
 
-        ret = infos.to_list()
+        ret = candidates.to_list()
         self.assertEqual(0, len(ret))
 
 
