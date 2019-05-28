@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from ...icx.icx_account import Account
     from ...base.address import Address
     from ..candidate_storage import CandidateStorage
-    from ..candidate_container import CandidateSortedInfos
+    from ..candidate_container import SortedCandidates
     from ..variable.variable import Variable
 
 
@@ -38,7 +38,7 @@ class CandidateHandler:
     icx_storage: 'IcxStorage' = None
     prep_storage: 'CandidateStorage' = None
     prep_variable: 'Variable' = None
-    prep_candidates: 'CandidateSortedInfos' = None
+    prep_candidates: 'SortedCandidates' = None
 
     @classmethod
     def handle_reg_prep_candidate(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
@@ -99,7 +99,7 @@ class CandidateHandler:
             raise InvalidParamsException(f'Failed to set candidate: no register')
 
         candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
-        candidate.update_dict(params)
+        candidate.update_db(params)
         cls.prep_storage.put_candidate(context, address, candidate)
         # TODO tx_result make if needs
 
@@ -176,7 +176,7 @@ class CandidateHandler:
 
         data = {
             "ranking": index + 1,
-            "totalDelegated": candidate.total_delegated,
+            "delegated": candidate.delegated,
         }
         return data
 
@@ -197,9 +197,9 @@ class CandidateHandler:
         for prep in preps:
             info = {
                 "address": prep.address,
-                "delegated": prep.total_delegated
+                "delegated": prep.delegated
             }
-            total_delegated += prep.total_delegated
+            total_delegated += prep.delegated
             prep_infos.append(info)
 
         data["totalDelegated"] = total_delegated
@@ -224,9 +224,9 @@ class CandidateHandler:
         for candidate in prep_list:
             info = {
                 "address": candidate.address,
-                "delegated": candidate.total_delegated
+                "delegated": candidate.delegated
             }
-            total_delegated += candidate.total_delegated
+            total_delegated += candidate.delegated
             prep_infos.append(info)
 
         data["totalDelegated"] = total_delegated

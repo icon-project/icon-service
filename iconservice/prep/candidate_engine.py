@@ -15,7 +15,7 @@
 from typing import TYPE_CHECKING, Any, List
 
 from .candidate import Candidate
-from .candidate_batch import BatchSlotType, RegPRep, UpdatePRep, UnregPRep
+from .candidate_batch import RegPRep, UpdatePRep, UnregPRep
 from .candidate_container import CandidateInfoMapper, SortedCandidates
 from .candidate_storage import CandidateStorage
 from .candidate_utils import CandidateUtils
@@ -60,8 +60,6 @@ class CandidateEngine(object):
         self._candidate_info_mapper: 'CandidateInfoMapper' = None
         self._candidate_sorted_infos: 'SortedCandidates' = None
 
-        self._preps_address: List['Address'] = None
-
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase') -> None:
         self._storage = CandidateStorage(db)
 
@@ -73,8 +71,6 @@ class CandidateEngine(object):
 
         handlers: list = [CandidateHandler]
         self._init_handlers(handlers)
-
-        self._preps_address: List['Address'] = []
 
     def _init_handlers(self, handlers: list):
         for handler in handlers:
@@ -92,9 +88,9 @@ class CandidateEngine(object):
         self._candidate_sorted_infos.genesis_update(sorted_objs)
         self._update_preps(context)
 
-    def _add_prep_candidates(self, address: 'Address', value: bytes, total_delegated: int):
+    def _add_prep_candidates(self, address: 'Address', value: bytes, delegated: int):
         candidate: 'Candidate' = Candidate.from_bytes(address, value)
-        candidate.update(total_delegated)
+        candidate.delegated = delegated
         self._candidate_info_mapper[address] = candidate
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
@@ -119,31 +115,36 @@ class CandidateEngine(object):
 
     def commit(self, context: 'IconScoreContext', prep_candiate_block_batch: 'CandidateBatch'):
         # TODO calc Batch
-        self._update_candidates(context, prep_candiate_block_batch)
+        self._commit_candidates(context, prep_candiate_block_batch)
         # state DB write DB
 
-    def _update_candidates(self, context: 'IconScoreContext', prep_candiate_block_batch: 'CandidateBatch'):
+    def _commit_candidates(self, context: 'IconScoreContext', prep_candiate_block_batch: 'CandidateBatch'):
+        dirty: bool = False
+
+        preps_address: list = []
+        preps = self._variable.get_preps(context)
+        for prep in preps:
+            preps_address.append(prep.address)
+
         for address, batch in prep_candiate_block_batch.items():
-            put_obj = batch.get(BatchSlotType.PUT)
-            if put_obj:
-                if isinstance(put_obj, RegPRep):
+            for obj in batch.values():
+                if isinstance(obj, RegPRep):
                     candidate: 'Candidate' = self._storage.get_candidate(context, address)
                     self._candidate_info_mapper[address] = candidate
                     self._candidate_sorted_infos.add_candidate(candidate)
-                elif isinstance(put_obj, UnregPRep):
+                elif isinstance(obj, UnregPRep):
                     del self._candidate_info_mapper[address]
                     self._candidate_sorted_infos.del_candidate(address)
-
-            update_obj = batch.get(BatchSlotType.UPDATE)
-            if update_obj:
-                if isinstance(update_obj, UpdatePRep):
+                elif isinstance(obj, UpdatePRep):
                     candidate: 'Candidate' = self._candidate_info_mapper[address]
-                    candidate.update(update_obj.total_delegated)
-                    self._candidate_sorted_infos.update_candidate(address, update_obj.total_delegated)
-                    if candidate.address in self._preps_address:
-                        context.preps_dirty: bool = True
+                    candidate.delegated = obj.delegated
+                    self._candidate_sorted_infos.update_candidate(address, obj.delegated)
+                    if candidate.address in preps_address:
+                        dirty: bool = True
+                else:
+                    pass
 
-        if context.preps_dirty:
+        if dirty:
             self._update_preps(context)
 
     def rollback(self):
@@ -151,23 +152,20 @@ class CandidateEngine(object):
 
     def _update_preps(self, context: 'IconScoreContext'):
         preps: list = []
-        preps_address: list = []
 
         for prep in self._variable.get_preps(context):
             info: 'Candidate' = self._candidate_info_mapper[prep.address]
             preps.append(info)
-            preps_address.append(info.address)
 
         context.updated_preps: List['PRep'] = PReps.from_list(preps).preps
-        self._preps_address: List['Address'] = preps_address
 
     # TODO we don't allow inner function except these functions
     @classmethod
     def update_sorted_candidates(cls,
                                  context: 'IconScoreContext',
                                  address: 'Address',
-                                 total_delegated: int):
-        CandidateUtils.update_candidate(context, address, total_delegated)
+                                 delegated: int):
+        CandidateUtils.update_candidate(context, address, delegated)
 
     def is_candidate(self, context: 'IconScoreContext', address: 'Address') -> bool:
         return self._storage.is_candidate(context, address)
@@ -183,7 +181,5 @@ class CandidateEngine(object):
         candidates: list = self._candidate_sorted_infos.to_list()
         preps: list = candidates[:PREP_MAX_PREPS]
         self._variable.put_preps(context, PReps.from_list(preps))
-
-        context.preps_dirty: bool = True
         self._update_preps(context)
 

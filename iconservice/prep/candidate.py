@@ -211,7 +211,7 @@ class Candidate(object):
                                            block_height,
                                            tx_index,
                                            incentive_rep)
-        self._total_delegated: int = 0
+        self._delegated: int = 0
 
     @property
     def address(self) -> 'Address':
@@ -250,20 +250,21 @@ class Candidate(object):
         return self._db_part.gv
 
     @property
-    def total_delegated(self) -> int:
-        return self._total_delegated
+    def delegated(self) -> int:
+        return self._delegated
 
-    def update(self, total_delegated: int):
-        self._total_delegated: int = total_delegated
+    @delegated.setter
+    def delegated(self, value: int):
+        self._delegated: int = value
 
-    def update_dict(self, data: dict):
+    def update_db(self, data: dict):
         self._db_part.update_dict(data)
 
     def __eq__(self, other: 'Candidate') -> bool:
         return isinstance(other, Candidate) \
                and self.address == other.address \
                and self._db_part == other._db_part \
-               and self.total_delegated == other.total_delegated
+               and self.delegated == other.delegated
 
     def __ne__(self, other: 'Candidate') -> bool:
         return not self.__eq__(other)
@@ -295,7 +296,7 @@ class Candidate(object):
         return not self.__gt__(other)
 
     def _to_order_list(self) -> list:
-        return [self._total_delegated, self._db_part.block_height, self._db_part.tx_index]
+        return [self._delegated, self._db_part.block_height, self._db_part.tx_index]
 
     @staticmethod
     def make_key(address: 'Address') -> bytes:

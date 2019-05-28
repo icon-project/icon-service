@@ -19,7 +19,7 @@ from enum import Enum
 
 
 class BatchSlotType(Enum):
-    PUT = 0
+    PUT_DEL = 0
     UPDATE = 1
 
 
@@ -33,8 +33,8 @@ class RegPRep(object):
 
 
 class UpdatePRep(object):
-    def __init__(self, total_delegated: int):
-        self.total_delegated: int = total_delegated
+    def __init__(self, delegated: int):
+        self.delegated: int = delegated
 
 
 class UnregPRep(object):

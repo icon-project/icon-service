@@ -130,7 +130,7 @@ class Engine:
         CommitDelegator.send_ipc(context, precommit_data)
 
     def create_icx_issue_info(self, context: 'IconScoreContext'):
-        gv: 'GovernanceVariable' = context.get_gv()
+        gv: 'GovernanceVariable' = context.candidate_engine.get_gv(context)
 
         iiss_data_for_issue = {
             "prep": {

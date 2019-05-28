@@ -57,7 +57,7 @@ class CandidateLinkedList:
 
         self._remove(node)
 
-    def update(self, address: 'Address', new_total_delegated: int):
+    def update(self, address: 'Address', new_delegated: int):
         if self._is_empty():
             return
 
@@ -66,7 +66,7 @@ class CandidateLinkedList:
             raise InvalidParamsException(f"Fail update_sort: node is None")
 
         self._remove(update_node)
-        update_node.data.update(new_total_delegated)
+        update_node.data.delegated = new_delegated
 
         if self._size == 0:
             self._add_init_node(update_node)

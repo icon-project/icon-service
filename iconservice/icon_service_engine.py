@@ -55,6 +55,7 @@ from .iiss.engine import Engine as IISSEngine
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
 from .prep.candidate_engine import CandidateEngine as PRepCandidateEngine
+from .prep.candidate_engine_interface import CandidateEngineInterface
 from .utils import sha3_256, int_to_bytes, is_flags_on
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
@@ -156,7 +157,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = self._conf.get(ConfigKey.TBEARS_MODE, False)
         IconScoreContext.iiss_engine: 'IISSEngine' = self._iiss_engine
-        IconScoreContext.prep_candidate_engine: 'PRepCandidateEngine' = self._prep_candidate_engine
+        IconScoreContext.candidate_engine: 'CandidateEngineInterface' = \
+            CandidateEngineInterface(self._prep_candidate_engine)
 
         self._icx_engine.open(self._icx_storage)
         self._icx_issue_engine.open(self._icx_storage)

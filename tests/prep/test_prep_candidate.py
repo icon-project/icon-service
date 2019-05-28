@@ -79,14 +79,14 @@ class TestPrepCandidate(unittest.TestCase):
         for i in range(count):
             addr: 'Address' = addresses[i]
             name: str = f'name{i}'
-            total_delegated: int = list1[i]
+            delegated: int = list1[i]
             block_height: int = list2[i]
             tx_index: int = list3[i]
             candidate: 'Candidate' = Candidate(address=addr,
                                                name=name,
                                                block_height=block_height,
                                                tx_index=tx_index)
-            candidate.update(total_delegated)
+            candidate.delegated = delegated
             mapper[addr] = candidate
 
         sorted_list: list = mapper.to_genesis_sorted_list()
@@ -98,11 +98,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort1(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [i for i in range(0, count)]
+        delegateds = [i for i in range(0, count)]
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{count - i - 1}', info.name)
@@ -110,11 +110,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort1_rev(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [i for i in range(count, 0, -1)]
+        delegateds = [i for i in range(count, 0, -1)]
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
@@ -122,11 +122,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort2(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [0] * count
+        delegateds = [0] * count
         block_heights = [i for i in range(0, count)]
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
@@ -134,11 +134,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort2_rev(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [0] * count
+        delegateds = [0] * count
         block_heights = [i for i in range(count, 0, -1)]
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{count - i - 1}', info.name)
@@ -146,11 +146,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort3(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [0] * count
+        delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [i for i in range(0, count)]
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
@@ -158,11 +158,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort3_rev(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [0] * count
+        delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [i for i in range(count, 0, -1)]
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{count - i - 1}', info.name)
@@ -170,11 +170,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_sort4(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [0] * count
+        delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, info in enumerate(candidates.to_list()):
             self.assertEqual(f'name{i}', info.name)
@@ -182,11 +182,11 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_update_info(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [i for i in range(0, count)]
+        delegateds = [i for i in range(0, count)]
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         candidate: 'Candidate' = Candidate(address=create_address(),
                                            name="new_name1",
@@ -206,17 +206,17 @@ class TestPrepCandidate(unittest.TestCase):
     def test_prep_candidate_info_for_updates(self):
         count = 5
         addresses = [create_address(), create_address(), create_address(), create_address(), create_address()]
-        total_delegateds = [0] * count
+        delegateds = [0] * count
         block_heights = [0] * count
         tx_indexs = [0] * count
 
-        candidates = self._make_sorted_list(count, total_delegateds, block_heights, tx_indexs, addresses)
+        candidates = self._make_sorted_list(count, delegateds, block_heights, tx_indexs, addresses)
 
         for i, candidate in enumerate(candidates.to_list()):
             candidates.update_candidate(candidate.address, i)
 
         for i, info in enumerate(candidates.to_list()):
-            self.assertEqual(info.total_delegated, count - i - 1)
+            self.assertEqual(info.delegated, count - i - 1)
 
     def test_prep_candidate_info_for_sort(self):
         candidates = SortedCandidates()
@@ -237,7 +237,7 @@ class TestPrepCandidate(unittest.TestCase):
         self.assertEqual(data[1], actual.name)
         self.assertEqual(data[2], actual.block_height)
         self.assertEqual(data[3], actual.tx_index)
-        self.assertEqual(data[4], actual.total_delegated)
+        self.assertEqual(data[4], actual.delegated)
 
         # insert head
         data: tuple = (create_address(), "name1", 0, 0, 20)
@@ -255,7 +255,7 @@ class TestPrepCandidate(unittest.TestCase):
         self.assertEqual(data[1], actual.name)
         self.assertEqual(data[2], actual.block_height)
         self.assertEqual(data[3], actual.tx_index)
-        self.assertEqual(data[4], actual.total_delegated)
+        self.assertEqual(data[4], actual.delegated)
 
         # append
         data: tuple = (create_address(), "name2", 0, 0, 0)
@@ -273,7 +273,7 @@ class TestPrepCandidate(unittest.TestCase):
         self.assertEqual(data[1], actual.name)
         self.assertEqual(data[2], actual.block_height)
         self.assertEqual(data[3], actual.tx_index)
-        self.assertEqual(data[4], actual.total_delegated)
+        self.assertEqual(data[4], actual.delegated)
 
         for data in data_list:
             candidates.del_candidate(data[0])

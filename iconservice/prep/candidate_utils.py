@@ -26,11 +26,11 @@ class CandidateUtils:
     def register_candidate(cls,
                            context: 'IconScoreContext',
                            address: 'Address',
-                           total_delegated: int):
+                           delegated: int):
         data: dict = \
             {
-                BatchSlotType.PUT: RegPRep(),
-                BatchSlotType.UPDATE: UpdatePRep(total_delegated)
+                BatchSlotType.PUT_DEL: RegPRep(),
+                BatchSlotType.UPDATE: UpdatePRep(delegated)
             }
         cls._add_batch_item(context, address, data)
 
@@ -38,10 +38,10 @@ class CandidateUtils:
     def update_candidate(cls,
                          context: 'IconScoreContext',
                          address: 'Address',
-                         total_delegated: int):
+                         delegated: int):
         data: dict = \
             {
-                BatchSlotType.UPDATE: UpdatePRep(total_delegated)
+                BatchSlotType.UPDATE: UpdatePRep(delegated)
             }
         cls._add_batch_item(context, address, data)
 
@@ -51,7 +51,7 @@ class CandidateUtils:
                              address: 'Address'):
         data: dict = \
             {
-                BatchSlotType.PUT: UnregPRep()
+                BatchSlotType.PUT_DEL: UnregPRep()
             }
         cls._add_batch_item(context, address, data)
 
