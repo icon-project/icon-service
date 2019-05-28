@@ -182,7 +182,6 @@ share/
 tmp/
 testcase/db/
 test_chain_helper_block/
-sample_score
 servertool.py
 *_pb2.py
 *_profile.txt
