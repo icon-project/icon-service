@@ -87,6 +87,19 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         return tx_results[0]
 
+    def _reject_score(self, tx_hash: Union[bytes, str]):
+        if isinstance(tx_hash, bytes):
+            tx_hash_str = f'0x{bytes.hex(tx_hash)}'
+        else:
+            tx_hash_str = tx_hash
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'rejectScore',
+                                      {"txHash": tx_hash_str, "reason": ""})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+        return tx_results[0]
+
     def _assert_get_value(self, from_addr: 'Address', score_addr: 'Address', func_name: str, value: Any):
         query_request = {
             "version": self._version,
@@ -479,6 +492,108 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
 
         # 6. assert get value: value3
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value3)
+
+    def test_prev_deploy_reject(self):
+        self._update_governance()
+
+        # 1. install done
+        value1 = 1 * self._icx_factor
+        score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
+
+        # 2. deploy update (wait audit)
+        """
+        def on_update(self, value: int) -> None:
+            super().on_update()
+            var = self._value.get()
+            self._value.set(var + value)
+        
+        def set_value(self, value: int):
+            self._value.set(value * 2)
+            self.Changed(value)
+        """
+        value2 = 2 * self._icx_factor
+        tx_result = self._deploy_score("update/test_score", value2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # new update deploy
+        value3 = 3 * self._icx_factor
+        tx_result = self._deploy_score("update/test_score", value3, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
+
+        # 3. assert get value: value1
+        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+
+        # 4. accept SCORE : tx_hash3 (Fail)
+        raise_exception_start_tag("test_prev_deploy_reject")
+        tx_result = self._reject_score(tx_hash3)
+        raise_exception_start_tag("test_prev_deploy_reject")
+        self.assertEqual(tx_result.status, int(False))
+
+        # 5. accept SCORE : tx_hash4
+        tx_result = self._accept_score(tx_hash4)
+        self.assertEqual(tx_result.status, int(True))
+
+        # 6. assert get value: value1 + value3
+        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1 + value3)
+
+        # 7. set value: value3
+        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+
+        # 8. assert get value: 2 * value3
+        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", 3 * value2)
+
+    def test_prev_deploy_accept(self):
+        self._update_governance()
+
+        # 1. install done
+        value1 = 1 * self._icx_factor
+        score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
+
+        # 2. deploy update (wait audit)
+        """
+        def on_update(self, value: int) -> None:
+            super().on_update()
+            var = self._value.get()
+            self._value.set(var + value)
+        
+        def set_value(self, value: int):
+            self._value.set(value * 2)
+            self.Changed(value)
+        """
+        value2 = 2 * self._icx_factor
+        tx_result = self._deploy_score("update/test_score", value2, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash3 = tx_result.tx_hash
+
+        # new update deploy
+        value3 = 3 * self._icx_factor
+        tx_result = self._deploy_score("update/test_score", value3, score_addr1)
+        self.assertEqual(tx_result.status, int(True))
+        tx_hash4 = tx_result.tx_hash
+
+        # 3. assert get value: value1
+        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
+
+        # 4. accept SCORE : tx_hash3 (Fail)
+        raise_exception_start_tag("test_prev_deploy_accept")
+        tx_result = self._accept_score(tx_hash3)
+        raise_exception_start_tag("test_prev_deploy_accept")
+        self.assertEqual(tx_result.status, int(False))
+
+        # 5. accept SCORE : tx_hash4
+        tx_result = self._accept_score(tx_hash4)
+        self.assertEqual(tx_result.status, int(True))
+
+        # 6. assert get value: value1 + value3
+        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1 + value3)
+
+        # 7. set value: value3
+        self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
+
+        # 8. assert get value: 2 * value3
+        self._assert_get_value(self._addr_array[0], score_addr1, "get_value", 3 * value2)
 
 
 if __name__ == '__main__':
