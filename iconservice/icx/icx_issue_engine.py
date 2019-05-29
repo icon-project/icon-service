@@ -46,6 +46,9 @@ class IcxIssueEngine:
             self._storage.close(context=None)
             self._storage = None
 
+        if self._issue_regulator:
+            self._issue_regulator.close()
+
     def _issue(self,
                context: 'IconScoreContext',
                to: 'Address',
@@ -112,9 +115,9 @@ class IcxIssueEngine:
             deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
                 self._issue_regulator.correct_issue_amount(context, total_issue_amount)
 
-        # todo : issue amount = total_issue_amount - prev total transaction fee
         self._issue(context, to_address, total_issue_amount)
         # todo: implement diff, fee event log
+        # hard cording.. TBD
         fee = 0
         total_issue_event_log: 'EventLog' = self._create_total_issue_amount_event_log(corrected_icx_issue_amount,
                                                                                       fee,
