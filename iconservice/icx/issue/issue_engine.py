@@ -15,29 +15,28 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from iconservice.icx.icx_issue_regulator import IcxIssueRegulator
-from iconservice.icx.icx_issue_storage import IcxIssueStorage
-from .. import ZERO_SCORE_ADDRESS, Address
-from ..base.exception import IconServiceBaseException
-from ..icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
-from ..iconscore.icon_score_event_log import EventLog
-from ..icx.issue_data_validator import IssueDataValidator
+from .issue_regulator import IssueRegulator
+from ... import ZERO_SCORE_ADDRESS, Address
+from ...base.exception import IconServiceBaseException
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ...iconscore.icon_score_event_log import EventLog
+from ...icx.issue_data_validator import IssueDataValidator
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
-    from ..icx.icx_storage import IcxStorage
+    from ...iconscore.icon_score_context import IconScoreContext
+    from ...icx.icx_storage import IcxStorage
 
 
-class IcxIssueEngine:
+class IssueEngine:
 
     def __init__(self):
         self._storage: 'IcxStorage' = None
-        self._issue_regulator: 'IcxIssueRegulator' = None
+        self._issue_regulator: 'IssueRegulator' = None
 
     def open(self, storage: 'IcxStorage'):
         self.close()
         self._storage = storage
-        self._issue_regulator = IcxIssueRegulator().open(self._storage.db)
+        self._issue_regulator = IssueRegulator().open(self._storage.db)
 
     def close(self):
         """Close resources

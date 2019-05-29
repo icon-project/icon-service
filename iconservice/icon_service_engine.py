@@ -48,7 +48,7 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_engine import IcxEngine
-from .icx.icx_issue_engine import IcxIssueEngine
+from .icx.issue.issue_engine import IssueEngine
 from .icx.icx_storage import IcxStorage
 from .icx.issue_data_validator import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
@@ -88,7 +88,7 @@ class IconServiceEngine(ContextContainer):
         self._deposit_handler = None
         self._iiss_engine: 'IISSEngine' = None
         self._prep_candidate_engine: 'PRepCandidateEngine' = None
-        self._icx_issue_engine: 'IcxIssueEngine' = None
+        self._icx_issue_engine: 'IssueEngine' = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -128,7 +128,7 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._icx_engine = IcxEngine()
-        self._icx_issue_engine = IcxIssueEngine()
+        self._icx_issue_engine = IssueEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)

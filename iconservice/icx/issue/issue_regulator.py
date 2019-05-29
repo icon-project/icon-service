@@ -15,25 +15,24 @@
 
 from typing import Optional, Tuple
 
-# todo: change to relative path
 from iconcommons import Logger
 
-from iconservice.database.db import ContextDatabase
-from iconservice.icon_constant import ICON_SERVICE_LOG_TAG
-from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.icx.icx_issue_storage import IcxIssueStorage
+from .issue_storage import IssueStorage
+from ...database.db import ContextDatabase
+from ...icon_constant import ICON_SERVICE_LOG_TAG
+from ...iconscore.icon_score_context import IconScoreContext
 
 
 # todo: implement fee related logic
-class IcxIssueRegulator:
+class IssueRegulator:
     _MAX_I_SCORE = 1_000
 
     def __init__(self):
-        self._issue_storage: 'IcxIssueStorage' = None
+        self._issue_storage: 'IssueStorage' = None
 
     def open(self, context_db: 'ContextDatabase'):
         self.close()
-        self._issue_storage = IcxIssueStorage(context_db)
+        self._issue_storage = IssueStorage(context_db)
 
     def close(self):
         """Close resources

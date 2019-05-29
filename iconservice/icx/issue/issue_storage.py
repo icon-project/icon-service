@@ -16,14 +16,14 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from iconservice.utils.msgpack_for_db import MsgPackForDB
+from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
-    from ..database.db import ContextDatabase
-    from ..iconscore.icon_score_context import IconScoreContext
+    from ...database.db import ContextDatabase
+    from ...iconscore.icon_score_context import IconScoreContext
 
 
-class IcxIssueStorage(object):
+class IssueStorage(object):
 
     _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
     _PREV_CALC_PERIOD_ISSUED_ICX_KEY = b'prev_calc_period_issued_icx'
