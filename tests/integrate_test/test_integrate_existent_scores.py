@@ -123,8 +123,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].status, int(True))
 
         # update governance SCORE(revision2)
         self._update_governance('0_0_4')
@@ -134,8 +133,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].status, int(True))
 
     # test when revision > 2
     def test_existent_score_revision4(self):
@@ -191,8 +189,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].status, int(True))
 
         # update governance SCORE(revision 2)
         self._update_governance('0_0_4')
@@ -202,7 +199,7 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
+        self.assertEqual(tx_results[0].status, int(True))
 
         # set revision to 4
         self._set_revision(3)

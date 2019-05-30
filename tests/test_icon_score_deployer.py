@@ -63,8 +63,8 @@ class TestIconScoreDeployer(unittest.TestCase):
 
     def test_install(self):
         self.normal_score_path = os.path.join(DIRECTORY_PATH, 'sample', 'normal_score.zip')
-        self.badzipfile_path = os.path.join(DIRECTORY_PATH, 'sample', 'badzipfile.zip')
-        self.innerdir_path = os.path.join(DIRECTORY_PATH, 'sample', 'innerdir.zip')
+        self.bad_zip_file_path = os.path.join(DIRECTORY_PATH, 'sample', 'badzipfile.zip')
+        self.inner_dir_path = os.path.join(DIRECTORY_PATH, 'sample', 'innerdir.zip')
 
         # Case when the user install SCORE first time.
         tx_hash1 = create_tx_hash()
@@ -83,16 +83,14 @@ class TestIconScoreDeployer(unittest.TestCase):
         self.assertEqual(installed_contents, file_path_list)
 
         # Case when the user install SCORE second time.(revision < 2)
-        with self.assertRaises(BaseException) as e:
-            IconScoreDeployer.deploy_legacy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
-        self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
+        IconScoreDeployer.deploy_legacy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
 
         # Case when installing SCORE with badzipfile Data.
         tx_hash2 = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash2)
 
         with self.assertRaises(BaseException) as e:
-            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.badzipfile_path))
+            IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.bad_zip_file_path))
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
         self.assertFalse(os.path.exists(score_deploy_path))
 
@@ -105,7 +103,7 @@ class TestIconScoreDeployer(unittest.TestCase):
         # Case when the user try to install scores inner directories.
         tx_hash3 = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash3)
-        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.innerdir_path))
+        IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.inner_dir_path))
         self.assertEqual(True, os.path.exists(score_deploy_path))
 
     def test_remove_existing_score(self):

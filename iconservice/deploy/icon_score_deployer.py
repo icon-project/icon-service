@@ -34,7 +34,7 @@ class IconScoreDeployer(object):
         :param revision: Revision num
         """
         try:
-            IconScoreDeployer._check_score_deploy_path(path)
+            shutil.rmtree(path, ignore_errors=True)
             os.makedirs(path)
 
             file_info_generator = IconScoreDeployer._extract_files_gen(data, revision)
@@ -122,7 +122,7 @@ class IconScoreDeployer(object):
         :param data: The byte value of the zip file.
         """
         try:
-            IconScoreDeployer._check_score_deploy_path(path)
+            shutil.rmtree(path, ignore_errors=True)
             if not os.path.exists(path):
                 os.makedirs(path)
 

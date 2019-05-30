@@ -124,8 +124,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
         accept_results = self._accept_score(tx1['params']['txHash'])
-        self.assertTrue("is a directory. Check " in accept_results[0].failure.message)
-        self.assertEqual(accept_results[0].status, int(False))
+        self.assertEqual(accept_results[0].status, int(True))
 
         # update governance SCORE(revision2)
         self._update_governance('0_0_4')
@@ -135,8 +134,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
         accept_results = self._accept_score(tx2['params']['txHash'])
-        self.assertTrue("is a directory. Check " in accept_results[0].failure.message)
-        self.assertEqual(accept_results[0].status, int(False))
+        self.assertEqual(accept_results[0].status, int(True))
 
     # test when revision > 2
     def test_existent_score_revision4_audit(self):
@@ -200,8 +198,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         # accept SCORE
         accept_result = self._accept_score(tx1['params']['txHash'])
-        self.assertTrue("is a directory." in accept_result[0].failure.message)
-        self.assertEqual(accept_result[0].status, int(False))
+        self.assertEqual(accept_result[0].status, int(True))
 
         # update governance SCORE(revision 2)
         tx2 = self._update_governance('0_0_4')
@@ -212,7 +209,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
         accept_result = self._accept_score(tx2['params']['txHash'])
-        self.assertEqual(accept_result[0].status, int(False))
+        self.assertEqual(accept_result[0].status, int(True))
 
         # set revision to 4
         self._set_revision(3)

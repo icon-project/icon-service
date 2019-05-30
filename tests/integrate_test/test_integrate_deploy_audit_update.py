@@ -528,7 +528,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         # 4. accept SCORE : tx_hash3 (Fail)
         raise_exception_start_tag("test_prev_deploy_reject")
         tx_result = self._reject_score(tx_hash3)
-        raise_exception_start_tag("test_prev_deploy_reject")
+        raise_exception_end_tag("test_prev_deploy_reject")
         self.assertEqual(tx_result.status, int(False))
 
         # 5. accept SCORE : tx_hash4
@@ -579,7 +579,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         # 4. accept SCORE : tx_hash3 (Fail)
         raise_exception_start_tag("test_prev_deploy_accept")
         tx_result = self._accept_score(tx_hash3)
-        raise_exception_start_tag("test_prev_deploy_accept")
+        raise_exception_end_tag("test_prev_deploy_accept")
         self.assertEqual(tx_result.status, int(False))
 
         # 5. accept SCORE : tx_hash4
