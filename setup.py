@@ -8,6 +8,16 @@ with open('requirements.txt') as requirements:
 
 version = os.environ.get('VERSION')
 
+extra_requires = {
+    "test": [
+        "hypothesis>=4.0.0",
+        "pytest>=3.6",
+        "pytest-cov>=2.5.1"
+    ]
+}
+
+test_requires = extra_requires['test']
+
 if version is None:
     with open(os.path.join('.', 'VERSION')) as version_file:
         version = version_file.read().strip()
@@ -27,9 +37,10 @@ setup_options = {
         'builtin_scores/*/package.json'
     ]},
     'setup_requires': ['pytest-runner'],
-    'tests_require': ['pytest'],
+    'tests_require': test_requires,
     'license': "Apache License 2.0",
     'install_requires': requires,
+    'extras_require': extra_requires,
     'entry_points': {
         'console_scripts': [
             'iconservice=iconservice.icon_service_cli:main'
