@@ -512,13 +512,13 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             self.Changed(value)
         """
         value2 = 2 * self._icx_factor
-        tx_result = self._deploy_score("update/test_score", value2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", value2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
         # new update deploy
         value3 = 3 * self._icx_factor
-        tx_result = self._deploy_score("update/test_score", value3, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", value3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
 
@@ -563,13 +563,13 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             self.Changed(value)
         """
         value2 = 2 * self._icx_factor
-        tx_result = self._deploy_score("update/test_score", value2, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", value2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
         # new update deploy
         value3 = 3 * self._icx_factor
-        tx_result = self._deploy_score("update/test_score", value3, score_addr1)
+        tx_result = self._deploy_score("update/sample_score", value3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
 
