@@ -1,4 +1,4 @@
 
 
-def test1_func():
+def sample_func():
     print('!!!!!!!!!!!!')
