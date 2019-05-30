@@ -53,9 +53,6 @@ class IssueEngine:
                context: 'IconScoreContext',
                to: 'Address',
                amount: int):
-        if amount == 0:
-            return
-
         if amount > 0:
             to_account = self._storage.get_account(context, to)
             to_account.deposit(amount)
@@ -102,7 +99,6 @@ class IssueEngine:
 
             total_issue_amount += issue_data_in_db[group_key]["value"]
 
-        # todo : iiss_engine 에 calc 주기를 넘겨주는 method를 생성하거나 variable property를 생성
         issue_variable = context.iiss_engine.issue_variable
         calc_next_block_height = issue_variable.get_calc_next_block_height(context)
 
@@ -117,7 +113,7 @@ class IssueEngine:
 
         self._issue(context, to_address, corrected_icx_issue_amount)
         # todo: implement diff, fee event log
-        # hard cording.. TBD
+        # todo: hard corded fee data, will be removed
         fee = 0
         total_issue_event_log: 'EventLog' = self._create_total_issue_amount_event_log(corrected_icx_issue_amount,
                                                                                       fee,
