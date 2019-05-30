@@ -44,6 +44,12 @@ from tests import create_address, create_block_hash, create_tx_hash
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
+VALIDATE_SCORE_BLACK_LIST = IconScoreContextUtil.validate_score_blacklist
+GET_OWNER = IconScoreContextUtil.get_owner
+GET_ICON_SCORE = IconScoreContextUtil.get_icon_score
+IS_SERVICE_FLAG_ON = IconScoreContextUtil.is_service_flag_on
+
+
 class TestIconZipDeploy(unittest.TestCase):
     _SCORE_ROOT_PATH = 'tests/score'
     _TEST_DB_PATH = 'tests/test_db'
@@ -119,6 +125,10 @@ class TestIconZipDeploy(unittest.TestCase):
         path = os.path.join(
             TEST_ROOT_PATH, self.sample_token_address.to_bytes().hex())
         remove_path(path)
+        IconScoreContextUtil.validate_score_blacklist = VALIDATE_SCORE_BLACK_LIST
+        IconScoreContextUtil.get_owner = GET_OWNER
+        IconScoreContextUtil.get_icon_score = GET_ICON_SCORE
+        IconScoreContextUtil.is_service_flag_on = IS_SERVICE_FLAG_ON
 
     @staticmethod
     def __ensure_dir(dir_path):

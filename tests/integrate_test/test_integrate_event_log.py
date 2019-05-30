@@ -32,8 +32,8 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self._update_governance()
 
     def _update_governance(self):
-        tx = self._make_deploy_tx("test_builtin",
-                                  LATEST_GOVERNANCE,
+        tx = self._make_deploy_tx("sample_builtin",
+                                  "latest_version/governance",
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -44,7 +44,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         if update_score_addr:
             address = update_score_addr
 
-        tx = self._make_deploy_tx("test_event_log_scores",
+        tx = self._make_deploy_tx("sample_event_log_scores",
                                   score_path,
                                   self._addr_array[0],
                                   address,
@@ -80,7 +80,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         return tx_results
 
     def test_valid_event_log(self):
-        tx_result = self._deploy_score("test_event_log_score")
+        tx_result = self._deploy_score("sample_event_log_score")
         self.assertEqual(tx_result.status, int(True))
         score_addr = tx_result.score_address
 
@@ -147,7 +147,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
 
     def test_call_event_log_in_read_only_method(self):
         # failure case: if call event log on read_only method, should raise error
-        tx_result = self._deploy_score("test_event_log_score")
+        tx_result = self._deploy_score("sample_event_log_score")
         self.assertEqual(int(True), tx_result.status)
         score_address: 'Address' = tx_result.score_address
 
@@ -161,12 +161,12 @@ class TestIntegrateEventLog(TestIntegrateBase):
 
     def test_event_log_self_is_not_defined(self):
         # failure case: event log which self is not defined treat as invalid event log
-        tx_result = self._deploy_score("test_self_is_not_defined_event_log_score")
+        tx_result = self._deploy_score("sample_self_is_not_defined_event_log_score")
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.message, "'self' is not declared as the first parameter")
 
     def test_event_log_when_error(self):
-        tx_result = self._deploy_score("test_event_log_score")
+        tx_result = self._deploy_score("sample_event_log_score")
         self.assertEqual(tx_result.status, int(True))
         score_addr = tx_result.score_address
 
@@ -179,7 +179,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(expected, actual)
 
     def test_event_log_having_body(self):
-        tx_result = self._deploy_score("test_event_log_score")
+        tx_result = self._deploy_score("sample_event_log_score")
         self.assertEqual(tx_result.status, int(True))
         score_addr = tx_result.score_address
 
@@ -192,7 +192,7 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(expected, actual)
 
     def test_event_log_index_on_deploy(self):
-        tx_result = self._deploy_score("test_event_log_score")
+        tx_result = self._deploy_score("sample_event_log_score")
         self.assertEqual(tx_result.status, int(True))
         score_addr = tx_result.score_address
 
@@ -207,12 +207,12 @@ class TestIntegrateEventLog(TestIntegrateBase):
         self.assertEqual(len(event_log.indexed), 1)
 
         # failure case: setting index more than 4(should raise an error)
-        tx_result = self._deploy_score("test_exceed_max_index_event_log_score")
+        tx_result = self._deploy_score("sample_exceed_max_index_event_log_score")
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.message, "Indexed arguments overflow: limit=3")
 
         # failure case: setting index more than event log's parameter total count(should raise an error)
-        tx_result = self._deploy_score("test_index_exceed_params_event_log_score")
+        tx_result = self._deploy_score("sample_index_exceed_params_event_log_score")
         self.assertEqual(tx_result.status, int(False))
         self.assertEqual(tx_result.failure.message, "Index exceeds the number of parameters")
 
@@ -221,19 +221,19 @@ class TestIntegrateEventLog(TestIntegrateBase):
 
     def test_event_log_parameters_on_deploy(self):
         # failure case: define dict type parameter
-        tx_result = self._deploy_score("test_invalid_params_type_event_log_score_dict")
+        tx_result = self._deploy_score("sample_invalid_params_type_event_log_score_dict")
         self.assertEqual(tx_result.failure.message, "Unsupported type for 'value: <class 'dict'>'")
 
         # failure case: define list type parameter
-        tx_result = self._deploy_score("test_invalid_params_type_event_log_score_array")
+        tx_result = self._deploy_score("sample_invalid_params_type_event_log_score_array")
         self.assertEqual(tx_result.failure.message, "Unsupported type for 'value: <class 'list'>'")
 
         # failure case: omit type hint
-        tx_result = self._deploy_score("test_invalid_params_type_hint_event_log_score")
+        tx_result = self._deploy_score("sample_invalid_params_type_hint_event_log_score")
         self.assertEqual(tx_result.failure.message, "Missing argument hint for 'EventLogInvalidParamsType': 'value'")
 
     def test_event_log_parameters_on_execute(self):
-        tx_result = self._deploy_score("test_event_log_score")
+        tx_result = self._deploy_score("sample_event_log_score")
         self.assertEqual(tx_result.status, int(True))
         score_addr = tx_result.score_address
 
@@ -300,15 +300,15 @@ class TestIntegrateEventLog(TestIntegrateBase):
             self.assertEqual(tx_results[0].status, int(True))
 
     def test_event_log_internal_call(self):
-        tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_a")
+        tx_result = self._deploy_score("sample_internal_call_event_log_scores/sample_event_log_score_a")
         self.assertEqual(tx_result.status, int(True))
         score_addr_a = tx_result.score_address
 
-        tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_b")
+        tx_result = self._deploy_score("sample_internal_call_event_log_scores/sample_event_log_score_b")
         self.assertEqual(tx_result.status, int(True))
         score_addr_b = tx_result.score_address
 
-        tx_result = self._deploy_score("test_internal_call_event_log_scores/test_event_log_score_c")
+        tx_result = self._deploy_score("sample_internal_call_event_log_scores/sample_event_log_score_c")
         self.assertEqual(tx_result.status, int(True))
         score_addr_c = tx_result.score_address
 

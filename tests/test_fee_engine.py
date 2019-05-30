@@ -92,6 +92,9 @@ def patch_fee_storage(fee_storage: FeeStorage):
     fee_storage.delete_deposit = delete
 
 
+calculate_virtual_step = VirtualStepCalculator.calculate_virtual_step
+
+
 class TestFeeEngine(unittest.TestCase):
 
     def setUp(self):
@@ -129,6 +132,7 @@ class TestFeeEngine(unittest.TestCase):
     def tearDown(self):
         ContextContainer._clear_context()
         clear_inner_task()
+        VirtualStepCalculator.calculate_virtual_step = calculate_virtual_step
 
     def get_context(self):
         context = IconScoreContext(IconScoreContextType.INVOKE)
@@ -1128,8 +1132,8 @@ class TestFeeEngine(unittest.TestCase):
     def _set_up_deposits(self, context, deposits):
         context.fee_sharing_proportion = 100
 
-        FeeEngine._MIN_DEPOSIT_TERM = 50
-        FeeEngine._MIN_DEPOSIT_AMOUNT = 10
+        self._engine._MIN_DEPOSIT_TERM = 50
+        self._engine._MIN_DEPOSIT_AMOUNT = 10
 
         for deposit in deposits:
             tx_hash = deposit[0]

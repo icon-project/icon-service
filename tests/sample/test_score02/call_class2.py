@@ -1,7 +1,7 @@
 from iconservice import *
 from .call_class1 import CallClass1
 from .print_func import func_test
-from .test_func import test1_func
+from .test_func import sample_func
 
 
 class CallClass2(CallClass1):
@@ -20,5 +20,5 @@ class CallClass2(CallClass1):
 
     def print_test(self):
         func_test()
-        test1_func()
+        sample_func()
 

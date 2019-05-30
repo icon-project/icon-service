@@ -17,11 +17,11 @@
 """IconServiceEngine testcase
 """
 
+from typing import TYPE_CHECKING, Union, Optional, Any
 from unittest import TestCase
 
-from typing import TYPE_CHECKING, Union, Optional, Any
-
 from iconcommons import IconConfig
+
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
@@ -41,7 +41,8 @@ class TestIntegrateBase(TestCase):
     def setUpClass(cls):
         cls._score_root_path = '.score'
         cls._state_db_root_path = '.statedb'
-        cls._test_sample_root = "test_samples"
+        cls._iiss_db_root_path = '.iissdb'
+        cls._test_sample_root = "samples"
         cls._signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
         cls._version = 3

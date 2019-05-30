@@ -28,14 +28,14 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
 
     def test_link_score(self):
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_internal_call_scores",
-                                   "test_score",
+        tx1 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={'value': hex(value1)})
 
-        tx2 = self._make_deploy_tx("test_internal_call_scores",
-                                   "test_link_score",
+        tx2 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_link_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -89,14 +89,14 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
 
     def test_link_score_cross(self):
         value1 = 1 * self._icx_factor
-        tx1 = self._make_deploy_tx("test_internal_call_scores",
-                                   "test_score",
+        tx1 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_score",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={'value': hex(value1)})
 
-        tx2 = self._make_deploy_tx("test_internal_call_scores",
-                                   "test_link_score_cross",
+        tx2 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_link_score_cross",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -150,13 +150,13 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
 
     def test_link_score_loop(self):
-        tx1 = self._make_deploy_tx("test_internal_call_scores",
-                                   "test_link_loop",
+        tx1 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_link_loop",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
-        tx2 = self._make_deploy_tx("test_internal_call_scores",
-                                   "test_link_loop",
+        tx2 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_link_loop",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS)
 
@@ -208,9 +208,9 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
                                        'set_value',
                                        {"value": hex(value2)})
 
-        raise_exception_start_tag("test_link_score_loop")
+        raise_exception_start_tag("sample_link_score_loop")
         prev_block, tx_results = self._make_and_req_block([tx4])
-        raise_exception_end_tag("test_link_score_loop")
+        raise_exception_end_tag("sample_link_score_loop")
 
         self._write_precommit_state(prev_block)
 

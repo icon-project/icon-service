@@ -328,7 +328,6 @@ class TestIconContainerDB(unittest.TestCase):
             testarray[5] = 1
             a = testarray[5]
 
-
     def test_container_util(self):
         prefix: bytes = ContainerUtil.create_db_prefix(ArrayDB, 'a')
         self.assertEqual(b'\x00|a', prefix)

@@ -25,7 +25,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
     def test_parameters_success_cases(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install",
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install",
                                    "sample_token",
                                    self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
@@ -83,7 +83,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 100 * 10 ** 18)
 
     def test_more_parameters_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -110,7 +110,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(TypeError, self._query, query_request)
 
     def test_less_parameters_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -133,7 +133,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(TypeError, self._query, query_request)
 
     def test_invalid_paramter_value_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -158,7 +158,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_invalid_address_query(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -183,7 +183,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertRaises(InvalidParamsException, self._query, query_request)
 
     def test_more_parameters_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -219,7 +219,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 1000 * 10 ** 18)
 
     def test_less_parameters_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -254,7 +254,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 1000 * 10 ** 18)
 
     def test_invalid_paramters_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -290,7 +290,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 1000 * 10 ** 18)
 
     def test_invalid_address_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -325,7 +325,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 1000 * 10 ** 18)
 
     def test_default_parameters(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns_default_value", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns_default_value", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={})
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -373,7 +373,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, val6)
 
     def test_primitive_type_parameters_methods(self):
-        tx1 = self._make_deploy_tx("test_scores", "test_db_returns", self._addr_array[0], ZERO_SCORE_ADDRESS,
+        tx1 = self._make_deploy_tx("sample_scores", "sample_db_returns", self._addr_array[0], ZERO_SCORE_ADDRESS,
                                    deploy_params={"value": str(self._addr_array[1]),
                                                   "value1": str(self._addr_array[1])})
 
@@ -500,7 +500,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
     # test for empty parameter invoke method
     def test_empty_parameter_invoke(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_score", self._addr_array[0], ZERO_SCORE_ADDRESS)
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_score", self._addr_array[0], ZERO_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
@@ -525,7 +525,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         self.assertEqual(response, 18)
 
         # token test
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "sample_token", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_token", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS,
                                    deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -553,7 +553,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
     # unsupported parameter type testcase
     def test_kwargs_parameter_method(self):
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_kwargs_score", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_kwargs_score", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"value": str(self._addr_array[1]),
                                                                       "value1": str(self._addr_array[1])})
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -563,7 +563,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
     # unsupported parameter type testcase
     def test_list_parameters_query(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_list_params_score", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_list_params_score", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
@@ -573,7 +573,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
 
     def test_dict_parameters_query(self):
         # deploy
-        tx1 = self._make_deploy_tx("test_deploy_scores/install", "test_dict_params_score", self._addr_array[0],
+        tx1 = self._make_deploy_tx("sample_deploy_scores/install", "sample_dict_params_score", self._addr_array[0],
                                    ZERO_SCORE_ADDRESS, deploy_params={"init_supply": hex(1000), "decimal": "0x12"})
 
         prev_block, tx_results = self._make_and_req_block([tx1])

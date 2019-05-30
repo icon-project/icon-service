@@ -66,11 +66,11 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         governance_tx_result = self._update_governance(self._admin)
         self.assertEqual(governance_tx_result.status, int(True))
 
-        deploy_tx_hash = self._deploy_score('install/test_score_fee_sharing', 0, self._admin, {"value": hex(100)})
+        deploy_tx_hash = self._deploy_score('install/sample_score_fee_sharing', 0, self._admin, {"value": hex(100)})
         self.assertEqual(deploy_tx_hash.status, int(True))
         self.score_address = deploy_tx_hash.score_address
 
-        deploy_tx_hash2 = self._deploy_score('install/test_score_fee_sharing_inter_call', 0, self._admin,
+        deploy_tx_hash2 = self._deploy_score('install/sample_score_fee_sharing_inter_call', 0, self._admin,
                                              {"value": hex(100), "score_address": str(self.score_address)})
         self.assertEqual(deploy_tx_hash2.status, int(True))
         self.score_address2 = deploy_tx_hash2.score_address
@@ -79,7 +79,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         super().tearDown()
 
     def _update_governance(self, from_address: 'Address') -> Any:
-        tx = self._make_deploy_tx("test_builtin",
+        tx = self._make_deploy_tx("sample_builtin",
                                   "governance_for_fee2/governance",
                                   from_address,
                                   GOVERNANCE_SCORE_ADDRESS)
@@ -93,7 +93,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                       deploy_params: dict) -> Any:
         address = ZERO_SCORE_ADDRESS
 
-        tx = self._make_deploy_tx("test_deploy_scores",
+        tx = self._make_deploy_tx("sample_deploy_scores",
                                   score_path,
                                   from_address,
                                   address, deploy_params)

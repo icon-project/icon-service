@@ -166,7 +166,7 @@ class TestContextDatabaseOnWriteMode(unittest.TestCase):
             db.put(context, b'key1', None)
 
     def test_delete(self):
-        context = self.context        
+        context = self.context
         db = self.context_db
         tx_batch = context.tx_batch
 
