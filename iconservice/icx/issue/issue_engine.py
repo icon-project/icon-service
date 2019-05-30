@@ -36,7 +36,8 @@ class IssueEngine:
     def open(self, storage: 'IcxStorage'):
         self.close()
         self._storage = storage
-        self._issue_regulator = IssueRegulator().open(self._storage.db)
+        self._issue_regulator = IssueRegulator()
+        self._issue_regulator.open(self._storage.db)
 
     def close(self):
         """Close resources
@@ -102,7 +103,7 @@ class IssueEngine:
             total_issue_amount += issue_data_in_db[group_key]["value"]
 
         # todo : iiss_engine 에 calc 주기를 넘겨주는 method를 생성하거나 variable property를 생성
-        issue_variable = context.iiss_engine._variable.issue
+        issue_variable = context.iiss_engine.issue_variable
         calc_next_block_height = issue_variable.get_calc_next_block_height(context)
 
         if calc_next_block_height == context.block.height:
@@ -114,7 +115,7 @@ class IssueEngine:
             deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
                 self._issue_regulator.correct_issue_amount(context, total_issue_amount)
 
-        self._issue(context, to_address, total_issue_amount)
+        self._issue(context, to_address, corrected_icx_issue_amount)
         # todo: implement diff, fee event log
         # hard cording.. TBD
         fee = 0

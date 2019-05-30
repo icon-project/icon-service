@@ -67,7 +67,7 @@ class IssueRegulator:
         current_calc_period_issued_amount += issue_amount
         return current_calc_period_issued_amount
 
-    def separate_icx_and_i_score(self, i_score: int) -> Tuple[int, int]:
+    def _separate_icx_and_i_score(self, i_score: int) -> Tuple[int, int]:
         over_issued_icx = abs(i_score) // self._MAX_I_SCORE
         over_issued_i_score = abs(i_score) % self._MAX_I_SCORE
         if i_score < 0:
@@ -103,7 +103,7 @@ class IssueRegulator:
                                              remain_over_issued_icx * self._MAX_I_SCORE + \
                                              remain_over_issued_i_score
 
-            over_issued_icx, over_issued_i_score = self.separate_icx_and_i_score(total_over_issued_i_score)
+            over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
 
             deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
                 self._reflect_difference_in_issuing(corrected_icx_issue_amount, over_issued_icx)

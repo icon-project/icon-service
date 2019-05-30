@@ -51,11 +51,10 @@ class RegulatorStorage(object):
         self._db.put(context, self._CURRENT_CALC_PERIOD_ISSUED_ICX_KEY, encoded_current_issued_amount)
 
     def get_current_calc_period_issued_icx(self, context: 'IconScoreContext') -> int:
-
         encoded_current_issued_amount = self._db.get(context, self._CURRENT_CALC_PERIOD_ISSUED_ICX_KEY)
-        current_issued_amount = MsgPackForDB.loads(encoded_current_issued_amount)
-        if current_issued_amount is None:
-            current_issued_amount = 0
+        current_issued_amount = 0
+        if encoded_current_issued_amount is not None:
+            current_issued_amount = MsgPackForDB.loads(encoded_current_issued_amount)
         return current_issued_amount
 
     def put_prev_calc_period_issued_icx(self, context: 'IconScoreContext', prev_calc_period_issued_amount: int):

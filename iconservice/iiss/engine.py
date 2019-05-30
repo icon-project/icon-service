@@ -78,6 +78,10 @@ class Engine:
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)
 
+    @property
+    def issue_variable(self):
+        return self._variable.issue
+
     def _init_reward_calc_proxy(self):
         self._reward_calc_proxy = RewardCalcProxy()
         self._reward_calc_proxy.open(path=IISS_SOCKET_PATH)

@@ -308,6 +308,9 @@ class TestIssueRegulator:
         expected_diff = prev_calc_period_issued_icx * 1000 - prev_calc_period_issued_i_score \
                         + recorded_remain_i_score + (over_issued_icx * 1000)
         expected_deducted_icx = (expected_diff // 1000)
+        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
+        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+               current_calc_period_issued_icx + icx_issue_amount
         assert deducted_icx == expected_deducted_icx
         assert remain_over_issued_icx == 0
         assert corrected_icx_issue_amount == icx_issue_amount - deducted_icx
@@ -337,6 +340,9 @@ class TestIssueRegulator:
         expected_diff = prev_calc_period_issued_icx * 1000 - prev_calc_period_issued_i_score \
                         + recorded_remain_i_score + (over_issued_icx * 1000)
         expected_deducted_icx = (expected_diff // 1000)
+        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
+        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+               current_calc_period_issued_icx + icx_issue_amount
         assert deducted_icx == icx_issue_amount
         assert remain_over_issued_icx == expected_deducted_icx - icx_issue_amount
         assert corrected_icx_issue_amount == 0
@@ -370,6 +376,9 @@ class TestIssueRegulator:
         expected_diff = prev_calc_period_issued_icx * 1000 - prev_calc_period_issued_i_score \
                         + recorded_remain_i_score + (over_issued_icx * 1000)
         expected_deducted_icx = (expected_diff // 1000)
+        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
+        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+               current_calc_period_issued_icx + icx_issue_amount
         assert deducted_icx == icx_issue_amount
         assert remain_over_issued_icx == expected_deducted_icx - icx_issue_amount
         assert corrected_icx_issue_amount == 0
@@ -403,6 +412,9 @@ class TestIssueRegulator:
         expected_diff = prev_calc_period_issued_icx * 1000 - prev_calc_period_issued_i_score \
                         + recorded_remain_i_score + (over_issued_icx * 1000)
         expected_deducted_icx = -(expected_diff // -1000)
+        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
+        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+               current_calc_period_issued_icx + icx_issue_amount
         assert deducted_icx == expected_deducted_icx
         assert remain_over_issued_icx == 0
         assert corrected_icx_issue_amount == icx_issue_amount + (-expected_deducted_icx)
@@ -432,7 +444,9 @@ class TestIssueRegulator:
                                                                      icx_issue_amount)
 
         remain_i_score = self.regulator_storage.get_over_issued_i_score(self.query_context)
-
+        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
+        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+               current_calc_period_issued_icx + icx_issue_amount
         assert deducted_icx == 0
         assert remain_over_issued_icx == 0
         assert corrected_icx_issue_amount == icx_issue_amount

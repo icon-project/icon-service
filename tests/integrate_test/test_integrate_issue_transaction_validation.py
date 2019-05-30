@@ -203,6 +203,11 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
             self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
 
+        # event log about correction
+        self.assertEqual(0, tx_results[0].event_logs[1].data[0])
+        self.assertEqual(0, tx_results[0].event_logs[1].data[1])
+        self.assertEqual(0, tx_results[0].event_logs[1].data[2])
+        self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[3])
         after_total_supply = self._query({}, "icx_getTotalSupply")
         after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
