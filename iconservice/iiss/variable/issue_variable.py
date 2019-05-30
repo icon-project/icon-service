@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class IssueVariable(object):
 
     def __init__(self, db: 'ContextDatabase'):
-        self._storage: 'IssueStorage' = IssueStorage(db)
+        self._storage: 'RegulatorStorage' = IssueStorage(db)
 
     @staticmethod
     def check_config_before_init(reward_variable: dict):

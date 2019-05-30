@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
 
 
-class IssueStorage(object):
+class RegulatorStorage(object):
 
     _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
     _PREV_CALC_PERIOD_ISSUED_ICX_KEY = b'prev_calc_period_issued_icx'
@@ -64,7 +64,9 @@ class IssueStorage(object):
 
     def get_prev_calc_period_issued_icx(self, context: 'IconScoreContext') -> Optional[int]:
         encoded_prev_issued_amount = self._db.get(context, self._PREV_CALC_PERIOD_ISSUED_ICX_KEY)
-        prev_issued_amount = MsgPackForDB.loads(encoded_prev_issued_amount)
+        prev_issued_amount: Optional[int] = None
+        if encoded_prev_issued_amount is not None:
+            prev_issued_amount = MsgPackForDB.loads(encoded_prev_issued_amount)
         return prev_issued_amount
 
     def put_over_issued_icx(self, context: 'IconScoreContext', over_issued_icx: int):
@@ -72,19 +74,19 @@ class IssueStorage(object):
         self._db.put(context, self._OVER_ISSUED_ICX_KEY, encoded_over_issued_icx)
 
     def get_over_issued_icx(self, context: 'IconScoreContext') -> int:
-        encoded_get_over_issued_icx = self._db.get(context, self._OVER_ISSUED_ICX_KEY)
-        over_issued_icx = MsgPackForDB.loads(encoded_get_over_issued_icx)
-        if over_issued_icx is None:
-            over_issued_icx = 0
+        encoded_over_issued_icx = self._db.get(context, self._OVER_ISSUED_ICX_KEY)
+        over_issued_icx = 0
+        if encoded_over_issued_icx is not None:
+            over_issued_icx = MsgPackForDB.loads(encoded_over_issued_icx)
         return over_issued_icx
 
     def put_over_issued_i_score(self, context: 'IconScoreContext', over_issued_i_score: int):
         encoded_over_issued_i_score = MsgPackForDB.dumps(over_issued_i_score)
         self._db.put(context, self._OVER_ISSUED_I_SCORE_KEY, encoded_over_issued_i_score)
 
-    def get_over_issued_i_score(self, context: 'IconScoreContext') -> Optional[int]:
+    def get_over_issued_i_score(self, context: 'IconScoreContext') -> int:
         encoded_over_issued_i_score = self._db.get(context, self._OVER_ISSUED_I_SCORE_KEY)
-        over_issued_i_score = MsgPackForDB.loads(encoded_over_issued_i_score)
-        if over_issued_i_score is None:
-            over_issued_i_score = 0
+        over_issued_i_score = 0
+        if encoded_over_issued_i_score is not None:
+            over_issued_i_score = MsgPackForDB.loads(encoded_over_issued_i_score)
         return over_issued_i_score
