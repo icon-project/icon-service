@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
 
 
+# todo: add version
+# todo: record values using structure and access to db only once
 class RegulatorStorage(object):
 
     _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
