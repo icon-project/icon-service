@@ -58,7 +58,8 @@ class IssueRegulator:
 
         return deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount
 
-    def _get_difference_between_icon_service_and_reward_calc(self, icx_amount, i_score_amount) -> int:
+    @staticmethod
+    def _get_difference_between_icon_service_and_reward_calc(icx_amount, i_score_amount) -> int:
         diff = icx_amount * I_SCORE_EXCHANGE_RATE - i_score_amount
         return diff
 
