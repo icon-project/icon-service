@@ -63,12 +63,8 @@ class IssueRegulator:
         diff = icx_amount * I_SCORE_EXCHANGE_RATE - i_score_amount
         return diff
 
-    def _accumulate_current_period_issued_icx(self, context: 'IconScoreContext', issue_amount: int) -> int:
-        current_calc_period_issued_amount = self._regulator_storage.get_current_calc_period_issued_icx(context)
-        current_calc_period_issued_amount += issue_amount
-        return current_calc_period_issued_amount
-
-    def _separate_icx_and_i_score(self, i_score: int) -> Tuple[int, int]:
+    @staticmethod
+    def _separate_icx_and_i_score(i_score: int) -> Tuple[int, int]:
         over_issued_icx = abs(i_score) // I_SCORE_EXCHANGE_RATE
         over_issued_i_score = abs(i_score) % I_SCORE_EXCHANGE_RATE
         if i_score < 0:
@@ -81,6 +77,11 @@ class IssueRegulator:
         # over_issued_icx = total_over_issued_i_score // max_i_score
         # over_issued_icx = -over_issued_icx if max_i_score < 0 else over_issued_icx
         # over_issued_i_score = total_over_issued_i_score % max_i_score
+
+    def _accumulate_current_period_issued_icx(self, context: 'IconScoreContext', issue_amount: int) -> int:
+        current_calc_period_issued_amount = self._regulator_storage.get_current_calc_period_issued_icx(context)
+        current_calc_period_issued_amount += issue_amount
+        return current_calc_period_issued_amount
 
     def correct_issue_amount_on_calc_period(self,
                                             context: 'IconScoreContext',
