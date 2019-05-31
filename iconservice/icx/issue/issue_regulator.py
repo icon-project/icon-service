@@ -111,7 +111,7 @@ class IssueRegulator:
             self._regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
             self._regulator_storage.put_over_issued_icx(context, remain_over_issued_icx)
 
-        # dose not consider about opposite case (i score is not None but prev_calc_period_issued_icx is Nont)
+        # dose not consider about opposite case (i score is not None but prev_calc_period_issued_icx is None)
         elif prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None:
             raise Exception("There is no prev_calc_period_i_score data even though calc period")
 
@@ -126,9 +126,9 @@ class IssueRegulator:
 
         current_calc_period_issued_icx: int = self._accumulate_current_period_issued_icx(context, icx_issue_amount)
         self._regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+
         remain_over_issued_icx: int = self._regulator_storage.get_over_issued_icx(context)
         deducted_icx: int = 0
-
         if remain_over_issued_icx == 0:
             return deducted_icx, remain_over_issued_icx, icx_issue_amount
 
