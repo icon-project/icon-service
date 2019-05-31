@@ -17,12 +17,12 @@ from typing import Optional, Tuple
 
 from .regulator_storage import RegulatorStorage
 from ...database.db import ContextDatabase
+from ...icon_constant import I_SCORE_EXCHANGE_RATE
 from ...iconscore.icon_score_context import IconScoreContext
 
 
 # todo: implement fee related logic
 class IssueRegulator:
-    _I_SCORE_EXCHANGE_RATE = 1_000
 
     def __init__(self):
         self._regulator_storage: 'RegulatorStorage' = None
@@ -59,7 +59,7 @@ class IssueRegulator:
         return deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount
 
     def _get_difference_between_icon_service_and_reward_calc(self, icx_amount, i_score_amount) -> int:
-        diff = icx_amount * self._I_SCORE_EXCHANGE_RATE - i_score_amount
+        diff = icx_amount * I_SCORE_EXCHANGE_RATE - i_score_amount
         return diff
 
     def _accumulate_current_period_issued_icx(self, context: 'IconScoreContext', issue_amount: int) -> int:
@@ -68,8 +68,8 @@ class IssueRegulator:
         return current_calc_period_issued_amount
 
     def _separate_icx_and_i_score(self, i_score: int) -> Tuple[int, int]:
-        over_issued_icx = abs(i_score) // self._I_SCORE_EXCHANGE_RATE
-        over_issued_i_score = abs(i_score) % self._I_SCORE_EXCHANGE_RATE
+        over_issued_icx = abs(i_score) // I_SCORE_EXCHANGE_RATE
+        over_issued_i_score = abs(i_score) % I_SCORE_EXCHANGE_RATE
         if i_score < 0:
             over_issued_icx = -over_issued_icx
             over_issued_i_score = -over_issued_i_score
@@ -100,7 +100,7 @@ class IssueRegulator:
                 self._get_difference_between_icon_service_and_reward_calc(prev_calc_period_issued_icx,
                                                                           prev_calc_period_issued_i_score)
             total_over_issued_i_score: int = over_issued_i_score + \
-                                             remain_over_issued_icx * self._I_SCORE_EXCHANGE_RATE + \
+                                             remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + \
                                              remain_over_issued_i_score
 
             over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
