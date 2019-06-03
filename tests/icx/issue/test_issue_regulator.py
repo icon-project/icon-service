@@ -122,14 +122,6 @@ class TestIssueRegulator:
         with pytest.raises(AssertionError):
             self.issue_regulator._reflect_difference_in_issuing(-1_000, 1)
 
-    def test_get_difference_between_icon_service_and_reward_calc(self):
-        # success case: should return difference in i_score (not loop)
-        icx_amount = 1_000
-        i_score_amount = 1_000_000
-        actual_diff = self.issue_regulator._get_difference_between_icon_service_and_reward_calc(icx_amount,
-                                                                                                i_score_amount)
-        assert actual_diff == 0
-
     def test_accumulate_current_period_issued_icx(self):
         pass
 
