@@ -367,7 +367,7 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
                     if not tx_request['params'].get('dataType') == "issue":
-                        raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
+                        raise AssertionError("Invalid block: first transaction must be an issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)

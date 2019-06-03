@@ -19,7 +19,7 @@
 from copy import deepcopy
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import IconServiceBaseException, IllegalFormatException
+from iconservice.base.exception import IllegalFormatException
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey
 from tests import create_address
@@ -64,7 +64,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         invalid_tx_list = [
             self._make_dummy_tx()
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(AssertionError, self._make_and_req_block, invalid_tx_list)
 
         # failure case: when first transaction is not a issue transaction
         # but 2nd is a issue transaction, should raise error
@@ -72,7 +72,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(AssertionError, self._make_and_req_block, invalid_tx_list)
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
@@ -87,7 +87,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(IconServiceBaseException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(AssertionError, self._make_and_req_block, invalid_tx_list)
 
     def test_validate_issue_transaction_format(self):
         # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with

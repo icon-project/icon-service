@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Optional
 
 from .issue_regulator import IssueRegulator
 from ... import ZERO_SCORE_ADDRESS, Address
-from ...base.exception import IconServiceBaseException
+from ...base.exception import IconServiceBaseException, InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
 from ...iconscore.icon_score_event_log import EventLog
 from ...icx.issue_data_validator import IssueDataValidator
@@ -92,8 +92,8 @@ class IssueEngine:
 
             if IssueDataValidator. \
                     validate_value(issue_data_in_tx[group_key], issue_data_in_db[group_key]):
-                raise IconServiceBaseException("Have difference between "
-                                               "issue transaction and actual db data")
+                raise InvalidParamsException("Have difference between "
+                                             "issue transaction and actual db data")
             issue_event_log: 'EventLog' = self._create_issue_event_log(group_key, issue_data_in_db)
             context.event_logs.append(issue_event_log)
 
