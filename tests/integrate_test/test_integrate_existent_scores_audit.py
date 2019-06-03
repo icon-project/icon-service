@@ -114,7 +114,7 @@ class TestIntegrateExistentScoresAudit(TestIntegrateBase):
         updated_governance_api = self._query(query_request, "icx_getScoreApi")
         self.assertNotEqual(original_governance_api, updated_governance_api)
 
-    def test_exists_score_revision3_abnormal_scores_aduit(self):
+    def test_exists_score_revision3_abnormal_scores_audit(self):
         self._setUp_audit()
 
         # set revision to 3
