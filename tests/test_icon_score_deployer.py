@@ -17,7 +17,7 @@
 import os
 import unittest
 
-from iconservice.base.address import AddressPrefix
+from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import ExceptionCode
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.deploy.utils import remove_path, get_score_path, get_score_deploy_path
@@ -82,17 +82,14 @@ class TestIconScoreDeployer(unittest.TestCase):
         file_path_list.sort()
         self.assertEqual(installed_contents, file_path_list)
 
-        # Case when the user install SCORE second time.(revision < 2)
-        IconScoreDeployer.deploy_legacy(score_deploy_path, self.read_zipfile_as_byte(self.normal_score_path))
-
-        # Case when installing SCORE with badzipfile Data.
+        # Case when installing SCORE with bad-zip-file Data.
         tx_hash2 = create_tx_hash()
         score_deploy_path: str = get_score_deploy_path(self.score_root_path, self.address, tx_hash2)
 
         with self.assertRaises(BaseException) as e:
             IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.bad_zip_file_path))
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
-        self.assertFalse(os.path.exists(score_deploy_path))
+        self.assertTrue(os.path.exists(score_deploy_path))
 
         # Case when the user specifies an installation path that does not have permission.
         score_deploy_path: str = get_score_deploy_path('/', self.address, tx_hash1)
@@ -229,7 +226,7 @@ class TestIconScoreDeployer(unittest.TestCase):
                 IconScoreDeployer.deploy(score_deploy_path, self.read_zipfile_as_byte(self.archive_path), REVISION_3)
             self.assertEqual(e.exception.code, ExceptionCode.INVALID_PACKAGE)
             self.assertEqual(e.exception.message, "package.json not found")
-            self.assertFalse(os.path.exists(score_deploy_path))
+            self.assertTrue(os.path.exists(score_deploy_path))
 
             score_path: str = get_score_path(self.score_root_path, address)
             remove_path(score_path)

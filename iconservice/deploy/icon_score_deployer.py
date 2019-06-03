@@ -33,20 +33,16 @@ class IconScoreDeployer(object):
         :param data: Bytes of the zip file.
         :param revision: Revision num
         """
-        try:
-            shutil.rmtree(path, ignore_errors=True)
-            os.makedirs(path)
+        shutil.rmtree(path, ignore_errors=True)
+        os.makedirs(path)
 
-            file_info_generator = IconScoreDeployer._extract_files_gen(data, revision)
-            for name, file_info, parent_dir in file_info_generator:
-                if not os.path.exists(os.path.join(path, parent_dir)):
-                    os.makedirs(os.path.join(path, parent_dir))
-                with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
-                    contents = file_info_context.read()
-                    dest.write(contents)
-        except BaseException as e:
-            shutil.rmtree(path, ignore_errors=True)
-            raise e
+        file_info_generator = IconScoreDeployer._extract_files_gen(data, revision)
+        for name, file_info, parent_dir in file_info_generator:
+            if not os.path.exists(os.path.join(path, parent_dir)):
+                os.makedirs(os.path.join(path, parent_dir))
+            with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
+                contents = file_info_context.read()
+                dest.write(contents)
 
     @staticmethod
     def _check_score_deploy_path(path: str):
@@ -121,21 +117,17 @@ class IconScoreDeployer(object):
         :param path: the path of directory where score is deployed
         :param data: The byte value of the zip file.
         """
-        try:
-            shutil.rmtree(path, ignore_errors=True)
-            if not os.path.exists(path):
-                os.makedirs(path)
+        shutil.rmtree(path, ignore_errors=True)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-            file_info_generator = IconScoreDeployer._extract_files_gen_legacy(data)
-            for name, file_info, parent_directory in file_info_generator:
-                if not os.path.exists(os.path.join(path, parent_directory)):
-                    os.makedirs(os.path.join(path, parent_directory))
-                with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
-                    contents = file_info_context.read()
-                    dest.write(contents)
-        except BaseException as e:
-            shutil.rmtree(path, ignore_errors=True)
-            raise e
+        file_info_generator = IconScoreDeployer._extract_files_gen_legacy(data)
+        for name, file_info, parent_directory in file_info_generator:
+            if not os.path.exists(os.path.join(path, parent_directory)):
+                os.makedirs(os.path.join(path, parent_directory))
+            with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
+                contents = file_info_context.read()
+                dest.write(contents)
 
     @staticmethod
     def _extract_files_gen_legacy(data: bytes):
