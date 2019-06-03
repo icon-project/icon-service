@@ -19,8 +19,8 @@ import os
 import shutil
 import zipfile
 
+from ..base.exception import InvalidPackageException
 from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
-from ..base.exception import InvalidParamsException, InvalidPackageException
 
 
 class IconScoreDeployer(object):
@@ -43,13 +43,6 @@ class IconScoreDeployer(object):
             with file_info as file_info_context, open(os.path.join(path, name), 'wb') as dest:
                 contents = file_info_context.read()
                 dest.write(contents)
-
-    @staticmethod
-    def _check_score_deploy_path(path: str):
-        if os.path.isfile(path):
-            raise InvalidParamsException(f'{path} is a file. Check your path.')
-        if os.path.isdir(path):
-            raise InvalidParamsException(f'{path} is a directory. Check your path.')
 
     @staticmethod
     def _extract_files_gen(data: bytes, revision: int = 0):
