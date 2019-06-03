@@ -77,8 +77,9 @@ class IssueRegulator:
 
         current_calc_period_total_issued_icx: int = self._regulator_storage.get_current_calc_period_issued_icx(context)
         prev_calc_period_issued_icx: Optional[int] = self._regulator_storage.get_prev_calc_period_issued_icx(context)
-        remain_over_issued_icx: int = self._regulator_storage.get_over_issued_icx(context)
         remain_over_issued_i_score: int = self._regulator_storage.get_over_issued_i_score(context)
+
+        remain_over_issued_icx = 0
         deducted_icx = 0
 
         current_calc_period_total_issued_icx += icx_issue_amount
@@ -87,18 +88,14 @@ class IssueRegulator:
             # get difference between icon_service and reward_calc after set exchange rates
             over_issued_i_score: int = \
                 prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
-
-            total_over_issued_i_score: int = over_issued_i_score + \
-                                             remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + \
-                                             remain_over_issued_i_score
-
+            total_over_issued_i_score: int = over_issued_i_score + remain_over_issued_i_score
             over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
 
             deducted_icx, remain_over_issued_icx, icx_issue_amount = \
                 self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx)
 
-            self._regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-            self._regulator_storage.put_over_issued_icx(context, remain_over_issued_icx)
+            remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
+            self._regulator_storage.put_over_issued_i_score(context, remain_over_issued_i_score)
 
         # dose not consider about opposite case (i score is not None but prev_calc_period_issued_icx is None)
         elif prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None:
@@ -114,15 +111,19 @@ class IssueRegulator:
         assert icx_issue_amount >= 0
 
         current_calc_period_total_issued_icx: int = self._regulator_storage.get_current_calc_period_issued_icx(context)
-        remain_over_issued_icx: int = self._regulator_storage.get_over_issued_icx(context)
+        remain_over_issued_i_score: int = self._regulator_storage.get_over_issued_i_score(context)
+        remain_over_issued_icx: int = 0
         deducted_icx: int = 0
 
+        if remain_over_issued_i_score > 0:
+            remain_over_issued_icx = remain_over_issued_i_score // I_SCORE_EXCHANGE_RATE
         current_calc_period_total_issued_icx += icx_issue_amount
 
         if remain_over_issued_icx > 0:
             deducted_icx, remain_over_issued_icx, icx_issue_amount = \
                 self._reflect_difference_in_issuing(icx_issue_amount, remain_over_issued_icx)
-            self._regulator_storage.put_over_issued_icx(context, remain_over_issued_icx)
+            remain_over_issued_i_score -= deducted_icx * I_SCORE_EXCHANGE_RATE
+            self._regulator_storage.put_over_issued_i_score(context, remain_over_issued_i_score)
         self._regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_total_issued_icx)
 
         return deducted_icx, remain_over_issued_icx, icx_issue_amount

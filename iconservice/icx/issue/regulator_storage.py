@@ -29,7 +29,6 @@ class RegulatorStorage(object):
 
     _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
     _PREV_CALC_PERIOD_ISSUED_ICX_KEY = b'prev_calc_period_issued_icx'
-    _OVER_ISSUED_ICX_KEY = b'over_issued_icx'
     _OVER_ISSUED_I_SCORE_KEY = b'over_issued_i_score'
 
     def __init__(self, db: 'ContextDatabase'):
@@ -69,17 +68,6 @@ class RegulatorStorage(object):
         if encoded_prev_issued_amount is not None:
             prev_issued_amount = MsgPackForDB.loads(encoded_prev_issued_amount)
         return prev_issued_amount
-
-    def put_over_issued_icx(self, context: 'IconScoreContext', over_issued_icx: int):
-        encoded_over_issued_icx = MsgPackForDB.dumps(over_issued_icx)
-        self._db.put(context, self._OVER_ISSUED_ICX_KEY, encoded_over_issued_icx)
-
-    def get_over_issued_icx(self, context: 'IconScoreContext') -> int:
-        encoded_over_issued_icx = self._db.get(context, self._OVER_ISSUED_ICX_KEY)
-        over_issued_icx = 0
-        if encoded_over_issued_icx is not None:
-            over_issued_icx = MsgPackForDB.loads(encoded_over_issued_icx)
-        return over_issued_icx
 
     def put_over_issued_i_score(self, context: 'IconScoreContext', over_issued_i_score: int):
         encoded_over_issued_i_score = MsgPackForDB.dumps(over_issued_i_score)
