@@ -69,6 +69,14 @@ class IssueRegulator:
 
         return over_issued_icx, over_issued_i_score
 
+    @staticmethod
+    def _is_data_sufficient_to_process_issue_correction(prev_calc_period_issued_i_score: Optional[int],
+                                                        prev_calc_period_issued_icx: Optional[int]):
+        if (prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None) or \
+                (prev_calc_period_issued_i_score is not None and prev_calc_period_issued_icx is None):
+            return False
+        return True
+
     def correct_issue_amount_on_calc_period(self,
                                             context: 'IconScoreContext',
                                             prev_calc_period_issued_i_score: Optional[int],
@@ -82,8 +90,14 @@ class IssueRegulator:
         remain_over_issued_icx = 0
         deducted_icx = 0
 
-        current_calc_period_total_issued_icx += icx_issue_amount
+        if not self._is_data_sufficient_to_process_issue_correction(prev_calc_period_issued_i_score,
+                                                                    prev_calc_period_issued_icx):
+            raise AssertionError("There is no prev_calc_period_i_score or "
+                                 "prev_calc_period_issued_icx data even though on calc period")
 
+        current_calc_period_total_issued_icx += icx_issue_amount
+        # in case of first calculate period
+        # (i.e. both prev_calc_period_issued_i_score and prev_calc_period_issued_icx is None), skip below logic
         if prev_calc_period_issued_i_score is not None and prev_calc_period_issued_icx is not None:
             # get difference between icon_service and reward_calc after set exchange rates
             over_issued_i_score: int = \
@@ -96,10 +110,6 @@ class IssueRegulator:
 
             remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
             self._regulator_storage.put_over_issued_i_score(context, remain_over_issued_i_score)
-
-        # dose not consider about opposite case (i score is not None but prev_calc_period_issued_icx is None)
-        elif prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None:
-            raise Exception("There is no prev_calc_period_i_score data even though calc period")
 
         self._regulator_storage.put_prev_calc_period_issued_icx(context, current_calc_period_total_issued_icx)
         self._regulator_storage.put_current_calc_period_issued_icx(context, 0)
