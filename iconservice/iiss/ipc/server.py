@@ -30,6 +30,7 @@ class IPCServer(object):
         self._server = None
         self._queue: Optional['MessageQueue'] = None
         self._unpacker: Optional['MessageUnpacker'] = MessageUnpacker()
+        self._task = []
 
     def open(self, loop,  message_queue: 'MessageQueue', path: str):
         assert loop
@@ -40,7 +41,6 @@ class IPCServer(object):
         self._queue = message_queue
 
         server = asyncio.start_unix_server(self._on_accepted, path)
-        print(f"server_object: {server}")
 
         self._server = server
 
@@ -48,17 +48,20 @@ class IPCServer(object):
         if self._server is None:
             return
 
-        asyncio.ensure_future(self._server)
+        self._server = self._loop.run_until_complete(self._server)
 
     def stop(self):
+        for t in self._task:
+            t.cancel()
+
         if self._server is None:
             return
 
         self._server.close()
 
-    async def close(self):
+    def close(self):
         if self._server is not None:
-            await self._server.wait_closed()
+            asyncio.wait_for(self._server.wait_closed(), 5)
             self._server = None
 
         self._loop = None
@@ -66,15 +69,15 @@ class IPCServer(object):
         self._unpacker = None
 
     def _on_accepted(self, reader: 'StreamReader', writer: 'StreamWriter'):
-        print(f"on_accepted() start: {reader} {writer}")
+        Logger.debug(f"on_accepted() start: {reader} {writer}")
 
-        asyncio.ensure_future(self._on_send(writer))
-        asyncio.ensure_future(self._on_recv(reader))
+        self._task.append(asyncio.ensure_future(self._on_send(writer)))
+        self._task.append(asyncio.ensure_future(self._on_recv(reader)))
 
-        print("on_accepted() end")
+        Logger.debug("on_accepted() end")
 
     async def _on_send(self, writer: 'StreamWriter'):
-        print("_on_send() start")
+        Logger.debug("_on_send() start")
 
         while True:
             request: 'Request' = await self._queue.get()
@@ -84,27 +87,25 @@ class IPCServer(object):
                 )
                 break
 
-            print(request)
-
             data: bytes = request.to_bytes()
-            print(f"on_send(): data({data.hex()}")
+            Logger.debug(f"on_send(): data({data.hex()}")
 
             writer.write(data)
             await writer.drain()
 
         writer.close()
 
-        print("_on_send() end")
+        Logger.debug("_on_send() end")
 
     async def _on_recv(self, reader: 'StreamReader'):
-        print("_on_recv() start")
+        Logger.debug("_on_recv() start")
 
         while True:
             data: bytes = await reader.read(1024)
             if not isinstance(data, bytes) or len(data) == 0:
                 break
 
-            print(f"on_recv(): data({data.hex()})")
+            Logger.debug(f"on_recv(): data({data.hex()})")
 
             self._unpacker.feed(data)
 
@@ -116,4 +117,4 @@ class IPCServer(object):
 
         await self._queue.put(NoneRequest())
 
-        print("_on_recv() end")
+        Logger.debug("_on_recv() end")

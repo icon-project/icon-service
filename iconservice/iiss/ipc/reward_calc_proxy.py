@@ -17,6 +17,7 @@ __all__ = 'RewardCalcProxy'
 
 import asyncio
 import concurrent.futures
+from subprocess import Popen
 from typing import Optional
 
 from iconcommons.logger import Logger
@@ -42,15 +43,18 @@ class RewardCalcProxy(object):
         self._ipc_server = IPCServer()
         self._message_queue: Optional['MessageQueue'] = None
         self._calculation_result: Optional[tuple] = None
+        self._reward_calc: Optional[Popen] = None
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
-    def open(self, path: str):
+    def open(self, path: str, iiss_db_path: str):
         Logger.debug(tag=_TAG, msg="open() start")
 
         self._loop = asyncio.get_event_loop()
         self._message_queue = MessageQueue(self._loop)
         self._ipc_server.open(self._loop, self._message_queue, path)
+
+        self.start_reward_calc(sock_path=path, iiss_db_path=iiss_db_path)
 
         Logger.debug(tag=_TAG, msg="open() end")
 
@@ -67,11 +71,12 @@ class RewardCalcProxy(object):
     def close(self):
         Logger.debug(tag=_TAG, msg="close() start")
 
-        future = self._ipc_server.close()
-        asyncio.wait_for(future, 5)
+        self._ipc_server.close()
 
         self._message_queue = None
         self._loop = None
+
+        self.stop_reward_calc()
 
         Logger.debug(tag=_TAG, msg="close() end")
 
@@ -247,3 +252,17 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="_commit_block() end")
 
         return future.result()
+
+    def start_reward_calc(self, sock_path: str, iiss_db_path: str):
+        Logger.debug(tag=_TAG, msg=f'run reward calc')
+
+        if self._reward_calc is None:
+            cmd = f'icon_rc -client -db-count 16 -iissdata {iiss_db_path} -ipc-addr {sock_path} -monitor'
+            self._reward_calc = Popen(cmd.split(" "))
+
+    def stop_reward_calc(self):
+        Logger.debug(tag=_TAG, msg='stop reward calc')
+
+        if self._reward_calc is not None:
+            self._reward_calc.kill()
+            self._reward_calc = None
