@@ -118,9 +118,9 @@ class IconScoreContext(object):
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
         """
-        self.type: IconScoreContextType = context_type
+        self.type: 'IconScoreContextType' = context_type
         # The type of external function which is called latest
-        self.func_type: IconScoreFuncType = IconScoreFuncType.WRITABLE
+        self.func_type: 'IconScoreFuncType' = IconScoreFuncType.WRITABLE
         self.block: 'Block' = None
         self.tx: 'Transaction' = None
         self.msg: 'Message' = None
@@ -146,6 +146,10 @@ class IconScoreContext(object):
     def readonly(self):
         return self.type == IconScoreContextType.QUERY or \
                self.func_type == IconScoreFuncType.READONLY
+
+    @property
+    def total_supply(self):
+        return self.icx_engine.get_total_supply(self)
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
