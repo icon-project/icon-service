@@ -80,7 +80,7 @@ class Engine:
 
     def _init_reward_calc_proxy(self, data_path: str):
         self._reward_calc_proxy = RewardCalcProxy()
-        self._reward_calc_proxy.open(path=IISS_SOCKET_PATH, iiss_db_path=data_path)
+        self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):

@@ -47,14 +47,14 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
-    def open(self, path: str, iiss_db_path: str):
+    def open(self, sock_path: str, iiss_db_path: str):
         Logger.debug(tag=_TAG, msg="open() start")
 
         self._loop = asyncio.get_event_loop()
         self._message_queue = MessageQueue(self._loop)
-        self._ipc_server.open(self._loop, self._message_queue, path)
+        self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
-        self.start_reward_calc(sock_path=path, iiss_db_path=iiss_db_path)
+        self.start_reward_calc(sock_path=sock_path, iiss_db_path=iiss_db_path)
 
         Logger.debug(tag=_TAG, msg="open() end")
 

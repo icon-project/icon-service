@@ -30,7 +30,7 @@ class IPCServer(object):
         self._server = None
         self._queue: Optional['MessageQueue'] = None
         self._unpacker: Optional['MessageUnpacker'] = MessageUnpacker()
-        self._task = []
+        self._tasks = []
 
     def open(self, loop,  message_queue: 'MessageQueue', path: str):
         assert loop
@@ -51,7 +51,7 @@ class IPCServer(object):
         self._server = self._loop.run_until_complete(self._server)
 
     def stop(self):
-        for t in self._task:
+        for t in self._tasks:
             t.cancel()
 
         if self._server is None:
@@ -71,8 +71,8 @@ class IPCServer(object):
     def _on_accepted(self, reader: 'StreamReader', writer: 'StreamWriter'):
         Logger.debug(f"on_accepted() start: {reader} {writer}")
 
-        self._task.append(asyncio.ensure_future(self._on_send(writer)))
-        self._task.append(asyncio.ensure_future(self._on_recv(reader)))
+        self._tasks.append(asyncio.ensure_future(self._on_send(writer)))
+        self._tasks.append(asyncio.ensure_future(self._on_recv(reader)))
 
         Logger.debug("on_accepted() end")
 
