@@ -94,5 +94,4 @@ class MsgPackForDB(object):
 
     @classmethod
     def loads(cls, data: bytes) -> list:
-        # todo: any
         return msgpack_loads(data, ext_hook=cls._decode, raw=False)
