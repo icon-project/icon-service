@@ -19,7 +19,7 @@ import unittest
 
 from iconservice import Address
 from iconservice.prep.candidate_container import SortedCandidates, CandidateInfoMapper
-from iconservice.prep.candidate import Candidate
+from iconservice.prep.data.candidate import Candidate
 from tests import create_address
 
 

@@ -79,8 +79,8 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
             ConstantKeys.NAME: "name",
             ConstantKeys.EMAIL: "email",
             ConstantKeys.WEBSITE: "website",
-            ConstantKeys.JSON: "json",
-            ConstantKeys.IP: "ip",
+            ConstantKeys.DETAILS: "json",
+            ConstantKeys.P2P_END_POINT: "ip",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(200)
             }
@@ -106,8 +106,8 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
         self.assertEqual(expected_response[ConstantKeys.NAME], response[ConstantKeys.NAME])
         self.assertEqual(expected_response[ConstantKeys.EMAIL], response[ConstantKeys.EMAIL])
         self.assertEqual(expected_response[ConstantKeys.WEBSITE], response[ConstantKeys.WEBSITE])
-        self.assertEqual(expected_response[ConstantKeys.JSON], response[ConstantKeys.JSON])
-        self.assertEqual(expected_response[ConstantKeys.IP], response[ConstantKeys.IP])
+        self.assertEqual(expected_response[ConstantKeys.DETAILS], response[ConstantKeys.DETAILS])
+        self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], response[ConstantKeys.P2P_END_POINT])
         self.assertEqual(expected_response[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP],
                          hex(response[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP]))
 
@@ -148,8 +148,8 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: hex(200+i)
                 }
@@ -184,8 +184,8 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: hex(200+i)
                 }

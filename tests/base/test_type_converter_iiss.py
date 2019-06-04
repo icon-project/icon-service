@@ -109,8 +109,8 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.NAME: name,
             ConstantKeys.EMAIL: email,
             ConstantKeys.WEBSITE: website,
-            ConstantKeys.JSON: json,
-            ConstantKeys.IP: ip,
+            ConstantKeys.DETAILS: json,
+            ConstantKeys.P2P_END_POINT: ip,
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
             }
@@ -120,8 +120,8 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(name, ret_params[ConstantKeys.NAME])
         self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
-        self.assertEqual(json, ret_params[ConstantKeys.JSON])
-        self.assertEqual(ip, ret_params[ConstantKeys.IP])
+        self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
+        self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
         governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
         self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
 
@@ -180,10 +180,10 @@ class TestTypeConverter(unittest.TestCase):
         end_rank = 20
 
         request = {
-            ConstantKeys.START_RANK: hex(start_rank),
-            ConstantKeys.END_RANK: hex(end_rank)
+            ConstantKeys.START_RANKING: hex(start_rank),
+            ConstantKeys.END_RANKING: hex(end_rank)
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE_LIST)
-        self.assertEqual(start_rank, ret_params[ConstantKeys.START_RANK])
-        self.assertEqual(end_rank, ret_params[ConstantKeys.END_RANK])
+        self.assertEqual(start_rank, ret_params[ConstantKeys.START_RANKING])
+        self.assertEqual(end_rank, ret_params[ConstantKeys.END_RANKING])

@@ -14,7 +14,7 @@
 
 from typing import TYPE_CHECKING
 
-from .candidate import Candidate
+from iconservice.prep.data.candidate import Candidate
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
 
 
-class CandidateStorage(object):
+class Storage(object):
 
     def __init__(self, db: 'ContextDatabase'):
         """Constructor
@@ -38,38 +38,28 @@ class CandidateStorage(object):
         if self._db:
             self._db = None
 
-    def is_candidate(self,
-                     context: 'IconScoreContext',
-                     address: 'Address') -> bool:
-
-        key: bytes = Candidate.make_key(address)
-        return self._db.get(context, key) is not None
-
-    def get_candidate(self,
-                      context: 'IconScoreContext',
-                      address: 'Address') -> 'Candidate':
-
+    def get_candidate(self, context: 'IconScoreContext', address: 'Address') -> 'Candidate':
         key: bytes = Candidate.make_key(address)
         value: bytes = self._db.get(context, key)
+
         if value is None:
-            raise InvalidParamsException("get_candidate: value is None")
-        return Candidate.from_bytes(address, value)
+            raise InvalidParamsException(f"P-Rep candidate not found: {str(address)}")
 
-    def put_candidate(self,
-                      context: 'IconScoreContext',
-                      address: 'Address',
-                      candidate: 'Candidate'):
+        candidate = Candidate.from_bytes(value)
+        assert address == candidate.address
 
+        return candidate
+
+    def put_candidate(self, context: 'IconScoreContext', candidate: 'Candidate'):
         key: bytes = Candidate.make_key(candidate.address)
         value: bytes = candidate.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_candidate(self,
-                         context: 'IconScoreContext',
-                         address: 'Address'):
-
+    def delete_candidate(self, context: 'IconScoreContext', address: 'Address'):
         key: bytes = Candidate.make_key(address)
         self._db.delete(context, key)
 
-    def get_prep_candidates(self) -> iter:
-        return self._db.key_value_db.get_sub_db(Candidate.prefix).iterator()
+    def get_candidate_iterator(self) -> iter:
+        with self._db.key_value_db.get_sub_db(Candidate.PREFIX).iterator() as it:
+            for _, value in it:
+                yield Candidate.from_bytes(value)

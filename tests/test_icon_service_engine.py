@@ -24,6 +24,7 @@ from unittest.mock import Mock
 
 from iconcommons.icon_config import IconConfig
 
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.address import Address, AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, InvalidParamsException, IconScoreException
@@ -860,6 +861,86 @@ class TestIconServiceEngine(unittest.TestCase):
             balance: int = self._engine.query(
                 converted_request['method'], converted_request['params'])
             self.assertEqual(0, balance)
+
+    def test_register_prep_candidate(self):
+        block_height = 1
+        block_hash = create_block_hash()
+        block_timestamp = 0
+        to: 'Address' = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 0)
+        value: int = 0
+        tx_hash: bytes = create_tx_hash(b'tx')
+        timestamp: int = int(time.time() * 1000)
+
+        # Information on P-Rep registration
+        name = 'Banana P-Rep'
+        email = 'banana@example.com'
+        website = 'https://banana.example.com'
+        details = 'https://banana.example.com/json'
+        p2p_end_point = 'target://123.45.67.89:7100'
+        public_key = bytes(32)
+        irep = 0x10000
+
+        step_limit = 200000000
+        tx_v3 = {
+            'method': 'icx_sendTransaction',
+            'params': {
+                'txHash': tx_hash,
+                'nid': 3,
+                'version': 3,
+                'from': self._genesis_address,
+                'to': to,
+                'value': value,
+                'stepLimit': step_limit,
+                'timestamp': timestamp,
+                'dataType': 'call',
+                'data': {
+                    'method': 'registerPRepCandidate',
+                    'params': {
+                        'name': name,
+                        'email': email,
+                        'website': website,
+                        'details': details,
+                        'p2pEndPoint': p2p_end_point,
+                        'publicKey': f'0x{public_key.hex()}',
+                        'governance': {
+                            'incentiveRep': hex(irep)
+                        }
+                    }
+                },
+                'signature': 'VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA='
+            }
+        }
+
+        block = Block(block_height,
+                      block_hash,
+                      block_timestamp,
+                      self.genesis_block.hash)
+
+        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        self.assertEqual(1, len(tx_results))
+        self.assertEqual(1, tx_results[0].status)
+
+        self._engine.commit(block)
+
+        # Query
+        params = {
+            'to': ZERO_SCORE_ADDRESS,
+            'dataType': 'call',
+            'data': {
+                'method': 'getPRepCandidate',
+                'params': {
+                    'address': f'{str(self._genesis_address)}'
+                }
+            }
+        }
+        result: dict = self._engine.query('icx_call', params)
+        self.assertEqual(name, result['name'])
+        self.assertEqual(email, result['email'])
+        self.assertEqual(website, result['website'])
+        self.assertEqual(details, result['details'])
+        self.assertEqual(p2p_end_point, result['p2pEndPoint'])
+        self.assertEqual(public_key, result['publicKey'])
+        self.assertEqual(irep, result['governance']['incentiveRep'])
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-
-# Copyright 2018 ICON Foundation
+# Copyright 2019 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,29 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import OrderedDict
-from enum import Enum
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from iconservice.prep.data.candidate import Candidate
+    from ..database.db import ContextDatabase
 
 
-class BatchSlotType(Enum):
-    PUT_DEL = 0
-    UPDATE = 1
+class Term(object):
+    """Defines P-Rep Term information
 
+    """
 
-class CandidateBatch(OrderedDict):
-    pass
-
-
-class RegPRep(object):
     def __init__(self):
-        pass
+        self.sequence: int = -1
+        self.start_block_height: int = -1
+        self.end_block_height: int = -1  # inclusive
+        self.preps: List['Candidate'] = []
 
-
-class UpdatePRep(object):
-    def __init__(self, delegated: int):
-        self.delegated: int = delegated
-
-
-class UnregPRep(object):
-    def __init__(self):
+    def load(self, db: 'ContextDatabase'):
         pass
