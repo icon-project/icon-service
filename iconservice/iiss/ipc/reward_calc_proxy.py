@@ -55,7 +55,7 @@ class RewardCalcProxy(object):
 
         self._loop = asyncio.get_event_loop()
         self._message_queue = MessageQueue(loop=self._loop,
-                                           notify_message=VersionNotify,
+                                           notify_message=VersionResponse,
                                            notify_handler=self.notify_handler)
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
@@ -84,6 +84,34 @@ class RewardCalcProxy(object):
         self.stop_reward_calc()
 
         Logger.debug(tag=_TAG, msg="close() end")
+
+    def get_version(self):
+        Logger.debug(tag=_TAG, msg="get_version() start")
+
+        future: concurrent.futures.Future = \
+            asyncio.run_coroutine_threadsafe(self._get_version(), self._loop)
+
+        try:
+            response: 'VersionResponse' = future.result(self.IPC_TIMEOUT)
+        except asyncio.TimeoutError:
+            future.cancel()
+            raise TimeoutException("get_version message to RewardCalculator has timed-out")
+
+        Logger.debug(tag=_TAG, msg=f"get_version() end: {response.version}")
+
+        return response.version
+
+    async def _get_version(self):
+        Logger.debug(tag=_TAG, msg="_get_version() start")
+
+        request = VersionRequest()
+
+        future: asyncio.Future = self._message_queue.put(request)
+        await future
+
+        Logger.debug(tag=_TAG, msg="_get_version() end")
+
+        return future.result()
 
     def calculate(self, db_path: str, block_height: int):
         """Request RewardCalculator to calculate IScore for every account
@@ -142,7 +170,7 @@ class RewardCalcProxy(object):
             self._claim_iscore(address, block_height, block_hash), self._loop)
 
         try:
-            response: 'ClaimResponse' = future.result()
+            response: 'ClaimResponse' = future.result(self.IPC_TIMEOUT)
         except asyncio.TimeoutError:
             future.cancel()
             raise TimeoutException("claim_iscore message to RewardCalculator has timed-out")
@@ -250,12 +278,12 @@ class RewardCalcProxy(object):
 
     def version_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"version_handler() start {response}")
-        assert isinstance(response, VersionNotify)
+        assert isinstance(response, VersionResponse)
         # TODO process version info if necessary
 
     def notify_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"notify_handler() start {type(response)}")
-        if isinstance(response, VersionNotify):
+        if isinstance(response, VersionResponse):
             self.version_handler(response=response)
 
     def start_reward_calc(self, sock_path: str, iiss_db_path: str):

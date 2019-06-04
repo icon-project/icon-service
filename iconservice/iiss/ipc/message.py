@@ -66,7 +66,18 @@ class Response(metaclass=ABCMeta):
         pass
 
 
-class VersionNotify(Response):
+class VersionRequest(Request):
+    def __init__(self):
+        super().__init__(MessageType.VERSION)
+
+    def _to_list(self) -> tuple:
+        return self.msg_type, self.msg_id
+
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id})"
+
+
+class VersionResponse(Response):
     MSG_TYPE = MessageType.VERSION
 
     def __init__(self, msg_id: int, version: int, block_height: int):
@@ -80,14 +91,14 @@ class VersionNotify(Response):
         return f"VERSION({self.msg_id}, {self.version}, {self.block_height})"
 
     @staticmethod
-    def from_list(items: list) -> 'VersionNotify':
+    def from_list(items: list) -> 'VersionResponse':
         msg_id: int = items[1]
         payload: int = items[2]
 
         version: int = payload[0]
         block_height: int = payload[1]
 
-        return VersionNotify(msg_id, version, block_height)
+        return VersionResponse(msg_id, version, block_height)
 
 
 class ClaimRequest(Request):

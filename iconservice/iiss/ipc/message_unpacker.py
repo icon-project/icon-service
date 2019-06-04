@@ -21,7 +21,7 @@ class MessageUnpacker(object):
         self._unpacker = msgpack.Unpacker(raw=True)
         self._iter = None
         self._response_classes = {
-            MessageType.VERSION: VersionNotify,
+            MessageType.VERSION: VersionResponse,
             MessageType.CLAIM: ClaimResponse,
             MessageType.QUERY: QueryResponse,
             MessageType.CALCULATE: CalculateResponse,

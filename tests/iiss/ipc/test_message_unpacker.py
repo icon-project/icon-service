@@ -87,7 +87,7 @@ class TestMessageUnpacker(unittest.TestCase):
 
         it = iter(self.unpacker)
         version_response = next(it)
-        self.assertIsInstance(version_response, VersionNotify)
+        self.assertIsInstance(version_response, VersionResponse)
         self.assertEqual(version, version_response.version)
 
         calculate_response = next(it)
