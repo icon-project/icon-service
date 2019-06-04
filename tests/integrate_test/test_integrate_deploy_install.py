@@ -427,6 +427,52 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.INVALID_PARAMETER)
         self.assertIsInstance(tx_results[0].failure.message, str)
 
+    def test_duplicated_deploy_tx_legacy(self):
+        block_height = 1
+
+        # 1. deploy
+        value1 = 1 * self._icx_factor
+
+        tx = self._make_deploy_tx("sample_deploy_scores",
+                                  "install/sample_score",
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS,
+                                  deploy_params={'value': hex(value1)})
+
+        prev_block, tx_results = self._make_and_req_block([tx], block_height=block_height)
+        tx_result = tx_results[0]
+        self.assertEqual(tx_result.status, int(True))
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_result = tx_results[0]
+        self.assertEqual(tx_result.status, int(True))
+
+        self._write_precommit_state(prev_block)
+
+    def test_duplicated_deploy_tx(self):
+        self._update_governance()
+        block_height = 2
+        # 1. deploy
+        value1 = 1 * self._icx_factor
+
+        tx = self._make_deploy_tx("sample_deploy_scores",
+                                  "install/sample_score",
+                                  self._addr_array[0],
+                                  ZERO_SCORE_ADDRESS,
+                                  deploy_params={'value': hex(value1)})
+
+        prev_block, tx_results = self._make_and_req_block([tx], block_height=block_height)
+        tx_result = tx_results[0]
+        self.assertEqual(tx_result.status, int(True))
+
+        prev_block, tx_results = self._make_and_req_block([tx], block_height=block_height)
+
+        tx_result = tx_results[0]
+        self.assertEqual(tx_result.status, int(True))
+
+        self._write_precommit_state(prev_block)
+
 
 if __name__ == '__main__':
     unittest.main()

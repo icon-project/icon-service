@@ -113,116 +113,14 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
         self.assertNotEqual(original_governance_api, updated_governance_api)
 
-    # test when revision <= 2
-    def test_existent_score(self):
-        self._setUp()
-
-        # deploy SCORE
-        tx1 = self._deploy_score('sample_deploy_scores/install', 'sample_token', self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                 self.token_initial_params)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
-
-        # update governance SCORE(revision2)
-        self._update_governance('0_0_4')
-        # deploy
-        tx2 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                 self.token_initial_params)
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
-
-    # test when revision > 2
-    def test_existent_score_revision4(self):
-        self._setUp()
-
-        # set revision to 4(revision4)
-        self._update_governance('0_0_4')
-        self._set_revision(3)
-
-        # deploy SCORE
-        tx1 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                 self.token_initial_params)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        score_addr1 = tx_results[0].score_address
-
-        # balance_of test(1000)
-        query_request = {
-            "from": self._admin,
-            "to": score_addr1,
-            "dataType": "call",
-            "data": {
-                "method": "balance_of",
-                "params": {
-                    "addr_from": str(self._addr_array[0])
-                }
-            }
-        }
-        response = self._query(query_request)
-        self.assertEqual(response, 1000 * 10 ** 18)
-
-        # deploy SCORE(update)
-        tx2 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], score_addr1,
-                                 {"update_supply": hex(3000), "decimal": "0x12"})
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-        # balance_of test(3000)
-        query_request['data']['params']['addr_from'] = str(self._addr_array[0])
-        response = self._query(query_request)
-        self.assertEqual(response, 3000 * 10 ** 18)
-
-    def test_rolling_update_deploy(self):
-        # case revision 0
-        self._setUp()
-
-        # deploy (revision0 must be fail)
-        tx1 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                 self.token_initial_params)
-
-        prev_block, tx_results = self._make_and_req_block([tx1])
-        self._write_precommit_state(prev_block)
-        self.assertTrue("is a directory. Check " in tx_results[0].failure.message)
-        self.assertEqual(tx_results[0].status, int(False))
-
-        # update governance SCORE(revision 2)
-        self._update_governance('0_0_4')
-        # deploy (revision2 must be fail)
-        tx2 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                 self.token_initial_params)
-
-        prev_block, tx_results = self._make_and_req_block([tx2])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(False))
-
-        # set revision to 4
-        self._set_revision(3)
-
-        # deploy(revision3 must be success)
-        tx4 = self._deploy_score("sample_deploy_scores/install", "sample_token", self._addr_array[0], ZERO_SCORE_ADDRESS,
-                                 self.token_initial_params)
-
-        prev_block, tx_results = self._make_and_req_block([tx4])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-
-    def test_exists_score_revision3_unnormal_scores(self):
+    def test_exists_score_revision3_abnormal_scores(self):
         self._setUp()
 
         # set revision to 3
         self._set_revision(3)
         sample_score_init_params = {"value": hex(1000)}
 
-        # deploy unnormal SCORE(not python)
+        # deploy abnormal SCORE(not python)
         tx1 = self._deploy_score("sample_deploy_scores/install", "test_score_no_python", self._addr_array[0],
                                  ZERO_SCORE_ADDRESS, sample_score_init_params)
 
