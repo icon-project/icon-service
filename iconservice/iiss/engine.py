@@ -16,6 +16,8 @@
 
 from typing import TYPE_CHECKING, Any
 
+from iconcommons.logger import Logger
+
 from .commit_delegator import CommitDelegator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
@@ -82,8 +84,12 @@ class Engine:
     def issue_variable(self):
         return self._variable.issue
 
+    # TODO implement calculate callback function
+    def calculate_callback(self, cb_data: tuple):
+        Logger.debug(tag="iiss", msg=f"calculate callback called with {cb_data}")
+
     def _init_reward_calc_proxy(self, data_path: str):
-        self._reward_calc_proxy = RewardCalcProxy()
+        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback)
         self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 

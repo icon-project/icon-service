@@ -84,7 +84,6 @@ class TestIntegrateBase(TestCase):
         RewardCalcProxy.start = Mock()
         RewardCalcProxy.stop = Mock()
         RewardCalcProxy.close = Mock()
-        RewardCalcProxy.get_version = Mock()
         RewardCalcProxy.calculate = Mock()
         RewardCalcProxy.claim_iscore = Mock()
         RewardCalcProxy.query_iscore = Mock()
