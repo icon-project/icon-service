@@ -63,7 +63,7 @@ class Engine:
         self._formula: 'IssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
-        self._init_reward_calc_proxy()
+        self._init_reward_calc_proxy(conf[ConfigKey.IISS_DB_ROOT_PATH])
 
         self._rc_storage: 'RewardCalcDataStorage' = RewardCalcDataStorage()
         self._rc_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
@@ -78,9 +78,9 @@ class Engine:
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)
 
-    def _init_reward_calc_proxy(self):
+    def _init_reward_calc_proxy(self, data_path: str):
         self._reward_calc_proxy = RewardCalcProxy()
-        self._reward_calc_proxy.open(path=IISS_SOCKET_PATH)
+        self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):
