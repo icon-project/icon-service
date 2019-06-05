@@ -27,9 +27,6 @@ if TYPE_CHECKING:
 # todo: record values using structure and access to db only once
 class RegulatorStorage(object):
     _REGULATOR_VARIABLE_KEY = b'regulator_variable'
-    _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
-    _PREV_CALC_PERIOD_ISSUED_ICX_KEY = b'prev_calc_period_issued_icx'
-    _OVER_ISSUED_I_SCORE_KEY = b'over_issued_i_score'
 
     def __init__(self, db: 'ContextDatabase'):
         self._db: 'ContextDatabase' = db
