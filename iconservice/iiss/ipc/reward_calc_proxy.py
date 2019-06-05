@@ -150,7 +150,7 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="on_calculate_done() end")
 
     def claim_iscore(self, address: 'Address',
-                     block_height: int, block_hash: bytes) -> int:
+                     block_height: int, block_hash: bytes) -> tuple:
         """Claim IScore of a given address
 
         It is called on invoke thread
