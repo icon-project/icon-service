@@ -20,6 +20,7 @@ from iconservice.database.db import ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, I_SCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.issue_regulator import IssueRegulator
+from iconservice.icx.issue.regulator_storage import RegulatorVariable
 
 
 def create_context_db():
@@ -126,20 +127,23 @@ class TestIssueRegulator:
         icx_issue_amount = 10_000
         over_issued_i_score = 1_000 * I_SCORE_EXCHANGE_RATE
         current_calc_period_issued_icx = 50_000
-        context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
+            self.issue_regulator.correct_issue_amount(self.direct_context, icx_issue_amount)
 
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == \
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
+        assert updated_regulator_variable.current_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert remain_over_issued_icx == 0
-        assert self.regulator_storage.get_over_issued_i_score(context) == 0
+        assert updated_regulator_variable.over_issued_i_score == 0
 
         assert deducted_icx == over_issued_i_score // I_SCORE_EXCHANGE_RATE
         assert corrected_icx_issue_amount == icx_issue_amount - over_issued_i_score // I_SCORE_EXCHANGE_RATE
@@ -147,21 +151,25 @@ class TestIssueRegulator:
     def test_correct_issue_amount_over_issued_icx_is_more_then_icx_issue_amount(self):
         icx_issue_amount = 1_000
         over_issued_i_score = 10_000 * I_SCORE_EXCHANGE_RATE
-        over_issued_icx = over_issued_i_score // I_SCORE_EXCHANGE_RATE
         current_calc_period_issued_icx = 50_000
         context = self.direct_context
+
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
 
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == \
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
+        assert updated_regulator_variable.current_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
-        assert remain_over_issued_icx == over_issued_icx - icx_issue_amount
-        assert self.regulator_storage.get_over_issued_i_score(context) == remain_over_issued_icx * I_SCORE_EXCHANGE_RATE
+        assert remain_over_issued_icx == over_issued_i_score // I_SCORE_EXCHANGE_RATE - icx_issue_amount
+        assert updated_regulator_variable.over_issued_i_score == remain_over_issued_icx * I_SCORE_EXCHANGE_RATE
 
         assert deducted_icx == icx_issue_amount
         assert corrected_icx_issue_amount == 0
@@ -174,17 +182,20 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
 
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == \
-               current_calc_period_issued_icx
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
+        assert updated_regulator_variable.current_calc_period_issued_icx == current_calc_period_issued_icx
 
         assert remain_over_issued_icx == over_issued_icx
-        assert self.regulator_storage.get_over_issued_i_score(context) == over_issued_icx * I_SCORE_EXCHANGE_RATE
+        assert updated_regulator_variable.over_issued_i_score == over_issued_icx * I_SCORE_EXCHANGE_RATE
 
         assert deducted_icx == 0
         assert corrected_icx_issue_amount == 0
@@ -196,17 +207,21 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
 
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == \
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
+        assert updated_regulator_variable.current_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert remain_over_issued_icx == 0
-        assert self.regulator_storage.get_over_issued_i_score(context) == 0
+        assert updated_regulator_variable.over_issued_i_score == 0
 
         assert deducted_icx == 0
         assert corrected_icx_issue_amount == icx_issue_amount
@@ -218,8 +233,10 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         with pytest.raises(AssertionError):
             self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
@@ -234,43 +251,51 @@ class TestIssueRegulator:
         icx_issue_amount = 1000
         over_issued_i_score = 0
         current_calc_period_issued_icx = 50_000
-        prev_calc_period_issued_i_score = None
+        prev_calc_period_issued_icx = None
 
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
+                                                                     prev_calc_period_issued_icx,
                                                                      icx_issue_amount)
 
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
-        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
+        assert updated_regulator_variable.current_calc_period_issued_icx == 0
+        assert updated_regulator_variable.prev_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert remain_over_issued_icx == 0
-        assert self.regulator_storage.get_over_issued_i_score(context) == 0
+        assert regulator_variable.over_issued_i_score == 0
 
         assert deducted_icx == 0
         assert corrected_icx_issue_amount == icx_issue_amount
 
     def test_correct_issue_amount_on_calc_period_invalid_scenario(self):
         # failure case: when prev issued i score is None but prev issued icx data is exist, should raise error
+        prev_calc_period_issued_icx = 1_000
+        prev_calc_period_issued_i_score = None
+
         icx_issue_amount = 1000
         over_issued_i_score = 0
         current_calc_period_issued_icx = 5_000
-        prev_calc_period_issued_i_score = None
-        prev_calc_period_issued_icx = 1_000
 
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
-        self.regulator_storage.put_prev_calc_period_issued_icx(context, prev_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         with pytest.raises(Exception):
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
@@ -289,30 +314,33 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
-        self.regulator_storage.put_prev_calc_period_issued_icx(context, prev_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
                                                                      prev_calc_period_issued_i_score,
                                                                      icx_issue_amount)
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
 
-        remain_i_score = self.regulator_storage.get_over_issued_i_score(self.query_context)
-
+        remain_i_score = updated_regulator_variable.over_issued_i_score
         expected_diff = prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score \
                         + over_issued_i_score
         expected_deducted_icx = (expected_diff // I_SCORE_EXCHANGE_RATE)
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
-        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+
+        assert updated_regulator_variable.current_calc_period_issued_icx == 0
+        assert updated_regulator_variable.prev_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert deducted_icx == expected_deducted_icx
         assert corrected_icx_issue_amount == icx_issue_amount - deducted_icx
 
         assert remain_over_issued_icx == 0
-        assert self.regulator_storage.get_over_issued_i_score(
-            self.query_context) // I_SCORE_EXCHANGE_RATE == remain_over_issued_icx
+        assert updated_regulator_variable.over_issued_i_score // I_SCORE_EXCHANGE_RATE == remain_over_issued_icx
 
         assert remain_i_score == expected_diff - deducted_icx * I_SCORE_EXCHANGE_RATE
         assert remain_i_score % I_SCORE_EXCHANGE_RATE == expected_diff % I_SCORE_EXCHANGE_RATE
@@ -325,30 +353,33 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
-        self.regulator_storage.put_prev_calc_period_issued_icx(context, prev_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
                                                                      prev_calc_period_issued_i_score,
                                                                      icx_issue_amount)
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
 
-        remain_i_score = self.regulator_storage.get_over_issued_i_score(self.query_context)
-
+        remain_i_score = updated_regulator_variable.over_issued_i_score
         expected_diff = prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score \
                         + over_issued_i_score
         expected_deducted_icx = (expected_diff // I_SCORE_EXCHANGE_RATE)
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
-        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+
+        assert updated_regulator_variable.current_calc_period_issued_icx == 0
+        assert updated_regulator_variable.prev_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert deducted_icx == icx_issue_amount
         assert corrected_icx_issue_amount == 0
 
         assert remain_over_issued_icx == expected_deducted_icx - icx_issue_amount
-        assert self.regulator_storage.get_over_issued_i_score(self.query_context) // I_SCORE_EXCHANGE_RATE \
-               == remain_over_issued_icx
+        assert updated_regulator_variable.over_issued_i_score // I_SCORE_EXCHANGE_RATE == remain_over_issued_icx
 
         assert remain_i_score % I_SCORE_EXCHANGE_RATE == expected_diff % I_SCORE_EXCHANGE_RATE
 
@@ -364,30 +395,33 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
-        self.regulator_storage.put_prev_calc_period_issued_icx(context, prev_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
                                                                      prev_calc_period_issued_i_score,
                                                                      icx_issue_amount)
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
 
-        remain_i_score = self.regulator_storage.get_over_issued_i_score(self.query_context)
+        remain_i_score = updated_regulator_variable.over_issued_i_score
 
         expected_diff = prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score \
                         + over_issued_i_score
         expected_deducted_icx = (expected_diff // I_SCORE_EXCHANGE_RATE)
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
-        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+        assert updated_regulator_variable.current_calc_period_issued_icx == 0
+        assert updated_regulator_variable.prev_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert deducted_icx == icx_issue_amount
         assert corrected_icx_issue_amount == 0
 
         assert remain_over_issued_icx == expected_deducted_icx - icx_issue_amount
-        assert self.regulator_storage.get_over_issued_i_score(self.query_context) // I_SCORE_EXCHANGE_RATE \
-               == remain_over_issued_icx
+        assert updated_regulator_variable.over_issued_i_score // I_SCORE_EXCHANGE_RATE == remain_over_issued_icx
 
         assert remain_i_score % I_SCORE_EXCHANGE_RATE == expected_diff % I_SCORE_EXCHANGE_RATE
 
@@ -403,30 +437,33 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
-        self.regulator_storage.put_prev_calc_period_issued_icx(context, prev_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
                                                                      prev_calc_period_issued_i_score,
                                                                      icx_issue_amount)
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
 
-        remain_i_score = self.regulator_storage.get_over_issued_i_score(self.query_context)
+        remain_i_score = updated_regulator_variable.over_issued_i_score
 
         expected_diff = prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score \
                         + over_issued_i_score
         expected_deducted_icx = -(expected_diff // -I_SCORE_EXCHANGE_RATE)
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
-        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+        assert updated_regulator_variable.current_calc_period_issued_icx == 0
+        assert updated_regulator_variable.prev_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert deducted_icx == expected_deducted_icx
         assert corrected_icx_issue_amount == icx_issue_amount + (-expected_deducted_icx)
 
         assert remain_over_issued_icx == 0
-        assert self.regulator_storage.get_over_issued_i_score(self.query_context) // -I_SCORE_EXCHANGE_RATE\
-               == remain_over_issued_icx
+        assert updated_regulator_variable.over_issued_i_score // -I_SCORE_EXCHANGE_RATE == remain_over_issued_icx
 
         assert remain_i_score % -I_SCORE_EXCHANGE_RATE == expected_diff % -I_SCORE_EXCHANGE_RATE
 
@@ -442,25 +479,29 @@ class TestIssueRegulator:
         context = self.direct_context
 
         # setting
-        self.regulator_storage.put_over_issued_i_score(context, over_issued_i_score)
-        self.regulator_storage.put_current_calc_period_issued_icx(context, current_calc_period_issued_icx)
-        self.regulator_storage.put_prev_calc_period_issued_icx(context, prev_calc_period_issued_icx)
+        regulator_variable: 'RegulatorVariable' = self.regulator_storage.get_regulator_variable(self.direct_context)
+        regulator_variable.over_issued_i_score = over_issued_i_score
+        regulator_variable.current_calc_period_issued_icx = current_calc_period_issued_icx
+        regulator_variable.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
             self.issue_regulator.correct_issue_amount_on_calc_period(context,
                                                                      prev_calc_period_issued_i_score,
                                                                      icx_issue_amount)
+        updated_regulator_variable: 'RegulatorVariable' = \
+            self.regulator_storage.get_regulator_variable(self.direct_context)
 
-        remain_i_score = self.regulator_storage.get_over_issued_i_score(self.query_context)
-        assert self.regulator_storage.get_current_calc_period_issued_icx(context) == 0
-        assert self.regulator_storage.get_prev_calc_period_issued_icx(context) == \
+        remain_i_score = updated_regulator_variable.over_issued_i_score
+        assert updated_regulator_variable.current_calc_period_issued_icx == 0
+        assert updated_regulator_variable.prev_calc_period_issued_icx == \
                current_calc_period_issued_icx + icx_issue_amount
 
         assert deducted_icx == 0
         assert corrected_icx_issue_amount == icx_issue_amount
 
         assert remain_over_issued_icx == 0
-        assert self.regulator_storage.get_over_issued_i_score(self.query_context) == remain_over_issued_icx
+        assert updated_regulator_variable.over_issued_i_score == remain_over_issued_icx
 
         assert remain_i_score == 0
-        assert self.regulator_storage.get_over_issued_i_score(self.query_context) == remain_i_score
+        assert updated_regulator_variable.over_issued_i_score == remain_i_score
