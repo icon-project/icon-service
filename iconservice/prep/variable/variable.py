@@ -36,6 +36,10 @@ class Variable(object):
                 raise Exception
             self._storage.put_gv(context, gv)
 
+        if self._storage.get_prep_period(context) is None:
+            prep_period: int = conf[ConfigKey.IISS_PREP_PERIOD]
+            self._storage.put_prep_period(context, prep_period)
+
     def put_gv(self, context: 'IconScoreContext', gv: 'GovernanceVariable'):
         self._storage.put_gv(context, gv)
 
@@ -53,3 +57,9 @@ class Variable(object):
         if value is None:
             return []
         return value.preps
+
+    def put_prep_period(self, context: 'IconScoreContext', pre_period: int):
+        self._storage.put_prep_period(context, pre_period)
+
+    def get_prep_period(self, context: 'IconScoreContext') -> int:
+        return self._storage.get_prep_period(context)

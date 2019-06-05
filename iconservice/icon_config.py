@@ -39,5 +39,6 @@ default_icon_config = {
     ConfigKey.GOVERNANCE_VARIABLE: {"incentiveRep": 1},
     ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 10,
     ConfigKey.IISS_CALCULATE_PERIOD: 10,
-    ConfigKey.IISS_PREP_LIST: []
+    ConfigKey.IISS_PREP_PERIOD: 10,
+    ConfigKey.IISS_PREP_LIST: [],
 }

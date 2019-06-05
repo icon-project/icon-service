@@ -110,6 +110,7 @@ class ConfigKey:
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
+    IISS_PREP_PERIOD = "iissPRepPeriod"
 
     # IISS VARIABLE
     IISS_REWARD_VARIABLE = "iissRewardVariable"
