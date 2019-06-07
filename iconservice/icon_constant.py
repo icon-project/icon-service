@@ -75,7 +75,7 @@ ISSUE_EVENT_LOG_MAPPER = {
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": ["ICXIssue(int)"],
+        "indexed": ["ICXIssue(int,int,int,int)"],
         "data": []
     }
 }
@@ -183,3 +183,5 @@ IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000
 IISS_MONTH = 12
+
+I_SCORE_EXCHANGE_RATE = 1_000
