@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Optional
 
 from .issue_regulator import IssueRegulator
 from ... import ZERO_SCORE_ADDRESS, Address
-from ...base.exception import IconServiceBaseException, InvalidParamsException
+from ...base.exception import InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
 from ...iconscore.icon_score_event_log import EventLog
 from ...icx.issue_data_validator import IssueDataValidator

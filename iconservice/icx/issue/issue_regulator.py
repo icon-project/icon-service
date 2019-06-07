@@ -72,19 +72,15 @@ class IssueRegulator:
     @staticmethod
     def _is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score: Optional[int],
                                                       prev_calc_period_issued_icx: Optional[int]):
-        if (prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None) or \
-                (prev_calc_period_issued_i_score is not None and prev_calc_period_issued_icx is None):
-            return False
-        return True
+        return (prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None) or \
+                (prev_calc_period_issued_i_score is not None and prev_calc_period_issued_icx is None)
 
     @staticmethod
     def _is_first_calculate_period(prev_calc_period_issued_i_score: Optional[int],
                                    prev_calc_period_issued_icx: Optional[int]):
         # in case of first calculate period
         # (i.e. both prev_calc_period_issued_i_score and prev_calc_period_issued_icx is None), skip the correction logic
-        if prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is None:
-            return True
-        return False
+        return prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is None
 
     def correct_issue_amount_on_calc_period(self,
                                             context: 'IconScoreContext',
