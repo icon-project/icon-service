@@ -139,7 +139,7 @@ class Engine:
         iiss_data_for_issue = {
             "prep": {
                 "incentive": gv.incentive_rep,
-                "rewardRate": self._variable.issue.get_reward_rep(context),
+                "rewardRate": self._variable.issue.get_reward_prep(context).reward_rate,
                 "totalDelegation": self._variable.issue.get_total_candidate_delegated(context),
             }
         }
