@@ -20,8 +20,7 @@
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import ConfigKey, IISS_MAX_DELEGATIONS
-from tests import raise_exception_start_tag, raise_exception_end_tag
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_CANDIDATE_ENABLE
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -62,7 +61,7 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
 
     def test_iiss_claim(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_CANDIDATE_ENABLE)
 
         # gain 10 icx
         balance: int = 10 * 10 ** 18

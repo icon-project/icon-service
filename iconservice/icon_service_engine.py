@@ -33,7 +33,7 @@ from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .fee.fee_engine import FeeEngine, DepositHandler
 from .fee.fee_storage import FeeStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REVISION_4, REVISION_5, \
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_CANDIDATE_ENABLE, REV_IISS_ENABLE, \
     ICX_ISSUE_TRANSACTION_INDEX
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -365,7 +365,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
+                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS_ENABLE:
                     if not tx_request['params'].get('dataType') == "issue":
                         raise AssertionError("Invalid block: first transaction must be an issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request)
@@ -408,7 +408,7 @@ class IconServiceEngine(ContextContainer):
                 tx_result.status == TransactionResult.SUCCESS:
             # If the tx is heading for Governance, updates the revision
             if self._set_revision_to_context(context):
-                if context.revision == REVISION_5:
+                if context.revision == REV_IISS_ENABLE:
                     flags |= PrecommitFlag.GENESIS_IISS_CALC
         return flags
 
@@ -833,7 +833,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if self._check_new_process(params):
-            if context.revision < REVISION_4:
+            if context.revision < REV_CANDIDATE_ENABLE:
                 raise InvalidParamsException(f"Method Not Found")
 
             data: dict = params['data']
@@ -937,7 +937,7 @@ class IconServiceEngine(ContextContainer):
         # TODO Branch IISS Engine
         if self._check_new_process(params):
 
-            if context.revision < REVISION_4:
+            if context.revision < REV_CANDIDATE_ENABLE:
                 raise InvalidParamsException(f"Method Not Found")
 
             self._process_new_transaction(context, params, tx_result)
@@ -1264,7 +1264,7 @@ class IconServiceEngine(ContextContainer):
                                     context: 'IconScoreContext',
                                     _) -> dict:
         # todo: get issue related info from iiss engine
-        if context.revision < REVISION_5:
+        if context.revision < REV_IISS_ENABLE:
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
 

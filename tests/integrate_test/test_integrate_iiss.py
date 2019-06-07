@@ -15,15 +15,14 @@
 
 """Test for icon_score_base.py and icon_score_base2.py"""
 
+import random
 import unittest
 from copy import deepcopy
-import random
-
-from iconservice.base.type_converter_templates import ConstantKeys
 
 from iconservice import Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS
+from iconservice.base.type_converter_templates import ConstantKeys
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_CANDIDATE_ENABLE, REV_IISS_ENABLE
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -81,7 +80,7 @@ class TestIntegrateIISS(TestIntegrateBase):
 
     def test_reg_prep_candidate(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_CANDIDATE_ENABLE)
 
         count = 200
         for i in range(count):
@@ -97,7 +96,7 @@ class TestIntegrateIISS(TestIntegrateBase):
             }
             self._reg_candidate(create_address(), reg_data, 4)
 
-        self._set_revision(5)
+        self._set_revision(REV_IISS_ENABLE)
 
         query_request = {
             "version": self._version,
@@ -118,7 +117,7 @@ class TestIntegrateIISS(TestIntegrateBase):
 
     def test_total(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_CANDIDATE_ENABLE)
 
         # prep register
 
@@ -136,7 +135,7 @@ class TestIntegrateIISS(TestIntegrateBase):
             }
             self._reg_candidate(self._addr_array[i + 10], reg_data, 4)
 
-        self._set_revision(5)
+        self._set_revision(REV_IISS_ENABLE)
 
         # gain 10 icx (addr0 - 5)
         balance: int = 10 * 10 ** 18
