@@ -23,7 +23,7 @@ from unittest.mock import Mock, patch
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import IconServiceBaseException
+from iconservice.base.exception import InvalidParamsException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
@@ -109,7 +109,7 @@ class TestTransactionResult(unittest.TestCase):
     def test_tx_failure(self, score_invoke):
         self._icon_service_engine._icon_score_deploy_engine.attach_mock(
             Mock(return_value=False), 'is_data_type_supported')
-        score_invoke.side_effect = IconServiceBaseException("error")
+        score_invoke.side_effect = Mock(side_effect=InvalidParamsException("error"))
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))

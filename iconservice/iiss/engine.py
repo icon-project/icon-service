@@ -72,11 +72,15 @@ class Engine:
         self._variable.init_config(context, conf)
 
         self._init_commit_delegator()
-        # todo: formula 가 min, max l point값을 가지고 있는게 좋을까?
+        # todo: consider formula managing r min, r max, r point
         self._formula = IssueFormula()
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)
+
+    @property
+    def issue_variable(self):
+        return self._variable.issue
 
     def _init_reward_calc_proxy(self, data_path: str):
         self._reward_calc_proxy = RewardCalcProxy()
