@@ -32,7 +32,8 @@ class IssueVariable(object):
     def check_config_before_init(reward_variable: dict):
         for value in reward_variable.values():
             if not 0 < value <= IISS_MAX_REWARD_RATE:
-                raise Exception
+                raise AssertionError(f"Invalid reward variable: Cannot set zero or under "
+                                     f"and more than {IISS_MAX_REWARD_RATE}")
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
         reward_variable = conf[ConfigKey.IISS_REWARD_VARIABLE]
