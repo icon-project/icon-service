@@ -27,7 +27,7 @@ class VariableStorage(object):
     PREFIX: bytes = b'prep'
     GOVERNANCE_VARIABLE_KEY: bytes = PREFIX + b'gv'
     PREPS_KEY: bytes = PREFIX + b'preps'
-    PREP_PERIOD: bytes = PREFIX + b'period'
+    PREP_PERIOD_KEY: bytes = PREFIX + b'period'
 
     def __init__(self, db: 'ContextDatabase'):
         """Constructor
@@ -61,10 +61,10 @@ class VariableStorage(object):
         return None
 
     def put_prep_period(self, context: 'IconScoreContext', prep_period: int):
-        self._db.put(context, self.PREP_PERIOD, PrepPeriod(prep_period).to_bytes())
+        self._db.put(context, self.PREP_PERIOD_KEY, PrepPeriod(prep_period).to_bytes())
 
     def get_prep_period(self, context: 'IconScoreContext') -> int:
-        value: bytes = self._db.get(context, self.PREP_PERIOD)
+        value: bytes = self._db.get(context, self.PREP_PERIOD_KEY)
         if value:
             return PrepPeriod.from_bytes(value)
         return 0
@@ -171,12 +171,11 @@ class PrepPeriod(object):
     def from_bytes(buf: bytes) -> int:
         data: list = MsgPackForDB.loads(buf)
         version: int = data[0]
-
         prep_period: int = data[1]
         return prep_period
 
     def to_bytes(self) -> bytes:
-        data = [
+        data: list = [
             self._VERSION,
             self.prep_period
         ]
