@@ -19,12 +19,11 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-from iconservice.base.exception import InvalidParamsException
-
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
+from iconservice.icon_constant import REV_IISS
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice import Address
@@ -78,7 +77,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
     def test_reg_prep_candidate(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_IISS)
 
         reg_data: dict = {
             ConstantKeys.NAME: "name1",
@@ -109,7 +108,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
     def test_set_prep_candidate(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_IISS)
 
         reg_data: dict = {
             ConstantKeys.NAME: "name1",
@@ -158,7 +157,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
     def test_unreg_prep_candidate(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_IISS)
 
         reg_data: dict = {
             ConstantKeys.NAME: "name1",
@@ -192,7 +191,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
     def test_prep_list(self):
         self._update_governance()
-        self._set_revision(4)
+        self._set_revision(REV_IISS)
 
         for i in range(10):
             reg_data: dict = {
@@ -221,7 +220,7 @@ class TestIntegratePrep(TestIntegrateBase):
         }
         response = self._query(query_request)
         total_delegated: int = response['totalDelegated']
-        prepList: list = response['prepList']
+        prep_list: list = response['prepList']
 
         self.assertEqual(0, total_delegated)
-        self.assertEqual(0, len(prepList))
+        self.assertEqual(0, len(prep_list))
