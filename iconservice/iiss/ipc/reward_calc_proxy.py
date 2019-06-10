@@ -42,7 +42,6 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="__init__() start")
 
         self._loop = None
-        self._message_queue = None
         self._ipc_server = IPCServer()
         self._message_queue: Optional['MessageQueue'] = None
         self._reward_calc: Optional[Popen] = None
@@ -55,7 +54,7 @@ class RewardCalcProxy(object):
 
         self._loop = asyncio.get_event_loop()
         self._message_queue = MessageQueue(loop=self._loop,
-                                           notify_message=VersionResponse,
+                                           notify_message=(VersionResponse, ),
                                            notify_handler=self.notify_handler)
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
