@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 import os
-
 from setuptools import setup, find_packages
 
 with open('requirements.txt') as requirements:
     requires = list(requirements)
-
-version = os.environ.get('VERSION')
 
 extra_requires = {
     "test": [
@@ -15,9 +12,9 @@ extra_requires = {
         "pytest-cov>=2.5.1"
     ]
 }
-
 test_requires = extra_requires['test']
 
+version = os.environ.get('VERSION')
 if version is None:
     with open(os.path.join('.', 'VERSION')) as version_file:
         version = version_file.read().strip()
@@ -25,7 +22,7 @@ if version is None:
 setup_options = {
     'name': 'iconservice',
     'version': version,
-    'description': 'ICON Service for python',
+    'description': 'ICON Service for Python',
     'long_description_content_type': 'text/markdown',
     'long_description': open('README.md').read(),
     'url': 'https://github.com/icon-project/icon-service',
@@ -48,12 +45,12 @@ setup_options = {
     },
     'classifiers': [
         'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: Developers', 
+        'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'Natural Language :: English',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7'
     ],
     'test_suite': 'tests'
 }

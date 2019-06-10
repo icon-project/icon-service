@@ -1,0 +1,25 @@
+language: python
+python:
+  - "3.6"
+
+branches:
+  only:
+  - master
+  - develop
+  - /^release-.*$/
+  - travis-test
+
+install:
+  - pip install -r requirements.txt
+  - pip install hypothesis
+
+script:
+  - python -m unittest
+
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: iconfoundation
+  password: $PYPI_PW
+  on:
+    branch: master
