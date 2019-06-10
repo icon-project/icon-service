@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from iconservice.icon_config import default_icon_config
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.icon_constant import ConfigKey, REV_CANDIDATE_ENABLE
+from iconservice.icon_constant import ConfigKey, REV_IISS
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -54,7 +54,7 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
     def test_iiss_stake(self):
         self._update_governance()
-        self._set_revision(REV_CANDIDATE_ENABLE)
+        self._set_revision(REV_IISS)
 
         unstake_lock_period: int = default_icon_config[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD]
 

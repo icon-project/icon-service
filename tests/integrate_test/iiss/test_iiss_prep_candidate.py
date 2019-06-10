@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS
-from iconservice.icon_constant import REV_CANDIDATE_ENABLE
+from iconservice.icon_constant import REV_IISS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
 
     def test_iiss_prep_candidate(self):
         self._update_governance()
-        self._set_revision(REV_CANDIDATE_ENABLE)
+        self._set_revision(REV_IISS)
 
         data: dict = {
             ConstantKeys.NAME: "name",
@@ -141,7 +141,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
 
     def test_iiss_prep_candidate_list(self):
         self._update_governance()
-        self._set_revision(REV_CANDIDATE_ENABLE)
+        self._set_revision(REV_IISS)
 
         for i in range(10):
             data: dict = {
@@ -177,7 +177,7 @@ class TestIntegratePRepCandidate(TestIntegrateBase):
 
     def test_iiss_prep_candidate_list_and_delegated(self):
         self._update_governance()
-        self._set_revision(REV_CANDIDATE_ENABLE)
+        self._set_revision(REV_IISS)
 
         for i in range(10):
             data: dict = {

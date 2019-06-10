@@ -21,7 +21,7 @@ from copy import deepcopy
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import IllegalFormatException
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS_ENABLE
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -51,7 +51,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         default_icon_config[ConfigKey.GOVERNANCE_VARIABLE]["incentiveRep"] = 100_000_000
         super().setUp()
         self._update_governance()
-        self._set_revision(REV_IISS_ENABLE)
+        self._set_revision(REV_IISS)
 
         # todo: if get_issue_info is redundant, should fix this method
         self.issue_data = self.icon_service_engine.query("iiss_get_issue_info", {})
