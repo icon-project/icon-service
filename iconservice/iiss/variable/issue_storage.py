@@ -99,10 +99,10 @@ class Reward:
     _VERSION = 0
 
     def __init__(self,
-                 reward_rate,
-                 reward_min,
-                 reward_max,
-                 reward_point):
+                 reward_rate: Optional[int],
+                 reward_min: int,
+                 reward_max: int,
+                 reward_point: int):
         self.reward_rate: Optional[int] = reward_rate
         self.reward_min: int = reward_min
         self.reward_max: int = reward_max

@@ -15,7 +15,7 @@
 
 from typing import Optional, Tuple
 
-from iconservice.icx.issue.regulator_storage import RegulatorVariable
+from .regulator_storage import RegulatorVariable
 from .regulator_storage import RegulatorStorage
 from ...database.db import ContextDatabase
 from ...icon_constant import I_SCORE_EXCHANGE_RATE
