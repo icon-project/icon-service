@@ -98,9 +98,9 @@ class PrecommitDataManager(object):
         # Clear remaining precommit data which have the same block height
         self._precommit_data_mapper.clear()
 
-    def rollback(self, block: 'Block'):
-        if block.hash in self._precommit_data_mapper:
-            del self._precommit_data_mapper[block.hash]
+    def rollback(self, instant_block_hash: bytes):
+        if instant_block_hash in self._precommit_data_mapper:
+            del self._precommit_data_mapper[instant_block_hash]
 
     def empty(self) -> bool:
         return len(self._precommit_data_mapper) == 0
@@ -129,18 +129,18 @@ class PrecommitDataManager(object):
             f'last_block({self._last_block}) '
             f'block_to_invoke({block})')
 
-    def validate_precommit_block(self, precommit_block: 'Block'):
+    def validate_precommit_block(self, instant_block_hash: bytes):
         """Check block validation
         before write_precommit_state() or remove_precommit_state()
 
-        :param precommit_block:
+        :param instant_block_hash: hash data which is used for retrieving block instance from the pre-commit data mapper
         """
-        assert isinstance(precommit_block, Block)
+        assert isinstance(instant_block_hash, bytes)
 
-        precommit_data = self._precommit_data_mapper.get(precommit_block.hash)
+        precommit_data = self._precommit_data_mapper.get(instant_block_hash)
         if precommit_data is None:
             raise InvalidParamsException(
-                f'No precommit data: precommit_block({precommit_block})')
+                f'No precommit data: block hash: ({instant_block_hash})')
 
         if self._last_block is None:
             return

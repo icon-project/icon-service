@@ -17,5 +17,7 @@ IconScoreBase
         db, 
         owner, 
         icx, 
-        block_height
+        block_height,
+        block,
+        revert
 ```

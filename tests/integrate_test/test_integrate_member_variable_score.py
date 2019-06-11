@@ -21,14 +21,16 @@ import unittest
 from typing import Union
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
 
 
 class TestScoreMemberVariable(TestIntegrateBase):
 
     def _update_governance(self) -> bytes:
-        tx = self._make_deploy_tx(
-            "test_builtin", "latest_version/governance", self._admin, GOVERNANCE_SCORE_ADDRESS)
+        tx = self._make_deploy_tx("test_builtin",
+                                  LATEST_GOVERNANCE,
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         tx_hash: bytes = tx_results[0].tx_hash

@@ -18,14 +18,13 @@
 """
 
 import unittest
+from typing import TYPE_CHECKING, Any
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
-
-from typing import TYPE_CHECKING, Any
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -38,7 +37,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
 
     def _update_governance(self):
         tx = self._make_deploy_tx("test_builtin",
-                                  "latest_version/governance",
+                                  LATEST_GOVERNANCE,
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])

@@ -24,7 +24,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRES
 from iconservice.base.exception import ExceptionCode, IconScoreException
 from iconservice.icon_constant import ConfigKey
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -41,7 +41,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
 
     def _update_governance(self) -> bytes:
         tx = self._make_deploy_tx("test_builtin",
-                                  "latest_version/governance",
+                                  LATEST_GOVERNANCE,
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])

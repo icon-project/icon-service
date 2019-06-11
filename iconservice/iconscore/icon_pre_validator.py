@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from ..deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
     from ..icx.icx_engine import IcxEngine
     from .icon_score_context import IconScoreContext
+    from ..fee.fee_engine import FeeEngine
 
 
 class IconPreValidator:
@@ -36,7 +37,7 @@ class IconPreValidator:
     It does not validate query requests like icx_getBalance, icx_call and so on
     """
 
-    def __init__(self, icx_engine: 'IcxEngine',
+    def __init__(self, icx_engine: 'IcxEngine', fee_engine: 'FeeEngine',
                  deploy_storage: 'IconScoreDeployStorage') -> None:
         """Constructor
 
@@ -44,6 +45,7 @@ class IconPreValidator:
         """
         self._icx = icx_engine
         self._deploy_storage = deploy_storage
+        self._fee_engine = fee_engine
 
     def execute(self, context: 'IconScoreContext', params: dict, step_price: int, minimum_step: int) -> None:
         """Validate a transaction on icx_sendTransaction
@@ -194,6 +196,8 @@ class IconPreValidator:
             self._validate_call_transaction(params)
         elif data_type == 'deploy':
             self._validate_deploy_transaction(params)
+        elif data_type == 'deposit':
+            self._validate_deposit_transaction(params)
 
     @staticmethod
     def _check_minimum_step(params: dict, minimum_step: int):
@@ -204,12 +208,20 @@ class IconPreValidator:
     def _check_from_can_charge_fee_v3(self, context: 'IconScoreContext', params: dict,
                                       step_price: int):
         from_: 'Address' = params['from']
+        to: 'Address' = params['to']
         value: int = params.get('value', 0)
 
         step_limit = params.get('stepLimit', 0)
         fee = step_limit * step_price
 
         self._check_balance(context, from_, value, fee)
+
+        data_type: str = params.get('dataType')
+        if to.is_contract and data_type in (None, 'call', 'message'):
+            # Check if the SCORE can be called when fee-sharing ON.
+            # If data_type is None or message and the recipient is SCORE,
+            # it works like `call`.(calling fallback)
+            self._fee_engine.check_score_available(context, to, context.block.height)
 
     def _validate_call_transaction(self, params: dict):
         """Validate call transaction
@@ -251,6 +263,24 @@ class IconPreValidator:
             raise InvalidRequestException('Content not found')
 
         self._validate_new_score_address_on_deploy_transaction(params)
+
+    def _validate_deposit_transaction(self, params: dict):
+        """Validate deposit transaction
+
+        :param params:
+        :return:
+        """
+        to: 'Address' = params['to']
+
+        if self._is_inactive_score(to):
+            raise InvalidRequestException(f'{to} is inactive SCORE')
+
+        data = params.get('data', None)
+        if not isinstance(data, dict):
+            raise InvalidRequestException('Data not found')
+
+        if 'action' not in data:
+            raise InvalidRequestException('Action not found')
 
     def _validate_new_score_address_on_deploy_transaction(self, params):
         """Check if a newly generated score address is available

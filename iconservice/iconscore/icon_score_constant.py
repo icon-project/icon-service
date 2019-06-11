@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
 from enum import IntEnum, unique
+from typing import TypeVar
+
 from ..base.address import Address
 
 T = TypeVar('T')
@@ -36,6 +37,10 @@ FORMAT_DECORATOR_DUPLICATED = "can't duplicated {} decorator func: {}, cls: {}"
 STR_FALLBACK = 'fallback'
 STR_ON_INSTALL = 'on_install'
 STR_ON_UPDATE = 'on_update'
+
+ATTR_SCORE_GET_API = "_IconScoreBase__get_api"
+ATTR_SCORE_CALL = "_IconScoreBase__call"
+ATTR_SCORE_VALIDATATE_EXTERNAL_METHOD = "_IconScoreBase__validate_external_method"
 
 
 @unique

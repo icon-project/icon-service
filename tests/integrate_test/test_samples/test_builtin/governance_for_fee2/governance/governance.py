@@ -24,6 +24,7 @@ NEXT = 'next'
 STATUS = 'status'
 DEPLOY_TX_HASH = 'deployTxHash'
 AUDIT_TX_HASH = 'auditTxHash'
+DEPOSIT_INFO = 'depositInfo'
 VALID_STATUS_KEYS = [STATUS, DEPLOY_TX_HASH, AUDIT_TX_HASH]
 
 STATUS_PENDING = 'pending'
@@ -54,6 +55,15 @@ CONTEXT_TYPE_INVOKE = 'invoke'
 CONTEXT_TYPE_QUERY = 'query'
 
 ZERO_TX_HASH = bytes(32)
+
+
+def _is_tx_hash_valid(tx_hash: bytes) -> bool:
+    return tx_hash is not None and tx_hash != ZERO_TX_HASH
+
+
+class SystemInterface(InterfaceScore):
+    @interface
+    def getScoreDepositInfo(self, address: Address) -> dict: pass
 
 
 class StepCosts:
@@ -113,7 +123,7 @@ class Governance(IconSystemScoreBase):
     _REVISION_NAME = 'revision_name'
 
     @eventlog(indexed=1)
-    def Accepted(self, txHash: str, warning: str):
+    def Accepted(self, txHash: str):
         pass
 
     @eventlog(indexed=1)
@@ -142,6 +152,10 @@ class Governance(IconSystemScoreBase):
 
     @eventlog(indexed=0)
     def UpdateServiceConfigLog(self, serviceFlag: int):
+        pass
+
+    @eventlog(indexed=0)
+    def RevisionChanged(self, revisionCode: int, revisionName: str):
         pass
 
     @property
@@ -208,7 +222,7 @@ class Governance(IconSystemScoreBase):
         if self.is_less_than_target_version('0.0.6'):
             self._migrate_v0_0_6()
 
-        self._version.set('0.0.6')
+        self._version.set('0.0.7')
 
     def is_less_than_target_version(self, target_version: str) -> bool:
         last_version = self._version.get()
@@ -227,11 +241,9 @@ class Governance(IconSystemScoreBase):
         self._set_initial_step_costs()
 
     def _migrate_v0_0_3(self):
-        # set initial import white list
+        self._set_initial_max_step_limits()
         self._set_initial_import_white_list()
         self._set_initial_service_config()
-
-        self._set_initial_max_step_limits()
 
     def _migrate_v0_0_4(self):
         pass
@@ -272,15 +284,13 @@ class Governance(IconSystemScoreBase):
             self.revert('SCORE not found')
 
         current_tx_hash = deploy_info.current_tx_hash
-        if current_tx_hash == ZERO_TX_HASH:
-            current_tx_hash = None
         next_tx_hash = deploy_info.next_tx_hash
-        if next_tx_hash == ZERO_TX_HASH:
-            next_tx_hash = None
         active = self.is_score_active(address)
 
         # install audit
-        if current_tx_hash is None and next_tx_hash and active is False:
+        if not _is_tx_hash_valid(current_tx_hash) \
+                and _is_tx_hash_valid(next_tx_hash) \
+                and active is False:
             reject_tx_hash = self._reject_status[next_tx_hash]
             if reject_tx_hash:
                 result = {
@@ -295,7 +305,9 @@ class Governance(IconSystemScoreBase):
                         STATUS: STATUS_PENDING,
                         DEPLOY_TX_HASH: next_tx_hash
                     }}
-        elif current_tx_hash and next_tx_hash is None and active is True:
+        elif _is_tx_hash_valid(current_tx_hash) \
+                and not _is_tx_hash_valid(next_tx_hash) \
+                and active is True:
             audit_tx_hash = self._audit_status[current_tx_hash]
             result = {
                 CURRENT: {
@@ -306,7 +318,9 @@ class Governance(IconSystemScoreBase):
                 result[CURRENT][AUDIT_TX_HASH] = audit_tx_hash
         else:
             # update audit
-            if current_tx_hash and next_tx_hash and active is True:
+            if _is_tx_hash_valid(current_tx_hash) \
+                    and _is_tx_hash_valid(next_tx_hash) \
+                    and active is True:
                 current_audit_tx_hash = self._audit_status[current_tx_hash]
                 next_reject_tx_hash = self._reject_status[next_tx_hash]
                 if next_reject_tx_hash:
@@ -334,6 +348,12 @@ class Governance(IconSystemScoreBase):
                         }}
             else:
                 result = {}
+
+        system = self.create_interface_score(ZERO_SCORE_ADDRESS, SystemInterface)
+        deposit_info = system.getScoreDepositInfo(address)
+        if deposit_info is not None:
+            result[DEPOSIT_INFO] = deposit_info
+
         return result
 
     @external(readonly=True)
@@ -350,7 +370,7 @@ class Governance(IconSystemScoreBase):
             self.StepPriceChanged(stepPrice)
 
     @external
-    def acceptScore(self, txHash: bytes, warning: str = ""):
+    def acceptScore(self, txHash: bytes):
         # check message sender
         Logger.debug(f'acceptScore: msg.sender = "{self.msg.sender}"', TAG)
         if self.msg.sender not in self._auditor_list:
@@ -380,14 +400,14 @@ class Governance(IconSystemScoreBase):
 
         self._audit_status[txHash] = self.tx.hash
 
-        self.Accepted('0x' + txHash.hex(), warning)
+        self.Accepted('0x' + txHash.hex())
 
     def _deploy(self, tx_hash: bytes, score_addr: Address):
         owner = self.get_owner(score_addr)
         tmp_sender = self.msg.sender
         self.msg.sender = owner
         try:
-            self.deploy(tx_hash)
+            self._context.deploy(tx_hash)
         finally:
             self.msg.sender = tmp_sender
 
@@ -850,6 +870,7 @@ class Governance(IconSystemScoreBase):
 
         self._revision_code.set(code)
         self._revision_name.set(name)
+        self.RevisionChanged(code, name)
 
     @external(readonly=True)
     def getRevision(self) -> dict:

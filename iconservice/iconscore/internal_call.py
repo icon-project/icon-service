@@ -16,15 +16,16 @@
 
 from typing import TYPE_CHECKING, Optional, Any
 
-from ..base.address import Address
-from ..base.exception import StackOverflowException
-from ..base.message import Message
-from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
-from .icon_score_constant import STR_FALLBACK
+from . import system_call_handler
+from .icon_score_constant import STR_FALLBACK, ATTR_SCORE_CALL
 from .icon_score_context_util import IconScoreContextUtil
 from .icon_score_event_log import EventLogEmitter
 from .icon_score_step import StepType
 from .icon_score_trace import Trace, TraceType
+from ..base.address import Address
+from ..base.exception import StackOverflowException
+from ..base.message import Message
+from ..icon_constant import ICX_TRANSFER_EVENT_LOG, MAX_CALL_STACK_SIZE, IconScoreContextType
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
@@ -69,14 +70,12 @@ class InternalCall(object):
             if amount > 0:
                 InternalCall.emit_event_log_for_icx_transfer(context, addr_from, addr_to, amount)
 
-            if addr_to.is_contract:
-                return InternalCall._other_score_call(context,
-                                                      addr_from,
-                                                      addr_to,
-                                                      amount,
-                                                      func_name,
-                                                      arg_params,
-                                                      kw_params)
+            if addr_to == system_call_handler.SYSTEM_ADDRESS:
+                return system_call_handler.handle_system_call(
+                    context, addr_from, amount, func_name, arg_params, kw_params)
+            elif addr_to.is_contract:
+                return InternalCall._other_score_call(
+                    context, addr_from, addr_to, amount, func_name, arg_params, kw_params)
 
             return None
         except BaseException as e:
@@ -142,7 +141,7 @@ class InternalCall(object):
         try:
             icon_score = IconScoreContextUtil.get_icon_score(context, addr_to)
             context.set_func_type_by_icon_score(icon_score, func_name)
-            score_func = getattr(icon_score, '_IconScoreBase__call')
+            score_func = getattr(icon_score, ATTR_SCORE_CALL)
             return score_func(func_name=func_name, arg_params=arg_params, kw_params=kw_params)
         finally:
             context.func_type = prev_func_type

@@ -17,7 +17,6 @@ import os
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -30,6 +29,8 @@ from .database.factory import ContextDatabaseFactory
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from .fee.fee_engine import FeeEngine, DepositHandler
+from .fee.fee_storage import FeeStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     REVISION_3
 from .iconscore.icon_pre_validator import IconPreValidator
@@ -76,6 +77,9 @@ class IconServiceEngine(ContextContainer):
         self._icon_score_deploy_engine = None
         self._step_counter_factory = None
         self._icon_pre_validator = None
+        self._fee_storage = None
+        self._fee_engine = None
+        self._deposit_handler = None
 
         # JSON-RPC handlers
         self._handlers = {
@@ -114,15 +118,20 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_storage = IcxStorage(self._icx_context_db)
+        self._fee_storage = FeeStorage(self._icx_context_db)
         icon_score_deploy_storage = IconScoreDeployStorage(self._icx_context_db)
 
         self._step_counter_factory = IconScoreStepCounterFactory()
-        self._icon_pre_validator =\
-            IconPreValidator(self._icx_engine, icon_score_deploy_storage)
+        self._fee_engine = FeeEngine(
+            icon_score_deploy_storage, self._fee_storage, self._icx_storage, self._icx_engine)
+        self._deposit_handler = DepositHandler(self._fee_engine)
+        self._icon_pre_validator = \
+            IconPreValidator(self._icx_engine, self._fee_engine, icon_score_deploy_storage)
 
         IconScoreClassLoader.init(score_root_path)
         IconScoreContext.score_root_path = score_root_path
         IconScoreContext.icx_engine = self._icx_engine
+        IconScoreContext.fee_engine = self._fee_engine
         IconScoreContext.icon_score_mapper = IconScoreMapper(is_threadsafe=True)
         IconScoreContext.icon_score_deploy_engine = self._icon_score_deploy_engine
         IconScoreContext.icon_service_flag = service_config_flag
@@ -366,7 +375,7 @@ class IconServiceEngine(ContextContainer):
             step_price: int = self._get_step_price_from_governance(context, governance_score)
             context.step_counter.set_step_price(step_price)
 
-            step_costs: int = self._get_step_costs_from_governance(governance_score)
+            step_costs: dict = self._get_step_costs_from_governance(governance_score)
             context.step_counter.set_step_costs(step_costs)
 
             max_step_limits: dict = self._get_step_max_limits_from_governance(governance_score)
@@ -462,6 +471,7 @@ class IconServiceEngine(ContextContainer):
         context.tx = Transaction(tx_hash=params['txHash'],
                                  index=index,
                                  origin=from_,
+                                 to=to,
                                  timestamp=params.get('timestamp', context.block.timestamp),
                                  nonce=params.get('nonce', None))
 
@@ -472,6 +482,7 @@ class IconServiceEngine(ContextContainer):
         context.step_counter.reset(step_limit)
         context.msg_stack.clear()
         context.event_log_stack.clear()
+        context.fee_sharing_proportion = 0
 
         return self._call(context, method, params)
 
@@ -628,6 +639,7 @@ class IconServiceEngine(ContextContainer):
         to: 'Address' = params.get('to')
 
         context = IconScoreContext(IconScoreContextType.QUERY)
+        context.block = self._icx_storage.last_block
         context.step_counter = self._step_counter_factory.create(IconScoreContextType.QUERY)
         self._set_revision_to_context(context)
 
@@ -723,10 +735,8 @@ class IconServiceEngine(ContextContainer):
         data = params.get('data', None)
 
         context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
-        return IconScoreEngine.query(context,
-                                     icon_score_address,
-                                     data_type,
-                                     data)
+
+        return IconScoreEngine.query(context, icon_score_address, data_type, data)
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -762,7 +772,7 @@ class IconServiceEngine(ContextContainer):
             context.func_type = IconScoreFuncType.WRITABLE
 
             # Charge a fee to from account
-            final_step_used, final_step_price = \
+            step_used_details, final_step_price = \
                 self._charge_transaction_fee(
                     context,
                     params,
@@ -770,13 +780,13 @@ class IconServiceEngine(ContextContainer):
                     context.step_counter.step_used)
 
             # Finalize tx_result
-            context.cumulative_step_used += final_step_used
-            tx_result.step_used = final_step_used
             tx_result.step_price = final_step_price
-            tx_result.cumulative_step_used = context.cumulative_step_used
             tx_result.event_logs = context.event_logs
             tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
             tx_result.traces = context.traces
+            final_step_used = self._append_step_results(tx_result, context, step_used_details)
+
+            context.cumulative_step_used += final_step_used
 
         return tx_result
 
@@ -809,19 +819,14 @@ class IconServiceEngine(ContextContainer):
 
         # Checks the balance only on the invoke context(skip estimate context)
         if context.type == IconScoreContextType.INVOKE:
+            tmp_context = IconScoreContext(IconScoreContextType.QUERY)
+            tmp_context.block = self._get_last_block()
 
-            if context.revision >= REVISION_3:
-                # Check if from account can charge a tx fee
-                self._icon_pre_validator.execute_to_check_out_of_balance(
-                    context,
-                    params,
-                    step_price=context.step_counter.step_price)
-            else:
-                # Check if from account can charge a tx fee
-                self._icon_pre_validator.execute_to_check_out_of_balance(
-                    None,
-                    params,
-                    step_price=context.step_counter.step_price)
+            # Check if from account can charge a tx fee
+            self._icon_pre_validator.execute_to_check_out_of_balance(
+                context if context.revision >= REVISION_3 else tmp_context,
+                params,
+                context.step_counter.step_price)
 
         # Every send_transaction are calculated DEFAULT STEP at first
         context.step_counter.apply_step(StepType.DEFAULT, 1)
@@ -829,7 +834,9 @@ class IconServiceEngine(ContextContainer):
         input_size = get_input_data_size(context.revision, params.get('data', None))
         context.step_counter.apply_step(StepType.INPUT, input_size)
 
-        self._transfer_coin(context, params)
+        data_type: str = params.get('dataType')
+        if data_type in (None, 'call', 'message'):
+            self._transfer_coin(context, params)
 
         score_address = None
         if to.is_contract:
@@ -857,7 +864,7 @@ class IconServiceEngine(ContextContainer):
                                 context: 'IconScoreContext',
                                 params: dict,
                                 status: int,
-                                step_used: int) -> (int, int):
+                                step_used: int) -> (dict, int):
         """Charge a fee to from account
         Because it is on finalizing a transaction,
         this method MUST NOT throw any exceptions
@@ -866,10 +873,11 @@ class IconServiceEngine(ContextContainer):
 
         :param params:
         :param status: 1: SUCCESS, 0: FAILURE
-        :return: final step_used, step_price
+        :return: detail step usage, final step price
         """
         version: int = params.get('version', 2)
         from_: 'Address' = params['from']
+        to: 'Address' = params['to']
 
         step_price = context.step_counter.step_price
 
@@ -888,19 +896,19 @@ class IconServiceEngine(ContextContainer):
                 step_price = 10 ** 10
 
         # Charge a fee to from account
-        fee: int = step_used * step_price
         try:
-            self._icx_engine.charge_fee(context, from_, fee)
+            step_used_details = self._fee_engine.charge_transaction_fee(
+                context, from_, to, step_price, step_used, context.block.height)
         except BaseException as e:
             if hasattr(e, 'message'):
                 message = e.message
             else:
                 message = str(e)
             Logger.exception(message, ICON_SERVICE_LOG_TAG)
-            step_used = 0
+            step_used_details = {from_: 0, to: 0}
 
         # final step_used and step_price
-        return step_used, step_price
+        return step_used_details, step_price
 
     def _handle_score_invoke(self,
                              context: 'IconScoreContext',
@@ -948,10 +956,26 @@ class IconServiceEngine(ContextContainer):
                 icon_score_address=score_address,
                 data=data)
             return score_address
+        elif data_type == 'deposit':
+            self._deposit_handler.handle_deposit_request(context, data)
         else:
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
             IconScoreEngine.invoke(context, to, data_type, data)
             return None
+
+    @staticmethod
+    def _append_step_results(
+            tx_result: 'TransactionResult', context: 'IconScoreContext', step_used_details: dict) -> int:
+        """
+        Appends step usage information to TransactionResult
+        """
+        final_step_used = sum(step_used_details.values())
+        tx_result.step_used = final_step_used
+        tx_result.cumulative_step_used = context.cumulative_step_used + final_step_used
+        if final_step_used != step_used_details.get(context.msg.sender, 0):
+            tx_result.step_used_details = step_used_details
+
+        return final_step_used
 
     @staticmethod
     def _get_failure_from_exception(
@@ -1067,18 +1091,27 @@ class IconServiceEngine(ContextContainer):
         prev_block_hash = block_hash
         return Block(block_height, block_hash, timestamp, prev_block_hash)
 
-    def commit(self, block: 'Block') -> None:
+    def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
         when the candidate block has been confirmed
+        :param block_height: height of block being committed
+        :param instant_block_hash: instant hash of block being committed
+        :param block_hash: hash of block being committed
         """
         # Check for block validation before commit
-        self._precommit_data_manager.validate_precommit_block(block)
+        self._precommit_data_manager.validate_precommit_block(instant_block_hash)
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         precommit_data: 'PrecommitData' = \
-            self._precommit_data_manager.get(block.hash)
+            self._precommit_data_manager.get(instant_block_hash)
         block_batch = precommit_data.block_batch
+        if block_hash:
+            block_batch.block = Block(block_height=block_batch.block.height,
+                                      block_hash=block_hash,
+                                      timestamp=block_batch.block.timestamp,
+                                      prev_hash=block_batch.block.prev_hash)
+
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
             context.icon_score_mapper.update(new_icon_score_mapper)
@@ -1092,13 +1125,15 @@ class IconServiceEngine(ContextContainer):
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:
             self._init_global_value_by_governance_score()
 
-    def rollback(self, block: 'Block') -> None:
+    def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state
         in context.block_batch and IconScoreEngine
+        :param block_height: height of block which is needed to be removed from the pre-commit data manager
+        :param instant_block_hash: hash of block which is needed to be removed from the pre-commit data manager
         """
         # Check for block validation before rollback
-        self._precommit_data_manager.validate_precommit_block(block)
-        self._precommit_data_manager.rollback(block)
+        self._precommit_data_manager.validate_precommit_block(instant_block_hash)
+        self._precommit_data_manager.rollback(instant_block_hash)
 
     def clear_context_stack(self):
         """Clear IconScoreContext stacks
@@ -1112,3 +1147,9 @@ class IconServiceEngine(ContextContainer):
                 ICON_SERVICE_LOG_TAG)
 
         self._clear_context()
+
+    def _get_last_block(self) -> Optional['Block']:
+        if self._precommit_data_manager:
+            return self._precommit_data_manager.last_block
+
+        return None

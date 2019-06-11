@@ -33,6 +33,8 @@ from tests.integrate_test.in_memory_zip import InMemoryZip
 if TYPE_CHECKING:
     from iconservice.base.address import Address, MalformedAddress
 
+LATEST_GOVERNANCE = "0_0_6/governance"
+
 
 class TestIntegrateBase(TestCase):
     @classmethod
@@ -81,7 +83,7 @@ class TestIntegrateBase(TestCase):
     def _make_init_config(self) -> dict:
         return {}
 
-    def _genesis_invoke(self) -> dict:
+    def _genesis_invoke(self) -> tuple:
         tx_hash = create_tx_hash()
         timestamp_us = create_timestamp()
         request_params = {
@@ -116,11 +118,11 @@ class TestIntegrateBase(TestCase):
 
         block_hash = create_block_hash()
         block = Block(self._block_height, block_hash, timestamp_us, None)
-        invoke_response: dict = self.icon_service_engine.invoke(
+        invoke_response: tuple = self.icon_service_engine.invoke(
             block,
             [tx]
         )
-        self.icon_service_engine.commit(block)
+        self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block_hash
 
@@ -273,12 +275,12 @@ class TestIntegrateBase(TestCase):
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.commit(block)
+        self.icon_service_engine.commit(block.height, block.hash, None)
         self._block_height += 1
         self._prev_block_hash = block.hash
 
     def _remove_precommit_state(self, block: 'Block') -> None:
-        self.icon_service_engine.rollback(block)
+        self.icon_service_engine.rollback(block.height, block.hash)
 
     def _query(self, request: dict, method: str = 'icx_call') -> Any:
         response = self.icon_service_engine.query(method, request)
