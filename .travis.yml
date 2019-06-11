@@ -11,10 +11,9 @@ branches:
 
 install:
   - pip install -r requirements.txt
-  - pip install hypothesis
 
 script:
-  - python -m unittest
+  - python setup.py test
 
 deploy:
   provider: pypi
