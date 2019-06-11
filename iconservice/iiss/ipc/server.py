@@ -105,15 +105,12 @@ class IPCServer(object):
             if not isinstance(data, bytes) or len(data) == 0:
                 break
 
-            Logger.debug(f"on_recv(): data({data.hex()})")
+            Logger.debug(f"_on_recv(): data({data.hex()})")
 
             self._unpacker.feed(data)
 
             for response in self._unpacker:
-                if not isinstance(response, VersionResponse):
-                    self._queue.put_response(response)
-                else:
-                    Logger.debug(f"{response.version}", "RCP")
+                self._queue.message_handler(response)
 
         await self._queue.put(NoneRequest())
 

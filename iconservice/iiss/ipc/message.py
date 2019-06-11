@@ -73,22 +73,32 @@ class VersionRequest(Request):
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id
 
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id})"
+
 
 class VersionResponse(Response):
     MSG_TYPE = MessageType.VERSION
 
-    def __init__(self, msg_id: int, version: int):
+    def __init__(self, msg_id: int, version: int, block_height: int):
         super().__init__()
 
-        self.msg_id = msg_id
+        self.msg_id: int = msg_id
         self.version: int = version
+        self.block_height: int = block_height
+
+    def __str__(self):
+        return f"VERSION({self.msg_id}, {self.version}, {self.block_height})"
 
     @staticmethod
     def from_list(items: list) -> 'VersionResponse':
         msg_id: int = items[1]
-        version: int = items[2]
+        payload: int = items[2]
 
-        return VersionResponse(msg_id, version)
+        version: int = payload[0]
+        block_height: int = payload[1]
+
+        return VersionResponse(msg_id, version, block_height)
 
 
 class ClaimRequest(Request):
@@ -119,6 +129,9 @@ class ClaimResponse(Response):
         self.block_height: int = block_height
         self.block_hash: bytes = block_hash
         self.iscore: int = iscore
+
+    def __str__(self) -> str:
+        return f"CLAIM({self.msg_id}, {self.address}, {self.block_height}, {self.block_hash.hex()}, {self.iscore})"
 
     @staticmethod
     def from_list(items: list) -> 'ClaimResponse':
@@ -160,6 +173,9 @@ class QueryResponse(Response):
         self.block_height: int = block_height
         self.iscore: int = iscore
 
+    def __str__(self) -> str:
+        return f"QUERY({self.msg_id}, {self.address}, {self.block_height}, {self.iscore})"
+
     @staticmethod
     def from_list(items: list) -> 'QueryResponse':
         msg_id: int = items[1]
@@ -179,6 +195,9 @@ class CalculateRequest(Request):
         self.db_path = db_path
         self.block_height = block_height
 
+    def __str__(self) -> str:
+        return f"{self.msg_type.name}({self.msg_id}, {self.db_path}, {self.block_height})"
+
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id, (self.db_path, self.block_height)
 
@@ -186,13 +205,17 @@ class CalculateRequest(Request):
 class CalculateResponse(Response):
     MSG_TYPE = MessageType.CALCULATE
 
-    def __init__(self, msg_id: int, success: bool, block_height: int, state_hash: bytes):
+    def __init__(self, msg_id: int, success: bool, block_height: int, iscore: int, state_hash: bytes):
         super().__init__()
 
         self.msg_id: int = msg_id
         self.success: bool = success
         self.block_height: int = block_height
+        self.iscore: int = iscore
         self.state_hash: bytes = state_hash
+
+    def __str__(self) -> str:
+        return f"CALCULATE({self.msg_id}, {self.success}, {self.block_height}, {self.iscore}, {self.state_hash})"
 
     @staticmethod
     def from_list(items: list) -> 'CalculateResponse':
@@ -201,9 +224,10 @@ class CalculateResponse(Response):
 
         success: bool = payload[0]
         block_height: int = payload[1]
-        state_hash: bytes = payload[2]
+        iscore: int = MsgPackForIpc.decode(TypeTag.INT, payload[2])
+        state_hash: bytes = payload[3]
 
-        return CalculateResponse(msg_id, success, block_height, state_hash)
+        return CalculateResponse(msg_id, success, block_height, iscore, state_hash)
 
 
 class CommitBlockRequest(Request):
@@ -213,6 +237,9 @@ class CommitBlockRequest(Request):
         self.success = success
         self.block_height = block_height
         self.block_hash = block_hash
+
+    def __str__(self):
+        return f"{self.msg_type.name}({self.msg_id}, {self.success}, {self.block_height}, {self.block_hash})"
 
     def _to_list(self) -> tuple:
         return self.msg_type, self.msg_id, (self.success, self.block_height, self.block_hash)
@@ -228,6 +255,9 @@ class CommitBlockResponse(Response):
         self.success: bool = success
         self.block_height: int = block_height
         self.block_hash: bytes = block_hash
+
+    def __str__(self):
+        return f"COMMIT_BLOCK({self.msg_id}, {self.success}, {self.block_height}, {self.block_hash})"
 
     @staticmethod
     def from_list(items: list) -> 'CommitBlockResponse':
