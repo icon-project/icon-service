@@ -323,13 +323,15 @@ class IconServiceEngine(ContextContainer):
     def invoke(self,
                block: 'Block',
                tx_requests: list,
-               prev_block_contributors: dict = None) -> tuple:
+               prev_block_generator: Optional['Address'] = None,
+               prev_block_validators: Optional[List['Address']] = None) -> tuple:
 
         """Process transactions in a block sent by loopchain
 
         :param block:
         :param tx_requests: transactions in a block
-        :param prev_block_contributors: previous block contributors
+        :param prev_block_generator: previous block generator
+        :param prev_block_validators: previous block validators
         :return: (TransactionResult[], bytes)
         """
         # If the block has already been processed,
@@ -381,13 +383,14 @@ class IconServiceEngine(ContextContainer):
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
-            context.block_batch,
-            block_result,
-            context.rc_block_batch,
-            context.prep_candidate_block_batch,
-            prev_block_contributors,
-            context.new_icon_score_mapper,
-            precommit_flag)
+            block_batch=context.block_batch,
+            block_result=block_result,
+            rc_block_batch=context.rc_block_batch,
+            prep_candidate_block_batch=context.prep_candidate_block_batch,
+            prev_block_generator=prev_block_generator,
+            prev_block_validators=prev_block_validators,
+            score_mapper=context.new_icon_score_mapper,
+            precommit_flag=precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash
