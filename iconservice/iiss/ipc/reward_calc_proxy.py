@@ -141,10 +141,9 @@ class RewardCalcProxy(object):
         Logger.debug(tag=_TAG, msg="on_calculate_done() start")
 
         response: 'CalculateResponse' = future.result()
-        calculation_result = response.success, response.block_height, response.iscore, response.state_hash
 
         if self._calculation_callback is not None:
-            self._calculation_callback(calculation_result)
+            self._calculation_callback(response)
 
         Logger.debug(tag=_TAG, msg="on_calculate_done() end")
 

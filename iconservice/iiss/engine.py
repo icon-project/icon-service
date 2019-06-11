@@ -23,6 +23,7 @@ from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
 from .handler.stake_handler import StakeHandler
 from .ipc.reward_calc_proxy import RewardCalcProxy
+from .ipc.message import CalculateResponse
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
 from .reward_calc.msg_data import PRepUnregisterTx
@@ -85,7 +86,7 @@ class Engine:
         return self._variable.issue
 
     # TODO implement calculate callback function
-    def calculate_callback(self, cb_data: tuple):
+    def calculate_callback(self, cb_data: 'CalculateResponse'):
         Logger.debug(tag="iiss", msg=f"calculate callback called with {cb_data}")
 
     def _init_reward_calc_proxy(self, data_path: str):
