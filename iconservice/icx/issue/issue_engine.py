@@ -13,26 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from .. import ZERO_SCORE_ADDRESS, Address
-from ..base.exception import IconServiceBaseException
-from ..icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
-from ..iconscore.icon_score_event_log import EventLog
-from ..icx.issue_data_validator import IssueDataValidator
+from .issue_regulator import IssueRegulator
+from ... import ZERO_SCORE_ADDRESS, Address
+from ...base.exception import InvalidParamsException
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ...iconscore.icon_score_event_log import EventLog
+from ...icx.issue_data_validator import IssueDataValidator
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
-    from ..icx.icx_storage import IcxStorage
+    from ...iconscore.icon_score_context import IconScoreContext
+    from ...icx.icx_storage import IcxStorage
 
 
-class IcxIssueEngine:
+class IssueEngine:
+
     def __init__(self):
         self._storage: 'IcxStorage' = None
+        self._issue_regulator: 'IssueRegulator' = None
 
     def open(self, storage: 'IcxStorage'):
         self.close()
         self._storage = storage
+        self._issue_regulator = IssueRegulator()
+        self._issue_regulator.open(self._storage.db)
 
     def close(self):
         """Close resources
@@ -41,17 +46,17 @@ class IcxIssueEngine:
             self._storage.close(context=None)
             self._storage = None
 
+        if self._issue_regulator:
+            self._issue_regulator.close()
+
     def _issue(self,
                context: 'IconScoreContext',
                to: 'Address',
                amount: int):
-        assert amount > 0
-
         if amount > 0:
             to_account = self._storage.get_account(context, to)
             to_account.deposit(amount)
             current_total_supply = self._storage.get_total_supply(context)
-
             self._storage.put_account(context, to_account)
             self._storage.put_total_supply(context, current_total_supply + amount)
 
@@ -64,16 +69,19 @@ class IcxIssueEngine:
         return event_log
 
     @staticmethod
-    def _create_total_issue_amount_event_log(total_issue_amount: int) -> 'EventLog':
+    def _create_total_issue_amount_event_log(total_issue_amount: int,
+                                             deducted_fee: int,
+                                             deducted_over_issued_icx: int,
+                                             remain_over_issued_icx: int) -> 'EventLog':
         total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
-        total_issue_data: list = [total_issue_amount]
+        total_issue_data: list = [deducted_fee, deducted_over_issued_icx, remain_over_issued_icx, total_issue_amount]
         total_issue_event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
         return total_issue_event_log
 
-    # todo: consider name: issue_for_iiss
     def issue(self,
               context: 'IconScoreContext',
               to_address: 'Address',
+              prev_calc_period_issued_i_score: Optional[int],
               issue_data_in_tx: dict,
               issue_data_in_db: dict):
         total_issue_amount = 0
@@ -84,15 +92,31 @@ class IcxIssueEngine:
 
             if IssueDataValidator. \
                     validate_value(issue_data_in_tx[group_key], issue_data_in_db[group_key]):
-                raise IconServiceBaseException("Have difference between "
-                                               "issue transaction and actual db data")
+                raise InvalidParamsException("Have difference between "
+                                             "issue transaction and actual db data")
             issue_event_log: 'EventLog' = self._create_issue_event_log(group_key, issue_data_in_db)
             context.event_logs.append(issue_event_log)
 
             total_issue_amount += issue_data_in_db[group_key]["value"]
 
-        # todo : issue amount = total_issue_amount - prev total transaction fee
-        # to_address: Address to be deposited
-        self._issue(context, to_address, total_issue_amount)
-        total_issue_event_log: 'EventLog' = self._create_total_issue_amount_event_log(total_issue_amount)
+        issue_variable = context.iiss_engine.issue_variable
+        calc_next_block_height = issue_variable.get_calc_next_block_height(context)
+
+        if calc_next_block_height == context.block.height:
+            deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
+                self._issue_regulator.correct_issue_amount_on_calc_period(context,
+                                                                          prev_calc_period_issued_i_score,
+                                                                          total_issue_amount)
+        else:
+            deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
+                self._issue_regulator.correct_issue_amount(context, total_issue_amount)
+
+        self._issue(context, to_address, corrected_icx_issue_amount)
+        # todo: implement diff, fee event log
+        # todo: hard corded fee data, will be removed
+        fee = 0
+        total_issue_event_log: 'EventLog' = self._create_total_issue_amount_event_log(corrected_icx_issue_amount,
+                                                                                      fee,
+                                                                                      deducted_icx,
+                                                                                      remain_over_issued_icx)
         context.event_logs.append(total_issue_event_log)

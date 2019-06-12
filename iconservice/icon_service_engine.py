@@ -33,8 +33,7 @@ from .deploy.icon_score_deploy_storage import IconScoreDeployStorage
 from .fee.fee_engine import FeeEngine, DepositHandler
 from .fee.fee_storage import FeeStorage
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REVISION_4, REVISION_5, \
-    ICX_ISSUE_TRANSACTION_INDEX
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -48,7 +47,7 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
     get_deploy_content_size
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx.icx_engine import IcxEngine
-from .icx.icx_issue_engine import IcxIssueEngine
+from .icx.issue.issue_engine import IssueEngine
 from .icx.icx_storage import IcxStorage
 from .icx.issue_data_validator import IssueDataValidator
 from .iiss.engine import Engine as IISSEngine
@@ -127,7 +126,7 @@ class IconServiceEngine(ContextContainer):
             state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
 
         self._icx_engine = IcxEngine()
-        self._icx_issue_engine = IcxIssueEngine()
+        self._icx_issue_engine = IssueEngine()
         self._icon_score_deploy_engine = IconScoreDeployEngine()
 
         self._icx_context_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
@@ -225,23 +224,19 @@ class IconServiceEngine(ContextContainer):
             self._pop_context()
 
     def _set_revision_to_context(self, context: 'IconScoreContext') -> bool:
-        # TODO: by goldworm
-        context.revision = REVISION_4
-        return True
-
-        # try:
-        #     self._push_context(context)
-        #     governance_score = self._get_governance_score(context)
-        #     if hasattr(governance_score, 'revision_code'):
-        #         before_revision: int = context.revision
-        #         revision: int = governance_score.revision_code
-        #         if before_revision != revision:
-        #             context.revision = revision
-        #             return True
-        #         else:
-        #             return False
-        # finally:
-        #     self._pop_context()
+        try:
+            self._push_context(context)
+            governance_score = self._get_governance_score(context)
+            if hasattr(governance_score, 'revision_code'):
+                before_revision: int = context.revision
+                revision: int = governance_score.revision_code
+                if before_revision != revision:
+                    context.revision = revision
+                    return True
+                else:
+                    return False
+        finally:
+            self._pop_context()
 
     @staticmethod
     def _get_governance_score(context) -> 'Governance':
@@ -365,9 +360,9 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REVISION_5:
+                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS:
                     if not tx_request['params'].get('dataType') == "issue":
-                        raise IconServiceBaseException("invalid block. first transaction must be issue transaction")
+                        raise AssertionError("Invalid block: first transaction must be an issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
@@ -410,7 +405,7 @@ class IconServiceEngine(ContextContainer):
                 tx_result.status == TransactionResult.SUCCESS:
             # If the tx is heading for Governance, updates the revision
             if self._set_revision_to_context(context):
-                if context.revision == REVISION_5:
+                if context.revision == REV_IISS:
                     flags |= PrecommitFlag.GENESIS_IISS_CALC
         return flags
 
@@ -496,10 +491,12 @@ class IconServiceEngine(ContextContainer):
         treasury_address: 'Address' = self._icx_engine.fee_treasury_address
         tx_result = TransactionResult(context.tx, context.block)
         tx_result.to = treasury_address
-
+        # todo: below i_score is temp data, will be removed
+        i_score = 1_000_000
         try:
             self._icx_issue_engine.issue(context,
                                          treasury_address,
+                                         i_score,
                                          issue_data_in_tx,
                                          issue_data_in_db)
 
@@ -833,7 +830,7 @@ class IconServiceEngine(ContextContainer):
         """
 
         if self._check_new_process(params):
-            if context.revision < REVISION_4:
+            if context.revision < REV_IISS:
                 raise InvalidParamsException(f"Method Not Found")
 
             data: dict = params['data']
@@ -937,7 +934,7 @@ class IconServiceEngine(ContextContainer):
         # TODO Branch IISS Engine
         if self._check_new_process(params):
 
-            if context.revision < REVISION_4:
+            if context.revision < REV_IISS:
                 raise InvalidParamsException(f"Method Not Found")
 
             self._process_new_transaction(context, params, tx_result)
@@ -1264,7 +1261,7 @@ class IconServiceEngine(ContextContainer):
                                     context: 'IconScoreContext',
                                     _) -> dict:
         # todo: get issue related info from iiss engine
-        if context.revision < REVISION_5:
+        if context.revision < REV_IISS:
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
 

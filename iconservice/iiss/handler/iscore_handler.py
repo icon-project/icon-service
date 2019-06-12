@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from ...base.address import ZERO_SCORE_ADDRESS
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
+from ...icon_constant import I_SCORE_EXCHANGE_RATE
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
 
 
 def _iscore_to_icx(iscore: int) -> int:
-    return iscore // 10 ** 3
+    return iscore // I_SCORE_EXCHANGE_RATE
 
 
 class IScoreHandler:

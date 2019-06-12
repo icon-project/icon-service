@@ -16,11 +16,14 @@
 
 from typing import TYPE_CHECKING, Any
 
+from iconcommons.logger import Logger
+
 from .commit_delegator import CommitDelegator
 from .handler.delegation_handler import DelegationHandler
 from .handler.iscore_handler import IScoreHandler
 from .handler.stake_handler import StakeHandler
 from .ipc.reward_calc_proxy import RewardCalcProxy
+from .ipc.message import CalculateResponse
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
 from .reward_calc.msg_data import PRepUnregisterTx
@@ -63,7 +66,7 @@ class Engine:
         self._formula: 'IssueFormula' = None
 
     def open(self, context: 'IconScoreContext', conf: 'IconConfig', db: 'ContextDatabase'):
-        self._init_reward_calc_proxy()
+        self._init_reward_calc_proxy(conf[ConfigKey.IISS_DB_ROOT_PATH])
 
         self._rc_storage: 'RewardCalcDataStorage' = RewardCalcDataStorage()
         self._rc_storage.open(conf[ConfigKey.IISS_DB_ROOT_PATH])
@@ -72,15 +75,23 @@ class Engine:
         self._variable.init_config(context, conf)
 
         self._init_commit_delegator()
-        # todo: formula 가 min, max l point값을 가지고 있는게 좋을까?
+        # todo: consider formula managing r min, r max, r point
         self._formula = IssueFormula()
 
         handlers: list = [StakeHandler, DelegationHandler, IScoreHandler]
         self._init_handlers(handlers)
 
-    def _init_reward_calc_proxy(self):
-        self._reward_calc_proxy = RewardCalcProxy()
-        self._reward_calc_proxy.open(path=IISS_SOCKET_PATH)
+    @property
+    def issue_variable(self):
+        return self._variable.issue
+
+    # TODO implement calculate callback function
+    def calculate_callback(self, cb_data: 'CalculateResponse'):
+        Logger.debug(tag="iiss", msg=f"calculate callback called with {cb_data}")
+
+    def _init_reward_calc_proxy(self, data_path: str):
+        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback)
+        self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):

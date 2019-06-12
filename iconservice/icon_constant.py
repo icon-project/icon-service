@@ -75,7 +75,7 @@ ISSUE_EVENT_LOG_MAPPER = {
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": ["ICXIssue(int)"],
+        "indexed": ["ICXIssue(int,int,int,int)"],
         "data": []
     }
 }
@@ -88,7 +88,11 @@ REVISION_2 = 2
 REVISION_3 = 3
 REVISION_4 = 4
 REVISION_5 = 5
+
 LATEST_REVISION = REVISION_4
+
+REV_IISS = REVISION_5 + 1
+REV_DECENTRALIZATION = REV_IISS + 1
 
 
 class ConfigKey:
@@ -184,3 +188,5 @@ IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000
 IISS_MONTH = 12
+
+I_SCORE_EXCHANGE_RATE = 1_000
