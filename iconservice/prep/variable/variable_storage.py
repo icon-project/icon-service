@@ -115,7 +115,7 @@ class PReps(object):
         obj = PReps()
 
         for p in preps:
-            prep: 'PRep' = PRep(p.address, p.total_delegated)
+            prep: 'PRep' = PRep(p.address, p.delegated)
             obj.preps.append(prep)
         return obj
 
@@ -131,9 +131,9 @@ class PReps(object):
 class PRep(object):
     _VERSION = 0
 
-    def __init__(self, address: 'Address', total_delegated: int):
+    def __init__(self, address: 'Address', delegated: int):
         self.address: 'Address' = address
-        self.total_delegated: int = total_delegated
+        self.delegated: int = delegated
 
     @staticmethod
     def from_list(data: list) -> 'PRep':
@@ -146,7 +146,7 @@ class PRep(object):
         data = [
             self._VERSION,
             self.address,
-            self.total_delegated
+            self.delegated
         ]
         return data
 

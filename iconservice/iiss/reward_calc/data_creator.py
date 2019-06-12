@@ -61,7 +61,7 @@ class DataCreator:
         converted_preps: List['DelegationInfo'] = []
         for prep in preps:
             Logger.debug(f"create_prep_data: {str(prep.address)}", "iiss")
-            info = DataCreator.create_delegation_info(prep.address, prep.total_delegated)
+            info = DataCreator.create_delegation_info(prep.address, prep.delegated)
             converted_preps.append(info)
 
         data = PRepsData()
