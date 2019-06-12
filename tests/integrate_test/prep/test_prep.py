@@ -83,8 +83,8 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.NAME: "name1",
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.DETAILS: "json1",
+            ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -114,8 +114,8 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.NAME: "name1",
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.DETAILS: "json1",
+            ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -147,8 +147,8 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.NAME: "name0",
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.DETAILS: "json1",
+            ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 300
             }
@@ -163,8 +163,8 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.NAME: "name1",
             ConstantKeys.EMAIL: "email1",
             ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.JSON: "json1",
-            ConstantKeys.IP: "ip1",
+            ConstantKeys.DETAILS: "json1",
+            ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.GOVERNANCE_VARIABLE: {
                 ConstantKeys.INCENTIVE_REP: 200
             }
@@ -198,8 +198,8 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
