@@ -38,13 +38,16 @@ class RewardCalcProxy(object):
 
     IPC_TIMEOUT = 0.1
 
-    def __init__(self, calc_callback: Callable[[tuple], Any] = None):
+    def __init__(self,
+                 version_callback: Callable[[tuple], Any] = None,
+                 calc_callback: Callable[[tuple], Any] = None):
         Logger.debug(tag=_TAG, msg="__init__() start")
 
         self._loop = None
         self._ipc_server = IPCServer()
         self._message_queue: Optional['MessageQueue'] = None
         self._reward_calc: Optional[Popen] = None
+        self._version_callback: Optional[Callable] = version_callback
         self._calculation_callback: Optional[Callable] = calc_callback
 
         Logger.debug(tag=_TAG, msg="__init__() end")
@@ -54,7 +57,7 @@ class RewardCalcProxy(object):
 
         self._loop = asyncio.get_event_loop()
         self._message_queue = MessageQueue(loop=self._loop,
-                                           notify_message=(VersionResponse, ),
+                                           notify_message=(VersionResponse, CalculateResponse),
                                            notify_handler=self.notify_handler)
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
@@ -276,13 +279,20 @@ class RewardCalcProxy(object):
 
     def version_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"version_handler() start {response}")
-        assert isinstance(response, VersionResponse)
-        # TODO process version info if necessary
+        if self._version_callback is not None:
+            self._version_callback(response)
+
+    def calculate_handler(self, response: 'Response'):
+        Logger.debug(tag=_TAG, msg=f"calculate_handler() start {response}")
+        if self._calculation_callback is not None:
+            self._calculation_callback(response)
 
     def notify_handler(self, response: 'Response'):
         Logger.debug(tag=_TAG, msg=f"notify_handler() start {type(response)}")
         if isinstance(response, VersionResponse):
             self.version_handler(response=response)
+        elif isinstance(response, CalculateResponse):
+            self.calculate_handler(response=response)
 
     def start_reward_calc(self, sock_path: str, iiss_db_path: str):
         """ Start reward calculator process
