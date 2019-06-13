@@ -129,11 +129,13 @@ class IconScoreInnerTask(object):
             block = Block.from_dict(converted_block_params)
 
             converted_tx_requests = params['transactions']
-            converted_prev_block_contributors = params.get('prevBlockContributors')
+            converted_prev_block_generator = params.get('prevBlockGenerator')
+            converted_prev_block_validators = params.get('prevBlockValidators')
             tx_results, state_root_hash = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
-                prev_block_contributors=converted_prev_block_contributors)
+                prev_block_generator=converted_prev_block_generator,
+                prev_block_validators=converted_prev_block_validators)
 
             convert_tx_results = \
                 {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case) for tx_result in tx_results}
