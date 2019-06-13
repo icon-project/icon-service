@@ -17,6 +17,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
+
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -33,7 +34,6 @@ if TYPE_CHECKING:
     from ..iconscore.icon_score_result import TransactionResult
     from ..iconscore.icon_score_context import IconScoreContext
     from ..precommit_data_manager import PrecommitData
-
     from ..base.address import Address, ZERO_SCORE_ADDRESS
     from ..icx.icx_account import Account
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
@@ -130,7 +130,6 @@ class Engine(EngineBase):
     def rollback(self):
         pass
 
-    # ========================
     def handle_set_stake(self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
 
         address: 'Address' = context.tx.origin

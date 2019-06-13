@@ -16,8 +16,7 @@
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from iconservice.prep.data.candidate import Candidate
-    from ..database.db import ContextDatabase
+    from .data.candidate import Candidate
 
 
 class Term(object):
@@ -31,5 +30,5 @@ class Term(object):
         self.end_block_height: int = -1  # inclusive
         self.preps: List['Candidate'] = []
 
-    def load(self, db: 'ContextDatabase'):
+    def load(self, context: 'IconScoreContext'):
         pass
