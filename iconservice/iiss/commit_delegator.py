@@ -131,14 +131,11 @@ class CommitDelegator(object):
 
     @classmethod
     def _put_block_produce_info_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        if precommit_data.prev_block_contributors is None:
+        if precommit_data.prev_block_generator is None or precommit_data.prev_block_validators is None:
             return
         
-        generator: 'Address' = precommit_data.prev_block_contributors.get("generator")
-        validators: List['Address'] = precommit_data.prev_block_contributors.get("validators")
-
-        if generator is None or validators is None:
-            return
+        generator: 'Address' = precommit_data.prev_block_generator
+        validators: List['Address'] = precommit_data.prev_block_validators
 
         Logger.debug(f"put_block_produce_info_for_rc", "iiss")
         data: 'BlockProduceInfoData' = RewardCalcDataCreator.create_block_produce_info_data(precommit_data.block.height,
