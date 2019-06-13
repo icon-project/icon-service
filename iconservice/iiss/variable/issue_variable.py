@@ -14,7 +14,7 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from .issue_storage import IssueStorage
+from .issue_storage import IssueStorage, Reward
 from ...icon_constant import ConfigKey, IISS_MAX_REWARD_RATE
 
 if TYPE_CHECKING:
@@ -32,54 +32,29 @@ class IssueVariable(object):
     def check_config_before_init(reward_variable: dict):
         for value in reward_variable.values():
             if not 0 < value <= IISS_MAX_REWARD_RATE:
-                raise Exception
+                raise AssertionError(f"Invalid reward variable: Cannot set zero or under "
+                                     f"and more than {IISS_MAX_REWARD_RATE}")
 
     def init_config(self, context: 'IconScoreContext', conf: 'IconConfig'):
         reward_variable = conf[ConfigKey.IISS_REWARD_VARIABLE]
         self.check_config_before_init(reward_variable)
-        if self._storage.get_reward_min(context) is None:
-            reward_min: int = reward_variable[ConfigKey.REWARD_MIN]
-            self._storage.put_reward_min(context, reward_min)
-
-        if self._storage.get_reward_max(context) is None:
-            reward_max: int = reward_variable[ConfigKey.REWARD_MAX]
-            self._storage.put_reward_max(context, reward_max)
-
-        if self._storage.get_reward_point(context) is None:
-            reward_point: int = reward_variable[ConfigKey.REWARD_POINT]
-            self._storage.put_reward_point(context, reward_point)
+        if self._storage.get_reward_prep(context) is None:
+            reward_prep = Reward(reward_rate=None,
+                                 reward_min=reward_variable[ConfigKey.REWARD_MIN],
+                                 reward_max=reward_variable[ConfigKey.REWARD_MAX],
+                                 reward_point=reward_variable[ConfigKey.REWARD_POINT])
+            self._storage.put_reward_prep(context, reward_prep)
 
         if self._storage.get_calc_period(context) is None:
             calc_period: int = conf[ConfigKey.IISS_CALCULATE_PERIOD]
             self._storage.put_calc_period(context, calc_period)
 
-    def put_reward_rep(self, context: 'IconScoreContext', reward_rep: int):
-        self._storage.put_reward_rep(context, reward_rep)
+    def put_reward_prep(self, context: 'IconScoreContext', reward_rep: Reward):
+        self._storage.put_reward_prep(context, reward_rep)
 
-    def get_reward_rep(self, context: 'IconScoreContext') -> int:
-        value: Optional[int] = self._storage.get_reward_rep(context)
-        return value
-
-    def put_reward_min(self, context: 'IconScoreContext', reward_min: int):
-        self._storage.put_reward_min(context, reward_min)
-
-    def get_reward_min(self, context: 'IconScoreContext') -> Optional[int]:
-        value: Optional[int] = self._storage.get_reward_min(context)
-        return value
-
-    def put_reward_max(self, context: 'IconScoreContext', reward_max: int):
-        self._storage.put_reward_max(context, reward_max)
-
-    def get_reward_max(self, context: 'IconScoreContext') -> Optional[int]:
-        value: Optional[int] = self._storage.get_reward_max(context)
-        return value
-
-    def put_reward_point(self, context: 'IconScoreContext', liner_point: int):
-        self._storage.put_reward_rep(context, liner_point)
-
-    def get_reward_point(self, context: 'IconScoreContext') -> Optional[int]:
-        value: Optional[int] = self._storage.get_reward_point(context)
-        return value
+    def get_reward_prep(self, context: 'IconScoreContext') -> 'Reward':
+        reward_prep: Optional['Reward'] = self._storage.get_reward_prep(context)
+        return reward_prep
 
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
         self._storage.put_calc_next_block_height(context, calc_block_height)
