@@ -29,28 +29,6 @@ class CandidateFlag(Flag):
     READONLY = auto()
 
 
-class RegPart(object):
-    """Defines registration info of a P-Rep Candidate
-
-    """
-
-    def __init__(self):
-        # registration time
-        self.block_height: int = 0
-        self.tx_index: int = 0
-
-        # registration info
-        self.name: str = ""
-        self.email: str = ""
-        self.website: str = ""
-        self.details: str = ""
-        # information required for P-Rep Consensus
-        self.public_key: bytes = b""
-        self.p2p_end_point: str = ""
-        # Governance Variables
-        self.incentive_rep: int = 0
-
-
 class Candidate(object):
     PREFIX: bytes = b"candidate"
     _VERSION: int = 0
@@ -108,7 +86,6 @@ class Candidate(object):
 
         # Required items
         self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
-        self.public_key: bytes = params.get(ConstantKeys.PUBLIC_KEY, self.public_key)
 
         gv: dict = params.get(ConstantKeys.GOVERNANCE_VARIABLE)
         if gv is not None:

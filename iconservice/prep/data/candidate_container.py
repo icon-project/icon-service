@@ -16,14 +16,13 @@
 
 from typing import TYPE_CHECKING, List, Union, Optional
 
-from ..iconscore.icon_score_context import IconScoreContext
-from .data.candidate import Candidate
-from .storage import Storage
-from ..base.exception import InvalidParamsException, AccessDeniedException
-from ..icon_constant import PREP_COUNT
+from .candidate import Candidate
+from ...base.exception import InvalidParamsException, AccessDeniedException
+from ...icon_constant import PREP_COUNT
+from ...iconscore.icon_score_context import IconScoreContext
 
 if TYPE_CHECKING:
-    from ..base.address import Address
+    from ...base.address import Address
 
 
 class SortedList(object):
@@ -103,8 +102,9 @@ class CandidateContainer(object):
             raise AccessDeniedException("CandidateContainer access denied")
 
         candidate: 'Candidate' = self._candidate_dict.get(address)
-        del self._candidate_dict[address]
-        self._candidate_list.remove(candidate)
+        if candidate:
+            del self._candidate_dict[address]
+            self._candidate_list.remove(candidate)
 
     def get(self, address: 'Address') -> Optional['Candidate']:
         return self._candidate_dict.get(address)
