@@ -23,7 +23,7 @@ from unittest.mock import Mock
 from iconservice.base.address import Address, AddressPrefix, ICON_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidEventLogException
 from iconservice.database.batch import TransactionBatch
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy.engine import IconScoreDeployEngine
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external

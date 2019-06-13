@@ -27,7 +27,7 @@ from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iiss.ipc.reward_calc_proxy import RewardCalcProxy
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip

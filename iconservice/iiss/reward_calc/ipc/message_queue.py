@@ -17,7 +17,7 @@ import asyncio
 from typing import Callable, Any
 
 from .message import Request, Response
-from ...base.exception import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException
 
 
 class MessageQueue(object):

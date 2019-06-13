@@ -15,8 +15,9 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from .issue_regulator import IssueRegulator
+from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS, Address
+from ...base.ComponentBase import EngineBase
 from ...base.exception import InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
 from ...iconscore.icon_score_event_log import EventLog
@@ -24,41 +25,19 @@ from ...icx.issue_data_validator import IssueDataValidator
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
-    from ...icx.icx_storage import IcxStorage
 
 
-class IssueEngine:
-
-    def __init__(self):
-        self._storage: 'IcxStorage' = None
-        self._issue_regulator: 'IssueRegulator' = None
-
-    def open(self, storage: 'IcxStorage'):
-        self.close()
-        self._storage = storage
-        self._issue_regulator = IssueRegulator()
-        self._issue_regulator.open(self._storage.db)
-
-    def close(self):
-        """Close resources
-        """
-        if self._storage:
-            self._storage.close(context=None)
-            self._storage = None
-
-        if self._issue_regulator:
-            self._issue_regulator.close()
-
+class Engine(EngineBase):
     def _issue(self,
                context: 'IconScoreContext',
                to: 'Address',
                amount: int):
         if amount > 0:
-            to_account = self._storage.get_account(context, to)
+            to_account = context.storage.icx.get_account(context, to)
             to_account.deposit(amount)
-            current_total_supply = self._storage.get_total_supply(context)
-            self._storage.put_account(context, to_account)
-            self._storage.put_total_supply(context, current_total_supply + amount)
+            current_total_supply = context.storage.icx.get_total_supply(context)
+            context.storage.icx.put_account(context, to_account)
+            context.storage.icx.put_total_supply(context, current_total_supply + amount)
 
     @staticmethod
     def _create_issue_event_log(group_key: str, issue_data_in_db: dict) -> 'EventLog':
@@ -99,17 +78,17 @@ class IssueEngine:
 
             total_issue_amount += issue_data_in_db[group_key]["value"]
 
-        issue_variable = context.iiss_engine.issue_variable
+        issue_variable = context.engine.iiss.issue_variable
         calc_next_block_height = issue_variable.get_calc_next_block_height(context)
 
         if calc_next_block_height == context.block.height:
             deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-                self._issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                          prev_calc_period_issued_i_score,
-                                                                          total_issue_amount)
+                Regulator.correct_issue_amount_on_calc_period(context,
+                                                              prev_calc_period_issued_i_score,
+                                                              total_issue_amount)
         else:
             deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-                self._issue_regulator.correct_issue_amount(context, total_issue_amount)
+                Regulator.correct_issue_amount(context, total_issue_amount)
 
         self._issue(context, to_address, corrected_icx_issue_amount)
         # todo: implement diff, fee event log

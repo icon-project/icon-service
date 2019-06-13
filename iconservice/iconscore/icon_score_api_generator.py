@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from inspect import signature, Signature, Parameter, isclass, getmembers, isfunction
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 
 from .icon_score_constant import ConstBitFlag, CONST_BIT_FLAG, CONST_INDEXED_ARGS_COUNT, BaseType, \
     STR_FALLBACK, STR_ON_INSTALL, STR_ON_UPDATE
@@ -24,6 +24,10 @@ from ..base.exception import IllegalFormatException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..icon_constant import REVISION_2
 from ..utils import get_main_type_from_annotations_type
+
+if TYPE_CHECKING:
+    from .icon_score_base import IconScoreBase
+    from .icon_score_context import IconScoreContext
 
 
 class ScoreApiGenerator:

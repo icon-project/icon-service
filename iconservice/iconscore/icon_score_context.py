@@ -27,17 +27,12 @@ from ..icon_constant import IconScoreContextType, IconScoreFuncType
 
 if TYPE_CHECKING:
     from ..base.address import Address
-    from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
-    from ..icx.icx_engine import IcxEngine
-    from ..fee.fee_engine import FeeEngine
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
-    from ..iiss.engine import Engine as IISSEngine
-    from ..prep import PRepEngine
     from ..prep.candidate_container import CandidateContainer
-    from ..prep.storage import Storage
+    from ..utils import ContextEngine, ContextStorage
 
 _thread_local_data = threading.local()
 
@@ -102,15 +97,11 @@ class IconScoreContext(object):
 
     score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
-    icon_score_deploy_engine: 'IconScoreDeployEngine' = None
-    icx_engine: 'IcxEngine' = None
-    fee_engine: 'FeeEngine' = None
     icon_service_flag: int = 0
     legacy_tbears_mode: bool = False
 
-    iiss_engine: 'IISSEngine' = None
-    prep_engine: 'PRepEngine' = None
-    prep_storage: 'Storage' = None
+    engine: 'ContextEngine' = None
+    storage: 'ContextStorage' = None
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -147,12 +138,11 @@ class IconScoreContext(object):
 
     @property
     def readonly(self):
-        return self.type == IconScoreContextType.QUERY or \
-               self.func_type == IconScoreFuncType.READONLY
+        return self.type == IconScoreContextType.QUERY or self.func_type == IconScoreFuncType.READONLY
 
     @property
     def total_supply(self):
-        return self.icx_engine.get_total_supply(self)
+        return self.storage.icx.get_total_supply(self)
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
@@ -164,7 +154,7 @@ class IconScoreContext(object):
     # TODO should remove after update GOVERNANCE 0.0.6 afterward
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        self.icon_score_deploy_engine.deploy(self, tx_hash)
+        self.engine.deploy.deploy(self, tx_hash)
 
     def update_batch(self):
         self.block_batch.update(self.tx_batch)

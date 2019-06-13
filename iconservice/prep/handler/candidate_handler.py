@@ -20,12 +20,12 @@ from iconservice.prep.data.candidate import Candidate
 from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
-from ...icx.icx_storage import Intent
+from ...icx.storage import Intent
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_result import TransactionResult
     from ...iconscore.icon_score_context import IconScoreContext
-    from ...icx.icx_storage import IcxStorage
+    from ...icx.storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
 

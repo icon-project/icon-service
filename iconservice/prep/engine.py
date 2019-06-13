@@ -14,23 +14,18 @@
 
 from typing import TYPE_CHECKING, Any, Optional
 
-from iconservice.prep.data.candidate import Candidate
+from iconcommons.logger import Logger
 from .candidate_container import CandidateContainer
-from .storage import Storage
 from .handler.candidate_handler import CandidateHandler
 from .term import Term
 from ..base.address import Address
-from ..database.db import ContextDatabase
 from ..iconscore.icon_score_result import TransactionResult
-from iconcommons.logger import Logger
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..icx.icx_storage import IcxStorage
 
 
 class Engine(object):
-    icx_storage: 'IcxStorage' = None
 
     def __init__(self) -> None:
         Logger.debug("PRepEngine.__init__() start")
@@ -63,8 +58,6 @@ class Engine(object):
 
     def _init_handlers(self):
         for handler in (CandidateHandler,):
-            handler.icx_storage = self.icx_storage
-            handler.prep_storage = self._storage
             handler.prep_candidates = self.candidates
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:

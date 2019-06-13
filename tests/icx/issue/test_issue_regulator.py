@@ -19,8 +19,8 @@ from unittest.mock import Mock
 from iconservice.database.db import ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, I_SCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.icx.issue.issue_regulator import IssueRegulator
-from iconservice.icx.issue.regulator_storage import RegulatorVariable
+from iconservice.icx.issue.regulator import Regulator
+from iconservice.icx.issue.storage import RegulatorVariable
 
 
 def create_context_db():

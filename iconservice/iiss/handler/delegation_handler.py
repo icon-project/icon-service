@@ -21,16 +21,16 @@ from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
 from ...icon_constant import IISS_MAX_DELEGATIONS
-from ...icx.icx_storage import Intent
+from ...icx.storage import Intent
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_result import TransactionResult
     from ...iconscore.icon_score_context import IconScoreContext
-    from ...icx.icx_storage import IcxStorage
+    from ...icx.storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..reward_calc.data_storage import DataStorage as RewardCalcDataStorage
-    from ..ipc.reward_calc_proxy import RewardCalcProxy
+    from ..reward_calc.storage import DataStorage as RewardCalcDataStorage
+    from iconservice.iiss.reward_calc.ipc import RewardCalcProxy
     from ..reward_calc.msg_data import DelegationInfo, DelegationTx, TxData
     from ..variable.variable import Variable
 
