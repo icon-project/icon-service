@@ -171,8 +171,7 @@ class Storage(StorageBase):
 
         if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
             self._put_special_account(context, account)
-        else:
-            self.put_account(context, account)
+        self.put_account(context, account)
 
         if account.balance > 0:
             total_supply = self.get_total_supply(context)
