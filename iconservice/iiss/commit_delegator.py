@@ -43,7 +43,7 @@ class CommitDelegator(object):
 
     @classmethod
     def genesis_update_db(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        context.prep_candidate_engine.update_preps_from_variable(context)
+        context.prep_engine.update_preps_to_variable(context)
         cls._put_next_calc_block_height(context, precommit_data.block.height)
 
         cls._put_header_for_rc(context, precommit_data)
@@ -62,7 +62,7 @@ class CommitDelegator(object):
 
         # every block time
         cls._put_block_produce_info_for_rc(context, precommit_data)
-        cls._put_preps_for_rc(context, precommit_data)
+        # cls._put_preps_for_rc(context, precommit_data)
 
         if not cls._check_update_calc_period(context, precommit_data):
             return
@@ -72,6 +72,9 @@ class CommitDelegator(object):
 
     @classmethod
     def send_ipc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        # TODO: Disable reward_calc_proxy for test
+        return
+
         # every block
         cls.reward_calc_proxy.commit_block(True, precommit_data.block.height, precommit_data.block.hash)
 
@@ -106,7 +109,7 @@ class CommitDelegator(object):
 
     @classmethod
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        gv: 'GovernanceVariable' = context.prep_candidate_engine.get_gv(context)
+        gv: 'GovernanceVariable' = context.prep_engine.get_gv(context)
 
         current_total_supply = cls.icx_storage.get_total_supply(context)
         current_total_candidate_delegated = cls.variable.issue.get_total_candidate_delegated(context)
@@ -145,17 +148,14 @@ class CommitDelegator(object):
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        if not context.prep_candidate_engine.prep_infos_dirty_include_sub_prep:
-            return
-
-        preps: List['PRep'] = context.prep_candidate_engine.get_preps_include_sub_prep()
+        preps: List['PRep'] = context.updated_preps
 
         if len(preps) == 0:
             return
 
         total_candidate_delegated: int = 0
         for prep in preps:
-            total_candidate_delegated += prep.total_delegated
+            total_candidate_delegated += prep.delegated
 
         Logger.debug(f"put_preps_for_rc: total_candidate_delegated{total_candidate_delegated}", "iiss")
 

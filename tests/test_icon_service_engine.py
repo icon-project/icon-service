@@ -24,6 +24,7 @@ from unittest.mock import Mock
 
 from iconcommons.icon_config import IconConfig
 
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.address import Address, AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, InvalidParamsException, IconScoreException
