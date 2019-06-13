@@ -24,7 +24,7 @@ from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
 
 if TYPE_CHECKING:
-    from .prep.candidate_batch import CandidateBatch as PRepCandidateBatch
+    from .prep.candidate_container import CandidateContainer
 
 
 class PrecommitFlag(IntFlag):
@@ -47,7 +47,7 @@ class PrecommitData(object):
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
-                 prep_candidate_block_batch: 'PRepCandidateBatch',
+                 candidates: 'CandidateContainer',
                  prev_block_generator: Optional['Address'],
                  prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'] = None,
@@ -63,7 +63,8 @@ class PrecommitData(object):
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch
-        self.prep_candidate_block_batch = prep_candidate_block_batch
+        # Snapshot of candidates
+        self.candidates = candidates
         self.prev_block_generator = prev_block_generator
         self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
@@ -81,7 +82,7 @@ class PrecommitDataManager(object):
     def __init__(self):
         self._lock = Lock()
         self._precommit_data_mapper = {}
-        self._last_block: 'Block' = None
+        self._last_block: Optional['Block'] = None
 
     @property
     def last_block(self) -> 'Block':

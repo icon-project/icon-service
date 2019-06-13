@@ -156,12 +156,13 @@ class ConstantKeys:
     DELEGATIONS = "delegations"
     EMAIL = 'email'
     WEBSITE = 'website'
-    JSON = 'json'
-    IP = 'ip'
-    GOVERNANCE_VARIABLE = "governanceVariable"
+    DETAILS = 'details'
+    P2P_END_POINT = 'p2pEndPoint'
+    PUBLIC_KEY = 'publicKey'
+    GOVERNANCE_VARIABLE = "governance"
     INCENTIVE_REP = "incentiveRep"
-    START_RANK = "startRank"
-    END_RANK = "endRank"
+    START_RANKING = "startRanking"
+    END_RANKING = "endRanking"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -332,8 +333,9 @@ type_convert_templates[ParamType.IISS_REG_PREP_CANDIDATE] = {
     ConstantKeys.NAME: ValueType.STRING,
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
-    ConstantKeys.JSON: ValueType.STRING,
-    ConstantKeys.IP: ValueType.STRING,
+    ConstantKeys.DETAILS: ValueType.STRING,
+    ConstantKeys.P2P_END_POINT: ValueType.STRING,
+    ConstantKeys.PUBLIC_KEY: ValueType.BYTES,
     ConstantKeys.GOVERNANCE_VARIABLE: {
         ConstantKeys.INCENTIVE_REP: ValueType.INT
     }
@@ -351,6 +353,6 @@ type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO] = \
 type_convert_templates[ParamType.IISS_GET_PREP_LIST] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
 
 type_convert_templates[ParamType.IISS_GET_PREP_CANDIDATE_LIST] = {
-    ConstantKeys.START_RANK: ValueType.INT,
-    ConstantKeys.END_RANK: ValueType.INT
+    ConstantKeys.START_RANKING: ValueType.INT,
+    ConstantKeys.END_RANKING: ValueType.INT
 }

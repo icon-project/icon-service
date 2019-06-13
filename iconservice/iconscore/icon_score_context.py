@@ -34,9 +34,10 @@ if TYPE_CHECKING:
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
-    from ..prep.candidate_batch import CandidateBatch as PRepCandidateBatch
-    from ..prep.candidate_engine import CandidateEngine as PRepCandidateEngine
     from ..iiss.engine import Engine as IISSEngine
+    from ..prep import PRepEngine
+    from ..prep.candidate_container import CandidateContainer
+    from ..prep.storage import Storage
 
 _thread_local_data = threading.local()
 
@@ -105,10 +106,11 @@ class IconScoreContext(object):
     icx_engine: 'IcxEngine' = None
     fee_engine: 'FeeEngine' = None
     icon_service_flag: int = 0
-    legacy_tbears_mode = False
+    legacy_tbears_mode: bool = False
 
     iiss_engine: 'IISSEngine' = None
-    prep_candidate_engine: 'PRepCandidateEngine' = None
+    prep_engine: 'PRepEngine' = None
+    prep_storage: 'Storage' = None
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -130,8 +132,6 @@ class IconScoreContext(object):
         self.tx_batch: 'TransactionBatch' = None
         self.rc_block_batch: list = []
         self.rc_tx_batch: list = []
-        self.prep_candidate_tx_batch: 'PRepCandidateBatch' = None
-        self.prep_candidate_block_batch: 'PRepCandidateBatch' = None
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
@@ -141,6 +141,9 @@ class IconScoreContext(object):
 
         self.msg_stack = []
         self.event_log_stack = []
+
+        # P-Rep candidates updated
+        self.candidates: Optional['CandidateContainer'] = None
 
     @property
     def readonly(self):
@@ -170,13 +173,8 @@ class IconScoreContext(object):
         self.rc_block_batch.extend(self.rc_tx_batch)
         self.rc_tx_batch.clear()
 
-        self.prep_candidate_block_batch.update(self.prep_candidate_tx_batch)
-        self.prep_candidate_tx_batch.clear()
-
     def clear_batch(self):
         if self.tx_batch:
             self.tx_batch.clear()
         if self.rc_tx_batch:
             self.rc_tx_batch.clear()
-        if self.prep_candidate_tx_batch:
-            self.prep_candidate_tx_batch.clear()

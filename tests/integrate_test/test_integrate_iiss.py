@@ -88,8 +88,8 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
@@ -126,8 +126,8 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.JSON: f"json{i}",
-                ConstantKeys.IP: f"ip{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }

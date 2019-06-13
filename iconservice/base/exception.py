@@ -141,6 +141,11 @@ class OutOfBalanceException(IconServiceBaseException):
         super().__init__(message, ExceptionCode.OUT_OF_BALANCE)
 
 
+class TimeoutException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.TIMEOUT_ERROR)
+
+
 class StackOverflowException(IconServiceBaseException):
     def __init__(self, message: Optional[str]):
         super().__init__(message, ExceptionCode.STACK_OVERFLOW)

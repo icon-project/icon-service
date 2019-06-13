@@ -16,8 +16,7 @@
 
 from typing import TYPE_CHECKING
 
-from ..candidate import Candidate
-from ..candidate_utils import CandidateUtils
+from iconservice.prep.data.candidate import Candidate
 from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
@@ -29,41 +28,35 @@ if TYPE_CHECKING:
     from ...icx.icx_storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
-    from ..candidate_storage import CandidateStorage
-    from ..candidate_container import CandidateSortedInfos
-    from ..variable.variable import Variable
 
 
 class CandidateHandler:
     icx_storage: 'IcxStorage' = None
-    prep_storage: 'CandidateStorage' = None
-    prep_variable: 'Variable' = None
-    prep_candidates: 'CandidateSortedInfos' = None
 
     @classmethod
-    def handle_reg_prep_candidate(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+    def _is_candidate(cls, context: 'IconScoreContext', address: 'Address') -> bool:
+        return context.prep_engine.is_candidate(context, address)
 
+    @classmethod
+    def handle_reg_prep_candidate(
+            cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
         address: 'Address' = context.tx.origin
+        if cls._is_candidate(context, address):
+            raise InvalidParamsException(f"{str(address)} has been already registered")
+
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP_CANDIDATE)
 
-        cls._put_prep_candidate_for_state_db(context, address, ret_params)
+        candidate = Candidate.from_dict(address, ret_params, context.block.height, context.tx.index)
+        context.prep_engine.candidates.add(candidate)
+
+        cls._put_prep_candidate_for_state_db(context, candidate)
         cls._put_reg_prep_candidate_for_iiss_db(context, address)
 
     @classmethod
-    def _put_prep_candidate_for_state_db(cls, context: 'IconScoreContext', address: 'Address', params: dict):
+    def _put_prep_candidate_for_state_db(cls, context: 'IconScoreContext', candidate: 'Candidate'):
+        context.prep_storage.put_candidate(context, candidate)
 
-        if cls.prep_storage.is_candidate(context, address):
-            raise InvalidParamsException(f'Failed to register candidate: already register')
-
-        prep_candidate: Candidate = \
-            Candidate.from_dict(params, context.block.height, context.tx.index, address)
-        cls.prep_storage.put_candidate(context, prep_candidate)
-
-        account: 'Account' = cls.icx_storage.get_account(context, address, Intent.DELEGATED)
-        CandidateUtils.register_prep_candidate_info_for_sort(context,
-                                                             address,
-                                                             prep_candidate.name,
-                                                             account.delegated_amount)
+        account: 'Account' = cls.icx_storage.get_account(context, candidate.address, Intent.DELEGATED)
 
         cls._apply_candidate_delegated_offset_for_iiss_variable(context, account.delegated_amount)
         # TODO tx_result make if needs
@@ -78,58 +71,9 @@ class CandidateHandler:
                                                                context.block.height)
 
     @classmethod
-    def _apply_candidate_delegated_offset_for_iiss_variable(cls,
-                                                            context: 'IconScoreContext',
-                                                            offset: int):
+    def _apply_candidate_delegated_offset_for_iiss_variable(
+            cls, context: 'IconScoreContext', offset: int):
         context.iiss_engine.apply_candidate_delegated_offset_for_iiss_variable(context, offset)
-
-    @classmethod
-    def handle_set_prep_candidate(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
-
-        address: 'Address' = context.tx.origin
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP_CANDIDATE)
-
-        cls._update_prep_candidate_for_state_db(context, address, ret_params)
-
-    @classmethod
-    def _update_prep_candidate_for_state_db(cls, context: 'IconScoreContext', address: 'Address', params: dict):
-
-        if not cls.prep_storage.is_candidate(context, address):
-            raise InvalidParamsException(f'Failed to set candidate: no register')
-
-        prep_candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
-        prep_candidate.update_dict(params)
-        cls.prep_storage.put_candidate(context, prep_candidate)
-        # TODO tx_result make if needs
-
-    @classmethod
-    def handle_unreg_prep_candidate(cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
-
-        address: 'Address' = context.tx.origin
-        # ret_params: dict = TypeConverter.convert(params, ParamType.IISS_UNREG_PREP_CANDIDATE)
-        cls._del_prep_candidate_for_state_db(context, address)
-        cls._put_unreg_prep_candidate_for_iiss_db(context, address)
-
-    @classmethod
-    def _del_prep_candidate_for_state_db(cls, context: 'IconScoreContext', address: 'Address'):
-        if not cls.prep_storage.is_candidate(context, address):
-            raise InvalidParamsException(f'Failed to un register candidate: no register')
-
-        cls.prep_storage.delete_candidate(context, address)
-        CandidateUtils.unregister_prep_candidate_info_for_sort(context, address)
-
-        account: 'Account' = cls.icx_storage.get_account(context, address, Intent.DELEGATED)
-        cls._apply_candidate_delegated_offset_for_iiss_variable(context, -account.delegated_amount)
-        # TODO tx_result make if needs
-
-    @classmethod
-    def _put_unreg_prep_candidate_for_iiss_db(cls,
-                                              context: 'IconScoreContext',
-                                              address: 'Address'):
-
-        context.iiss_engine.put_unreg_prep_candidate_for_iiss_db(context.rc_tx_batch,
-                                                                 address,
-                                                                 context.block.height)
 
     @classmethod
     def handle_get_prep_candidate(cls, context: 'IconScoreContext', params: dict) -> dict:
@@ -141,94 +85,131 @@ class CandidateHandler:
     @classmethod
     def _get_prep_candidate(cls, context: 'IconScoreContext', address: 'Address') -> dict:
 
-        if not cls.prep_storage.is_candidate(context, address):
-            raise InvalidParamsException(f'Failed to get candidate: no register')
+        if not cls._is_candidate(context, address):
+            raise InvalidParamsException(f"P-Rep candidate not found: {str(address)}")
 
-        prep_candidate: 'Candidate' = cls.prep_storage.get_candidate(context, address)
-
-        data = {
-            ConstantKeys.NAME: prep_candidate.name,
-            ConstantKeys.EMAIL: prep_candidate.email,
-            ConstantKeys.WEBSITE: prep_candidate.website,
-            ConstantKeys.JSON: prep_candidate.json,
-            ConstantKeys.IP: prep_candidate.ip,
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: prep_candidate.gv.incentiveRep
-            }
-        }
-        return data
+        candidate: 'Candidate' = context.prep_storage.get_candidate(context, address)
+        return candidate.to_dict()
 
     @classmethod
-    def handle_get_prep_candidate_delegation_info(cls, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_set_prep_candidate(
+            cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+        address: 'Address' = context.tx.origin
+        prep_engine = context.prep_engine
+        prep_storage = context.prep_storage
 
+        candidate: 'Candidate' = prep_engine.candidates.get(address)
+        if candidate is None:
+            raise InvalidParamsException(f"P-Rep candidate not found: str{address}")
+
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP_CANDIDATE)
+        candidate.set(ret_params)
+
+        prep_storage.put_candidate(context, candidate)
+
+    @classmethod
+    def handle_unreg_prep_candidate(
+            cls, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+        """Unregister a P-Rep candidate
+
+        :param context:
+        :param params:
+        :param tx_result:
+        :return:
+        """
+        address: 'Address' = context.tx.origin
+        prep_engine = context.prep_engine
+
+        candidate: 'Candidate' = prep_engine.candidates.get(address)
+        if candidate is None:
+            raise InvalidParamsException(f"P-Rep candidate not found: str{address}")
+
+        cls._del_prep_candidate_for_state_db(context, candidate)
+        cls._put_unreg_prep_candidate_for_iiss_db(context, address)
+
+    @classmethod
+    def _del_prep_candidate_for_state_db(
+            cls, context: 'IconScoreContext', candidate: 'Candidate'):
+        context.prep_storage.delete_candidate(context, candidate.address)
+        cls._apply_candidate_delegated_offset_for_iiss_variable(context, -candidate.delegated)
+
+    @classmethod
+    def _put_unreg_prep_candidate_for_iiss_db(
+            cls, context: 'IconScoreContext', address: 'Address'):
+        context.iiss_engine.put_unreg_prep_candidate_for_iiss_db(
+            context.rc_tx_batch, address, context.block.height)
+
+    @classmethod
+    def handle_get_prep_candidate_delegation_info(
+            cls, context: 'IconScoreContext', params: dict) -> dict:
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
+
         return cls._get_prep_candidate_delegation_info(context, address)
 
     @classmethod
-    def _get_prep_candidate_delegation_info(cls, context: 'IconScoreContext', address: 'Address') -> dict:
-
-        index, candidate = cls.prep_candidates.get(address)
+    def _get_prep_candidate_delegation_info(
+            cls, context: 'IconScoreContext', address: 'Address') -> dict:
+        candidates: 'CandidateContainer' = context.prep_engine.candidates.get(address)
+        candidate = candidates.get(address)
+        ranking: int = candidates.get_ranking(address)
 
         if candidate is None:
-            raise InvalidParamsException(f"this EOA is not Candidate: {address}")
+            raise InvalidParamsException(f"P-Rep candidate not found: {str(address)}")
 
-        data = {
-            "ranking": index + 1,
-            "totalDelegated": candidate.total_delegated,
+        return {
+            "ranking": ranking,
+            "delegated": candidate.delegated
         }
-        return data
 
+"""
     @classmethod
     def handle_get_prep_list(cls, context: 'IconScoreContext', params: dict) -> dict:
-
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_LIST)
-        return cls._get_prep_list(context)
-
-    @classmethod
-    def _get_prep_list(cls, context: 'IconScoreContext') -> dict:
-
-        preps: list = cls.prep_variable.get_preps(context)
-        data: dict = {}
+        preps: List['Candidate'] = context.prep_engine.candidates.get_preps()
+        result: dict = {}
         total_delegated: int = 0
 
-        prep_infos = []
+        preps_in_result = []
         for prep in preps:
-            info = {
+            item = {
                 "address": prep.address,
-                "delegated": prep.total_delegated
+                "delegated": prep.delegated
             }
-            total_delegated += prep.total_delegated
-            prep_infos.append(info)
+            preps_in_result.append(item)
+            total_delegated += prep.delegated
 
-        data["totalDelegated"] = total_delegated
-        data["prepList"] = prep_infos
+        result["totalDelegated"] = total_delegated
+        result["preps"] = preps_in_result
 
-        return data
+        return result
 
     @classmethod
     def handle_get_prep_candidate_list(cls, context: 'IconScoreContext', params: dict) -> dict:
-
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_CANDIDATE_LIST)
         return cls._get_prep_candidate_list(context, ret_params)
 
     @classmethod
     def _get_prep_candidate_list(cls, context: 'IconScoreContext', params: dict) -> dict:
-
-        prep_list: list = cls.prep_candidates.to_list()
-        data: dict = {}
+        candidates: 'CandidateContainer' = context.prep_engine.candidates
         total_delegated: int = 0
+        candidate_list = []
 
-        prep_infos = []
-        for candidate in prep_list:
-            info = {
+        start_index: int = params.get(ConstantKeys.START_RANKING, 1) - 1
+        end_index: int = params.get(ConstantKeys.END_RANKING, len(candidates))
+
+        for i in range(start_index, end_index):
+            candidate: 'Candidate' = candidates[i]
+
+            item = {
                 "address": candidate.address,
-                "delegated": candidate.total_delegated
+                "delegated": candidate.delegated
             }
-            total_delegated += candidate.total_delegated
-            prep_infos.append(info)
+            candidate_list.append(item)
 
-        data["totalDelegated"] = total_delegated
-        data["prepList"] = prep_infos
+            total_delegated += candidate.delegated
 
-        return data
+        return {
+            "totalDelegated": total_delegated,
+            "candidates": candidate_list
+        }
+"""
