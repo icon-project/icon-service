@@ -20,6 +20,7 @@ from iconcommons import Logger
 
 from .issue_formula import IssueFormula
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
+from .variable.issue_storage import Reward
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
@@ -112,15 +113,16 @@ class CommitDelegator(object):
 
         current_total_supply = cls.icx_storage.get_total_supply(context)
         current_total_candidate_delegated = cls.variable.issue.get_total_candidate_delegated(context)
-        # todo: after demo, should consider about record these variable to formula (i.e. record in memory)
-        r_min = cls.variable.issue.get_reward_min(context)
-        r_max = cls.variable.issue.get_reward_max(context)
-        r_point = cls.variable.issue.get_reward_point(context)
-        reward_rep: int = IssueFormula.calculate_r_rep(r_min, r_max, r_point,
+        reward_prep: 'Reward' = cls.variable.issue.get_reward_prep(context)
+
+        reward_rep: int = IssueFormula.calculate_r_rep(reward_prep.reward_min,
+                                                       reward_prep.reward_max,
+                                                       reward_prep.reward_point,
                                                        current_total_supply,
                                                        current_total_candidate_delegated)
         calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
-        cls.variable.issue.put_reward_rep(context, reward_rep)
+        reward_prep.reward_rate = reward_rep
+        cls.variable.issue.put_reward_prep(context, reward_prep)
 
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(precommit_data.block.height,
                                                                               calculated_incentive_rep,

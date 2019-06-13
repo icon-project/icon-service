@@ -23,10 +23,7 @@ if TYPE_CHECKING:
 
 class IssueStorage(object):
     PREFIX: bytes = b'issue'
-    REWARD_REP_KEY: bytes = PREFIX + b'rr'
-    REWARD_MIN_KEY: bytes = PREFIX + b'rmin'
-    REWARD_MAX_KEY: bytes = PREFIX + b'rmax'
-    REWARD_POINT_KEY: bytes = PREFIX + b'rp'
+    REWARD_PREP_KEY: bytes = PREFIX + b'rprep'
     CALC_NEXT_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cnbh'
     CALC_PERIOD_KEY: bytes = PREFIX + b'pk'
     TOTAL_CANDIDATE_DELEGATED_KEY: bytes = PREFIX + b'tcd'
@@ -44,65 +41,13 @@ class IssueStorage(object):
         if self._db:
             self._db = None
 
-    def put_reward_rep(self, context: 'IconScoreContext', reward_rep: int):
-        version = 0
-        data: bytes = MsgPackForDB.dumps([version, reward_rep])
-        self._db.put(context, self.REWARD_REP_KEY, data)
+    def put_reward_prep(self, context: 'IconScoreContext', reward_prep: 'Reward'):
+        self._db.put(context, self.REWARD_PREP_KEY, reward_prep.to_bytes())
 
-    def get_reward_rep(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.REWARD_REP_KEY)
-        if value:
-            data = MsgPackForDB.loads(value)
-            version: int = data[0]
-            reward_rep: int = data[1]
-            return reward_rep
-        else:
-            return None
-
-    def put_reward_min(self, context: 'IconScoreContext', reward_min: int):
-        version = 0
-        data: bytes = MsgPackForDB.dumps([version, reward_min])
-        self._db.put(context, self.REWARD_MIN_KEY, data)
-
-    def get_reward_min(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.REWARD_MIN_KEY)
-        if value:
-            data = MsgPackForDB.loads(value)
-            version: int = data[0]
-            reward_min: int = data[1]
-            return reward_min
-        else:
-            return None
-
-    def put_reward_max(self, context: 'IconScoreContext', reward_max: int):
-        version = 0
-        data: bytes = MsgPackForDB.dumps([version, reward_max])
-        self._db.put(context, self.REWARD_MAX_KEY, data)
-
-    def get_reward_max(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.REWARD_MAX_KEY)
-        if value:
-            data = MsgPackForDB.loads(value)
-            version: int = data[0]
-            reward_max: int = data[1]
-            return reward_max
-        else:
-            return None
-
-    def put_reward_point(self, context: 'IconScoreContext', reward_point: int):
-        version = 0
-        data: bytes = MsgPackForDB.dumps([version, reward_point])
-        self._db.put(context, self.REWARD_POINT_KEY, data)
-
-    def get_reward_point(self, context: 'IconScoreContext') -> Optional[int]:
-        value: bytes = self._db.get(context, self.REWARD_POINT_KEY)
-        if value:
-            data = MsgPackForDB.loads(value)
-            version: int = data[0]
-            reward_point: int = data[1]
-            return reward_point
-        else:
-            return None
+    def get_reward_prep(self, context: 'IconScoreContext'):
+        reward_prep: Optional[bytes] = self._db.get(context, self.REWARD_PREP_KEY)
+        if reward_prep:
+            return Reward.from_bytes(reward_prep)
 
     def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
         version = 0
@@ -148,3 +93,34 @@ class IssueStorage(object):
             total_candidate_delegated: int = data[1]
             return total_candidate_delegated
         return None
+
+
+class Reward:
+    _VERSION = 0
+
+    def __init__(self,
+                 reward_rate: Optional[int],
+                 reward_min: int,
+                 reward_max: int,
+                 reward_point: int):
+        self.reward_rate: Optional[int] = reward_rate
+        self.reward_min: int = reward_min
+        self.reward_max: int = reward_max
+        self.reward_point: int = reward_point
+
+    @classmethod
+    def from_bytes(cls, buf: bytes) -> 'Reward':
+        data: list = MsgPackForDB.loads(buf)
+        version = data[0]
+
+        return cls(*data[1:])
+
+    def to_bytes(self):
+        data: list = [
+            self._VERSION,
+            self.reward_rate,
+            self.reward_min,
+            self.reward_max,
+            self.reward_point
+        ]
+        return MsgPackForDB.dumps(data)
