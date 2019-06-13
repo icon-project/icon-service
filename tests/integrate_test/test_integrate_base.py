@@ -17,7 +17,7 @@
 """IconServiceEngine testcase
 """
 
-from typing import TYPE_CHECKING, Union, Optional, Any
+from typing import TYPE_CHECKING, Union, Optional, Any, List
 from unittest import TestCase
 from unittest.mock import Mock
 
@@ -306,7 +306,8 @@ class TestIntegrateBase(TestCase):
 
     def _make_and_req_block(self, tx_list: list,
                             block_height: int = None,
-                            prev_block_contributor: Optional[dict] = None) -> tuple:
+                            prev_block_generator: Optional['Address'] = None,
+                            prev_block_validators: Optional[List['Address']] = None) -> tuple:
         if block_height is None:
             block_height: int = self._block_height
         block_hash = create_block_hash()
@@ -316,7 +317,8 @@ class TestIntegrateBase(TestCase):
 
         invoke_response, _ = self.icon_service_engine.invoke(block=block,
                                                              tx_requests=tx_list,
-                                                             prev_block_contributors=prev_block_contributor)
+                                                             prev_block_generator=prev_block_generator,
+                                                             prev_block_validators=prev_block_validators)
 
         return block, invoke_response
 

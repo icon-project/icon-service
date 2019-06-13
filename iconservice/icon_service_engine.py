@@ -320,13 +320,15 @@ class IconServiceEngine(ContextContainer):
     def invoke(self,
                block: 'Block',
                tx_requests: list,
-               prev_block_contributors: dict = None) -> tuple:
+               prev_block_generator: Optional['Address'] = None,
+               prev_block_validators: Optional[List['Address']] = None) -> tuple:
 
         """Process transactions in a block sent by loopchain
 
         :param block:
         :param tx_requests: transactions in a block
-        :param prev_block_contributors: previous block contributors
+        :param prev_block_generator: previous block generator
+        :param prev_block_validators: previous block validators
         :return: (TransactionResult[], bytes)
         """
         # If the block has already been processed,
@@ -383,7 +385,8 @@ class IconServiceEngine(ContextContainer):
             block_result,
             context.rc_block_batch,
             candidates,
-            prev_block_contributors,
+            prev_block_generator,
+            prev_block_validators,
             context.new_icon_score_mapper,
             precommit_flag)
         self._precommit_data_manager.push(precommit_data)

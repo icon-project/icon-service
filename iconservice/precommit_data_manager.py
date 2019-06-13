@@ -16,7 +16,7 @@
 
 from enum import IntFlag
 from threading import Lock
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from .base.block import Block
 from .base.exception import InvalidParamsException
@@ -48,7 +48,8 @@ class PrecommitData(object):
                  block_result: list,
                  rc_block_batch: list,
                  candidates: 'CandidateContainer',
-                 prev_block_contributors: Optional[dict],
+                 prev_block_generator: Optional['Address'],
+                 prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'] = None,
                  precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
@@ -64,7 +65,8 @@ class PrecommitData(object):
         self.rc_block_batch = rc_block_batch
         # Snapshot of candidates
         self.candidates = candidates
-        self.prev_block_contributors = prev_block_contributors
+        self.prev_block_generator = prev_block_generator
+        self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
         self.precommit_flag = precommit_flag
 

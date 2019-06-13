@@ -138,9 +138,8 @@ class ConstantKeys:
     BLOCK = "block"
     TRANSACTIONS = "transactions"
 
-    PREV_BLOCK_CONTRIBUTORS = "prevBlockContributors"
-    GENERATOR = "generator"
-    VALIDATORS = "validators"
+    PREV_BLOCK_GENERATOR = "prevBlockGenerator"
+    PREV_BLOCK_VALIDATORS = "prevBlockValidators"
 
     FILTER = "filter"
 
@@ -252,10 +251,8 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
     ],
-    ConstantKeys.PREV_BLOCK_CONTRIBUTORS: {
-        ConstantKeys.GENERATOR: ValueType.ADDRESS,
-        ConstantKeys.VALIDATORS: [ValueType.ADDRESS]
-    }
+    ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
+    ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
 }
 
 # todo: check if version parameter is redundant
