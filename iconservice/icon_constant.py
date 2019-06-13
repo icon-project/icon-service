@@ -157,6 +157,17 @@ class IconScoreFuncType(IntEnum):
 
 ENABLE_THREAD_FLAG = EnableThreadFlag.INVOKE | EnableThreadFlag.QUERY | EnableThreadFlag.VALIDATE
 
+
+class DeployType(IntEnum):
+    INSTALL = 0
+    UPDATE = 1
+
+
+class DeployState(IntEnum):
+    INACTIVE = 0
+    ACTIVE = 1
+
+
 IISS_METHOD_TABLE = [
     "setStake",
     "getStake",

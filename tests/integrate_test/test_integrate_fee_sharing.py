@@ -21,7 +21,8 @@ from iconcommons import IconConfig
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.address import Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidRequestException
-from iconservice.fee.fee_engine import FeeEngine, FIXED_TERM
+from iconservice.fee import FeeEngine
+from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine

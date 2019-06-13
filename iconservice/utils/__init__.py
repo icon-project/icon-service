@@ -21,6 +21,7 @@ Functions and classes in this module don't have any external dependencies.
 
 import hashlib
 import re
+from collections import namedtuple
 from enum import Flag
 from typing import Any, Union
 
@@ -105,3 +106,7 @@ def toggle_flags(src_flags: Flag, dest_flags: Flag, on: bool) -> Flag:
         src_flags &= ~dest_flags
 
     return src_flags
+
+
+ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
+ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue rc")

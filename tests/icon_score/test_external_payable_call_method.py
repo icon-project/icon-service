@@ -23,7 +23,7 @@ from iconservice.base.exception import ExceptionCode
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import IconScoreDatabase
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy import DeployEngine
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, payable
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreFuncType
@@ -115,7 +115,7 @@ class ChildCallClass(BaseCallClass):
 class TestExternalPayableCall(unittest.TestCase):
 
     def setUp(self):
-        IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
+        IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
         self.context = Mock(spec=IconScoreContext)
         self.context.attach_mock(Mock(spec=Transaction), "tx")
         self.context.attach_mock(Mock(spec=Block), "block")

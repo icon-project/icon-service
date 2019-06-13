@@ -19,10 +19,11 @@ from typing import TYPE_CHECKING
 from .icon_score_constant import STR_FALLBACK
 from .icon_score_context_util import IconScoreContextUtil
 from .internal_call import InternalCall
-from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
+from ..base.address import GOVERNANCE_SCORE_ADDRESS
 
 if TYPE_CHECKING:
     from .icon_score_context import IconScoreContext
+    from ..base.address import Address
 
 
 class Icx(object):

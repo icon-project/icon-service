@@ -20,19 +20,16 @@ from iconcommons import Logger
 
 from .issue_formula import IssueFormula
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
-from .variable.issue_storage import Reward
 from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..icx.icx_storage import IcxStorage
+    from ..icx.storage import IcxStorage
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address
-    from ..prep.variable.variable_storage import GovernanceVariable, PRep
-    from .ipc.reward_calc_proxy import RewardCalcProxy
-    from .reward_calc.data_storage import DataStorage as RewardCalcDataStorage
+    from iconservice.iiss.reward_calc.ipc import RewardCalcProxy
+    from .reward_calc.storage import DataStorage as RewardCalcDataStorage
     from .reward_calc.msg_data import Header, BlockProduceInfoData, PRepsData, GovernanceVariable
-    from .variable.variable import Variable
 
 
 class CommitDelegator(object):

@@ -14,32 +14,48 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from ...utils.msgpack_for_db import MsgPackForDB
+from ..base.ComponentBase import StorageBase
+from ..icon_constant import IISS_MAX_REWARD_RATE, ConfigKey
+from ..utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
-    from ...database.db import ContextDatabase
-    from ...iconscore.icon_score_context import IconScoreContext
+    from ..iconscore.icon_score_context import IconScoreContext
 
 
-class IssueStorage(object):
-    PREFIX: bytes = b'issue'
+class Storage(StorageBase):
+    PREFIX: bytes = b'iiss'
+    UNSTAKE_LOCK_PERIOD_KEY: bytes = PREFIX + b'ulp'
     REWARD_PREP_KEY: bytes = PREFIX + b'rprep'
     CALC_NEXT_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cnbh'
     CALC_PERIOD_KEY: bytes = PREFIX + b'pk'
     TOTAL_CANDIDATE_DELEGATED_KEY: bytes = PREFIX + b'tcd'
 
-    def __init__(self, db: 'ContextDatabase'):
-        """Constructor
+    def open(self,
+             context: 'IconScoreContext',
+             unstake_lock_period: int,
+             reward_meta_data: dict,
+             calc_period: int):
+        self.check_config_before_init(reward_meta_data)
 
-        :param db: (Database) state db wrapper
-        """
-        self._db: 'ContextDatabase' = db
+        if self.get_unstake_lock_period(context) is None:
+            self.put_unstake_lock_period(context, unstake_lock_period)
 
-    def close(self):
-        """Close the embedded database.
-        """
-        if self._db:
-            self._db = None
+        if self.get_reward_prep(context) is None:
+            reward_prep = Reward(reward_rate=None,
+                                 reward_min=reward_meta_data[ConfigKey.REWARD_MIN],
+                                 reward_max=reward_meta_data[ConfigKey.REWARD_MAX],
+                                 reward_point=reward_meta_data[ConfigKey.REWARD_POINT])
+            self.put_reward_prep(context, reward_prep)
+
+        if self.get_calc_period(context) is None:
+            self.put_calc_period(context, calc_period)
+
+    @staticmethod
+    def check_config_before_init(reward_variable: dict):
+        for value in reward_variable.values():
+            if not 0 < value <= IISS_MAX_REWARD_RATE:
+                raise AssertionError(f"Invalid reward variable: Cannot set zero or under "
+                                     f"and more than {IISS_MAX_REWARD_RATE}")
 
     def put_reward_prep(self, context: 'IconScoreContext', reward_prep: 'Reward'):
         self._db.put(context, self.REWARD_PREP_KEY, reward_prep.to_bytes())
@@ -93,6 +109,21 @@ class IssueStorage(object):
             total_candidate_delegated: int = data[1]
             return total_candidate_delegated
         return None
+
+    def put_unstake_lock_period(self, context: 'IconScoreContext', unstake_lock_period: int):
+        version = 0
+        data: bytes = MsgPackForDB.dumps([version, unstake_lock_period])
+        self._db.put(context, self.UNSTAKE_LOCK_PERIOD_KEY, data)
+
+    def get_unstake_lock_period(self, context: 'IconScoreContext') -> Optional[int]:
+        value: bytes = self._db.get(context, self.UNSTAKE_LOCK_PERIOD_KEY)
+        if value:
+            data = MsgPackForDB.loads(value)
+            version: int = data[0]
+            unstake_lock_period: int = data[1]
+            return unstake_lock_period
+        else:
+            return None
 
 
 class Reward:

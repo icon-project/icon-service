@@ -22,7 +22,7 @@ from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
-from iconservice.fee.fee_engine import FeeEngine
+from iconservice.fee.engine import FeeEngine
 from iconservice.icon_constant import REVISION_3
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \

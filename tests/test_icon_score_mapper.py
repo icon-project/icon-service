@@ -19,7 +19,7 @@ import unittest
 from unittest.mock import Mock
 
 from iconservice.base.address import AddressPrefix
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.storage import IconScoreDeployStorage
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader

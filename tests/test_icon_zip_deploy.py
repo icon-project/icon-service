@@ -28,8 +28,8 @@ from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
+from iconservice.deploy.engine import IconScoreDeployEngine
+from iconservice.deploy.storage import IconScoreDeployStorage
 from iconservice.deploy.utils import remove_path
 from iconservice.icon_constant import ZERO_TX_HASH
 from iconservice.iconscore.icon_score_context import ContextContainer
@@ -37,8 +37,8 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.icx.icx_engine import IcxEngine
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx.engine import IcxEngine
+from iconservice.icx.storage import IcxStorage
 from tests import create_address, create_block_hash, create_tx_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))

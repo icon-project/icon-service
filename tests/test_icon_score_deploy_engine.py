@@ -26,8 +26,8 @@ from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.factory import ContextDatabaseFactory
 from iconservice.deploy import DeployType
-from iconservice.deploy import icon_score_deploy_engine as isde
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployTXParams, \
+from iconservice.deploy import engine as isde
+from iconservice.deploy.storage import IconScoreDeployStorage, IconScoreDeployTXParams, \
     IconScoreDeployInfo
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.icon_constant import ICON_DEX_DB_NAME, IconServiceFlag
@@ -36,8 +36,8 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
-from iconservice.icx.icx_engine import IcxEngine
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx.engine import IcxEngine
+from iconservice.icx.storage import IcxStorage
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 PROJECT_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))

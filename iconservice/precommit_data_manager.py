@@ -44,6 +44,7 @@ class PrecommitFlag(IntFlag):
 
 class PrecommitData(object):
     def __init__(self,
+                 revision: int,
                  block_batch: 'BlockBatch',
                  block_result: list,
                  rc_block_batch: list,
@@ -60,6 +61,7 @@ class PrecommitData(object):
         :param precommit_flag: precommit flag
 
         """
+        self.revision: int = revision
         self.block_batch = block_batch
         self.block_result = block_result
         self.rc_block_batch = rc_block_batch

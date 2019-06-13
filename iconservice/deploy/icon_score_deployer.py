@@ -19,8 +19,8 @@ import os
 import shutil
 import zipfile
 
-from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
 from ..base.exception import InvalidParamsException, InvalidPackageException
+from ..icon_constant import REVISION_3, PACKAGE_JSON_FILE
 
 
 class IconScoreDeployer(object):
