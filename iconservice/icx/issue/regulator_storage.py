@@ -26,10 +26,7 @@ if TYPE_CHECKING:
 # todo: add version
 # todo: record values using structure and access to db only once
 class RegulatorStorage(object):
-
-    _CURRENT_CALC_PERIOD_ISSUED_ICX_KEY = b'current_calc_period_issued_icx'
-    _PREV_CALC_PERIOD_ISSUED_ICX_KEY = b'prev_calc_period_issued_icx'
-    _OVER_ISSUED_I_SCORE_KEY = b'over_issued_i_score'
+    _REGULATOR_VARIABLE_KEY = b'regulator_variable'
 
     def __init__(self, db: 'ContextDatabase'):
         self._db: 'ContextDatabase' = db
@@ -44,38 +41,46 @@ class RegulatorStorage(object):
             self._db.close(context)
             self._db = None
 
-    def put_current_calc_period_issued_icx(self,
-                                           context: 'IconScoreContext',
-                                           current_calc_period_issued_amount: int):
+    def get_regulator_variable(self, context: 'IconScoreContext'):
+        regulator_variable: Optional[bytes] = self._db.get(context, self._REGULATOR_VARIABLE_KEY)
+        if regulator_variable:
+            return RegulatorVariable.from_bytes(regulator_variable)
+        return RegulatorVariable.first_initiate()
 
-        encoded_current_issued_amount = MsgPackForDB.dumps(current_calc_period_issued_amount)
-        self._db.put(context, self._CURRENT_CALC_PERIOD_ISSUED_ICX_KEY, encoded_current_issued_amount)
+    def put_regulator_variable(self, context: 'IconScoreContext', rv: 'RegulatorVariable'):
+        self._db.put(context, self._REGULATOR_VARIABLE_KEY, rv.to_bytes())
 
-    def get_current_calc_period_issued_icx(self, context: 'IconScoreContext') -> int:
-        encoded_current_issued_amount = self._db.get(context, self._CURRENT_CALC_PERIOD_ISSUED_ICX_KEY)
-        current_issued_amount = 0
-        if encoded_current_issued_amount is not None:
-            current_issued_amount = MsgPackForDB.loads(encoded_current_issued_amount)
-        return current_issued_amount
 
-    def put_prev_calc_period_issued_icx(self, context: 'IconScoreContext', prev_calc_period_issued_amount: int):
-        encoded_prev_issued_amount = MsgPackForDB.dumps(prev_calc_period_issued_amount)
-        self._db.put(context, self._PREV_CALC_PERIOD_ISSUED_ICX_KEY, encoded_prev_issued_amount)
+class RegulatorVariable:
+    _VERSION = 0
 
-    def get_prev_calc_period_issued_icx(self, context: 'IconScoreContext') -> Optional[int]:
-        encoded_prev_issued_amount = self._db.get(context, self._PREV_CALC_PERIOD_ISSUED_ICX_KEY)
-        prev_issued_amount: Optional[int] = None
-        if encoded_prev_issued_amount is not None:
-            prev_issued_amount = MsgPackForDB.loads(encoded_prev_issued_amount)
-        return prev_issued_amount
+    def __init__(self,
+                 current_calc_period_issued_icx: int,
+                 prev_calc_period_issued_icx: Optional[int],
+                 over_issued_i_score: int):
+        self.current_calc_period_issued_icx = current_calc_period_issued_icx
+        self.prev_calc_period_issued_icx = prev_calc_period_issued_icx
+        self.over_issued_i_score = over_issued_i_score
 
-    def put_over_issued_i_score(self, context: 'IconScoreContext', over_issued_i_score: int):
-        encoded_over_issued_i_score = MsgPackForDB.dumps(over_issued_i_score)
-        self._db.put(context, self._OVER_ISSUED_I_SCORE_KEY, encoded_over_issued_i_score)
+    @classmethod
+    def first_initiate(cls):
+        # prev_calc_period_issued_icx could be None in case of first calculating period
+        return cls(current_calc_period_issued_icx=0,
+                   prev_calc_period_issued_icx=None,
+                   over_issued_i_score=0)
 
-    def get_over_issued_i_score(self, context: 'IconScoreContext') -> int:
-        encoded_over_issued_i_score = self._db.get(context, self._OVER_ISSUED_I_SCORE_KEY)
-        over_issued_i_score = 0
-        if encoded_over_issued_i_score is not None:
-            over_issued_i_score = MsgPackForDB.loads(encoded_over_issued_i_score)
-        return over_issued_i_score
+    @classmethod
+    def from_bytes(cls, buf: bytes) -> 'RegulatorVariable':
+        data: list = MsgPackForDB.loads(buf)
+        version = data[0]
+
+        return cls(*data[1:])
+
+    def to_bytes(self):
+        data: list = [
+            self._VERSION,
+            self.current_calc_period_issued_icx,
+            self.prev_calc_period_issued_icx,
+            self.over_issued_i_score
+        ]
+        return MsgPackForDB.dumps(data)
