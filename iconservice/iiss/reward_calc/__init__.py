@@ -14,4 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .storage import Storage as RcStorage
+from .storage import Storage as RewardCalcStorage
+from .data_creator import DataCreator as RewardCalcDataCreator

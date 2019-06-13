@@ -26,12 +26,12 @@ from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import IconScoreContextType, IconScoreFuncType
 
 if TYPE_CHECKING:
-    from ..base.address import Address
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
-    from ..prep.candidate_container import CandidateContainer
+    from ..base.address import Address
+    from ..prep.data.candidate_container import CandidateContainer
     from ..utils import ContextEngine, ContextStorage
 
 _thread_local_data = threading.local()
