@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from copy import deepcopy
 from typing import TYPE_CHECKING, List, Union, Optional
 
 from .candidate import Candidate
@@ -142,7 +142,7 @@ class CandidateContainer(object):
         return preps
 
     def get_snapshot(self) -> 'CandidateContainer':
-        return None
+        return deepcopy(self)
 
     def get_ranking(self, address: 'Address') -> int:
         """The ranking is in the descending order by delegated amount

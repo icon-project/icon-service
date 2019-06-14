@@ -101,14 +101,14 @@ class Storage(StorageBase):
         value: bytes = MsgPackForDB.dumps(data)
         self._db.put(context, self.TOTAL_CANDIDATE_DELEGATED_KEY, value)
 
-    def get_total_candidate_delegated(self, context: 'IconScoreContext') -> Optional[int]:
+    def get_total_candidate_delegated(self, context: 'IconScoreContext') -> int:
         value: bytes = self._db.get(context, self.TOTAL_CANDIDATE_DELEGATED_KEY)
         if value:
             data: list = MsgPackForDB.loads(value)
             version: int = data[0]
             total_candidate_delegated: int = data[1]
             return total_candidate_delegated
-        return None
+        return 0
 
     def put_unstake_lock_period(self, context: 'IconScoreContext', unstake_lock_period: int):
         version = 0

@@ -47,7 +47,7 @@ from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue_data_validator import IssueDataValidator
 from .iiss import IISSEngine, IISSStorage
-from .iiss.reward_calc import RcStorage
+from .iiss.reward_calc import RewardCalcStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .utils import sha3_256, int_to_bytes, is_flags_on, ContextEngine, ContextStorage
@@ -135,6 +135,7 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
+                                     conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.GOVERNANCE_VARIABLE])
 
         self._load_builtin_scores(context, conf[ConfigKey.BUILTIN_SCORE_OWNER])
@@ -154,7 +155,7 @@ class IconServiceEngine(ContextContainer):
                                                    iiss=IISSStorage(self._icx_context_db),
                                                    prep=PRepStorage(self._icx_context_db),
                                                    issue=IssueStorage(self._icx_context_db),
-                                                   rc=RcStorage())
+                                                   rc=RewardCalcStorage())
 
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage
@@ -165,13 +166,16 @@ class IconServiceEngine(ContextContainer):
                                 unstake_lock_period: int,
                                 reward_meta_data: dict,
                                 calc_period: int,
+                                term_period: int,
                                 governance_variable: dict):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
         IconScoreContext.engine.icx.open(context)
         IconScoreContext.engine.iiss.open(context, iiss_db_root_path)
-        IconScoreContext.engine.prep.open(context)
+        IconScoreContext.engine.prep.open(context,
+                                          term_period,
+                                          governance_variable)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)
@@ -181,8 +185,7 @@ class IconServiceEngine(ContextContainer):
                                            unstake_lock_period,
                                            reward_meta_data,
                                            calc_period)
-        IconScoreContext.storage.prep.open(context,
-                                           governance_variable)
+        IconScoreContext.storage.prep.open(context)
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.rc.open(iiss_db_root_path)
 

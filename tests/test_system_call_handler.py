@@ -22,7 +22,7 @@ from unittest.mock import Mock
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
 from iconservice.base.exception import MethodNotFoundException, InvalidParamsException
-from iconservice.fee.engine import FeeEngine
+from iconservice.fee import FeeEngine
 from iconservice.icon_constant import IconScoreContextType, GOVERNANCE_ADDRESS
 from iconservice.iconscore import system_call_handler
 from iconservice.iconscore.icon_score_context import IconScoreContext

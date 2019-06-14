@@ -14,10 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import TYPE_CHECKING
+
 from ..base.address import Address, GOVERNANCE_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
-from ..database.db import IconScoreDatabase
 from ..icon_constant import REVISION_2
+
+if TYPE_CHECKING:
+    from .icon_score_base import IconScoreBase
+    from ..database.db import IconScoreDatabase
 
 
 class IconScoreInfo(object):
