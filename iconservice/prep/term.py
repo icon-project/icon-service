@@ -18,9 +18,9 @@ from typing import TYPE_CHECKING, List, Optional
 from ..base.type_converter_templates import ConstantKeys
 
 if TYPE_CHECKING:
-    from .data.candidate import Candidate
+    from .data.prep import PRep
     from ..iconscore.icon_score_context import IconScoreContext
-    from .data.candidate_container import CandidateContainer
+    from .data.prep_container import PRepContainer
 
 
 class Term(object):
@@ -32,7 +32,7 @@ class Term(object):
         self._sequence: int = -1
         self._end_block_height: int = -1
         self._period: int = -1
-        self._preps: List['Candidate'] = []
+        self._main_preps: List['PRep'] = []
         self._incentive_rep: int = -1
 
     @property
@@ -48,8 +48,8 @@ class Term(object):
         return self._period
 
     @property
-    def preps(self) -> List['Candidate']:
-        return self._preps
+    def preps(self) -> List['PRep']:
+        return self._main_preps
 
     @property
     def incentive_rep(self) -> int:
@@ -61,25 +61,25 @@ class Term(object):
             version = data[0]
             self._sequence = data[1]
             self._end_block_height = data[2]
-            self._preps = self._make_preps(context, data[3])
+            self._main_preps = self._make_preps(context, data[3])
             self._incentive_rep = data[4]
         else:
             self._period = term_period
             self._incentive_rep = governance_variable[ConstantKeys.INCENTIVE_REP]
 
-    def _make_preps(self, context: 'IconScoreContext', data: list) -> List['Candidate']:
-        preps: list = []
-        candidate_container: 'CandidateContainer' = context.engine.prep.get_snapshot()
+    def _make_preps(self, context: 'IconScoreContext', data: list) -> List['PRep']:
+        prep_list: list = []
+        preps: 'PRepContainer' = context.engine.prep.get_snapshot()
         for i, in range(0, len(data), 2):
-            candidate: 'Candidate' = candidate_container[data[i]]
-            candidate.delegated = data[i+1]
-            preps.append(candidate)
-        return preps
+            prep: 'PRep' = preps[data[i]]
+            prep.delegated = data[i+1]
+            prep_list.append(prep)
+        return prep_list
 
     def save(self,
              context: 'IconScoreContext',
              current_block_height: int,
-             preps: List['Candidate'],
+             preps: List['PRep'],
              incentive_rep: int):
 
         data: list = [
@@ -93,10 +93,10 @@ class Term(object):
 
         self._sequence += 1
         self._end_block_height = current_block_height + self._period
-        self._preps = preps
+        self._main_preps = preps
         self._incentive_rep = incentive_rep
 
-    def _make_prep_for_db(self, preps: List['Candidate']) -> list:
+    def _make_prep_for_db(self, preps: List['PRep']) -> list:
         data: list = []
         for prep in preps:
             data.append(prep.address)

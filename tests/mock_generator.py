@@ -64,7 +64,7 @@ def _create_inner_task(
         iiss_db_from_path,
         db_factory_create_by_name,
         icx_engine_open,
-        service_engine_load_prep_candidate,
+        service_engine_load_preps,
         service_engine_load_builtin_scores,
         service_engine_init_global_value_by_governance_score):
     state_db = {}
@@ -98,7 +98,7 @@ def _create_inner_task(
     # Patches create_by_name to pass creating DB
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
-    service_engine_load_prep_candidate.assert_called()
+    service_engine_load_preps.assert_called()
     service_engine_load_builtin_scores.assert_called()
     service_engine_init_global_value_by_governance_score.assert_called()
 

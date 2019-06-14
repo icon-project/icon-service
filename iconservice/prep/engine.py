@@ -15,8 +15,9 @@
 from typing import TYPE_CHECKING, Any
 
 from iconcommons.logger import Logger
-from .data.candidate import Candidate
-from .data.candidate_container import CandidateContainer
+
+from .data.prep import PRep
+from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
 class Engine(EngineBase):
     """PRepEngine class
 
-    Manages P-Rep candidates and handles P-Rep related JSON-RPC API requests
+    Manages preps and handles P-Rep related JSON-RPC API requests
     """
 
     def __init__(self) -> None:
@@ -46,26 +47,26 @@ class Engine(EngineBase):
         Logger.debug("PRepEngine.__init__() start")
 
         self._invoke_handlers: dict = {
-            "registerPRepCandidate": self.handle_register_prep_candidate,
-            "setPRepCandidate": self.handle_set_prep_candidate,
-            "unregisterPRepCandidate": self.handle_unregister_prep_candidate
+            "registerPRep": self.handle_register_prep,
+            "setPRep": self.handle_set_prep,
+            "unregisterPRep": self.handle_unregister_prep
         }
 
         self._query_handler: dict = {
-            "getPRepCandidate": self.handle_get_prep_candidate,
-            "getPRepCandidateDelegationInfo": self.handle_get_prep_candidate_delegation_info,
-            "getPRepList": self.handle_get_prep_list,
-            "getPRepCandidateList": self.handle_get_prep_candidate_list
+            "getPRep": self.handle_get_prep,
+            "getMainPRepList": self.handle_get_main_prep_list,
+            # "getSubPRepList": self.handle_get_sub_prep_list,
+            "getPRepList": self.handle_get_prep_list
         }
 
-        self.candidates: Optional['CandidateContainer'] = None
+        self.preps: Optional['PRepContainer'] = None
         self.term = Term()
 
         Logger.debug("PRepEngine.__init__() end")
 
     def open(self, context: 'IconScoreContext', term_period: int, governance_variable: dict) -> None:
-        self.candidates = CandidateContainer()
-        self.candidates.load(context)
+        self.preps = PRepContainer()
+        self.preps.load(context)
         self.term.load(context, term_period, governance_variable)
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
@@ -95,12 +96,12 @@ class Engine(EngineBase):
     def rollback(self):
         pass
 
-    def handle_register_prep_candidate(
+    def handle_register_prep(
             self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
-        """Register a P-Rep candidate
+        """Register a P-Rep
 
         Roles
-        * Update candidates in context
+        * Update preps in context
         * Update stateDB
         * Update rcDB
 
@@ -113,28 +114,28 @@ class Engine(EngineBase):
         prep_storage: 'PRepStorage' = context.storage.prep
 
         address: 'Address' = context.tx.origin
-        if address in context.candidates:
+        if address in context.preps:
             raise InvalidParamsException(f"{str(address)} has been already registered")
 
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP_CANDIDATE)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
         account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
 
-        # Create a candidate object and assign delegated amount from account to candidate
-        candidate = Candidate.from_dict(address, ret_params, context.block.height, context.tx.index)
-        candidate.delegated = account.delegated_amount
+        # Create a PRep object and assign delegated amount from account to prep
+        prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
+        prep.delegated = account.delegated_amount
 
-        # Update candidates in context
-        context.candidates.add(candidate)
+        # Update preps in context
+        context.preps.add(prep)
 
         # Update stateDB
-        prep_storage.put_candidate(context, candidate)
-        self._apply_candidate_delegated_offset_for_iiss_variable(context, candidate.delegated)
+        prep_storage.put_prep(context, prep)
+        self._apply_prep_delegated_offset_for_iiss_variable(context, prep.delegated)
 
         # Update rcDB
-        self._put_reg_prep_candidate_for_rc_data(context, address)
+        self._put_reg_prep_for_rc_data(context, address)
 
     @staticmethod
-    def _put_reg_prep_candidate_for_rc_data(context: 'IconScoreContext', address: 'Address'):
+    def _put_reg_prep_for_rc_data(context: 'IconScoreContext', address: 'Address'):
         rc_tx_batch: list = context.rc_tx_batch
         block_height: int = context.block.height
 
@@ -143,7 +144,7 @@ class Engine(EngineBase):
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
     @staticmethod
-    def _put_unreg_prep_candidate_for_iiss_db(context: 'IconScoreContext', address: 'Address'):
+    def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):
         rc_tx_batch: list = context.rc_tx_batch
         block_height: int = context.block.height
 
@@ -152,31 +153,31 @@ class Engine(EngineBase):
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
     @staticmethod
-    def _apply_candidate_delegated_offset_for_iiss_variable(
+    def _apply_prep_delegated_offset_for_iiss_variable(
             context: 'IconScoreContext', offset: int):
-        total_delegated_amount: int = context.storage.iiss.get_total_candidate_delegated(context)
-        context.storage.iiss.put_total_candidate_delegated(context, total_delegated_amount + offset)
+        total_delegated_amount: int = context.storage.iiss.get_total_prep_delegated(context)
+        context.storage.iiss.put_total_prep_delegated(context, total_delegated_amount + offset)
 
-    def handle_get_prep_candidate(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns registration information of a P-Rep candidate
+    def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
+        """Returns registration information of a P-Rep
 
         :param context:
         :param params:
         :return:
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_CANDIDATE)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
 
-        candidate: 'Candidate' = self.candidates.get(address)
-        if candidate is None:
-            raise InvalidParamsException(f"P-Rep candidate not found: {str(address)}")
+        prep: 'PRep' = self.preps.get(address)
+        if prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
-        return candidate.to_dict()
+        return prep.to_dict()
 
     @staticmethod
-    def handle_set_prep_candidate(
+    def handle_set_prep(
             context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
-        """Update a P-Rep candidate registration information
+        """Update a P-Rep registration information
 
         :param context:
         :param params:
@@ -186,19 +187,19 @@ class Engine(EngineBase):
         prep_storage = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        candidate: 'Candidate' = context.candidates.get(address)
-        if candidate is None:
-            raise InvalidParamsException(f"P-Rep candidate not found: str{address}")
+        prep: 'PRep' = context.preps.get(address)
+        if prep is None:
+            raise InvalidParamsException(f"P-Rep not found: str{address}")
 
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP_CANDIDATE)
-        candidate.set(ret_params)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
+        prep.set(ret_params)
 
-        # Update a new P-Rep candidate registration info to stateDB
-        prep_storage.put_candidate(context, candidate)
+        # Update a new P-Rep registration info to stateDB
+        prep_storage.put_prep(context, prep)
 
-    def handle_unregister_prep_candidate(
+    def handle_unregister_prep(
             self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
-        """Unregister a P-Rep candidate
+        """Unregister a P-Rep
 
         :param context:
         :param params:
@@ -208,97 +209,74 @@ class Engine(EngineBase):
         prep_storage: 'PRepStorage' = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        candidate: 'Candidate' = context.candidates.get(address)
-        if candidate is None:
-            raise InvalidParamsException(f"P-Rep candidate not found: str{address}")
+        prep: 'PRep' = context.preps.get(address)
+        if prep is None:
+            raise InvalidParamsException(f"P-Rep not found: str{address}")
 
-        # Update candidates in context
-        context.candidates.remove(address)
+        # Update preps in context
+        context.preps.remove(address)
 
         # Update stateDB
-        prep_storage.delete_candidate(context, address)
-        self._apply_candidate_delegated_offset_for_iiss_variable(context, -candidate.delegated)
+        prep_storage.delete_prep(context, address)
+        self._apply_prep_delegated_offset_for_iiss_variable(context, -prep.delegated)
 
         # Update rcDB
-        self._put_unreg_prep_candidate_for_iiss_db(context, address)
+        self._put_unreg_prep_for_iiss_db(context, address)
 
-    def handle_get_prep_candidate_delegation_info(
-            self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns delegation info of a P-Rep candidate
-
-        :param context:
-        :param params:
-        :return:
-        """
-        ret_params: dict = TypeConverter.convert(
-            params, ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO)
-        address: 'Address' = ret_params[ConstantKeys.ADDRESS]
-
-        candidate = self.candidates.get(address)
-        ranking: int = self.candidates.get_ranking(address)
-
-        if candidate is None:
-            raise InvalidParamsException(f"P-Rep candidate not found: {str(address)}")
-
-        return {
-            "ranking": ranking,
-            "delegated": candidate.delegated
-        }
-
-    def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_main_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns 22 P-Rep list in the present term
 
         :param context:
         :param params:
         :return:
         """
-        candidates: 'CandidateContainer' = self.candidates
+        preps: 'PRepContainer' = self.preps
         total_delegated: int = 0
-        preps = []
+        prep_list = []
 
-        for prep in candidates:
+        for prep in preps:
             item = {
                 "address": prep.address,
                 "delegated": prep.delegated
             }
-            preps.append(item)
+            prep_list.append(item)
             total_delegated += prep.delegated
 
-            if len(preps) == PREP_COUNT:
+            if len(prep_list) == PREP_COUNT:
                 break
 
         return {
             "totalDelegated": total_delegated,
-            "preps": preps
+            "preps": prep_list
         }
 
-    def handle_get_prep_candidate_list(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns P-Rep candidate list with start and end rankings
+    def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+        """Returns P-Rep list with start and end rankings
 
         :param context:
         :param params:
         :return:
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_CANDIDATE_LIST)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_LIST)
 
-        candidates: 'CandidateContainer' = self.candidates
+        preps: 'PRepContainer' = self.preps
         total_delegated: int = 0
-        candidate_list = []
+        prep_list = []
 
         start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1) - 1
-        end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(candidates))
+        end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
 
         for i in range(start_index, end_index):
-            candidate: 'Candidate' = candidates[i]
+            prep: 'PRep' = preps[i]
 
             item = {
-                "address": candidate.address,
-                "delegated": candidate.delegated
+                "address": prep.address,
+                "delegated": prep.delegated
             }
-            candidate_list.append(item)
-            total_delegated += candidate.delegated
+            prep_list.append(item)
+            total_delegated += prep.delegated
 
         return {
             "totalDelegated": total_delegated,
-            "candidates": candidate_list
+            "preps": prep_list
         }

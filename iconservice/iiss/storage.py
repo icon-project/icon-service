@@ -28,7 +28,7 @@ class Storage(StorageBase):
     REWARD_PREP_KEY: bytes = PREFIX + b'rprep'
     CALC_NEXT_BLOCK_HEIGHT_KEY: bytes = PREFIX + b'cnbh'
     CALC_PERIOD_KEY: bytes = PREFIX + b'pk'
-    TOTAL_CANDIDATE_DELEGATED_KEY: bytes = PREFIX + b'tcd'
+    TOTAL_PREP_DELEGATED_KEY: bytes = PREFIX + b'tcd'
 
     def open(self,
              context: 'IconScoreContext',
@@ -95,19 +95,19 @@ class Storage(StorageBase):
             return calc_period
         return None
 
-    def put_total_candidate_delegated(self, context: 'IconScoreContext', total_candidate_delegated: int):
+    def put_total_prep_delegated(self, context: 'IconScoreContext', total_prep_delegated: int):
         version = 0
-        data: list = [version, total_candidate_delegated]
+        data: list = [version, total_prep_delegated]
         value: bytes = MsgPackForDB.dumps(data)
-        self._db.put(context, self.TOTAL_CANDIDATE_DELEGATED_KEY, value)
+        self._db.put(context, self.TOTAL_PREP_DELEGATED_KEY, value)
 
-    def get_total_candidate_delegated(self, context: 'IconScoreContext') -> int:
-        value: bytes = self._db.get(context, self.TOTAL_CANDIDATE_DELEGATED_KEY)
+    def get_total_prep_delegated(self, context: 'IconScoreContext') -> int:
+        value: bytes = self._db.get(context, self.TOTAL_PREP_DELEGATED_KEY)
         if value:
             data: list = MsgPackForDB.loads(value)
             version: int = data[0]
-            total_candidate_delegated: int = data[1]
-            return total_candidate_delegated
+            total_prep_delegated: int = data[1]
+            return total_prep_delegated
         return 0
 
     def put_unstake_lock_period(self, context: 'IconScoreContext', unstake_lock_period: int):
