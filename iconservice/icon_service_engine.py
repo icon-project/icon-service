@@ -135,6 +135,7 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
+                                     conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.GOVERNANCE_VARIABLE])
 
         self._load_builtin_scores(context, conf[ConfigKey.BUILTIN_SCORE_OWNER])
@@ -165,13 +166,16 @@ class IconServiceEngine(ContextContainer):
                                 unstake_lock_period: int,
                                 reward_meta_data: dict,
                                 calc_period: int,
+                                term_period: int,
                                 governance_variable: dict):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
         IconScoreContext.engine.icx.open(context)
         IconScoreContext.engine.iiss.open(context, iiss_db_root_path)
-        IconScoreContext.engine.prep.open(context)
+        IconScoreContext.engine.prep.open(context,
+                                          term_period,
+                                          governance_variable)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)
@@ -181,8 +185,7 @@ class IconServiceEngine(ContextContainer):
                                            unstake_lock_period,
                                            reward_meta_data,
                                            calc_period)
-        IconScoreContext.storage.prep.open(context,
-                                           governance_variable)
+        IconScoreContext.storage.prep.open(context)
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.rc.open(iiss_db_root_path)
 

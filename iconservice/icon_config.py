@@ -36,8 +36,9 @@ default_icon_config = {
         ConfigKey.REWARD_MAX: 800,
         ConfigKey.REWARD_POINT: 7000,
     },
-    ConfigKey.GOVERNANCE_VARIABLE: {"incentiveRep": 1},
     ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 10,
     ConfigKey.IISS_CALCULATE_PERIOD: 10,
+    ConfigKey.TERM_PERIOD: 10,
+    ConfigKey.GOVERNANCE_VARIABLE: {"incentiveRep": 1},
     ConfigKey.IISS_PREP_LIST: []
 }

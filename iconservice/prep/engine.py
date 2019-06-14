@@ -63,11 +63,10 @@ class Engine(EngineBase):
 
         Logger.debug("PRepEngine.__init__() end")
 
-    def open(self, context: 'IconScoreContext') -> None:
+    def open(self, context: 'IconScoreContext', term_period: int, governance_variable: dict) -> None:
         self.candidates = CandidateContainer()
         self.candidates.load(context)
-
-        # self.term.load(context)
+        self.term.load(context, term_period, governance_variable)
 
     def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
         method: str = data['method']
@@ -154,7 +153,7 @@ class Engine(EngineBase):
 
     @staticmethod
     def _apply_candidate_delegated_offset_for_iiss_variable(
-        context: 'IconScoreContext', offset: int):
+            context: 'IconScoreContext', offset: int):
         total_delegated_amount: int = context.storage.iiss.get_total_candidate_delegated(context)
         context.storage.iiss.put_total_candidate_delegated(context, total_delegated_amount + offset)
 
