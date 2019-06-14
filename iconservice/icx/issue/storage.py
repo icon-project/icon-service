@@ -16,30 +16,17 @@
 
 from typing import TYPE_CHECKING, Optional
 
+from ...base.ComponentBase import StorageBase
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
-    from ...database.db import ContextDatabase
     from ...iconscore.icon_score_context import IconScoreContext
 
 
 # todo: add version
 # todo: record values using structure and access to db only once
-class RegulatorStorage(object):
+class Storage(StorageBase):
     _REGULATOR_VARIABLE_KEY = b'regulator_variable'
-
-    def __init__(self, db: 'ContextDatabase'):
-        self._db: 'ContextDatabase' = db
-
-    def close(self,
-              context: 'IconScoreContext') -> None:
-        """Close the embedded database.
-
-        :param context:
-        """
-        if self._db:
-            self._db.close(context)
-            self._db = None
 
     def get_regulator_variable(self, context: 'IconScoreContext'):
         regulator_variable: Optional[bytes] = self._db.get(context, self._REGULATOR_VARIABLE_KEY)

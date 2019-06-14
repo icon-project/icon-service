@@ -24,17 +24,20 @@ from iconservice.base.block import Block
 from iconservice.base.exception import InvalidRequestException, OutOfBalanceException
 from iconservice.base.transaction import Transaction
 from iconservice.database.db import ContextDatabase
-from iconservice.deploy import DeployState
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployInfo
-from iconservice.fee.fee_engine import FeeEngine
-from iconservice.fee.fee_engine import VirtualStepCalculator, FIXED_TERM
-from iconservice.fee.fee_storage import FeeStorage
-from iconservice.icon_constant import IconScoreContextType
+
+from iconservice.deploy import DeployStorage
+from iconservice.deploy.storage import IconScoreDeployInfo
+from iconservice.fee import FeeEngine, FeeStorage
+from iconservice.fee.engine import VirtualStepCalculator, FIXED_TERM
+from iconservice.icon_constant import IconScoreContextType, DeployState
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine
 from iconservice.icx.coin_part import CoinPartType
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx import IcxStorage
+from iconservice.icx.icx_account import Account
+from iconservice.icx import IcxStorage
+from tests import create_address
 from tests.mock_generator import clear_inner_task
 
 
@@ -116,7 +119,7 @@ class TestFeeEngine(unittest.TestCase):
 
         context_db = create_context_db()
 
-        deploy_storage = IconScoreDeployStorage(context_db)
+        deploy_storage = DeployStorage(context_db)
         deploy_info = IconScoreDeployInfo(self._score_address,
                                           DeployState.ACTIVE,
                                           self._sender,

@@ -26,8 +26,7 @@ from iconservice.database.db import ContextDatabase
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType, ContextContainer
 from iconservice.icx.coin_part import CoinPartType, CoinPart
 from iconservice.icx.icx_account import Account
-from iconservice.icx.icx_engine import IcxEngine
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx import IcxEngine, IcxStorage
 
 
 class TestIcxEngine(unittest.TestCase, ContextContainer):
@@ -36,6 +35,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         self.db_name = 'engine.db'
         db = ContextDatabase.from_path(self.db_name)
         self.engine = IcxEngine()
+        self.storage = IcxStorage(db)
         self.from_ = Address.from_string('hx' + 'a' * 40)
         self.to = Address.from_string('hx' + 'b' * 40)
         self.genesis_address = Address.from_string('hx' + '0' * 40)
@@ -49,8 +49,7 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         block.attach_mock(Mock(return_value=0), 'height')
         self.context.block = block
 
-        icx_storage = IcxStorage(db)
-        self.engine.open(icx_storage)
+        self.engine.open()
 
         accounts: list = [
             {'address': self.genesis_address, 'balance': self.total_supply},

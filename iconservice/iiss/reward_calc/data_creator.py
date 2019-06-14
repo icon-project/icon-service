@@ -24,7 +24,6 @@ from ..reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData
 if TYPE_CHECKING:
     from ...base.address import Address
     from ..reward_calc.msg_data import Tx
-    from ...prep.variable.variable_storage import PRep
 
 
 class DataCreator:

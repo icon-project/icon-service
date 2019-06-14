@@ -16,6 +16,7 @@
 
 from typing import TYPE_CHECKING, List, Union, Optional
 
+from ..iconscore.icon_score_context import IconScoreContext
 from .data.candidate import Candidate
 from .storage import Storage
 from ..base.exception import InvalidParamsException, AccessDeniedException
@@ -83,8 +84,7 @@ class CandidateContainer(object):
         self._candidate_list = SortedList()
 
     def load(self, context: 'IconScoreContext'):
-        prep_storage: 'Storage' = context.prep_storage
-        for candidate in prep_storage.get_candidate_iterator():
+        for candidate in context.storage.prep.get_candidate_iterator():
             self._add(candidate)
 
     def add(self, candidate: 'Candidate'):

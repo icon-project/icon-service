@@ -13,14 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum
-
-
-class DeployType(IntEnum):
-    INSTALL = 0
-    UPDATE = 1
-
-
-class DeployState(IntEnum):
-    INACTIVE = 0
-    ACTIVE = 1
+from .engine import Engine as DeployEngine
+from .storage import Storage as DeployStorage
