@@ -390,7 +390,7 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        gv: 'GovernanceVariable' = context.storage.get_gv(context)
+        gv: 'GovernanceVariable' = context.storage.prep.get_gv(context)
 
         current_total_supply = context.storage.icx.get_total_supply(context)
         current_total_candidate_delegated = context.storage.iiss.get_total_candidate_delegated(context)

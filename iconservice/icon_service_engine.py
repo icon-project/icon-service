@@ -47,7 +47,7 @@ from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue_data_validator import IssueDataValidator
 from .iiss import IISSEngine, IISSStorage
-from .iiss.reward_calc import RcStorage
+from .iiss.reward_calc import RewardCalcStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .utils import sha3_256, int_to_bytes, is_flags_on, ContextEngine, ContextStorage
@@ -154,7 +154,7 @@ class IconServiceEngine(ContextContainer):
                                                    iiss=IISSStorage(self._icx_context_db),
                                                    prep=PRepStorage(self._icx_context_db),
                                                    issue=IssueStorage(self._icx_context_db),
-                                                   rc=RcStorage())
+                                                   rc=RewardCalcStorage())
 
         IconScoreContext.engine = engine
         IconScoreContext.storage = storage

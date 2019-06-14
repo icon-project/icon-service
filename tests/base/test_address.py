@@ -18,8 +18,7 @@ import hashlib
 import random
 import unittest
 
-from iconservice.base.address import Address, AddressPrefix, \
-    ICON_EOA_ADDRESS_PREFIX, ICON_CONTRACT_ADDRESS_PREFIX, \
+from iconservice.base.address import Address, AddressPrefix, ICON_EOA_ADDRESS_PREFIX, ICON_CONTRACT_ADDRESS_PREFIX, \
     ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS, is_icon_address_valid, split_icon_address, MalformedAddress
 from iconservice.base.exception import ExceptionCode
 from tests import create_address

@@ -15,8 +15,11 @@
 
 from typing import TYPE_CHECKING, List
 
+
+
 if TYPE_CHECKING:
     from .data.candidate import Candidate
+    from ..iconscore.icon_score_context import IconScoreContext
 
 
 class Term(object):

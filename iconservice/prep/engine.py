@@ -15,10 +15,10 @@
 from typing import TYPE_CHECKING, Any
 
 from iconcommons.logger import Logger
-
 from .data.candidate import Candidate
 from .data.candidate_container import CandidateContainer
 from .term import Term
+from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
@@ -30,19 +30,19 @@ from ..iiss.reward_calc import RewardCalcDataCreator
 if TYPE_CHECKING:
     from . import PRepStorage
     from ..iiss.reward_calc.msg_data import *
-    from ..iiss import IISSEngine
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icx.icx_account import Account
     from ..icx import IcxStorage
 
 
-class Engine(object):
+class Engine(EngineBase):
     """PRepEngine class
 
     Manages P-Rep candidates and handles P-Rep related JSON-RPC API requests
     """
 
     def __init__(self) -> None:
+        super().__init__()
         Logger.debug("PRepEngine.__init__() start")
 
         self._invoke_handlers: dict = {
@@ -83,9 +83,6 @@ class Engine(object):
         handler: callable = self._query_handler[method]
         ret = handler(context, params)
         return ret
-
-    def close(self):
-        pass
 
     def commit(self, context: 'IconScoreContext'):
         """If the current P-Rep term is over, update term with new information
@@ -132,8 +129,7 @@ class Engine(object):
 
         # Update stateDB
         prep_storage.put_candidate(context, candidate)
-        self._apply_candidate_delegated_offset_for_iiss_variable(
-            context, candidate.delegated)
+        self._apply_candidate_delegated_offset_for_iiss_variable(context, candidate.delegated)
 
         # Update rcDB
         self._put_reg_prep_candidate_for_rc_data(context, address)
@@ -158,7 +154,7 @@ class Engine(object):
 
     @staticmethod
     def _apply_candidate_delegated_offset_for_iiss_variable(
-            context: 'IconScoreContext', offset: int):
+        context: 'IconScoreContext', offset: int):
         total_delegated_amount: int = context.storage.iiss.get_total_candidate_delegated(context)
         context.storage.iiss.put_total_candidate_delegated(context, total_delegated_amount + offset)
 

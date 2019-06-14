@@ -21,8 +21,7 @@ import plyvel
 from iconcommons.logger import Logger
 from ..base.exception import DatabaseException, InvalidParamsException
 from ..icon_constant import ICON_DB_LOG_TAG
-from ..iconscore.icon_score_context import ContextGetter
-from ..iconscore.icon_score_context import IconScoreContextType
+from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
 
 if TYPE_CHECKING:
     from ..base.address import Address
