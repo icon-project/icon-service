@@ -14,7 +14,7 @@
 
 from typing import TYPE_CHECKING, Optional
 
-from .data.candidate import Candidate
+from .data.prep import PRep
 from ..base.ComponentBase import StorageBase
 from ..base.exception import InvalidParamsException
 from ..utils.msgpack_for_db import MsgPackForDB
@@ -28,31 +28,31 @@ class Storage(StorageBase):
     PREFIX: bytes = b'prep'
     TERMS_KEY: bytes = PREFIX + b'terms'
 
-    def get_candidate(self, context: 'IconScoreContext', address: 'Address') -> 'Candidate':
-        key: bytes = Candidate.make_key(address)
+    def get_prep(self, context: 'IconScoreContext', address: 'Address') -> 'PRep':
+        key: bytes = PRep.make_key(address)
         value: bytes = self._db.get(context, key)
 
         if value is None:
-            raise InvalidParamsException(f"P-Rep candidate not found: {str(address)}")
+            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
-        candidate = Candidate.from_bytes(value)
-        assert address == candidate.address
+        prep = PRep.from_bytes(value)
+        assert address == prep.address
 
-        return candidate
+        return prep
 
-    def put_candidate(self, context: 'IconScoreContext', candidate: 'Candidate'):
-        key: bytes = Candidate.make_key(candidate.address)
-        value: bytes = candidate.to_bytes()
+    def put_prep(self, context: 'IconScoreContext', prep: 'PRep'):
+        key: bytes = PRep.make_key(prep.address)
+        value: bytes = prep.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_candidate(self, context: 'IconScoreContext', address: 'Address'):
-        key: bytes = Candidate.make_key(address)
+    def delete_prep(self, context: 'IconScoreContext', address: 'Address'):
+        key: bytes = PRep.make_key(address)
         self._db.delete(context, key)
 
-    def get_candidate_iterator(self) -> iter:
-        with self._db.key_value_db.get_sub_db(Candidate.PREFIX).iterator() as it:
+    def get_prep_iterator(self) -> iter:
+        with self._db.key_value_db.get_sub_db(PRep.PREFIX).iterator() as it:
             for _, value in it:
-                yield Candidate.from_bytes(value)
+                yield PRep.from_bytes(value)
 
     def put_terms(self, context: 'IconScoreContext', data: list):
         value: bytes = MsgPackForDB.dumps(data)
