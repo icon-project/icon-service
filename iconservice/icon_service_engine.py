@@ -399,7 +399,7 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
 
-        candidates = context.engine.prep.candidates.get_snapshot()
+        preps = context.engine.prep.preps.get_snapshot()
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -408,7 +408,7 @@ class IconServiceEngine(ContextContainer):
             context.block_batch,
             block_result,
             context.rc_block_batch,
-            candidates,
+            preps,
             prev_block_generator,
             prev_block_validators,
             context.new_icon_score_mapper,
@@ -1325,7 +1325,7 @@ class IconServiceEngine(ContextContainer):
 
     def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
-        when the candidate block has been confirmed
+        when the precommit block has been confirmed
         :param block_height: height of block being committed
         :param instant_block_hash: instant hash of block being committed
         :param block_hash: hash of block being committed

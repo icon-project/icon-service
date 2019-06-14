@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
     from ..base.address import Address
-    from ..prep.data.candidate_container import CandidateContainer
+    from ..prep.data.prep_container import PRepContainer
     from ..utils import ContextEngine, ContextStorage
 
 _thread_local_data = threading.local()
@@ -133,8 +133,8 @@ class IconScoreContext(object):
         self.msg_stack = []
         self.event_log_stack = []
 
-        # P-Rep candidates updated
-        self.candidates: Optional['CandidateContainer'] = None
+        # P-Rep preps updated
+        self.preps: Optional['PRepContainer'] = None
 
     @property
     def readonly(self):

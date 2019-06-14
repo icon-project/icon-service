@@ -179,14 +179,13 @@ IISS_METHOD_TABLE = [
 ]
 
 PREP_METHOD_TABLE = [
-    "registerPRepCandidate",
-    "unregisterPRepCandidate",
-    "setPRepCandidate",
-    "getPRepCandidate",
-    "getPRepCandidateStats",
-    "getPRepCandidateDelegationInfo",
-    "getPRepList",
-    "getPRepCandidateList"
+    "registerPRep",
+    "unregisterPRep",
+    "setPRep",
+    "getPRep",
+    "getMainPRepList",
+    "getSubPRepList",
+    "getPRepList"
 ]
 
 NEW_METHPD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE

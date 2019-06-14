@@ -97,7 +97,7 @@ class TestTypeConverter(unittest.TestCase):
         ret_params = TypeConverter.convert(request, ParamType.IISS_QUERY_ISCORE)
         self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
 
-    def test_reg_prep_candidate(self):
+    def test_reg_prep(self):
         name = "name"
         email = 'email'
         website = "website"
@@ -116,7 +116,7 @@ class TestTypeConverter(unittest.TestCase):
             }
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP_CANDIDATE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP)
         self.assertEqual(name, ret_params[ConstantKeys.NAME])
         self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
@@ -125,14 +125,14 @@ class TestTypeConverter(unittest.TestCase):
         governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
         self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
 
-    def test_unreg_prep_candidate(self):
+    def test_unreg_prep(self):
 
         request = {}
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_UNREG_PREP_CANDIDATE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_UNREG_PREP)
         self.assertEqual({}, ret_params)
 
-    def test_set_prep_candidate(self):
+    def test_set_prep(self):
         website = "website"
         incentive_rep = 10000
 
@@ -143,39 +143,29 @@ class TestTypeConverter(unittest.TestCase):
             }
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP_CANDIDATE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP)
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
         governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
         self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
 
-    def test_get_prep_candidate(self):
+    def test_get_prep(self):
         address = create_address()
 
         request = {
             ConstantKeys.ADDRESS: str(address),
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP)
         self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
 
-    def test_get_prep_candidate_delegation_info(self):
-        address = create_address()
-
-        request = {
-            ConstantKeys.ADDRESS: str(address),
-        }
-
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE_DELEGATION_INFO)
-        self.assertEqual(address, ret_params[ConstantKeys.ADDRESS])
-
-    def test_get_prep_list(self):
+    def test_get_main_prep_list(self):
 
         request = {}
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_LIST)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_MAIN_PREP_LIST)
         self.assertEqual({}, ret_params)
 
-    def test_get_prep_candidate_list(self):
+    def test_get_prep_list(self):
         start_rank = 10
         end_rank = 20
 
@@ -184,6 +174,6 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.END_RANKING: hex(end_rank)
         }
 
-        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_CANDIDATE_LIST)
+        ret_params = TypeConverter.convert(request, ParamType.IISS_GET_PREP_LIST)
         self.assertEqual(start_rank, ret_params[ConstantKeys.START_RANKING])
         self.assertEqual(end_rank, ret_params[ConstantKeys.END_RANKING])
