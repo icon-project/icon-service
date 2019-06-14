@@ -14,4 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .icx_engine import IcxEngine
+from .engine import Engine as IcxEngine
+from .storage import Storage as IcxStorage, Intent

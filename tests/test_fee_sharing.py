@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
-from iconservice.fee.fee_engine import DepositInfo, BLOCKS_IN_ONE_MONTH
+from iconservice.fee.engine import DepositInfo, BLOCKS_IN_ONE_MONTH
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter

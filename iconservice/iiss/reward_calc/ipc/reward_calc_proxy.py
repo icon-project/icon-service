@@ -25,8 +25,8 @@ from iconcommons.logger import Logger
 from .message import *
 from .message_queue import MessageQueue
 from .server import IPCServer
-from ...base.address import Address
-from ...base.exception import TimeoutException
+from ....base.address import Address
+from ....base.exception import TimeoutException
 
 _TAG = "RCP"
 

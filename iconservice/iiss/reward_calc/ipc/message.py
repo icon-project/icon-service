@@ -18,8 +18,8 @@ from enum import IntEnum
 
 import msgpack
 
-from ...base.address import Address
-from ...utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
+from iconservice.base.address import Address
+from iconservice.utils.msgpack_for_ipc import MsgPackForIpc, TypeTag
 
 _next_msg_id: int = 0
 

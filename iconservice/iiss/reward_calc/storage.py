@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ..reward_calc.msg_data import Data
 
 
-class DataStorage(object):
+class Storage(object):
     _CURRENT_IISS_DB_NAME = "current_db"
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
@@ -39,10 +39,6 @@ class DataStorage(object):
         self._db: Optional['RewardCalcDatabase'] = None
         # 'None' if open() is not called else 'int'
         self._db_iiss_tx_index: Optional[int] = None
-
-    @property
-    def db(self) -> Optional['RewardCalcDatabase']:
-        return self._db
 
     def open(self, path: str):
         if not os.path.exists(path):

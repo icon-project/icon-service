@@ -18,14 +18,13 @@ import warnings
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from . import DeployType, DeployState
+from ..base.ComponentBase import StorageBase
 from ..base.address import Address, ICON_EOA_ADDRESS_BYTES_SIZE, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from ..base.exception import InvalidParamsException, AccessDeniedException
-from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2, ZERO_TX_HASH
+from ..icon_constant import DEFAULT_BYTE_SIZE, REVISION_2, ZERO_TX_HASH, DeployState, DeployType
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..database.db import ContextDatabase
 
 
 class IconScoreDeployTXParams(object):
@@ -186,21 +185,13 @@ class IconScoreDeployInfo(object):
             self.current_tx_hash, self.next_tx_hash)
 
 
-class IconScoreDeployStorage(object):
+class Storage(StorageBase):
     """Store deploy_int and tx_params on LevelDB.
     """
 
     _DEPLOY_STORAGE_PREFIX = b'isds|'
     _DEPLOY_STORAGE_DEPLOY_INFO_PREFIX = _DEPLOY_STORAGE_PREFIX + b'di|'
     _DEPLOY_STORAGE_DEPLOY_TX_PARAMS_PREFIX = _DEPLOY_STORAGE_PREFIX + b'dtp|'
-
-    def __init__(self, db: 'ContextDatabase') -> None:
-        """Constructor
-
-        :param db:
-        """
-        super().__init__()
-        self._db = db
 
     def put_deploy_info_and_tx_params(self,
                                       context: 'IconScoreContext',

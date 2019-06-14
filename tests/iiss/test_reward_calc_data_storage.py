@@ -19,7 +19,7 @@ import unittest
 from unittest.mock import patch
 
 from iconservice.iiss.reward_calc.data_creator import *
-from iconservice.iiss.reward_calc.data_storage import DataStorage as RewardCalcDataStorage
+from iconservice.iiss.reward_calc.storage import DataStorage as RewardCalcDataStorage
 from iconservice.iiss.reward_calc.msg_data import TxType
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase

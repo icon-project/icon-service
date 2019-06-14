@@ -29,7 +29,8 @@ from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
+from iconservice.deploy import DeployEngine
+from iconservice.icon_constant import REVISION_3
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -49,7 +50,7 @@ class TestTransactionResult(unittest.TestCase):
     def setUp(self):
         self._icon_service_engine = generate_service_engine()
         self._icon_service_engine._icon_score_deploy_engine = \
-            Mock(spec=IconScoreDeployEngine)
+            Mock(spec=DeployEngine)
 
         self._icon_service_engine._charge_transaction_fee = \
             Mock(return_value=({}, 0))

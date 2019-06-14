@@ -14,37 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
 from hashlib import sha3_256
+from typing import TYPE_CHECKING
 
 from .deposit import Deposit
 from .deposit_meta import DepositMeta
+from ..base.ComponentBase import StorageBase
 from ..base.address import Address
 
 if TYPE_CHECKING:
-    from ..database.db import ContextDatabase
     from ..iconscore.icon_score_context import IconScoreContext
 
 
-class FeeStorage(object):
+class Storage(StorageBase):
     """Fee and Deposit state manager embedding a state db wrapper"""
 
     _FEE_PREFIX = b'\x02'
-
-    def __init__(self, db: 'ContextDatabase') -> None:
-        """Constructor
-
-        :param db: (Database) state db wrapper
-        """
-        self._db = db
-
-    @property
-    def db(self) -> 'ContextDatabase':
-        """Returns state db wrapper.
-
-        :return: (Database) state db wrapper
-        """
-        return self._db
 
     def _generate_key(self, key_data: bytes):
         """
@@ -63,8 +48,7 @@ class FeeStorage(object):
         value = self._db.get(context, key)
         return DepositMeta.from_bytes(value) if value else None
 
-    def put_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address',
-                         deposit_meta: 'DepositMeta') -> None:
+    def put_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address', deposit_meta: 'DepositMeta'):
         """Puts the score deposit meta information into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -76,7 +60,7 @@ class FeeStorage(object):
         value = deposit_meta.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address') -> None:
+    def delete_deposit_meta(self, context: 'IconScoreContext', score_address: 'Address'):
         """Deletes the score deposit meta information from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -102,7 +86,7 @@ class FeeStorage(object):
 
         return value
 
-    def put_deposit(self, context: 'IconScoreContext', deposit: 'Deposit') -> None:
+    def put_deposit(self, context: 'IconScoreContext', deposit: 'Deposit'):
         """Puts the deposit data into db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -113,7 +97,7 @@ class FeeStorage(object):
         value = deposit.to_bytes()
         self._db.put(context, key, value)
 
-    def delete_deposit(self, context: 'IconScoreContext', deposit_id: bytes) -> None:
+    def delete_deposit(self, context: 'IconScoreContext', deposit_id: bytes):
         """Deletes the deposit from db.
 
         :param context: Object that contains the useful information to process user's JSON-RPC request
@@ -122,13 +106,3 @@ class FeeStorage(object):
         """
         key = self._generate_key(deposit_id)
         self._db.delete(context, key)
-
-    def close(self,
-              context: 'IconScoreContext') -> None:
-        """Close the embedded database.
-
-        :param context:
-        """
-        if self._db:
-            self._db.close(context)
-            self._db = None

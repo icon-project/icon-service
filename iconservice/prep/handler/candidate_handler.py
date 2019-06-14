@@ -20,12 +20,12 @@ from iconservice.prep.data.candidate import Candidate
 from ...base.exception import InvalidParamsException
 from ...base.type_converter import TypeConverter
 from ...base.type_converter_templates import ParamType, ConstantKeys
-from ...icx.icx_storage import Intent
+from ...icx.storage import Intent
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_result import TransactionResult
     from ...iconscore.icon_score_context import IconScoreContext
-    from ...icx.icx_storage import IcxStorage
+    from ...icx.storage import IcxStorage
     from ...icx.icx_account import Account
     from ...base.address import Address
 
@@ -161,6 +161,30 @@ class CandidateHandler:
             "ranking": ranking,
             "delegated": candidate.delegated
         }
+
+def put_reg_prep_candidate_for_rc_data(self,
+                                       batch: list,
+                                       address: 'Address',
+                                       block_height: int):
+    tx: 'PRepRegisterTx' = RewardCalcDataCreator.create_tx_prep_reg()
+    iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
+    self._rc_storage.storage.rc.put(batch, iiss_tx_data)
+
+def put_unreg_prep_candidate_for_iiss_db(self,
+                                         batch: list,
+                                         address: 'Address',
+                                         block_height: int):
+    tx: 'PRepUnregisterTx' = RewardCalcDataCreator.create_tx_prep_unreg()
+    iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
+    self._rc_storage.put(batch, iiss_tx_data)
+
+def apply_candidate_delegated_offset_for_iiss_variable(self,
+                                                       context: 'IconScoreContext',
+                                                       offset: int):
+    total_delegated_amount: int = self._variable.issue.get_total_candidate_delegated(context)
+    self._variable.issue.put_total_candidate_delegated(context,
+                                                       total_delegated_amount + offset)
+
 
 """
     @classmethod
