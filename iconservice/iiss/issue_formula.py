@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
+from ..icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, PREP_COUNT, PREP_MAX_PREPS
 
 
 class IssueFormula(object):
@@ -27,8 +27,8 @@ class IssueFormula(object):
         return cls._instance
 
     def __init__(self,
-                 prep_count: int = 22,
-                 sub_prep_count: int = 100):
+                 prep_count: int =  PREP_COUNT,
+                 sub_prep_count: int = PREP_MAX_PREPS):
         self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep}
         self._prep_count: int = prep_count
         self._sub_prep_count: int = sub_prep_count
