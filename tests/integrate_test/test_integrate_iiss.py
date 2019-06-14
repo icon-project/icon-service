@@ -64,13 +64,13 @@ class TestIntegrateIISS(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _reg_candidate(self, address: 'Address', data: dict, revision: int = REV_IISS):
+    def _reg_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
 
         data = deepcopy(data)
         value: str = hex(data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP])
         data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP] = value
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRepCandidate', data)
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
         if revision >= REV_IISS:
             # issue tx must be exists after revision 5
@@ -78,7 +78,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def test_reg_prep_candidate(self):
+    def test_reg_prep(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
@@ -88,13 +88,13 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
                 ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
+                ConstantKeys.DETAILS: f"details{i}",
+                ConstantKeys.P2P_END_POINT: f"p2pEndPoint{i}",
                 ConstantKeys.GOVERNANCE_VARIABLE: {
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
             }
-            self._reg_candidate(create_address(), reg_data, REV_IISS)
+            self._reg_prep(create_address(), reg_data, REV_IISS)
 
         query_request = {
             "version": self._version,
@@ -132,7 +132,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                     ConstantKeys.INCENTIVE_REP: 200 + i
                 }
             }
-            self._reg_candidate(self._addr_array[i + 10], reg_data, REV_IISS)
+            self._reg_prep(self._addr_array[i + 10], reg_data, REV_IISS)
 
         # gain 10 icx (addr0 - 5)
         balance: int = 10 * 10 ** 18

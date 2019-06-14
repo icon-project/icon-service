@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .storage import Reward
     from ..prep.term import Term
-    from ..prep.data.candidate import Candidate
+    from ..prep.data.prep import PRep
 
 
 class Engine(EngineBase):
@@ -118,7 +118,7 @@ class Engine(EngineBase):
             "prep": {
                 "incentive": gv.incentive_rep,
                 "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
-                "totalDelegation": context.storage.iiss.get_total_candidate_delegated(context)
+                "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
             }
         }
         for group in iiss_data_for_issue:
@@ -194,39 +194,38 @@ class Engine(EngineBase):
             raise InvalidParamsException(f'Failed to delegation: Overflow Max Input List')
 
         delegating: 'Account' = context.storage.icx.get_account(context, delegating_address, Intent.DELEGATING)
-        candidates: dict = cls._make_candidates(delegating.delegations, delegations)
-        cls._set_delegations(delegating, candidates)
-        dirty_accounts: list = cls._delegated_candidates(context, delegating, candidates)
+        preps: dict = cls._make_preps(delegating.delegations, delegations)
+        cls._set_delegations(delegating, preps)
+        dirty_accounts: list = cls._delegated_preps(context, delegating, preps)
         dirty_accounts.append(delegating)
 
         for dirty_account in dirty_accounts:
             context.storage.icx.put_account(context, dirty_account)
-            if context.engine.prep.is_candidate(context, dirty_account.address):
-                context.engine.prep.update_sorted_candidates(context,
-                                                             dirty_account.address,
-                                                             dirty_account.delegated_amount)
+            if context.engine.prep.is_prep(context, dirty_account.address):
+                context.engine.prep.update_sorted_preps(
+                    context, dirty_account.address, dirty_account.delegated_amount)
         # TODO tx_result make if needs
 
     @classmethod
-    def _make_candidates(cls, old_delegations: list, new_delegations: list) -> dict:
-        candidates: dict = {}
+    def _make_preps(cls, old_delegations: list, new_delegations: list) -> dict:
+        preps: dict = {}
 
         if old_delegations:
             for address, old in old_delegations:
-                candidates[address] = (old, 0)
+                preps[address] = (old, 0)
 
         for delegation in new_delegations:
             address, new = delegation.values()
-            if address in candidates:
-                old, _ = candidates[address]
-                candidates[address] = (old, new)
+            if address in preps:
+                old, _ = preps[address]
+                preps[address] = (old, new)
             else:
-                candidates[address] = (0, new)
-        return candidates
+                preps[address] = (0, new)
+        return preps
 
     @classmethod
-    def _set_delegations(cls, delegating: 'Account', candidates: dict):
-        new_delegations: list = [(address, new) for address, (before, new) in candidates.items() if new > 0]
+    def _set_delegations(cls, delegating: 'Account', preps: dict):
+        new_delegations: list = [(address, new) for address, (before, new) in preps.items() if new > 0]
         delegating.set_delegations(new_delegations)
 
         if delegating.delegations_amount > delegating.stake:
@@ -234,21 +233,21 @@ class Engine(EngineBase):
                 f"Failed to delegation: delegation_amount{delegating.delegations_amount} > stake{delegating.stake}")
 
     @classmethod
-    def _delegated_candidates(cls, context: 'IconScoreContext', delegating: 'Account', candidates: dict) -> list:
+    def _delegated_preps(cls, context: 'IconScoreContext', delegating: 'Account', preps: dict) -> list:
         dirty_accounts: list = []
-        for address, (before, new) in candidates.items():
+        for address, (before, new) in preps.items():
             if address == delegating.address:
-                candidate: 'Account' = delegating
+                prep: 'Account' = delegating
             else:
-                candidate: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATED)
-                dirty_accounts.append(candidate)
+                prep: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATED)
+                dirty_accounts.append(prep)
 
             offset: int = new - before
-            candidate.update_delegated_amount(offset)
+            prep.update_delegated_amount(offset)
 
-            if context.engine.prep.is_candidate(context, address):
-                total: int = context.storage.prep.get_total_candidate_delegated(context)
-                context.storage.prep.put_total_candidate_delegated(context, total + offset)
+            if context.engine.prep.is_prep(context, address):
+                total: int = context.storage.prep.get_total_prep_delegated(context)
+                context.storage.prep.put_total_prep_delegated(context, total + offset)
         return dirty_accounts
 
     @classmethod
@@ -389,14 +388,14 @@ class Engine(EngineBase):
     @classmethod
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         current_total_supply = context.storage.icx.get_total_supply(context)
-        current_total_candidate_delegated = context.storage.iiss.get_total_candidate_delegated(context)
+        current_total_prep_delegated = context.storage.iiss.get_total_prep_delegated(context)
         reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
 
         reward_rep: int = IssueFormula.calculate_r_rep(reward_prep.reward_min,
                                                        reward_prep.reward_max,
                                                        reward_prep.reward_point,
                                                        current_total_supply,
-                                                       current_total_candidate_delegated)
+                                                       current_total_prep_delegated)
 
         incentive_rep: int = context.engine.prep.term.incentive_rep
         calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(incentive_rep)
@@ -424,18 +423,18 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        preps: List['Candidate'] = context.candidates.get_preps()
+        preps: List['PRep'] = context.preps.get_preps()
 
         if len(preps) == 0:
             return
 
-        total_candidate_delegated: int = 0
+        total_prep_delegated: int = 0
         for prep in preps:
-            total_candidate_delegated += prep.delegated
+            total_prep_delegated += prep.delegated
 
-        Logger.debug(f"put_preps_for_rc: total_candidate_delegated{total_candidate_delegated}", "iiss")
+        Logger.debug(f"put_preps_for_rc: total_prep_delegated{total_prep_delegated}", "iiss")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(precommit_data.block.height,
-                                                                   total_candidate_delegated,
+                                                                   total_prep_delegated,
                                                                    preps)
         context.storage.rc.put(precommit_data.rc_block_batch, data)
