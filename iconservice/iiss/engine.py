@@ -17,7 +17,6 @@
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
-
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -38,7 +37,8 @@ if TYPE_CHECKING:
     from ..icx.icx_account import Account
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .storage import Reward
-    from ..prep.storage import GovernanceVariable
+    from ..prep.term import Term
+    from ..prep.data.candidate import Candidate
 
 
 class Engine(EngineBase):
@@ -327,7 +327,8 @@ class Engine(EngineBase):
         return data
 
     def genesis_update_db(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        context.engine.prep.update_preps_to_variable(context)
+        term: 'Term' = context.engine.prep.term
+        term.save(context, precommit_data.block.height, term.preps, term.incentive_rep)
         self._put_next_calc_block_height(context, precommit_data.block.height)
 
         self._put_header_for_rc(context, precommit_data)
@@ -353,9 +354,6 @@ class Engine(EngineBase):
         self._put_gv_for_rc(context, precommit_data)
 
     def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        # TODO: Disable reward_calc_proxy for test
-        return
-
         # every block
         self._reward_calc_proxy.commit_block(True, precommit_data.block.height, precommit_data.block.hash)
 
@@ -363,9 +361,9 @@ class Engine(EngineBase):
             return
 
         block_height: int = precommit_data.block.height
-        path: str = cls.rc_storage.create_db_for_calc(precommit_data.block.height)
-        cls.reward_calc_proxy.calculate(path, block_height)
-        cls._put_next_calc_block_height(context, precommit_data.block.height)
+        path: str = context.storage.rc.create_db_for_calc(precommit_data.block.height)
+        self._reward_calc_proxy.calculate(path, block_height)
+        self._put_next_calc_block_height(context, precommit_data.block.height)
 
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData') -> bool:
@@ -378,10 +376,10 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_next_calc_block_height(cls, context: 'IconScoreContext', block_height: int):
-        calc_period: int = context.storage.rc.get_calc_period(context)
+        calc_period: int = context.storage.iiss.get_calc_period(context)
         if calc_period is None:
             raise InvalidParamsException("Fail put next calc block height: didn't init yet")
-        context.storage.rc.put_calc_next_block_height(context, block_height + calc_period)
+        context.storage.iiss.put_calc_next_block_height(context, block_height + calc_period)
 
     @classmethod
     def _put_header_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
@@ -390,8 +388,6 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_gv_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        gv: 'GovernanceVariable' = context.storage.get_gv(context)
-
         current_total_supply = context.storage.icx.get_total_supply(context)
         current_total_candidate_delegated = context.storage.iiss.get_total_candidate_delegated(context)
         reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
@@ -401,7 +397,9 @@ class Engine(EngineBase):
                                                        reward_prep.reward_point,
                                                        current_total_supply,
                                                        current_total_candidate_delegated)
-        calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(gv.incentive_rep)
+
+        incentive_rep: int = context.engine.prep.term.incentive_rep
+        calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(incentive_rep)
         reward_prep.reward_rate = reward_rep
         context.storage.iiss.put_reward_prep(context, reward_prep)
 
@@ -426,7 +424,7 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        preps: List['PRep'] = context.updated_preps
+        preps: List['Candidate'] = context.candidates.get_preps()
 
         if len(preps) == 0:
             return
