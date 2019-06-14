@@ -328,6 +328,8 @@ class IconServiceEngine(ContextContainer):
             IconScoreContext.icon_score_mapper.close()
             IconScoreContext.icon_score_mapper = None
 
+            self._close_component_context(context)
+
             IconScoreClassLoader.exit(context.score_root_path)
         finally:
             self._pop_context()

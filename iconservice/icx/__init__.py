@@ -15,4 +15,4 @@
 # limitations under the License.
 
 from .engine import Engine as IcxEngine
-from .storage import Storage as IcxStorage
+from .storage import Storage as IcxStorage, Intent

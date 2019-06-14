@@ -162,6 +162,30 @@ class CandidateHandler:
             "delegated": candidate.delegated
         }
 
+def put_reg_prep_candidate_for_rc_data(self,
+                                       batch: list,
+                                       address: 'Address',
+                                       block_height: int):
+    tx: 'PRepRegisterTx' = RewardCalcDataCreator.create_tx_prep_reg()
+    iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
+    self._rc_storage.storage.rc.put(batch, iiss_tx_data)
+
+def put_unreg_prep_candidate_for_iiss_db(self,
+                                         batch: list,
+                                         address: 'Address',
+                                         block_height: int):
+    tx: 'PRepUnregisterTx' = RewardCalcDataCreator.create_tx_prep_unreg()
+    iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
+    self._rc_storage.put(batch, iiss_tx_data)
+
+def apply_candidate_delegated_offset_for_iiss_variable(self,
+                                                       context: 'IconScoreContext',
+                                                       offset: int):
+    total_delegated_amount: int = self._variable.issue.get_total_candidate_delegated(context)
+    self._variable.issue.put_total_candidate_delegated(context,
+                                                       total_delegated_amount + offset)
+
+
 """
     @classmethod
     def handle_get_prep_list(cls, context: 'IconScoreContext', params: dict) -> dict:
