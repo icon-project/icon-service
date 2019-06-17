@@ -519,7 +519,6 @@ class IconServiceEngine(ContextContainer):
         treasury_address: 'Address' = context.storage.icx.fee_treasury
         tx_result = TransactionResult(context.tx, context.block)
         tx_result.to = treasury_address
-        # todo: below i_score is temp data, will be removed
         i_score: Optional[int] = context.storage.rc.get_prev_calc_period_issued_i_score()
 
         try:
