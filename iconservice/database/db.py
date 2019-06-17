@@ -17,9 +17,9 @@
 from typing import TYPE_CHECKING, Optional
 
 import plyvel
-
 from iconcommons.logger import Logger
-from ..base.exception import DatabaseException, InvalidParamsException
+
+from ..base.exception import DatabaseException, InvalidParamsException, AccessDeniedException
 from ..icon_constant import ICON_DB_LOG_TAG
 from ..iconscore.icon_score_context import ContextGetter, IconScoreContextType
 
@@ -341,6 +341,7 @@ class IconScoreDatabase(ContextGetter):
         :param key: key to set
         :param value: value to set
         """
+        self._validate_ownership()
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
@@ -379,6 +380,7 @@ class IconScoreDatabase(ContextGetter):
 
         :param key: key to delete
         """
+        self._validate_ownership()
         hashed_key = self._hash_key(key)
         if self._observer:
             old_value = self._context_db.get(self._context, hashed_key)
@@ -406,3 +408,10 @@ class IconScoreDatabase(ContextGetter):
         data.append(key)
 
         return b'|'.join(data)
+
+    def _validate_ownership(self):
+        """Prevent a SCORE from accessing the database of another SCORE
+
+        """
+        if self._context.current_address != self.address:
+            raise AccessDeniedException("Invalid database ownership")

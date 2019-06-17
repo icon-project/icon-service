@@ -8,6 +8,9 @@ class SampleInterface(InterfaceScore):
     @interface
     def get_value(self) -> int: pass
 
+    @interface
+    def get_db(self) -> IconScoreDatabase: pass
+
 
 class SampleLinkScore(IconScoreBase):
     _SCORE_ADDR = 'score_addr'
@@ -42,3 +45,18 @@ class SampleLinkScore(IconScoreBase):
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
         test_interface.set_value(value)
         self.Changed(value)
+
+    def _get_other_score_db(self):
+        interface_score = self.create_interface_score(self._addr_score.get(), SampleInterface)
+        return interface_score.get_db()
+
+    @external(readonly=True)
+    def get_data_from_other_score(self) -> bool:
+        db = self._get_other_score_db()
+        db.get(b'dummy_key')
+        return True
+
+    @external
+    def put_data_to_other_score_db(self):
+        db = self._get_other_score_db()
+        db.put(b'dummy_key', b'dummy_value')
