@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from ..base.address import Address, ZERO_SCORE_ADDRESS
     from ..icx.icx_account import Account
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
+    from .reward_calc.msg_data import GovernanceVariable
     from .storage import Reward
     from ..prep.term import Term
     from ..prep.data.prep import PRep
@@ -201,9 +202,8 @@ class Engine(EngineBase):
 
         for dirty_account in dirty_accounts:
             context.storage.icx.put_account(context, dirty_account)
-            if context.engine.prep.is_prep(context, dirty_account.address):
-                context.engine.prep.update_sorted_preps(
-                    context, dirty_account.address, dirty_account.delegated_amount)
+            if dirty_account.address in context.preps:
+                context.preps.update(dirty_account.address, dirty_account.delegated_amount)
         # TODO tx_result make if needs
 
     @classmethod
@@ -245,9 +245,9 @@ class Engine(EngineBase):
             offset: int = new - before
             prep.update_delegated_amount(offset)
 
-            if context.engine.prep.is_prep(context, address):
-                total: int = context.storage.prep.get_total_prep_delegated(context)
-                context.storage.prep.put_total_prep_delegated(context, total + offset)
+            if address in context.preps:
+                total: int = context.storage.iiss.get_total_prep_delegated(context)
+                context.storage.iiss.put_total_prep_delegated(context, total + offset)
         return dirty_accounts
 
     @classmethod

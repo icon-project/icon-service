@@ -18,7 +18,7 @@ import unittest
 
 from iconservice.base.type_converter import TypeConverter
 from iconservice.base.type_converter_templates import ParamType, ConstantKeys
-from tests import create_address
+from tests import create_address, create_tx_hash
 
 
 class TestTypeConverter(unittest.TestCase):
@@ -103,6 +103,7 @@ class TestTypeConverter(unittest.TestCase):
         website = "website"
         json = "json"
         ip = "ip"
+        public_key = create_tx_hash()
         incentive_rep = 10000
 
         request = {
@@ -111,9 +112,8 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.WEBSITE: website,
             ConstantKeys.DETAILS: json,
             ConstantKeys.P2P_END_POINT: ip,
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
-            }
+            ConstantKeys.PUBLIC_KEY: public_key.hex(),
+            ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP)
@@ -122,8 +122,8 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
         self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
         self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
-        governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
-        self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
+        self.assertEqual(public_key, ret_params[ConstantKeys.PUBLIC_KEY])
+        self.assertEqual(incentive_rep, ret_params[ConstantKeys.INCENTIVE_REP])
 
     def test_unreg_prep(self):
 
@@ -138,15 +138,12 @@ class TestTypeConverter(unittest.TestCase):
 
         request = {
             ConstantKeys.WEBSITE: website,
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
-            }
+            ConstantKeys.INCENTIVE_REP: hex(incentive_rep)
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP)
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
-        governance = ret_params[ConstantKeys.GOVERNANCE_VARIABLE]
-        self.assertEqual(incentive_rep, governance[ConstantKeys.INCENTIVE_REP])
+        self.assertEqual(incentive_rep, ret_params[ConstantKeys.INCENTIVE_REP])
 
     def test_get_prep(self):
         address = create_address()

@@ -18,9 +18,11 @@
 """
 
 from typing import TYPE_CHECKING
+from unittest.mock import Mock
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -46,17 +48,30 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _claim(self, address: 'Address'):
+    def _claim(self, address: 'Address', revision: int = REV_IISS):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'claimIScore', {})
-        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
     def test_iiss_claim(self):
@@ -66,7 +81,9 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
         # stake 10 icx
@@ -100,11 +117,14 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
                 }
             }
         }
-
+        block_height = 1000000000000000000
+        icx = 1000000000000000000
+        iscore = icx * 10**3
+        RewardCalcProxy.query_iscore = Mock(return_value=(iscore, block_height))
         response = self._query(query_request)
         expected_response = {
-            "blockHeight": 1000000000000000000,
-            "icx": 1000000000000000000,
-            "iscore": 1000000000000000000000
+            "blockHeight": block_height,
+            "icx": icx,
+            "iscore": iscore
         }
         self.assertEqual(expected_response, response)
