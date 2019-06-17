@@ -44,6 +44,11 @@ class ExceptionCode(IntEnum):
         return str(self.name).capitalize().replace('_', ' ')
 
 
+class InvalidBlockException(BaseException):
+    # if this exception is raised on invoke, icon service will be closed
+    pass
+
+
 class IconServiceBaseException(BaseException):
     """All custom exceptions used in IconService should inherit from this
     """
