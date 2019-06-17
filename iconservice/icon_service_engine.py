@@ -400,7 +400,7 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
 
-        preps = context.engine.prep.preps.get_snapshot()
+        preps = context.preps.get_snapshot()
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -1360,7 +1360,7 @@ class IconServiceEngine(ContextContainer):
             self._init_global_value_by_governance_score(context)
 
         if precommit_data.revision >= REV_IISS:
-            context.engine.prep.commit(context)
+            context.engine.prep.commit(context, precommit_data)
 
             if is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC):
                 context.engine.iiss.genesis_commit(context, precommit_data)

@@ -49,7 +49,12 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+
         self._write_precommit_state(prev_block)
 
     def test_iiss_stake(self):
@@ -61,7 +66,9 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
         # set stake 1 icx
@@ -175,7 +182,9 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
         for _ in range(unstake_lock_period + 1):
             tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 0)
-            prev_block, tx_results = self._make_and_req_block([tx])
+            tx_list = [tx]
+            tx_list.insert(0, self._make_dummy_issue_tx())
+            prev_block, tx_results = self._make_and_req_block(tx_list)
             self._write_precommit_state(prev_block)
 
         # after unstake_lock_period
@@ -185,7 +194,9 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
         # update icx balance
         tx = self._make_icx_send_tx(self._addr_array[0], self._genesis, balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
         query_request = {

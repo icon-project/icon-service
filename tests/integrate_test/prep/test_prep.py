@@ -23,6 +23,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRES
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import REV_IISS
+from tests import create_tx_hash
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -46,36 +47,69 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-    def _reg_candidate(self, address: 'Address', data: dict):
+    def _stake(self, address: 'Address', value: int, revision: int = REV_IISS):
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
+
+        tx_list = [tx]
+        if revision >= REV_IISS:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+
+        self._write_precommit_state(prev_block)
+
+    def _delegate(self, address: 'Address', delegations: list, revision: int = REV_IISS):
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
+
+        tx_list = [tx]
+        if revision >= REV_IISS:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+
+    def _reg_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
 
         data = deepcopy(data)
-        value: str = hex(data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP])
-        data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP] = value
+        value: str = data[ConstantKeys.PUBLIC_KEY].hex()
+        data[ConstantKeys.PUBLIC_KEY] = value
+        value: str = hex(data[ConstantKeys.INCENTIVE_REP])
+        data[ConstantKeys.INCENTIVE_REP] = value
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRepCandidate', data)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
+        tx_list = [tx]
+        if revision >= REV_IISS:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _set_candidate(self, address: 'Address', data: dict):
+    def _set_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
 
         data = deepcopy(data)
-        governance_data = data.get(ConstantKeys.GOVERNANCE_VARIABLE)
-        if governance_data:
-            value = governance_data.get(ConstantKeys.INCENTIVE_REP)
-            if value:
-                governance_data[ConstantKeys.INCENTIVE_REP] = hex(value)
+        value = data.get(ConstantKeys.INCENTIVE_REP)
+        if value:
+            data[ConstantKeys.INCENTIVE_REP] = hex(value)
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRepCandidate', data)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
+        tx_list = [tx]
+        if revision >= REV_IISS:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _unreg_candidate(self, address: 'Address'):
+    def _unreg_prep(self, address: 'Address', revision: int = REV_IISS):
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRepCandidate', {})
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
+        tx_list = [tx]
+        if revision >= REV_IISS:
+            # issue tx must be exists after revision 5
+            tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def test_reg_prep_candidate(self):
+    def test_reg_prep(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
@@ -85,11 +119,10 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: 200
-            }
+            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
+            ConstantKeys.INCENTIVE_REP: 200
         }
-        self._reg_candidate(self._addr_array[0], reg_data)
+        self._reg_prep(self._addr_array[0], reg_data)
 
         query_request = {
             "version": self._version,
@@ -97,7 +130,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRepCandidate",
+                "method": "getPRep",
                 "params": {
                     "address": str(self._addr_array[0])
                 }
@@ -106,7 +139,7 @@ class TestIntegratePrep(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(reg_data, response)
 
-    def test_set_prep_candidate(self):
+    def test_set_prep(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
@@ -116,19 +149,16 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: 200
-            }
+            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
+            ConstantKeys.INCENTIVE_REP: 200
         }
-        self._reg_candidate(self._addr_array[0], reg_data)
+        self._reg_prep(self._addr_array[0], reg_data)
 
         update_data: dict = {
             ConstantKeys.NAME: "name0",
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: 300,
-            }
+            ConstantKeys.INCENTIVE_REP: 300,
         }
-        self._set_candidate(self._addr_array[0], update_data)
+        self._set_prep(self._addr_array[0], update_data)
 
         query_request = {
             "version": self._version,
@@ -136,7 +166,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRepCandidate",
+                "method": "getPRep",
                 "params": {
                     "address": str(self._addr_array[0])
                 }
@@ -149,9 +179,8 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: 300
-            }
+            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
+            ConstantKeys.INCENTIVE_REP: 300
         }
         self.assertEqual(expected, response)
 
@@ -165,12 +194,11 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.WEBSITE: "website1",
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: 200
-            }
+            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
+            ConstantKeys.INCENTIVE_REP: 200
         }
-        self._reg_candidate(self._addr_array[0], reg_data)
-        self._unreg_candidate(self._addr_array[0])
+        self._reg_prep(self._addr_array[0], reg_data)
+        self._unreg_prep(self._addr_array[0])
 
         query_request = {
             "version": self._version,
@@ -178,7 +206,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRepCandidate",
+                "method": "getPRep",
                 "params": {
                     "address": str(self._addr_array[0])
                 }
@@ -187,7 +215,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         with self.assertRaises(InvalidParamsException) as e:
             response = self._query(query_request)
-        self.assertEqual(f'Failed to get candidate: no register', e.exception.args[0])
+        self.assertEqual(f'P-Rep not found: {str(self._addr_array[0])}', e.exception.args[0])
 
     def test_prep_list(self):
         self._update_governance()
@@ -200,11 +228,10 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.GOVERNANCE_VARIABLE: {
-                    ConstantKeys.INCENTIVE_REP: 200 + i
-                }
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
+                ConstantKeys.INCENTIVE_REP: 200 + i
             }
-            self._reg_candidate(self._addr_array[i], reg_data)
+            self._reg_prep(self._addr_array[i], reg_data)
 
         query_request = {
             "version": self._version,
@@ -220,7 +247,8 @@ class TestIntegratePrep(TestIntegrateBase):
         }
         response = self._query(query_request)
         total_delegated: int = response['totalDelegated']
-        prep_list: list = response['prepList']
+        prep_list: list = response['preps']
 
         self.assertEqual(0, total_delegated)
-        self.assertEqual(0, len(prep_list))
+        self.assertEqual(10, len(prep_list))
+

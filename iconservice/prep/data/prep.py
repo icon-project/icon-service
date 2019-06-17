@@ -86,10 +86,7 @@ class PRep(object):
 
         # Required items
         self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
-
-        gv: dict = params.get(ConstantKeys.GOVERNANCE_VARIABLE)
-        if gv is not None:
-            self.incentive_rep: int = gv.get(ConstantKeys.INCENTIVE_REP, self.incentive_rep)
+        self.incentive_rep: int = params.get(ConstantKeys.INCENTIVE_REP, self.incentive_rep)
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()
@@ -167,11 +164,9 @@ class PRep(object):
             ConstantKeys.EMAIL: self.email,
             ConstantKeys.WEBSITE: self.website,
             ConstantKeys.DETAILS: self.details,
-            ConstantKeys.PUBLIC_KEY: self.public_key,
             ConstantKeys.P2P_END_POINT: self.p2p_end_point,
-            ConstantKeys.GOVERNANCE_VARIABLE: {
-                ConstantKeys.INCENTIVE_REP: self.incentive_rep
-            }
+            ConstantKeys.PUBLIC_KEY: self.public_key,
+            ConstantKeys.INCENTIVE_REP: self.incentive_rep
         }
 
     def __str__(self) -> str:
