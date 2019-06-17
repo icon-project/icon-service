@@ -78,8 +78,7 @@ class Engine(EngineBase):
 
             total_issue_amount += issue_data_in_db[group_key]["value"]
 
-        issue_variable = context.engine.iiss.issue_variable
-        calc_next_block_height = issue_variable.get_calc_next_block_height(context)
+        calc_next_block_height = context.storage.iiss.get_calc_next_block_height(context)
 
         if calc_next_block_height == context.block.height:
             deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
