@@ -19,7 +19,7 @@ import unittest
 from unittest.mock import patch
 
 from iconservice.iiss.reward_calc.data_creator import *
-from iconservice.iiss.reward_calc.storage import DataStorage as RewardCalcDataStorage
+from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.msg_data import TxType
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
@@ -32,7 +32,7 @@ class TestRcDataStorage(unittest.TestCase):
     def setUp(self, _, mocked_iiss_db_from_path) -> None:
         self.path = ""
         mocked_iiss_db_from_path.side_effect = MockIissDataBase.from_path
-        self.rc_data_storage = RewardCalcDataStorage()
+        self.rc_data_storage = RewardCalcStorage()
         self.rc_data_storage.open(self.path)
 
         dummy_block_height = 1
@@ -65,10 +65,10 @@ class TestRcDataStorage(unittest.TestCase):
     def test_open(self, mocked_path_exists, mocked_iiss_db_from_path):
         # success case: when input existing path, make path of current_db and iiss_rc_db
         # and generate current level db(if not exist)
-        rc_data_storage = RewardCalcDataStorage()
+        rc_data_storage = RewardCalcStorage()
         test_db_path: str = os.path.join(os.getcwd(), ".storage_test_db")
 
-        expected_current_db_path = os.path.join(test_db_path, RewardCalcDataStorage._CURRENT_IISS_DB_NAME)
+        expected_current_db_path = os.path.join(test_db_path, RewardCalcStorage._CURRENT_IISS_DB_NAME)
 
         def from_path(path: str,
                       create_if_missing: bool = True) -> 'MockIissDataBase':
@@ -90,7 +90,7 @@ class TestRcDataStorage(unittest.TestCase):
         self.assertEqual(expected_tx_index, actual_tx_index)
 
     def test_load_last_tx_index(self):
-        current_db = self.rc_data_storage.db
+        current_db = self.rc_data_storage._db
         # success case: when inquiring tx index while current_db has non data recorded should return -1
         current_db.delete(b'last_transaction_index')
         expected_tx_index = -1
@@ -119,7 +119,7 @@ class TestRcDataStorage(unittest.TestCase):
     def test_create_db_for_calc_valid_block_height(self, mocked_path_exists, mocked_rename, mocked_iiss_db_from_path):
         # success case: when input valid block height, should create iiss_db and return path
         mocked_iiss_db_from_path.side_effect = MockIissDataBase.from_path
-        current_db_path = os.path.join(self.path, RewardCalcDataStorage._CURRENT_IISS_DB_NAME)
+        current_db_path = os.path.join(self.path, RewardCalcStorage._CURRENT_IISS_DB_NAME)
 
         # todo: to be refactored
         def path_exists(path):
@@ -131,7 +131,7 @@ class TestRcDataStorage(unittest.TestCase):
 
         valid_block_height = 1
         expected_iiss_db_path = os.path.join(self.path,
-                                             RewardCalcDataStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
+                                             RewardCalcStorage._IISS_RC_DB_NAME_PREFIX + f"{valid_block_height}")
         actual_ret_path = self.rc_data_storage.create_db_for_calc(valid_block_height)
         self.assertEqual(expected_iiss_db_path, actual_ret_path)
 
@@ -154,7 +154,7 @@ class TestRcDataStorage(unittest.TestCase):
         expected_index = -1
         self.assertEqual(expected_index, self.rc_data_storage._db_iiss_tx_index)
         self.assertEqual(None,
-                         self.rc_data_storage.db.get(self.rc_data_storage._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX))
+                         self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX))
 
     def test_commit_with_iiss_tx(self):
         # todo: should supplement this unit tests
@@ -166,13 +166,26 @@ class TestRcDataStorage(unittest.TestCase):
 
             recorded_index = \
                 int.from_bytes(
-                    self.rc_data_storage.db.get(self.rc_data_storage._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX), 'big')
+                    self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_GETTING_LAST_TRANSACTION_INDEX), 'big')
             self.assertEqual(expected_index, recorded_index)
 
             last_tx_index = -1
-            for key in self.rc_data_storage.db.iterator():
+            for key in self.rc_data_storage._db.iterator():
                 if key[:2] == b'TX':
                     temp_tx_index = int.from_bytes(key[2:], 'big')
                     if last_tx_index < temp_tx_index:
                         last_tx_index = temp_tx_index
             self.assertEqual(expected_index, last_tx_index)
+
+    def test_putting_i_score_data_on_current_db(self):
+        # success case: If there is no prev_calc_period_issued_i_score, should return None
+        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_i_score()
+        assert actual_i_score is None
+
+        # success case: put i score and get i score from the db
+        expected_i_score = 10_000
+        self.rc_data_storage.put_prev_calc_period_issued_i_score(expected_i_score)
+
+        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_i_score()
+        assert actual_i_score == expected_i_score
+
