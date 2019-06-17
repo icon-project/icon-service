@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..base.exception import IllegalFormatException
+from ..base.exception import InvalidBlockException
 
 
 class IssueDataValidator:
@@ -21,9 +21,9 @@ class IssueDataValidator:
     def validate_format(tx_data: dict, db_data: dict):
         try:
             if not tx_data.keys() == db_data.keys():
-                raise IllegalFormatException("invalid issue transaction format")
+                raise InvalidBlockException("invalid issue transaction format")
         except AttributeError:
-            raise IllegalFormatException("invalid issue transaction format")
+            raise InvalidBlockException("invalid issue transaction format")
 
         for key, val in db_data.items():
             if isinstance(val, dict):

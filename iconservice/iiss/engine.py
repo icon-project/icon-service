@@ -24,7 +24,7 @@ from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE
+from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula
@@ -67,9 +67,14 @@ class Engine(EngineBase):
         # todo: consider formula managing r min, r max, r point
         self._formula = IssueFormula()
 
-    # TODO implement calculate callback function
-    def calculate_callback(self, cb_data: 'CalculateResponse'):
-        Logger.debug(tag="iiss", msg=f"calculate callback called with {cb_data}")
+    @staticmethod
+    def calculate_callback(cb_data: 'CalculateResponse'):
+        # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
+        if not cb_data.success:
+            raise AssertionError(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
+
+        IconScoreContext.storage.rc.put_prev_calc_period_issued_i_score(cb_data.iscore)
+        Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)
 
     def _init_reward_calc_proxy(self, data_path: str):
         self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback)

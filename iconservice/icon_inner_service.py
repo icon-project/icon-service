@@ -21,7 +21,7 @@ from typing import Any, TYPE_CHECKING, Optional, Tuple
 from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode, IconServiceBaseException
+from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBlockException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
@@ -144,12 +144,16 @@ class IconScoreInnerTask(object):
                 'stateRootHash': bytes.hex(state_root_hash)
             }
             response = MakeResponse.make_response(results)
+        except InvalidBlockException as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         except IconServiceBaseException as icon_e:
             self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+            self._close()
         finally:
             Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()

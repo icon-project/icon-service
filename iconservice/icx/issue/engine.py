@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 
 
 class Engine(EngineBase):
-    def _issue(self,
-               context: 'IconScoreContext',
+    @staticmethod
+    def _issue(context: 'IconScoreContext',
                to: 'Address',
                amount: int):
         if amount > 0:
