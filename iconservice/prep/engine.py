@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from iconcommons.logger import Logger
-
 from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -27,13 +26,15 @@ from ..icon_constant import PREP_COUNT
 from ..iconscore.icon_score_result import TransactionResult
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
+from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from . import PRepStorage
-    from ..iiss.reward_calc.msg_data import *
+    from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icx.icx_account import Account
     from ..icx import IcxStorage
+    from ..precommit_data_manager import PrecommitData
 
 
 class Engine(EngineBase):
@@ -84,14 +85,15 @@ class Engine(EngineBase):
         ret = handler(context, params)
         return ret
 
-    def commit(self, context: 'IconScoreContext'):
+    def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         """If the current P-Rep term is over, update term with new information
         which has P-Rep list(address, delegated amount), start height, end height, incentive_rep
 
         :param context:
+        :param precommit_data:
         :return:
         """
-        pass
+        self.preps = precommit_data.preps
 
     def rollback(self):
         pass

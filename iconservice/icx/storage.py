@@ -13,24 +13,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import json
 from enum import IntEnum, IntFlag
 from typing import TYPE_CHECKING, Optional, Union
 
 from iconcommons import Logger
-from ..base.ComponentBase import StorageBase
 from .coin_part import CoinPart, CoinPartFlag, CoinPartType
 from .delegation_part import DelegationPart
 from .icx_account import Account
 from .stake_part import StakePart
+from ..base.ComponentBase import StorageBase
+from ..base.address import Address
 from ..base.block import Block
 from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER, ICX_LOG_TAG
 
 if TYPE_CHECKING:
     from ..database.db import ContextDatabase
     from ..iconscore.icon_score_context import IconScoreContext
-    from ..base.address import Address
-    from ..base.block import Block
 
 
 class AccountPartFlag(IntFlag):

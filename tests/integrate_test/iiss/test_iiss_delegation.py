@@ -46,13 +46,19 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
     def _delegate(self, address: 'Address', delegations: list):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
@@ -63,7 +69,10 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
         # stake 10 icx
@@ -110,7 +119,10 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        # issue tx must be exists after revision 5
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
         # stake 10 icx

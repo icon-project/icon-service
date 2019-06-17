@@ -92,7 +92,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.DETAILS: f"details{i}",
                 ConstantKeys.P2P_END_POINT: f"p2pEndPoint{i}",
-                ConstantKeys.PUBLIC_KEY: create_tx_hash(),
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
                 ConstantKeys.INCENTIVE_REP: 200 + i,
             }
             self._reg_prep(create_address(), reg_data, REV_IISS)
@@ -112,7 +112,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         preps: list = response['preps']
         total_delegated: int = response['totalDelegated']
         # TODO setting trigger!
-        self.assertEqual(0, len(preps))
+        self.assertEqual(200, len(preps))
         self.assertEqual(0, total_delegated)
 
     def test_total(self):
@@ -129,7 +129,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: create_tx_hash(),
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
                 ConstantKeys.INCENTIVE_REP: 200 + i
             }
             self._reg_prep(self._addr_array[i + 10], reg_data, REV_IISS)

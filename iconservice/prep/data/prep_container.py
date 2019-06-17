@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from copy import deepcopy
 from typing import TYPE_CHECKING, List, Union, Optional
 
@@ -20,9 +21,7 @@ from .prep import PRep
 from ...base.exception import InvalidParamsException, AccessDeniedException
 from ...icon_constant import PREP_COUNT
 from ...iconscore.icon_score_context import IconScoreContext
-
-if TYPE_CHECKING:
-    from ...base.address import Address
+from ...base.address import Address
 
 
 class SortedList(object):
@@ -45,7 +44,7 @@ class SortedList(object):
         self._sorted_list.remove(prep)
         self.add(prep)
 
-    def index(self, prep) -> int:
+    def index(self, prep: 'PRep') -> int:
         return self._sorted_list.index(prep)
 
     def remove(self, prep: 'PRep'):
@@ -105,6 +104,11 @@ class PRepContainer(object):
         if prep:
             del self._prep_dict[address]
             self._prep_list.remove(prep)
+
+    def update(self, address: 'Address', delegated_amount: int):
+        prep: 'PRep' = self.get(address)
+        prep.delegated: int = delegated_amount
+        self._prep_list.sort(prep)
 
     def get(self, address: 'Address') -> Optional['PRep']:
         return self._prep_dict.get(address)

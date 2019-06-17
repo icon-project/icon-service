@@ -31,8 +31,7 @@ from tests import create_address
 class TestTransactionValidator(unittest.TestCase):
 
     def setUp(self):
-        self.validator = IconPreValidator(
-            Mock(spec=IcxEngine), Mock(spec=FeeEngine), Mock(spec=DeployEngine))
+        self.validator = IconPreValidator()
 
     def test_excute_v2(self):
         self.validator._check_data_size = Mock()
