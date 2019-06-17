@@ -99,7 +99,7 @@ class PRep(object):
 
         :return: delegated, block_height, tx_index
         """
-        return self.delegated, self.block_height, self.tx_index
+        return self.delegated, -self.block_height, -self.tx_index
 
     def to_bytes(self) -> bytes:
         return MsgPackForDB.dumps([

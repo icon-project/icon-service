@@ -259,5 +259,7 @@ class TestIntegratePRep(TestIntegrateBase):
             self.assertEqual(value, actual_prep["delegated"])
 
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 0)
-        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_list = [tx]
+        tx_list.insert(0, self._make_dummy_issue_tx())
+        prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
