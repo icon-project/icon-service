@@ -8,6 +8,9 @@ class SampleInterface(InterfaceScore):
     @interface
     def get_value(self) -> int: pass
 
+    @interface
+    def get_db(self) -> IconScoreDatabase: pass
+
 
 class SampleLinkScore(IconScoreBase):
     _SCORE_ADDR = 'score_addr'
@@ -42,3 +45,36 @@ class SampleLinkScore(IconScoreBase):
         test_interface = self.create_interface_score(self._addr_score.get(), SampleInterface)
         test_interface.set_value(value)
         self.Changed(value)
+
+    def _get_other_score_db(self):
+        interface_score = self.create_interface_score(self._addr_score.get(), SampleInterface)
+        return interface_score.get_db()
+
+    @external(readonly=True)
+    def get_other_score_db_bool(self) -> bool:
+        self._get_other_score_db()
+        return True
+
+    @external(readonly=True)
+    def get_other_score_db_int(self) -> int:
+        self._get_other_score_db()
+        return 1
+
+    @external(readonly=True)
+    def get_other_score_db_str(self) -> str:
+        self._get_other_score_db()
+        return "string"
+
+    @external(readonly=True)
+    def get_other_score_db_bytes(self) -> bytes:
+        self._get_other_score_db()
+        return b'bytestring'
+
+    @external(readonly=True)
+    def get_other_score_db_address(self) -> Address:
+        self._get_other_score_db()
+        return Address.from_string(f"hx{'0'*40}")
+
+    @external
+    def try_get_other_score_db(self):
+        self._get_other_score_db()

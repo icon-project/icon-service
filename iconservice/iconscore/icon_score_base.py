@@ -569,6 +569,8 @@ class IconScoreBase(IconScoreObject, ContextGetter,
 
         :return: :class:`.IconScoreDatabase` db
         """
+        if self.msg.sender.is_contract:
+            raise AccessDeniedException("Can not access other SCORE's Database")
         return self.__db
 
     @property

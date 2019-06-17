@@ -26,3 +26,7 @@ class SampleScore(IconScoreBase):
     def set_value(self, value: int):
         self._value.set(value)
         self.Changed(value)
+
+    @external
+    def get_db(self):
+        return self.db

@@ -19,7 +19,7 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
-from iconservice.base.exception import ExceptionCode
+from iconservice.base.exception import ExceptionCode, AccessDeniedException
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -216,6 +216,63 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
 
         self.assertEqual(tx_results[0].status, int(False))
         self.assertEqual(tx_results[0].failure.message, 'Max call stack size exceeded')
+
+    def test_get_other_score_db(self):
+        value1 = 1 * self._icx_factor
+        tx1 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_score",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS,
+                                   deploy_params={'value': hex(value1)})
+
+        tx2 = self._make_deploy_tx("sample_internal_call_scores",
+                                   "sample_link_score",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+
+        self._write_precommit_state(prev_block)
+
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+        self.assertEqual(tx_results[1].status, int(True))
+        score_addr2 = tx_results[1].score_address
+
+        tx3 = self._make_score_call_tx(self._addr_array[0], score_addr2, "add_score_func",
+                                       {"score_addr": str(score_addr1)})
+        prev_block, tx_results = self._make_and_req_block([tx3])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+
+        query_request = {
+            "version": self._version,
+            "from": self._admin,
+            "to": score_addr2,
+            "dataType": "call",
+            "data": {
+                "method": "get_other_score_db_bool", "params": {}
+            }
+        }
+
+        with self.assertRaises(AccessDeniedException) as e:
+            self._query(query_request)
+
+        query_request['data']['method'] = "get_other_score_db_int"
+        self.assertRaises(AccessDeniedException, self._query, query_request)
+
+        query_request['data']['method'] = "get_other_score_db_str"
+        self.assertRaises(AccessDeniedException, self._query, query_request)
+
+        query_request['data']['method'] = "get_other_score_db_bytes"
+        self.assertRaises(AccessDeniedException, self._query, query_request)
+
+        query_request['data']['method'] = "get_other_score_db_address"
+        self.assertRaises(AccessDeniedException, self._query, query_request)
+
+        tx4 = self._make_score_call_tx(self._addr_array[0], score_addr2, "try_get_other_score_db", {})
+        prev_block, tx_results = self._make_and_req_block([tx4])
+        self.assertEqual(tx_results[0].status, int(False))
 
 
 if __name__ == '__main__':
