@@ -21,7 +21,7 @@ from .base.address import Address, generate_score_address, generate_score_addres
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException
+    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException, InvalidBlockException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -339,7 +339,7 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
-    # todo: remove None of rev_block_contributors default
+    # todo: remove None of prev_block_generator, prev_block_validators default
     def invoke(self,
                block: 'Block',
                tx_requests: list,
@@ -388,7 +388,7 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS:
                     if not tx_request['params'].get('dataType') == "issue":
-                        raise AssertionError("Invalid block: first transaction must be an issue transaction")
+                        raise InvalidBlockException("Invalid block: first transaction must be an issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
@@ -520,7 +520,8 @@ class IconServiceEngine(ContextContainer):
         tx_result = TransactionResult(context.tx, context.block)
         tx_result.to = treasury_address
         # todo: below i_score is temp data, will be removed
-        i_score = 1_000_000
+        i_score: Optional[int] = context.storage.rc.get_prev_calc_period_issued_i_score()
+
         try:
             context.engine.issue.issue(context,
                                        treasury_address,
