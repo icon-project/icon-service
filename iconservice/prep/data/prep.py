@@ -149,7 +149,7 @@ class PRep(object):
         # Required items
         prep.p2p_end_point: str = data[ConstantKeys.P2P_END_POINT]
         prep.public_key: bytes = data[ConstantKeys.PUBLIC_KEY]
-        prep.incentive_rep: int = data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP]
+        prep.incentive_rep: int = data[ConstantKeys.INCENTIVE_REP]
 
         # Registration time
         prep.block_height: int = block_height

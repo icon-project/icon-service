@@ -372,6 +372,7 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
+        context.preps = context.engine.prep.preps.get_snapshot()
 
         self._set_revision_to_context(context)
         block_result = []
@@ -515,7 +516,7 @@ class IconServiceEngine(ContextContainer):
                                    issue_data_in_tx: dict,
                                    issue_data_in_db: dict):
 
-        treasury_address: 'Address' = context.engine.icx.fee_treasury_address
+        treasury_address: 'Address' = context.storage.icx.fee_treasury
         tx_result = TransactionResult(context.tx, context.block)
         tx_result.to = treasury_address
         # todo: below i_score is temp data, will be removed
@@ -1292,7 +1293,7 @@ class IconServiceEngine(ContextContainer):
             iiss_data_for_issue = {"prep": {"value": 0}}
             return iiss_data_for_issue
 
-        iiss_data_for_issue: dict = context.engine.issue.create_icx_issue_info(context)
+        iiss_data_for_issue: dict = context.engine.iiss.create_icx_issue_info(context)
         return iiss_data_for_issue
 
     def _make_last_block_status(self) -> Optional[dict]:
