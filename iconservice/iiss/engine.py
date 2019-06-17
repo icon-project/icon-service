@@ -103,20 +103,20 @@ class Engine(EngineBase):
 
     def genesis_commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         self.genesis_update_db(context, precommit_data)
-        context.storage.iiss.commit(precommit_data.rc_block_batch)
+        context.storage.rc.commit(precommit_data.rc_block_batch)
         self.genesis_send_ipc(context, precommit_data)
 
     def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         self.update_db(context, precommit_data)
-        context.storage.iiss.commit(precommit_data.rc_block_batch)
+        context.storage.rc.commit(precommit_data.rc_block_batch)
         self.send_ipc(context, precommit_data)
 
     def create_icx_issue_info(self, context: 'IconScoreContext'):
-        gv: 'GovernanceVariable' = context.storage.prep.get_gv(context)
+        incentive_rep: int = context.engine.prep.term.incentive_rep
 
         iiss_data_for_issue = {
             "prep": {
-                "incentive": gv.incentive_rep,
+                "incentive": incentive_rep,
                 "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
                 "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
             }
@@ -356,7 +356,7 @@ class Engine(EngineBase):
         # every block
         self._reward_calc_proxy.commit_block(True, precommit_data.block.height, precommit_data.block.hash)
 
-        if not cls._check_update_calc_period(context, precommit_data):
+        if not self._check_update_calc_period(context, precommit_data):
             return
 
         block_height: int = precommit_data.block.height
@@ -367,7 +367,7 @@ class Engine(EngineBase):
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData') -> bool:
         block_height: int = precommit_data.block.height
-        check_next_block_height: Optional[int] = context.storage.rc.get_calc_next_block_height(context)
+        check_next_block_height: Optional[int] = context.storage.iiss.get_calc_next_block_height(context)
         if check_next_block_height is None:
             return False
 
@@ -423,7 +423,7 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        preps: List['PRep'] = context.preps.get_preps()
+        preps: List['PRep'] = context.engine.prep.preps.get_preps()
 
         if len(preps) == 0:
             return

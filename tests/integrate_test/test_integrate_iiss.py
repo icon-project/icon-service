@@ -23,7 +23,7 @@ from iconservice import Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS
-from tests import create_address
+from tests import create_address, create_tx_hash
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -67,8 +67,10 @@ class TestIntegrateIISS(TestIntegrateBase):
     def _reg_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
 
         data = deepcopy(data)
-        value: str = hex(data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP])
-        data[ConstantKeys.GOVERNANCE_VARIABLE][ConstantKeys.INCENTIVE_REP] = value
+        value: str = data[ConstantKeys.PUBLIC_KEY].hex()
+        data[ConstantKeys.PUBLIC_KEY] = value
+        value: str = hex(data[ConstantKeys.INCENTIVE_REP])
+        data[ConstantKeys.INCENTIVE_REP] = value
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
@@ -90,9 +92,8 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.DETAILS: f"details{i}",
                 ConstantKeys.P2P_END_POINT: f"p2pEndPoint{i}",
-                ConstantKeys.GOVERNANCE_VARIABLE: {
-                    ConstantKeys.INCENTIVE_REP: 200 + i
-                }
+                ConstantKeys.PUBLIC_KEY: create_tx_hash(),
+                ConstantKeys.INCENTIVE_REP: 200 + i,
             }
             self._reg_prep(create_address(), reg_data, REV_IISS)
 
@@ -108,7 +109,7 @@ class TestIntegrateIISS(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        preps: list = response['prepList']
+        preps: list = response['preps']
         total_delegated: int = response['totalDelegated']
         # TODO setting trigger!
         self.assertEqual(0, len(preps))
@@ -128,9 +129,8 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.WEBSITE: f"website{i}",
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.GOVERNANCE_VARIABLE: {
-                    ConstantKeys.INCENTIVE_REP: 200 + i
-                }
+                ConstantKeys.PUBLIC_KEY: create_tx_hash(),
+                ConstantKeys.INCENTIVE_REP: 200 + i
             }
             self._reg_prep(self._addr_array[i + 10], reg_data, REV_IISS)
 
