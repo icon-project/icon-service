@@ -68,8 +68,8 @@ class TestIntegratePRep(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.INCENTIVE_REP])
-        data[ConstantKeys.INCENTIVE_REP] = value
+        value: str = hex(data[ConstantKeys.IREP])
+        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
@@ -80,9 +80,9 @@ class TestIntegratePRep(TestIntegrateBase):
     def _set_prep(self, address: 'Address', data: dict):
 
         data = deepcopy(data)
-        value = data.get(ConstantKeys.INCENTIVE_REP)
+        value = data.get(ConstantKeys.IREP)
         if value:
-            data[ConstantKeys.INCENTIVE_REP] = hex(value)
+            data[ConstantKeys.IREP] = hex(value)
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
         tx_list = [tx]
@@ -109,7 +109,7 @@ class TestIntegratePRep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json",
             ConstantKeys.P2P_END_POINT: "ip",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.INCENTIVE_REP: 200
+            ConstantKeys.IREP: 200
         }
         self._reg_prep(self._addr_array[0], data)
 
@@ -129,18 +129,19 @@ class TestIntegratePRep(TestIntegrateBase):
         response = self._query(query_request)
         expected_response: dict = data
 
-        self.assertEqual(expected_response[ConstantKeys.NAME], response[ConstantKeys.NAME])
-        self.assertEqual(expected_response[ConstantKeys.EMAIL], response[ConstantKeys.EMAIL])
-        self.assertEqual(expected_response[ConstantKeys.WEBSITE], response[ConstantKeys.WEBSITE])
-        self.assertEqual(expected_response[ConstantKeys.DETAILS], response[ConstantKeys.DETAILS])
-        self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], response[ConstantKeys.P2P_END_POINT])
-        self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], response[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(expected_response[ConstantKeys.INCENTIVE_REP], response[ConstantKeys.INCENTIVE_REP])
+        register = response["registration"]
+        self.assertEqual(expected_response[ConstantKeys.NAME], register[ConstantKeys.NAME])
+        self.assertEqual(expected_response[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
+        self.assertEqual(expected_response[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(expected_response[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
+        self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
+        self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
+        self.assertEqual(expected_response[ConstantKeys.IREP], register[ConstantKeys.IREP])
 
-        data: dict = {
-            ConstantKeys.INCENTIVE_REP: 2001,
+        data1: dict = {
+            ConstantKeys.IREP: 2001,
         }
-        self._set_prep(self._addr_array[0], data)
+        self._set_prep(self._addr_array[0], data1)
 
         query_request = {
             "version": self._version,
@@ -156,10 +157,10 @@ class TestIntegratePRep(TestIntegrateBase):
         }
 
         response = self._query(query_request)
-
-        self.assertEqual(ConstantKeys.NAME, response[ConstantKeys.NAME])
-        self.assertEqual(ConstantKeys.WEBSITE, response[ConstantKeys.WEBSITE])
-        self.assertEqual(hex(2001), hex(response[ConstantKeys.INCENTIVE_REP]))
+        register = response["registration"]
+        self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
+        self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(hex(data1[ConstantKeys.IREP]), hex(register[ConstantKeys.IREP]))
 
         self._unreg_prep(self._addr_array[0])
 
@@ -175,7 +176,7 @@ class TestIntegratePRep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.INCENTIVE_REP: 200+i
+                ConstantKeys.IREP: 200+i
             }
             self._reg_prep(self._addr_array[i], data)
 
@@ -210,7 +211,7 @@ class TestIntegratePRep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.INCENTIVE_REP: 200+i
+                ConstantKeys.IREP: 200+i
             }
             self._reg_prep(self._addr_array[i], data)
 

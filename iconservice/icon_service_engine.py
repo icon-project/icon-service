@@ -1060,9 +1060,9 @@ class IconServiceEngine(ContextContainer):
             step_price=context.step_counter.step_price)
 
         if self._check_iiss_process(params):
-            context.engine.iiss.invoke(context, data, tx_result)
+            context.engine.iiss.invoke(context, data)
         elif self._check_prep_process(params):
-            context.engine.prep.invoke(context, data, tx_result)
+            context.engine.prep.invoke(context, data)
         else:
             raise InvalidParamsException("invalid method")
 

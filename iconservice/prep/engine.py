@@ -19,14 +19,14 @@ from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
-from ..base.address import Address
+from ..base.address import Address, ZERO_SCORE_ADDRESS
+from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import PREP_COUNT
+from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..iconscore.icon_score_result import TransactionResult
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
-from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
     from . import PRepStorage
@@ -56,7 +56,7 @@ class Engine(EngineBase):
         self._query_handler: dict = {
             "getPRep": self.handle_get_prep,
             "getMainPRepList": self.handle_get_main_prep_list,
-            # "getSubPRepList": self.handle_get_sub_prep_list,
+            "getSubPRepList": self.handle_get_sub_prep_list,
             "getPRepList": self.handle_get_prep_list
         }
 
@@ -70,12 +70,12 @@ class Engine(EngineBase):
         self.preps.load(context)
         self.term.load(context, term_period, governance_variable)
 
-    def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
+    def invoke(self, context: 'IconScoreContext', data: dict) -> None:
         method: str = data['method']
         params: dict = data['params']
 
         handler: callable = self._invoke_handlers[method]
-        handler(context, params, tx_result)
+        handler(context, params)
 
     def query(self, context: 'IconScoreContext', data: dict) -> Any:
         method: str = data['method']
@@ -99,7 +99,7 @@ class Engine(EngineBase):
         pass
 
     def handle_register_prep(
-            self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+            self, context: 'IconScoreContext', params: dict):
         """Register a P-Rep
 
         Roles
@@ -108,8 +108,7 @@ class Engine(EngineBase):
         * Update rcDB
 
         :param context: 
-        :param params: 
-        :param tx_result: 
+        :param params:
         :return: 
         """
         icx_storage: 'IcxStorage' = context.storage.icx
@@ -136,21 +135,21 @@ class Engine(EngineBase):
         # Update rcDB
         self._put_reg_prep_for_rc_data(context, address)
 
+        self._create_tx_result(context, 'PRepRegistered(Address)', address)
+
+    @classmethod
+    def _create_tx_result(cls, context: 'IconScoreContext', event_signature: str, address: 'Address'):
+        # make tx result
+        arguments = [address]
+        index = 0
+        EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, event_signature, arguments, index)
+
     @staticmethod
     def _put_reg_prep_for_rc_data(context: 'IconScoreContext', address: 'Address'):
         rc_tx_batch: list = context.rc_tx_batch
         block_height: int = context.block.height
 
         tx: 'PRepRegisterTx' = RewardCalcDataCreator.create_tx_prep_reg()
-        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
-        context.storage.rc.put(rc_tx_batch, iiss_tx_data)
-
-    @staticmethod
-    def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):
-        rc_tx_batch: list = context.rc_tx_batch
-        block_height: int = context.block.height
-
-        tx: 'PRepUnregisterTx' = RewardCalcDataCreator.create_tx_prep_unreg()
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
@@ -176,14 +175,11 @@ class Engine(EngineBase):
 
         return prep.to_dict()
 
-    @staticmethod
-    def handle_set_prep(
-            context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+    def handle_set_prep(self, context: 'IconScoreContext', params: dict):
         """Update a P-Rep registration information
 
         :param context:
         :param params:
-        :param tx_result:
         :return:
         """
         prep_storage = context.storage.prep
@@ -194,18 +190,19 @@ class Engine(EngineBase):
             raise InvalidParamsException(f"P-Rep not found: str{address}")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
-        prep.set(ret_params)
+        prep.set(ret_params, context.block.height)
 
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
 
+        self._create_tx_result(context, 'PRepSet(Address)', address)
+
     def handle_unregister_prep(
-            self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+            self, context: 'IconScoreContext', params: dict):
         """Unregister a P-Rep
 
         :param context:
         :param params:
-        :param tx_result:
         :return:
         """
         prep_storage: 'PRepStorage' = context.storage.prep
@@ -225,6 +222,17 @@ class Engine(EngineBase):
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)
 
+        self._create_tx_result(context, 'PRepUnregistered(Address)', address)
+
+    @staticmethod
+    def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):
+        rc_tx_batch: list = context.rc_tx_batch
+        block_height: int = context.block.height
+
+        tx: 'PRepUnregisterTx' = RewardCalcDataCreator.create_tx_prep_unreg()
+        iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
+        context.storage.rc.put(rc_tx_batch, iiss_tx_data)
+
     def handle_get_main_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns 22 P-Rep list in the present term
 
@@ -232,9 +240,9 @@ class Engine(EngineBase):
         :param params:
         :return:
         """
-        preps: 'PRepContainer' = self.preps
+        preps: 'PRepContainer' = self.term.main_preps
         total_delegated: int = 0
-        prep_list = []
+        prep_list: list = []
 
         for prep in preps:
             item = {
@@ -244,8 +252,29 @@ class Engine(EngineBase):
             prep_list.append(item)
             total_delegated += prep.delegated
 
-            if len(prep_list) == PREP_COUNT:
-                break
+        return {
+            "totalDelegated": total_delegated,
+            "preps": prep_list
+        }
+
+    def handle_get_sub_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+        """Returns 22 P-Rep list in the present term
+
+        :param context:
+        :param params:
+        :return:
+        """
+        preps: 'PRepContainer' = self.term.sub_preps
+        total_delegated: int = 0
+        prep_list: list = []
+
+        for prep in preps:
+            item = {
+                "address": prep.address,
+                "delegated": prep.delegated
+            }
+            prep_list.append(item)
+            total_delegated += prep.delegated
 
         return {
             "totalDelegated": total_delegated,
@@ -263,9 +292,12 @@ class Engine(EngineBase):
 
         preps: 'PRepContainer' = self.preps
         total_delegated: int = 0
-        prep_list = []
+        prep_list: list = []
 
         start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1) - 1
+        if start_index < 0:
+            start_index = 0
+
         end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
 
         for i in range(start_index, end_index):

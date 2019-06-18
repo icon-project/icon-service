@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntFlag, unique, IntEnum
+from enum import IntFlag, unique, IntEnum, Enum
 
 GOVERNANCE_ADDRESS = "cx0000000000000000000000000000000000000001"
 
@@ -115,6 +115,7 @@ class ConfigKey:
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
     GOVERNANCE_VARIABLE = "governanceVariable"
+    IREP = 'irep'
 
     # IISS VARIABLE
     IISS_REWARD_VARIABLE = "iissRewardVariable"
@@ -201,3 +202,19 @@ IISS_ANNUAL_BLOCK = 15_768_000
 IISS_MONTH = 12
 
 I_SCORE_EXCHANGE_RATE = 1_000
+
+
+class PRepStatus(Enum):
+    NONE = 0
+    ACTIVE = 1
+    UNREGISTERED = 2
+    PENALTY1 = 3
+    PENALTY2 = 4
+
+
+PREP_STATUS_MAPPER = {
+    PRepStatus.ACTIVE: "active",
+    PRepStatus.UNREGISTERED: "unregistered",
+    PRepStatus.PENALTY1: "prep disqualification penalty",
+    PRepStatus.PENALTY2: "low productivity penalty"
+}
