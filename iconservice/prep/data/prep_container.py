@@ -15,13 +15,13 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Union, Optional
+from typing import List, Union, Optional
 
 from .prep import PRep
-from ...base.exception import InvalidParamsException, AccessDeniedException
-from ...icon_constant import PREP_COUNT
-from ...iconscore.icon_score_context import IconScoreContext
 from ...base.address import Address
+from ...base.exception import InvalidParamsException, AccessDeniedException
+from ...icon_constant import PREP_COUNT, PREP_MAX_PREPS
+from ...iconscore.icon_score_context import IconScoreContext
 
 
 class SortedList(object):
@@ -57,8 +57,10 @@ class SortedList(object):
         for prep in self._sorted_list:
             yield prep
 
-    def __getitem__(self, index: int) -> 'PRep':
-        return self._sorted_list[index]
+    def __getitem__(self, k: Union[int, slice]) -> Union['PRep', List['PRep']]:
+        if isinstance(k, slice):
+            return self._sorted_list[k]
+        return self._sorted_list[k]
 
     def __len__(self) -> int:
         return len(self._sorted_list)
@@ -132,18 +134,11 @@ class PRepContainer(object):
         return len(self._prep_list)
 
     def get_preps(self) -> List['PRep']:
-        """Returns top 22 main preps in descending order by delegated amount
+        """Returns top 100 preps in descending order by delegated amount
 
         :return: P-Rep list
         """
-        preps = []
-
-        for prep in self._prep_list:
-            preps.append(prep)
-            if len(preps) == PREP_COUNT:
-                break
-
-        return preps
+        return self._prep_list[:PREP_MAX_PREPS]
 
     def get_snapshot(self) -> 'PRepContainer':
         return deepcopy(self)

@@ -161,9 +161,10 @@ class ConstantKeys:
     DETAILS = 'details'
     P2P_END_POINT = 'p2pEndPoint'
     PUBLIC_KEY = 'publicKey'
-    INCENTIVE_REP = "incentiveRep"
     START_RANKING = "startRanking"
     END_RANKING = "endRanking"
+    IREP = "irep"
+    IREP_BLOCK_HEIGHT = "irepUpdateBlockHeight"
 
 
 type_convert_templates[ParamType.BLOCK] = {
@@ -340,7 +341,7 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.DETAILS: ValueType.STRING,
     ConstantKeys.P2P_END_POINT: ValueType.STRING,
     ConstantKeys.PUBLIC_KEY: ValueType.BYTES,
-    ConstantKeys.INCENTIVE_REP: ValueType.INT
+    ConstantKeys.IREP: ValueType.INT
 }
 
 type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]

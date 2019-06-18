@@ -15,6 +15,7 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
+from ..icon_constant import PREP_COUNT, PREP_MAX_PREPS
 from ..base.type_converter_templates import ConstantKeys
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ class Term(object):
         self._end_block_height: int = -1
         self._period: int = -1
         self._main_preps: List['PRep'] = []
+        self._sub_preps: List['PRep'] = []
         self._incentive_rep: int = -1
 
     @property
@@ -48,8 +50,12 @@ class Term(object):
         return self._period
 
     @property
-    def preps(self) -> List['PRep']:
+    def main_preps(self) -> List['PRep']:
         return self._main_preps
+
+    @property
+    def sub_preps(self) -> List['PRep']:
+        return self._sub_preps
 
     @property
     def incentive_rep(self) -> int:
@@ -61,20 +67,21 @@ class Term(object):
             version = data[0]
             self._sequence = data[1]
             self._end_block_height = data[2]
-            self._main_preps = self._make_preps(context, data[3])
+            self._main_preps, self._sub_preps = self._make_preps(context, data[3])
             self._incentive_rep = data[4]
         else:
             self._period = term_period
-            self._incentive_rep = governance_variable[ConstantKeys.INCENTIVE_REP]
+            self._incentive_rep = governance_variable[ConstantKeys.IREP]
 
-    def _make_preps(self, context: 'IconScoreContext', data: list) -> List['PRep']:
+    def _make_preps(self, context: 'IconScoreContext', data: list) -> tuple:
         prep_list: list = []
         preps: 'PRepContainer' = context.engine.prep.get_snapshot()
         for i, in range(0, len(data), 2):
             prep: 'PRep' = preps[data[i]]
             prep.delegated = data[i+1]
             prep_list.append(prep)
-        return prep_list
+
+        return prep_list[:PREP_COUNT], prep_list[PREP_COUNT: PREP_MAX_PREPS]
 
     def save(self,
              context: 'IconScoreContext',

@@ -73,8 +73,8 @@ class TestIntegratePrep(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.INCENTIVE_REP])
-        data[ConstantKeys.INCENTIVE_REP] = value
+        value: str = hex(data[ConstantKeys.IREP])
+        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
@@ -82,14 +82,16 @@ class TestIntegratePrep(TestIntegrateBase):
             # issue tx must be exists after revision 5
             tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
+        self.assertEqual('PRepRegistered(Address)', tx_results[1].event_logs[0].indexed[0])
+        self.assertEqual(address, tx_results[1].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
     def _set_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
 
         data = deepcopy(data)
-        value = data.get(ConstantKeys.INCENTIVE_REP)
+        value = data.get(ConstantKeys.IREP)
         if value:
-            data[ConstantKeys.INCENTIVE_REP] = hex(value)
+            data[ConstantKeys.IREP] = hex(value)
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
         tx_list = [tx]
@@ -97,6 +99,8 @@ class TestIntegratePrep(TestIntegrateBase):
             # issue tx must be exists after revision 5
             tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
+        self.assertEqual('PRepSet(Address)', tx_results[1].event_logs[0].indexed[0])
+        self.assertEqual(address, tx_results[1].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
     def _unreg_prep(self, address: 'Address', revision: int = REV_IISS):
@@ -107,6 +111,8 @@ class TestIntegratePrep(TestIntegrateBase):
             # issue tx must be exists after revision 5
             tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
+        self.assertEqual('PRepUnregistered(Address)', tx_results[1].event_logs[0].indexed[0])
+        self.assertEqual(address, tx_results[1].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
     def test_reg_prep(self):
@@ -120,7 +126,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.INCENTIVE_REP: 200
+            ConstantKeys.IREP: 200
         }
         self._reg_prep(self._addr_array[0], reg_data)
 
@@ -137,7 +143,14 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(reg_data, response)
+        register = response["registration"]
+        self.assertEqual(reg_data[ConstantKeys.NAME], register[ConstantKeys.NAME])
+        self.assertEqual(reg_data[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
+        self.assertEqual(reg_data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(reg_data[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
+        self.assertEqual(reg_data[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
+        self.assertEqual(reg_data[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
+        self.assertEqual(reg_data[ConstantKeys.IREP], register[ConstantKeys.IREP])
 
     def test_set_prep(self):
         self._update_governance()
@@ -150,13 +163,13 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.INCENTIVE_REP: 200
+            ConstantKeys.IREP: 200
         }
         self._reg_prep(self._addr_array[0], reg_data)
 
         update_data: dict = {
             ConstantKeys.NAME: "name0",
-            ConstantKeys.INCENTIVE_REP: 300,
+            ConstantKeys.IREP: 300,
         }
         self._set_prep(self._addr_array[0], update_data)
 
@@ -173,16 +186,15 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        expected: dict = {
-            ConstantKeys.NAME: "name0",
-            ConstantKeys.EMAIL: "email1",
-            ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.DETAILS: "json1",
-            ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.INCENTIVE_REP: 300
-        }
-        self.assertEqual(expected, response)
+        register = response["registration"]
+
+        self.assertEqual(update_data[ConstantKeys.NAME], register[ConstantKeys.NAME])
+        self.assertEqual(reg_data[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
+        self.assertEqual(reg_data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(reg_data[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
+        self.assertEqual(reg_data[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
+        self.assertEqual(reg_data[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
+        self.assertEqual(update_data[ConstantKeys.IREP], register[ConstantKeys.IREP])
 
     def test_unreg_prep_candidate(self):
         self._update_governance()
@@ -195,7 +207,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.INCENTIVE_REP: 200
+            ConstantKeys.IREP: 200
         }
         self._reg_prep(self._addr_array[0], reg_data)
         self._unreg_prep(self._addr_array[0])
@@ -229,7 +241,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.INCENTIVE_REP: 200 + i
+                ConstantKeys.IREP: 200 + i
             }
             self._reg_prep(self._addr_array[i], reg_data)
 
