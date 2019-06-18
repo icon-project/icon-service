@@ -25,10 +25,10 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy import DeployType
+from iconservice.icon_constant import DeployType
 from iconservice.deploy import engine as isde
-from iconservice.deploy.storage import IconScoreDeployStorage, IconScoreDeployTXParams, \
-    IconScoreDeployInfo
+from iconservice.deploy import DeployStorage
+from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.icon_constant import ICON_DEX_DB_NAME, IconServiceFlag
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
@@ -36,8 +36,8 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
-from iconservice.icx.engine import IcxEngine
-from iconservice.icx.storage import IcxStorage
+from iconservice.icx import IcxEngine
+from iconservice.icx import IcxStorage
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 PROJECT_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -127,7 +127,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
         self._score_deploy_engine = isde.IconScoreDeployEngine()
-        self._deploy_storage = IconScoreDeployStorage(self._icx_db)
+        self._deploy_storage = DeployStorage(self._icx_db)
 
         self._icon_score_mapper = IconScoreMapper()
 

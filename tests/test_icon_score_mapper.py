@@ -18,19 +18,17 @@
 import unittest
 from unittest.mock import Mock
 
-from iconservice.base.address import AddressPrefix
-from iconservice.deploy.storage import IconScoreDeployStorage
+from iconservice.deploy import DeployStorage
 from iconservice.iconscore.icon_score_base import IconScoreBase
-from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from tests import create_address, create_tx_hash
 
 
 class TestIconScoreMapper(unittest.TestCase):
     def setUp(self):
         IconScoreMapper.icon_score_class_loader = Mock(spec=IconScoreClassLoader)
-        IconScoreMapper.deploy_storage = Mock(spec=IconScoreDeployStorage)
+        IconScoreMapper.deploy_storage = Mock(spec=DeployStorage)
         self.context = Mock(spec=IconScoreContext)
         self.icon_score_mapper = IconScoreMapper()
 

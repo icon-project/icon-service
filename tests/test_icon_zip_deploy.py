@@ -28,8 +28,7 @@ from iconservice.base.block import Block
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy.engine import IconScoreDeployEngine
-from iconservice.deploy.storage import IconScoreDeployStorage
+from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.deploy.utils import remove_path
 from iconservice.icon_constant import ZERO_TX_HASH
 from iconservice.iconscore.icon_score_context import ContextContainer
@@ -37,8 +36,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
-from iconservice.icx.engine import IcxEngine
-from iconservice.icx.storage import IcxStorage
+from iconservice.icx import IcxEngine, IcxStorage
 from tests import create_address, create_block_hash, create_tx_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -74,9 +72,9 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icx_db = ContextDatabaseFactory.create_by_name('icx_db')
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
-        self._icon_deploy_storage = IconScoreDeployStorage(self._icx_db)
+        self._icon_deploy_storage = DeployStorage(self._icx_db)
 
-        self._engine = IconScoreDeployEngine()
+        self._engine = DeployEngine()
         IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()
 

@@ -28,7 +28,7 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
-from iconservice.deploy.engine import IconScoreDeployEngine
+from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, external, interface
@@ -38,13 +38,13 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
-from iconservice.utils import to_camel_case
+from iconservice.utils import to_camel_case, ContextEngine, ContextStorage
 from tests import create_address
 from tests import raise_exception_start_tag, raise_exception_end_tag
 
-OTHER_CALL = InternalCall._other_score_call
-ICX_ENGINE = IconScoreContext.icx_engine
-ICON_SCORE_DEPLOY_ENGINE = IconScoreContext.icon_score_deploy_engine
+# OTHER_CALL = InternalCall._other_score_call
+# ICX_ENGINE = IconScoreContext.engine.icx
+# ICON_SCORE_DEPLOY_ENGINE = IconScoreContext.engine.deploy
 
 
 class TestTrace(unittest.TestCase):
@@ -68,17 +68,33 @@ class TestTrace(unittest.TestCase):
         ContextContainer._push_context(context)
 
         InternalCall._other_score_call = Mock()
-        IconScoreContext.icx_engine = Mock(spec=IcxEngine)
-        IconScoreContext.icon_score_deploy_engine = Mock(spec=IconScoreDeployEngine)
+
+        IconScoreContext.engine = ContextEngine(
+            icx=Mock(spec=IcxEngine),
+            deploy=Mock(spec=DeployEngine),
+            fee=None,
+            iiss=None,
+            prep=None,
+            issue=None
+        )
+        IconScoreContext.storage = ContextStorage(
+            icx=None,
+            deploy=Mock(spec=DeployStorage),
+            fee=None,
+            iiss=None,
+            prep=None,
+            issue=None,
+            rc=None
+        )
 
         context.icon_score_mapper = Mock()
         context.icon_score_mapper.get_icon_score = Mock(return_value=TestScore(db))
         self._score = TestScore(db)
 
     def tearDown(self):
-        InternalCall._other_score_call = OTHER_CALL
-        IconScoreContext.icx_engine = ICX_ENGINE
-        IconScoreContext.icon_score_deploy_engine = ICON_SCORE_DEPLOY_ENGINE
+        # InternalCall._other_score_call = OTHER_CALL
+        # IconScoreContext.icx_engine = ICX_ENGINE
+        # IconScoreContext.icon_score_deploy_engine = ICON_SCORE_DEPLOY_ENGINE
         ContextContainer._clear_context()
         self._mock_icon_score = None
 
@@ -147,7 +163,7 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine = IconServiceEngine()
         self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
         self._icon_service_engine._icon_score_deploy_engine = \
-            Mock(spec=IconScoreDeployEngine)
+            Mock(spec=DeployEngine)
 
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)
@@ -197,7 +213,7 @@ class TestTrace(unittest.TestCase):
         self._icon_service_engine = IconServiceEngine()
         self._icon_service_engine._icx_engine = Mock(spec=IcxEngine)
         self._icon_service_engine._icon_score_deploy_engine = \
-            Mock(spec=IconScoreDeployEngine)
+            Mock(spec=DeployEngine)
 
         self._icon_service_engine._icon_pre_validator = Mock(
             spec=IconPreValidator)

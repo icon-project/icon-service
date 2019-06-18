@@ -17,6 +17,7 @@ import os
 from typing import TYPE_CHECKING
 
 from iconcommons import Logger
+
 from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_path
 from ..base.ComponentBase import EngineBase
