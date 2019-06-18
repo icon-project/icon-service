@@ -17,6 +17,8 @@
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
+
+from iconservice.icx.issue.regulator import Regulator
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -24,7 +26,8 @@ from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
+from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, \
+    ISSUE_CALCULATE_ORDER
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula
@@ -59,12 +62,9 @@ class Engine(EngineBase):
         }
 
         self._reward_calc_proxy: 'RewardCalcProxy' = None
-        self._formula: 'IssueFormula' = None
 
     def open(self, context: 'IconScoreContext', path: str):
         self._init_reward_calc_proxy(path)
-        # todo: consider formula managing r min, r max, r point
-        self._formula = IssueFormula()
 
     @staticmethod
     def calculate_callback(cb_data: 'CalculateResponse'):
@@ -115,22 +115,6 @@ class Engine(EngineBase):
         self.update_db(context, precommit_data)
         context.storage.rc.commit(precommit_data.rc_block_batch)
         self.send_ipc(context, precommit_data)
-
-    def create_icx_issue_info(self, context: 'IconScoreContext'):
-        incentive_rep: int = context.engine.prep.term.incentive_rep
-
-        iiss_data_for_issue = {
-            "prep": {
-                "incentive": incentive_rep,
-                "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
-                "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
-            }
-        }
-        for group in iiss_data_for_issue:
-            issue_amount_per_group = self._formula.calculate(group, iiss_data_for_issue[group])
-            iiss_data_for_issue[group]["value"] = issue_amount_per_group
-
-        return iiss_data_for_issue
 
     def rollback(self):
         pass

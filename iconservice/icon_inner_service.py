@@ -69,29 +69,29 @@ class IconScoreInnerTask(object):
                                                })
         Logger.info(f'icon_score_hello with response: {response}', ICON_INNER_LOG_TAG)
         return response
-
-    @message_queue_task
-    async def get_issue_info(self):
-        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
-            loop = get_event_loop()
-            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
-                                              self._get_issue_info)
-        else:
-            return self._get_issue_info()
-
-    def _get_issue_info(self):
-        query_method_name = "iiss_get_issue_info"
-        response = None
-        try:
-            value = self._icon_service_engine.query(query_method_name, {})
-            response = MakeResponse.make_response(value)
-        # todo: add except after implementing formula method
-        except Exception as e:
-            self._log_exception(e, ICON_SERVICE_LOG_TAG)
-            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
-        finally:
-            Logger.info(f'icx issue response with {response}', ICON_INNER_LOG_TAG)
-            return response
+    #
+    # @message_queue_task
+    # async def get_issue_info(self):
+    #     if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+    #         loop = get_event_loop()
+    #         return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+    #                                           self._get_issue_info)
+    #     else:
+    #         return self._get_issue_info()
+    #
+    # def _get_issue_info(self):
+    #     query_method_name = "iiss_get_issue_info"
+    #     response = None
+    #     try:
+    #         value = self._icon_service_engine.query(query_method_name, {})
+    #         response = MakeResponse.make_response(value)
+    #     # todo: add except after implementing formula method
+    #     except Exception as e:
+    #         self._log_exception(e, ICON_SERVICE_LOG_TAG)
+    #         response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+    #     finally:
+    #         Logger.info(f'icx issue response with {response}', ICON_INNER_LOG_TAG)
+    #         return response
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
@@ -129,19 +129,25 @@ class IconScoreInnerTask(object):
             block = Block.from_dict(converted_block_params)
 
             converted_tx_requests = params['transactions']
+
+            converted_is_block_editable = params.get('isBlockEditable')
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
-            tx_results, state_root_hash = self._icon_service_engine.invoke(
+
+            # todo: consider compativity
+            tx_results, state_root_hash, added_transactions = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
                 prev_block_generator=converted_prev_block_generator,
-                prev_block_validators=converted_prev_block_validators)
+                prev_block_validators=converted_prev_block_validators,
+                is_block_editable=converted_is_block_editable)
 
             convert_tx_results = \
-                {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case) for tx_result in tx_results}
+                [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
             results = {
                 'txResults': convert_tx_results,
-                'stateRootHash': bytes.hex(state_root_hash)
+                'stateRootHash': bytes.hex(state_root_hash),
+                'addedTransactions': added_transactions
             }
             response = MakeResponse.make_response(results)
         except InvalidBlockException as e:

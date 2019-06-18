@@ -67,6 +67,7 @@ class Regulator:
         # (i.e. both prev_calc_period_issued_i_score and prev_calc_period_issued_icx is None), skip the correction logic
         return prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is None
 
+    # todo: get type (calculate, invoke) and input data to db
     @classmethod
     def correct_issue_amount_on_calc_period(cls,
                                             context: 'IconScoreContext',
@@ -74,6 +75,7 @@ class Regulator:
                                             icx_issue_amount: int) -> Tuple[int, int, int]:
         assert icx_issue_amount >= 0
 
+        # db get
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         prev_calc_period_issued_icx: Optional[int] = regulator_variable.prev_calc_period_issued_icx
@@ -82,6 +84,7 @@ class Regulator:
         remain_over_issued_icx = 0
         deducted_icx = 0
 
+        # 확인로직(적절한가??)
         if not cls._is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score,
                                                                  prev_calc_period_issued_icx):
             raise AssertionError("There is no prev_calc_period_i_score or "
@@ -103,6 +106,7 @@ class Regulator:
 
         regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
         regulator_variable.current_calc_period_issued_icx = 0
+
         context.storage.issue.put_regulator_variable(context, regulator_variable)
 
         # deducted_icx can be negative value (in case of reward calculator having been issued more)
