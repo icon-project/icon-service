@@ -106,20 +106,6 @@ class PRep(object):
     def make_key(cls, address: 'Address') -> bytes:
         return cls.PREFIX + address.to_bytes_including_prefix()
 
-    def set(self, params: dict, block_height: int):
-        # Optional items
-        self.name: str = params.get(ConstantKeys.NAME, self.name)
-        self.email: str = params.get(ConstantKeys.EMAIL, self.email)
-        self.website: str = params.get(ConstantKeys.WEBSITE, self.website)
-        self.details: str = params.get(ConstantKeys.DETAILS, self.details)
-
-        # Required items
-        self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
-
-        if ConstantKeys.IREP in params:
-            self.incentive_rep: int = params[ConstantKeys.IREP]
-            self.incentive_rep_block_height: int = block_height
-
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()
 
@@ -204,6 +190,20 @@ class PRep(object):
         prep.tx_index: int = tx_index
 
         return prep
+
+    def set(self, params: dict, block_height: int):
+        # Optional items
+        self.name: str = params.get(ConstantKeys.NAME, self.name)
+        self.email: str = params.get(ConstantKeys.EMAIL, self.email)
+        self.website: str = params.get(ConstantKeys.WEBSITE, self.website)
+        self.details: str = params.get(ConstantKeys.DETAILS, self.details)
+
+        # Required items
+        self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
+
+        if ConstantKeys.IREP in params:
+            self.incentive_rep: int = params[ConstantKeys.IREP]
+            self.incentive_rep_block_height: int = block_height
 
     def to_dict(self) -> dict:
         return {

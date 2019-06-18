@@ -30,7 +30,6 @@ from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_result import TransactionResult
     from ..iconscore.icon_score_context import IconScoreContext
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address, ZERO_SCORE_ADDRESS
@@ -327,7 +326,7 @@ class Engine(EngineBase):
             "icx": self._iscore_to_icx(iscore),
             "blockHeight": block_height
         }
-
+        
         return data
 
     def genesis_update_db(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):

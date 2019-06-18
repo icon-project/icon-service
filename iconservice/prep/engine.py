@@ -24,7 +24,6 @@ from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..iconscore.icon_score_event_log import EventLogEmitter
-from ..iconscore.icon_score_result import TransactionResult
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
 
@@ -136,6 +135,12 @@ class Engine(EngineBase):
         self._put_reg_prep_for_rc_data(context, address)
 
         self._create_tx_result(context, 'PRepRegistered(Address)', address)
+
+    @classmethod
+    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep'):
+        irep: int = context.engine.prep.term.incentive_rep
+        if prep.incentive_rep > irep * 1.2 or prep.incentive_rep < irep * 0.8:
+            raise Exception
 
     @classmethod
     def _create_tx_result(cls, context: 'IconScoreContext', event_signature: str, address: 'Address'):

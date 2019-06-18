@@ -124,12 +124,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.legacy_tbears_mode = conf.get(ConfigKey.TBEARS_MODE, False)
         self._init_component_context()
 
-        last_block: 'Block' = IconScoreContext.storage.icx.last_block
-        self._precommit_data_manager.last_block = last_block
-
         context = IconScoreContext(IconScoreContextType.DIRECT)
-        context.block = last_block
-
         self._open_component_context(context,
                                      conf[ConfigKey.IISS_DB_ROOT_PATH],
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
@@ -137,6 +132,9 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.GOVERNANCE_VARIABLE])
+
+        last_block: 'Block' = IconScoreContext.storage.icx.last_block
+        self._precommit_data_manager.last_block = last_block
 
         self._load_builtin_scores(context, conf[ConfigKey.BUILTIN_SCORE_OWNER])
         self._init_global_value_by_governance_score(context)
