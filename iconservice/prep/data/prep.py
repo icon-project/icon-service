@@ -16,7 +16,9 @@ from enum import auto, Flag, IntEnum
 from typing import TYPE_CHECKING, Tuple
 
 from ...base.address import Address
+from ...base.exception import InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
+from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -36,15 +38,22 @@ class PRep(object):
     class Index(IntEnum):
         VERSION = 0
         ADDRESS = auto()
+
+        STATUS = auto()
         NAME = auto()
         EMAIL = auto()
         WEBSITE = auto()
         DETAILS = auto()
         P2P_END_POINT = auto()
         PUBLIC_KEY = auto()
-        INCENTIVE_REP = auto()
+        IREP = auto()
+        IREP_BLOCK_HEIGHT = auto()
+
         BLOCK_HEIGHT = auto()
         TX_INDEX = auto()
+
+        TOTAL_BLOCKS = auto()
+        VALIDATE_BLOCKS = auto()
 
         SIZE = auto()
 
@@ -55,13 +64,12 @@ class PRep(object):
         # key
         self.address: 'Address' = address
 
-        # registration time
-        self.block_height: int = 0
-        self.tx_index: int = 0
-
         # The delegated amount retrieved from account
+        self.stake: int = 0
         self.delegated: int = 0
 
+        # status
+        self._status: 'PRepStatus' = PRepStatus.NONE
         # registration info
         self.name: str = ""
         self.email: str = ""
@@ -72,21 +80,31 @@ class PRep(object):
         self.p2p_end_point: str = ""
         # Governance Variables
         self.incentive_rep: int = 0
+        self.incentive_rep_block_height: int = 0
+
+        # registration time
+        self.block_height: int = 0
+        self.tx_index: int = 0
+
+        # stats
+        self.total_blocks: int = 0
+        self.validated_blocks: int = 0
+
+    @property
+    def status(self) -> 'PRepStatus':
+        return self._status
+
+    @status.setter
+    def status(self, value: 'PRepStatus'):
+        if value == PRepStatus.ACTIVE and self._status != PRepStatus.NONE:
+            raise InvalidParamsException(f"Invalid init status setting: {value}")
+        elif value != PRepStatus.ACTIVE and self._status == PRepStatus.NONE:
+            raise InvalidParamsException(f"Invalid status setting: {value}")
+        self._status = value
 
     @classmethod
     def make_key(cls, address: 'Address') -> bytes:
         return cls.PREFIX + address.to_bytes_including_prefix()
-
-    def set(self, params: dict):
-        # Optional items
-        self.name: str = params.get(ConstantKeys.NAME, self.name)
-        self.email: str = params.get(ConstantKeys.EMAIL, self.email)
-        self.website: str = params.get(ConstantKeys.WEBSITE, self.website)
-        self.details: str = params.get(ConstantKeys.DETAILS, self.details)
-
-        # Required items
-        self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
-        self.incentive_rep: int = params.get(ConstantKeys.INCENTIVE_REP, self.incentive_rep)
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()
@@ -104,6 +122,9 @@ class PRep(object):
     def to_bytes(self) -> bytes:
         return MsgPackForDB.dumps([
             self._VERSION,
+
+            self.status.value,
+
             self.name,
             self.email,
             self.website,
@@ -111,8 +132,13 @@ class PRep(object):
             self.p2p_end_point,
             self.public_key,
             self.incentive_rep,
+            self.incentive_rep_block_height,
+
             self.block_height,
             self.tx_index,
+
+            self.total_blocks,
+            self.validated_blocks
         ])
 
     @classmethod
@@ -121,21 +147,31 @@ class PRep(object):
         assert len(items) == cls.Index.SIZE
 
         prep = PRep(items[cls.Index.ADDRESS])
+
+        prep._status = PRepStatus[items[cls.Index.STATUS]]
+
         prep.name = items[cls.Index.NAME]
         prep.email = items[cls.Index.EMAIL]
         prep.website = items[cls.Index.WEBSITE]
         prep.details = items[cls.Index.DETAILS]
         prep.p2p_end_point = items[cls.Index.P2P_END_POINT]
         prep.public_key = items[cls.Index.PUBLIC_KEY]
-        prep.incentive_rep = items[cls.Index.INCENTIVE_REP]
+        prep.incentive_rep = items[cls.Index.IREP]
+        prep.incentive_rep_block_height = items[cls.Index.IREP_BLOCK_HEIGHT]
+
         prep.block_height = items[cls.Index.BLOCK_HEIGHT]
         prep.tx_index = items[cls.Index.TX_INDEX]
+
+        prep.total_blocks = items[cls.Index.TOTAL_BLOCKS]
+        prep.validated_blocks = items[cls.Index.VALIDATE_BLOCKS]
 
         return prep
 
     @staticmethod
     def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':
         prep = PRep(address)
+
+        prep.status: int = PRepStatus.ACTIVE
 
         # Optional items
         prep.name: str = data.get(ConstantKeys.NAME, "")
@@ -146,7 +182,8 @@ class PRep(object):
         # Required items
         prep.p2p_end_point: str = data[ConstantKeys.P2P_END_POINT]
         prep.public_key: bytes = data[ConstantKeys.PUBLIC_KEY]
-        prep.incentive_rep: int = data[ConstantKeys.INCENTIVE_REP]
+        prep.incentive_rep: int = data[ConstantKeys.IREP]
+        prep.incentive_rep_block_height: int = block_height
 
         # Registration time
         prep.block_height: int = block_height
@@ -154,20 +191,39 @@ class PRep(object):
 
         return prep
 
+    def set(self, params: dict, block_height: int):
+        # Optional items
+        self.name: str = params.get(ConstantKeys.NAME, self.name)
+        self.email: str = params.get(ConstantKeys.EMAIL, self.email)
+        self.website: str = params.get(ConstantKeys.WEBSITE, self.website)
+        self.details: str = params.get(ConstantKeys.DETAILS, self.details)
+
+        # Required items
+        self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
+
+        if ConstantKeys.IREP in params:
+            self.incentive_rep: int = params[ConstantKeys.IREP]
+            self.incentive_rep_block_height: int = block_height
+
     def to_dict(self) -> dict:
-        """Used for the result of getPRep JSON-RPC API
-
-        :return:
-        """
         return {
-            ConstantKeys.NAME: self.name,
-            ConstantKeys.EMAIL: self.email,
-            ConstantKeys.WEBSITE: self.website,
-            ConstantKeys.DETAILS: self.details,
-            ConstantKeys.P2P_END_POINT: self.p2p_end_point,
-            ConstantKeys.PUBLIC_KEY: self.public_key,
-            ConstantKeys.INCENTIVE_REP: self.incentive_rep
+            "status": PREP_STATUS_MAPPER[self.status],
+            "registration": {
+                ConstantKeys.NAME: self.name,
+                ConstantKeys.EMAIL: self.email,
+                ConstantKeys.WEBSITE: self.website,
+                ConstantKeys.DETAILS: self.details,
+                ConstantKeys.P2P_END_POINT: self.p2p_end_point,
+                ConstantKeys.PUBLIC_KEY: self.public_key,
+                ConstantKeys.IREP: self.incentive_rep,
+                ConstantKeys.IREP_BLOCK_HEIGHT: self.incentive_rep_block_height
+            },
+            "delegation": {
+                "stake": self.stake,
+                "delegated": self.delegated
+            },
+            "stats": {
+                "totalBlocks": self.total_blocks,
+                "validatedBlocks": self.validated_blocks
+            }
         }
-
-    def __str__(self) -> str:
-        return str(self.to_dict())

@@ -69,8 +69,8 @@ class TestIntegrateIISS(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.INCENTIVE_REP])
-        data[ConstantKeys.INCENTIVE_REP] = value
+        value: str = hex(data[ConstantKeys.IREP])
+        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
@@ -93,7 +93,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"details{i}",
                 ConstantKeys.P2P_END_POINT: f"p2pEndPoint{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.INCENTIVE_REP: 200 + i,
+                ConstantKeys.IREP: 200 + i,
             }
             self._reg_prep(create_address(), reg_data, REV_IISS)
 
@@ -130,7 +130,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.INCENTIVE_REP: 200 + i
+                ConstantKeys.IREP: 200 + i
             }
             self._reg_prep(self._addr_array[i + 10], reg_data, REV_IISS)
 

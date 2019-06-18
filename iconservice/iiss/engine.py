@@ -30,7 +30,6 @@ from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_result import TransactionResult
     from ..iconscore.icon_score_context import IconScoreContext
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address, ZERO_SCORE_ADDRESS
@@ -92,12 +91,12 @@ class Engine(EngineBase):
     def close(self):
         self._close_reward_calc_proxy()
 
-    def invoke(self, context: 'IconScoreContext', data: dict, tx_result: 'TransactionResult') -> None:
+    def invoke(self, context: 'IconScoreContext', data: dict) -> None:
         method: str = data['method']
         params: dict = data['params']
 
         handler: callable = self._invoke_handlers[method]
-        handler(context, params, tx_result)
+        handler(context, params)
 
     def query(self, context: 'IconScoreContext', data: dict) -> Any:
         method: str = data['method']
@@ -136,7 +135,7 @@ class Engine(EngineBase):
     def rollback(self):
         pass
 
-    def handle_set_stake(self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+    def handle_set_stake(self, context: 'IconScoreContext', params: dict):
 
         address: 'Address' = context.tx.origin
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_STAKE)
@@ -178,7 +177,7 @@ class Engine(EngineBase):
         }
         return data
 
-    def handle_set_delegation(self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+    def handle_set_delegation(self, context: 'IconScoreContext', params: dict):
 
         address: 'Address' = context.tx.origin
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
@@ -294,7 +293,7 @@ class Engine(EngineBase):
     def _iscore_to_icx(cls, iscore: int) -> int:
         return iscore // I_SCORE_EXCHANGE_RATE
 
-    def handle_claim_iscore(self, context: 'IconScoreContext', params: dict, tx_result: 'TransactionResult'):
+    def handle_claim_iscore(self, context: 'IconScoreContext', params: dict):
         address: 'Address' = context.tx.origin
 
         # TODO: error handling
@@ -327,12 +326,13 @@ class Engine(EngineBase):
             "icx": self._iscore_to_icx(iscore),
             "blockHeight": block_height
         }
-
+        
         return data
 
     def genesis_update_db(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+        preps: list = context.engine.prep.preps.get_preps()
         term: 'Term' = context.engine.prep.term
-        term.save(context, precommit_data.block.height, term.preps, term.incentive_rep)
+        term.save(context, precommit_data.block.height, preps, term.incentive_rep)
         self._put_next_calc_block_height(context, precommit_data.block.height)
 
         self._put_header_for_rc(context, precommit_data)
