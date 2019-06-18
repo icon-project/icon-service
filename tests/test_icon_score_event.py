@@ -23,16 +23,17 @@ from unittest.mock import Mock
 from iconservice.base.address import Address, AddressPrefix, ICON_ADDRESS_BYTES_SIZE
 from iconservice.base.exception import InvalidEventLogException
 from iconservice.database.batch import TransactionBatch
-from iconservice.deploy import DeployEngine
+from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_base import eventlog, IconScoreBase, IconScoreDatabase, external
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContext, IconScoreContextType, IconScoreFuncType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
-from iconservice.icx import IcxEngine
-from iconservice.utils import int_to_bytes
+from iconservice.icx import IcxEngine, IcxStorage
+from iconservice.utils import int_to_bytes, ContextEngine, ContextStorage
 from iconservice.utils import to_camel_case
+from tests import CONTEXT_ENGINE, CONTEXT_STORAGE
 
 
 class TestEventlog(unittest.TestCase):
@@ -44,7 +45,24 @@ class TestEventlog(unittest.TestCase):
         traces = Mock(spec=list)
         step_counter = Mock(spec=IconScoreStepCounter)
 
-        IconScoreContext.icon_score_deploy_engine = Mock(spec=DeployEngine)
+        IconScoreContext.engine = ContextEngine(
+            icx=Mock(IcxEngine),
+            deploy=Mock(DeployEngine),
+            fee=None,
+            iiss=None,
+            prep=None,
+            issue=None
+        )
+        IconScoreContext.storage = ContextStorage(
+            icx=Mock(IcxStorage),
+            deploy=Mock(DeployStorage),
+            fee=None,
+            iiss=None,
+            prep=None,
+            issue=None,
+            rc=None
+        )
+
         IconScoreContext.icx_engine = Mock(spec=IcxEngine)
         context.type = IconScoreContextType.INVOKE
         context.func_type = IconScoreFuncType.WRITABLE
@@ -58,6 +76,8 @@ class TestEventlog(unittest.TestCase):
         self._mock_score = EventlogScore(db)
 
     def tearDown(self):
+        IconScoreContext.engine = CONTEXT_ENGINE
+        IconScoreContext.storage = CONTEXT_STORAGE
         ContextContainer._clear_context()
         self._mock_icon_score = None
 

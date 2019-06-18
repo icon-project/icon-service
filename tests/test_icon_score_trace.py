@@ -39,12 +39,8 @@ from iconservice.iconscore.icon_score_trace import TraceType
 from iconservice.iconscore.internal_call import InternalCall
 from iconservice.icx import IcxEngine
 from iconservice.utils import to_camel_case, ContextEngine, ContextStorage
-from tests import create_address
-from tests import raise_exception_start_tag, raise_exception_end_tag
-
-# OTHER_CALL = InternalCall._other_score_call
-# ICX_ENGINE = IconScoreContext.engine.icx
-# ICON_SCORE_DEPLOY_ENGINE = IconScoreContext.engine.deploy
+from tests import raise_exception_start_tag, raise_exception_end_tag, create_address,\
+    CONTEXT_ENGINE, CONTEXT_STORAGE, OTHER_CALL
 
 
 class TestTrace(unittest.TestCase):
@@ -92,9 +88,9 @@ class TestTrace(unittest.TestCase):
         self._score = TestScore(db)
 
     def tearDown(self):
-        # InternalCall._other_score_call = OTHER_CALL
-        # IconScoreContext.icx_engine = ICX_ENGINE
-        # IconScoreContext.icon_score_deploy_engine = ICON_SCORE_DEPLOY_ENGINE
+        IconScoreContext.engine = CONTEXT_ENGINE
+        IconScoreContext.storage = CONTEXT_STORAGE
+        InternalCall._other_score_call = OTHER_CALL
         ContextContainer._clear_context()
         self._mock_icon_score = None
 

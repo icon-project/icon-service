@@ -22,20 +22,21 @@
 import hashlib
 import os
 import random
+import shutil
 import sys
 
-import shutil
-from unittest.mock import Mock
-
-from iconservice.iconscore.icon_score_base2 import Block
-from iconservice.iconscore.icon_score_context import IconScoreContext
-
 from iconcommons.logger import Logger
+
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.icon_constant import DATA_BYTE_ORDER
-
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iconscore.internal_call import InternalCall
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+
+OTHER_CALL = InternalCall._other_score_call
+CONTEXT_ENGINE = IconScoreContext.engine
+CONTEXT_STORAGE = IconScoreContext.storage
 
 
 def create_address(prefix: int = 0, data: bytes=None) -> 'Address':

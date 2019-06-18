@@ -37,7 +37,8 @@ from iconservice.iconscore.icon_score_context import IconScoreContextType
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx import IcxEngine, IcxStorage
-from tests import create_address, create_block_hash, create_tx_hash
+from iconservice.utils import ContextStorage
+from tests import create_address, create_block_hash, create_tx_hash, CONTEXT_STORAGE
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -74,8 +75,6 @@ class TestIconZipDeploy(unittest.TestCase):
         self._icx_storage = IcxStorage(self._icx_db)
         self._icon_deploy_storage = DeployStorage(self._icx_db)
 
-        self._engine = DeployEngine()
-        IconScoreMapper.deploy_storage = self._icon_deploy_storage
         self._icon_score_mapper = IconScoreMapper()
 
         IconScoreContextUtil.validate_score_blacklist = Mock()
@@ -83,13 +82,21 @@ class TestIconZipDeploy(unittest.TestCase):
         IconScoreContextUtil.get_icon_score = Mock()
         IconScoreContextUtil.is_service_flag_on = Mock()
 
-        self._engine.open(self._icon_deploy_storage)
-
         self.from_address = create_address(AddressPrefix.EOA)
-
         self.sample_token_address = create_address(AddressPrefix.CONTRACT)
 
         self.make_context()
+        self._engine = DeployEngine()
+        self._engine.open(self._icon_deploy_storage)
+        IconScoreContext.storage = ContextStorage(
+            deploy=Mock(DeployStorage),
+            fee=None,
+            icx=None,
+            iiss=None,
+            prep=None,
+            issue=None,
+            rc=None
+        )
 
         self._one_icx = 1 * 10 ** 18
         self._one_icx_to_token = 1
@@ -127,6 +134,7 @@ class TestIconZipDeploy(unittest.TestCase):
         IconScoreContextUtil.get_owner = GET_OWNER
         IconScoreContextUtil.get_icon_score = GET_ICON_SCORE
         IconScoreContextUtil.is_service_flag_on = IS_SERVICE_FLAG_ON
+        IconScoreContext.storage = CONTEXT_STORAGE
 
     @staticmethod
     def __ensure_dir(dir_path):
