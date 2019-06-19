@@ -37,7 +37,6 @@ class Engine(EngineBase):
 
     def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, int]:
         incentive_rep: int = context.engine.prep.term.incentive_rep
-
         iiss_data_for_issue = {
             "prep": {
                 "incentive": incentive_rep,

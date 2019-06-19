@@ -83,12 +83,11 @@ class TestIntegrateBase(TestCase):
 
         self._genesis_invoke()
 
-    def _mock_ipc(self):
-        def mock_calculate(self, path, block_height):
+    def mock_calculate(self, path, block_height):
+        response = CalculateResponse(0, True, 1, 0, b'mocked_response')
+        self._calculation_callback(response)
 
-            response = CalculateResponse(0, True, 1, 0, b'mocked_response')
-            self._calculation_callback(response)
-
+    def _mock_ipc(self, mock_calculate: callable = mock_calculate):
         RewardCalcProxy.open = Mock()
         RewardCalcProxy.start = Mock()
         RewardCalcProxy.stop = Mock()

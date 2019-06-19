@@ -24,7 +24,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.icx.issue.regulator import Regulator
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -51,7 +51,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
     def setUp(self):
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-        default_icon_config[ConfigKey.GOVERNANCE_VARIABLE]["incentiveRep"] = 100_000_000
+        default_icon_config[ConfigKey.GOVERNANCE_VARIABLE]["irep"] = 100_000_000_000
         super().setUp()
         self._update_governance()
         self._set_revision(REV_IISS)
@@ -188,8 +188,33 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self.assertEqual(0, tx_results[0].event_logs[1].data[1])
         self.assertEqual(0, tx_results[0].event_logs[1].data[2])
         self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[3])
+
+        print(tx_results[0].event_logs[1])
         after_total_supply = self._query({}, "icx_getTotalSupply")
         after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
         self.assertEqual(before_total_supply + self.total_issue_amount, after_total_supply)
         self.assertEqual(before_treasury_icx_amount + self.total_issue_amount, after_treasury_icx_amount)
+
+    def test_validate_issue_transaction_value_corrected_issue_amount(self):
+        # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
+        def mock_calculate(self, path, block_height):
+            response = CalculateResponse(0, True, 1, 46422210000, b'mocked_response')
+            self._calculation_callback(response)
+
+        tx_list = [
+            self._make_dummy_tx(),
+            self._make_dummy_tx()
+        ]
+        calc_period = 19
+        for x in range(0, 50):
+            if x % 16 == 0:
+                self._mock_ipc(mock_calculate)
+            copyed_tx_list = deepcopy(tx_list)
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list, is_block_editable=True)
+            if x == calc_period:
+                self.assertEqual(10, tx_results[0].event_logs[1].data[1])
+                self.assertEqual(4642212, tx_results[0].event_logs[1].data[3])
+                calc_period += 10
+            self._write_precommit_state(prev_block)
+
