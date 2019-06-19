@@ -40,6 +40,5 @@ class HashGenerator:
     @classmethod
     def generate_hash(cls, origin_data: dict):
         origin = cls.generate_salted_origin(origin_data)
-        print(origin)
         return hashlib.sha3_256(origin.encode()).hexdigest()
 

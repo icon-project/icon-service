@@ -29,9 +29,9 @@ from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCH
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula
+from ..iconscore.icon_score_context import IconScoreContext
 
 if TYPE_CHECKING:
-    from ..iconscore.icon_score_context import IconScoreContext
     from ..precommit_data_manager import PrecommitData
     from ..base.address import Address, ZERO_SCORE_ADDRESS
     from ..icx.icx_account import Account

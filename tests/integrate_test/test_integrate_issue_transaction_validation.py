@@ -69,7 +69,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         invalid_tx_list = [
             self._make_dummy_tx()
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: when first transaction is not a issue transaction
         # but 2nd is a issue transaction, should raise error
@@ -77,14 +77,14 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
             self._make_issue_tx(self.issue_data),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [
@@ -92,7 +92,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
     def test_validate_issue_transaction_format(self):
         # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with
@@ -108,7 +108,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(InvalidBlockException, self._make_and_req_block, tx_list)
+            self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
             copied_issue_data[group_key] = temp
 
         # more than
@@ -119,7 +119,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block, tx_list)
+        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
 
         # failure case: when group's inner data key (i.e. incentiveRep, rewardRep, etc) is different
         # with stateDB (except value), should raise error
@@ -133,7 +133,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(InvalidBlockException, self._make_and_req_block, tx_list)
+            self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
             del data['dummy_key']
 
         # less than
@@ -147,36 +147,12 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                     self._make_dummy_tx(),
                     self._make_dummy_tx()
                 ]
-                self.assertRaises(InvalidBlockException, self._make_and_req_block, tx_list)
+                self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
                 data[key] = temp
 
     def test_validate_issue_transaction_value(self):
-        # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with
-        # stateDB, transaction result should be failure
-        copied_issue_data = deepcopy(self.issue_data)
-        invalid_value = 999999999999999999
-
-        expected_tx_status = 0
-        expected_failure_msg = 'Have difference between issue transaction and actual db data'
-        expected_event_logs = []
         expected_step_price = 0
         expected_step_used = 0
-        # for group, data in copied_issue_data.items():
-        #     for key in self.issue_data[group].keys():
-        #         temp = data[key]
-        #         data[key] = invalid_value
-        #         tx_list = [
-        #             self._make_issue_tx(copied_issue_data),
-        #             self._make_dummy_tx(),
-        #             self._make_dummy_tx()
-        #         ]
-        #         _, tx_results = self._make_and_req_block(tx_list)
-        #         self.assertEqual(expected_tx_status, tx_results[0].status)
-        #         self.assertEqual(expected_failure_msg, tx_results[0].failure.message)
-        #         self.assertEqual(expected_event_logs, tx_results[0].event_logs)
-        #         self.assertEqual(expected_step_price, tx_results[0].step_price)
-        #         self.assertEqual(expected_step_used, tx_results[0].step_used)
-        #         data[key] = temp
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         before_total_supply = self._query({}, "icx_getTotalSupply")
@@ -186,7 +162,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
         self._write_precommit_state(prev_block)
         expected_tx_status = 1
         expected_failure = None

@@ -97,17 +97,8 @@ class Regulator:
         return over_issued_icx, over_issued_i_score
 
     @staticmethod
-    def _is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score: Optional[int],
-                                                      prev_calc_period_issued_icx: Optional[int]):
-        return not (prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None) and \
-               not (prev_calc_period_issued_i_score is not None and prev_calc_period_issued_icx is None)
-
-    @staticmethod
-    def _is_first_calculate_period(prev_calc_period_issued_i_score: Optional[int],
-                                   prev_calc_period_issued_icx: Optional[int]):
-        # in case of first calculate period
-        # (i.e. both prev_calc_period_issued_i_score and prev_calc_period_issued_icx is None), skip the correction logic
-        return prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is None
+    def _is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score: Optional[int]):
+        return prev_calc_period_issued_i_score is not None
 
     def _correct_issue_amount_on_calc_period(self,
                                              prev_calc_period_issued_i_score: Optional[int],
@@ -117,24 +108,19 @@ class Regulator:
         prev_calc_period_issued_icx: Optional[int] = self._regulator_variable.prev_calc_period_issued_icx
         remain_over_issued_i_score: int = self._regulator_variable.over_issued_i_score
 
-        deducted_icx = 0
-        if not self._is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score,
-                                                                  prev_calc_period_issued_icx):
-            print(prev_calc_period_issued_i_score, prev_calc_period_issued_icx)
-            raise AssertionError("There is no prev_calc_period_i_score or "
-                                 "prev_calc_period_issued_icx data even though on calc period")
+        if not self._is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score):
+            raise AssertionError("There is no prev_calc_period_i_score")
 
-        if not self._is_first_calculate_period(prev_calc_period_issued_i_score, prev_calc_period_issued_icx):
-            # get difference between icon_service and reward_calc after set exchange rates
-            prev_calc_over_issued_i_score: int = \
-                prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
-            total_over_issued_i_score: int = prev_calc_over_issued_i_score + remain_over_issued_i_score
-            over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
+        # get difference between icon_service and reward_calc after set exchange rates
+        prev_calc_over_issued_i_score: int = \
+            prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
+        total_over_issued_i_score: int = prev_calc_over_issued_i_score + remain_over_issued_i_score
+        over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
 
-            deducted_icx, remain_over_issued_icx, icx_issue_amount = \
-                self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx)
+        deducted_icx, remain_over_issued_icx, icx_issue_amount = \
+            self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx)
 
-            remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
+        remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
 
         # deducted_icx can be negative value (in case of reward calculator having been issued more)
         return deducted_icx, remain_over_issued_i_score, icx_issue_amount

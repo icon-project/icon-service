@@ -28,7 +28,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_IISS
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
@@ -84,12 +84,17 @@ class TestIntegrateBase(TestCase):
         self._genesis_invoke()
 
     def _mock_ipc(self):
+        def mock_calculate(self, path, block_height):
+
+            response = CalculateResponse(0, True, 1, 0, b'mocked_response')
+            self._calculation_callback(response)
+
         RewardCalcProxy.open = Mock()
         RewardCalcProxy.start = Mock()
         RewardCalcProxy.stop = Mock()
         RewardCalcProxy.close = Mock()
         RewardCalcProxy.get_version = Mock()
-        RewardCalcProxy.calculate = Mock()
+        RewardCalcProxy.calculate = mock_calculate
         RewardCalcProxy.claim_iscore = Mock()
         RewardCalcProxy.query_iscore = Mock()
         RewardCalcProxy.commit_block = Mock()
@@ -332,6 +337,26 @@ class TestIntegrateBase(TestCase):
                                             prev_block_validators=prev_block_validators,
                                             is_block_editable=is_block_editable)
 
+        return block, invoke_response
+
+    def _make_and_req_block_for_issue_test(self, tx_list: list,
+                                           block_height: int = None,
+                                           prev_block_generator: Optional['Address'] = None,
+                                           prev_block_validators: Optional[List['Address']] = None,
+                                           is_block_editable=False) -> tuple:
+        if block_height is None:
+            block_height: int = self._block_height
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+
+        invoke_response, _, added_transactions = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:

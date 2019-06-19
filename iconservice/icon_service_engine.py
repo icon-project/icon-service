@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import os
+from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
+from iconservice.utils.hashing.hash_generator import HashGenerator
 from .base.type_converter import TypeConverter
 from .icx.issue.regulator import Regulator
 from iconservice.icx.issue.regulator import Regulator
@@ -350,14 +352,16 @@ class IconServiceEngine(ContextContainer):
             "dataType": data_type,
             "data": data
         }
-        converted_transaction_params = TypeConverter.convert_type_reverse(transaction_params)
-
+        converted_transaction_params = deepcopy(transaction_params)
+        converted_transaction_params = TypeConverter.convert_type_reverse(converted_transaction_params)
+        tx_hash = HashGenerator.generate_hash(converted_transaction_params)
+        transaction_params["txHash"] = tx_hash
         transaction = {
             "method": "icx_sendTransaction",
             "params": transaction_params
         }
 
-        return transaction, converted_transaction_params
+        return transaction, tx_hash
 
     # todo: remove None of prev_block_generator, prev_block_validators default
     def invoke(self,
@@ -454,7 +458,6 @@ class IconServiceEngine(ContextContainer):
             context.new_icon_score_mapper,
             precommit_flag)
         self._precommit_data_manager.push(precommit_data)
-
         return block_result, precommit_data.state_root_hash, added_transactions
 
     def _update_revision_if_necessary(self,
