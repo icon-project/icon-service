@@ -30,7 +30,7 @@ from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.utils import ContextEngine, ContextStorage
-from tests import create_address, create_tx_hash, rmtree, CONTEXT_ENGINE, CONTEXT_STORAGE
+from tests import create_address, create_tx_hash, rmtree
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -64,8 +64,6 @@ class TestIconScoreClassLoader(unittest.TestCase):
         ContextContainer._push_context(self._context)
 
     def tearDown(self):
-        IconScoreContext.engine = CONTEXT_ENGINE
-        IconScoreContext.storage = CONTEXT_STORAGE
         ContextContainer._pop_context()
         rmtree(self._score_root_path)
         sys.path.remove(self._score_root_path)

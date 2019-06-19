@@ -33,7 +33,6 @@ from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import int_to_bytes, ContextEngine, ContextStorage
 from iconservice.utils import to_camel_case
-from tests import CONTEXT_ENGINE, CONTEXT_STORAGE
 
 
 class TestEventlog(unittest.TestCase):
@@ -76,8 +75,6 @@ class TestEventlog(unittest.TestCase):
         self._mock_score = EventlogScore(db)
 
     def tearDown(self):
-        IconScoreContext.engine = CONTEXT_ENGINE
-        IconScoreContext.storage = CONTEXT_STORAGE
         ContextContainer._clear_context()
         self._mock_icon_score = None
 

@@ -123,8 +123,8 @@ class TestIconScoreDeployStorage(unittest.TestCase):
         self.assertEqual(e.exception.message, f'deploy_params already exists: {tx_hash}')
         self.storage.put_deploy_tx_params.assert_not_called()
 
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
-            with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployInfo') as MockDeployInfos:
+        with patch('iconservice.deploy.storage.IconScoreDeployTXParams') as MockTxParams:
+            with patch('iconservice.deploy.storage.IconScoreDeployInfo') as MockDeployInfos:
                 self.storage.put_deploy_tx_params.reset_mock()
                 self.storage.get_deploy_tx_params.reset_mock()
                 self.storage.get_deploy_tx_params.return_value = None
@@ -152,7 +152,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
                 self.storage.get_deploy_info.assert_called_once_with(context, score_address)
                 self.storage.put_deploy_info.assert_called_once_with(context, deploy_info)
 
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
+        with patch('iconservice.deploy.storage.IconScoreDeployTXParams') as MockTxParams:
             self.storage.put_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.return_value = None
@@ -184,7 +184,7 @@ class TestIconScoreDeployStorage(unittest.TestCase):
             self.storage.put_deploy_tx_params.assert_called_once_with(context, tx_params)
             self.storage.get_deploy_info.assert_called_once_with(context, score_address)
 
-        with patch('iconservice.deploy.icon_score_deploy_storage.IconScoreDeployTXParams') as MockTxParams:
+        with patch('iconservice.deploy.storage.IconScoreDeployTXParams') as MockTxParams:
             self.storage.put_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.reset_mock()
             self.storage.get_deploy_tx_params.return_value = None

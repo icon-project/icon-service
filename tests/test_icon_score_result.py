@@ -29,8 +29,6 @@ from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
-from iconservice.deploy import DeployEngine
-from iconservice.icon_constant import REVISION_3
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -49,11 +47,10 @@ from tests.mock_generator import generate_service_engine, generate_inner_task, \
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):
         self._icon_service_engine = generate_service_engine()
-        self._icon_service_engine._icon_score_deploy_engine = \
-            Mock(spec=DeployEngine)
 
         self._icon_service_engine._charge_transaction_fee = \
             Mock(return_value=({}, 0))
+        IconScoreContext.engine.iiss.open = Mock()
 
         step_counter_factory = IconScoreStepCounterFactory()
         step_counter_factory.get_step_cost = Mock(return_value=6000)
@@ -81,8 +78,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_index = randrange(0, 100)
         self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
         self._mock_context.msg = Message(from_)
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=False), 'is_data_type_supported')
+        IconScoreContext.engine.deploy.invoke = Mock()
 
         params = {
             'version': 3,
@@ -108,8 +104,7 @@ class TestTransactionResult(unittest.TestCase):
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_tx_failure(self, score_invoke):
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=False), 'is_data_type_supported')
+        IconScoreContext.engine.deploy.invoke = Mock()
         score_invoke.side_effect = Mock(side_effect=InvalidParamsException("error"))
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
@@ -132,8 +127,7 @@ class TestTransactionResult(unittest.TestCase):
         self.assertNotIn('scoreAddress', camel_dict)
 
     def test_install_result(self):
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=True), 'is_data_type_supported')
+        IconScoreContext.engine.deploy.invoke = Mock()
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         self._mock_context.tx = Transaction(os.urandom(32), 0, from_, 0)
@@ -168,8 +162,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.tx = Transaction(os.urandom(32), 1234, from_, 0)
         self._mock_context.msg = Message(from_)
 
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=False), 'is_data_type_supported')
+        IconScoreContext.engine.deploy.invoke = Mock()
         self._icon_service_engine._process_transaction = Mock(return_value=to_)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
@@ -220,6 +213,7 @@ class TestTransactionResult(unittest.TestCase):
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_request(self, score_invoke):
         inner_task = generate_inner_task(3)
+        IconScoreContext.engine.prep.preps = Mock()
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):

@@ -38,7 +38,7 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.icx import IcxEngine, IcxStorage
 from iconservice.utils import ContextStorage
-from tests import create_address, create_block_hash, create_tx_hash, CONTEXT_STORAGE
+from tests import create_address, create_block_hash, create_tx_hash
 
 TEST_ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -134,7 +134,6 @@ class TestIconZipDeploy(unittest.TestCase):
         IconScoreContextUtil.get_owner = GET_OWNER
         IconScoreContextUtil.get_icon_score = GET_ICON_SCORE
         IconScoreContextUtil.is_service_flag_on = IS_SERVICE_FLAG_ON
-        IconScoreContext.storage = CONTEXT_STORAGE
 
     @staticmethod
     def __ensure_dir(dir_path):
