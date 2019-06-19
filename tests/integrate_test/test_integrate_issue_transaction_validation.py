@@ -197,7 +197,8 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self.assertEqual(before_treasury_icx_amount + self.total_issue_amount, after_treasury_icx_amount)
 
     def test_validate_issue_transaction_value_corrected_issue_amount(self):
-        # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
+        # success case: when iconservice over issued 10 icx than reward carc, icx issue amount
+        # should be corrected on calc period.
         def mock_calculate(self, path, block_height):
             response = CalculateResponse(0, True, 1, 46422210000, b'mocked_response')
             self._calculation_callback(response)
