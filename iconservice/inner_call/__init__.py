@@ -46,15 +46,18 @@ def get_preps(context: IconScoreContext):
             break
 
     block: 'Block' = context.storage.icx.last_block
-    root_hash = get_preps_root_hash(prep_ids_in_bytes)
-
-    return {
+    result = {
         "result": {
             "blockHeight": 0 if block is None else block.height,
             "preps": prep_result,
-            "rootHash": f"0x{root_hash.hex()}"
+            "rootHash": ""
         }
     }
+    if prep_result:
+        root_hash = get_preps_root_hash(prep_ids_in_bytes)
+        result['rootHash'] = f"0x{root_hash.hex()}"
+
+    return result
 
 
 inner_call_handler = {
