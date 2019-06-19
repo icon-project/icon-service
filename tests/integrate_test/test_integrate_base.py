@@ -318,11 +318,13 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
 
-        invoke_response, _ = self.icon_service_engine.invoke(block=block,
+        invoke_response, _, main_prep_as_dict = self.icon_service_engine.invoke(block=block,
                                                              tx_requests=tx_list,
                                                              prev_block_generator=prev_block_generator,
                                                              prev_block_validators=prev_block_validators)
 
+        if main_prep_as_dict:
+            return block, invoke_response, main_prep_as_dict
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:
