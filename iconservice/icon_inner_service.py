@@ -200,6 +200,34 @@ class IconScoreInnerTask(object):
             return response
 
     @message_queue_task
+    async def call(self, request: dict):
+        Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+            loop = get_event_loop()
+            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                              self._call, request)
+        else:
+            return self._call(request)
+
+    def _call(self, request: dict):
+        response = None
+
+        try:
+            response = self._icon_service_engine.inner_call(request)
+
+            if isinstance(response, Address):
+                response = str(response)
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        finally:
+            Logger.info(f'call response with {response}', ICON_INNER_LOG_TAG)
+            return response
+
+    @message_queue_task
     async def write_precommit_state(self, request: dict):
         Logger.info(f'write_precommit_state request with {request}', ICON_INNER_LOG_TAG)
         if self._is_thread_flag_on(EnableThreadFlag.INVOKE):
