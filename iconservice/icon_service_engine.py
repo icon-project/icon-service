@@ -19,13 +19,9 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
-from iconservice.utils.hashing.hash_generator import HashGenerator
-from .base.type_converter import TypeConverter
-from .icx.issue.regulator import Regulator
 from iconservice.icx.issue.regulator import Regulator
-from iconservice.utils.hashing.hash_generator import HashGenerator
-
 from iconservice.inner_call import inner_call
+from iconservice.utils.hashing.hash_generator import HashGenerator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -33,6 +29,7 @@ from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFou
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBlockException
 from .base.message import Message
 from .base.transaction import Transaction
+from .base.type_converter import TypeConverter
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
