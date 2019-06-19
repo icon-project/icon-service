@@ -15,7 +15,6 @@
 
 from typing import Optional, Tuple
 
-from iconservice.iiss.issue_formula import IssueFormula
 from .storage import RegulatorVariable
 from ...icon_constant import I_SCORE_EXCHANGE_RATE
 from ...iconscore.icon_score_context import IconScoreContext

@@ -36,7 +36,8 @@ from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
+    ISSUE_TRANSACTION_VERSION
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -343,8 +344,9 @@ class IconServiceEngine(ContextContainer):
 
     def formatting_transaction(self, data_type: str, data: dict, timestamp: int):
         # todo: stringfy params to make valid tx hash
+        # todo: tests about reverse
         transaction_params = {
-            "version": "0x3",
+            "version": ISSUE_TRANSACTION_VERSION,
             "timestamp": timestamp,
             "dataType": data_type,
             "data": data
@@ -358,9 +360,10 @@ class IconServiceEngine(ContextContainer):
             "params": transaction_params
         }
 
-        return transaction, tx_hash
+        return transaction
 
     # todo: remove None of prev_block_generator, prev_block_validators default
+    # todo: is it right setting default value to is_block_editable?
     def invoke(self,
                block: 'Block',
                tx_requests: list,
@@ -404,18 +407,22 @@ class IconServiceEngine(ContextContainer):
 
         regulator: 'Regulator' = None
         if is_block_editable:
+            # todo: need to be refactoring (duplicated codes)
             issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
             regulator.set_issue_info_about_correction(context, total_issue_amount)
             # todo: fee TBD
             fee = 0
             issue_data["result"] = {
-                "deductedFromFee": fee,
-                "deductedFromOverIssuedICX": regulator.deducted_icx,
+                "coveredByFee": fee,
+                "coveredByOverIssuedICX": regulator.deducted_icx,
                 "issue": regulator.corrected_icx_issue_amount
             }
-            issue_transaction, tx_hash = self.formatting_transaction("issue", issue_data, context.block.timestamp)
-            added_transactions[tx_hash] = issue_transaction["params"]
+            # todo: need to refactor (dirty)
+            issue_transaction = self.formatting_transaction("issue", issue_data, context.block.timestamp)
+            tx_params_to_added = deepcopy(issue_transaction["params"])
+            del tx_params_to_added["txHash"]
+            added_transactions[issue_transaction["params"]["txHash"]] = tx_params_to_added
             tx_requests.insert(0, issue_transaction)
 
         if block.height == 0:
@@ -589,8 +596,8 @@ class IconServiceEngine(ContextContainer):
             # todo: fee TBD
             fee = 0
             issue_data_in_db["result"] = {
-                "deductedFromFee": fee,
-                "deductedFromOverIssuedICX": regulator.deducted_icx,
+                "coveredByFee": fee,
+                "coveredByOverIssuedICX": regulator.deducted_icx,
                 "issue": regulator.corrected_icx_issue_amount
             }
             if issue_data_in_tx != issue_data_in_db:
