@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
 
+from .base.type_converter import TypeConverter
+from .icx.issue.regulator import Regulator
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.utils.hashing.hash_generator import HashGenerator
 
@@ -26,7 +28,7 @@ from .base.address import Address, generate_score_address, generate_score_addres
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException, InvalidBlockException
+    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBlockException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -35,8 +37,7 @@ from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
-    ISSUE_CALCULATE_ORDER
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -51,7 +52,6 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
-from .icx.issue_data_validator import IssueDataValidator
 from .iiss import IISSEngine, IISSStorage
 from .iiss.reward_calc import RewardCalcStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -342,30 +342,22 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
-    def create_issue_transaction(self,
-                                 context: 'IconScoreContext'):
-        # get create transaction info
-        issue_data: dict = context.engine.issue.calculate_corrected_issue_amount(context)
-
-        # make transaction form
-        return self.formatting_transaction("issue", issue_data, context.block.timestamp)
-
     def formatting_transaction(self, data_type: str, data: dict, timestamp: int):
-        # todo: getting version, nid, timestamps
+        # todo: stringfy params to make valid tx hash
         transaction_params = {
-            "version": 3,
+            "version": "0x3",
             "timestamp": timestamp,
             "dataType": data_type,
             "data": data
         }
-        transaction_params["txHash"] = HashGenerator.generate_hash(transaction_params)
+        converted_transaction_params = TypeConverter.convert_type_reverse(transaction_params)
 
         transaction = {
             "method": "icx_sendTransaction",
             "params": transaction_params
         }
 
-        return transaction
+        return transaction, converted_transaction_params
 
     # todo: remove None of prev_block_generator, prev_block_validators default
     def invoke(self,
@@ -407,9 +399,22 @@ class IconServiceEngine(ContextContainer):
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
+        added_transactions = {}
 
+        regulator: 'Regulator' = None
         if is_block_editable:
-            issue_transaction = self.create_issue_transaction(context)
+            issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
+            regulator = Regulator()
+            regulator.set_issue_info_about_correction(context, total_issue_amount)
+            # todo: fee TBD
+            fee = 0
+            issue_data["result"] = {
+                "deductedFromFee": fee,
+                "deductedFromOverIssuedICX": regulator.deducted_icx,
+                "issue": regulator.corrected_icx_issue_amount
+            }
+            issue_transaction, tx_hash = self.formatting_transaction("issue", issue_data, context.block.timestamp)
+            added_transactions[tx_hash] = issue_transaction["params"]
             tx_requests.insert(0, issue_transaction)
 
         if block.height == 0:
@@ -423,7 +428,7 @@ class IconServiceEngine(ContextContainer):
                 if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS:
                     if not tx_request['params'].get('dataType') == "issue":
                         raise InvalidBlockException("Invalid block: first transaction must be an issue transaction")
-                    tx_result = self._invoke_issue_request(context, tx_request, is_block_editable)
+                    tx_result = self._invoke_issue_request(context, tx_request, is_block_editable, regulator)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -434,8 +439,6 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
 
-        # 바뀔수도 있다.
-        added_transactions = {issue_transaction["params"]["txHash"]: issue_transaction["params"]}
         preps = context.preps.get_snapshot()
 
         # Save precommit data
@@ -549,7 +552,8 @@ class IconServiceEngine(ContextContainer):
 
     def _process_issue_transaction(self,
                                    context: 'IconScoreContext',
-                                   issue_data: dict):
+                                   issue_data: dict,
+                                   regulator: 'Regulator'):
 
         treasury_address: 'Address' = context.storage.icx.fee_treasury
         tx_result = TransactionResult(context.tx, context.block)
@@ -557,7 +561,8 @@ class IconServiceEngine(ContextContainer):
 
         context.engine.issue.issue(context,
                                    treasury_address,
-                                   issue_data)
+                                   issue_data,
+                                   regulator)
 
         tx_result.status = TransactionResult.SUCCESS
 
@@ -570,18 +575,25 @@ class IconServiceEngine(ContextContainer):
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
                               request: dict,
-                              is_block_editable: bool) -> 'TransactionResult':
+                              is_block_editable: bool,
+                              regulator: 'Regulator') -> 'TransactionResult':
         assert 'params' in request
         assert 'data' in request['params']
 
-        if not isinstance(request['params']['data'], dict):
-            raise IllegalFormatException("invalid issue transaction format")
-
-        issue_data_in_tx: dict = request['params']['data']
+        issue_data_in_tx: dict = request['params'].get('data')
         if not is_block_editable:
-            issue_data_in_db: dict = context.engine.issue.calculate_corrected_issue_amount(context)
+            issue_data_in_db, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
+            regulator = Regulator()
+            regulator.set_issue_info_about_correction(context, total_issue_amount)
+
+            # todo: fee TBD
+            fee = 0
+            issue_data_in_db["result"] = {
+                "deductedFromFee": fee,
+                "deductedFromOverIssuedICX": regulator.deducted_icx,
+                "issue": regulator.corrected_icx_issue_amount
+            }
             if issue_data_in_tx != issue_data_in_db:
-                context.engine.issue.clear()
                 raise InvalidBlockException("Have difference between "
                                             "issue transaction and actual db data")
 
@@ -597,7 +609,7 @@ class IconServiceEngine(ContextContainer):
         context.event_log_stack.clear()
 
         # todo: get issue related data from iiss engine
-        tx_result = self._process_issue_transaction(context, issue_data_in_tx)
+        tx_result = self._process_issue_transaction(context, issue_data_in_tx, regulator)
         return tx_result
 
     def _invoke_request(self,

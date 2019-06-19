@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
 
-from iconservice.icx.issue.regulator import Regulator
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -26,8 +25,7 @@ from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, \
-    ISSUE_CALCULATE_ORDER
+from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula

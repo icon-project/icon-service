@@ -51,9 +51,6 @@ class TestIntegratePrep(TestIntegrateBase):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
 
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
 
         self._write_precommit_state(prev_block)
@@ -62,9 +59,6 @@ class TestIntegratePrep(TestIntegrateBase):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
 
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
@@ -78,9 +72,6 @@ class TestIntegratePrep(TestIntegrateBase):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self.assertEqual('PRepRegistered(Address)', tx_results[1].event_logs[0].indexed[0])
         self.assertEqual(address, tx_results[1].event_logs[0].data[0])
@@ -95,9 +86,6 @@ class TestIntegratePrep(TestIntegrateBase):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self.assertEqual('PRepSet(Address)', tx_results[1].event_logs[0].indexed[0])
         self.assertEqual(address, tx_results[1].event_logs[0].data[0])
@@ -107,9 +95,6 @@ class TestIntegratePrep(TestIntegrateBase):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self.assertEqual('PRepUnregistered(Address)', tx_results[1].event_logs[0].indexed[0])
         self.assertEqual(address, tx_results[1].event_logs[0].data[0])

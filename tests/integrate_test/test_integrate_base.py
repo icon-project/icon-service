@@ -25,8 +25,9 @@ from iconcommons import IconConfig
 
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_IISS
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
@@ -317,11 +318,19 @@ class TestIntegrateBase(TestCase):
         timestamp_us = create_timestamp()
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
 
-        invoke_response, _ = self.icon_service_engine.invoke(block=block,
-                                                             tx_requests=tx_list,
-                                                             prev_block_generator=prev_block_generator,
-                                                             prev_block_validators=prev_block_validators)
+        is_block_editable = False
+        governance_score = self.icon_service_engine._get_governance_score(context)
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
+            is_block_editable = True
+
+        invoke_response, _, added_transactions = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
 
         return block, invoke_response
 

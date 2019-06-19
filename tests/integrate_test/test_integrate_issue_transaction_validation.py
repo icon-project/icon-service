@@ -21,7 +21,10 @@ from copy import deepcopy
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidBlockException
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
+    IconScoreContextType
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icx.issue.regulator import Regulator
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -54,10 +57,12 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self._set_revision(REV_IISS)
 
         # todo: if get_issue_info is redundant, should fix this method
-        self.issue_data = self.icon_service_engine.query("iiss_get_issue_info", {})
-        self.total_issue_amount = 0
-        for group_dict in self.issue_data.values():
-            self.total_issue_amount += group_dict["value"]
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+        self.issue_data, self.total_issue_amount = IconScoreContext.engine.issue.create_icx_issue_info(context)
+
+        # self.total_issue_amount = 0
+        # for group_dict in self.issue_data.values():
+        #     self.total_issue_amount += group_dict["value"]
 
     def test_validate_issue_transaction_position(self):
         # failure case: when first transaction is not a issue transaction, should raise error
@@ -79,7 +84,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self._make_issue_tx(self.issue_data),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(KeyError, self._make_and_req_block, invalid_tx_list)
+        self.assertRaises(InvalidBlockException, self._make_and_req_block, invalid_tx_list)
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [
@@ -156,29 +161,28 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         expected_event_logs = []
         expected_step_price = 0
         expected_step_used = 0
-        for group, data in copied_issue_data.items():
-            for key in self.issue_data[group].keys():
-                temp = data[key]
-                data[key] = invalid_value
-                tx_list = [
-                    self._make_issue_tx(copied_issue_data),
-                    self._make_dummy_tx(),
-                    self._make_dummy_tx()
-                ]
-                _, tx_results = self._make_and_req_block(tx_list)
-                self.assertEqual(expected_tx_status, tx_results[0].status)
-                self.assertEqual(expected_failure_msg, tx_results[0].failure.message)
-                self.assertEqual(expected_event_logs, tx_results[0].event_logs)
-                self.assertEqual(expected_step_price, tx_results[0].step_price)
-                self.assertEqual(expected_step_used, tx_results[0].step_used)
-                data[key] = temp
+        # for group, data in copied_issue_data.items():
+        #     for key in self.issue_data[group].keys():
+        #         temp = data[key]
+        #         data[key] = invalid_value
+        #         tx_list = [
+        #             self._make_issue_tx(copied_issue_data),
+        #             self._make_dummy_tx(),
+        #             self._make_dummy_tx()
+        #         ]
+        #         _, tx_results = self._make_and_req_block(tx_list)
+        #         self.assertEqual(expected_tx_status, tx_results[0].status)
+        #         self.assertEqual(expected_failure_msg, tx_results[0].failure.message)
+        #         self.assertEqual(expected_event_logs, tx_results[0].event_logs)
+        #         self.assertEqual(expected_step_price, tx_results[0].step_price)
+        #         self.assertEqual(expected_step_used, tx_results[0].step_used)
+        #         data[key] = temp
 
         # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
         before_total_supply = self._query({}, "icx_getTotalSupply")
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
         tx_list = [
-            self._make_issue_tx(self.issue_data),
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
