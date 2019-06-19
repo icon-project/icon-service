@@ -133,7 +133,7 @@ class IconScoreContext(object):
         self.msg_stack = []
         self.event_log_stack = []
 
-        # P-Rep preps updated
+        # PReps to update on invoke
         self.preps: Optional['PRepContainer'] = None
 
     @property

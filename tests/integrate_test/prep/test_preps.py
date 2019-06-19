@@ -173,7 +173,7 @@ class TestIntegratePRep(TestIntegrateBase):
 
         with self.assertRaises(InvalidParamsException) as e:
             self._get_prep(self._addr_array[0])
-        self.assertEqual(f"P-Rep not found: {str(self._addr_array[0])}",e.exception.args[0])
+        self.assertEqual(f"P-Rep not found: {str(self._addr_array[0])}", e.exception.args[0])
 
     def test_prep_list(self):
         self._update_governance()
@@ -187,7 +187,7 @@ class TestIntegratePRep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP+i
+                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(self._addr_array[i], data)
 
@@ -210,7 +210,7 @@ class TestIntegratePRep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP+i
+                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(self._addr_array[i], data)
 

@@ -14,7 +14,7 @@
 
 import hashlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
 
@@ -26,7 +26,7 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import PrepResultState, IISS_MIN_IREP
+from ..icon_constant import PrepResultState, IISS_MIN_IREP, IISS_MAX_IREP
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
@@ -127,7 +127,7 @@ class Engine(EngineBase):
         # Create a PRep object and assign delegated amount from account to prep
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
         prep.delegated = account.delegated_amount
-        self._validate_irep(context, prep)
+        self._validate_irep(context, prep.irep)
 
         # Update preps in context
         context.preps.add(prep)
@@ -210,7 +210,7 @@ class Engine(EngineBase):
         return total_multiply_delegated_by_irep // total_delegated if total_delegated != 0 else 0
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns registration information of a P-Rep
+        """Returns total information of a P-Rep
 
         :param context:
         :param params:
@@ -240,8 +240,8 @@ class Engine(EngineBase):
             raise InvalidParamsException(f"P-Rep not found: str{address}")
         prev_irep: int = prep.irep
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
-        prep.set(ret_params, context.block.height)
-        self._validate_irep(context, prep, prev_irep)
+        prep.set(context.block.height, **ret_params)
+        self._validate_irep(context, prep.irep, prev_irep)
 
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
@@ -249,9 +249,15 @@ class Engine(EngineBase):
         self._create_tx_result(context, 'PRepSet(Address)', address)
 
     @classmethod
-    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep', prev_irep: int = None):
-        irep: int = prep.irep
-        if irep < IISS_MIN_IREP:
+    def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_irep: int = None):
+        """Validate irep
+
+        :param context:
+        :param irep:
+        :param prev_irep:
+        :return:
+        """
+        if not (IISS_MIN_IREP <= irep <= IISS_MAX_IREP):
             raise InvalidParamsException(f"Invalid irep: {irep}")
 
         if prev_irep is None:
@@ -264,7 +270,7 @@ class Engine(EngineBase):
             context.engine.issue.validate_total_supply_limit(context, irep)
             return
 
-        raise InvalidParamsException(f'irep out of range: {irep}, {prev_irep}')
+        raise InvalidParamsException(f'Irep out of range: {irep}, {prev_irep}')
 
     def handle_unregister_prep(self, context: 'IconScoreContext', params: dict):
         """Unregister a P-Rep
@@ -285,7 +291,7 @@ class Engine(EngineBase):
 
         # Update stateDB
         prep_storage.delete_prep(context, address)
-        self._apply_prep_delegated_offset_for_iiss_variable(context, -prep.delegated)
+        self._apply_prep_delegated_offset_for_iiss_variable(context, -prep._delegated)
 
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)
@@ -308,7 +314,7 @@ class Engine(EngineBase):
         :param params:
         :return:
         """
-        preps: 'PRepContainer' = self.term.main_preps
+        preps: List['PRep'] = self.term.main_preps
         total_delegated: int = 0
         prep_list: list = []
 
@@ -332,7 +338,7 @@ class Engine(EngineBase):
         :param params:
         :return:
         """
-        preps: 'PRepContainer' = self.term.sub_preps
+        preps: List['PRep'] = self.term.sub_preps
         total_delegated: int = 0
         prep_list: list = []
 
@@ -373,8 +379,8 @@ class Engine(EngineBase):
         if start_index > end_index:
             raise InvalidParamsException("Invalid params: reverse")
 
-        for i in range(start_index -1, end_index):
-            prep: 'PRep' = preps[i]
+        for i in range(start_index - 1, end_index):
+            prep: 'PRep' = preps.get_by_index(i)
 
             item = {
                 "address": prep.address,

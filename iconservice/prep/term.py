@@ -120,9 +120,9 @@ class Term(object):
         self._irep = irep
         self._total_supply = total_supply
 
-    def _make_prep_for_db(self, preps: List['PRep']) -> list:
+    def _make_prep_for_db(self, preps: List['PRep']) -> List['PRep']:
         data: list = []
         for prep in preps:
             data.append(prep.address)
-            data.append(prep.delegated)
+            data.append(prep._delegated)
         return data
