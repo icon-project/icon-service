@@ -14,11 +14,11 @@
 
 from asyncio import get_event_loop
 from concurrent.futures.thread import ThreadPoolExecutor
-
-from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 from typing import Any, TYPE_CHECKING, Optional, Tuple
 
+from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
 from iconcommons.logger import Logger
+
 from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBlockException
@@ -131,7 +131,7 @@ class IconScoreInnerTask(object):
             converted_tx_requests = params['transactions']
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
-            tx_results, state_root_hash = self._icon_service_engine.invoke(
+            tx_results, state_root_hash, main_prep_as_dict = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,
                 prev_block_generator=converted_prev_block_generator,
@@ -143,6 +143,9 @@ class IconScoreInnerTask(object):
                 'txResults': convert_tx_results,
                 'stateRootHash': bytes.hex(state_root_hash)
             }
+
+            if main_prep_as_dict:
+                results["prep"] = main_prep_as_dict
             response = MakeResponse.make_response(results)
         except InvalidBlockException as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)

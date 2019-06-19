@@ -17,6 +17,7 @@ import os
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -30,7 +31,8 @@ from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
+    REV_DECENTRALIZATION
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -400,6 +402,10 @@ class IconServiceEngine(ContextContainer):
 
         preps = context.preps.get_snapshot()
 
+        main_prep_as_dict: Optional[dict] = None
+        if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_end_block_height(context):
+            main_prep_as_dict = context.engine.prep.make_prep_tx_result(context)
+
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
@@ -414,7 +420,7 @@ class IconServiceEngine(ContextContainer):
             precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
-        return block_result, precommit_data.state_root_hash
+        return block_result, precommit_data.state_root_hash, main_prep_as_dict
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
