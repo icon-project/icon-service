@@ -140,6 +140,7 @@ class ConstantKeys:
     BLOCK = "block"
     TRANSACTIONS = "transactions"
 
+    IS_BLOCK_EDITABLE = 'isBlockEditable'
     PREV_BLOCK_GENERATOR = "prevBlockGenerator"
     PREV_BLOCK_VALIDATORS = "prevBlockValidators"
 
@@ -161,6 +162,7 @@ class ConstantKeys:
     DETAILS = 'details'
     P2P_END_POINT = 'p2pEndPoint'
     PUBLIC_KEY = 'publicKey'
+    PREP_ID = 'id'
     START_RANKING = "startRanking"
     END_RANKING = "endRanking"
     IREP = "irep"
@@ -253,6 +255,7 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
     ],
+    ConstantKeys.IS_BLOCK_EDITABLE: ValueType.BOOL,
     ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
     ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
 }

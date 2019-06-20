@@ -14,36 +14,30 @@
 import hashlib
 from typing import TYPE_CHECKING
 
-from ..icon_constant import PREP_COUNT
 from ..iconscore.icon_score_context import IconScoreContext
 
 if TYPE_CHECKING:
     from ..base.block import Block
-    from ..prep.data.prep import PRep
     from ..prep.data.prep_container import PRepContainer
 
 
-def get_preps_root_hash(prep_id_list: list) -> bytes:
-    return hashlib.sha3_256(b''.join(prep_id_list)).digest()
+def get_preps_root_hash(prep_ids_in_bytes: bytes) -> bytes:
+    return hashlib.sha3_256(prep_ids_in_bytes).digest()
 
 
 def get_preps(context: IconScoreContext):
-    preps: 'PRepContainer' = context.engine.prep.preps
+    preps: 'PRepContainer' = context.engine.prep.term.main_preps
     prep_result = []
-    prep_ids_in_bytes = []
+    prep_ids_in_bytes = b''
 
     for prep in preps:
-        p_rep: 'PRep' = context.engine.prep.preps.get(prep.address)
         data = {
-            "id": str(p_rep.address),
-            "publicKey": f"0x{bytes.hex(p_rep.public_key)}",
-            "p2pEndPoint": p_rep.p2p_end_point
+            "id": str(prep.address),
+            "publicKey": f"0x{bytes.hex(prep.public_key)}",
+            "p2pEndPoint": prep.p2p_end_point
         }
         prep_result.append(data)
-        prep_ids_in_bytes.append(p_rep.address.to_bytes())
-
-        if len(prep_result) == PREP_COUNT:
-            break
+        prep_ids_in_bytes = prep_ids_in_bytes + prep.address.to_bytes()
 
     block: 'Block' = context.storage.icx.last_block
     result = {

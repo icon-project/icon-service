@@ -203,6 +203,8 @@ IISS_MONTH = 12
 
 I_SCORE_EXCHANGE_RATE = 1_000
 
+ISSUE_TRANSACTION_VERSION = 3
+
 
 class PRepStatus(Enum):
     NONE = 0
@@ -218,3 +220,8 @@ PREP_STATUS_MAPPER = {
     PRepStatus.PENALTY1: "prep disqualification penalty",
     PRepStatus.PENALTY2: "low productivity penalty"
 }
+
+
+class PrepResultState(Enum):
+    NORMAL = 0
+    PENALTY = 1
