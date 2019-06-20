@@ -36,7 +36,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
-    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION
+    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -104,9 +104,8 @@ class IconServiceEngine(ContextContainer):
         score_root_path: str = conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         score_root_path: str = os.path.abspath(score_root_path)
         state_db_root_path: str = conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
-        iiss_db_root_path: str = conf[ConfigKey.IISS_DB_ROOT_PATH].rstrip('/')
+        iiss_db_root_path: str = os.path.join(state_db_root_path, IISS_DB)
         iiss_db_root_path: str = os.path.abspath(iiss_db_root_path)
-        conf[ConfigKey.IISS_DB_ROOT_PATH] = iiss_db_root_path
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
@@ -130,7 +129,7 @@ class IconServiceEngine(ContextContainer):
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._open_component_context(context,
-                                     conf[ConfigKey.IISS_DB_ROOT_PATH],
+                                     iiss_db_root_path,
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],

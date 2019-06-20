@@ -30,7 +30,6 @@ default_icon_config = {
         ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
         ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False
     },
-    ConfigKey.IISS_DB_ROOT_PATH: ".iissdb",
     ConfigKey.IISS_REWARD_VARIABLE: {
         ConfigKey.REWARD_MIN: 200,
         ConfigKey.REWARD_MAX: 800,
