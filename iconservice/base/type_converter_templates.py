@@ -140,6 +140,7 @@ class ConstantKeys:
     BLOCK = "block"
     TRANSACTIONS = "transactions"
 
+    IS_BLOCK_EDITABLE = 'isBlockEditable'
     PREV_BLOCK_GENERATOR = "prevBlockGenerator"
     PREV_BLOCK_VALIDATORS = "prevBlockValidators"
 
@@ -254,6 +255,7 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.TRANSACTIONS: [
         type_convert_templates[ParamType.INVOKE_TRANSACTION]
     ],
+    ConstantKeys.IS_BLOCK_EDITABLE: ValueType.BOOL,
     ConstantKeys.PREV_BLOCK_GENERATOR: ValueType.ADDRESS,
     ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
 }
