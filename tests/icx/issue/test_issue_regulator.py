@@ -55,7 +55,7 @@ class TestIssueRegulator:
 
     def setup(self):
         self.context_db = create_context_db()
-        self.issue_regulator = IssueRegulator()
+        self.issue_regulator = Regulator()
         self.issue_regulator.open(self.context_db)
         self.regulator_storage = self.issue_regulator._regulator_storage
 
@@ -135,7 +135,7 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount(self.direct_context, icx_issue_amount)
+            self.issue_regulator._correct_issue_amount(self.direct_context, icx_issue_amount)
 
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
@@ -161,7 +161,7 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
+            self.issue_regulator._correct_issue_amount(context, icx_issue_amount)
 
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
@@ -188,7 +188,7 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
+            self.issue_regulator._correct_issue_amount(context, icx_issue_amount)
 
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
@@ -213,7 +213,7 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
+            self.issue_regulator._correct_issue_amount(context, icx_issue_amount)
 
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
@@ -239,7 +239,7 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         with pytest.raises(AssertionError):
-            self.issue_regulator.correct_issue_amount(context, icx_issue_amount)
+            self.issue_regulator._correct_issue_amount(context, icx_issue_amount)
 
     def test_correct_issue_amount_on_calc_period_when_first_calc_period(self):
         # success case: when prev issued i score and prev issued icx data is None, should return below
@@ -263,9 +263,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_icx,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_icx,
+                                                                      icx_issue_amount)
 
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
@@ -298,9 +298,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         with pytest.raises(Exception):
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_i_score,
+                                                                      icx_issue_amount)
 
     def test_correct_issue_amount_on_calc_period_prev_icx_is_more_than_prev_i_score(self):
         # success case: when remain over issued icx + prev calc over issued icx < icx_issue amount
@@ -321,9 +321,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_i_score,
+                                                                      icx_issue_amount)
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
 
@@ -360,9 +360,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_i_score,
+                                                                      icx_issue_amount)
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
 
@@ -402,9 +402,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_i_score,
+                                                                      icx_issue_amount)
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
 
@@ -444,9 +444,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_i_score,
+                                                                      icx_issue_amount)
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
 
@@ -486,9 +486,9 @@ class TestIssueRegulator:
         self.regulator_storage.put_regulator_variable(self.direct_context, regulator_variable)
 
         deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount = \
-            self.issue_regulator.correct_issue_amount_on_calc_period(context,
-                                                                     prev_calc_period_issued_i_score,
-                                                                     icx_issue_amount)
+            self.issue_regulator._correct_issue_amount_on_calc_period(context,
+                                                                      prev_calc_period_issued_i_score,
+                                                                      icx_issue_amount)
         updated_regulator_variable: 'RegulatorVariable' = \
             self.regulator_storage.get_regulator_variable(self.direct_context)
 

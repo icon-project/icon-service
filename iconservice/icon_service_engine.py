@@ -14,18 +14,21 @@
 # limitations under the License.
 
 import os
+from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-
+from iconservice.icx.issue.regulator import Regulator
 from iconservice.inner_call import inner_call
+from iconservice.utils.hashing.hash_generator import HashGenerator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, IllegalFormatException, InvalidBlockException
+    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBlockException
 from .base.message import Message
 from .base.transaction import Transaction
+from .base.type_converter import TypeConverter
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
@@ -33,7 +36,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
-    REV_DECENTRALIZATION
+    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -48,7 +51,6 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
-from .icx.issue_data_validator import IssueDataValidator
 from .iiss import IISSEngine, IISSStorage
 from .iiss.reward_calc import RewardCalcStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -88,7 +90,6 @@ class IconServiceEngine(ContextContainer):
             'debug_estimateStep': self._handle_estimate_step,
             'icx_getScoreApi': self._handle_icx_get_score_api,
             'ise_getStatus': self._handle_ise_get_status,
-            'iiss_get_issue_info': self._handle_iiss_get_issue_info
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -340,12 +341,34 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
+    def formatting_transaction(self, data_type: str, data: dict, timestamp: int):
+        # todo: stringfy params to make valid tx hash
+        # todo: tests about reverse
+        transaction_params = {
+            "version": ISSUE_TRANSACTION_VERSION,
+            "timestamp": timestamp,
+            "dataType": data_type,
+            "data": data
+        }
+        converted_transaction_params = deepcopy(transaction_params)
+        converted_transaction_params = TypeConverter.convert_type_reverse(converted_transaction_params)
+        tx_hash = HashGenerator.generate_hash(converted_transaction_params)
+        transaction_params["txHash"] = tx_hash
+        transaction = {
+            "method": "icx_sendTransaction",
+            "params": transaction_params
+        }
+
+        return transaction
+
     # todo: remove None of prev_block_generator, prev_block_validators default
+    # todo: is it right setting default value to is_block_editable?
     def invoke(self,
                block: 'Block',
                tx_requests: list,
                prev_block_generator: Optional['Address'] = None,
-               prev_block_validators: Optional[List['Address']] = None) -> tuple:
+               prev_block_validators: Optional[List['Address']] = None,
+               is_block_editable: bool = False) -> tuple:
 
         """Process transactions in a block sent by loopchain
 
@@ -353,6 +376,7 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :param prev_block_generator: previous block generator
         :param prev_block_validators: previous block validators
+        :param is_block_editable: boolean which imply whether creating special transaction or not
         :return: (TransactionResult[], bytes)
         """
         # If the block has already been processed,
@@ -378,6 +402,27 @@ class IconServiceEngine(ContextContainer):
         self._set_revision_to_context(context)
         block_result = []
         precommit_flag = PrecommitFlag.NONE
+        added_transactions = {}
+
+        regulator: 'Regulator' = None
+        if is_block_editable:
+            # todo: need to be refactoring (duplicated codes)
+            issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
+            regulator = Regulator()
+            regulator.set_issue_info_about_correction(context, total_issue_amount)
+            # todo: fee TBD
+            fee = 0
+            issue_data["result"] = {
+                "coveredByFee": fee,
+                "coveredByOverIssuedICX": regulator.deducted_icx,
+                "issue": regulator.corrected_icx_issue_amount
+            }
+            # todo: need to refactor (dirty)
+            issue_transaction = self.formatting_transaction("issue", issue_data, context.block.timestamp)
+            tx_params_to_added = deepcopy(issue_transaction["params"])
+            del tx_params_to_added["txHash"]
+            added_transactions[issue_transaction["params"]["txHash"]] = tx_params_to_added
+            tx_requests.insert(0, issue_transaction)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -390,7 +435,7 @@ class IconServiceEngine(ContextContainer):
                 if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS:
                     if not tx_request['params'].get('dataType') == "issue":
                         raise InvalidBlockException("Invalid block: first transaction must be an issue transaction")
-                    tx_result = self._invoke_issue_request(context, tx_request)
+                    tx_result = self._invoke_issue_request(context, tx_request, is_block_editable, regulator)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -421,7 +466,7 @@ class IconServiceEngine(ContextContainer):
             precommit_flag)
         self._precommit_data_manager.push(precommit_data)
 
-        return block_result, precommit_data.state_root_hash, main_prep_as_dict
+        return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
@@ -518,47 +563,50 @@ class IconServiceEngine(ContextContainer):
 
     def _process_issue_transaction(self,
                                    context: 'IconScoreContext',
-                                   issue_data_in_tx: dict,
-                                   issue_data_in_db: dict):
+                                   issue_data: dict,
+                                   regulator: 'Regulator'):
 
         treasury_address: 'Address' = context.storage.icx.fee_treasury
         tx_result = TransactionResult(context.tx, context.block)
         tx_result.to = treasury_address
-        i_score: Optional[int] = context.storage.rc.get_prev_calc_period_issued_i_score()
 
-        try:
-            context.engine.issue.issue(context,
-                                       treasury_address,
-                                       i_score,
-                                       issue_data_in_tx,
-                                       issue_data_in_db)
+        context.engine.issue.issue(context,
+                                   treasury_address,
+                                   issue_data,
+                                   regulator)
 
-            tx_result.status = TransactionResult.SUCCESS
-        except IconServiceBaseException as tx_failure_exception:
-            tx_result.failure = self._get_failure_from_exception(tx_failure_exception)
-            # todo: consider about trace (if need)
-            trace: 'Trace' = self._get_trace_from_exception(ZERO_SCORE_ADDRESS, tx_failure_exception)
-            context.traces.append(trace)
-            context.event_logs.clear()
-        finally:
-            tx_result.event_logs = context.event_logs
-            tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
-            tx_result.traces = context.traces
+        tx_result.status = TransactionResult.SUCCESS
 
-            return tx_result
+        tx_result.event_logs = context.event_logs
+        tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
+        tx_result.traces = context.traces
+
+        return tx_result
 
     def _invoke_issue_request(self,
                               context: 'IconScoreContext',
-                              request: dict) -> 'TransactionResult':
+                              request: dict,
+                              is_block_editable: bool,
+                              regulator: 'Regulator') -> 'TransactionResult':
         assert 'params' in request
         assert 'data' in request['params']
 
-        if not isinstance(request['params']['data'], dict):
-            raise IllegalFormatException("invalid issue transaction format")
+        issue_data_in_tx: dict = request['params'].get('data')
+        if not is_block_editable:
+            issue_data_in_db, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
+            regulator = Regulator()
+            regulator.set_issue_info_about_correction(context, total_issue_amount)
 
-        issue_data_in_tx: dict = request['params']['data']
-        issue_data_in_db: dict = context.engine.iiss.create_icx_issue_info(context)
-        IssueDataValidator.validate_format(issue_data_in_tx, issue_data_in_db)
+            # todo: fee TBD
+            fee = 0
+            issue_data_in_db["result"] = {
+                "coveredByFee": fee,
+                "coveredByOverIssuedICX": regulator.deducted_icx,
+                "issue": regulator.corrected_icx_issue_amount
+            }
+            if issue_data_in_tx != issue_data_in_db:
+                raise InvalidBlockException("Have difference between "
+                                            "issue transaction and actual db data")
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=ICX_ISSUE_TRANSACTION_INDEX,
@@ -572,9 +620,7 @@ class IconServiceEngine(ContextContainer):
         context.event_log_stack.clear()
 
         # todo: get issue related data from iiss engine
-        tx_result = self._process_issue_transaction(context,
-                                                    issue_data_in_tx,
-                                                    issue_data_in_db)
+        tx_result = self._process_issue_transaction(context, issue_data_in_tx, regulator)
         return tx_result
 
     def _invoke_request(self,
@@ -1289,17 +1335,6 @@ class IconServiceEngine(ContextContainer):
             last_block_status = self._make_last_block_status()
             response['lastBlock'] = last_block_status
         return response
-
-    def _handle_iiss_get_issue_info(self,
-                                    context: 'IconScoreContext',
-                                    _) -> dict:
-        # todo: get issue related info from iiss engine
-        if context.revision < REV_IISS:
-            iiss_data_for_issue = {"prep": {"value": 0}}
-            return iiss_data_for_issue
-
-        iiss_data_for_issue: dict = context.engine.iiss.create_icx_issue_info(context)
-        return iiss_data_for_issue
 
     def _make_last_block_status(self) -> Optional[dict]:
         block = self._get_last_block()

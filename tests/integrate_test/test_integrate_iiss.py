@@ -47,9 +47,6 @@ class TestIntegrateIISS(TestIntegrateBase):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
 
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
 
         self._write_precommit_state(prev_block)
@@ -58,9 +55,6 @@ class TestIntegrateIISS(TestIntegrateBase):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
 
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
@@ -74,9 +68,6 @@ class TestIntegrateIISS(TestIntegrateBase):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
-        if revision >= REV_IISS:
-            # issue tx must be exists after revision 5
-            tx_list.insert(0, self._make_dummy_issue_tx())
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
@@ -138,9 +129,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         balance: int = 10 * 10 ** 18
         for i in range(5):
             tx = self._make_icx_send_tx(self._genesis, self._addr_array[i], balance)
-            # issue tx must be exists after revision 5
-            issue_tx = self._make_dummy_issue_tx()
-            prev_block, tx_results = self._make_and_req_block([issue_tx, tx])
+            prev_block, tx_results = self._make_and_req_block([tx])
             self._write_precommit_state(prev_block)
 
         # set stake 10 icx
