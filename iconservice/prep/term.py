@@ -100,7 +100,8 @@ class Term(object):
 
         self._sequence += 1
         self._end_block_height = current_block_height + self._period
-        self._main_preps = preps
+        self._main_preps = preps[:PREP_COUNT]
+        self._sub_preps = preps[PREP_COUNT: PREP_MAX_PREPS]
         self._incentive_rep = incentive_rep
 
     def _make_prep_for_db(self, preps: List['PRep']) -> list:

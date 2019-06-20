@@ -17,6 +17,7 @@
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
+
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -37,7 +38,6 @@ if TYPE_CHECKING:
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
     from .storage import Reward
-    from ..prep.term import Term
     from ..prep.data.prep import PRep
 
 
@@ -335,9 +335,6 @@ class Engine(EngineBase):
         return data
 
     def genesis_update_db(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        preps: list = context.engine.prep.preps.get_preps()
-        term: 'Term' = context.engine.prep.term
-        term.save(context, precommit_data.block.height, preps, term.incentive_rep)
         self._put_next_calc_block_height(context, precommit_data.block.height)
 
         self._put_header_for_rc(context, precommit_data)
