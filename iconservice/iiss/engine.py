@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
-from .reward_calc.ipc.message import CalculateResponse
+from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidParamsException
@@ -66,6 +66,10 @@ class Engine(EngineBase):
         # todo: consider formula managing r min, r max, r point
         self._formula = IssueFormula()
 
+    # TODO implement version callback function
+    def version_callback(self, cb_data: 'VersionResponse'):
+        Logger.debug(tag="iiss", msg=f"version callback called with {cb_data}")
+
     @staticmethod
     def calculate_callback(cb_data: 'CalculateResponse'):
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
@@ -76,7 +80,8 @@ class Engine(EngineBase):
         Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)
 
     def _init_reward_calc_proxy(self, data_path: str):
-        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback)
+        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback,
+                                                  version_callback=self.version_callback)
         self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 
