@@ -161,6 +161,7 @@ class ConstantKeys:
     DETAILS = 'details'
     P2P_END_POINT = 'p2pEndPoint'
     PUBLIC_KEY = 'publicKey'
+    PREP_ID = 'id'
     START_RANKING = "startRanking"
     END_RANKING = "endRanking"
     IREP = "irep"
