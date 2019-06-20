@@ -39,8 +39,8 @@ class RewardCalcProxy(object):
     IPC_TIMEOUT = 0.1
 
     def __init__(self,
-                 version_callback: Callable[[tuple], Any] = None,
-                 calc_callback: Callable[[tuple], Any] = None):
+                 version_callback: Callable[['Response'], Any] = None,
+                 calc_callback: Callable[['Response'], Any] = None):
         Logger.debug(tag=_TAG, msg="__init__() start")
 
         self._loop = None
