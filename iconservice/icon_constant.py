@@ -94,6 +94,8 @@ LATEST_REVISION = REVISION_4
 REV_IISS = REVISION_5 + 1
 REV_DECENTRALIZATION = REV_IISS + 1
 
+IISS_DB = 'iiss'
+
 
 class ConfigKey:
     BUILTIN_SCORE_OWNER = 'builtinScoreOwner'
@@ -109,7 +111,6 @@ class ConfigKey:
     AMQP_TARGET = 'amqpTarget'
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
-    IISS_DB_ROOT_PATH = "iissDbRootPath"
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"

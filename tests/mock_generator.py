@@ -113,7 +113,6 @@ def _create_inner_task(
 def clear_inner_task():
     rmtree(default_icon_config[ConfigKey.SCORE_ROOT_PATH])
     rmtree(default_icon_config[ConfigKey.STATE_DB_ROOT_PATH])
-    rmtree(default_icon_config[ConfigKey.IISS_DB_ROOT_PATH])
 
 
 def generate_service_engine(revision=0):
