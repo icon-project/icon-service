@@ -44,18 +44,16 @@ class MessageQueue(object):
         return future
 
     def message_handler(self, response: 'Response'):
-        if isinstance(response, self.notify_message):
-            self.notify_handler(response)
-        else:
+        try:
             self.put_response(response)
+        except KeyError:
+            if isinstance(response, self.notify_message):
+                self.notify_handler(response)
 
     def put_response(self, response: 'Response'):
         msg_id: int = response.msg_id
 
-        try:
-            future: asyncio.Future = self._msg_id_to_future[msg_id]
-        except KeyError:
-            return
+        future: asyncio.Future = self._msg_id_to_future[msg_id]
 
         del self._msg_id_to_future[msg_id]
 
