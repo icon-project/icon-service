@@ -94,6 +94,8 @@ LATEST_REVISION = REVISION_4
 REV_IISS = REVISION_5 + 1
 REV_DECENTRALIZATION = REV_IISS + 1
 
+IISS_DB = 'iiss'
+
 
 class ConfigKey:
     BUILTIN_SCORE_OWNER = 'builtinScoreOwner'
