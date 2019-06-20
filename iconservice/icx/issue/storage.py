@@ -53,7 +53,7 @@ class RegulatorVariable:
     def first_initiate(cls):
         # prev_calc_period_issued_icx could be None in case of first calculating period
         return cls(current_calc_period_issued_icx=0,
-                   prev_calc_period_issued_icx=None,
+                   prev_calc_period_issued_icx=0,
                    over_issued_i_score=0)
 
     @classmethod

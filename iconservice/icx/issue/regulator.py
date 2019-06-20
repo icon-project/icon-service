@@ -22,9 +22,50 @@ from ...iconscore.icon_score_context import IconScoreContext
 
 # todo: implement fee related logic
 class Regulator:
+    def __init__(self):
+        self._regulator_variable: 'RegulatorVariable' = None
 
-    @classmethod
-    def _reflect_difference_in_issuing(cls, icx_issue_amount: int, over_issued_icx: int) -> Tuple[int, int, int]:
+        self._deducted_icx = None
+        self._corrected_icx_issue_amount = None
+
+    @property
+    def deducted_icx(self):
+        return self._deducted_icx
+
+    @property
+    def remain_over_issued_icx(self):
+        return self._regulator_variable.over_issued_i_score // I_SCORE_EXCHANGE_RATE
+
+    @property
+    def corrected_icx_issue_amount(self):
+        return self._corrected_icx_issue_amount
+
+    def set_issue_info_about_correction(self, context: 'IconScoreContext', issue_amount):
+        self._regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
+        calc_next_block_height = context.storage.iiss.get_calc_next_block_height(context)
+
+        current_calc_period_total_issued_icx: int = self._regulator_variable.current_calc_period_issued_icx
+        current_calc_period_total_issued_icx += issue_amount
+        if calc_next_block_height == context.block.height:
+            i_score = context.storage.rc.get_prev_calc_period_issued_i_score()
+            deducted_icx, remain_over_issued_i_score, corrected_icx_issue_amount = \
+                self._correct_issue_amount_on_calc_period(i_score, issue_amount)
+
+            self._regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
+            self._regulator_variable.current_calc_period_issued_icx = 0
+        else:
+            deducted_icx, remain_over_issued_i_score, corrected_icx_issue_amount = \
+                self._correct_issue_amount(issue_amount)
+
+            self._regulator_variable.current_calc_period_issued_icx = current_calc_period_total_issued_icx
+        self._regulator_variable.over_issued_i_score = remain_over_issued_i_score
+        self._deducted_icx, self._corrected_icx_issue_amount = deducted_icx, corrected_icx_issue_amount
+
+    def put_regulate_variable(self, context: 'IconScoreContext'):
+        context.storage.issue.put_regulator_variable(context, self._regulator_variable)
+
+    @staticmethod
+    def _reflect_difference_in_issuing(icx_issue_amount: int, over_issued_icx: int) -> Tuple[int, int, int]:
         assert icx_issue_amount >= 0
 
         corrected_icx_issue_amount = icx_issue_amount - over_issued_icx
@@ -43,8 +84,8 @@ class Regulator:
 
         return deducted_icx, remain_over_issued_icx, corrected_icx_issue_amount
 
-    @classmethod
-    def _separate_icx_and_i_score(cls, i_score: int) -> Tuple[int, int]:
+    @staticmethod
+    def _separate_icx_and_i_score(i_score: int) -> Tuple[int, int]:
         abs_i_score = abs(i_score)
         over_issued_icx = abs_i_score // I_SCORE_EXCHANGE_RATE
         over_issued_i_score = abs_i_score % I_SCORE_EXCHANGE_RATE
@@ -54,80 +95,48 @@ class Regulator:
 
         return over_issued_icx, over_issued_i_score
 
-    @classmethod
-    def _is_data_suitable_to_process_issue_correction(cls, prev_calc_period_issued_i_score: Optional[int],
-                                                      prev_calc_period_issued_icx: Optional[int]):
-        return (prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is not None) or \
-               (prev_calc_period_issued_i_score is not None and prev_calc_period_issued_icx is None)
+    @staticmethod
+    def _is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score: Optional[int]):
+        return prev_calc_period_issued_i_score is not None
 
-    @classmethod
-    def _is_first_calculate_period(cls, prev_calc_period_issued_i_score: Optional[int],
-                                   prev_calc_period_issued_icx: Optional[int]):
-        # in case of first calculate period
-        # (i.e. both prev_calc_period_issued_i_score and prev_calc_period_issued_icx is None), skip the correction logic
-        return prev_calc_period_issued_i_score is None and prev_calc_period_issued_icx is None
-
-    @classmethod
-    def correct_issue_amount_on_calc_period(cls,
-                                            context: 'IconScoreContext',
-                                            prev_calc_period_issued_i_score: Optional[int],
-                                            icx_issue_amount: int) -> Tuple[int, int, int]:
+    def _correct_issue_amount_on_calc_period(self,
+                                             prev_calc_period_issued_i_score: Optional[int],
+                                             icx_issue_amount: int) -> Tuple[int, int, int]:
         assert icx_issue_amount >= 0
 
-        regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
-        current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
-        prev_calc_period_issued_icx: Optional[int] = regulator_variable.prev_calc_period_issued_icx
-        remain_over_issued_i_score: int = regulator_variable.over_issued_i_score
+        prev_calc_period_issued_icx: Optional[int] = self._regulator_variable.prev_calc_period_issued_icx
+        remain_over_issued_i_score: int = self._regulator_variable.over_issued_i_score
 
-        remain_over_issued_icx = 0
-        deducted_icx = 0
+        if not self._is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score):
+            raise AssertionError("There is no prev_calc_period_i_score")
 
-        if not cls._is_data_suitable_to_process_issue_correction(prev_calc_period_issued_i_score,
-                                                                 prev_calc_period_issued_icx):
-            raise AssertionError("There is no prev_calc_period_i_score or "
-                                 "prev_calc_period_issued_icx data even though on calc period")
+        # get difference between icon_service and reward_calc after set exchange rates
+        prev_calc_over_issued_i_score: int = \
+            prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
+        total_over_issued_i_score: int = prev_calc_over_issued_i_score + remain_over_issued_i_score
+        over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
 
-        current_calc_period_total_issued_icx += icx_issue_amount
-        if not cls._is_first_calculate_period(prev_calc_period_issued_i_score, prev_calc_period_issued_icx):
-            # get difference between icon_service and reward_calc after set exchange rates
-            prev_calc_over_issued_i_score: int = \
-                prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
-            total_over_issued_i_score: int = prev_calc_over_issued_i_score + remain_over_issued_i_score
-            over_issued_icx, over_issued_i_score = cls._separate_icx_and_i_score(total_over_issued_i_score)
+        deducted_icx, remain_over_issued_icx, icx_issue_amount = \
+            self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx)
 
-            deducted_icx, remain_over_issued_icx, icx_issue_amount = \
-                cls._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx)
-
-            remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
-            regulator_variable.over_issued_i_score = remain_over_issued_i_score
-
-        regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
-        regulator_variable.current_calc_period_issued_icx = 0
-        context.storage.issue.put_regulator_variable(context, regulator_variable)
+        remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
 
         # deducted_icx can be negative value (in case of reward calculator having been issued more)
-        return deducted_icx, remain_over_issued_icx, icx_issue_amount
+        return deducted_icx, remain_over_issued_i_score, icx_issue_amount
 
-    @classmethod
-    def correct_issue_amount(cls, context: 'IconScoreContext', icx_issue_amount: int) -> Tuple[int, int, int]:
+    def _correct_issue_amount(self, icx_issue_amount: int) -> Tuple[int, int, int]:
         assert icx_issue_amount >= 0
 
-        regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
-        current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
-        remain_over_issued_i_score: int = regulator_variable.over_issued_i_score
+        remain_over_issued_i_score: int = self._regulator_variable.over_issued_i_score
         remain_over_issued_icx: int = 0
         deducted_icx: int = 0
 
         if remain_over_issued_i_score > 0:
             remain_over_issued_icx = remain_over_issued_i_score // I_SCORE_EXCHANGE_RATE
-        current_calc_period_total_issued_icx += icx_issue_amount
 
         if remain_over_issued_icx > 0:
             deducted_icx, remain_over_issued_icx, icx_issue_amount = \
-                cls._reflect_difference_in_issuing(icx_issue_amount, remain_over_issued_icx)
+                self._reflect_difference_in_issuing(icx_issue_amount, remain_over_issued_icx)
             remain_over_issued_i_score -= deducted_icx * I_SCORE_EXCHANGE_RATE
-            regulator_variable.over_issued_i_score = remain_over_issued_i_score
-        regulator_variable.current_calc_period_issued_icx = current_calc_period_total_issued_icx
-        context.storage.issue.put_regulator_variable(context, regulator_variable)
 
-        return deducted_icx, remain_over_issued_icx, icx_issue_amount
+        return deducted_icx, remain_over_issued_i_score, icx_issue_amount

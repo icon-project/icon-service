@@ -25,9 +25,10 @@ from iconcommons import IconConfig
 
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_IISS
 from iconservice.icon_service_engine import IconServiceEngine
-from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
@@ -82,13 +83,17 @@ class TestIntegrateBase(TestCase):
 
         self._genesis_invoke()
 
-    def _mock_ipc(self):
+    def mock_calculate(self, path, block_height):
+        response = CalculateResponse(0, True, 1, 0, b'mocked_response')
+        self._calculation_callback(response)
+
+    def _mock_ipc(self, mock_calculate: callable = mock_calculate):
         RewardCalcProxy.open = Mock()
         RewardCalcProxy.start = Mock()
         RewardCalcProxy.stop = Mock()
         RewardCalcProxy.close = Mock()
         RewardCalcProxy.get_version = Mock()
-        RewardCalcProxy.calculate = Mock()
+        RewardCalcProxy.calculate = mock_calculate
         RewardCalcProxy.claim_iscore = Mock()
         RewardCalcProxy.query_iscore = Mock()
         RewardCalcProxy.commit_block = Mock()
@@ -317,15 +322,68 @@ class TestIntegrateBase(TestCase):
         timestamp_us = create_timestamp()
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
 
-        invoke_response, _, main_prep_as_dict = self.icon_service_engine.invoke(block=block,
-                                                             tx_requests=tx_list,
-                                                             prev_block_generator=prev_block_generator,
-                                                             prev_block_validators=prev_block_validators)
+        is_block_editable = False
+        governance_score = self.icon_service_engine._get_governance_score(context)
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
+            is_block_editable = True
 
-        if main_prep_as_dict:
-            return block, invoke_response, main_prep_as_dict
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
         return block, invoke_response
+
+    def _make_and_req_block_for_issue_test(self, tx_list: list,
+                                           block_height: int = None,
+                                           prev_block_generator: Optional['Address'] = None,
+                                           prev_block_validators: Optional[List['Address']] = None,
+                                           is_block_editable=False) -> tuple:
+        if block_height is None:
+            block_height: int = self._block_height
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
+        return block, invoke_response
+
+    def _make_and_req_block_for_prep_test(self, tx_list: list,
+                            block_height: int = None,
+                            prev_block_generator: Optional['Address'] = None,
+                            prev_block_validators: Optional[List['Address']] = None) -> tuple:
+        if block_height is None:
+            block_height: int = self._block_height
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+
+        is_block_editable = False
+        governance_score = self.icon_service_engine._get_governance_score(context)
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
+            is_block_editable = True
+
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
+        return block, invoke_response, main_prep_as_dict
 
     def _write_precommit_state(self, block: 'Block') -> None:
         self.icon_service_engine.commit(block.height, block.hash, None)
