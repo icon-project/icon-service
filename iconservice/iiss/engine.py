@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Optional, List
 from iconcommons.logger import Logger
 
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
-from .reward_calc.ipc.message import CalculateResponse
+from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidParamsException
@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
     from .storage import Reward
-    from ..prep.term import Term
     from ..prep.data.prep import PRep
 
 
@@ -64,6 +63,10 @@ class Engine(EngineBase):
     def open(self, context: 'IconScoreContext', path: str):
         self._init_reward_calc_proxy(path)
 
+    # TODO implement version callback function
+    def version_callback(self, cb_data: 'VersionResponse'):
+        Logger.debug(tag="iiss", msg=f"version callback called with {cb_data}")
+
     @staticmethod
     def calculate_callback(cb_data: 'CalculateResponse'):
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
@@ -74,7 +77,8 @@ class Engine(EngineBase):
         Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)
 
     def _init_reward_calc_proxy(self, data_path: str):
-        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback)
+        self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback,
+                                                  version_callback=self.version_callback)
         self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 
@@ -312,9 +316,6 @@ class Engine(EngineBase):
         return data
 
     def genesis_update_db(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
-        preps: list = context.engine.prep.preps.get_preps()
-        term: 'Term' = context.engine.prep.term
-        term.save(context, precommit_data.block.height, preps, term.incentive_rep)
         self._put_next_calc_block_height(context, precommit_data.block.height)
 
         self._put_header_for_rc(context, precommit_data)

@@ -329,7 +329,7 @@ class TestIntegrateBase(TestCase):
         if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
             is_block_editable = True
 
-        invoke_response, _, added_transactions = \
+        invoke_response, _, added_transactions, added_transactions = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -350,12 +350,13 @@ class TestIntegrateBase(TestCase):
 
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
 
-        invoke_response, _, added_transactions = \
+        invoke_response, _, added_transactions, main_prep_as_dict = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
                                             prev_block_validators=prev_block_validators,
                                             is_block_editable=is_block_editable)
+
         return block, invoke_response
 
     def _write_precommit_state(self, block: 'Block') -> None:
