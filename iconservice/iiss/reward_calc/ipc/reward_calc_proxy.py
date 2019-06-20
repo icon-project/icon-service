@@ -17,6 +17,7 @@ __all__ = 'RewardCalcProxy'
 
 import asyncio
 import concurrent.futures
+import os
 from subprocess import Popen
 from typing import Optional, Callable, Any
 
@@ -303,8 +304,12 @@ class RewardCalcProxy(object):
         """
         Logger.debug(tag=_TAG, msg=f'run reward calc')
 
+        iscore_db_path, _ = os.path.split(iiss_db_path)
+        iscore_db_path = os.path.join(iscore_db_path, 'rc')
+
         if self._reward_calc is None:
-            cmd = f'icon_rc -client -db-count 16 -iissdata {iiss_db_path} -ipc-addr {sock_path} -monitor'
+            cmd = f'icon_rc -client -monitor -db-count 16 -db {iscore_db_path} -iissdata {iiss_db_path}' \
+                f' -ipc-addr {sock_path}'
             self._reward_calc = Popen(cmd.split(" "))
 
     def stop_reward_calc(self):

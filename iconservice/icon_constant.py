@@ -109,7 +109,6 @@ class ConfigKey:
     AMQP_TARGET = 'amqpTarget'
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
-    IISS_DB_ROOT_PATH = "iissDbRootPath"
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"

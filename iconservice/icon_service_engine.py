@@ -103,9 +103,8 @@ class IconServiceEngine(ContextContainer):
         score_root_path: str = conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         score_root_path: str = os.path.abspath(score_root_path)
         state_db_root_path: str = conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
-        iiss_db_root_path: str = conf[ConfigKey.IISS_DB_ROOT_PATH].rstrip('/')
+        iiss_db_root_path: str = os.path.join(state_db_root_path, 'iiss')
         iiss_db_root_path: str = os.path.abspath(iiss_db_root_path)
-        conf[ConfigKey.IISS_DB_ROOT_PATH] = iiss_db_root_path
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
@@ -129,7 +128,7 @@ class IconServiceEngine(ContextContainer):
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._open_component_context(context,
-                                     conf[ConfigKey.IISS_DB_ROOT_PATH],
+                                     iiss_db_root_path,
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
