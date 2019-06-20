@@ -404,7 +404,7 @@ class IconServiceEngine(ContextContainer):
         preps = context.preps.get_snapshot()
 
         main_prep_as_dict: Optional[dict] = None
-        if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_end_block_height(context):
+        if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_term_end_block_height(context):
             main_prep_as_dict = context.engine.prep.make_prep_tx_result(context)
 
         # Save precommit data

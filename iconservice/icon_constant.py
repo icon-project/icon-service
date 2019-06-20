@@ -218,3 +218,8 @@ PREP_STATUS_MAPPER = {
     PRepStatus.PENALTY1: "prep disqualification penalty",
     PRepStatus.PENALTY2: "low productivity penalty"
 }
+
+
+class PrepResultState(Enum):
+    NORMAL = 0
+    PENALTY = 1

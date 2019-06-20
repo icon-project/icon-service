@@ -30,6 +30,7 @@ from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
 from ..precommit_data_manager import PrecommitData
+from ..icon_constant import PrepResultState
 
 if TYPE_CHECKING:
     from . import PRepStorage
@@ -168,7 +169,7 @@ class Engine(EngineBase):
         total_delegated_amount: int = context.storage.iiss.get_total_prep_delegated(context)
         context.storage.iiss.put_total_prep_delegated(context, total_delegated_amount + offset)
 
-    def check_end_block_height(self, context: 'IconScoreContext') -> bool:
+    def check_term_end_block_height(self, context: 'IconScoreContext') -> bool:
         return self.term.end_block_height == context.block.height or self.term.end_block_height == -1
 
     def make_prep_tx_result(self, context: 'IconScoreContext') -> Optional[dict]:
@@ -188,7 +189,7 @@ class Engine(EngineBase):
                 preps_as_list_for_roothash.extend(
                     [prep.address.to_bytes(), prep.public_key, prep.p2p_end_point.encode()])
             prep_as_dict["preps"] = preps_as_list
-            prep_as_dict["state"] = 0
+            prep_as_dict["state"] = PrepResultState.NORMAL.value
             prep_as_dict["rootHash"] = hashlib.sha3_256(b'|'.join(preps_as_list_for_roothash)).digest()
         return prep_as_dict
 
