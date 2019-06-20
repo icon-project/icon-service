@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import hashlib
-from typing import TYPE_CHECKING
 
+from iconservice.base.type_converter import TypeConverter
 from ..iconscore.icon_score_context import IconScoreContext
-
-if TYPE_CHECKING:
-    from ..base.block import Block
-    from ..prep.data.prep_container import PRepContainer
 
 
 def get_preps_root_hash(prep_ids_in_bytes: bytes) -> bytes:
@@ -26,30 +22,18 @@ def get_preps_root_hash(prep_ids_in_bytes: bytes) -> bytes:
 
 
 def get_preps(context: IconScoreContext):
-    preps: 'PRepContainer' = context.engine.prep.term.main_preps
-    prep_result = []
-    prep_ids_in_bytes = b''
+    preps: 'dict' = context.engine.prep.make_prep_tx_result()
+    if preps is None:
+        preps = {}
 
-    for prep in preps:
-        data = {
-            "id": str(prep.address),
-            "publicKey": f"0x{bytes.hex(prep.public_key)}",
-            "p2pEndPoint": prep.p2p_end_point
-        }
-        prep_result.append(data)
-        prep_ids_in_bytes = prep_ids_in_bytes + prep.address.to_bytes()
+    block = context.storage.icx.last_block
+    preps['blockHeight'] = 0 if block is None else block
+    preps.pop('state', None)
 
-    block: 'Block' = context.storage.icx.last_block
+    TypeConverter.convert_type_reverse(preps)
     result = {
-        "result": {
-            "blockHeight": 0 if block is None else block.height,
-            "preps": prep_result,
-            "rootHash": ""
-        }
+        "result": preps
     }
-    if prep_result:
-        root_hash = get_preps_root_hash(prep_ids_in_bytes)
-        result['rootHash'] = f"0x{root_hash.hex()}"
 
     return result
 
