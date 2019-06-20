@@ -205,6 +205,7 @@ I_SCORE_EXCHANGE_RATE = 1_000
 
 ISSUE_TRANSACTION_VERSION = 3
 
+
 class PRepStatus(Enum):
     NONE = 0
     ACTIVE = 1

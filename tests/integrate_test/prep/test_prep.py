@@ -303,9 +303,7 @@ class TestIntegratePrep(TestIntegrateBase):
         tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                       {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
         tx_list = [tx]
-        # issue tx must be exists after revision 5
-        tx_list.insert(0, self._make_dummy_issue_tx())
-        prev_block, tx_results, main_prep_as_dict = self._make_and_req_block(tx_list)
+        prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test(tx_list)
 
         # check if tx_result has all of field correctly
         self.assertTrue('preps' and 'state' and 'rootHash' in main_prep_as_dict)
@@ -381,10 +379,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._delegate(self._admin, delegations)
 
         for i in range(7):
-            if i == 6:
-                prev_block, tx_results, _ = self._make_and_req_block([])
-            else:
-                prev_block, tx_results = self._make_and_req_block([])
+            prev_block, tx_results = self._make_and_req_block([])
             self._write_precommit_state(prev_block)
 
         query_request = {

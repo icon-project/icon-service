@@ -329,7 +329,7 @@ class TestIntegrateBase(TestCase):
         if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
             is_block_editable = True
 
-        invoke_response, _, added_transactions, added_transactions = \
+        invoke_response, _, added_transactions, main_prep_as_dict = \
             self.icon_service_engine.invoke(block=block,
                                             tx_requests=tx_list,
                                             prev_block_generator=prev_block_generator,
@@ -358,6 +358,32 @@ class TestIntegrateBase(TestCase):
                                             is_block_editable=is_block_editable)
 
         return block, invoke_response
+
+    def _make_and_req_block_for_prep_test(self, tx_list: list,
+                            block_height: int = None,
+                            prev_block_generator: Optional['Address'] = None,
+                            prev_block_validators: Optional[List['Address']] = None) -> tuple:
+        if block_height is None:
+            block_height: int = self._block_height
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+
+        is_block_editable = False
+        governance_score = self.icon_service_engine._get_governance_score(context)
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
+            is_block_editable = True
+
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
+        return block, invoke_response, main_prep_as_dict
 
     def _write_precommit_state(self, block: 'Block') -> None:
         self.icon_service_engine.commit(block.height, block.hash, None)
