@@ -170,10 +170,9 @@ class Engine(EngineBase):
         context.storage.iiss.put_total_prep_delegated(context, total_delegated_amount + offset)
 
     def check_term_end_block_height(self, context: 'IconScoreContext') -> bool:
-        return self.term.end_block_height == context.block.height or self.term.end_block_height == -1
+        return self.term.end_block_height in (context.block.height, -1)
 
-    def make_prep_tx_result(self, context: 'IconScoreContext') -> Optional[dict]:
-        self.term.save(context, context.block.height, self.preps.get_preps(), self.term.incentive_rep)
+    def make_prep_tx_result(self) -> Optional[dict]:
         main_preps = self.term.main_preps
         prep_as_dict = None
         if len(main_preps) > 0:
@@ -192,6 +191,9 @@ class Engine(EngineBase):
             prep_as_dict["state"] = PrepResultState.NORMAL.value
             prep_as_dict["rootHash"] = hashlib.sha3_256(b'|'.join(preps_as_list_for_roothash)).digest()
         return prep_as_dict
+
+    def save_term(self, context: 'IconScoreContext'):
+        self.term.save(context, context.block.height, context.preps.get_preps(), self.term.incentive_rep)
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns registration information of a P-Rep
