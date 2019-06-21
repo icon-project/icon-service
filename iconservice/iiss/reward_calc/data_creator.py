@@ -36,11 +36,11 @@ class DataCreator:
 
     @staticmethod
     def create_gv_variable(block_height: int,
-                           calculated_incentive_rep: int,
+                           calculated_irep: int,
                            reward_rep: int) -> 'GovernanceVariable':
         data = GovernanceVariable()
         data.block_height: int = block_height
-        data.calculated_incentive_rep: int = calculated_incentive_rep
+        data.calculated_irep: int = calculated_irep
         data.reward_rep: int = reward_rep
         return data
 

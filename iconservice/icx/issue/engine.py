@@ -38,10 +38,10 @@ class Engine(EngineBase):
         self._formula = IssueFormula()
 
     def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, int]:
-        incentive_rep: int = context.engine.prep.term.incentive_rep
+        irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             "prep": {
-                "incentive": incentive_rep,
+                "incentive": irep,
                 "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
                 "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
             }
@@ -107,8 +107,8 @@ class Engine(EngineBase):
                                                       regulator.corrected_icx_issue_amount)
         context.event_logs.append(total_issue_event_log)
 
-    def validate_limit_total_supply(self, context: 'IconScoreContext', expect_incentive_rep: int):
-        beta: int = self._formula.get_limit_inflation_beta(expect_incentive_rep)
+    def validate_limit_total_supply(self, context: 'IconScoreContext', expect_irep: int):
+        beta: int = self._formula.get_limit_inflation_beta(expect_irep)
         if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * 0.1:
             raise InvalidParamsException("Out of Boundary : expected irep")
 

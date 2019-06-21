@@ -91,7 +91,7 @@ class Engine(EngineBase):
 
     def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         """If the current P-Rep term is over, update term with new information
-        which has P-Rep list(address, delegated amount), start height, end height, incentive_rep
+        which has P-Rep list(address, delegated amount), start height, end height, irep
 
         :param context:
         :param precommit_data:
@@ -191,7 +191,7 @@ class Engine(EngineBase):
         self.term.save(context,
                        context.block.height,
                        context.preps.get_preps(),
-                       self.term.incentive_rep,
+                       self.term.irep,
                        context.total_supply)
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
@@ -223,7 +223,7 @@ class Engine(EngineBase):
         prep: 'PRep' = context.preps.get(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: str{address}")
-        prev_irep: int = prep.incentive_rep
+        prev_irep: int = prep.irep
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
         prep.set(ret_params, context.block.height)
         self._validate_limit_irep(context, prep, prev_irep)
@@ -235,7 +235,7 @@ class Engine(EngineBase):
 
     @classmethod
     def _validate_limit_irep(cls, context: 'IconScoreContext', prep: 'PRep', prev_irep: int = None):
-        prep_irep: int = prep.incentive_rep
+        prep_irep: int = prep.irep
         if prep_irep < IISS_MIN_IREP:
             raise InvalidParamsException(f"Invalid irep {prep_irep}")
 
