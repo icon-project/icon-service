@@ -69,10 +69,10 @@ class Engine(EngineBase):
 
         Logger.debug("PRepEngine.__init__() end")
 
-    def open(self, context: 'IconScoreContext', term_period: int, governance_variable: dict) -> None:
+    def open(self, context: 'IconScoreContext', term_period: int, irep: int) -> None:
         self.preps = PRepContainer()
         self.preps.load(context)
-        self.term.load(context, term_period, governance_variable)
+        self.term.load(context, term_period, irep)
 
     def invoke(self, context: 'IconScoreContext', data: dict) -> None:
         method: str = data['method']

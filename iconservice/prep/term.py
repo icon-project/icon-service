@@ -66,7 +66,7 @@ class Term(object):
     def total_supply(self) -> int:
         return self._total_supply
 
-    def load(self, context: 'IconScoreContext', term_period: int, governance_variable: dict):
+    def load(self, context: 'IconScoreContext', term_period: int, irep: int):
         data: Optional[list] = context.storage.prep.get_term(context)
         if data:
             version = data[0]
@@ -76,7 +76,7 @@ class Term(object):
             self._irep = data[4]
         else:
             self._period = term_period
-            self._irep = governance_variable[ConstantKeys.IREP]
+            self._irep = irep
             self._total_supply = context.total_supply
 
     def _make_preps(self, context: 'IconScoreContext', data: list) -> tuple:

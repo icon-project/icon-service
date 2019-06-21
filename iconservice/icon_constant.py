@@ -115,7 +115,6 @@ class ConfigKey:
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
-    GOVERNANCE_VARIABLE = "governanceVariable"
     IREP = 'irep'
 
     # IISS VARIABLE
