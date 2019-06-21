@@ -51,7 +51,7 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
-from .iiss import IISSEngine, IISSStorage
+from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
@@ -448,9 +448,16 @@ class IconServiceEngine(ContextContainer):
         preps = context.preps.get_snapshot()
 
         main_prep_as_dict: Optional[dict] = None
-        if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_term_end_block_height(context):
-            context.engine.prep.save_term(context)
-            main_prep_as_dict = context.engine.prep.make_prep_tx_result()
+
+        if context.revision >= REV_DECENTRALIZATION:
+            decentralization_flag = context.engine.prep.term.sequence != -1
+            if decentralization_flag:
+                decentralization_flag = context.engine.prep.check_term_end_block_height(context)
+            else:
+                decentralization_flag = check_decentralization_condition(context)
+            if decentralization_flag:
+                context.engine.prep.save_term(context)
+                main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
         # Save precommit data
         # It will be written to levelDB on commit

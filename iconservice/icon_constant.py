@@ -96,6 +96,9 @@ REV_DECENTRALIZATION = REV_IISS + 1
 
 IISS_DB = 'iiss'
 
+MINIMUM_DELEGATE_OF_BOTTOM_PREP = 800_460 * 2 * (10**18) # 800,460,000 * 0.002,
+# minimum delegation of bottom prep for decentralization
+
 
 class ConfigKey:
     BUILTIN_SCORE_OWNER = 'builtinScoreOwner'
