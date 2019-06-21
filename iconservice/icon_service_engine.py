@@ -449,7 +449,8 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict: Optional[dict] = None
         if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_term_end_block_height(context):
-            main_prep_as_dict = context.engine.prep.make_prep_tx_result(context)
+            context.engine.prep.save_term(context)
+            main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
         # Save precommit data
         # It will be written to levelDB on commit
