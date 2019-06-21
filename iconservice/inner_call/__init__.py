@@ -17,10 +17,6 @@ from iconservice.base.type_converter import TypeConverter
 from ..iconscore.icon_score_context import IconScoreContext
 
 
-def get_preps_root_hash(prep_ids_in_bytes: bytes) -> bytes:
-    return hashlib.sha3_256(prep_ids_in_bytes).digest()
-
-
 def get_preps(context: IconScoreContext):
     preps: 'dict' = context.engine.prep.make_prep_tx_result()
     if preps is None:
