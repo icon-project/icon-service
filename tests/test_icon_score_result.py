@@ -64,7 +64,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.block = Mock(spec=Block)
         self._mock_context.event_logs = []
         self._mock_context.traces = []
-        self._mock_context.step_counter = step_counter_factory.create(5000000)
+        self._mock_context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE)
         self._mock_context.current_address = Mock(spec=Address)
         self._mock_context.revision = 0
 
@@ -76,9 +76,8 @@ class TestTransactionResult(unittest.TestCase):
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         tx_index = randrange(0, 100)
-        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, to_, 0)
         self._mock_context.msg = Message(from_)
-        IconScoreContext.engine.deploy.invoke = Mock()
 
         params = {
             'version': 3,
@@ -104,13 +103,12 @@ class TestTransactionResult(unittest.TestCase):
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_tx_failure(self, score_invoke):
-        IconScoreContext.engine.deploy.invoke = Mock()
         score_invoke.side_effect = Mock(side_effect=InvalidParamsException("error"))
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         tx_index = randrange(0, 100)
-        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, to_, 0)
         self._mock_context.msg = Message(from_)
         self._mock_context.tx_batch = TransactionBatch()
 
@@ -129,8 +127,9 @@ class TestTransactionResult(unittest.TestCase):
     def test_install_result(self):
         IconScoreContext.engine.deploy.invoke = Mock()
 
-        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        self._mock_context.tx = Transaction(os.urandom(32), 0, from_, 0)
+        from_ = Address(AddressPrefix.EOA, os.urandom(20))
+        to_ = Address(AddressPrefix.EOA, os.urandom(20))
+        self._mock_context.tx = Transaction(os.urandom(32), 0, from_, to_, 0)
         self._mock_context.msg = Message(from_)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
@@ -159,7 +158,7 @@ class TestTransactionResult(unittest.TestCase):
     def test_sample_result(self):
         from_ = Address.from_data(AddressPrefix.EOA, b'from')
         to_ = Address.from_data(AddressPrefix.CONTRACT, b'to')
-        self._mock_context.tx = Transaction(os.urandom(32), 1234, from_, 0)
+        self._mock_context.tx = Transaction(os.urandom(32), 1234, from_, to_, 0)
         self._mock_context.msg = Message(from_)
 
         IconScoreContext.engine.deploy.invoke = Mock()

@@ -76,7 +76,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
         deploy_engine_invoke = Mock()
         IconScoreContext.engine.deploy.invoke = deploy_engine_invoke
 
-        tx_hash1 = bytes.hex(create_tx_hash())
+        tx_hash1: str = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = Address.from_string('cx0000000000000000000000000000000000000000')
         content_type = 'application/zip'
@@ -95,7 +95,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # for StepType.CONTRACT_UPDATE
         to_ = result['txResults'][tx_hash1]['scoreAddress']
-        tx_hash2 = bytes.hex(create_tx_hash())
+        tx_hash2: str = bytes.hex(create_tx_hash())
 
         request2 = create_request([
             ReqData(tx_hash2, from_, to_, 0, 'deploy', data),
@@ -742,7 +742,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         return step_used
 
-    def _assert_step_used(self, step_used: int, request: dict, tx_hash: bytes):
+    def _assert_step_used(self, step_used: int, request: dict, tx_hash: str):
         self.step_counter = IconScoreStepCounter(0, self.step_cost_dict, 5_000_000)
         self.step_counter.reset(step_limit=5_000_000)
         factory = self._inner_task._icon_service_engine._step_counter_factory

@@ -189,13 +189,15 @@ def _patch_service_engine(icon_service_engine, revision):
         prep=PRepEngine(),
         issue=IssueEngine()
     )
+
+    db = icon_service_engine._icx_context_db
     IconScoreContext.storage = ContextStorage(
-        deploy=DeployStorage(icon_service_engine._icx_context_db),
-        fee=FeeStorage(icon_service_engine._icx_context_db),
-        icx=IcxStorage(icon_service_engine._icx_context_db),
-        iiss=IISSStorage(icon_service_engine._icx_context_db),
-        prep=PRepStorage(icon_service_engine._icx_context_db),
-        issue=IssueStorage(icon_service_engine._icx_context_db),
+        deploy=DeployStorage(db),
+        fee=FeeStorage(db),
+        icx=IcxStorage(db),
+        iiss=IISSStorage(db),
+        prep=PRepStorage(db),
+        issue=IssueStorage(db),
         rc=RewardCalcStorage()
     )
 

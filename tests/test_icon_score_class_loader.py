@@ -44,7 +44,7 @@ class TestIconScoreClassLoader(unittest.TestCase):
 
         IconScoreContext.engine = ContextEngine(
             icx=None,
-            deploy=Mock(DeployEngine),
+            deploy=Mock(spec=DeployEngine),
             fee=None,
             iiss=None,
             prep=None,
