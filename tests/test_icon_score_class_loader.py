@@ -21,6 +21,7 @@ import sys
 import unittest
 from unittest.mock import Mock
 
+from iconservice.deploy import DeployEngine, DeployStorage
 from iconservice.deploy.utils import convert_path_to_package_name
 from iconservice.iconscore.icon_score_base import IconScoreBase
 from iconservice.iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -28,6 +29,7 @@ from iconservice.iconscore.icon_score_constant import ATTR_SCORE_GET_API
 from iconservice.iconscore.icon_score_context import ContextContainer, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.utils import ContextEngine, ContextStorage
 from tests import create_address, create_tx_hash, rmtree
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -40,7 +42,24 @@ class TestIconScoreClassLoader(unittest.TestCase):
         self._score_root_path = self._SCORE_ROOT_PATH
         sys.path.append(self._score_root_path)
 
-        IconScoreContext.icon_score_deploy_engine = Mock()
+        IconScoreContext.engine = ContextEngine(
+            icx=None,
+            deploy=Mock(spec=DeployEngine),
+            fee=None,
+            iiss=None,
+            prep=None,
+            issue=None
+        )
+        IconScoreContext.storage = ContextStorage(
+            icx=None,
+            deploy=Mock(spec=DeployStorage),
+            fee=None,
+            iiss=None,
+            prep=None,
+            issue=None,
+            rc=None
+        )
+
         self._context = IconScoreContext(IconScoreContextType.DIRECT)
         ContextContainer._push_context(self._context)
 
