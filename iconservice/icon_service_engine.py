@@ -452,10 +452,10 @@ class IconServiceEngine(ContextContainer):
         if context.revision >= REV_DECENTRALIZATION:
             decentralization_flag = context.engine.prep.term.sequence != -1
             if decentralization_flag:
-                decentralization_flag = context.engine.prep.check_term_end_block_height(context)
+                prep_updated = context.engine.prep.check_term_end_block_height(context)
             else:
-                decentralization_flag = check_decentralization_condition(context)
-            if decentralization_flag:
+                prep_updated = check_decentralization_condition(context)
+            if prep_updated:
                 context.engine.prep.save_term(context)
                 main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
