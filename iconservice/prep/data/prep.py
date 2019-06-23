@@ -79,8 +79,8 @@ class PRep(object):
         self.public_key: bytes = b""
         self.p2p_end_point: str = ""
         # Governance Variables
-        self.incentive_rep: int = 0
-        self.incentive_rep_block_height: int = 0
+        self.irep: int = 0
+        self.irep_block_height: int = 0
 
         # registration time
         self.block_height: int = 0
@@ -131,8 +131,8 @@ class PRep(object):
             self.details,
             self.p2p_end_point,
             self.public_key,
-            self.incentive_rep,
-            self.incentive_rep_block_height,
+            self.irep,
+            self.irep_block_height,
 
             self.block_height,
             self.tx_index,
@@ -156,8 +156,8 @@ class PRep(object):
         prep.details = items[cls.Index.DETAILS]
         prep.p2p_end_point = items[cls.Index.P2P_END_POINT]
         prep.public_key = items[cls.Index.PUBLIC_KEY]
-        prep.incentive_rep = items[cls.Index.IREP]
-        prep.incentive_rep_block_height = items[cls.Index.IREP_BLOCK_HEIGHT]
+        prep.irep = items[cls.Index.IREP]
+        prep.irep_block_height = items[cls.Index.IREP_BLOCK_HEIGHT]
 
         prep.block_height = items[cls.Index.BLOCK_HEIGHT]
         prep.tx_index = items[cls.Index.TX_INDEX]
@@ -182,8 +182,8 @@ class PRep(object):
         # Required items
         prep.p2p_end_point: str = data[ConstantKeys.P2P_END_POINT]
         prep.public_key: bytes = data[ConstantKeys.PUBLIC_KEY]
-        prep.incentive_rep: int = data[ConstantKeys.IREP]
-        prep.incentive_rep_block_height: int = block_height
+        prep.irep: int = data[ConstantKeys.IREP]
+        prep.irep_block_height: int = block_height
 
         # Registration time
         prep.block_height: int = block_height
@@ -202,8 +202,8 @@ class PRep(object):
         self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
 
         if ConstantKeys.IREP in params:
-            self.incentive_rep: int = params[ConstantKeys.IREP]
-            self.incentive_rep_block_height: int = block_height
+            self.irep: int = params[ConstantKeys.IREP]
+            self.irep_block_height: int = block_height
 
     def to_dict(self) -> dict:
         return {
@@ -215,8 +215,8 @@ class PRep(object):
                 ConstantKeys.DETAILS: self.details,
                 ConstantKeys.P2P_END_POINT: self.p2p_end_point,
                 ConstantKeys.PUBLIC_KEY: self.public_key,
-                ConstantKeys.IREP: self.incentive_rep,
-                ConstantKeys.IREP_BLOCK_HEIGHT: self.incentive_rep_block_height
+                ConstantKeys.IREP: self.irep,
+                ConstantKeys.IREP_BLOCK_HEIGHT: self.irep_block_height
             },
             "delegation": {
                 "stake": self.stake,

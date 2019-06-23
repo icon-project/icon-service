@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, IISS_MIN_IREP
 from iconservice.icon_constant import REV_IISS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -104,7 +104,7 @@ class TestIntegratePRep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json",
             ConstantKeys.P2P_END_POINT: "ip",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: 200
+            ConstantKeys.IREP: IISS_MIN_IREP
         }
         self._reg_prep(self._addr_array[0], data)
 
@@ -171,7 +171,7 @@ class TestIntegratePRep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.IREP: 200+i
+                ConstantKeys.IREP: IISS_MIN_IREP+i
             }
             self._reg_prep(self._addr_array[i], data)
 
@@ -206,7 +206,7 @@ class TestIntegratePRep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.IREP: 200+i
+                ConstantKeys.IREP: IISS_MIN_IREP+i
             }
             self._reg_prep(self._addr_array[i], data)
 

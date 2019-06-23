@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import REV_IISS, REV_DECENTRALIZATION
+from iconservice.icon_constant import REV_IISS, REV_DECENTRALIZATION, IISS_MIN_IREP
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -111,7 +111,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: 200
+            ConstantKeys.IREP: IISS_MIN_IREP
         }
         self._reg_prep(self._addr_array[0], reg_data)
 
@@ -148,13 +148,13 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: 200
+            ConstantKeys.IREP: IISS_MIN_IREP
         }
         self._reg_prep(self._addr_array[0], reg_data)
 
         update_data: dict = {
             ConstantKeys.NAME: "name0",
-            ConstantKeys.IREP: 300,
+            ConstantKeys.IREP: IISS_MIN_IREP + 100,
         }
         self._set_prep(self._addr_array[0], update_data)
 
@@ -192,7 +192,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.DETAILS: "json1",
             ConstantKeys.P2P_END_POINT: "ip1",
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: 200
+            ConstantKeys.IREP: IISS_MIN_IREP
         }
         self._reg_prep(self._addr_array[0], reg_data)
         self._unreg_prep(self._addr_array[0])
@@ -226,7 +226,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: 200 + i
+                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(self._addr_array[i], reg_data)
 
@@ -276,7 +276,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: _PREPS_LEN + i
+                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(self._addr_array[i], reg_data)
 

@@ -86,7 +86,7 @@ class GovernanceVariable(Data):
         self.block_height: int = 0
 
         # value
-        self.calculated_incentive_rep: int = 0
+        self.calculated_irep: int = 0
         self.reward_rep: int = 0
 
     def make_key(self) -> bytes:
@@ -95,7 +95,7 @@ class GovernanceVariable(Data):
 
     def make_value(self) -> bytes:
         data = [
-            self.calculated_incentive_rep,
+            self.calculated_irep,
             self.reward_rep
         ]
         return MsgPackForIpc.dumps(data)
@@ -105,13 +105,13 @@ class GovernanceVariable(Data):
         data_list: list = MsgPackForIpc.loads(value)
         obj = GovernanceVariable()
         obj.block_height: int = int.from_bytes(key[2:], DATA_BYTE_ORDER)
-        obj.calculated_incentive_rep: int = data_list[0]
+        obj.calculated_irep: int = data_list[0]
         obj.reward_rep: int = data_list[1]
         return obj
 
     def __str__(self):
         return f"[{self._PREFIX}] " \
-            f"key: {self.block_height}, calculated_incentive_rep: {self.calculated_incentive_rep}, reward_rep: {self.reward_rep}"
+            f"key: {self.block_height}, calculated_irep: {self.calculated_irep}, reward_rep: {self.reward_rep}"
 
 
 class BlockProduceInfoData(Data):

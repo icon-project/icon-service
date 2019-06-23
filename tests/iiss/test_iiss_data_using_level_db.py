@@ -40,7 +40,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
 
         self.iiss_gv: 'GovernanceVariable' = GovernanceVariable()
         self.iiss_gv.block_height = 20
-        self.iiss_gv.calculated_incentive_rep = 30
+        self.iiss_gv.calculated_irep = 30
         self.iiss_gv.reward_rep = 10_000
 
         self.iiss_block_produce_info: 'BlockProduceInfoData' = BlockProduceInfoData()
@@ -114,7 +114,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_gv: 'GovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
-        self.assertEqual(self.iiss_gv.calculated_incentive_rep, ret_gv.calculated_incentive_rep)
+        self.assertEqual(self.iiss_gv.calculated_irep, ret_gv.calculated_irep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
 
     def test_iiss_block_produce_info_data(self):
@@ -195,7 +195,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         if self.debug:
             print("===IISS_GOVERNANCE_VARIABLE===")
             print(f"block_height: {self.iiss_gv.block_height}")
-            print(f"calculated incentive_rep: {self.iiss_gv.calculated_incentive_rep}")
+            print(f"calculated irep: {self.iiss_gv.calculated_irep}")
             print(f"reward_rep: {self.iiss_gv.reward_rep}")
             print(f"key: {key}")
             print(f"value: {value}")
@@ -287,7 +287,7 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         ret_gv: 'GovernanceVariable' = self.iiss_gv.from_bytes(key, value)
 
         self.assertEqual(self.iiss_gv.block_height, ret_gv.block_height)
-        self.assertEqual(self.iiss_gv.calculated_incentive_rep, ret_gv.calculated_incentive_rep)
+        self.assertEqual(self.iiss_gv.calculated_irep, ret_gv.calculated_irep)
         self.assertEqual(self.iiss_gv.reward_rep, ret_gv.reward_rep)
 
         key: bytes = self.iiss_block_produce_info.make_key()

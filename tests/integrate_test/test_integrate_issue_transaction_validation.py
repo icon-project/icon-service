@@ -51,7 +51,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
     def setUp(self):
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-        default_icon_config[ConfigKey.GOVERNANCE_VARIABLE]["irep"] = 100_000_000_000
+        default_icon_config[ConfigKey.IREP] = 100_000_000_000
         super().setUp()
         self._update_governance()
         self._set_revision(REV_IISS)

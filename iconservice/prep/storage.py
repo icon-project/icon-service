@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 class Storage(StorageBase):
     PREFIX: bytes = b'prep'
-    TERMS_KEY: bytes = PREFIX + b'terms'
+    TERM_KEY: bytes = b'term'
 
     def get_prep(self, context: 'IconScoreContext', address: 'Address') -> 'PRep':
         key: bytes = PRep.make_key(address)
@@ -54,12 +54,12 @@ class Storage(StorageBase):
             for _, value in it:
                 yield PRep.from_bytes(value)
 
-    def put_terms(self, context: 'IconScoreContext', data: list):
+    def put_term(self, context: 'IconScoreContext', data: list):
         value: bytes = MsgPackForDB.dumps(data)
-        self._db.put(context, self.TERMS_KEY, value)
+        self._db.put(context, self.TERM_KEY, value)
 
-    def get_terms(self, context: 'IconScoreContext') -> Optional[list]:
-        value: bytes = self._db.get(context, self.TERMS_KEY)
+    def get_term(self, context: 'IconScoreContext') -> Optional[list]:
+        value: bytes = self._db.get(context, self.TERM_KEY)
         if value:
             return MsgPackForDB.loads(value)
         return None
