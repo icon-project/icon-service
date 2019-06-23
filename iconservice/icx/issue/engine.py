@@ -12,12 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, Tuple
+
+from typing import TYPE_CHECKING, Tuple, Optional
 
 from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS, Address
 from ...base.ComponentBase import EngineBase
-from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
+from ...base.exception import InvalidParamsException
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, IISS_ANNUAL_BLOCK
 from ...iconscore.icon_score_event_log import EventLog
 from ...iiss.issue_formula import IssueFormula
 
@@ -30,16 +32,16 @@ class Engine(EngineBase):
     def __init__(self):
         super().__init__()
 
-        self._formula: 'IssueFormula' = None
+        self._formula: Optional['IssueFormula'] = None
 
     def open(self, context: 'IconScoreContext'):
         self._formula = IssueFormula()
 
     def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, int]:
-        incentive_rep: int = context.engine.prep.term.incentive_rep
+        irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             "prep": {
-                "incentive": incentive_rep,
+                "incentive": irep,
                 "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
                 "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
             }
@@ -104,3 +106,10 @@ class Engine(EngineBase):
                                                       regulator.remain_over_issued_icx,
                                                       regulator.corrected_icx_issue_amount)
         context.event_logs.append(total_issue_event_log)
+
+    def validate_total_supply_limit(self, context: 'IconScoreContext', expected_irep: int):
+        beta: int = self._formula.get_limit_inflation_beta(expected_irep)
+
+        # Prevent irep from causing to issue more than 10% of total supply for a year
+        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply // 10:
+            raise InvalidParamsException(f"Out of range: expected irep")

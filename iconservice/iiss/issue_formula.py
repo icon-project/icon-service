@@ -29,7 +29,9 @@ class IssueFormula(object):
     def __init__(self,
                  prep_count: int = PREP_COUNT,
                  sub_prep_count: int = PREP_MAX_PREPS):
-        self._handler: dict = {'prep': self._handle_icx_issue_formula_for_prep}
+        self._handler: dict = {
+            'prep': self._handle_icx_issue_formula_for_prep
+        }
         self._prep_count: int = prep_count
         self._sub_prep_count: int = sub_prep_count
 
@@ -58,3 +60,9 @@ class IssueFormula(object):
         beta_2: int = calculated_i_rep * self._sub_prep_count
         beta_3: int = reward_rate * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
         return beta_1 + beta_2 + beta_3
+
+    def get_limit_inflation_beta(self, incentive: int) -> int:
+        calculated_i_rep: int = self.calculate_i_rep_per_block_contributor(incentive)
+        beta_1: int = calculated_i_rep * self._prep_count
+        beta_2: int = calculated_i_rep * self._sub_prep_count
+        return beta_1 + beta_2

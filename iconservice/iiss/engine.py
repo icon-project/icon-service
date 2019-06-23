@@ -385,13 +385,13 @@ class Engine(EngineBase):
                                                        current_total_supply,
                                                        current_total_prep_delegated)
 
-        incentive_rep: int = context.engine.prep.term.incentive_rep
-        calculated_incentive_rep: int = IssueFormula.calculate_i_rep_per_block_contributor(incentive_rep)
+        irep: int = context.engine.prep.term.irep
+        calculated_irep: int = IssueFormula.calculate_i_rep_per_block_contributor(irep)
         reward_prep.reward_rate = reward_rep
         context.storage.iiss.put_reward_prep(context, reward_prep)
 
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(precommit_data.block.height,
-                                                                              calculated_incentive_rep,
+                                                                              calculated_irep,
                                                                               reward_rep)
         context.storage.rc.put(precommit_data.rc_block_batch, data)
 

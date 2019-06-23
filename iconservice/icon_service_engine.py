@@ -134,7 +134,7 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
-                                     conf[ConfigKey.GOVERNANCE_VARIABLE])
+                                     conf[ConfigKey.IREP])
 
         last_block: 'Block' = IconScoreContext.storage.icx.last_block
         self._precommit_data_manager.last_block = last_block
@@ -168,7 +168,7 @@ class IconServiceEngine(ContextContainer):
                                 reward_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
-                                governance_variable: dict):
+                                irep: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -176,7 +176,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.iiss.open(context, iiss_db_root_path)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
-                                          governance_variable)
+                                          irep)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)
