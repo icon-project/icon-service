@@ -35,7 +35,8 @@ class Term(object):
         self._period: int = -1
         self._main_preps: List['PRep'] = []
         self._sub_preps: List['PRep'] = []
-        self._incentive_rep: int = -1
+        self._irep: int = -1
+        self._total_supply: int = -1
 
     @property
     def sequence(self) -> int:
@@ -58,20 +59,25 @@ class Term(object):
         return self._sub_preps
 
     @property
-    def incentive_rep(self) -> int:
-        return self._incentive_rep
+    def irep(self) -> int:
+        return self._irep
 
-    def load(self, context: 'IconScoreContext', term_period: int, governance_variable: dict):
-        data: Optional[list] = context.storage.prep.get_terms(context)
+    @property
+    def total_supply(self) -> int:
+        return self._total_supply
+
+    def load(self, context: 'IconScoreContext', term_period: int, irep: int):
+        data: Optional[list] = context.storage.prep.get_term(context)
         if data:
             version = data[0]
             self._sequence = data[1]
             self._end_block_height = data[2]
             self._main_preps, self._sub_preps = self._make_preps(context, data[3])
-            self._incentive_rep = data[4]
+            self._irep = data[4]
         else:
             self._period = term_period
-            self._incentive_rep = governance_variable[ConstantKeys.IREP]
+            self._irep = irep
+            self._total_supply = context.total_supply
 
     def _make_preps(self, context: 'IconScoreContext', data: list) -> tuple:
         prep_list: list = []
@@ -87,22 +93,25 @@ class Term(object):
              context: 'IconScoreContext',
              current_block_height: int,
              preps: List['PRep'],
-             incentive_rep: int):
+             irep: int,
+             total_supply: int):
 
         data: list = [
             self._VERSION,
             self._sequence + 1,
             current_block_height + self._period,
             self._make_prep_for_db(preps),
-            incentive_rep
+            irep,
+            total_supply
         ]
-        context.storage.prep.put_terms(context, data)
+        context.storage.prep.put_term(context, data)
 
         self._sequence += 1
         self._end_block_height = current_block_height + self._period
         self._main_preps = preps[:PREP_COUNT]
         self._sub_preps = preps[PREP_COUNT: PREP_MAX_PREPS]
-        self._incentive_rep = incentive_rep
+        self._irep = irep
+        self._total_supply = total_supply
 
     def _make_prep_for_db(self, preps: List['PRep']) -> list:
         data: list = []
