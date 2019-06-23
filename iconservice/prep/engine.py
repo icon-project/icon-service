@@ -128,7 +128,7 @@ class Engine(EngineBase):
         # Create a PRep object and assign delegated amount from account to prep
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
         prep.delegated = account.delegated_amount
-        self._validate_limit_irep(context, prep)
+        self._validate_irep(context, prep)
 
         # Update preps in context
         context.preps.add(prep)
@@ -226,7 +226,7 @@ class Engine(EngineBase):
         prev_irep: int = prep.irep
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
         prep.set(ret_params, context.block.height)
-        self._validate_limit_irep(context, prep, prev_irep)
+        self._validate_irep(context, prep, prev_irep)
 
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
@@ -234,18 +234,21 @@ class Engine(EngineBase):
         self._create_tx_result(context, 'PRepSet(Address)', address)
 
     @classmethod
-    def _validate_limit_irep(cls, context: 'IconScoreContext', prep: 'PRep', prev_irep: int = None):
-        prep_irep: int = prep.irep
-        if prep_irep < IISS_MIN_IREP:
-            raise InvalidParamsException(f"Invalid irep {prep_irep}")
+    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep', prev_irep: int = None):
+        irep: int = prep.irep
+        if irep < IISS_MIN_IREP:
+            raise InvalidParamsException(f"Invalid irep: {irep}")
 
         if prev_irep is None:
             return
 
-        if prev_irep * 0.8 > prep_irep or prep_irep > prev_irep * 1.2:
-            raise InvalidParamsException(f'Out of boundary: {prep_irep}, {prev_irep}')
+        min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
+        max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
 
-        context.engine.issue.validate_limit_total_supply(context, prep_irep)
+        if min_irep <= irep <= max_irep:
+            context.engine.issue.validate_total_supply_limit(context, irep)
+
+        raise InvalidParamsException(f'irep out of range: {irep}, {prev_irep}')
 
     def handle_unregister_prep(self, context: 'IconScoreContext', params: dict):
         """Unregister a P-Rep

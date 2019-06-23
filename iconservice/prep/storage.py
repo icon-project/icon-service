@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 class Storage(StorageBase):
     PREFIX: bytes = b'prep'
-    TERM_KEY: bytes = PREFIX + b'term'
+    TERM_KEY: bytes = b'term'
 
     def get_prep(self, context: 'IconScoreContext', address: 'Address') -> 'PRep':
         key: bytes = PRep.make_key(address)

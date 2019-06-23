@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, Optional
 
 from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS, Address
@@ -32,7 +32,7 @@ class Engine(EngineBase):
     def __init__(self):
         super().__init__()
 
-        self._formula: 'IssueFormula' = None
+        self._formula: Optional['IssueFormula'] = None
 
     def open(self, context: 'IconScoreContext'):
         self._formula = IssueFormula()
@@ -107,8 +107,9 @@ class Engine(EngineBase):
                                                       regulator.corrected_icx_issue_amount)
         context.event_logs.append(total_issue_event_log)
 
-    def validate_limit_total_supply(self, context: 'IconScoreContext', expect_irep: int):
-        beta: int = self._formula.get_limit_inflation_beta(expect_irep)
-        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * 0.1:
-            raise InvalidParamsException("Out of Boundary : expected irep")
+    def validate_total_supply_limit(self, context: 'IconScoreContext', expected_irep: int):
+        beta: int = self._formula.get_limit_inflation_beta(expected_irep)
 
+        # Prevent irep from causing to issue more than 10% of total supply for a year
+        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply // 10:
+            raise InvalidParamsException(f"Out of range: expected irep")
