@@ -42,8 +42,7 @@ class IconBuiltinScoreLoader(object):
         return os.path.join(root_path, 'builtin_scores')
 
     @staticmethod
-    def load_builtin_scores(context: 'IconScoreContext', builtin_score_owner_str: str):
-        builtin_score_owner = Address.from_string(builtin_score_owner_str)
+    def load_builtin_scores(context: 'IconScoreContext', builtin_score_owner: 'Address'):
         for score_name, value in BUILTIN_SCORE_ADDRESS_MAPPER.items():
             score_address = Address.from_string(value)
 
