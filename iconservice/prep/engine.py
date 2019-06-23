@@ -30,7 +30,7 @@ from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
 from ..precommit_data_manager import PrecommitData
-from ..icon_constant import PrepResultState
+from ..icon_constant import PrepResultState, IISS_MIN_IREP
 
 if TYPE_CHECKING:
     from . import PRepStorage
@@ -69,10 +69,10 @@ class Engine(EngineBase):
 
         Logger.debug("PRepEngine.__init__() end")
 
-    def open(self, context: 'IconScoreContext', term_period: int, governance_variable: dict) -> None:
+    def open(self, context: 'IconScoreContext', term_period: int, irep: int) -> None:
         self.preps = PRepContainer()
         self.preps.load(context)
-        self.term.load(context, term_period, governance_variable)
+        self.term.load(context, term_period, irep)
 
     def invoke(self, context: 'IconScoreContext', data: dict) -> None:
         method: str = data['method']
@@ -91,7 +91,7 @@ class Engine(EngineBase):
 
     def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         """If the current P-Rep term is over, update term with new information
-        which has P-Rep list(address, delegated amount), start height, end height, incentive_rep
+        which has P-Rep list(address, delegated amount), start height, end height, irep
 
         :param context:
         :param precommit_data:
@@ -128,6 +128,7 @@ class Engine(EngineBase):
         # Create a PRep object and assign delegated amount from account to prep
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
         prep.delegated = account.delegated_amount
+        self._validate_irep(context, prep)
 
         # Update preps in context
         context.preps.add(prep)
@@ -140,12 +141,6 @@ class Engine(EngineBase):
         self._put_reg_prep_for_rc_data(context, address)
 
         self._create_tx_result(context, 'PRepRegistered(Address)', address)
-
-    @classmethod
-    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep'):
-        irep: int = context.engine.prep.term.incentive_rep
-        if prep.incentive_rep > irep * 1.2 or prep.incentive_rep < irep * 0.8:
-            raise Exception
 
     @classmethod
     def _create_tx_result(cls, context: 'IconScoreContext', event_signature: str, address: 'Address'):
@@ -193,7 +188,11 @@ class Engine(EngineBase):
         return prep_as_dict
 
     def save_term(self, context: 'IconScoreContext'):
-        self.term.save(context, context.block.height, context.preps.get_preps(), self.term.incentive_rep)
+        self.term.save(context,
+                       context.block.height,
+                       context.preps.get_preps(),
+                       self.term.irep,
+                       context.total_supply)
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns registration information of a P-Rep
@@ -224,17 +223,34 @@ class Engine(EngineBase):
         prep: 'PRep' = context.preps.get(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: str{address}")
-
+        prev_irep: int = prep.irep
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
         prep.set(ret_params, context.block.height)
+        self._validate_irep(context, prep, prev_irep)
 
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
 
         self._create_tx_result(context, 'PRepSet(Address)', address)
 
-    def handle_unregister_prep(
-            self, context: 'IconScoreContext', params: dict):
+    @classmethod
+    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep', prev_irep: int = None):
+        irep: int = prep.irep
+        if irep < IISS_MIN_IREP:
+            raise InvalidParamsException(f"Invalid irep: {irep}")
+
+        if prev_irep is None:
+            return
+
+        min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
+        max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
+
+        if min_irep <= irep <= max_irep:
+            context.engine.issue.validate_total_supply_limit(context, irep)
+
+        raise InvalidParamsException(f'irep out of range: {irep}, {prev_irep}')
+
+    def handle_unregister_prep(self, context: 'IconScoreContext', params: dict):
         """Unregister a P-Rep
 
         :param context:

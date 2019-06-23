@@ -17,6 +17,7 @@ import os
 from typing import TYPE_CHECKING
 
 from iconcommons import Logger
+
 from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_path
 from ..base.ComponentBase import EngineBase
@@ -118,8 +119,11 @@ class Engine(EngineBase):
             raise InvalidParamsException(f'tx_params is None: 0x{tx_hash.hex()}')
 
         score_address: 'Address' = tx_params.score_address
+        tmp_current = context.current_address
+        context.current_address = score_address
         self._score_deploy(context, tx_params)
         context.storage.deploy.update_score_info(context, score_address, tx_hash)
+        context.current_address = tmp_current
 
     def _score_deploy(self, context: 'IconScoreContext', tx_params: 'IconScoreDeployTXParams'):
         """

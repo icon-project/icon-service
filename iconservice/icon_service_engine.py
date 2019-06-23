@@ -18,9 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-from iconservice.icx.issue.regulator import Regulator
-from iconservice.inner_call import inner_call
-from iconservice.utils.hashing.hash_generator import HashGenerator
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -51,13 +49,16 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
+from .icx.issue.regulator import Regulator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
+from .inner_call import inner_call
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
 from .utils import sha3_256, int_to_bytes, is_flags_on, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
+from .utils.hashing.hash_generator import HashGenerator
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
@@ -134,12 +135,13 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
-                                     conf[ConfigKey.GOVERNANCE_VARIABLE])
+                                     conf[ConfigKey.IREP])
 
         last_block: 'Block' = IconScoreContext.storage.icx.last_block
         self._precommit_data_manager.last_block = last_block
 
-        self._load_builtin_scores(context, conf[ConfigKey.BUILTIN_SCORE_OWNER])
+        self._load_builtin_scores(
+            context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
         self._init_global_value_by_governance_score(context)
 
     def _init_component_context(self):
@@ -168,7 +170,7 @@ class IconServiceEngine(ContextContainer):
                                 reward_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
-                                governance_variable: dict):
+                                irep: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -176,7 +178,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.iiss.open(context, iiss_db_root_path)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
-                                          governance_variable)
+                                          irep)
         IconScoreContext.engine.issue.open(context)
 
         IconScoreContext.storage.deploy.open(context)
@@ -216,13 +218,17 @@ class IconServiceEngine(ContextContainer):
                 make_flag |= flag
         return make_flag
 
-    def _load_builtin_scores(self, context: 'IconScoreContext', builtin_owner: 'str'):
+    def _load_builtin_scores(self, context: 'IconScoreContext', builtin_score_owner: 'Address'):
+        current_address: 'Address' = context.current_address
+        context.current_address = GOVERNANCE_SCORE_ADDRESS
+
         try:
             self._push_context(context)
-            IconBuiltinScoreLoader.load_builtin_scores(
-                context, builtin_owner)
+            IconBuiltinScoreLoader.load_builtin_scores(context, builtin_score_owner)
         finally:
             self._pop_context()
+
+        context.current_address = current_address
 
     def _init_global_value_by_governance_score(self, context: 'IconScoreContext'):
         """Initialize step_counter_factory with parameters

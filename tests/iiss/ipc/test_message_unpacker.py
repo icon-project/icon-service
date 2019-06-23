@@ -18,7 +18,7 @@ import unittest
 
 from iconservice.base.address import AddressPrefix
 from iconservice.iiss.reward_calc.ipc.message import *
-from iconservice.iiss.reward_calc.ipc import MessageUnpacker
+from iconservice.iiss.reward_calc.ipc.message_unpacker import MessageUnpacker
 from iconservice.utils import int_to_bytes
 
 

@@ -118,7 +118,6 @@ class ConfigKey:
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
-    GOVERNANCE_VARIABLE = "governanceVariable"
     IREP = 'irep'
 
     # IISS VARIABLE
@@ -200,6 +199,7 @@ PREP_MAX_PREPS = 100
 PREP_COUNT = 22
 
 IISS_MAX_REWARD_RATE = 10_000
+IISS_MIN_IREP = 10_000
 IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000

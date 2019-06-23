@@ -43,7 +43,7 @@ class TestRcDataStorage(unittest.TestCase):
 
         self.dummy_gv = GovernanceVariable()
         self.dummy_gv.block_height = dummy_block_height
-        self.dummy_gv.calculated_incentive_rep = 1
+        self.dummy_gv.calculated_irep = 1
         self.dummy_gv.reward_rep = 1000
 
         self.dummy_prep = PRepsData()

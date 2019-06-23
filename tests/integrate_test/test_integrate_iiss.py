@@ -22,7 +22,7 @@ from copy import deepcopy
 from iconservice import Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS, IISS_MIN_IREP
 from tests import create_address, create_tx_hash
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -84,7 +84,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"details{i}",
                 ConstantKeys.P2P_END_POINT: f"p2pEndPoint{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: 200 + i,
+                ConstantKeys.IREP: IISS_MIN_IREP + i,
             }
             self._reg_prep(create_address(), reg_data, REV_IISS)
 
@@ -121,7 +121,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: 200 + i
+                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(self._addr_array[i + 10], reg_data, REV_IISS)
 
