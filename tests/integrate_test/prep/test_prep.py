@@ -661,7 +661,11 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(_MAIN_PREPS_LEN, len(org_response_of_main_prep_list["preps"]))
 
         for i in range(10):
-            prev_block, tx_results = self._make_and_req_block([], prev_block_generator=self._addr_array[0])
+            prev_block, tx_results = self._make_and_req_block(
+                [],
+                prev_block_generator=self._addr_array[0],
+                prev_block_validators=[self._addr_array[1], self._addr_array[2]])
+
             self._write_precommit_state(prev_block)
 
         query_request = {
@@ -690,7 +694,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "data": {
                 "method": "getPRep",
                 "params": {
-                    "address": str(self._addr_array[1])
+                    "address": str(self._addr_array[3])
                 }
             }
         }

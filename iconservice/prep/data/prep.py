@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Tuple
 from ...base.address import Address
 from ...base.exception import InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_DEFER_PERIOD
+from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -112,7 +112,8 @@ class PRep(object):
         return self._validated_blocks * 100 // self._total_blocks
 
     def is_low_productivity(self) -> bool:
-        if self._total_blocks <= PENALTY_DEFER_PERIOD:
+        # A grace period without measuring productivity
+        if self._total_blocks <= PENALTY_GRACE_PERIOD:
             return False
 
         return self.productivity < 85

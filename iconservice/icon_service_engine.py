@@ -489,7 +489,7 @@ class IconServiceEngine(ContextContainer):
         if prev_block_generator:
             validates.add(prev_block_generator)
         if prev_block_validators:
-            validates.add(prev_block_validators)
+            validates.update(prev_block_validators)
 
         main_preps: list = context.engine.prep.term.main_preps
         for prep in main_preps:
