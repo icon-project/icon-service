@@ -17,7 +17,6 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional
 
 from iconcommons.logger import Logger
-
 from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -26,11 +25,11 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
+from ..icon_constant import PrepResultState, IISS_MIN_IREP
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
 from ..precommit_data_manager import PrecommitData
-from ..icon_constant import PrepResultState, IISS_MIN_IREP
 
 if TYPE_CHECKING:
     from . import PRepStorage
@@ -247,6 +246,7 @@ class Engine(EngineBase):
 
         if min_irep <= irep <= max_irep:
             context.engine.issue.validate_total_supply_limit(context, irep)
+            return
 
         raise InvalidParamsException(f'irep out of range: {irep}, {prev_irep}')
 
@@ -346,13 +346,18 @@ class Engine(EngineBase):
         total_delegated: int = 0
         prep_list: list = []
 
-        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1) - 1
-        if start_index < 0:
-            start_index = 0
+        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+        if start_index <= 0:
+            raise InvalidParamsException("Invalid params: startRanking")
 
         end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
+        if end_index <= 0:
+            raise InvalidParamsException("Invalid params: endRanking")
 
-        for i in range(start_index, end_index):
+        if start_index > end_index:
+            raise InvalidParamsException("Invalid params: reverse")
+
+        for i in range(start_index -1, end_index):
             prep: 'PRep' = preps[i]
 
             item = {
@@ -363,6 +368,7 @@ class Engine(EngineBase):
             total_delegated += prep.delegated
 
         return {
+            "startRanking": start_index,
             "totalDelegated": total_delegated,
             "preps": prep_list
         }
