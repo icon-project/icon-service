@@ -455,7 +455,8 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict: Optional[dict] = None
         if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_term_end_block_height(context):
-            context.engine.prep.save_term(context)
+            weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
+            context.engine.prep.save_term(context, weighted_average_of_irep)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
         # Save precommit data

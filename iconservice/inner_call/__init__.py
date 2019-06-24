@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
-
 from ..base.type_converter import TypeConverter
 from ..iconscore.icon_score_context import IconScoreContext
 
@@ -26,6 +24,7 @@ def get_preps(context: IconScoreContext):
     block = context.storage.icx.last_block
     preps['blockHeight'] = 0 if block is None else block
     preps.pop('state', None)
+    preps.pop('irep', None)
 
     TypeConverter.convert_type_reverse(preps)
     result = {

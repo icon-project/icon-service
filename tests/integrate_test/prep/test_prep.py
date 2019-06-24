@@ -503,3 +503,50 @@ class TestIntegratePrep(TestIntegrateBase):
         response_of_main_prep_list = self._query(query_request)
         org_response_of_main_prep_list["preps"][0] = {"address": last_addr, "delegated": _AMOUNT_DELEGATE}
         self.assertEqual(org_response_of_main_prep_list["preps"], response_of_main_prep_list["preps"])
+
+    def test_weighted_average_of_irep(self):
+        """
+        Scenario
+        1. generates preps and delegates 10000 to 10 preps
+        2. sets revision to REV_DECENTRALIZATION and generates main and sub preps
+        3. check wighted average of irep correct
+        :return:
+        """
+        _PREPS_LEN = 200
+        _MAIN_PREPS_LEN = 22
+        _AMOUNT_DELEGATE = 10000
+        self._update_governance()
+        self._set_revision(REV_IISS)
+        self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        buf_total_irep = 0
+        # generate preps
+        for i in range(_PREPS_LEN):
+            if i < 10:
+                buf_total_irep += IISS_MIN_IREP + i
+            reg_data: dict = {
+                ConstantKeys.NAME: f"name{i}",
+                ConstantKeys.EMAIL: f"email{i}",
+                ConstantKeys.WEBSITE: f"website{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
+                ConstantKeys.IREP: IISS_MIN_IREP + i
+            }
+            self._reg_prep(self._addr_array[i], reg_data)
+
+        # stake
+        self._stake(self._admin, _AMOUNT_DELEGATE * 10)
+        delegations = []
+        for i in range(10):
+            delegations.append({
+                "address": str(self._addr_array[i]),
+                "value": hex(_AMOUNT_DELEGATE)
+            })
+        self._delegate(self._admin, delegations)
+
+        # set revision to REV_DECENTRALIZATION
+        tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                      {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
+        block, invoke_response, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
+        self.assertEqual(_AMOUNT_DELEGATE * buf_total_irep // (_AMOUNT_DELEGATE * 10), main_prep_as_dict['irep'])
