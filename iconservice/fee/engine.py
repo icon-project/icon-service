@@ -19,13 +19,13 @@ from decimal import Decimal
 from enum import IntEnum
 from typing import List, Dict, Optional
 
-from iconservice.icon_constant import ICX_IN_LOOP
 from .deposit import Deposit
 from .deposit_meta import DepositMeta
 from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
+from ..icon_constant import ICX_IN_LOOP
 from ..iconscore.icon_score_event_log import EventLogEmitter
 
 if typing.TYPE_CHECKING:

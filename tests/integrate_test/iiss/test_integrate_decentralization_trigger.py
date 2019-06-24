@@ -19,7 +19,7 @@ from unittest.mock import patch
 from iconservice.base.address import Address, GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS,\
+from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
     IconScoreContextType, IISS_MIN_IREP, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address, create_block_hash
