@@ -13,15 +13,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from enum import unique, IntEnum
 from struct import Struct
-from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
 from typing import Optional
+
+from .exception import InvalidParamsException
+from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
+from ..utils.msgpack_for_db import MsgPackForDB
+
+
+@unique
+class BlockVersion(IntEnum):
+    STRUCT = 0
+    # change to msg pack and add 'step_used' field
+    MSG_PACK = 1
 
 
 class Block(object):
     """Block Information included in IconScoreContext
     """
-    _VERSION = 0
+    _VERSION = BlockVersion.MSG_PACK
+    _STRUCT_PACKED_BYTES_SIZE = 129
     # leveldb account value structure (bigendian, 1 + 32 + 32 + 32 + 32 bytes)
     # version(1)
     # | height(DEFAULT_BYTE_SIZE)
@@ -31,8 +43,12 @@ class Block(object):
 
     _struct = Struct(f'>B{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s{DEFAULT_BYTE_SIZE}s')
 
-    def __init__(self, block_height: int, block_hash: bytes,
-                 timestamp: int, prev_hash: Optional[bytes]) -> None:
+    def __init__(self,
+                 block_height: int,
+                 block_hash: bytes,
+                 timestamp: int,
+                 prev_hash: Optional[bytes],
+                 step_used: Optional[int]) -> None:
         """Constructor
 
         :param block_height: block height
@@ -45,6 +61,7 @@ class Block(object):
         # unit: microsecond
         self._timestamp = timestamp
         self._prev_hash = prev_hash
+        self._step_used = step_used
 
     @property
     def height(self) -> int:
@@ -62,13 +79,22 @@ class Block(object):
     def prev_hash(self) -> bytes:
         return self._prev_hash
 
+    @property
+    def step_used(self) -> Optional[int]:
+        return self._step_used
+
     @staticmethod
     def from_dict(params: dict):
         block_height = params.get('blockHeight')
         block_hash = params.get('blockHash')
         timestamp = params.get('timestamp', 0)
         prev_hash = params.get('prevBlockHash', b'\x00' * 32)
-        return Block(block_height, block_hash, timestamp, prev_hash)
+
+        return Block(block_height=block_height,
+                     block_hash=block_hash,
+                     timestamp=timestamp,
+                     prev_hash=prev_hash,
+                     step_used=0)
 
     @staticmethod
     def from_block(block: 'Block'):
@@ -76,10 +102,18 @@ class Block(object):
         block_hash = block.hash
         timestamp = block.timestamp
         prev_hash = block.prev_hash
-        return Block(block_height, block_hash, timestamp, prev_hash)
+        step_used = block.step_used
+        return Block(block_height, block_hash, timestamp, prev_hash, step_used)
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'Block':
+        if len(buf) == Block._STRUCT_PACKED_BYTES_SIZE and buf[0] == BlockVersion.STRUCT:
+            return Block._from_struct_packed_bytes(buf)
+        else:
+            return Block._from_msg_packed_bytes(buf)
+
+    @staticmethod
+    def _from_struct_packed_bytes(buf: bytes) -> 'Block':
         """Create Account object from bytes data
 
         :param buf: (bytes) bytes data including Account information
@@ -100,32 +134,36 @@ class Block(object):
             byte_prev_hash = None
         prev_block_hash = byte_prev_hash
 
-        block = Block(block_height, block_hash, timestamp, prev_block_hash)
+        # todo: consider using 0 as a step_used (not None)
+        block = Block(block_height, block_hash, timestamp, prev_block_hash, None)
         return block
 
+    @staticmethod
+    def _from_msg_packed_bytes(buf: bytes) -> 'Block':
+        data: list = MsgPackForDB.loads(buf)
+        version: int = data[0]
+
+        assert version <= Block._VERSION
+
+        if version != BlockVersion.MSG_PACK:
+            raise InvalidParamsException(f"Invalid block version: {version}")
+
+        return Block(block_height=data[1],
+                     block_hash=data[2],
+                     timestamp=data[3],
+                     prev_hash=data[4],
+                     step_used=data[5])
+
     def to_bytes(self) -> bytes:
-        """Convert block object to bytes
-
-        :return: data including information of block object
-        """
-
-        byteorder = DATA_BYTE_ORDER
-        # for extendability
-        block_height_bytes = self._height.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
-        block_hash_bytes = self._hash
-        timestamp_bytes = self._timestamp.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
-
-        tmp_prev_hash = self._prev_hash
-        if tmp_prev_hash is None:
-            tmp_prev_hash = bytes(DEFAULT_BYTE_SIZE)
-        prev_block_hash_bytes = tmp_prev_hash
-
-        return Block._struct.pack(
-            self._VERSION,
-            block_height_bytes,
-            block_hash_bytes,
-            timestamp_bytes,
-            prev_block_hash_bytes)
+        data = [
+            BlockVersion.MSG_PACK,
+            self._height,
+            self._hash,
+            self._timestamp,
+            self._prev_hash,
+            self._step_used
+        ]
+        return MsgPackForDB.dumps(data)
 
     def __bytes__(self) -> bytes:
         """operator bytes() overriding
@@ -138,8 +176,10 @@ class Block(object):
         hash_hex = 'None' if self._hash is None else f'0x{self._hash.hex()}'
         prev_hash_hex = \
             'None' if self._prev_hash is None else f'0x{self._prev_hash.hex()}'
+        step_used = 'None' if self._step_used is None else self._step_used
 
         return f'height({self._height}) ' \
             f'hash({hash_hex}) ' \
             f'timestamp({self._timestamp}) ' \
-            f'prev_hash({prev_hash_hex})'
+            f'prev_hash({prev_hash_hex})' \
+            f'step_used({step_used})' \
