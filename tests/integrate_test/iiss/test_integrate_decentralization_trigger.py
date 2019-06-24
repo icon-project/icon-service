@@ -21,7 +21,7 @@ from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
     IconScoreContextType, IISS_MIN_IREP, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from tests import create_address, create_block_hash, create_tx_hash
+from tests import create_address, create_block_hash
 from tests.integrate_test import create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
 
@@ -41,52 +41,6 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         self._update_governance()
         self._main_preps = self._addr_array[:22]
         self._set_revision(REV_IISS)
-
-    def _genesis_invoke(self) -> tuple:
-        tx_hash = create_tx_hash()
-        timestamp_us = create_timestamp()
-        self.initial_total_supply = 801_460_000 * self._icx_factor
-        request_params = {
-            'txHash': tx_hash,
-            'version': self._version,
-            'timestamp': timestamp_us
-        }
-
-        tx = {
-            'method': 'icx_sendTransaction',
-            'params': request_params,
-            'genesisData': {
-                "accounts": [
-                    {
-                        "name": "genesis",
-                        "address": self._genesis,
-                        "balance": 800_460_000 * self._icx_factor
-                    },
-                    {
-                        "name": "fee_treasury",
-                        "address": self._fee_treasury,
-                        "balance": 0
-                    },
-                    {
-                        "name": "_admin",
-                        "address": self._admin,
-                        "balance": 1_000_000 * self._icx_factor
-                    }
-                ]
-            },
-        }
-
-        block_hash = create_block_hash()
-        block = Block(self._block_height, block_hash, timestamp_us, None)
-        invoke_response: tuple = self.icon_service_engine.invoke(
-            block,
-            [tx]
-        )
-        self.icon_service_engine.commit(block.height, block.hash, None)
-        self._block_height += 1
-        self._prev_block_hash = block_hash
-
-        return invoke_response
 
     def _make_and_req_block(self, tx_list: list,
                             block_height: int = None,
@@ -141,11 +95,11 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         return tx
 
     def test_decentralization_trigger(self):
-        _MINIMUM_DELEGATE = self.initial_total_supply // 1000 * 2
+        total_supply = 2_000_000 * 10**18
+        _DELEGATE_AMOUNT = total_supply // 1000 * 3
         _TERM = 10
         # distribute icx
-        minimum_delegate = _MINIMUM_DELEGATE
-        balance: int = minimum_delegate * 10
+        balance: int = _DELEGATE_AMOUNT * 10
         tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[22], balance)
         tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[23], balance)
         tx3 = self._make_icx_send_tx(self._genesis, self._addr_array[24], balance)
@@ -154,9 +108,9 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # stake
-        stake_tx1 = self._stake_tx(self._addr_array[22], minimum_delegate * 10)
-        stake_tx2 = self._stake_tx(self._addr_array[23], minimum_delegate * 10)
-        stake_tx3 = self._stake_tx(self._addr_array[24], minimum_delegate * 10)
+        stake_tx1 = self._stake_tx(self._addr_array[22], balance)
+        stake_tx2 = self._stake_tx(self._addr_array[23], balance)
+        stake_tx3 = self._stake_tx(self._addr_array[24], balance)
         prev_block, tx_results, main_prep_list = self._make_and_req_block([stake_tx1, stake_tx2, stake_tx3])
         self.assertIsNone(main_prep_list)
         self._write_precommit_state(prev_block)
@@ -181,15 +135,15 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # delegate
-        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
+        delegate_info = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
                          for address in self._addr_array[:10]]
         delegate_tx1 = self._delegate_tx(self._addr_array[22], delegate_info)
 
-        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
+        delegate_info = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
                          for address in self._addr_array[10:20]]
         delegate_tx2 = self._delegate_tx(self._addr_array[23], delegate_info)
 
-        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
+        delegate_info = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
                          for address in self._addr_array[20:22]]
         delegate_tx3 = self._delegate_tx(self._addr_array[24], delegate_info)
 
@@ -209,7 +163,7 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         }
         # check if sorted correctly
         initial_main_preps_response = self._query(query_request)
-        additional_delegate = _MINIMUM_DELEGATE + 1
+        additional_delegate = _DELEGATE_AMOUNT + 1
         # stake
         stake_tx = self._stake_tx(self._genesis, additional_delegate)
 
