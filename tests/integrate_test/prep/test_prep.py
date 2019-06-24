@@ -18,11 +18,12 @@
 """
 from copy import deepcopy
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import REV_IISS, REV_DECENTRALIZATION, IISS_MIN_IREP
+from iconservice.icon_constant import REV_IISS, REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_MAIN_PREPS
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -110,9 +111,60 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(address, tx_results[1].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
-    def test_reg_prep(self):
+    # decentralize by delegate to 22 accounts.
+    def _decentralize(self, main_preps: list=None):
+        if main_preps is None:
+            self.main_preps = [create_address() for _ in range(PREP_MAIN_PREPS)]
+        else:
+            self.main_preps = main_preps
+        delegate_amount = 10 ** 18
+        # distribute icx
+        minimum_delegate = delegate_amount
+        balance: int = minimum_delegate * 10
+        addr1, addr2, addr3 = create_address(), create_address(), create_address()
+        tx1 = self._make_icx_send_tx(self._genesis, addr1, balance)
+        tx2 = self._make_icx_send_tx(self._genesis, addr2, balance)
+        tx3 = self._make_icx_send_tx(self._genesis, addr3, balance)
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
+        self._write_precommit_state(prev_block)
+        # stake
+        self._stake(addr1, minimum_delegate * 10)
+        self._stake(addr2, minimum_delegate * 10)
+        self._stake(addr3, minimum_delegate * 10)
+        # register preps
+        for i, address in enumerate(self.main_preps):
+            data: dict = {
+                ConstantKeys.NAME: "name",
+                ConstantKeys.EMAIL: "email",
+                ConstantKeys.WEBSITE: "website",
+                ConstantKeys.DETAILS: "json",
+                ConstantKeys.P2P_END_POINT: "ip",
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
+                ConstantKeys.IREP: IISS_MIN_IREP
+            }
+            self._reg_prep(address, data)
+
+        # delegate
+        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
+                         for address in self._addr_array[:10]]
+        self._delegate(addr1, delegate_info)
+
+        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
+                         for address in self._addr_array[10:20]]
+        self._delegate(addr2, delegate_info)
+
+        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
+                         for address in self._addr_array[20:22]]
+        self._delegate(addr3, delegate_info)
+
+    @patch('iconservice.iiss.get_minimum_delegate_for_bottom_prep')
+    def test_reg_prep(self, get_minimum_delegate):
+        get_minimum_delegate.return_value = 10 ** 18
         self._update_governance()
         self._set_revision(REV_IISS)
+        self._decentralize()
+        self._set_revision(REV_DECENTRALIZATION)
+        new_prep = create_address()
 
         reg_data: dict = {
             ConstantKeys.NAME: "name1",
@@ -123,7 +175,7 @@ class TestIntegratePrep(TestIntegrateBase):
             ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
             ConstantKeys.IREP: IISS_MIN_IREP
         }
-        self._reg_prep(self._addr_array[0], reg_data)
+        self._reg_prep(new_prep, reg_data)
 
         query_request = {
             "version": self._version,
@@ -133,7 +185,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "data": {
                 "method": "getPRep",
                 "params": {
-                    "address": str(self._addr_array[0])
+                    "address": str(new_prep)
                 }
             }
         }
@@ -360,7 +412,8 @@ class TestIntegratePrep(TestIntegrateBase):
         prep_list: list = response['preps']
         self.assertEqual(3000, len(prep_list))
 
-    def test_update_prep_list(self):
+    @patch('iconservice.iiss.get_minimum_delegate_for_bottom_prep')
+    def test_update_prep_list(self, get_minimum_delegate):
         """
         Scenario
         1. generates preps
@@ -374,23 +427,14 @@ class TestIntegratePrep(TestIntegrateBase):
         _PREPS_LEN = 200
         _MAIN_PREPS_LEN = 22
         _AMOUNT_DELEGATE = 10000
+        _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
+        get_minimum_delegate.return_value = _MINIMUM_DELEGATE_AMOUNT
         self._update_governance()
         self._set_revision(REV_IISS)
         self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
         # generate preps
-        for i in range(_PREPS_LEN):
-            reg_data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
-            }
-            self._reg_prep(self._addr_array[i], reg_data)
-
+        self._decentralize(self._addr_array)
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
@@ -407,7 +451,7 @@ class TestIntegratePrep(TestIntegrateBase):
         total_delegated: int = response['totalDelegated']
         prep_list: list = response['preps']
 
-        self.assertEqual(0, total_delegated)
+        self.assertEqual(_MINIMUM_DELEGATE_AMOUNT * 22, total_delegated)
         self.assertEqual(_PREPS_LEN, len(prep_list))
 
         # set revision to REV_DECENTRALIZATION
@@ -475,13 +519,13 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(f'P-Rep not found: {str(first_main_prep)}', e.exception.args[0])
 
         # stake
-        self._stake(self._admin, _AMOUNT_DELEGATE)
+        self._stake(self._admin, _AMOUNT_DELEGATE + _MINIMUM_DELEGATE_AMOUNT)
 
         # delegate 10000 to last prep
         last_addr = self._addr_array[_PREPS_LEN - 1]
         delegations = [{
             "address": str(last_addr),
-            "value": hex(_AMOUNT_DELEGATE)
+            "value": hex(_AMOUNT_DELEGATE + _MINIMUM_DELEGATE_AMOUNT)
         }]
         self._delegate(self._admin, delegations)
 
@@ -501,5 +545,6 @@ class TestIntegratePrep(TestIntegrateBase):
         }
         # check if sorted correctly
         response_of_main_prep_list = self._query(query_request)
-        org_response_of_main_prep_list["preps"][0] = {"address": last_addr, "delegated": _AMOUNT_DELEGATE}
+        org_response_of_main_prep_list["preps"][0] = {"address": last_addr,
+                                                      "delegated": _AMOUNT_DELEGATE + _MINIMUM_DELEGATE_AMOUNT}
         self.assertEqual(org_response_of_main_prep_list["preps"], response_of_main_prep_list["preps"])

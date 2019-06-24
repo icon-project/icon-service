@@ -164,7 +164,7 @@ class Engine(EngineBase):
         context.storage.iiss.put_total_prep_delegated(context, total_delegated_amount + offset)
 
     def check_term_end_block_height(self, context: 'IconScoreContext') -> bool:
-        return self.term.end_block_height in (context.block.height, -1)
+        return self.term.end_block_height == context.block.height
 
     def make_prep_tx_result(self) -> Optional[dict]:
         main_preps = self.term.main_preps

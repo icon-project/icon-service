@@ -50,7 +50,7 @@ from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
 from .icx.issue.regulator import Regulator
-from .iiss import IISSEngine, IISSStorage
+from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
 from .inner_call import inner_call
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
@@ -454,7 +454,8 @@ class IconServiceEngine(ContextContainer):
         preps = context.preps.get_snapshot()
 
         main_prep_as_dict: Optional[dict] = None
-        if context.revision >= REV_DECENTRALIZATION and context.engine.prep.check_term_end_block_height(context):
+
+        if self._is_main_prep_updated(context):
             context.engine.prep.save_term(context)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
@@ -473,6 +474,16 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    @staticmethod
+    def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
+        if context.revision < REV_DECENTRALIZATION:
+            return False
+
+        if context.engine.prep.term.sequence > -1:
+            return context.engine.prep.check_term_end_block_height(context)
+        else:
+            return check_decentralization_condition(context)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
