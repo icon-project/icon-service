@@ -346,18 +346,18 @@ class Engine(EngineBase):
         total_delegated: int = 0
         prep_list: list = []
 
-        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1) - 1
-        if start_index < 0:
+        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+        if start_index <= 0:
             raise InvalidParamsException("Invalid params: startRanking")
 
         end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
         if end_index <= 0:
             raise InvalidParamsException("Invalid params: endRanking")
 
-        if start_index >= end_index:
+        if start_index > end_index:
             raise InvalidParamsException("Invalid params: reverse")
 
-        for i in range(start_index, end_index):
+        for i in range(start_index -1, end_index):
             prep: 'PRep' = preps[i]
 
             item = {
@@ -368,6 +368,7 @@ class Engine(EngineBase):
             total_delegated += prep.delegated
 
         return {
+            "startRanking": start_index,
             "totalDelegated": total_delegated,
             "preps": prep_list
         }
