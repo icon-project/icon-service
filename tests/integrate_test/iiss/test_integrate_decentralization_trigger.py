@@ -126,7 +126,7 @@ class TestIntegrateDecentralization(TestIntegrateBase):
                 ConstantKeys.DETAILS: "json",
                 ConstantKeys.P2P_END_POINT: "ip",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: 200
+                ConstantKeys.IREP: 10000
             }
             reg_prep_tx_list.append(self._reg_prep_tx(address, data))
 

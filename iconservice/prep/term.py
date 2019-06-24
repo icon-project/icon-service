@@ -15,7 +15,7 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
-from ..icon_constant import PREP_COUNT, PREP_MAX_PREPS
+from ..icon_constant import PREP_MAIN_PREPS, PREP_SUB_PREPS
 from ..base.type_converter_templates import ConstantKeys
 
 if TYPE_CHECKING:
@@ -87,7 +87,7 @@ class Term(object):
             prep.delegated = data[i+1]
             prep_list.append(prep)
 
-        return prep_list[:PREP_COUNT], prep_list[PREP_COUNT: PREP_MAX_PREPS]
+        return prep_list[:PREP_MAIN_PREPS], prep_list[PREP_MAIN_PREPS: PREP_SUB_PREPS]
 
     def save(self,
              context: 'IconScoreContext',
@@ -108,8 +108,8 @@ class Term(object):
 
         self._sequence += 1
         self._end_block_height = current_block_height + self._period
-        self._main_preps = preps[:PREP_COUNT]
-        self._sub_preps = preps[PREP_COUNT: PREP_MAX_PREPS]
+        self._main_preps = preps[:PREP_MAIN_PREPS]
+        self._sub_preps = preps[PREP_MAIN_PREPS: PREP_SUB_PREPS]
         self._irep = irep
         self._total_supply = total_supply
 

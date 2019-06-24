@@ -96,8 +96,10 @@ REV_DECENTRALIZATION = REV_IISS + 1
 
 IISS_DB = 'iiss'
 
-MINIMUM_DELEGATE_OF_BOTTOM_PREP = 800_460 * 2 * (10**18) # 800,460,000 * 0.002,
-# minimum delegation of bottom prep for decentralization
+# The requirement for decentralization to commence
+# Delegated amount of 22th Main PRep should be more than 0.2% of total supply
+# 800,460,000 * 0.002,
+MINIMUM_DELEGATE_OF_BOTTOM_PREP = 800_460 * 2 * (10**18)
 
 
 class ConfigKey:
@@ -195,8 +197,8 @@ PREP_METHOD_TABLE = [
 NEW_METHPD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE
 
 IISS_MAX_DELEGATIONS = 10
-PREP_MAX_PREPS = 100
-PREP_COUNT = 22
+PREP_SUB_PREPS = 100
+PREP_MAIN_PREPS = 22
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000
