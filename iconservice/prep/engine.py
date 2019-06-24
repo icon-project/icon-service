@@ -180,7 +180,7 @@ class Engine(EngineBase):
                 prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
                 prep_info_as_dict[ConstantKeys.P2P_END_POINT] = prep.p2p_end_point
                 preps_as_list.append(prep_info_as_dict)
-                prep_addresses_for_roothash += prep.address.to_bytes() + b'|'
+                prep_addresses_for_roothash += prep.address.to_bytes()
             prep_as_dict["preps"] = preps_as_list
             prep_as_dict["irep"] = self.term.irep
             prep_as_dict["state"] = PrepResultState.NORMAL.value
