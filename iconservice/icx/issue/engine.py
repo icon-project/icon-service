@@ -89,8 +89,6 @@ class Engine(EngineBase):
               issue_data: dict,
               regulator: 'Regulator'):
 
-        # todo: fee TBD
-        fee = 0
         self._issue(context, to_address, regulator.corrected_icx_issue_amount)
         regulator.put_regulate_variable(context)
 
@@ -101,8 +99,8 @@ class Engine(EngineBase):
             context.event_logs.append(issue_event_log)
 
         total_issue_event_log: 'EventLog' = \
-            self._create_total_issue_amount_event_log(regulator.deducted_icx,
-                                                      fee,
+            self._create_total_issue_amount_event_log(regulator.deducted_icx_from_fee,
+                                                      regulator.deducted_icx_from_remain,
                                                       regulator.remain_over_issued_icx,
                                                       regulator.corrected_icx_issue_amount)
         context.event_logs.append(total_issue_event_log)

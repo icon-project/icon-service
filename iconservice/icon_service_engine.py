@@ -415,11 +415,10 @@ class IconServiceEngine(ContextContainer):
             issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
             regulator.set_issue_info_about_correction(context, total_issue_amount)
-            # todo: fee TBD
-            fee = 0
+
             issue_data["result"] = {
-                "coveredByFee": fee,
-                "coveredByOverIssuedICX": regulator.deducted_icx,
+                "coveredByFee": regulator.deducted_icx_from_fee,
+                "coveredByOverIssuedICX": regulator.deducted_icx_from_remain,
                 "issue": regulator.corrected_icx_issue_amount
             }
             # todo: need to refactor (dirty)
@@ -638,11 +637,9 @@ class IconServiceEngine(ContextContainer):
             regulator = Regulator()
             regulator.set_issue_info_about_correction(context, total_issue_amount)
 
-            # todo: fee TBD
-            fee = 0
             issue_data_in_db["result"] = {
-                "coveredByFee": fee,
-                "coveredByOverIssuedICX": regulator.deducted_icx,
+                "coveredByFee": regulator.deducted_icx_from_fee,
+                "coveredByOverIssuedICX": regulator.deducted_icx_from_remain,
                 "issue": regulator.corrected_icx_issue_amount
             }
             if issue_data_in_tx != issue_data_in_db:
