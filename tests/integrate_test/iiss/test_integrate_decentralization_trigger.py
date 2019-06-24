@@ -96,7 +96,7 @@ class TestIntegrateDecentralization(TestIntegrateBase):
 
     def test_decentralization_trigger(self):
         total_supply = 2_000_000 * 10**18
-        _DELEGATE_AMOUNT = total_supply // 1000 * 3
+        _DELEGATE_AMOUNT = total_supply * 3 // 1000
         _TERM = 10
         # distribute icx
         balance: int = _DELEGATE_AMOUNT * 10

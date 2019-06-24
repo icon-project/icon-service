@@ -117,7 +117,7 @@ class TestIntegratePrep(TestIntegrateBase):
             self.main_preps = [create_address() for _ in range(PREP_MAIN_PREPS)]
         else:
             self.main_preps = main_preps
-        self.delegate_amount = self.total_supply // 1000 * 3
+        self.delegate_amount = self.total_supply * 3 // 1000
         # distribute icx
         minimum_delegate = self.delegate_amount
         balance: int = minimum_delegate * 10
