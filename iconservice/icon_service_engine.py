@@ -452,7 +452,7 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._update_revision_if_necessary(precommit_flag, context, tx_result)
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
-            context.block_batch.block.step_used = context.cumulative_step_used
+                context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
         preps = context.preps.get_snapshot()
 
@@ -1423,7 +1423,7 @@ class IconServiceEngine(ContextContainer):
                                       block_hash=block_hash,
                                       timestamp=block_batch.block.timestamp,
                                       prev_hash=block_batch.block.prev_hash,
-                                      step_used=block_batch.block.step_used)
+                                      cumulative_fee=block_batch.block.cumulative_fee)
 
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:

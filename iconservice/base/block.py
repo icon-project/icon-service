@@ -48,20 +48,21 @@ class Block(object):
                  block_hash: bytes,
                  timestamp: int,
                  prev_hash: Optional[bytes],
-                 step_used: Optional[int]) -> None:
+                 cumulative_fee: Optional[int]) -> None:
         """Constructor
 
         :param block_height: block height
         :param block_hash: block hash
         :param timestamp: block timestamp
         :param prev_hash: prev block hash
+        :param cumulative_fee: cumulative_fee
         """
         self._height = block_height
         self._hash = block_hash
         # unit: microsecond
         self._timestamp = timestamp
         self._prev_hash = prev_hash
-        self._step_used = step_used
+        self._cumulative_fee = cumulative_fee
 
     @property
     def height(self) -> int:
@@ -80,8 +81,8 @@ class Block(object):
         return self._prev_hash
 
     @property
-    def step_used(self) -> Optional[int]:
-        return self._step_used
+    def cumulative_fee(self) -> Optional[int]:
+        return self._cumulative_fee
 
     @staticmethod
     def from_dict(params: dict):
@@ -94,7 +95,7 @@ class Block(object):
                      block_hash=block_hash,
                      timestamp=timestamp,
                      prev_hash=prev_hash,
-                     step_used=0)
+                     cumulative_fee=0)
 
     @staticmethod
     def from_block(block: 'Block'):
@@ -102,8 +103,8 @@ class Block(object):
         block_hash = block.hash
         timestamp = block.timestamp
         prev_hash = block.prev_hash
-        step_used = block.step_used
-        return Block(block_height, block_hash, timestamp, prev_hash, step_used)
+        cumulative_fee = block.cumulative_fee
+        return Block(block_height, block_hash, timestamp, prev_hash, cumulative_fee)
 
     @staticmethod
     def from_bytes(buf: bytes) -> 'Block':
@@ -152,7 +153,7 @@ class Block(object):
                      block_hash=data[2],
                      timestamp=data[3],
                      prev_hash=data[4],
-                     step_used=data[5])
+                     cumulative_fee=data[5])
 
     def to_bytes(self) -> bytes:
         data = [
@@ -161,7 +162,7 @@ class Block(object):
             self._hash,
             self._timestamp,
             self._prev_hash,
-            self._step_used
+            self._cumulative_fee
         ]
         return MsgPackForDB.dumps(data)
 
@@ -176,10 +177,10 @@ class Block(object):
         hash_hex = 'None' if self._hash is None else f'0x{self._hash.hex()}'
         prev_hash_hex = \
             'None' if self._prev_hash is None else f'0x{self._prev_hash.hex()}'
-        step_used = 'None' if self._step_used is None else self._step_used
+        cumulative_fee = 'None' if self._cumulative_fee is None else self._cumulative_fee
 
         return f'height({self._height}) ' \
             f'hash({hash_hex}) ' \
             f'timestamp({self._timestamp}) ' \
             f'prev_hash({prev_hash_hex})' \
-            f'step_used({step_used})' \
+            f'cumulative_fee({cumulative_fee})' \
