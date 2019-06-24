@@ -13,15 +13,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from ..icon_constant import PREP_COUNT, MINIMUM_DELEGATE_OF_BOTTOM_PREP
+
+from typing import TYPE_CHECKING
+
 from .engine import Engine as IISSEngine
 from .storage import Storage as IISSStorage
+from ..icon_constant import PREP_MAIN_PREPS, ICX_IN_LOOP
+
+if TYPE_CHECKING:
+    from ..iconscore.icon_score_context import IconScoreContext
+    from ..prep.data.prep import PRep
 
 
-def check_decentralization_condition(context):
-    if len(context.engine.prep.preps) >= PREP_COUNT:
-        bottom_prep = context.engine.prep.preps[PREP_COUNT - 1]
+def check_decentralization_condition(context: 'IconScoreContext'):
+    preps = context.preps
+    if len(preps) >= PREP_MAIN_PREPS:
+        minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
+        bottom_prep: 'PRep' = preps[PREP_MAIN_PREPS - 1]
         bottom_prep_delegated = bottom_prep.delegated
-        if bottom_prep_delegated >= MINIMUM_DELEGATE_OF_BOTTOM_PREP:
-            return True
+        return bottom_prep_delegated >= minimum_delegate
     return False
+
+
+def get_minimum_delegate_for_bottom_prep(context):
+    total_supply = context.storage.icx.get_total_supply(context)
+    minimum_delegate = total_supply // 1000 * 2 * ICX_IN_LOOP
+    return minimum_delegate

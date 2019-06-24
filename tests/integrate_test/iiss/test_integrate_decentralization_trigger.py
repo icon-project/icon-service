@@ -16,11 +16,11 @@ from copy import deepcopy
 from typing import Optional, List
 from unittest.mock import patch
 
-from iconservice import Address
-from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
+from iconservice.base.address import Address, GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, IconScoreContextType
+from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS,\
+    IconScoreContextType, IISS_MIN_IREP, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address, create_block_hash
 from tests.integrate_test import create_timestamp
@@ -95,10 +95,13 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         return tx
 
-    @patch('iconservice.iiss.MINIMUM_DELEGATE_OF_BOTTOM_PREP', 10**18)
-    def test_decentralization_trigger(self):
+    @patch('iconservice.iiss.get_minimum_delegate_for_bottom_prep')
+    def test_decentralization_trigger(self, get_minimum_delegate):
+        _MINIMUM_DELEGATE = 10**18
+        _TERM = 10
+        get_minimum_delegate.return_value = _MINIMUM_DELEGATE
         # distribute icx
-        minimum_delegate = 10 ** 18
+        minimum_delegate = _MINIMUM_DELEGATE
         balance: int = minimum_delegate * 10
         tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[22], balance)
         tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[23], balance)
@@ -126,7 +129,7 @@ class TestIntegrateDecentralization(TestIntegrateBase):
                 ConstantKeys.DETAILS: "json",
                 ConstantKeys.P2P_END_POINT: "ip",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: 200
+                ConstantKeys.IREP: IISS_MIN_IREP
             }
             reg_prep_tx_list.append(self._reg_prep_tx(address, data))
 
@@ -148,13 +151,47 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         delegate_tx3 = self._delegate_tx(self._addr_array[24], delegate_info)
 
         prev_block, tx_results, main_prep_list = self._make_and_req_block([delegate_tx1, delegate_tx2, delegate_tx3])
-        self.assertIsNone(main_prep_list)
+        self.assertIsNotNone(main_prep_list)
         self._write_precommit_state(prev_block)
 
-        balance: int = minimum_delegate * 10
-        tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[22], balance)
-        tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[23], balance)
-        tx3 = self._make_icx_send_tx(self._genesis, self._addr_array[24], balance)
-        prev_block, tx_results, main_prep_list = self._make_and_req_block([tx1, tx2, tx3])
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getMainPRepList",
+                "params": {}
+            }
+        }
+        # check if sorted correctly
+        initial_main_preps_response = self._query(query_request)
+        additional_delegate = _MINIMUM_DELEGATE + 1
+        # stake
+        stake_tx = self._stake_tx(self._admin, additional_delegate)
+
+        # delegate 10000 to last prep
+        last_address = self._main_preps[PREP_MAIN_PREPS - 1]
+        delegations = [{
+            "address": str(last_address),
+            "value": hex(additional_delegate)
+        }]
+        delegate_tx = self._delegate_tx(self._admin, delegations)
+        prev_block, tx_results, main_prep_list = self._make_and_req_block([stake_tx, delegate_tx])
+        self._write_precommit_state(prev_block)
+        self.assertIsNone(main_prep_list)
+
+        for i in range(_TERM-2):
+            prev_block, tx_results, main_prep_list = self._make_and_req_block([])
+            self._write_precommit_state(prev_block)
+            self.assertIsNone(main_prep_list)
+
+        # check returning main_prep_list after decentralized(Term==10)
+        prev_block, tx_results, main_prep_list = self._make_and_req_block([])
         self._write_precommit_state(prev_block)
         self.assertIsNotNone(main_prep_list)
+
+        main_preps_response = self._query(query_request)
+        self.assertEqual(initial_main_preps_response['totalDelegated']+additional_delegate,
+                         main_preps_response['totalDelegated'])
+        self.assertEqual(main_preps_response['preps'][0]['address'], last_address)

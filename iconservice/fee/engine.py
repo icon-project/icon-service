@@ -19,6 +19,7 @@ from decimal import Decimal
 from enum import IntEnum
 from typing import List, Dict, Optional
 
+from iconservice.icon_constant import ICX_IN_LOOP
 from .deposit import Deposit
 from .deposit_meta import DepositMeta
 from ..base.ComponentBase import EngineBase
@@ -35,7 +36,6 @@ if typing.TYPE_CHECKING:
 FIXED_TERM = True
 FIXED_RATIO_PER_MONTH = '0.08'
 BLOCKS_IN_ONE_MONTH = 1_296_000
-ICX_IN_LOOP = 10 ** 18
 
 
 class DepositInfo:

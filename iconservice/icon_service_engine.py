@@ -455,15 +455,9 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict: Optional[dict] = None
 
-        if context.revision >= REV_DECENTRALIZATION:
-            decentralization_flag = context.engine.prep.term.sequence != -1
-            if decentralization_flag:
-                prep_updated = context.engine.prep.check_term_end_block_height(context)
-            else:
-                prep_updated = check_decentralization_condition(context)
-            if prep_updated:
-                context.engine.prep.save_term(context)
-                main_prep_as_dict = context.engine.prep.make_prep_tx_result()
+        if self._is_main_prep_updated(context):
+            context.engine.prep.save_term(context)
+            main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -480,6 +474,16 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    @staticmethod
+    def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
+        if context.revision < REV_DECENTRALIZATION:
+            return False
+
+        if context.engine.prep.term.sequence > -1:
+            return context.engine.prep.check_term_end_block_height(context)
+        else:
+            return check_decentralization_condition(context)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
