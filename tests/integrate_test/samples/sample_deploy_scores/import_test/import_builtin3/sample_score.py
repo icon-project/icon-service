@@ -2,7 +2,7 @@ from iconservice import *
 tmpOs = __import__("os")
 
 
-class TestScore(IconScoreBase):
+class SampleScore(IconScoreBase):
 
     @eventlog(indexed=1)
     def Changed(self, value: int):

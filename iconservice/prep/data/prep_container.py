@@ -20,7 +20,7 @@ from typing import List, Union, Optional
 from .prep import PRep
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
-from ...icon_constant import PREP_COUNT, PREP_MAX_PREPS
+from ...icon_constant import PREP_MAIN_PREPS, PREP_SUB_PREPS
 from ...iconscore.icon_score_context import IconScoreContext
 
 
@@ -138,7 +138,7 @@ class PRepContainer(object):
 
         :return: P-Rep list
         """
-        return self._prep_list[:PREP_MAX_PREPS]
+        return self._prep_list[:PREP_SUB_PREPS]
 
     def get_snapshot(self) -> 'PRepContainer':
         return deepcopy(self)
