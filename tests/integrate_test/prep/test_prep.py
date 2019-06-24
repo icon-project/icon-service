@@ -47,7 +47,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-    def _stake(self, address: 'Address', value: int, revision: int = REV_IISS):
+    def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
 
         tx_list = [tx]
@@ -55,14 +55,14 @@ class TestIntegratePrep(TestIntegrateBase):
 
         self._write_precommit_state(prev_block)
 
-    def _delegate(self, address: 'Address', delegations: list, revision: int = REV_IISS):
+    def _delegate(self, address: 'Address', delegations: list):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
 
         tx_list = [tx]
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _reg_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
+    def _reg_prep(self, address: 'Address', data: dict):
 
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
@@ -77,7 +77,17 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(address, tx_results[1].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
-    def _set_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
+    def _reg_prep_bulk(self, bulk: list):
+        tx_list: list = []
+
+        for address, data in bulk:
+            tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
+            tx_list.append(tx)
+
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+
+    def _set_prep(self, address: 'Address', data: dict):
 
         data = deepcopy(data)
         value = data.get(ConstantKeys.IREP)
@@ -91,7 +101,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(address, tx_results[1].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
-    def _unreg_prep(self, address: 'Address', revision: int = REV_IISS):
+    def _unreg_prep(self, address: 'Address'):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
         tx_list = [tx]
@@ -237,9 +247,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "getPRepList",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
+                "params": {}
             }
         }
         response = self._query(query_request)
@@ -248,6 +256,109 @@ class TestIntegratePrep(TestIntegrateBase):
 
         self.assertEqual(0, total_delegated)
         self.assertEqual(10, len(prep_list))
+
+    def test_prep_list2(self):
+        self._update_governance()
+        self._set_revision(REV_IISS)
+
+        bulk: list = []
+        preps = 3000
+        for i in range(preps):
+            reg_data: dict = {
+                ConstantKeys.NAME: f"name{i}",
+                ConstantKeys.EMAIL: f"email{i}",
+                ConstantKeys.WEBSITE: f"website{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode().hex(),
+                ConstantKeys.IREP: hex(IISS_MIN_IREP + i)
+            }
+            bulk.append((create_address(), reg_data))
+        self._reg_prep_bulk(bulk)
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {
+                    "startRanking": hex(0),
+                    "endRanking": hex(1)
+                }
+            }
+        }
+        with self.assertRaises(InvalidParamsException) as e:
+            response = self._query(query_request)
+        self.assertEqual("Invalid params: startRanking", e.exception.args[0])
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {
+                    "startRanking": hex(1),
+                    "endRanking": hex(0)
+                }
+            }
+        }
+        with self.assertRaises(InvalidParamsException) as e:
+            response = self._query(query_request)
+        self.assertEqual("Invalid params: endRanking", e.exception.args[0])
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {
+                    "startRanking": hex(2),
+                    "endRanking": hex(1)
+                }
+            }
+        }
+        with self.assertRaises(InvalidParamsException) as e:
+            response = self._query(query_request)
+        self.assertEqual("Invalid params: reverse", e.exception.args[0])
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {
+                    "startRanking": hex(2),
+                    "endRanking": hex(2)
+                }
+            }
+        }
+        response = self._query(query_request)
+        prep_list: list = response['preps']
+        self.assertEqual(1, len(prep_list))
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {
+                    "startRanking": hex(1)
+                }
+            }
+        }
+        response = self._query(query_request)
+        prep_list: list = response['preps']
+        self.assertEqual(3000, len(prep_list))
 
     def test_update_prep_list(self):
         """
@@ -322,9 +433,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "getMainPRepList",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
+                "params": {}
             }
         }
         org_response_of_main_prep_list = self._query(query_request)
@@ -338,9 +447,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "getSubPRepList",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
+                "params": {}
             }
         }
         response = self._query(query_request)
@@ -389,9 +496,7 @@ class TestIntegratePrep(TestIntegrateBase):
             "dataType": "call",
             "data": {
                 "method": "getMainPRepList",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
+                "params": {}
             }
         }
         # check if sorted correctly
