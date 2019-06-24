@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from .engine import Engine as IISSEngine
 from .storage import Storage as IISSStorage
-from ..icon_constant import PREP_MAIN_PREPS, ICX_IN_LOOP
+from ..icon_constant import PREP_MAIN_PREPS
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -39,5 +39,5 @@ def check_decentralization_condition(context: 'IconScoreContext'):
 def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext'):
     """Minimum delegate = total_supply * 0.002 ICX"""
     total_supply = context.storage.icx.get_total_supply(context)
-    minimum_delegate = total_supply // 1000 * 2 * ICX_IN_LOOP
+    minimum_delegate = total_supply // 1000 * 2
     return minimum_delegate
