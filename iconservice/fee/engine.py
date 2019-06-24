@@ -25,6 +25,7 @@ from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
+from ..icon_constant import ICX_IN_LOOP
 from ..iconscore.icon_score_event_log import EventLogEmitter
 
 if typing.TYPE_CHECKING:
@@ -35,7 +36,6 @@ if typing.TYPE_CHECKING:
 FIXED_TERM = True
 FIXED_RATIO_PER_MONTH = '0.08'
 BLOCKS_IN_ONE_MONTH = 1_296_000
-ICX_IN_LOOP = 10 ** 18
 
 
 class DepositInfo:
