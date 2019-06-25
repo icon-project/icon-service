@@ -17,6 +17,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional
 
 from iconcommons.logger import Logger
+
 from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -172,26 +173,36 @@ class Engine(EngineBase):
         if len(main_preps) > 0:
             prep_as_dict = OrderedDict()
             preps_as_list = []
-            preps_as_list_for_roothash = []
-            for prep in self.term.main_preps:
+            prep_addresses_for_roothash = b''
+            for prep in main_preps:
                 prep_info_as_dict = OrderedDict()
                 prep_info_as_dict[ConstantKeys.PREP_ID] = prep.address
                 prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
                 prep_info_as_dict[ConstantKeys.P2P_END_POINT] = prep.p2p_end_point
                 preps_as_list.append(prep_info_as_dict)
-                preps_as_list_for_roothash.extend(
-                    [prep.address.to_bytes(), prep.public_key, prep.p2p_end_point.encode()])
+                prep_addresses_for_roothash += prep.address.to_bytes()
             prep_as_dict["preps"] = preps_as_list
+            prep_as_dict["irep"] = self.term.irep
             prep_as_dict["state"] = PrepResultState.NORMAL.value
-            prep_as_dict["rootHash"] = hashlib.sha3_256(b'|'.join(preps_as_list_for_roothash)).digest()
+            prep_as_dict["rootHash"] = hashlib.sha3_256(prep_addresses_for_roothash).digest()
         return prep_as_dict
 
-    def save_term(self, context: 'IconScoreContext'):
+    def save_term(self, context: 'IconScoreContext', weighted_average_of_irep: int):
         self.term.save(context,
                        context.block.height,
                        context.preps.get_preps(),
-                       self.term.irep,
+                       weighted_average_of_irep,
                        context.total_supply)
+
+    @staticmethod
+    def calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
+        main_preps = context.preps.get_preps()
+        total_delegated = 0  # total delegated of prep
+        total_multiply_delegated_by_irep = 0
+        for prep in main_preps:
+            total_multiply_delegated_by_irep += prep.irep * prep.delegated
+            total_delegated += prep.delegated
+        return total_multiply_delegated_by_irep // total_delegated if total_delegated != 0 else 0
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns registration information of a P-Rep
