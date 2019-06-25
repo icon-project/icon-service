@@ -179,7 +179,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_result.logs_bloom.add(b'1')
         tx_result.logs_bloom.add(b'2')
         tx_result.logs_bloom.add(b'3')
-        tx_result.block = Block(123, hashlib.sha3_256(b'block').digest(), 1, None)
+        tx_result.block = Block(123, hashlib.sha3_256(b'block').digest(), 1, None, 0)
 
         camel_dict = tx_result.to_dict(to_camel_case)
 

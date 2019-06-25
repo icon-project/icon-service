@@ -84,6 +84,10 @@ class Block(object):
     def cumulative_fee(self) -> Optional[int]:
         return self._cumulative_fee
 
+    @cumulative_fee.setter
+    def cumulative_fee(self, cumulative_fee: int):
+        self._cumulative_fee = cumulative_fee
+
     @staticmethod
     def from_dict(params: dict):
         block_height = params.get('blockHeight')

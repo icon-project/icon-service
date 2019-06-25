@@ -74,8 +74,8 @@ class Engine(EngineBase):
         return event_log
 
     @staticmethod
-    def _create_total_issue_amount_event_log(deducted_over_issued_icx: int,
-                                             deducted_fee: int,
+    def _create_total_issue_amount_event_log(deducted_fee: int,
+                                             deducted_over_issued_icx: int,
                                              remain_over_issued_icx: int,
                                              total_issue_amount: int) -> 'EventLog':
         total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]

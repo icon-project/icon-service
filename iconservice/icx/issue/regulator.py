@@ -55,15 +55,21 @@ class Regulator:
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if calc_next_block_height == context.block.height:
-            i_score = context.storage.rc.get_prev_calc_period_issued_i_score()
+            prev_calc_period_issued_i_score = context.storage.rc.get_prev_calc_period_issued_i_score()
             covered_icx, remain_over_issued_i_score, corrected_icx_issue_amount = \
-                self._correct_issue_amount_on_calc_period(i_score, issue_amount, prev_block_cumulative_fee)
+                self._correct_issue_amount_on_calc_period(regulator_variable.prev_calc_period_issued_icx,
+                                                          prev_calc_period_issued_i_score,
+                                                          regulator_variable.over_issued_i_score,
+                                                          issue_amount,
+                                                          prev_block_cumulative_fee)
 
             regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
             regulator_variable.current_calc_period_issued_icx = 0
         else:
             covered_icx, remain_over_issued_i_score, corrected_icx_issue_amount = \
-                self._correct_issue_amount(issue_amount, prev_block_cumulative_fee)
+                self._correct_issue_amount(regulator_variable.over_issued_i_score,
+                                           issue_amount,
+                                           prev_block_cumulative_fee)
             regulator_variable.current_calc_period_issued_icx = current_calc_period_total_issued_icx
         regulator_variable.over_issued_i_score = remain_over_issued_i_score
 
@@ -118,13 +124,12 @@ class Regulator:
         return over_issued_icx, over_issued_i_score
 
     def _correct_issue_amount_on_calc_period(self,
+                                             prev_calc_period_issued_icx,
                                              prev_calc_period_issued_i_score: Optional[int],
+                                             remain_over_issued_i_score,
                                              icx_issue_amount: int,
                                              prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
         assert icx_issue_amount >= 0
-
-        prev_calc_period_issued_icx: Optional[int] = self._regulator_variable.prev_calc_period_issued_icx
-        remain_over_issued_i_score: int = self._regulator_variable.over_issued_i_score
 
         # check if RC has sent response about 'CALCULATE' requests. every period should get response
         if prev_calc_period_issued_i_score is None:
@@ -145,10 +150,9 @@ class Regulator:
         # covered_icx can be negative value (in case of reward calculator having been issued more)
         return covered_icx, remain_over_issued_i_score, icx_issue_amount
 
-    def _correct_issue_amount(self, icx_issue_amount: int, prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
+    def _correct_issue_amount(self, remain_over_issued_i_score: int, icx_issue_amount: int, prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
         assert icx_issue_amount >= 0
 
-        remain_over_issued_i_score: int = self._regulator_variable.over_issued_i_score
         covered_icx: int = 0
 
         allowances = (remain_over_issued_i_score // I_SCORE_EXCHANGE_RATE) + prev_block_cumulative_fee

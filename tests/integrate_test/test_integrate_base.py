@@ -139,7 +139,7 @@ class TestIntegrateBase(TestCase):
         }
 
         block_hash = create_block_hash()
-        block = Block(self._block_height, block_hash, timestamp_us, None)
+        block = Block(self._block_height, block_hash, timestamp_us, None, 0)
         invoke_response: tuple = self.icon_service_engine.invoke(
             block,
             [tx]
@@ -322,7 +322,7 @@ class TestIntegrateBase(TestCase):
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
-        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
@@ -350,7 +350,7 @@ class TestIntegrateBase(TestCase):
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
-        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
 
         invoke_response, _, added_transactions, main_prep_as_dict = \
             self.icon_service_engine.invoke(block=block,
@@ -371,7 +371,7 @@ class TestIntegrateBase(TestCase):
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
-        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context = IconScoreContext(IconScoreContextType.DIRECT)
 
         is_block_editable = False
@@ -406,4 +406,4 @@ class TestIntegrateBase(TestCase):
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
-        return Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        return Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
