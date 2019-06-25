@@ -18,7 +18,6 @@
 """
 from copy import deepcopy
 from typing import TYPE_CHECKING
-from unittest.mock import patch
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
@@ -641,7 +640,7 @@ class TestIntegratePrep(TestIntegrateBase):
         total_delegated: int = response['totalDelegated']
         prep_list: list = response['preps']
 
-        self.assertEqual(_MINIMUM_DELEGATE_AMOUNT * 22, total_delegated)
+        self.assertEqual(self.delegate_amount * 22, total_delegated)
         self.assertEqual(_PREPS_LEN, len(prep_list))
 
         self._set_revision(REV_DECENTRALIZATION)

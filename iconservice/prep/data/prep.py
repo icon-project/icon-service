@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Tuple
 from ...base.address import Address
 from ...base.exception import InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD
+from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -109,6 +109,7 @@ class PRep(object):
 
     @property
     def productivity(self):
+        # return : % (percentage)
         return self._validated_blocks * 100 // self._total_blocks
 
     def is_low_productivity(self) -> bool:
@@ -116,7 +117,7 @@ class PRep(object):
         if self._total_blocks <= PENALTY_GRACE_PERIOD:
             return False
 
-        return self.productivity < 85
+        return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
 
     @classmethod
     def make_key(cls, address: 'Address') -> bytes:
