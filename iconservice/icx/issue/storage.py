@@ -32,7 +32,9 @@ class Storage(StorageBase):
         regulator_variable: Optional[bytes] = self._db.get(context, self._REGULATOR_VARIABLE_KEY)
         if regulator_variable:
             return RegulatorVariable.from_bytes(regulator_variable)
-        return RegulatorVariable.first_initiate()
+        return RegulatorVariable(current_calc_period_issued_icx=0,
+                                 prev_calc_period_issued_icx=0,
+                                 over_issued_i_score=0)
 
     def put_regulator_variable(self, context: 'IconScoreContext', rv: 'RegulatorVariable'):
         self._db.put(context, self._REGULATOR_VARIABLE_KEY, rv.to_bytes())
@@ -48,13 +50,6 @@ class RegulatorVariable:
         self.current_calc_period_issued_icx = current_calc_period_issued_icx
         self.prev_calc_period_issued_icx = prev_calc_period_issued_icx
         self.over_issued_i_score = over_issued_i_score
-
-    @classmethod
-    def first_initiate(cls):
-        # prev_calc_period_issued_icx could be None in case of first calculating period
-        return cls(current_calc_period_issued_icx=0,
-                   prev_calc_period_issued_icx=0,
-                   over_issued_i_score=0)
 
     @classmethod
     def from_bytes(cls, buf: bytes) -> 'RegulatorVariable':

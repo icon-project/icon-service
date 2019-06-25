@@ -99,8 +99,8 @@ class Engine(EngineBase):
             context.event_logs.append(issue_event_log)
 
         total_issue_event_log: 'EventLog' = \
-            self._create_total_issue_amount_event_log(regulator.deducted_icx_from_fee,
-                                                      regulator.deducted_icx_from_remain,
+            self._create_total_issue_amount_event_log(regulator.covered_icx_by_fee,
+                                                      regulator.covered_icx_by_over_issue,
                                                       regulator.remain_over_issued_icx,
                                                       regulator.corrected_icx_issue_amount)
         context.event_logs.append(total_issue_event_log)
