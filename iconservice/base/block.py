@@ -18,7 +18,7 @@ from struct import Struct
 from typing import Optional
 
 from .exception import InvalidParamsException
-from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE
+from ..icon_constant import DATA_BYTE_ORDER, DEFAULT_BYTE_SIZE, REV_IISS
 from ..utils.msgpack_for_db import MsgPackForDB
 
 
@@ -135,8 +135,7 @@ class Block(object):
             byte_prev_hash = None
         prev_block_hash = byte_prev_hash
 
-        # todo: consider using 0 as a step_used (not None)
-        block = Block(block_height, block_hash, timestamp, prev_block_hash, None)
+        block = Block(block_height, block_hash, timestamp, prev_block_hash, 0)
         return block
 
     @staticmethod
@@ -155,7 +154,13 @@ class Block(object):
                      prev_hash=data[4],
                      cumulative_fee=data[5])
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self, revision: int = 0) -> bytes:
+        if revision >= REV_IISS:
+            return self._to_msg_packed_bytes()
+        else:
+            return self._to_struct_packed_bytes()
+
+    def _to_msg_packed_bytes(self) -> bytes:
         data = [
             BlockVersion.MSG_PACK,
             self._height,
@@ -166,12 +171,28 @@ class Block(object):
         ]
         return MsgPackForDB.dumps(data)
 
-    def __bytes__(self) -> bytes:
-        """operator bytes() overriding
+    def _to_struct_packed_bytes(self) -> bytes:
+        """Convert block object to bytes
 
-        :return: binary data including information of account object
+        :return: data including information of block object
         """
-        return self.to_bytes()
+        byteorder = DATA_BYTE_ORDER
+        # for extendability
+        block_height_bytes = self._height.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
+        block_hash_bytes = self._hash
+        timestamp_bytes = self._timestamp.to_bytes(DEFAULT_BYTE_SIZE, byteorder)
+
+        tmp_prev_hash = self._prev_hash
+        if tmp_prev_hash is None:
+            tmp_prev_hash = bytes(DEFAULT_BYTE_SIZE)
+        prev_block_hash_bytes = tmp_prev_hash
+
+        return Block._struct.pack(
+            self._VERSION,
+            block_height_bytes,
+            block_hash_bytes,
+            timestamp_bytes,
+            prev_block_hash_bytes)
 
     def __str__(self) -> str:
         hash_hex = 'None' if self._hash is None else f'0x{self._hash.hex()}'

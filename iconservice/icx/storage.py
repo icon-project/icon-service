@@ -121,7 +121,7 @@ class Storage(StorageBase):
         Logger.debug(f'_load_address_from_storage() end(address type: {db_key})', ICX_LOG_TAG)
 
     def put_block_info(self, context: 'IconScoreContext', block: 'Block'):
-        self._db.put(context, self._LAST_BLOCK_KEY, bytes(block))
+        self._db.put(context, self._LAST_BLOCK_KEY, block.to_bytes(context.revision))
         self._last_block = block
 
     def put_genesis_accounts(self, context: 'IconScoreContext', accounts: list):
