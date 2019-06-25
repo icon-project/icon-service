@@ -22,7 +22,10 @@ from typing import TYPE_CHECKING
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import REV_IISS, REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_MAIN_PREPS
+from iconservice.icon_constant import IconScoreContextType, REV_IISS
+from iconservice.icon_constant import REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_MAIN_PREPS
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iiss import get_minimum_delegate_for_bottom_prep
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -157,6 +160,12 @@ class TestIntegratePrep(TestIntegrateBase):
         delegate_info_addr3 = [{"address": str(address), "value": hex(self.delegate_amount)}
                                for address in self._addr_array[20:22]]
         self._delegate(addr3, delegate_info_addr3)
+
+    def _send_icx_in_loop(self, to_addr: 'Address', balance: int):
+        tx = self._make_icx_send_tx(self._genesis, to_addr, balance)
+        tx_list = [tx]
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
 
     def test_reg_prep(self):
         self._update_governance()
@@ -542,3 +551,65 @@ class TestIntegratePrep(TestIntegrateBase):
                                                       "delegated": delegate_amount + self.delegate_amount}
 
         self.assertEqual(org_response_of_main_prep_list["preps"], response_of_main_prep_list["preps"])
+
+    def test_weighted_average_of_irep(self):
+        """
+        Scenario
+        1. generates preps and delegates more than minumum delegated amount to 22 preps
+        2. sets revision to REV_DECENTRALIZATION and generates main and sub preps
+        3. check wighted average of irep correct
+        :return:
+        """
+        _PREPS_LEN = 50
+        _MAIN_PREPS_LEN = 22
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+        _AMOUNT_DELEGATE = int(get_minimum_delegate_for_bottom_prep(context=context) * 2)
+
+        self._update_governance()
+        self._set_revision(REV_IISS)
+        _addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        _addr_array_from_1 = create_address()
+        _addr_array_from_2 = create_address()
+        self._send_icx_in_loop(_addr_array_from_1, _AMOUNT_DELEGATE * 10)
+        self._send_icx_in_loop(_addr_array_from_2, _AMOUNT_DELEGATE * 10)
+
+        buf_total_irep = 0
+        # generate preps
+        for i in range(_PREPS_LEN):
+            if i < 22:
+                buf_total_irep += IISS_MIN_IREP + i
+            reg_data: dict = {
+                ConstantKeys.NAME: f"name{i}",
+                ConstantKeys.EMAIL: f"email{i}",
+                ConstantKeys.WEBSITE: f"website{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
+                ConstantKeys.IREP: IISS_MIN_IREP + i
+            }
+            self._reg_prep(_addr_array[i], reg_data)
+
+        from_addr_for_stake = [self._admin, _addr_array_from_1, _addr_array_from_2]
+
+        idx_for_stake = 10
+        for idx, from_addr in enumerate(from_addr_for_stake):
+            # stake
+            self._stake(from_addr, _AMOUNT_DELEGATE * 10)
+            delegations = []
+            for i in range(idx_for_stake - 10, idx_for_stake):
+                if i > 21:
+                    break
+                delegations.append({
+                    "address": str(_addr_array[i]),
+                    "value": hex(_AMOUNT_DELEGATE)
+                })
+            self._delegate(from_addr, delegations)
+            idx_for_stake += 10
+
+        # set revision to REV_DECENTRALIZATION
+        tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                      {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
+        block, invoke_response, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
+        self.assertEqual((_AMOUNT_DELEGATE * buf_total_irep) // (_AMOUNT_DELEGATE * _MAIN_PREPS_LEN),
+                         main_prep_as_dict['irep'])
