@@ -312,7 +312,8 @@ class TestIntegrateBase(TestCase):
         issue_tx = self._make_issue_tx(issue_data)
         return issue_tx
 
-    def _make_and_req_block(self, tx_list: list,
+    def _make_and_req_block(self,
+                            tx_list: list,
                             block_height: int = None,
                             prev_block_generator: Optional['Address'] = None,
                             prev_block_validators: Optional[List['Address']] = None) -> tuple:
@@ -338,7 +339,8 @@ class TestIntegrateBase(TestCase):
 
         return block, invoke_response
 
-    def _make_and_req_block_for_issue_test(self, tx_list: list,
+    def _make_and_req_block_for_issue_test(self,
+                                           tx_list: list,
                                            block_height: int = None,
                                            prev_block_generator: Optional['Address'] = None,
                                            prev_block_validators: Optional[List['Address']] = None,
@@ -359,10 +361,11 @@ class TestIntegrateBase(TestCase):
 
         return block, invoke_response
 
-    def _make_and_req_block_for_prep_test(self, tx_list: list,
-                            block_height: int = None,
-                            prev_block_generator: Optional['Address'] = None,
-                            prev_block_validators: Optional[List['Address']] = None) -> tuple:
+    def _make_and_req_block_for_prep_test(self,
+                                          tx_list: list,
+                                          block_height: int = None,
+                                          prev_block_generator: Optional['Address'] = None,
+                                          prev_block_validators: Optional[List['Address']] = None) -> tuple:
         if block_height is None:
             block_height: int = self._block_height
         block_hash = create_block_hash()

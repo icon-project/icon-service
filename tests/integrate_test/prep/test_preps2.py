@@ -44,25 +44,28 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision',
+                                      {"code": hex(revision),
+                                       "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
+                                      'setStake',
+                                      {"value": hex(value)})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {"delegations": delegations})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict):
@@ -73,11 +76,11 @@ class TestIntegratePrep(TestIntegrateBase):
         value: str = hex(data[ConstantKeys.IREP])
         data[ConstantKeys.IREP] = value
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self.assertEqual('PRepRegistered(Address)', tx_results[1].event_logs[0].indexed[0])
-        self.assertEqual(address, tx_results[1].event_logs[0].data[0])
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'registerPRep',
+                                      data)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def _reg_prep_bulk(self, bulk: list):
@@ -97,92 +100,80 @@ class TestIntegratePrep(TestIntegrateBase):
         if value:
             data[ConstantKeys.IREP] = hex(value)
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self.assertEqual('PRepSet(Address)', tx_results[1].event_logs[0].indexed[0])
-        self.assertEqual(address, tx_results[1].event_logs[0].data[0])
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'setPRep',
+                                      data)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def _unreg_prep(self, address: 'Address'):
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-        self.assertEqual('PRepUnregistered(Address)', tx_results[1].event_logs[0].indexed[0])
-        self.assertEqual(address, tx_results[1].event_logs[0].data[0])
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'unregisterPRep',
+                                      {})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    # decentralize by delegate to 22 accounts.
-    def _decentralize(self, main_preps: list=None):
-        self.total_supply = 2_000_000 * self._icx_factor
-        if main_preps is None:
-            self.main_preps = [create_address() for _ in range(PREP_MAIN_PREPS)]
-        else:
-            self.main_preps = main_preps
-        # Minimum_delegate_amount is 0.02 * total_supply
-        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
-        self.delegate_amount = self.total_supply * 3 // 1000
+    # decentralize by delegate to n accounts.
+    def _decentralize(self, main_preps: list, delegate_amount: int):
+
         # Can delegate up to 10 preps at a time
-        stake_amount: int = self.delegate_amount * 10
+        stake_amount: int = delegate_amount * 10
         addr1, addr2, addr3 = create_address(), create_address(), create_address()
         tx1 = self._make_icx_send_tx(self._genesis, addr1, stake_amount)
         tx2 = self._make_icx_send_tx(self._genesis, addr2, stake_amount)
         tx3 = self._make_icx_send_tx(self._genesis, addr3, stake_amount)
         prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
         self._write_precommit_state(prev_block)
+
         # stake
         self._stake(addr1, stake_amount)
         self._stake(addr2, stake_amount)
         self._stake(addr3, stake_amount)
+
         # register preps
-        for i, address in enumerate(self.main_preps):
+        for i, address in enumerate(main_preps):
             data: dict = {
-                ConstantKeys.NAME: "name",
-                ConstantKeys.EMAIL: "email",
-                ConstantKeys.WEBSITE: "website",
-                ConstantKeys.DETAILS: "json",
-                ConstantKeys.P2P_END_POINT: "ip",
+                ConstantKeys.NAME: f"name{i}",
+                ConstantKeys.EMAIL: f"email{i}",
+                ConstantKeys.WEBSITE: f"website{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
                 ConstantKeys.IREP: IISS_MIN_IREP
             }
             self._reg_prep(address, data)
 
         # delegate
-        delegate_info_addr1 = [{"address": str(address), "value": hex(self.delegate_amount)}
-                               for address in self._addr_array[:10]]
-        self._delegate(addr1, delegate_info_addr1)
+        data: list = [
+            {
+                "address": str(address),
+                "value": hex(delegate_amount)
+            }for address in main_preps[:10]]
+        self._delegate(addr1, data)
 
-        delegate_info_addr2 = [{"address": str(address), "value": hex(self.delegate_amount)}
-                               for address in self._addr_array[10:20]]
-        self._delegate(addr2, delegate_info_addr2)
+        data: list = [
+            {
+                "address": str(address),
+                "value": hex(delegate_amount)
+            }for address in main_preps[10:20]]
+        self._delegate(addr2, data)
 
-        delegate_info_addr3 = [{"address": str(address), "value": hex(self.delegate_amount)}
-                               for address in self._addr_array[20:22]]
-        self._delegate(addr3, delegate_info_addr3)
+        data: list = [
+            {
+                "address": str(address),
+                "value": hex(delegate_amount)
+            }for address in main_preps[20:22]]
+        self._delegate(addr3, data)
 
     def _send_icx_in_loop(self, to_addr: 'Address', balance: int):
         tx = self._make_icx_send_tx(self._genesis, to_addr, balance)
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def test_reg_prep(self):
-        self._update_governance()
-        self._set_revision(REV_IISS)
-        new_prep = create_address()
-
-        reg_data: dict = {
-            ConstantKeys.NAME: "name1",
-            ConstantKeys.EMAIL: "email1",
-            ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.DETAILS: "json1",
-            ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: IISS_MIN_IREP
-        }
-        self._reg_prep(new_prep, reg_data)
-
+    def _get_prep(self, address: 'Address') -> dict:
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
@@ -191,96 +182,50 @@ class TestIntegratePrep(TestIntegrateBase):
             "data": {
                 "method": "getPRep",
                 "params": {
-                    "address": str(new_prep)
+                    "address": str(address)
                 }
             }
         }
-        response = self._query(query_request)
-        register = response["registration"]
-        self.assertEqual(reg_data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-        self.assertEqual(reg_data[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
-        self.assertEqual(reg_data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-        self.assertEqual(reg_data[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
-        self.assertEqual(reg_data[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
-        self.assertEqual(reg_data[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(reg_data[ConstantKeys.IREP], register[ConstantKeys.IREP])
+        return self._query(query_request)
 
-    def test_set_prep(self):
-        self._update_governance()
-        self._set_revision(REV_IISS)
-
-        reg_data: dict = {
-            ConstantKeys.NAME: "name1",
-            ConstantKeys.EMAIL: "email1",
-            ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.DETAILS: "json1",
-            ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: IISS_MIN_IREP
-        }
-        self._reg_prep(self._addr_array[0], reg_data)
-
-        update_data: dict = {
-            ConstantKeys.NAME: "name0",
-            ConstantKeys.IREP: IISS_MIN_IREP + 100,
-        }
-        self._set_prep(self._addr_array[0], update_data)
-
+    def _get_prep_list(self) -> dict:
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRep",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
+                "method": "getPRepList",
+                "params": {}
             }
         }
-        response = self._query(query_request)
-        register = response["registration"]
+        return self._query(query_request)
 
-        self.assertEqual(update_data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-        self.assertEqual(reg_data[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
-        self.assertEqual(reg_data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-        self.assertEqual(reg_data[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
-        self.assertEqual(reg_data[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
-        self.assertEqual(reg_data[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(update_data[ConstantKeys.IREP], register[ConstantKeys.IREP])
-
-    def test_unreg_prep_candidate(self):
-        self._update_governance()
-        self._set_revision(REV_IISS)
-
-        reg_data: dict = {
-            ConstantKeys.NAME: "name1",
-            ConstantKeys.EMAIL: "email1",
-            ConstantKeys.WEBSITE: "website1",
-            ConstantKeys.DETAILS: "json1",
-            ConstantKeys.P2P_END_POINT: "ip1",
-            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: IISS_MIN_IREP
-        }
-        self._reg_prep(self._addr_array[0], reg_data)
-        self._unreg_prep(self._addr_array[0])
-
+    def _get_main_perps(self) -> dict:
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRep",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
+                "method": "getMainPRepList",
+                "params": {}
             }
         }
+        return self._query(query_request)
 
-        with self.assertRaises(InvalidParamsException) as e:
-            response = self._query(query_request)
-        self.assertEqual(f'P-Rep not found: {str(self._addr_array[0])}', e.exception.args[0])
+    def _get_sub_perps(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getSubPRepList",
+                "params": {}
+            }
+        }
+        return self._query(query_request)
 
     def test_prep_list(self):
         self._update_governance()
@@ -416,7 +361,7 @@ class TestIntegratePrep(TestIntegrateBase):
         }
         response = self._query(query_request)
         prep_list: list = response['preps']
-        self.assertEqual(3000, len(prep_list))
+        self.assertEqual(preps, len(prep_list))
 
     def test_update_prep_list(self):
         """
@@ -429,37 +374,33 @@ class TestIntegratePrep(TestIntegrateBase):
         6. check main preps sorted
         :return:
         """
+
         _PREPS_LEN = 200
         self._update_governance()
         self._set_revision(REV_IISS)
-        self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        total_supply = 2_000_000 * self._icx_factor
+
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        delegate_amount = total_supply * 3 // 1000
 
         # generate preps
-        self._decentralize(self._addr_array)
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getPRepList",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
-            }
-        }
-        response = self._query(query_request)
+        self._decentralize(addr_array, delegate_amount)
+
+        response = self._get_prep_list()
         total_delegated: int = response['totalDelegated']
         prep_list: list = response['preps']
 
-        self.assertEqual(self.delegate_amount * 22, total_delegated)
+        self.assertEqual(delegate_amount * 22, total_delegated)
         self.assertEqual(_PREPS_LEN, len(prep_list))
 
         # set revision to REV_DECENTRALIZATION
         tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                       {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
-        tx_list = [tx]
-        prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test(tx_list)
+        prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
 
         # check if tx_result has all fields correctly
         self.assertTrue('preps' and 'state' and 'rootHash' in main_prep_as_dict)
@@ -471,35 +412,15 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(0, main_prep_as_dict["state"])
 
         # check if main preps elected
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getMainPRepList",
-                "params": {}
-            }
-        }
-        org_response_of_main_prep_list = self._query(query_request)
-        self.assertEqual(PREP_MAIN_PREPS, len(org_response_of_main_prep_list["preps"]))
+        main_preps = self._get_main_perps()["preps"]
+        self.assertEqual(PREP_MAIN_PREPS, len(main_preps))
 
         # check if generating sub preps
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getSubPRepList",
-                "params": {}
-            }
-        }
-        response = self._query(query_request)
-        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, PREP_SUB_PREPS - PREP_MAIN_PREPS), len(response["preps"]))
+        sub_preps = self._get_sub_perps()["preps"]
+        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, PREP_SUB_PREPS - PREP_MAIN_PREPS), len(sub_preps))
 
         # un-register first main prep
-        first_main_prep = org_response_of_main_prep_list["preps"][0]["address"]
+        first_main_prep = main_preps[0]["address"]
         self._unreg_prep(first_main_prep)
 
         query_request = {
@@ -514,43 +435,38 @@ class TestIntegratePrep(TestIntegrateBase):
                 }
             }
         }
-
         with self.assertRaises(InvalidParamsException) as e:
             self._query(query_request)
         self.assertEqual(f'P-Rep not found: {str(first_main_prep)}', e.exception.args[0])
 
-        greatest_delegate_amount = self.delegate_amount + 1
+        greatest_delegate_amount = delegate_amount + 1
         # stake
         self._stake(self._genesis, greatest_delegate_amount)
 
         # delegate greatest_amount to last prep
-        last_addr = self._addr_array[_PREPS_LEN - 1]
-        delegations = [{
-            "address": str(last_addr),
-            "value": hex(greatest_delegate_amount)
-        }]
+        last_addr = addr_array[_PREPS_LEN - 1]
+        delegations = [
+            {
+                "address": str(last_addr),
+                "value": hex(greatest_delegate_amount)
+            }
+        ]
         self._delegate(self._genesis, delegations)
 
         for i in range(7):
             prev_block, tx_results = self._make_and_req_block([])
             self._write_precommit_state(prev_block)
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getMainPRepList",
-                "params": {}
-            }
-        }
         # check if sorted correctly
-        response_of_main_prep_list = self._query(query_request)
-        org_response_of_main_prep_list["preps"][0] = {"address": last_addr,
-                                                      "delegated": greatest_delegate_amount}
+        actual_main_preps = self._get_main_perps()["preps"]
+        expected_main_preps: list = main_preps[1:]
+        expected_main_preps.insert(
+            0, {
+                "address": last_addr,
+                "delegated": greatest_delegate_amount
+            })
 
-        self.assertEqual(org_response_of_main_prep_list["preps"], response_of_main_prep_list["preps"])
+        self.assertEqual(expected_main_preps, actual_main_preps)
 
     def test_weighted_average_of_irep(self):
         """
@@ -560,24 +476,22 @@ class TestIntegratePrep(TestIntegrateBase):
         3. check wighted average of irep correct
         :return:
         """
+
         _PREPS_LEN = 50
-        _MAIN_PREPS_LEN = 22
         context = IconScoreContext(IconScoreContextType.DIRECT)
         _AMOUNT_DELEGATE = int(get_minimum_delegate_for_bottom_prep(context=context) * 2)
 
         self._update_governance()
         self._set_revision(REV_IISS)
-        _addr_array = [create_address() for _ in range(_PREPS_LEN)]
+        addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        _addr_array_from_1 = create_address()
-        _addr_array_from_2 = create_address()
-        self._send_icx_in_loop(_addr_array_from_1, _AMOUNT_DELEGATE * 10)
-        self._send_icx_in_loop(_addr_array_from_2, _AMOUNT_DELEGATE * 10)
+        self._send_icx_in_loop(addr_array[0], _AMOUNT_DELEGATE * 10)
+        self._send_icx_in_loop(addr_array[1], _AMOUNT_DELEGATE * 10)
 
         buf_total_irep = 0
         # generate preps
         for i in range(_PREPS_LEN):
-            if i < 22:
+            if i < PREP_MAIN_PREPS:
                 buf_total_irep += IISS_MIN_IREP + i
             reg_data: dict = {
                 ConstantKeys.NAME: f"name{i}",
@@ -588,9 +502,9 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
                 ConstantKeys.IREP: IISS_MIN_IREP + i
             }
-            self._reg_prep(_addr_array[i], reg_data)
+            self._reg_prep(addr_array[i], reg_data)
 
-        from_addr_for_stake = [self._admin, _addr_array_from_1, _addr_array_from_2]
+        from_addr_for_stake = [self._admin, addr_array[0], addr_array[1]]
 
         idx_for_stake = 10
         for idx, from_addr in enumerate(from_addr_for_stake):
@@ -601,7 +515,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 if i > 21:
                     break
                 delegations.append({
-                    "address": str(_addr_array[i]),
+                    "address": str(addr_array[i]),
                     "value": hex(_AMOUNT_DELEGATE)
                 })
             self._delegate(from_addr, delegations)
@@ -611,7 +525,7 @@ class TestIntegratePrep(TestIntegrateBase):
         tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                       {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
         block, invoke_response, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
-        self.assertEqual((_AMOUNT_DELEGATE * buf_total_irep) // (_AMOUNT_DELEGATE * _MAIN_PREPS_LEN),
+        self.assertEqual((_AMOUNT_DELEGATE * buf_total_irep) // (_AMOUNT_DELEGATE * PREP_MAIN_PREPS),
                          main_prep_as_dict['irep'])
 
     def test_low_productivity(self):
@@ -622,82 +536,45 @@ class TestIntegratePrep(TestIntegrateBase):
 
         self._update_governance()
         self._set_revision(REV_IISS)
-        self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        total_supply = 2_000_000 * self._icx_factor
+
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        delegate_amount = total_supply * 3 // 1000
 
         # generate preps
-        self._decentralize(self._addr_array)
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getPRepList",
-                "params": {}
-            }
-        }
-        response = self._query(query_request)
+        self._decentralize(addr_array, delegate_amount)
+
+        response = self._get_prep_list()
         total_delegated: int = response['totalDelegated']
         prep_list: list = response['preps']
 
-        self.assertEqual(self.delegate_amount * 22, total_delegated)
+        self.assertEqual(delegate_amount * 22, total_delegated)
         self.assertEqual(_PREPS_LEN, len(prep_list))
 
         self._set_revision(REV_DECENTRALIZATION)
 
         # check if generating main preps
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getMainPRepList",
-                "params": {}
-            }
-        }
-        org_response_of_main_prep_list = self._query(query_request)
-        self.assertEqual(_MAIN_PREPS_LEN, len(org_response_of_main_prep_list["preps"]))
+        main_preps = self._get_main_perps()["preps"]
+        self.assertEqual(_MAIN_PREPS_LEN, len(main_preps))
 
         for i in range(10):
             prev_block, tx_results = self._make_and_req_block(
                 [],
-                prev_block_generator=self._addr_array[0],
-                prev_block_validators=[self._addr_array[1], self._addr_array[2]])
-
+                prev_block_generator=addr_array[0],
+                prev_block_validators=[addr_array[1], addr_array[2]])
             self._write_precommit_state(prev_block)
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getPRep",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
-            }
-        }
-        info = self._query(query_request)
+        info = self._get_prep(addr_array[0])
         total_blocks: int = info['stats']['totalBlocks']
         validated_blocks: int = info['stats']['validatedBlocks']
         self.assertEqual(10, total_blocks)
         self.assertEqual(10, validated_blocks)
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getPRep",
-                "params": {
-                    "address": str(self._addr_array[3])
-                }
-            }
-        }
-        info = self._query(query_request)
+        info = self._get_prep(addr_array[3])
         total_blocks: int = info['stats']['totalBlocks']
         validated_blocks: int = info['stats']['validatedBlocks']
         self.assertEqual(10, total_blocks)
