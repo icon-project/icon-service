@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from ..base.type_converter import TypeConverter
-from ..iconscore.icon_score_context import IconScoreContext
+
+if typing:
+    from ..iconscore.icon_score_context import IconScoreContext
+    from ..base.block import Block
 
 
-def get_preps(context: IconScoreContext):
-    preps: 'dict' = context.engine.prep.make_prep_tx_result()
+def get_main_preps(context: 'IconScoreContext'):
+    preps: 'dict' = context.engine.prep.get_main_preps_in_term()
     if preps is None:
         preps = {}
 
-    block = context.storage.icx.last_block
-    preps['blockHeight'] = 0 if block is None else block
-    preps.pop('state', None)
-    preps.pop('irep', None)
-
+    block: 'Block' = context.storage.icx.last_block
+    preps['blockHeight'] = hex(0) if block is None else hex(block.height)
     TypeConverter.convert_type_reverse(preps)
     result = {
         "result": preps
@@ -35,11 +37,11 @@ def get_preps(context: IconScoreContext):
 
 
 inner_call_handler = {
-    "ise_getPRepList": get_preps
+    "ise_getPRepList": get_main_preps
 }
 
 
-def inner_call(context: IconScoreContext, request: dict):
+def inner_call(context: 'IconScoreContext', request: dict):
     method = request['method']
     params = request.get("params", {})
     handler = inner_call_handler[method]
