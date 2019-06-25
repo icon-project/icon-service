@@ -37,28 +37,31 @@ class TestIntegrateIISS(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision',
+                                      {"code": hex(revision),
+                                       "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-    def _stake(self, address: 'Address', value: int, revision: int = REV_IISS):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-
+    def _stake(self, address: 'Address', value: int):
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
+                                      'setStake',
+                                      {"value": hex(value)})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def _delegate(self, address: 'Address', delegations: list, revision: int = REV_IISS):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+    def _delegate(self, address: 'Address', delegations: list):
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {"delegations": delegations})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def _reg_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
+    def _reg_prep(self, address: 'Address', data: dict):
 
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
@@ -66,9 +69,11 @@ class TestIntegrateIISS(TestIntegrateBase):
         value: str = hex(data[ConstantKeys.IREP])
         data[ConstantKeys.IREP] = value
 
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'registerPRep',
+                                      data)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def test_reg_prep(self):
@@ -86,7 +91,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
                 ConstantKeys.IREP: IISS_MIN_IREP + i,
             }
-            self._reg_prep(create_address(), reg_data, REV_IISS)
+            self._reg_prep(create_address(), reg_data)
 
         query_request = {
             "version": self._version,
@@ -123,7 +128,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
                 ConstantKeys.IREP: IISS_MIN_IREP + i
             }
-            self._reg_prep(self._addr_array[i + 10], reg_data, REV_IISS)
+            self._reg_prep(self._addr_array[i + 10], reg_data)
 
         # gain 10 icx (addr0 - 5)
         balance: int = 10 * 10 ** 18
@@ -163,7 +168,6 @@ class TestIntegrateIISS(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        print(response)
 
         self._make_and_req_block([])
         self._make_and_req_block([])
