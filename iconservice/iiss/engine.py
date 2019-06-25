@@ -386,7 +386,7 @@ class Engine(EngineBase):
                                                       current_total_prep_delegated)
 
         irep: int = context.engine.prep.term.irep
-        calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
+        calculated_irep: int = IssueFormula.calculate_i_rep_per_block_contributor(irep)
         reward_prep.reward_rate = reward_rep
         context.storage.iiss.put_reward_prep(context, reward_prep)
 

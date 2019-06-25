@@ -63,8 +63,8 @@ class IssueDataKey:
     PREP = "prep"
     TOTAL = "total"
 
-    INCENTIVE = "incentive"
-    REWARD_RATE = "rewardRate"
+    IREP = "irep"
+    RREP = "rrep"
     TOTAL_DELEGATION = "totalDelegation"
     VALUE = "value"
 
@@ -72,7 +72,7 @@ class IssueDataKey:
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
         "indexed": ["PRepIssue(int,int,int,int)"],
-        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
+        "data": [IssueDataKey.IREP, IssueDataKey.RREP, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {

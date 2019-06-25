@@ -41,8 +41,8 @@ class Engine(EngineBase):
         irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             "prep": {
-                "incentive": irep,
-                "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
+                "irep": irep,
+                "rrep": context.storage.iiss.get_reward_prep(context).reward_rate,
                 "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
             }
         }
