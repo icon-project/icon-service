@@ -1400,7 +1400,7 @@ class IconServiceEngine(ContextContainer):
         block_hash = b'\x00' * 32
         timestamp = 0
         prev_block_hash = block_hash
-        return Block(block_height, block_hash, timestamp, prev_block_hash)
+        return Block(block_height, block_hash, timestamp, prev_block_hash, 0)
 
     def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB

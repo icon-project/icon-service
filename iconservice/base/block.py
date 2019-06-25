@@ -193,15 +193,3 @@ class Block(object):
             block_hash_bytes,
             timestamp_bytes,
             prev_block_hash_bytes)
-
-    def __str__(self) -> str:
-        hash_hex = 'None' if self._hash is None else f'0x{self._hash.hex()}'
-        prev_hash_hex = \
-            'None' if self._prev_hash is None else f'0x{self._prev_hash.hex()}'
-        cumulative_fee = 'None' if self._cumulative_fee is None else self._cumulative_fee
-
-        return f'height({self._height}) ' \
-            f'hash({hash_hex}) ' \
-            f'timestamp({self._timestamp}) ' \
-            f'prev_hash({prev_hash_hex})' \
-            f'cumulative_fee({cumulative_fee})' \

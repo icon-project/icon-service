@@ -37,7 +37,7 @@ class TestBlock(unittest.TestCase):
         self._test_Block_from_bytes_to_bytes(block_hash, prev_block_hash)
 
     def _test_Block_from_bytes_to_bytes(self, block_hash: bytes, prev_block_hash: Optional[bytes]):
-        block1 = Block(1, block_hash, 100, prev_block_hash)
+        block1 = Block(1, block_hash, 100, prev_block_hash, 0)
         data = Block.to_bytes(block1)
         self.assertEqual(bytes(block1), data)
         self.assertTrue(isinstance(data, bytes))
@@ -48,16 +48,6 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(block2.hash, block_hash)
         self.assertEqual(block2.timestamp, 100)
         self.assertEqual(block2.prev_hash, prev_block_hash)
-
-    def test_block_to_str(self):
-
-        block = Block(1,
-                      create_block_hash(),
-                      100,
-                      create_block_hash())
-
-        self.assertEqual(f'height({block.height}) hash(0x{bytes.hex(block.hash)}) '
-                         f'timestamp({block.timestamp}) prev_hash(0x{bytes.hex(block.prev_hash)})', str(block))
 
 
 if __name__ == '__main__':
