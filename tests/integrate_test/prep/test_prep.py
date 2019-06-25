@@ -421,7 +421,6 @@ class TestIntegratePrep(TestIntegrateBase):
         :return:
         """
         _PREPS_LEN = 200
-        _MAIN_PREPS_LEN = 22
         self._update_governance()
         self._set_revision(REV_IISS)
         self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
@@ -455,7 +454,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         # check if tx_result has all fields correctly
         self.assertTrue('preps' and 'state' and 'rootHash' in main_prep_as_dict)
-        self.assertTrue(_MAIN_PREPS_LEN, len(main_prep_as_dict["preps"]))
+        self.assertTrue(PREP_MAIN_PREPS, len(main_prep_as_dict["preps"]))
         self.assertEqual(0, main_prep_as_dict["state"])
 
         self._write_precommit_state(prev_block)
@@ -474,7 +473,7 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         org_response_of_main_prep_list = self._query(query_request)
-        self.assertEqual(_MAIN_PREPS_LEN, len(org_response_of_main_prep_list["preps"]))
+        self.assertEqual(PREP_MAIN_PREPS, len(org_response_of_main_prep_list["preps"]))
 
         # check if generating sub preps
         query_request = {
@@ -488,7 +487,7 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(min(_PREPS_LEN - _MAIN_PREPS_LEN, 100 - _MAIN_PREPS_LEN), len(response["preps"]))
+        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, 100 - PREP_MAIN_PREPS), len(response["preps"]))
 
         # un-register first main prep
         first_main_prep = org_response_of_main_prep_list["preps"][0]["address"]

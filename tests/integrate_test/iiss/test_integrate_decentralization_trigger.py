@@ -19,7 +19,7 @@ from iconservice.base.address import Address, GOVERNANCE_SCORE_ADDRESS, ZERO_SCO
 from iconservice.base.block import Block
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    IconScoreContextType, IISS_MIN_IREP, PREP_MAIN_PREPS
+    IconScoreContextType, IISS_MIN_IREP, PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_MAX_DELEGATIONS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from tests import create_address, create_block_hash
 from tests.integrate_test import create_timestamp
@@ -95,14 +95,14 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         return tx
 
     def test_decentralization_trigger(self):
-        total_supply = 2_000_000 * 10**18
+        total_supply = 2_000_000 * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
         _DELEGATE_AMOUNT = total_supply * 3 // 1000
         _TERM = 10
         # distribute icx
         # Can delegate up to 10 preps at a time
-        stake_amount: int = _DELEGATE_AMOUNT * 10
+        stake_amount: int = _DELEGATE_AMOUNT * IISS_MAX_DELEGATIONS
         tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[22], stake_amount)
         tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[23], stake_amount)
         tx3 = self._make_icx_send_tx(self._genesis, self._addr_array[24], stake_amount)
