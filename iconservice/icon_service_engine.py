@@ -18,7 +18,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -64,6 +63,7 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
+    from .prep.data.prep import PRep
 
 
 class IconServiceEngine(ContextContainer):
@@ -429,6 +429,8 @@ class IconServiceEngine(ContextContainer):
             added_transactions[issue_transaction["params"]["txHash"]] = tx_params_to_added
             tx_requests.insert(0, issue_transaction)
 
+        self._update_productivity(context, prev_block_generator, prev_block_validators)
+
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
             tx_result = self._invoke_genesis(context, tx_requests[0], 0)
@@ -474,6 +476,27 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    @staticmethod
+    def _update_productivity(context: 'IconScoreContext',
+                             prev_block_generator: Optional['Address'] = None,
+                             prev_block_validators: Optional[List['Address']] = None):
+
+        if context.revision < REV_DECENTRALIZATION or context.engine.prep.term.sequence == -1:
+            return
+
+        validates: set = set()
+        if prev_block_generator:
+            validates.add(prev_block_generator)
+        if prev_block_validators:
+            validates.update(prev_block_validators)
+
+        main_preps: list = context.engine.prep.term.main_preps
+        for prep in main_preps:
+            is_validate: bool = prep.address in validates
+            p: 'PRep' = context.preps.get(prep.address)
+            if p:
+                p.update_productivity(is_validate)
 
     @staticmethod
     def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
