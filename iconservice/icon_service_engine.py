@@ -451,7 +451,9 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._update_revision_if_necessary(precommit_flag, context, tx_result)
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
-                context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
+
+                if context.revision >= REV_IISS:
+                    context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
         preps = context.preps.get_snapshot()
 

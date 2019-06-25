@@ -188,7 +188,7 @@ class Block(object):
         prev_block_hash_bytes = tmp_prev_hash
 
         return Block._struct.pack(
-            self._VERSION,
+            BlockVersion.STRUCT,
             block_height_bytes,
             block_hash_bytes,
             timestamp_bytes,

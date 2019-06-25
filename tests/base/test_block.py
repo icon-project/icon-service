@@ -20,26 +20,35 @@ import unittest
 from typing import Optional
 
 from iconservice.base.block import Block
-from iconservice.icon_constant import DEFAULT_BYTE_SIZE
+from iconservice.icon_constant import DEFAULT_BYTE_SIZE, REV_IISS
 from tests import create_block_hash
 
 
 class TestBlock(unittest.TestCase):
 
     def test_Block_from_bytes_to_bytes(self):
+        # success case: struct
         block_hash = create_block_hash()
         prev_block_hash = create_block_hash()
-        self._test_Block_from_bytes_to_bytes(block_hash, prev_block_hash)
+        self._test_block_from_bytes_to_bytes_struct(block_hash, prev_block_hash)
+
+        # success case: msg pack
+        self._test_block_from_bytes_to_bytes_msg_pack(block_hash, prev_block_hash)
 
     def test_Block_from_bytes_to_bytes_None_hash(self):
+        # success case: struct
         block_hash = create_block_hash()
         prev_block_hash = None
-        self._test_Block_from_bytes_to_bytes(block_hash, prev_block_hash)
+        self._test_block_from_bytes_to_bytes_struct(block_hash, prev_block_hash)
 
-    def _test_Block_from_bytes_to_bytes(self, block_hash: bytes, prev_block_hash: Optional[bytes]):
-        block1 = Block(1, block_hash, 100, prev_block_hash, 0)
-        data = Block.to_bytes(block1)
-        self.assertEqual(bytes(block1), data)
+        # success case: msg pack
+        self._test_block_from_bytes_to_bytes_msg_pack(block_hash, prev_block_hash)
+
+    def _test_block_from_bytes_to_bytes_struct(self, block_hash: bytes, prev_block_hash: Optional[bytes]):
+        revision = 0
+        cumulative_fee = 10
+        block1 = Block(1, block_hash, 100, prev_block_hash, cumulative_fee)
+        data = Block.to_bytes(block1, revision)
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(1 + DEFAULT_BYTE_SIZE + DEFAULT_BYTE_SIZE + DEFAULT_BYTE_SIZE + DEFAULT_BYTE_SIZE, len(data))
 
@@ -48,6 +57,22 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(block2.hash, block_hash)
         self.assertEqual(block2.timestamp, 100)
         self.assertEqual(block2.prev_hash, prev_block_hash)
+        # as cumulative fee is not recorded, result should be zero (not 10)
+        self.assertEqual(block2.cumulative_fee, 0)
+
+    def _test_block_from_bytes_to_bytes_msg_pack(self, block_hash: bytes, prev_block_hash: Optional[bytes]):
+        revision = REV_IISS
+        cumulative_fee = 10
+        block1 = Block(1, block_hash, 100, prev_block_hash, cumulative_fee)
+        data = Block.to_bytes(block1, revision)
+        self.assertTrue(isinstance(data, bytes))
+
+        block2 = Block.from_bytes(data)
+        self.assertEqual(block2.height, 1)
+        self.assertEqual(block2.hash, block_hash)
+        self.assertEqual(block2.timestamp, 100)
+        self.assertEqual(block2.prev_hash, prev_block_hash)
+        self.assertEqual(block2.cumulative_fee, cumulative_fee)
 
 
 if __name__ == '__main__':

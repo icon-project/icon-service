@@ -74,6 +74,7 @@ class Regulator:
             self._covered_icx_by_fee = prev_block_cumulative_fee
             self._covered_icx_by_remain = covered_icx - prev_block_cumulative_fee
         else:
+            # todo: bug!! 0 일 때도 elif 와 동일한 상황일 수 있(!! fee = issue amount - over issued icx)
             if corrected_icx_issue_amount == 0:
                 self._covered_icx_by_remain = 0
                 self._covered_icx_by_fee = covered_icx
