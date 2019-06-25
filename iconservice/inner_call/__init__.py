@@ -28,8 +28,6 @@ def get_main_preps(context: 'IconScoreContext'):
 
     block: 'Block' = context.storage.icx.last_block
     preps['blockHeight'] = hex(0) if block is None else hex(block.height)
-    block = context.storage.icx.last_block
-    preps['blockHeight'] = 0 if block is None else block
     TypeConverter.convert_type_reverse(preps)
     result = {
         "result": preps
