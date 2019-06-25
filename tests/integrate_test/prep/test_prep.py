@@ -613,3 +613,92 @@ class TestIntegratePrep(TestIntegrateBase):
         block, invoke_response, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
         self.assertEqual((_AMOUNT_DELEGATE * buf_total_irep) // (_AMOUNT_DELEGATE * _MAIN_PREPS_LEN),
                          main_prep_as_dict['irep'])
+
+    def test_low_productivity(self):
+        _PREPS_LEN = 200
+        _MAIN_PREPS_LEN = 22
+        _AMOUNT_DELEGATE = 10000
+        _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
+
+        self._update_governance()
+        self._set_revision(REV_IISS)
+        self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        # generate preps
+        self._decentralize(self._addr_array)
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {}
+            }
+        }
+        response = self._query(query_request)
+        total_delegated: int = response['totalDelegated']
+        prep_list: list = response['preps']
+
+        self.assertEqual(self.delegate_amount * 22, total_delegated)
+        self.assertEqual(_PREPS_LEN, len(prep_list))
+
+        self._set_revision(REV_DECENTRALIZATION)
+
+        # check if generating main preps
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getMainPRepList",
+                "params": {}
+            }
+        }
+        org_response_of_main_prep_list = self._query(query_request)
+        self.assertEqual(_MAIN_PREPS_LEN, len(org_response_of_main_prep_list["preps"]))
+
+        for i in range(10):
+            prev_block, tx_results = self._make_and_req_block(
+                [],
+                prev_block_generator=self._addr_array[0],
+                prev_block_validators=[self._addr_array[1], self._addr_array[2]])
+
+            self._write_precommit_state(prev_block)
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRep",
+                "params": {
+                    "address": str(self._addr_array[0])
+                }
+            }
+        }
+        info = self._query(query_request)
+        total_blocks: int = info['stats']['totalBlocks']
+        validated_blocks: int = info['stats']['validatedBlocks']
+        self.assertEqual(10, total_blocks)
+        self.assertEqual(10, validated_blocks)
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRep",
+                "params": {
+                    "address": str(self._addr_array[3])
+                }
+            }
+        }
+        info = self._query(query_request)
+        total_blocks: int = info['stats']['totalBlocks']
+        validated_blocks: int = info['stats']['validatedBlocks']
+        self.assertEqual(10, total_blocks)
+        self.assertEqual(0, validated_blocks)

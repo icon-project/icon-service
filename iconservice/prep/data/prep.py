@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Tuple
 from ...base.address import Address
 from ...base.exception import InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER
+from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -87,8 +87,8 @@ class PRep(object):
         self.tx_index: int = 0
 
         # stats
-        self.total_blocks: int = 0
-        self.validated_blocks: int = 0
+        self._total_blocks: int = 0
+        self._validated_blocks: int = 0
 
     @property
     def status(self) -> 'PRepStatus':
@@ -101,6 +101,23 @@ class PRep(object):
         elif value != PRepStatus.ACTIVE and self._status == PRepStatus.NONE:
             raise InvalidParamsException(f"Invalid status setting: {value}")
         self._status = value
+
+    def update_productivity(self, is_validate: bool):
+        if is_validate:
+            self._validated_blocks += 1
+        self._total_blocks += 1
+
+    @property
+    def productivity(self):
+        # return : % (percentage)
+        return self._validated_blocks * 100 // self._total_blocks
+
+    def is_low_productivity(self) -> bool:
+        # A grace period without measuring productivity
+        if self._total_blocks <= PENALTY_GRACE_PERIOD:
+            return False
+
+        return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
 
     @classmethod
     def make_key(cls, address: 'Address') -> bytes:
@@ -123,7 +140,7 @@ class PRep(object):
         return MsgPackForDB.dumps([
             self._VERSION,
 
-            self.status.value,
+            self._status.value,
 
             self.name,
             self.email,
@@ -137,8 +154,8 @@ class PRep(object):
             self.block_height,
             self.tx_index,
 
-            self.total_blocks,
-            self.validated_blocks
+            self._total_blocks,
+            self._validated_blocks,
         ])
 
     @classmethod
@@ -162,8 +179,8 @@ class PRep(object):
         prep.block_height = items[cls.Index.BLOCK_HEIGHT]
         prep.tx_index = items[cls.Index.TX_INDEX]
 
-        prep.total_blocks = items[cls.Index.TOTAL_BLOCKS]
-        prep.validated_blocks = items[cls.Index.VALIDATE_BLOCKS]
+        prep._total_blocks = items[cls.Index.TOTAL_BLOCKS]
+        prep._validated_blocks = items[cls.Index.VALIDATE_BLOCKS]
 
         return prep
 
@@ -171,7 +188,7 @@ class PRep(object):
     def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':
         prep = PRep(address)
 
-        prep.status: int = PRepStatus.ACTIVE
+        prep._status: int = PRepStatus.ACTIVE
 
         # Optional items
         prep.name: str = data.get(ConstantKeys.NAME, "")
@@ -223,7 +240,7 @@ class PRep(object):
                 "delegated": self.delegated
             },
             "stats": {
-                "totalBlocks": self.total_blocks,
-                "validatedBlocks": self.validated_blocks
+                "totalBlocks": self._total_blocks,
+                "validatedBlocks": self._validated_blocks
             }
         }
