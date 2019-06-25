@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IconScoreContextType, REV_IISS
+from iconservice.icon_constant import IconScoreContextType, REV_IISS, PREP_SUB_PREPS
 from iconservice.icon_constant import REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss import get_minimum_delegate_for_bottom_prep
@@ -132,9 +132,9 @@ class TestIntegratePrep(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
         self._write_precommit_state(prev_block)
         # stake
-        self._stake(addr1, self.delegate_amount * 10)
-        self._stake(addr2, self.delegate_amount * 10)
-        self._stake(addr3, self.delegate_amount * 10)
+        self._stake(addr1, stake_amount)
+        self._stake(addr2, stake_amount)
+        self._stake(addr3, stake_amount)
         # register preps
         for i, address in enumerate(self.main_preps):
             data: dict = {
@@ -496,7 +496,7 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         response = self._query(query_request)
-        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, 100 - PREP_MAIN_PREPS), len(response["preps"]))
+        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, PREP_SUB_PREPS - PREP_MAIN_PREPS), len(response["preps"]))
 
         # un-register first main prep
         first_main_prep = org_response_of_main_prep_list["preps"][0]["address"]
@@ -519,15 +519,15 @@ class TestIntegratePrep(TestIntegrateBase):
             self._query(query_request)
         self.assertEqual(f'P-Rep not found: {str(first_main_prep)}', e.exception.args[0])
 
-        delegate_amount = self.delegate_amount + 1
+        greatest_delegate_amount = self.delegate_amount + 1
         # stake
-        self._stake(self._genesis, delegate_amount + self.delegate_amount)
+        self._stake(self._genesis, greatest_delegate_amount)
 
-        # delegate 10000 to last prep
+        # delegate greatest_amount to last prep
         last_addr = self._addr_array[_PREPS_LEN - 1]
         delegations = [{
             "address": str(last_addr),
-            "value": hex(delegate_amount + self.delegate_amount)
+            "value": hex(greatest_delegate_amount)
         }]
         self._delegate(self._genesis, delegations)
 
@@ -548,7 +548,7 @@ class TestIntegratePrep(TestIntegrateBase):
         # check if sorted correctly
         response_of_main_prep_list = self._query(query_request)
         org_response_of_main_prep_list["preps"][0] = {"address": last_addr,
-                                                      "delegated": delegate_amount + self.delegate_amount}
+                                                      "delegated": greatest_delegate_amount}
 
         self.assertEqual(org_response_of_main_prep_list["preps"], response_of_main_prep_list["preps"])
 
