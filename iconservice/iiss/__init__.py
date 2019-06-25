@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from .engine import Engine as IISSEngine
 from .storage import Storage as IISSStorage
-from ..icon_constant import PREP_MAIN_PREPS, ICX_IN_LOOP
+from ..icon_constant import PREP_MAIN_PREPS
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
