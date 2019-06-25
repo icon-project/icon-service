@@ -96,21 +96,24 @@ class TestIntegrateDecentralization(TestIntegrateBase):
 
     def test_decentralization_trigger(self):
         total_supply = 2_000_000 * 10**18
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
         _DELEGATE_AMOUNT = total_supply * 3 // 1000
         _TERM = 10
         # distribute icx
-        balance: int = _DELEGATE_AMOUNT * 10
-        tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[22], balance)
-        tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[23], balance)
-        tx3 = self._make_icx_send_tx(self._genesis, self._addr_array[24], balance)
+        # Can delegate up to 10 preps at a time
+        stake_amount: int = _DELEGATE_AMOUNT * 10
+        tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[22], stake_amount)
+        tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[23], stake_amount)
+        tx3 = self._make_icx_send_tx(self._genesis, self._addr_array[24], stake_amount)
         prev_block, tx_results, main_prep_list = self._make_and_req_block([tx1, tx2, tx3])
         self.assertIsNone(main_prep_list)
         self._write_precommit_state(prev_block)
 
         # stake
-        stake_tx1 = self._stake_tx(self._addr_array[22], balance)
-        stake_tx2 = self._stake_tx(self._addr_array[23], balance)
-        stake_tx3 = self._stake_tx(self._addr_array[24], balance)
+        stake_tx1 = self._stake_tx(self._addr_array[22], stake_amount)
+        stake_tx2 = self._stake_tx(self._addr_array[23], stake_amount)
+        stake_tx3 = self._stake_tx(self._addr_array[24], stake_amount)
         prev_block, tx_results, main_prep_list = self._make_and_req_block([stake_tx1, stake_tx2, stake_tx3])
         self.assertIsNone(main_prep_list)
         self._write_precommit_state(prev_block)
@@ -135,20 +138,20 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
         # delegate
-        delegate_info = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
-                         for address in self._addr_array[:10]]
-        delegate_tx1 = self._delegate_tx(self._addr_array[22], delegate_info)
+        delegate_info_addr_1 = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
+                                for address in self._addr_array[:10]]
+        delegate_tx1 = self._delegate_tx(self._addr_array[22], delegate_info_addr_1)
 
-        delegate_info = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
-                         for address in self._addr_array[10:20]]
-        delegate_tx2 = self._delegate_tx(self._addr_array[23], delegate_info)
+        delegate_info_addr_2 = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
+                                for address in self._addr_array[10:20]]
+        delegate_tx2 = self._delegate_tx(self._addr_array[23], delegate_info_addr_2)
 
-        delegate_info = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
-                         for address in self._addr_array[20:22]]
-        delegate_tx3 = self._delegate_tx(self._addr_array[24], delegate_info)
+        delegate_info_addr_3 = [{"address": str(address), "value": hex(_DELEGATE_AMOUNT)}
+                                for address in self._addr_array[20:22]]
+        delegate_tx3 = self._delegate_tx(self._addr_array[24], delegate_info_addr_3)
 
         prev_block, tx_results, main_prep_list = self._make_and_req_block([delegate_tx1, delegate_tx2, delegate_tx3])
-        self.assertIsNotNone(main_prep_list)
+        self.assertIsNotNone(main_prep_list) # decentralized!
         self._write_precommit_state(prev_block)
 
         query_request = {
@@ -161,17 +164,16 @@ class TestIntegrateDecentralization(TestIntegrateBase):
                 "params": {}
             }
         }
-        # check if sorted correctly
-        initial_main_preps_response = self._query(query_request)
-        additional_delegate = _DELEGATE_AMOUNT + 1
-        # stake
-        stake_tx = self._stake_tx(self._genesis, additional_delegate)
 
-        # delegate 10000 to last prep
+        initial_main_preps_response = self._query(query_request)
+        # stake
+        stake_tx = self._stake_tx(self._genesis, _DELEGATE_AMOUNT)
+
+        # delegate _DELEGATE_AMOUNT to bottom prep
         last_address = self._main_preps[PREP_MAIN_PREPS - 1]
         delegations = [{
             "address": str(last_address),
-            "value": hex(additional_delegate)
+            "value": hex(_DELEGATE_AMOUNT)
         }]
         delegate_tx = self._delegate_tx(self._genesis, delegations)
         prev_block, tx_results, main_prep_list = self._make_and_req_block([stake_tx, delegate_tx])
@@ -188,7 +190,7 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertIsNotNone(main_prep_list)
 
-        main_preps_response = self._query(query_request)
-        self.assertEqual(initial_main_preps_response['totalDelegated']+additional_delegate,
-                         main_preps_response['totalDelegated'])
-        self.assertEqual(main_preps_response['preps'][0]['address'], last_address)
+        second_main_prep_response = self._query(query_request)
+        self.assertEqual(initial_main_preps_response['totalDelegated']+_DELEGATE_AMOUNT,
+                         second_main_prep_response['totalDelegated'])
+        self.assertEqual(second_main_prep_response['preps'][0]['address'], last_address)

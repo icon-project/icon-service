@@ -117,20 +117,21 @@ class TestIntegratePrep(TestIntegrateBase):
             self.main_preps = [create_address() for _ in range(PREP_MAIN_PREPS)]
         else:
             self.main_preps = main_preps
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
         self.delegate_amount = self.total_supply * 3 // 1000
-        # distribute icx
-        minimum_delegate = self.delegate_amount
-        balance: int = minimum_delegate * 10
+        # Can delegate up to 10 preps at a time
+        stake_amount: int = self.delegate_amount * 10
         addr1, addr2, addr3 = create_address(), create_address(), create_address()
-        tx1 = self._make_icx_send_tx(self._genesis, addr1, balance)
-        tx2 = self._make_icx_send_tx(self._genesis, addr2, balance)
-        tx3 = self._make_icx_send_tx(self._genesis, addr3, balance)
+        tx1 = self._make_icx_send_tx(self._genesis, addr1, stake_amount)
+        tx2 = self._make_icx_send_tx(self._genesis, addr2, stake_amount)
+        tx3 = self._make_icx_send_tx(self._genesis, addr3, stake_amount)
         prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
         self._write_precommit_state(prev_block)
         # stake
-        self._stake(addr1, minimum_delegate * 10)
-        self._stake(addr2, minimum_delegate * 10)
-        self._stake(addr3, minimum_delegate * 10)
+        self._stake(addr1, self.delegate_amount * 10)
+        self._stake(addr2, self.delegate_amount * 10)
+        self._stake(addr3, self.delegate_amount * 10)
         # register preps
         for i, address in enumerate(self.main_preps):
             data: dict = {
@@ -145,23 +146,21 @@ class TestIntegratePrep(TestIntegrateBase):
             self._reg_prep(address, data)
 
         # delegate
-        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
-                         for address in self._addr_array[:10]]
-        self._delegate(addr1, delegate_info)
+        delegate_info_addr1 = [{"address": str(address), "value": hex(self.delegate_amount)}
+                               for address in self._addr_array[:10]]
+        self._delegate(addr1, delegate_info_addr1)
 
-        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
-                         for address in self._addr_array[10:20]]
-        self._delegate(addr2, delegate_info)
+        delegate_info_addr2 = [{"address": str(address), "value": hex(self.delegate_amount)}
+                               for address in self._addr_array[10:20]]
+        self._delegate(addr2, delegate_info_addr2)
 
-        delegate_info = [{"address": str(address), "value": hex(minimum_delegate)}
-                         for address in self._addr_array[20:22]]
-        self._delegate(addr3, delegate_info)
+        delegate_info_addr3 = [{"address": str(address), "value": hex(self.delegate_amount)}
+                               for address in self._addr_array[20:22]]
+        self._delegate(addr3, delegate_info_addr3)
 
     def test_reg_prep(self):
         self._update_governance()
         self._set_revision(REV_IISS)
-        self._decentralize()
-        self._set_revision(REV_DECENTRALIZATION)
         new_prep = create_address()
 
         reg_data: dict = {
@@ -423,7 +422,6 @@ class TestIntegratePrep(TestIntegrateBase):
         """
         _PREPS_LEN = 200
         _MAIN_PREPS_LEN = 22
-        _AMOUNT_DELEGATE = 10000
         self._update_governance()
         self._set_revision(REV_IISS)
         self._addr_array = [create_address() for _ in range(_PREPS_LEN)]
@@ -455,7 +453,7 @@ class TestIntegratePrep(TestIntegrateBase):
         tx_list = [tx]
         prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test(tx_list)
 
-        # check if tx_result has all of field correctly
+        # check if tx_result has all fields correctly
         self.assertTrue('preps' and 'state' and 'rootHash' in main_prep_as_dict)
         self.assertTrue(_MAIN_PREPS_LEN, len(main_prep_as_dict["preps"]))
         self.assertEqual(0, main_prep_as_dict["state"])
@@ -464,7 +462,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(0, main_prep_as_dict["state"])
 
-        # check if generating main preps
+        # check if main preps elected
         query_request = {
             "version": self._version,
             "from": self._addr_array[0],
@@ -513,14 +511,15 @@ class TestIntegratePrep(TestIntegrateBase):
             self._query(query_request)
         self.assertEqual(f'P-Rep not found: {str(first_main_prep)}', e.exception.args[0])
 
+        delegate_amount = self.delegate_amount + 1
         # stake
-        self._stake(self._genesis, _AMOUNT_DELEGATE + self.delegate_amount)
+        self._stake(self._genesis, delegate_amount + self.delegate_amount)
 
         # delegate 10000 to last prep
         last_addr = self._addr_array[_PREPS_LEN - 1]
         delegations = [{
             "address": str(last_addr),
-            "value": hex(_AMOUNT_DELEGATE + self.delegate_amount)
+            "value": hex(delegate_amount + self.delegate_amount)
         }]
         self._delegate(self._genesis, delegations)
 
@@ -541,6 +540,6 @@ class TestIntegratePrep(TestIntegrateBase):
         # check if sorted correctly
         response_of_main_prep_list = self._query(query_request)
         org_response_of_main_prep_list["preps"][0] = {"address": last_addr,
-                                                      "delegated": _AMOUNT_DELEGATE + self.delegate_amount}
+                                                      "delegated": delegate_amount + self.delegate_amount}
 
         self.assertEqual(org_response_of_main_prep_list["preps"], response_of_main_prep_list["preps"])
