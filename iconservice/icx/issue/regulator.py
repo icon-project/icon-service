@@ -46,7 +46,7 @@ class Regulator:
     def corrected_icx_issue_amount(self):
         return self._corrected_icx_issue_amount
 
-    def set_issue_info_about_correction(self, context: 'IconScoreContext', issue_amount):
+    def set_issue_info_about_correction(self, context: 'IconScoreContext', issue_amount: int):
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
         prev_block_cumulative_fee = context.storage.icx.last_block.cumulative_fee
         calc_next_block_height = context.storage.iiss.get_calc_next_block_height(context)
@@ -56,7 +56,7 @@ class Regulator:
         current_calc_period_total_issued_icx += issue_amount
         if calc_next_block_height == context.block.height:
             prev_calc_period_issued_i_score = context.storage.rc.get_prev_calc_period_issued_i_score()
-            covered_icx, remain_over_issued_i_score, corrected_icx_issue_amount = \
+            covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, corrected_icx_issue_amount = \
                 self._correct_issue_amount_on_calc_period(regulator_variable.prev_calc_period_issued_icx,
                                                           prev_calc_period_issued_i_score,
                                                           regulator_variable.over_issued_i_score,
@@ -66,7 +66,7 @@ class Regulator:
             regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
             regulator_variable.current_calc_period_issued_icx = 0
         else:
-            covered_icx, remain_over_issued_i_score, corrected_icx_issue_amount = \
+            covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, corrected_icx_issue_amount = \
                 self._correct_issue_amount(regulator_variable.over_issued_i_score,
                                            issue_amount,
                                            prev_block_cumulative_fee)
@@ -75,42 +75,61 @@ class Regulator:
 
         self._corrected_icx_issue_amount = corrected_icx_issue_amount
         self._regulator_variable = regulator_variable
-
-        if covered_icx >= prev_block_cumulative_fee:
-            self._covered_icx_by_fee = prev_block_cumulative_fee
-            self._covered_icx_by_remain = covered_icx - prev_block_cumulative_fee
-        else:
-            # todo: bug!! 0 일 때도 elif 와 동일한 상황일 수 있(!! fee = issue amount - over issued icx)
-            if corrected_icx_issue_amount == 0:
-                self._covered_icx_by_remain = 0
-                self._covered_icx_by_fee = covered_icx
-            # case of RC over issued than IS and covered by fee
-            elif corrected_icx_issue_amount > 0:
-                self._covered_icx_by_remain = covered_icx - prev_block_cumulative_fee
-                self._covered_icx_by_fee = prev_block_cumulative_fee
+        self._covered_icx_by_fee = covered_icx_by_fee
+        self._covered_icx_by_remain = covered_icx_by_remain
 
     def put_regulate_variable(self, context: 'IconScoreContext'):
         context.storage.issue.put_regulator_variable(context, self._regulator_variable)
 
+    def _reflect_difference_in_issuing(self,
+                                       icx_issue_amount: int,
+                                       over_issued_icx: int,
+                                       prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
+        # cover about over issued icx
+        # remain_over_issued_icx, corrected_icx_issue_amount
+        covered_icx_by_remain, remain_over_issued_icx, corrected_icx_issue_amount = \
+            self._calculate_over_issued_icx(icx_issue_amount,
+                                            over_issued_icx)
+
+        covered_icx_by_fee, remain_over_issued_icx, corrected_icx_issue_amount = \
+            self._calculate_prev_block_cumulative_fee(remain_over_issued_icx,
+                                                      corrected_icx_issue_amount,
+                                                      prev_block_cumulative_fee)
+
+        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, corrected_icx_issue_amount
+
     @staticmethod
-    def _reflect_difference_in_issuing(icx_issue_amount: int, over_issued_icx: int) -> Tuple[int, int, int]:
-        assert icx_issue_amount >= 0
-
-        corrected_icx_issue_amount = icx_issue_amount - over_issued_icx
+    def _calculate_over_issued_icx(icx_issue_amount: int,
+                                   over_issued_icx: int) -> Tuple[int, int, int]:
+        corrected_issue_amount = icx_issue_amount - over_issued_icx
         if over_issued_icx < 0:
-            covered_icx = over_issued_icx
+            covered_icx_by_remain = over_issued_icx
             remain_over_issued_icx = 0
-            return covered_icx, remain_over_issued_icx, corrected_icx_issue_amount
+            return covered_icx_by_remain, remain_over_issued_icx, corrected_issue_amount
 
-        if corrected_icx_issue_amount >= 0:
+        if corrected_issue_amount >= 0:
             remain_over_issued_icx = 0
-            covered_icx = over_issued_icx
+            covered_icx_by_remain = over_issued_icx
         else:
-            remain_over_issued_icx = abs(corrected_icx_issue_amount)
-            corrected_icx_issue_amount = 0
-            covered_icx = icx_issue_amount
+            remain_over_issued_icx = abs(corrected_issue_amount)
+            corrected_issue_amount = 0
+            covered_icx_by_remain = icx_issue_amount
 
-        return covered_icx, remain_over_issued_icx, corrected_icx_issue_amount
+        return covered_icx_by_remain, remain_over_issued_icx, corrected_issue_amount
+
+    @staticmethod
+    def _calculate_prev_block_cumulative_fee(remain_over_issued_icx: int,
+                                             corrected_issue_amount: int,
+                                             prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
+        corrected_issue_amount -= prev_block_cumulative_fee
+        if corrected_issue_amount >= 0:
+            covered_icx_by_fee = prev_block_cumulative_fee
+        else:
+            covered_icx_by_fee = prev_block_cumulative_fee + corrected_issue_amount
+            remain_over_issued_icx = remain_over_issued_icx + abs(corrected_issue_amount)
+            corrected_issue_amount = 0
+
+        return covered_icx_by_fee, remain_over_issued_icx, corrected_issue_amount
 
     @staticmethod
     def _separate_icx_and_i_score(i_score: int) -> Tuple[int, int]:
@@ -124,12 +143,13 @@ class Regulator:
         return over_issued_icx, over_issued_i_score
 
     def _correct_issue_amount_on_calc_period(self,
-                                             prev_calc_period_issued_icx,
+                                             prev_calc_period_issued_icx: int,
                                              prev_calc_period_issued_i_score: Optional[int],
-                                             remain_over_issued_i_score,
+                                             remain_over_issued_i_score: int,
                                              icx_issue_amount: int,
-                                             prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
+                                             prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
         assert icx_issue_amount >= 0
+        assert prev_block_cumulative_fee >= 0
 
         # check if RC has sent response about 'CALCULATE' requests. every period should get response
         if prev_calc_period_issued_i_score is None:
@@ -140,26 +160,27 @@ class Regulator:
             prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
         total_over_issued_i_score: int = prev_calc_over_issued_i_score + remain_over_issued_i_score
         over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
-        allowances = over_issued_icx + prev_block_cumulative_fee
 
-        covered_icx, remain_over_issued_icx, icx_issue_amount = \
-            self._reflect_difference_in_issuing(icx_issue_amount, allowances)
+        covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
+            self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx, prev_block_cumulative_fee)
 
         remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
 
         # covered_icx can be negative value (in case of reward calculator having been issued more)
-        return covered_icx, remain_over_issued_i_score, icx_issue_amount
+        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, icx_issue_amount
 
-    def _correct_issue_amount(self, remain_over_issued_i_score: int, icx_issue_amount: int, prev_block_cumulative_fee: int) -> Tuple[int, int, int]:
+    def _correct_issue_amount(self,
+                              remain_over_issued_i_score: int,
+                              icx_issue_amount: int,
+                              prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
         assert icx_issue_amount >= 0
+        assert prev_block_cumulative_fee >= 0
 
-        covered_icx: int = 0
+        over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(remain_over_issued_i_score)
 
-        allowances = (remain_over_issued_i_score // I_SCORE_EXCHANGE_RATE) + prev_block_cumulative_fee
+        # covered_icx_by_remain is always positive value
+        covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
+            self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx, prev_block_cumulative_fee)
+        remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
 
-        if allowances > 0:
-            covered_icx, remain_over_issued_icx, icx_issue_amount = \
-                self._reflect_difference_in_issuing(icx_issue_amount, allowances)
-            remain_over_issued_i_score -= covered_icx * I_SCORE_EXCHANGE_RATE
-
-        return covered_icx, remain_over_issued_i_score, icx_issue_amount
+        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, icx_issue_amount
