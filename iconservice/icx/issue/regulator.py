@@ -20,7 +20,6 @@ from ...icon_constant import I_SCORE_EXCHANGE_RATE
 from ...iconscore.icon_score_context import IconScoreContext
 
 
-# todo: implement fee related logic
 class Regulator:
     def __init__(self):
         self._regulator_variable: 'RegulatorVariable' = None
@@ -73,10 +72,10 @@ class Regulator:
             regulator_variable.current_calc_period_issued_icx = current_calc_period_total_issued_icx
         regulator_variable.over_issued_i_score = remain_over_issued_i_score
 
-        self._corrected_icx_issue_amount = corrected_icx_issue_amount
         self._regulator_variable = regulator_variable
         self._covered_icx_by_fee = covered_icx_by_fee
         self._covered_icx_by_remain = covered_icx_by_remain
+        self._corrected_icx_issue_amount = corrected_icx_issue_amount
 
     def put_regulate_variable(self, context: 'IconScoreContext'):
         context.storage.issue.put_regulator_variable(context, self._regulator_variable)
