@@ -366,6 +366,11 @@ class IconServiceEngine(ContextContainer):
 
         return transaction
 
+    @staticmethod
+    def _is_decentralized(context: 'IconScoreContext') -> bool:
+        return context.engine.prep.term.sequence != -1 and context.revision >= REV_DECENTRALIZATION
+
+
     # todo: remove None of prev_block_generator, prev_block_validators default
     # todo: is it right setting default value to is_block_editable?
     def invoke(self,
@@ -410,7 +415,7 @@ class IconServiceEngine(ContextContainer):
         added_transactions = {}
 
         regulator: 'Regulator' = None
-        if is_block_editable:
+        if is_block_editable and self._is_decentralized(context):
             # todo: need to be refactoring (duplicated codes)
             issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
@@ -438,7 +443,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS:
+                if index == ICX_ISSUE_TRANSACTION_INDEX and self._is_decentralized(context):
                     if not tx_request['params'].get('dataType') == "issue":
                         raise InvalidBlockException("Invalid block: first transaction must be an issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request, is_block_editable, regulator)
@@ -634,7 +639,7 @@ class IconServiceEngine(ContextContainer):
         assert 'data' in request['params']
 
         issue_data_in_tx: dict = request['params'].get('data')
-        if not is_block_editable:
+        if not is_block_editable and self._is_decentralized(context):
             issue_data_in_db, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
             regulator.set_issue_info_about_correction(context, total_issue_amount)

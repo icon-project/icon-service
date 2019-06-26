@@ -52,18 +52,18 @@ class IssueFormula(object):
         return int(first_operand * second_operand + rmin)
 
     @staticmethod
-    def calculate_i_rep_per_block_contributor(irep: int) -> int:
+    def calculate_irep_per_block_contributor(irep: int) -> int:
         return int(irep * IISS_MONTH // (IISS_ANNUAL_BLOCK * 2))
 
     def _handle_icx_issue_formula_for_prep(self, irep: int, rrep: int, total_delegation: int) -> int:
-        calculated_irep: int = self.calculate_i_rep_per_block_contributor(irep)
+        calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
         beta_1: int = calculated_irep * self._prep_count
         beta_2: int = calculated_irep * self._sub_prep_count
         beta_3: int = rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
         return beta_1 + beta_2 + beta_3
 
     def get_limit_inflation_beta(self, irep: int) -> int:
-        calculated_irep: int = self.calculate_i_rep_per_block_contributor(irep)
+        calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
         beta_1: int = calculated_irep * self._prep_count
         beta_2: int = calculated_irep * self._sub_prep_count
         return beta_1 + beta_2
