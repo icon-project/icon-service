@@ -28,7 +28,7 @@ from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
-from ..iiss.issue_formula import IssueFormula
+from ..icx.issue.issue_formula import IssueFormula
 from ..iconscore.icon_score_context import IconScoreContext
 
 if TYPE_CHECKING:

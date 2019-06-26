@@ -21,7 +21,7 @@ from ...base.ComponentBase import EngineBase
 from ...base.exception import InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, IISS_ANNUAL_BLOCK
 from ...iconscore.icon_score_event_log import EventLog
-from ...iiss.issue_formula import IssueFormula
+from .issue_formula import IssueFormula
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
