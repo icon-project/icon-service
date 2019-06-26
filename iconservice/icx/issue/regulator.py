@@ -24,10 +24,10 @@ class Regulator:
     def __init__(self):
         self._regulator_variable: 'RegulatorVariable' = None
 
-        self._covered_icx_by_fee: 'int' = None
-        self._covered_icx_by_remain: 'int' = None
+        self._covered_icx_by_fee: int = None
+        self._covered_icx_by_remain: int = None
 
-        self._corrected_icx_issue_amount: 'int' = None
+        self._corrected_icx_issue_amount: int = None
 
     @property
     def covered_icx_by_fee(self):
