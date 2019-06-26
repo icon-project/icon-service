@@ -186,10 +186,9 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # event log about correction
         self.assertEqual(0, tx_results[0].event_logs[1].data[0])
         self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-        self.assertEqual(0, tx_results[0].event_logs[1].data[2])
-        self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[3])
+        self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[2])
+        self.assertEqual(0, tx_results[0].event_logs[1].data[3])
 
-        print(tx_results[0].event_logs[1])
         after_total_supply = self._query({}, "icx_getTotalSupply")
         after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
@@ -222,22 +221,24 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             copyed_tx_list = deepcopy(tx_list)
             prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
                                                                              is_block_editable=True,
-                                                                             cumulative_fee=cumulative_fee )
+                                                                             cumulative_fee=cumulative_fee)
             if x == 0:
                 self.assertEqual(0, tx_results[0].event_logs[1].data[0])
                 self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-                self.assertEqual(0, tx_results[0].event_logs[1].data[2])
-                self.assertEqual(expected_issue_amount, tx_results[0].event_logs[1].data[3])
+                self.assertEqual(expected_issue_amount, tx_results[0].event_logs[1].data[2])
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+
             elif x == check_point:
                 self.assertEqual(cumulative_fee, tx_results[0].event_logs[1].data[0])
                 self.assertEqual(expected_diff_in_calc_period, tx_results[0].event_logs[1].data[1])
                 self.assertEqual(expected_issue_amount - cumulative_fee - expected_diff_in_calc_period,
-                                 tx_results[0].event_logs[1].data[3])
+                                 tx_results[0].event_logs[1].data[2])
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
                 check_point += calc_period
             else:
                 self.assertEqual(cumulative_fee, tx_results[0].event_logs[1].data[0])
                 self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-                self.assertEqual(0, tx_results[0].event_logs[1].data[2])
-                self.assertEqual(expected_issue_amount - cumulative_fee, tx_results[0].event_logs[1].data[3])
+                self.assertEqual(expected_issue_amount - cumulative_fee, tx_results[0].event_logs[1].data[2])
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
             self._write_precommit_state(prev_block)
 

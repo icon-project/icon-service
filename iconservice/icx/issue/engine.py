@@ -79,7 +79,7 @@ class Engine(EngineBase):
                                              remain_over_issued_icx: int,
                                              total_issue_amount: int) -> 'EventLog':
         total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
-        total_issue_data: list = [deducted_fee, deducted_over_issued_icx, remain_over_issued_icx, total_issue_amount]
+        total_issue_data: list = [deducted_fee, deducted_over_issued_icx, total_issue_amount, remain_over_issued_icx]
         total_issue_event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
         return total_issue_event_log
 
