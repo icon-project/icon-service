@@ -379,14 +379,14 @@ class Engine(EngineBase):
         current_total_prep_delegated = context.storage.iiss.get_total_prep_delegated(context)
         reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
 
-        reward_rep: int = IssueFormula.calculate_r_rep(reward_prep.reward_min,
-                                                       reward_prep.reward_max,
-                                                       reward_prep.reward_point,
-                                                       current_total_supply,
-                                                       current_total_prep_delegated)
+        reward_rep: int = IssueFormula.calculate_rrep(reward_prep.reward_min,
+                                                      reward_prep.reward_max,
+                                                      reward_prep.reward_point,
+                                                      current_total_supply,
+                                                      current_total_prep_delegated)
 
         irep: int = context.engine.prep.term.irep
-        calculated_irep: int = IssueFormula.calculate_i_rep_per_block_contributor(irep)
+        calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
         reward_prep.reward_rate = reward_rep
         context.storage.iiss.put_reward_prep(context, reward_prep)
 

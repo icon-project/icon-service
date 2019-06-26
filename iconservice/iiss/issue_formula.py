@@ -43,26 +43,26 @@ class IssueFormula(object):
         return value
 
     @staticmethod
-    def calculate_r_rep(r_min: int, r_max: int, r_point: int, total_supply: int, total_delegated: int) -> int:
+    def calculate_rrep(rmin: int, rmax: int, rpoint: int, total_supply: int, total_delegated: int) -> int:
         stake_percentage: float = total_delegated / total_supply * IISS_MAX_REWARD_RATE
 
-        first_operand: float = (r_max - r_min) / (r_point ** 2)
-        second_operand: float = (stake_percentage - r_point) ** 2
-        return int(first_operand * second_operand + r_min)
+        first_operand: float = (rmax - rmin) / (rpoint ** 2)
+        second_operand: float = (stake_percentage - rpoint) ** 2
+        return int(first_operand * second_operand + rmin)
 
     @staticmethod
-    def calculate_i_rep_per_block_contributor(i_rep: int) -> int:
-        return int(i_rep * IISS_MONTH // (IISS_ANNUAL_BLOCK * 2))
+    def calculate_irep_per_block_contributor(irep: int) -> int:
+        return int(irep * IISS_MONTH // (IISS_ANNUAL_BLOCK * 2))
 
     def _handle_icx_issue_formula_for_prep(self, incentive: int, reward_rate: int, total_delegation: int) -> int:
-        calculated_i_rep: int = self.calculate_i_rep_per_block_contributor(incentive)
-        beta_1: int = calculated_i_rep * self._prep_count
-        beta_2: int = calculated_i_rep * self._sub_prep_count
+        calculated_irep: int = self.calculate_irep_per_block_contributor(incentive)
+        beta_1: int = calculated_irep * self._prep_count
+        beta_2: int = calculated_irep * self._sub_prep_count
         beta_3: int = reward_rate * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
         return beta_1 + beta_2 + beta_3
 
     def get_limit_inflation_beta(self, incentive: int) -> int:
-        calculated_i_rep: int = self.calculate_i_rep_per_block_contributor(incentive)
-        beta_1: int = calculated_i_rep * self._prep_count
-        beta_2: int = calculated_i_rep * self._sub_prep_count
+        calculated_irep: int = self.calculate_irep_per_block_contributor(incentive)
+        beta_1: int = calculated_irep * self._prep_count
+        beta_2: int = calculated_irep * self._sub_prep_count
         return beta_1 + beta_2
