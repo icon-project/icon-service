@@ -179,13 +179,13 @@ class TestRcDataStorage(unittest.TestCase):
 
     def test_putting_i_score_data_on_current_db(self):
         # success case: If there is no prev_calc_period_issued_i_score, should return None
-        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_i_score()
+        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_iscore()
         assert actual_i_score is None
 
         # success case: put i score and get i score from the db
         expected_i_score = 10_000
-        self.rc_data_storage.put_prev_calc_period_issued_i_score(expected_i_score)
+        self.rc_data_storage.put_prev_calc_period_issued_iscore(expected_i_score)
 
-        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_i_score()
+        actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_iscore()
         assert actual_i_score == expected_i_score
 

@@ -53,7 +53,7 @@ class TestSystemCallHandler(unittest.TestCase):
             rc=None
         )
         self.block_height = randrange(0, 100000)
-        self.context.block = Block(self.block_height, os.urandom(32), 0, os.urandom(32))
+        self.context.block = Block(self.block_height, os.urandom(32), 0, os.urandom(32), 0)
 
     def tearDown(self):
         pass

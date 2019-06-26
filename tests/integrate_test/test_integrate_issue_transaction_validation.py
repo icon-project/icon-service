@@ -22,7 +22,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix,
 from iconservice.base.exception import InvalidBlockException
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
-    IconScoreContextType
+    IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
 from tests import create_address
@@ -186,10 +186,9 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # event log about correction
         self.assertEqual(0, tx_results[0].event_logs[1].data[0])
         self.assertEqual(0, tx_results[0].event_logs[1].data[1])
-        self.assertEqual(0, tx_results[0].event_logs[1].data[2])
-        self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[3])
+        self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[2])
+        self.assertEqual(0, tx_results[0].event_logs[1].data[3])
 
-        print(tx_results[0].event_logs[1])
         after_total_supply = self._query({}, "icx_getTotalSupply")
         after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
@@ -199,23 +198,53 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
     def test_validate_issue_transaction_value_corrected_issue_amount(self):
         # success case: when iconservice over issued 10 icx than reward carc, icx issue amount
         # should be corrected on calc period.
+        calc_period = 10
+        check_point = calc_period + 9
+
+        cumulative_fee = 10
+        expected_issue_amount = 4642222
+        calculate_response_iscore = 46422210000
+        expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
+                                       (calculate_response_iscore // ISCORE_EXCHANGE_RATE)
+
         def mock_calculate(self, path, block_height):
-            response = CalculateResponse(0, True, 1, 46422210000, b'mocked_response')
+            response = CalculateResponse(0, True, 1, calculate_response_iscore, b'mocked_response')
             self._calculation_callback(response)
 
         tx_list = [
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        calc_period = 19
         for x in range(0, 50):
             if x % 16 == 0:
                 self._mock_ipc(mock_calculate)
             copyed_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list, is_block_editable=True)
-            if x == calc_period:
-                self.assertEqual(10, tx_results[0].event_logs[1].data[1])
-                self.assertEqual(4642212, tx_results[0].event_logs[1].data[3])
-                calc_period += 10
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
+                                                                             is_block_editable=True,
+                                                                             cumulative_fee=cumulative_fee)
+            issue_amount = tx_results[0].event_logs[0].data[3]
+            actual_covered_by_fee = tx_results[0].event_logs[1].data[0]
+            actual_covered_by_remain = tx_results[0].event_logs[1].data[1]
+            actual_issue_amount = tx_results[0].event_logs[1].data[2]
+            if x == 0:
+                self.assertEqual(0, actual_covered_by_fee)
+                self.assertEqual(0, actual_covered_by_remain)
+                self.assertEqual(expected_issue_amount, actual_issue_amount)
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+
+            elif x == check_point:
+                self.assertEqual(cumulative_fee, actual_covered_by_fee)
+                self.assertEqual(expected_diff_in_calc_period, actual_covered_by_remain)
+                self.assertEqual(expected_issue_amount - cumulative_fee - expected_diff_in_calc_period,
+                                 actual_issue_amount)
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+                check_point += calc_period
+            else:
+                self.assertEqual(cumulative_fee, actual_covered_by_fee)
+                self.assertEqual(0, actual_covered_by_remain)
+                self.assertEqual(expected_issue_amount - cumulative_fee, actual_issue_amount)
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+            self.assertEqual(issue_amount, actual_covered_by_fee + actual_covered_by_remain + actual_issue_amount)
+
             self._write_precommit_state(prev_block)
 

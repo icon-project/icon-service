@@ -75,8 +75,9 @@ class TestCoinPart(unittest.TestCase):
 
     def test_coin_part_from_bytes_to_bytes_revision_3(self):
         part1 = CoinPart()
+        revision = 3
 
-        data = part1.to_bytes()
+        data = part1.to_bytes(revision)
         self.assertTrue(isinstance(data, bytes))
         self.assertEqual(36, len(data))
 
@@ -87,7 +88,7 @@ class TestCoinPart(unittest.TestCase):
         part1.type = CoinPartType.GENESIS
         part1.deposit(1024)
 
-        part3 = CoinPart.from_bytes(part1.to_bytes())
+        part3 = CoinPart.from_bytes(part1.to_bytes(revision))
         self.assertEqual(CoinPartType.GENESIS, part3.type)
         self.assertEqual(1024, part3.balance)
 
