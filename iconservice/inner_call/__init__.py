@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
+from typing import TYPE_CHECKING
 
 from ..base.type_converter import TypeConverter
 
-if typing:
+if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..base.block import Block
 
 
-def get_main_preps(context: 'IconScoreContext'):
-    preps: 'dict' = context.engine.prep.get_main_preps_in_term()
+def get_main_preps(context: 'IconScoreContext', **kwargs):
+    preps: dict = context.engine.prep.get_main_preps_in_term()
     if preps is None:
         preps = {}
 
