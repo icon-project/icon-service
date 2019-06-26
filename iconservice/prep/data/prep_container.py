@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from iconcommons import Logger
 
@@ -22,7 +22,6 @@ from .prep import PRep, PRepFlag, PRepStatus
 from .sorted_list import SortedList
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
-from ...icon_constant import PREP_SUB_PREPS
 from ...iconscore.icon_score_context import IconScoreContext
 from ...utils import toggle_flags
 
@@ -187,14 +186,6 @@ class PRepContainer(object):
         prep.delegated = delegated
         self._active_prep_list.add(prep)
 
-    def get(self, address: 'Address') -> Optional['PRep']:
-        """Returns an active P-Rep with a given address
-
-        :param address: The address of a P-Rep
-        :return: The instance of a PRep which has a given address
-        """
-        return self._active_prep_dict.get(address)
-
     def __contains__(self, address: 'Address') -> bool:
         """Check whether the active P-Rep which has a given address are contained
 
@@ -205,6 +196,17 @@ class PRepContainer(object):
             raise InvalidParamsException
 
         return address in self._active_prep_dict
+
+    def contains(self, address: 'Address', inactive_preps_included: bool = True) -> bool:
+        """Check whether the P-Rep is contained regardless of its PRepStatus
+
+        :param address: Address
+        :param inactive_preps_included: bool
+        :return: True(contained) False(not contained)
+        """
+        return \
+            address in self._active_prep_dict \
+            or (inactive_preps_included and address in self._inactive_prep_dict)
 
     def __iter__(self):
         """Active P-Rep iterator
@@ -217,19 +219,24 @@ class PRepContainer(object):
     def get_by_index(self, index: int) -> 'PRep':
         return self._active_prep_list[index]
 
-    def get_by_address(self, address: 'Address') -> 'PRep':
-        return self._active_prep_dict[address]
+    def get_by_address(self, address: 'Address') -> Optional['PRep']:
+        """Returns an active P-Rep with a given address
+
+        :param address: The address of a P-Rep
+        :return: The instance of a PRep which has a given address
+        """
+        return self._active_prep_dict.get(address)
 
     def __len__(self) -> int:
         assert len(self._active_prep_list) == len(self._active_prep_dict)
         return len(self._active_prep_list)
 
-    def get_preps(self) -> List['PRep']:
-        """Returns top 100 preps in descending order by delegated amount
+    def get_preps(self, start_index: int, size: int) -> List['PRep']:
+        """Returns
 
         :return: P-Rep list
         """
-        return self._active_prep_list[:PREP_SUB_PREPS]
+        return self._active_prep_list[start_index:start_index + size]
 
     def get_snapshot(self) -> 'PRepContainer':
         if not self.is_frozen():

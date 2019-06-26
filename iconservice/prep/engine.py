@@ -26,7 +26,7 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import PrepResultState, IISS_MIN_IREP, IISS_MAX_IREP
+from ..icon_constant import PrepResultState, IISS_MIN_IREP, IISS_MAX_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
@@ -34,6 +34,7 @@ from ..iiss.reward_calc import RewardCalcDataCreator
 if TYPE_CHECKING:
     from . import PRepStorage
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
+    from ..iiss import IISSStorage
     from ..iconscore.icon_score_context import IconScoreContext
     from ..icx.icx_account import Account
     from ..icx import IcxStorage
@@ -118,38 +119,45 @@ class Engine(EngineBase):
         prep_storage: 'PRepStorage' = context.storage.prep
 
         address: 'Address' = context.tx.origin
-        if address in context.preps:
+        if context.preps.contains(address, inactive_preps_included=True):
             raise InvalidParamsException(f"{str(address)} has been already registered")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
         account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
+        # prep.irep is set to IISS_MIN_IREP by default
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
         prep.delegated = account.delegated_amount
-        self._validate_irep(context, prep.irep)
 
         # Update preps in context
         context.preps.add(prep)
 
         # Update stateDB
         prep_storage.put_prep(context, prep)
-        self._apply_prep_delegated_offset_for_iiss_variable(context, prep.delegated)
+        self._put_total_prep_delegated_in_state_db(context, prep.delegated)
 
         # Update rcDB
-        self._put_reg_prep_for_rc_data(context, address)
+        self._put_reg_prep_in_rc_db(context, address)
 
-        self._create_tx_result(context, 'PRepRegistered(Address)', address)
-
-    @classmethod
-    def _create_tx_result(cls, context: 'IconScoreContext', event_signature: str, address: 'Address'):
-        # make tx result
-        arguments = [address]
-        index = 0
-        EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, event_signature, arguments, index)
+        # EventLog
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature="PRepRegistered(Address)",
+            arguments=[address],
+            indexed_args_count=0
+        )
 
     @staticmethod
-    def _put_reg_prep_for_rc_data(context: 'IconScoreContext', address: 'Address'):
+    def _put_reg_prep_in_rc_db(context: 'IconScoreContext', address: 'Address'):
+        """Put a newly registered P-Rep in RewardCalcDatabase
+
+        :param context:
+        :param address: The address of P-Rep
+        :return:
+        """
+
         rc_tx_batch: list = context.rc_tx_batch
         block_height: int = context.block.height
 
@@ -158,12 +166,28 @@ class Engine(EngineBase):
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
     @staticmethod
-    def _apply_prep_delegated_offset_for_iiss_variable(
-            context: 'IconScoreContext', offset: int):
-        total_delegated_amount: int = context.storage.iiss.get_total_prep_delegated(context)
-        context.storage.iiss.put_total_prep_delegated(context, total_delegated_amount + offset)
+    def _put_total_prep_delegated_in_state_db(context: 'IconScoreContext', offset: int):
+        """Put total prep delegated to StateDatabase
+
+        :param context:
+        :param offset:
+        :return:
+        """
+        if offset == 0:
+            # No need to update total prep delegated
+            return
+
+        storage: 'IISSStorage' = context.storage.iiss
+
+        total_delegated: int = storage.get_total_prep_delegated(context)
+        storage.put_total_prep_delegated(context, total_delegated + offset)
 
     def check_end_block_height_of_term(self, context: 'IconScoreContext') -> bool:
+        """Is the last block of the current term
+
+        :param context:
+        :return:
+        """
         return self.term.end_block_height == context.block.height
 
     def make_prep_tx_result(self) -> Optional[dict]:
@@ -187,7 +211,7 @@ class Engine(EngineBase):
                 prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
                 prep_info_as_dict[ConstantKeys.P2P_END_POINT] = prep.p2p_end_point
                 preps_as_list.append(prep_info_as_dict)
-                prep_addresses_for_roothash += prep.address.to_bytes()
+                prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
             prep_as_dict["preps"] = preps_as_list
             prep_as_dict["rootHash"] = hashlib.sha3_256(prep_addresses_for_roothash).digest()
         return prep_as_dict
@@ -195,19 +219,24 @@ class Engine(EngineBase):
     def save_term(self, context: 'IconScoreContext', weighted_average_of_irep: int):
         self.term.save(context,
                        context.block.height,
-                       context.preps.get_preps(),
+                       context.preps.get_preps(start_index=0, size=PREP_MAIN_AND_SUB_PREPS),
                        weighted_average_of_irep,
                        context.total_supply)
 
     @staticmethod
     def calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
-        main_preps = context.preps.get_preps()
+        preps: 'PRepContainer' = context.preps
+        assert len(preps) >= PREP_MAIN_PREPS
+
         total_delegated = 0  # total delegated of prep
-        total_multiply_delegated_by_irep = 0
-        for prep in main_preps:
-            total_multiply_delegated_by_irep += prep.irep * prep.delegated
+        total_weighted_irep = 0
+
+        for i in range(PREP_MAIN_PREPS):
+            prep: 'PRep' = preps.get_by_index(i)
+            total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated
-        return total_multiply_delegated_by_irep // total_delegated if total_delegated != 0 else 0
+
+        return total_weighted_irep // total_delegated if total_delegated > 0 else 0
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns the details of a P-Rep including info of registration, delegation and statistics
@@ -246,7 +275,14 @@ class Engine(EngineBase):
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
 
-        self._create_tx_result(context, 'PRepSet(Address)', address)
+        # EventLog
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature="PRepSet(Address)",
+            arguments=[address],
+            indexed_args_count=0
+        )
 
     @classmethod
     def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_irep: int = None):
@@ -270,7 +306,7 @@ class Engine(EngineBase):
             context.engine.issue.validate_total_supply_limit(context, irep)
             return
 
-        raise InvalidParamsException(f'Irep out of range: {irep}, {prev_irep}')
+        raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
 
     def handle_unregister_prep(self, context: 'IconScoreContext', params: dict):
         """Unregister a P-Rep
@@ -291,12 +327,19 @@ class Engine(EngineBase):
 
         # Update stateDB
         prep_storage.delete_prep(context, address)
-        self._apply_prep_delegated_offset_for_iiss_variable(context, -prep.delegated)
+        self._put_total_prep_delegated_in_state_db(context, -prep.delegated)
 
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)
 
-        self._create_tx_result(context, 'PRepUnregistered(Address)', address)
+        # EventLog
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature="PRepUnregistered(Address)",
+            arguments=[address],
+            indexed_args_count=0
+        )
 
     @staticmethod
     def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):

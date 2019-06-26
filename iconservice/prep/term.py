@@ -15,12 +15,12 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
-from ..icon_constant import PREP_MAIN_PREPS, PREP_SUB_PREPS
+from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 
 if TYPE_CHECKING:
-    from .data.prep import PRep
+    from .data import PRep, PRepFlag, PRepContainer
+    from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
-    from .data.prep_container import PRepContainer
 
 
 class Term(object):
@@ -79,7 +79,7 @@ class Term(object):
             self._sequence = data[1]
             self._start_block_height = data[2]
             self._end_block_height = self._start_block_height + term_period - 1
-            self._main_preps, self._sub_preps = self._make_preps(context, data[3])
+            self._main_preps, self._sub_preps = self._make_main_and_sub_preps(context, data[3])
             self._irep = data[4]
             self._total_supply = data[5]
         else:
@@ -87,15 +87,36 @@ class Term(object):
             self._irep = irep
             self._total_supply = context.total_supply
 
-    def _make_preps(self, context: 'IconScoreContext', data: list) -> tuple:
+    @staticmethod
+    def _make_main_and_sub_preps(context: 'IconScoreContext', data: list) -> tuple:
+        """Returns tuple of Main P-Rep List and Sub P-Rep List
+
+        :param context:
+        :param data:
+        :return:
+        """
         prep_list: list = []
-        preps: 'PRepContainer' = context.engine.prep.get_snapshot()
-        for i, in range(0, len(data), 2):
-            prep: 'PRep' = preps[data[i]]
-            prep.delegated = data[i + 1]
+        frozen_preps: 'PRepContainer' = context.engine.prep.preps
+        assert frozen_preps.is_frozen()
+
+        for i in range(0, len(data), 2):
+            address: 'Address' = data[i]
+            delegated: int = data[i + 1]
+
+            frozen_prep: 'PRep' = frozen_preps.get_by_address(address)
+            assert frozen_prep.is_frozen()
+
+            if delegated == frozen_prep.delegated:
+                prep: 'PRep' = frozen_prep
+            else:
+                prep: 'PRep' = frozen_prep.copy(PRepFlag.NONE)
+                prep.delegated = delegated
+                prep.freeze()
+
+            assert prep.is_frozen()
             prep_list.append(prep)
 
-        return prep_list[:PREP_MAIN_PREPS], prep_list[PREP_MAIN_PREPS: PREP_SUB_PREPS]
+        return prep_list[:PREP_MAIN_PREPS], prep_list[PREP_MAIN_PREPS: PREP_MAIN_AND_SUB_PREPS]
 
     def save(self,
              context: 'IconScoreContext',
@@ -103,12 +124,21 @@ class Term(object):
              preps: List['PRep'],
              irep: int,
              total_supply: int):
+        """Save term data to stateDB
+
+        :param context:
+        :param current_block_height:
+        :param preps: P-Rep list including main P-Reps and sub P-Reps
+        :param irep:
+        :param total_supply:
+        :return:
+        """
 
         data: list = [
             self._VERSION,
             self._sequence + 1,
-            current_block_height + 1,
-            self._make_prep_for_db(preps),
+            current_block_height + self._period,
+            self._serialize_preps(preps),
             irep,
             total_supply
         ]
@@ -118,11 +148,12 @@ class Term(object):
         self._start_block_height = current_block_height + 1
         self._end_block_height = current_block_height + self._period
         self._main_preps = preps[:PREP_MAIN_PREPS]
-        self._sub_preps = preps[PREP_MAIN_PREPS: PREP_SUB_PREPS]
+        self._sub_preps = preps[PREP_MAIN_PREPS: PREP_MAIN_AND_SUB_PREPS]
         self._irep = irep
         self._total_supply = total_supply
 
-    def _make_prep_for_db(self, preps: List['PRep']) -> List:
+    @staticmethod
+    def _serialize_preps(preps: List['PRep']) -> List:
         data: list = []
         for prep in preps:
             data.append(prep.address)

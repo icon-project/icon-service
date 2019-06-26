@@ -22,6 +22,7 @@ from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
 from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
 from ...utils.msgpack_for_db import MsgPackForDB
+from ...icon_constant import IISS_MIN_IREP
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -325,16 +326,19 @@ class PRep(Sortable):
             flags=PRepFlag.NONE,
             address=address,
             status=PRepStatus.ACTIVE,
+
             # Optional items
             name=data.get(ConstantKeys.NAME, ""),
             email=data.get(ConstantKeys.EMAIL, ""),
             website=data.get(ConstantKeys.WEBSITE, ""),
             details=data.get(ConstantKeys.DETAILS, ""),
+
             # Required items
             p2p_end_point=data[ConstantKeys.P2P_END_POINT],
             public_key=data[ConstantKeys.PUBLIC_KEY],
-            irep=data[ConstantKeys.IREP],
-            irep_block_height=data[ConstantKeys.IREP_BLOCK_HEIGHT],
+            irep=IISS_MIN_IREP,
+            irep_block_height=block_height,
+
             # Registration time
             block_height=block_height,
             tx_index=tx_index
