@@ -26,11 +26,10 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
+from ..icon_constant import PrepResultState, IISS_MIN_IREP
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.storage import Intent
 from ..iiss.reward_calc import RewardCalcDataCreator
-from ..precommit_data_manager import PrecommitData
-from ..icon_constant import PrepResultState, IISS_MIN_IREP
 
 if TYPE_CHECKING:
     from . import PRepStorage
@@ -165,34 +164,50 @@ class Engine(EngineBase):
         context.storage.iiss.put_total_prep_delegated(context, total_delegated_amount + offset)
 
     def check_term_end_block_height(self, context: 'IconScoreContext') -> bool:
-        return self.term.end_block_height in (context.block.height, -1)
+        return self.term.end_block_height == context.block.height
 
     def make_prep_tx_result(self) -> Optional[dict]:
+        prep_as_dict = self.get_main_preps_in_term()
+        if prep_as_dict:
+            prep_as_dict['irep'] = self.term.irep
+            prep_as_dict['state'] = PrepResultState.NORMAL.value
+            return prep_as_dict
+        return None
+
+    def get_main_preps_in_term(self) -> Optional[dict]:
         main_preps = self.term.main_preps
         prep_as_dict = None
         if len(main_preps) > 0:
             prep_as_dict = OrderedDict()
             preps_as_list = []
-            preps_as_list_for_roothash = []
-            for prep in self.term.main_preps:
+            prep_addresses_for_roothash = b''
+            for prep in main_preps:
                 prep_info_as_dict = OrderedDict()
                 prep_info_as_dict[ConstantKeys.PREP_ID] = prep.address
                 prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
                 prep_info_as_dict[ConstantKeys.P2P_END_POINT] = prep.p2p_end_point
                 preps_as_list.append(prep_info_as_dict)
-                preps_as_list_for_roothash.extend(
-                    [prep.address.to_bytes(), prep.public_key, prep.p2p_end_point.encode()])
+                prep_addresses_for_roothash += prep.address.to_bytes()
             prep_as_dict["preps"] = preps_as_list
-            prep_as_dict["state"] = PrepResultState.NORMAL.value
-            prep_as_dict["rootHash"] = hashlib.sha3_256(b'|'.join(preps_as_list_for_roothash)).digest()
+            prep_as_dict["rootHash"] = hashlib.sha3_256(prep_addresses_for_roothash).digest()
         return prep_as_dict
 
-    def save_term(self, context: 'IconScoreContext'):
+    def save_term(self, context: 'IconScoreContext', weighted_average_of_irep: int):
         self.term.save(context,
                        context.block.height,
                        context.preps.get_preps(),
-                       self.term.irep,
+                       weighted_average_of_irep,
                        context.total_supply)
+
+    @staticmethod
+    def calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
+        main_preps = context.preps.get_preps()
+        total_delegated = 0  # total delegated of prep
+        total_multiply_delegated_by_irep = 0
+        for prep in main_preps:
+            total_multiply_delegated_by_irep += prep.irep * prep.delegated
+            total_delegated += prep.delegated
+        return total_multiply_delegated_by_irep // total_delegated if total_delegated != 0 else 0
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns registration information of a P-Rep
@@ -247,6 +262,7 @@ class Engine(EngineBase):
 
         if min_irep <= irep <= max_irep:
             context.engine.issue.validate_total_supply_limit(context, irep)
+            return
 
         raise InvalidParamsException(f'irep out of range: {irep}, {prev_irep}')
 
@@ -346,13 +362,18 @@ class Engine(EngineBase):
         total_delegated: int = 0
         prep_list: list = []
 
-        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1) - 1
-        if start_index < 0:
-            start_index = 0
+        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+        if start_index <= 0:
+            raise InvalidParamsException("Invalid params: startRanking")
 
         end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
+        if end_index <= 0:
+            raise InvalidParamsException("Invalid params: endRanking")
 
-        for i in range(start_index, end_index):
+        if start_index > end_index:
+            raise InvalidParamsException("Invalid params: reverse")
+
+        for i in range(start_index -1, end_index):
             prep: 'PRep' = preps[i]
 
             item = {
@@ -363,6 +384,7 @@ class Engine(EngineBase):
             total_delegated += prep.delegated
 
         return {
+            "startRanking": start_index,
             "totalDelegated": total_delegated,
             "preps": prep_list
         }

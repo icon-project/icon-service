@@ -40,32 +40,36 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision',
+                                      {"code": hex(revision),
+                                       "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
-
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
+                                      'setStake',
+                                      {"value": hex(value)})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {"delegations": delegations})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def _claim(self, address: 'Address', revision: int = REV_IISS):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'claimIScore', {})
-
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+    def _claim(self, address: 'Address'):
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'claimIScore',
+                                      {})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
     def test_iiss_claim(self):
@@ -75,8 +79,7 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
         # stake 10 icx

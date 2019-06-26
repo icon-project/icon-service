@@ -38,43 +38,60 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision',
+                                      {"code": hex(revision),
+                                       "name": f"1.1.{revision}"})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
+                                      'setStake',
+                                      {"value": hex(value)})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _delegate(self, address: 'Address', delegations: list):
-        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
-        tx_list = [tx]
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {"delegations": delegations})
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
-    def test_iiss_duplecated_delegations(self):
+    def _get_delegation(self, address: 'Address') -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getDelegation",
+                "params": {
+                    "address": str(address)
+                }
+            }
+        }
+        return self._query(query_request)
+
+    def test_iiss_overlap_delegations(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        tx_list = [tx]
-
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
         # stake 10 icx
         stake: int = balance
         self._stake(self._addr_array[0], stake)
 
-        # delegation 1 icx
+        # delegation 1 icx to addr1
         delegations: list = []
         delegation_amount: int = 1 * 10 ** 18
         for i in range(IISS_MAX_DELEGATIONS):
@@ -86,26 +103,11 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
 
         self._delegate(self._addr_array[0], delegations)
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getDelegation",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
-            }
-        }
-
-        response = self._query(query_request)
+        response: dict = self._get_delegation(self._addr_array[0])
         delegations: list = response['delegations']
         total_delegated: int = response['totalDelegated']
         self.assertEqual(1, len(delegations))
         self.assertEqual(delegation_amount, total_delegated)
-
-        print(response)
 
     def test_iiss_delegation(self):
         self._update_governance()
@@ -114,16 +116,14 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         # gain 10 icx
         balance: int = 10 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
-        tx_list = [tx]
-
-        prev_block, tx_results = self._make_and_req_block(tx_list)
+        prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
         # stake 10 icx
         stake: int = balance
         self._stake(self._addr_array[0], stake)
 
-        # delegation 1 icx
+        # delegation 1 icx addr0 ~ addr9
         delegations: list = []
         delegation_amount: int = 1 * 10 ** 18
         for i in range(IISS_MAX_DELEGATIONS):
@@ -132,34 +132,9 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
                 "value": hex(delegation_amount)
             }
             delegations.append(delegation_info)
-
         self._delegate(self._addr_array[0], delegations)
 
-        delegations: list = []
-        delegation_amount: int = 1 * 10 ** 18
-        for i in range(IISS_MAX_DELEGATIONS):
-            delegation_info: dict = {
-                "address": str(self._addr_array[i]),
-                "value": hex(delegation_amount)
-            }
-            delegations.append(delegation_info)
-
-        self._delegate(self._addr_array[0], delegations)
-
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getDelegation",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
-            }
-        }
-
-        response = self._query(query_request)
+        response: dict = self._get_delegation(self._addr_array[0])
         actual_response = []
         for info in response["delegations"]:
             ret_info: dict = {
@@ -172,7 +147,7 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         self.assertEqual(expected_response, actual_response)
         self.assertEqual(balance, response["totalDelegated"])
 
-        # other delegation 1 icx
+        # other delegation 1 icx addr10 ~ addr19
         delegations: list = []
         delegation_amount: int = 1 * 10 ** 18
         for i in range(IISS_MAX_DELEGATIONS):
@@ -184,20 +159,7 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
 
         self._delegate(self._addr_array[0], delegations)
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getDelegation",
-                "params": {
-                    "address": str(self._addr_array[0])
-                }
-            }
-        }
-
-        response = self._query(query_request)
+        response: dict = self._get_delegation(self._addr_array[0])
         actual_response = []
         for info in response["delegations"]:
             ret_info: dict = {
