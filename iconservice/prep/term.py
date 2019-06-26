@@ -74,6 +74,8 @@ class Term(object):
         data: Optional[list] = context.storage.prep.get_term(context)
         if data:
             version = data[0]
+            assert version == self._VERSION
+
             self._sequence = data[1]
             self._start_block_height = data[2]
             self._end_block_height = self._start_block_height + term_period - 1
@@ -120,9 +122,9 @@ class Term(object):
         self._irep = irep
         self._total_supply = total_supply
 
-    def _make_prep_for_db(self, preps: List['PRep']) -> List['PRep']:
+    def _make_prep_for_db(self, preps: List['PRep']) -> List:
         data: list = []
         for prep in preps:
             data.append(prep.address)
-            data.append(prep._delegated)
+            data.append(prep.delegated)
         return data

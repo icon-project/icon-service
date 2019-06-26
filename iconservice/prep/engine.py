@@ -210,7 +210,7 @@ class Engine(EngineBase):
         return total_multiply_delegated_by_irep // total_delegated if total_delegated != 0 else 0
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns total information of a P-Rep
+        """Returns the details of a P-Rep including info of registration, delegation and statistics
 
         :param context:
         :param params:
@@ -291,7 +291,7 @@ class Engine(EngineBase):
 
         # Update stateDB
         prep_storage.delete_prep(context, address)
-        self._apply_prep_delegated_offset_for_iiss_variable(context, -prep._delegated)
+        self._apply_prep_delegated_offset_for_iiss_variable(context, -prep.delegated)
 
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)

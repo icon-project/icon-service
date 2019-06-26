@@ -397,7 +397,7 @@ class Engine(EngineBase):
 
         total_prep_delegated: int = 0
         for prep in preps:
-            total_prep_delegated += prep._delegated
+            total_prep_delegated += prep.delegated
 
         Logger.debug(f"put_preps_for_rc: total_prep_delegated{total_prep_delegated}", "iiss")
 
