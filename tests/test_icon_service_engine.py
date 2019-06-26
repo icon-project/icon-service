@@ -107,7 +107,7 @@ class TestIconServiceEngine(unittest.TestCase):
             }
         ]
 
-        block = Block(0, create_block_hash(), 0, None)
+        block = Block(0, create_block_hash(), 0, None, 0)
         tx = {'method': '',
               'params': {'txHash': create_tx_hash()},
               'genesisData': {'accounts': accounts}}
@@ -219,7 +219,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         original_invoke_request = self._engine._invoke_request
 
@@ -303,7 +304,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
@@ -365,7 +367,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -423,7 +426,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
@@ -497,7 +501,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         context = _create_context(IconScoreContextType.DIRECT)
         before_from_balance: int = \
@@ -575,7 +580,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         context = _create_context(IconScoreContextType.QUERY)
         before_from_balance: int = \
@@ -706,7 +712,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
@@ -728,7 +735,8 @@ class TestIconServiceEngine(unittest.TestCase):
             block_height=1,
             block_hash=create_block_hash(),
             timestamp=0,
-            prev_hash=create_block_hash())
+            prev_hash=create_block_hash(),
+            cumulative_fee=0)
 
         with self.assertRaises(InvalidParamsException) as cm:
             self._engine.commit(block.height, block.hash, None)
@@ -758,7 +766,8 @@ class TestIconServiceEngine(unittest.TestCase):
         block = Block(block_height,
                       instant_block_hash,
                       block_timestamp,
-                      self.genesis_block.hash)
+                      self.genesis_block.hash,
+                      0)
 
         self._engine.invoke(block, [dummy_tx])
         instant_block_hash = block.hash
@@ -773,7 +782,8 @@ class TestIconServiceEngine(unittest.TestCase):
             block_height=1,
             block_hash=create_block_hash(),
             timestamp=0,
-            prev_hash=self.genesis_block.hash)
+            prev_hash=self.genesis_block.hash,
+            cumulative_fee=0)
 
         block_result, state_root_hash = self._engine.invoke(block, [])
         self.assertIsInstance(block_result, list)

@@ -37,7 +37,8 @@ class TestTransactionResult(unittest.TestCase):
         block = Block(block_height=0,
                       block_hash=block_hash,
                       timestamp=0x1234567890,
-                      prev_hash=None)
+                      prev_hash=None,
+                      cumulative_fee=0)
 
         tx_result = TransactionResult(tx=tx, block=block, to=to)
 

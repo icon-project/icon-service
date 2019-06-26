@@ -165,7 +165,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         self._context.tx = Transaction(
             create_tx_hash(), origin=self.addr1)
-        self._context.block = Block(1, create_block_hash(), 0, None)
+        self._context.block = Block(1, create_block_hash(), 0, None, 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()

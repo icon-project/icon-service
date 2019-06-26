@@ -209,7 +209,7 @@ class CoinPart(BasePart):
                         flags=CoinPartFlag(data[2]),
                         balance=data[3])
 
-    def to_bytes(self, revision: int = 0) -> bytes:
+    def to_bytes(self, revision: int) -> bytes:
         """Convert CoinPart object to bytes
 
         :return: data including information of CoinPart object

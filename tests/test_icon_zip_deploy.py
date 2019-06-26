@@ -109,7 +109,7 @@ class TestIconZipDeploy(unittest.TestCase):
         tx_hash = create_tx_hash()
         self._context.new_icon_score_mapper = IconScoreMapper()
         self._context.tx = Transaction(tx_hash, origin=self.from_address)
-        self._context.block = Block(1, create_block_hash(), 0, None)
+        self._context.block = Block(1, create_block_hash(), 0, None, 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self._context.icx.open(self._icx_storage)

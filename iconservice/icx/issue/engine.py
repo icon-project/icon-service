@@ -21,7 +21,7 @@ from ...base.ComponentBase import EngineBase
 from ...base.exception import InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, IISS_ANNUAL_BLOCK
 from ...iconscore.icon_score_event_log import EventLog
-from ...iiss.issue_formula import IssueFormula
+from .issue_formula import IssueFormula
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
@@ -41,8 +41,8 @@ class Engine(EngineBase):
         irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             "prep": {
-                "incentive": irep,
-                "rewardRate": context.storage.iiss.get_reward_prep(context).reward_rate,
+                "irep": irep,
+                "rrep": context.storage.iiss.get_reward_prep(context).reward_rate,
                 "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
             }
         }
@@ -74,12 +74,12 @@ class Engine(EngineBase):
         return event_log
 
     @staticmethod
-    def _create_total_issue_amount_event_log(deducted_over_issued_icx: int,
-                                             deducted_fee: int,
+    def _create_total_issue_amount_event_log(deducted_fee: int,
+                                             deducted_over_issued_icx: int,
                                              remain_over_issued_icx: int,
                                              total_issue_amount: int) -> 'EventLog':
         total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
-        total_issue_data: list = [deducted_fee, deducted_over_issued_icx, remain_over_issued_icx, total_issue_amount]
+        total_issue_data: list = [deducted_fee, deducted_over_issued_icx, total_issue_amount, remain_over_issued_icx]
         total_issue_event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
         return total_issue_event_log
 
@@ -89,8 +89,6 @@ class Engine(EngineBase):
               issue_data: dict,
               regulator: 'Regulator'):
 
-        # todo: fee TBD
-        fee = 0
         self._issue(context, to_address, regulator.corrected_icx_issue_amount)
         regulator.put_regulate_variable(context)
 
@@ -101,8 +99,8 @@ class Engine(EngineBase):
             context.event_logs.append(issue_event_log)
 
         total_issue_event_log: 'EventLog' = \
-            self._create_total_issue_amount_event_log(regulator.deducted_icx,
-                                                      fee,
+            self._create_total_issue_amount_event_log(regulator.covered_icx_by_fee,
+                                                      regulator.covered_icx_by_over_issue,
                                                       regulator.remain_over_issued_icx,
                                                       regulator.corrected_icx_issue_amount)
         context.event_logs.append(total_issue_event_log)
