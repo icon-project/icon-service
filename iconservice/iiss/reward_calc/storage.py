@@ -34,7 +34,7 @@ class Storage(object):
     _IISS_RC_DB_NAME_PREFIX = "iiss_rc_db_"
 
     _KEY_FOR_GETTING_LAST_TRANSACTION_INDEX = b'last_transaction_index'
-    _KEY_FOR_PREV_CALC_PERIOD_ISSUED_I_SCORE = b'prev_calc_period_issued_i_score'
+    _KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE = b'prev_calc_period_issued_iscore'
 
     def __init__(self):
         self._path: str = ""
@@ -58,18 +58,18 @@ class Storage(object):
             self._db.close()
             self._db = None
 
-    def put_prev_calc_period_issued_i_score(self, i_score: int):
+    def put_prev_calc_period_issued_iscore(self, iscore: int):
         # do not versioning this value as this temporary data
-        i_score = MsgPackForDB.dumps(i_score)
-        self._db.put(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_I_SCORE, i_score)
+        iscore = MsgPackForDB.dumps(iscore)
+        self._db.put(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE, iscore)
 
-    def get_prev_calc_period_issued_i_score(self) -> Optional[int]:
-        prev_calc_period_issued_i_score = self._db.get(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_I_SCORE)
-        if prev_calc_period_issued_i_score is None:
+    def get_prev_calc_period_issued_iscore(self) -> Optional[int]:
+        prev_calc_period_issued_iscore = self._db.get(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE)
+        if prev_calc_period_issued_iscore is None:
             return None
 
-        i_score = MsgPackForDB.loads(prev_calc_period_issued_i_score)
-        return i_score
+        iscore = MsgPackForDB.loads(prev_calc_period_issued_iscore)
+        return iscore
 
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):

@@ -32,7 +32,7 @@ from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
     ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -366,6 +366,11 @@ class IconServiceEngine(ContextContainer):
 
         return transaction
 
+    @staticmethod
+    def _is_decentralized(context: 'IconScoreContext') -> bool:
+        return context.engine.prep.term.sequence != -1 and context.revision >= REV_DECENTRALIZATION
+
+
     # todo: remove None of prev_block_generator, prev_block_validators default
     # todo: is it right setting default value to is_block_editable?
     def invoke(self,
@@ -410,16 +415,15 @@ class IconServiceEngine(ContextContainer):
         added_transactions = {}
 
         regulator: 'Regulator' = None
-        if is_block_editable:
+        if is_block_editable and self._is_decentralized(context):
             # todo: need to be refactoring (duplicated codes)
             issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
             regulator.set_issue_info_about_correction(context, total_issue_amount)
-            # todo: fee TBD
-            fee = 0
+
             issue_data["result"] = {
-                "coveredByFee": fee,
-                "coveredByOverIssuedICX": regulator.deducted_icx,
+                "coveredByFee": regulator.covered_icx_by_fee,
+                "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
                 "issue": regulator.corrected_icx_issue_amount
             }
             # todo: need to refactor (dirty)
@@ -439,7 +443,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == ICX_ISSUE_TRANSACTION_INDEX and context.revision >= REV_IISS:
+                if index == ICX_ISSUE_TRANSACTION_INDEX and self._is_decentralized(context):
                     if not tx_request['params'].get('dataType') == "issue":
                         raise InvalidBlockException("Invalid block: first transaction must be an issue transaction")
                     tx_result = self._invoke_issue_request(context, tx_request, is_block_editable, regulator)
@@ -452,6 +456,9 @@ class IconServiceEngine(ContextContainer):
                 precommit_flag = self._update_revision_if_necessary(precommit_flag, context, tx_result)
                 precommit_flag = self._generate_precommit_flag(precommit_flag, tx_result)
                 self._update_step_properties_if_necessary(context, precommit_flag)
+
+                if context.revision >= REV_IISS:
+                    context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
         preps = context.preps.get_snapshot()
 
@@ -632,16 +639,14 @@ class IconServiceEngine(ContextContainer):
         assert 'data' in request['params']
 
         issue_data_in_tx: dict = request['params'].get('data')
-        if not is_block_editable:
+        if not is_block_editable and self._is_decentralized(context):
             issue_data_in_db, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
             regulator.set_issue_info_about_correction(context, total_issue_amount)
 
-            # todo: fee TBD
-            fee = 0
             issue_data_in_db["result"] = {
-                "coveredByFee": fee,
-                "coveredByOverIssuedICX": regulator.deducted_icx,
+                "coveredByFee": regulator.covered_icx_by_fee,
+                "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
                 "issue": regulator.corrected_icx_issue_amount
             }
             if issue_data_in_tx != issue_data_in_db:
@@ -1081,7 +1086,7 @@ class IconServiceEngine(ContextContainer):
             return False
 
         method_name: Optional[str] = data.get("method")
-        return method_name in NEW_METHPD_TABLE
+        return method_name in NEW_METHOD_TABLE
 
     @staticmethod
     def _check_iiss_process(params: dict) -> bool:
@@ -1402,7 +1407,7 @@ class IconServiceEngine(ContextContainer):
         block_hash = b'\x00' * 32
         timestamp = 0
         prev_block_hash = block_hash
-        return Block(block_height, block_hash, timestamp, prev_block_hash)
+        return Block(block_height, block_hash, timestamp, prev_block_hash, 0)
 
     def commit(self, block_height: int, instant_block_hash: bytes, block_hash: Optional[bytes]) -> None:
         """Write updated states in a context.block_batch to StateDB
@@ -1421,7 +1426,8 @@ class IconServiceEngine(ContextContainer):
             block_batch.block = Block(block_height=block_batch.block.height,
                                       block_hash=block_hash,
                                       timestamp=block_batch.block.timestamp,
-                                      prev_hash=block_batch.block.prev_hash)
+                                      prev_hash=block_batch.block.prev_hash,
+                                      cumulative_fee=block_batch.block.cumulative_fee)
 
         new_icon_score_mapper = precommit_data.score_mapper
         if new_icon_score_mapper:
@@ -1432,7 +1438,7 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db.write_batch(context=context, states=block_batch)
 
-        context.storage.icx.put_block_info(context, block_batch.block)
+        context.storage.icx.put_block_info(context, block_batch.block, precommit_data.revision)
         self._precommit_data_manager.commit(block_batch.block)
 
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:

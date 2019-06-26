@@ -32,7 +32,8 @@ class TestBatch(unittest.TestCase):
             block_height=10,
             block_hash=self.block_hash,
             timestamp=0,
-            prev_hash=self.prev_block_hash)
+            prev_hash=self.prev_block_hash,
+            cumulative_fee=0)
 
         self.block_batch = BlockBatch(block)
 

@@ -63,20 +63,20 @@ class IssueDataKey:
     PREP = "prep"
     TOTAL = "total"
 
-    INCENTIVE = "incentive"
-    REWARD_RATE = "rewardRate"
+    IREP = "irep"
+    RREP = "rrep"
     TOTAL_DELEGATION = "totalDelegation"
     VALUE = "value"
 
 
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
-        "indexed": ["PRepIssue(int,int,int,int)"],
-        "data": [IssueDataKey.INCENTIVE, IssueDataKey.REWARD_RATE, IssueDataKey.TOTAL_DELEGATION,
+        "indexed": ["PRepIssued(int,int,int,int)"],
+        "data": [IssueDataKey.IREP, IssueDataKey.RREP, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": ["ICXIssue(int,int,int,int)"],
+        "indexed": ["ICXIssued(int,int,int,int)"],
         "data": []
     }
 }
@@ -190,7 +190,7 @@ PREP_METHOD_TABLE = [
     "getPRepList"
 ]
 
-NEW_METHPD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE
+NEW_METHOD_TABLE = IISS_METHOD_TABLE + PREP_METHOD_TABLE
 
 IISS_MAX_DELEGATIONS = 10
 PREP_SUB_PREPS = 100
@@ -203,7 +203,7 @@ IISS_SOCKET_PATH = "/tmp/iiss.sock"
 IISS_ANNUAL_BLOCK = 15_768_000
 IISS_MONTH = 12
 
-I_SCORE_EXCHANGE_RATE = 1_000
+ISCORE_EXCHANGE_RATE = 1_000
 
 PENALTY_GRACE_PERIOD = 86_240
 
