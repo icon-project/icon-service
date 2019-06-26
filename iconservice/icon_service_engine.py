@@ -1433,7 +1433,7 @@ class IconServiceEngine(ContextContainer):
 
         self._icx_context_db.write_batch(context=context, states=block_batch)
 
-        context.storage.icx.put_block_info(context, block_batch.block)
+        context.storage.icx.put_block_info(context, block_batch.block, precommit_data.revision)
         self._precommit_data_manager.commit(block_batch.block)
 
         if precommit_data.precommit_flag & PrecommitFlag.STEP_ALL_CHANGED != PrecommitFlag.NONE:

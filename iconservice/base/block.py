@@ -150,7 +150,7 @@ class Block(object):
                      prev_hash=data[4],
                      cumulative_fee=data[5])
 
-    def to_bytes(self, revision: int = 0) -> bytes:
+    def to_bytes(self, revision: int) -> bytes:
         if revision >= REV_IISS:
             return self._to_msg_packed_bytes()
         else:
