@@ -370,7 +370,6 @@ class IconServiceEngine(ContextContainer):
     def _is_decentralized(context: 'IconScoreContext') -> bool:
         return context.engine.prep.term.sequence != -1 and context.revision >= REV_DECENTRALIZATION
 
-
     # todo: remove None of prev_block_generator, prev_block_validators default
     # todo: is it right setting default value to is_block_editable?
     def invoke(self,
@@ -468,6 +467,8 @@ class IconServiceEngine(ContextContainer):
             context.engine.prep.save_term(context, weighted_average_of_irep)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
 
+        self._update_reward_calc(context, precommit_flag, prev_block_generator, prev_block_validators)
+
         # Save precommit data
         # It will be written to levelDB on commit
         precommit_data = PrecommitData(
@@ -504,6 +505,18 @@ class IconServiceEngine(ContextContainer):
             p: 'PRep' = context.preps.get(prep.address)
             if p:
                 p.update_productivity(is_validate)
+
+    @staticmethod
+    def _update_reward_calc(context: 'IconScoreContext',
+                            precommit_flag: 'PrecommitFlag',
+                            prev_block_generator: Optional['Address'],
+                            prev_block_validators: Optional[List['Address']]):
+
+        if context.revision < REV_IISS:
+            return
+
+        is_first: bool = is_flags_on(precommit_flag, PrecommitFlag.GENESIS_IISS_CALC)
+        context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, is_first)
 
     @staticmethod
     def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
@@ -1447,11 +1460,10 @@ class IconServiceEngine(ContextContainer):
 
         if precommit_data.revision >= REV_IISS:
             context.engine.prep.commit(context, precommit_data)
+            context.storage.rc.commit(precommit_data.rc_block_batch)
 
-            if is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC):
-                context.engine.iiss.genesis_commit(context, precommit_data)
-            else:
-                context.engine.iiss.commit(context, precommit_data)
+            is_first: bool = is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC)
+            context.engine.iiss.send_ipc(context, precommit_data, is_first)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state

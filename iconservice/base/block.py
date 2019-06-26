@@ -118,7 +118,7 @@ class Block(object):
         """
         byteorder = DATA_BYTE_ORDER
 
-        version, block_height_bytes, block_hash_bytes,\
+        version, block_height_bytes, block_hash_bytes, \
         timestamp_bytes, block_prev_hash_bytes = \
             Block._struct.unpack(buf)
 
