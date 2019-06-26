@@ -21,7 +21,7 @@ class IssueFormula(object):
     _instance = None
 
     def __new__(cls, *args, **kwargs):
-        if not isinstance(cls._instance, cls):
+        if not isinstance(cls._instance, IssueFormula):
             cls._instance = super().__new__(cls, *args, **kwargs)
 
         return cls._instance
