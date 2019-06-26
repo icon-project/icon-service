@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IconScoreContextType, REV_IISS, PREP_SUB_PREPS
+from iconservice.icon_constant import IconScoreContextType, REV_IISS, PREP_SUB_PREPS, IISS_INITIAL_IREP
 from iconservice.icon_constant import REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss import get_minimum_delegate_for_bottom_prep
@@ -73,8 +73,6 @@ class TestIntegratePrep(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.IREP])
-        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -117,7 +115,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     # decentralize by delegate to n accounts.
-    def _decentralize(self, main_preps: list, delegate_amount: int):
+    def _decentralize(self, preps: list, delegate_amount: int):
 
         # Can delegate up to 10 preps at a time
         stake_amount: int = delegate_amount * 10
@@ -134,7 +132,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._stake(addr3, stake_amount)
 
         # register preps
-        for i, address in enumerate(main_preps):
+        for i, address in enumerate(preps):
             data: dict = {
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
@@ -142,7 +140,6 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP
             }
             self._reg_prep(address, data)
 
@@ -151,21 +148,21 @@ class TestIntegratePrep(TestIntegrateBase):
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in main_preps[:10]]
+            }for address in preps[:10]]
         self._delegate(addr1, data)
 
         data: list = [
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in main_preps[10:20]]
+            }for address in preps[10:20]]
         self._delegate(addr2, data)
 
         data: list = [
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in main_preps[20:22]]
+            }for address in preps[20:22]]
         self._delegate(addr3, data)
 
     def _send_icx_in_loop(self, to_addr: 'Address', balance: int):
@@ -492,7 +489,7 @@ class TestIntegratePrep(TestIntegrateBase):
         # generate preps
         for i in range(_PREPS_LEN):
             if i < PREP_MAIN_PREPS:
-                buf_total_irep += IISS_MIN_IREP + i
+                buf_total_irep += IISS_INITIAL_IREP
             reg_data: dict = {
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
@@ -500,7 +497,6 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(addr_array[i], reg_data)
 
@@ -579,3 +575,73 @@ class TestIntegratePrep(TestIntegrateBase):
         validated_blocks: int = info['stats']['validatedBlocks']
         self.assertEqual(10, total_blocks)
         self.assertEqual(0, validated_blocks)
+
+    def test_prep_set_irep_in_term(self):
+        _PREPS_LEN = 22
+        self._update_governance()
+        self._set_revision(REV_IISS)
+
+        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        total_supply = 2_000_000 * self._icx_factor
+
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        delegate_amount = total_supply * 3 // 1000
+
+        # generate preps
+        self._decentralize(addr_array, delegate_amount)
+
+        # set revision to REV_DECENTRALIZATION
+        tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
+                                      {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
+        prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
+        self.assertIsNotNone(main_prep_as_dict)
+        data: dict = {
+            ConstantKeys.NAME: "name0",
+            ConstantKeys.EMAIL: "email0",
+            ConstantKeys.WEBSITE: "website0",
+            ConstantKeys.DETAILS: "json0",
+            ConstantKeys.P2P_END_POINT: "ip0",
+            ConstantKeys.PUBLIC_KEY: f'publicKey0'.encode(),
+        }
+
+        expected_response: dict = data
+        response: dict = self._get_prep(addr_array[0])
+        register = response["registration"]
+
+        self.assertEqual(expected_response[ConstantKeys.NAME], register[ConstantKeys.NAME])
+        self.assertEqual(expected_response[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
+        self.assertEqual(expected_response[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(expected_response[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
+        self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
+        self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
+        self.assertEqual(IISS_INITIAL_IREP, register[ConstantKeys.IREP])
+
+        irep_value = int(IISS_INITIAL_IREP * 1.2)
+
+        set_prep_data1: dict = {
+            ConstantKeys.IREP: irep_value,
+        }
+        self._set_prep(addr_array[0], set_prep_data1)
+
+        response: dict = self._get_prep(addr_array[0])
+        register = response["registration"]
+        self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
+        self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(hex(set_prep_data1[ConstantKeys.IREP]), hex(register[ConstantKeys.IREP]))
+
+        irep_value2 = int(irep_value * 1.1)
+
+        set_prep_data2: dict = {
+            ConstantKeys.IREP: hex(irep_value2),
+        }
+        tx = self._make_score_call_tx(addr_array[0],
+                                      ZERO_SCORE_ADDRESS,
+                                      'setPRep',
+                                      set_prep_data2)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        set_result = tx_results[0]
+        self.assertEqual(set_result.status, 0)
+        failure_message = set_result.failure.message
+        self.assertEqual(failure_message, "Can update irep only one time in term")

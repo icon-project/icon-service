@@ -23,7 +23,7 @@ from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import PrepResultState, IISS_MIN_IREP
@@ -125,7 +125,7 @@ class Engine(EngineBase):
         account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
-        prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
+        prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index, context.iiss_initial_irep)
         prep.delegated = account.delegated_amount
         self._validate_irep(context, prep)
 
@@ -256,6 +256,11 @@ class Engine(EngineBase):
 
         if prev_irep is None:
             return
+
+        term = context.engine.prep.term
+
+        if term.end_block_height != -1 and prep.irep_block_height > term.end_block_height - term.period:
+            raise InvalidRequestException('Can update irep only one time in term')
 
         min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
         max_irep: int = prev_irep * 12 // 10  # 120% of previous irep

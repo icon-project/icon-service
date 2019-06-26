@@ -99,6 +99,7 @@ class IconScoreContext(object):
     icon_score_mapper: 'IconScoreMapper' = None
     icon_service_flag: int = 0
     legacy_tbears_mode: bool = False
+    iiss_initial_irep: int = 0
 
     engine: 'ContextEngine' = None
     storage: 'ContextStorage' = None

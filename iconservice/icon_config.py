@@ -39,5 +39,6 @@ default_icon_config = {
     ConfigKey.IISS_CALCULATE_PERIOD: 10,
     ConfigKey.TERM_PERIOD: 10,
     ConfigKey.IREP: 10_000,
+    ConfigKey.IISS_INITIAL_IREP: 37_500,
     ConfigKey.IISS_PREP_LIST: []
 }

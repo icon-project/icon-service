@@ -15,7 +15,6 @@
 from enum import auto, Flag, IntEnum
 from typing import TYPE_CHECKING, Tuple
 
-from ...base.address import Address
 from ...base.exception import InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
 from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
@@ -185,7 +184,8 @@ class PRep(object):
         return prep
 
     @staticmethod
-    def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int) -> 'PRep':
+    def from_dict(address: 'Address', data: dict, block_height: int, tx_index: int,
+                  irep: int) -> 'PRep':
         prep = PRep(address)
 
         prep._status: int = PRepStatus.ACTIVE
@@ -199,7 +199,7 @@ class PRep(object):
         # Required items
         prep.p2p_end_point: str = data[ConstantKeys.P2P_END_POINT]
         prep.public_key: bytes = data[ConstantKeys.PUBLIC_KEY]
-        prep.irep: int = data[ConstantKeys.IREP]
+        prep.irep: int = irep
         prep.irep_block_height: int = block_height
 
         # Registration time
@@ -218,7 +218,7 @@ class PRep(object):
         # Required items
         self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
 
-        if ConstantKeys.IREP in params:
+        if ConstantKeys.IREP in params and self.irep != params[ConstantKeys.IREP]:
             self.irep: int = params[ConstantKeys.IREP]
             self.irep_block_height: int = block_height
 
