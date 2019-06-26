@@ -120,6 +120,7 @@ class ConfigKey:
 
     # IISS VARIABLE
     IISS_REWARD_VARIABLE = "iissRewardVariable"
+    IISS_INITIAL_IREP = "iissInitialIRep"
     REWARD_POINT = 'rewardPoint'
     REWARD_MIN = "rewardMin"
     REWARD_MAX = "rewardMAX"
@@ -198,6 +199,7 @@ PREP_MAIN_PREPS = 22
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000
+IISS_INITIAL_IREP = 37_500
 IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000
