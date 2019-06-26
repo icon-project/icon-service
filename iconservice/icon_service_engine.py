@@ -32,7 +32,7 @@ from .deploy import DeployEngine, DeployStorage
 from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
-    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHPD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
+    IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
     ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
@@ -1081,7 +1081,7 @@ class IconServiceEngine(ContextContainer):
             return False
 
         method_name: Optional[str] = data.get("method")
-        return method_name in NEW_METHPD_TABLE
+        return method_name in NEW_METHOD_TABLE
 
     @staticmethod
     def _check_iiss_process(params: dict) -> bool:

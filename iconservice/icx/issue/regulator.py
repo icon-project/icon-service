@@ -16,7 +16,7 @@
 from typing import Optional, Tuple
 
 from .storage import RegulatorVariable
-from ...icon_constant import I_SCORE_EXCHANGE_RATE
+from ...icon_constant import ISCORE_EXCHANGE_RATE
 from ...iconscore.icon_score_context import IconScoreContext
 
 
@@ -39,7 +39,7 @@ class Regulator:
 
     @property
     def remain_over_issued_icx(self):
-        return self._regulator_variable.over_issued_i_score // I_SCORE_EXCHANGE_RATE
+        return self._regulator_variable.over_issued_iscore // ISCORE_EXCHANGE_RATE
 
     @property
     def corrected_icx_issue_amount(self):
@@ -54,23 +54,23 @@ class Regulator:
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if calc_next_block_height == context.block.height:
-            prev_calc_period_issued_i_score = context.storage.rc.get_prev_calc_period_issued_i_score()
-            covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, corrected_icx_issue_amount = \
+            prev_calc_period_issued_iscore = context.storage.rc.get_prev_calc_period_issued_iscore()
+            covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
                 self._correct_issue_amount_on_calc_period(regulator_variable.prev_calc_period_issued_icx,
-                                                          prev_calc_period_issued_i_score,
-                                                          regulator_variable.over_issued_i_score,
+                                                          prev_calc_period_issued_iscore,
+                                                          regulator_variable.over_issued_iscore,
                                                           issue_amount,
                                                           prev_block_cumulative_fee)
 
             regulator_variable.prev_calc_period_issued_icx = current_calc_period_total_issued_icx
             regulator_variable.current_calc_period_issued_icx = 0
         else:
-            covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, corrected_icx_issue_amount = \
-                self._correct_issue_amount(regulator_variable.over_issued_i_score,
+            covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
+                self._correct_issue_amount(regulator_variable.over_issued_iscore,
                                            issue_amount,
                                            prev_block_cumulative_fee)
             regulator_variable.current_calc_period_issued_icx = current_calc_period_total_issued_icx
-        regulator_variable.over_issued_i_score = remain_over_issued_i_score
+        regulator_variable.over_issued_iscore = remain_over_issued_iscore
 
         self._regulator_variable = regulator_variable
         self._covered_icx_by_fee = covered_icx_by_fee
@@ -131,55 +131,55 @@ class Regulator:
         return covered_icx_by_fee, remain_over_issued_icx, corrected_issue_amount
 
     @staticmethod
-    def _separate_icx_and_i_score(i_score: int) -> Tuple[int, int]:
-        abs_i_score = abs(i_score)
-        over_issued_icx = abs_i_score // I_SCORE_EXCHANGE_RATE
-        over_issued_i_score = abs_i_score % I_SCORE_EXCHANGE_RATE
-        if i_score < 0:
+    def _separate_icx_and_iscore(iscore: int) -> Tuple[int, int]:
+        abs_iscore = abs(iscore)
+        over_issued_icx = abs_iscore // ISCORE_EXCHANGE_RATE
+        over_issued_iscore = abs_iscore % ISCORE_EXCHANGE_RATE
+        if iscore < 0:
             over_issued_icx = -over_issued_icx
-            over_issued_i_score = -over_issued_i_score
+            over_issued_iscore = -over_issued_iscore
 
-        return over_issued_icx, over_issued_i_score
+        return over_issued_icx, over_issued_iscore
 
     def _correct_issue_amount_on_calc_period(self,
                                              prev_calc_period_issued_icx: int,
-                                             prev_calc_period_issued_i_score: Optional[int],
-                                             remain_over_issued_i_score: int,
+                                             prev_calc_period_issued_iscore: Optional[int],
+                                             remain_over_issued_iscore: int,
                                              icx_issue_amount: int,
                                              prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
         assert icx_issue_amount >= 0
         assert prev_block_cumulative_fee >= 0
 
         # check if RC has sent response about 'CALCULATE' requests. every period should get response
-        if prev_calc_period_issued_i_score is None:
-            raise AssertionError("There is no prev_calc_period_i_score")
+        if prev_calc_period_issued_iscore is None:
+            raise AssertionError("There is no prev_calc_period_iscore")
 
         # get difference between icon_service and reward_calc after set exchange rates
-        prev_calc_over_issued_i_score: int = \
-            prev_calc_period_issued_icx * I_SCORE_EXCHANGE_RATE - prev_calc_period_issued_i_score
-        total_over_issued_i_score: int = prev_calc_over_issued_i_score + remain_over_issued_i_score
-        over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(total_over_issued_i_score)
+        prev_calc_over_issued_iscore: int = \
+            prev_calc_period_issued_icx * ISCORE_EXCHANGE_RATE - prev_calc_period_issued_iscore
+        total_over_issued_iscore: int = prev_calc_over_issued_iscore + remain_over_issued_iscore
+        over_issued_icx, over_issued_iscore = self._separate_icx_and_iscore(total_over_issued_iscore)
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
             self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx, prev_block_cumulative_fee)
 
-        remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
+        remain_over_issued_iscore = remain_over_issued_icx * ISCORE_EXCHANGE_RATE + over_issued_iscore
 
         # covered_icx can be negative value (in case of reward calculator having been issued more)
-        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, icx_issue_amount
+        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, icx_issue_amount
 
     def _correct_issue_amount(self,
-                              remain_over_issued_i_score: int,
+                              remain_over_issued_iscore: int,
                               icx_issue_amount: int,
                               prev_block_cumulative_fee: int) -> Tuple[int, int, int, int]:
         assert icx_issue_amount >= 0
         assert prev_block_cumulative_fee >= 0
 
-        over_issued_icx, over_issued_i_score = self._separate_icx_and_i_score(remain_over_issued_i_score)
+        over_issued_icx, over_issued_iscore = self._separate_icx_and_iscore(remain_over_issued_iscore)
 
         # covered_icx_by_remain is always positive value
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
             self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx, prev_block_cumulative_fee)
-        remain_over_issued_i_score = remain_over_issued_icx * I_SCORE_EXCHANGE_RATE + over_issued_i_score
+        remain_over_issued_iscore = remain_over_issued_icx * ISCORE_EXCHANGE_RATE + over_issued_iscore
 
-        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_i_score, icx_issue_amount
+        return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, icx_issue_amount

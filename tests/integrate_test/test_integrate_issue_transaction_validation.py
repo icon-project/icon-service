@@ -22,7 +22,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix,
 from iconservice.base.exception import InvalidBlockException
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
-    IconScoreContextType, I_SCORE_EXCHANGE_RATE
+    IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
 from tests import create_address
@@ -205,7 +205,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         expected_issue_amount = 4642222
         calculate_response_iscore = 46422210000
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
-                                       (calculate_response_iscore // I_SCORE_EXCHANGE_RATE)
+                                       (calculate_response_iscore // ISCORE_EXCHANGE_RATE)
 
         def mock_calculate(self, path, block_height):
             response = CalculateResponse(0, True, 1, calculate_response_iscore, b'mocked_response')

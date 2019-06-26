@@ -25,7 +25,7 @@ from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, I_SCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
+from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..iiss.issue_formula import IssueFormula
@@ -73,7 +73,7 @@ class Engine(EngineBase):
         if not cb_data.success:
             raise AssertionError(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
 
-        IconScoreContext.storage.rc.put_prev_calc_period_issued_i_score(cb_data.iscore)
+        IconScoreContext.storage.rc.put_prev_calc_period_issued_iscore(cb_data.iscore)
         Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)
 
     def _init_reward_calc_proxy(self, data_path: str):
@@ -277,7 +277,7 @@ class Engine(EngineBase):
 
     @classmethod
     def _iscore_to_icx(cls, iscore: int) -> int:
-        return iscore // I_SCORE_EXCHANGE_RATE
+        return iscore // ISCORE_EXCHANGE_RATE
 
     def handle_claim_iscore(self, context: 'IconScoreContext', params: dict):
         address: 'Address' = context.tx.origin

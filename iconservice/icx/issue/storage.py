@@ -32,7 +32,7 @@ class Storage(StorageBase):
             return RegulatorVariable.from_bytes(regulator_variable)
         return RegulatorVariable(current_calc_period_issued_icx=0,
                                  prev_calc_period_issued_icx=0,
-                                 over_issued_i_score=0)
+                                 over_issued_iscore=0)
 
     def put_regulator_variable(self, context: 'IconScoreContext', rv: 'RegulatorVariable'):
         self._db.put(context, self._REGULATOR_VARIABLE_KEY, rv.to_bytes())
@@ -44,10 +44,10 @@ class RegulatorVariable:
     def __init__(self,
                  current_calc_period_issued_icx: int,
                  prev_calc_period_issued_icx: Optional[int],
-                 over_issued_i_score: int):
+                 over_issued_iscore: int):
         self.current_calc_period_issued_icx = current_calc_period_issued_icx
         self.prev_calc_period_issued_icx = prev_calc_period_issued_icx
-        self.over_issued_i_score = over_issued_i_score
+        self.over_issued_iscore = over_issued_iscore
 
     @classmethod
     def from_bytes(cls, buf: bytes) -> 'RegulatorVariable':
@@ -61,6 +61,6 @@ class RegulatorVariable:
             self._VERSION,
             self.current_calc_period_issued_icx,
             self.prev_calc_period_issued_icx,
-            self.over_issued_i_score
+            self.over_issued_iscore
         ]
         return MsgPackForDB.dumps(data)
