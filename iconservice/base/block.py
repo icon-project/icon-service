@@ -62,7 +62,7 @@ class Block(object):
         # unit: microsecond
         self._timestamp = timestamp
         self._prev_hash = prev_hash
-        self._cumulative_fee = cumulative_fee
+        self.cumulative_fee = cumulative_fee
 
     @property
     def height(self) -> int:
@@ -79,14 +79,6 @@ class Block(object):
     @property
     def prev_hash(self) -> bytes:
         return self._prev_hash
-
-    @property
-    def cumulative_fee(self) -> Optional[int]:
-        return self._cumulative_fee
-
-    @cumulative_fee.setter
-    def cumulative_fee(self, cumulative_fee: int):
-        self._cumulative_fee = cumulative_fee
 
     @staticmethod
     def from_dict(params: dict):
@@ -171,7 +163,7 @@ class Block(object):
             self._hash,
             self._timestamp,
             self._prev_hash,
-            self._cumulative_fee
+            self.cumulative_fee
         ]
         return MsgPackForDB.dumps(data)
 
