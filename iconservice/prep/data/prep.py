@@ -218,7 +218,7 @@ class PRep(object):
         # Required items
         self.p2p_end_point: str = params.get(ConstantKeys.P2P_END_POINT, self.p2p_end_point)
 
-        if ConstantKeys.IREP in params and self.irep != params[ConstantKeys.IREP]:
+        if ConstantKeys.IREP in params:
             self.irep: int = params[ConstantKeys.IREP]
             self.irep_block_height: int = block_height
 

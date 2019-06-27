@@ -236,7 +236,6 @@ class TestIntegratePrep(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
             }
             self._reg_prep(self._addr_array[i], reg_data)
 
@@ -597,6 +596,14 @@ class TestIntegratePrep(TestIntegrateBase):
                                       {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
         prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
         self.assertIsNotNone(main_prep_as_dict)
+
+        for i in range(2):
+            prev_block, tx_results = self._make_and_req_block(
+                [],
+                prev_block_generator=addr_array[0],
+                prev_block_validators=[addr_array[1], addr_array[2]])
+            self._write_precommit_state(prev_block)
+
         data: dict = {
             ConstantKeys.NAME: "name0",
             ConstantKeys.EMAIL: "email0",

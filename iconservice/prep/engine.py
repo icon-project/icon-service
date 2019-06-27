@@ -127,7 +127,6 @@ class Engine(EngineBase):
         # Create a PRep object and assign delegated amount from account to prep
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index, context.iiss_initial_irep)
         prep.delegated = account.delegated_amount
-        self._validate_irep(context, prep)
 
         # Update preps in context
         context.preps.add(prep)
@@ -238,11 +237,11 @@ class Engine(EngineBase):
         prep: 'PRep' = context.preps.get(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: str{address}")
-        prev_irep: int = prep.irep
-        prev_irep_updated_height: int = prep.irep_block_height
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
+        irep = ret_params.get(ConstantKeys.IREP)
+        if irep:
+            self._validate_irep(context, prep, irep)
         prep.set(ret_params, context.block.height)
-        self._validate_irep(context, prep, prev_irep, prev_irep_updated_height)
 
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
@@ -250,21 +249,20 @@ class Engine(EngineBase):
         self._create_tx_result(context, 'PRepSet(Address)', address)
 
     @classmethod
-    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep', prev_irep: int = None,
-                       prev_irep_block_height: int = None):
-        irep: int = prep.irep
+    def _validate_irep(cls, context: 'IconScoreContext', prep: 'PRep', irep: int):
         if irep < IISS_MIN_IREP:
             raise InvalidParamsException(f"Invalid irep: {irep}")
+        prev_irep = prep.irep
 
-        if prev_irep is None:
-            return
+        prev_irep_block_height = prep.irep_block_height
+        current_block_height = context.block.height
 
         term = context.engine.prep.term
-        term_start_height = term.end_block_height - term.period
+        term_start_height = term.start_block_height
 
         if term.end_block_height != -1 and \
                 prev_irep_block_height >= term_start_height and \
-                prep.irep_block_height >= term_start_height:
+                current_block_height >= term_start_height:
             raise InvalidRequestException('Can update irep only one time in term')
 
         min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
