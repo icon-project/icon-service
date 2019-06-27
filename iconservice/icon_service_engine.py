@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
-    from .prep.data.prep import PRep
+    from .prep.data import PRep, PRepContainer
 
 
 class IconServiceEngine(ContextContainer):
@@ -273,8 +273,8 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _get_governance_score(context: 'IconScoreContext') -> 'Governance':
-        governance_score: 'Governance' = IconScoreContextUtil.get_icon_score(
-            context, GOVERNANCE_SCORE_ADDRESS)
+        governance_score: 'Governance' = \
+            IconScoreContextUtil.get_icon_score(context, GOVERNANCE_SCORE_ADDRESS)
         if governance_score is None:
             raise ScoreNotFoundException('Governance SCORE not found')
         return governance_score
@@ -394,8 +394,8 @@ class IconServiceEngine(ContextContainer):
         precommit_data: 'PrecommitData' = self._precommit_data_manager.get(block.hash)
         if precommit_data is not None:
             Logger.info(
-                f'The result of block(0x{block.hash.hex()} already exists',
-                ICON_SERVICE_LOG_TAG)
+                tag=ICON_SERVICE_LOG_TAG,
+                msg=f"Block result already exists: {block.height}, 0x{block.hash.hex()}")
             return precommit_data.block_result, precommit_data.state_root_hash
 
         # Check for block validation before invoke
@@ -407,7 +407,7 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.preps = context.engine.prep.preps.get_snapshot()
+        context.preps: 'PRepContainer' = context.engine.prep.preps.get_snapshot()
 
         self._set_revision_to_context(context)
         block_result = []
@@ -460,12 +460,11 @@ class IconServiceEngine(ContextContainer):
                 if context.revision >= REV_IISS:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-        preps = context.preps.get_snapshot()
+        # Make context.preps immutable
+        context.preps.freeze()
 
-        main_prep_as_dict: Optional[dict] = self.after_transaction_process(context,
-                                                                           precommit_flag,
-                                                                           prev_block_generator,
-                                                                           prev_block_validators)
+        main_prep_as_dict: Optional[dict] = self.after_transaction_process(
+            context, precommit_flag, prev_block_generator, prev_block_validators)
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -474,7 +473,7 @@ class IconServiceEngine(ContextContainer):
             context.block_batch,
             block_result,
             context.rc_block_batch,
-            preps,
+            context.preps,
             prev_block_generator,
             prev_block_validators,
             context.new_icon_score_mapper,
@@ -492,7 +491,8 @@ class IconServiceEngine(ContextContainer):
         is_first: bool = is_flags_on(flag, PrecommitFlag.GENESIS_IISS_CALC)
 
         main_prep_as_dict: Optional[dict] = None
-        if self._is_main_prep_updated(context):
+        if self._is_prep_term_over(context):
+            # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
             context.engine.prep.save_term(context, weighted_average_of_irep)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
@@ -536,7 +536,7 @@ class IconServiceEngine(ContextContainer):
         context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, is_first)
 
     @staticmethod
-    def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
+    def _is_prep_term_over(context: 'IconScoreContext') -> bool:
         if context.revision < REV_DECENTRALIZATION:
             return False
 

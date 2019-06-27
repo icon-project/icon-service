@@ -26,6 +26,7 @@ from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
+from ..icon_constant import PREP_MAIN_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -42,6 +43,9 @@ if TYPE_CHECKING:
 
 
 class Engine(EngineBase):
+    """IISSEngine class
+
+    """
 
     def __init__(self):
         super().__init__()
@@ -58,13 +62,14 @@ class Engine(EngineBase):
             'queryIScore': self.handle_query_iscore
         }
 
-        self._reward_calc_proxy: 'RewardCalcProxy' = None
+        self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
 
     def open(self, context: 'IconScoreContext', path: str):
         self._init_reward_calc_proxy(path)
 
     # TODO implement version callback function
-    def version_callback(self, cb_data: 'VersionResponse'):
+    @staticmethod
+    def version_callback(cb_data: 'VersionResponse'):
         Logger.debug(tag="iiss", msg=f"version callback called with {cb_data}")
 
     @staticmethod
@@ -267,25 +272,31 @@ class Engine(EngineBase):
         return iscore // ISCORE_EXCHANGE_RATE
 
     def handle_claim_iscore(self, context: 'IconScoreContext', params: dict):
+        """Handles claimIScore JSON-RPC request
+
+        :param context:
+        :param params:
+        :return:
+        """
         address: 'Address' = context.tx.origin
 
         # TODO: error handling
-        iscore, block_height = self._reward_calc_proxy.claim_iscore(address, context.block.height, context.block.hash)
+        iscore, block_height = self._reward_calc_proxy.claim_iscore(
+            address, context.block.height, context.block.hash)
 
         icx: int = self._iscore_to_icx(iscore)
 
         from_account: 'Account' = context.storage.icx.get_account(context, address)
         from_account.deposit(icx)
         context.storage.icx.put_account(context, from_account)
-        self._create_tx_result(context, iscore, icx)
 
-    @classmethod
-    def _create_tx_result(cls, context: 'IconScoreContext', iscore: int, icx: int):
-        # make tx result
-        event_signature: str = 'IScoreClaimed(int,int)'
-        arguments = [iscore, icx]
-        index = 0
-        EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, event_signature, arguments, index)
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature="IScoreClaimed(int,int)",
+            arguments=[iscore, icx],
+            indexed_args_count=0
+        )
 
     def handle_query_iscore(self, context: 'IconScoreContext', params: dict) -> dict:
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_QUERY_ISCORE)
@@ -390,7 +401,8 @@ class Engine(EngineBase):
 
     @classmethod
     def _put_preps_for_rc(cls, context: 'IconScoreContext'):
-        preps: List['PRep'] = context.preps.get_preps()
+        preps: List['PRep'] = \
+            context.engine.prep.preps.get_preps(start_index=0, size=PREP_MAIN_PREPS)
 
         if len(preps) == 0:
             return
