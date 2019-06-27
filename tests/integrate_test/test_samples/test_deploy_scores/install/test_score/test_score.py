@@ -1,7 +1,5 @@
 from iconservice import *
 
-print("import")
-
 
 class TestScore(IconScoreBase):
 
@@ -16,7 +14,6 @@ class TestScore(IconScoreBase):
     def on_install(self, value: int=1000) -> None:
         super().on_install()
         self._value.set(value)
-        print("on_install")
 
     def on_update(self) -> None:
         super().on_update()
@@ -27,7 +24,6 @@ class TestScore(IconScoreBase):
 
     @external(readonly=True)
     def get_value(self) -> int:
-        print("call")
         return self._value.get()
 
     @external

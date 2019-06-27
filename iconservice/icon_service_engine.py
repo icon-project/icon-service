@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import builtins
 import os
 from typing import TYPE_CHECKING, List, Any, Optional
 
@@ -53,10 +52,6 @@ from .precommit_data_manager import PrecommitData, PrecommitDataManager, Precomm
 from .utils import sha3_256, int_to_bytes
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
-
-
-def mock_print(*args, **kwargs): pass
-setattr(builtins, "print", mock_print)
 
 if TYPE_CHECKING:
     from .iconscore.icon_score_event_log import EventLog
