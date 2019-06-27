@@ -65,13 +65,13 @@ class Storage(StorageBase):
         if reward_prep:
             return Reward.from_bytes(reward_prep)
 
-    def put_calc_next_block_height(self, context: 'IconScoreContext', calc_block_height: int):
+    def put_end_block_height_of_calc(self, context: 'IconScoreContext', calc_block_height: int):
         version = 0
         data: list = [version, calc_block_height]
         value: bytes = MsgPackForDB.dumps(data)
         self._db.put(context, self.CALC_NEXT_BLOCK_HEIGHT_KEY, value)
 
-    def get_calc_next_block_height(self, context: 'IconScoreContext') -> Optional[int]:
+    def get_end_block_height_of_calc(self, context: 'IconScoreContext') -> Optional[int]:
         value: bytes = self._db.get(context, self.CALC_NEXT_BLOCK_HEIGHT_KEY)
         if value:
             data: list = MsgPackForDB.loads(value)

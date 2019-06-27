@@ -48,7 +48,7 @@ class Regulator:
     def set_issue_info_about_correction(self, context: 'IconScoreContext', issue_amount: int):
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
         prev_block_cumulative_fee = context.storage.icx.last_block.cumulative_fee
-        calc_next_block_height = context.storage.iiss.get_calc_next_block_height(context)
+        calc_next_block_height = context.storage.iiss.get_end_block_height_of_calc(context)
 
         # update current calculated period total issued icx
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
