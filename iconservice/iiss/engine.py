@@ -310,13 +310,13 @@ class Engine(EngineBase):
         # every block time
         self._put_block_produce_info_for_rc(context, prev_block_generator, prev_block_validators)
 
-        if is_first and not self._check_update_calc_period(context):
+        if not is_first and not self._check_update_calc_period(context):
             return
 
         self._put_next_calc_block_height(context)
 
         self._put_header_for_rc(context)
-        self._put_gv_for_rc(context)
+        self._put_gv(context)
         self._put_preps_for_rc(context)
 
     def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData', is_first: bool):
@@ -325,7 +325,7 @@ class Engine(EngineBase):
         # every block time
         self._reward_calc_proxy.commit_block(True, block_height, precommit_data.block.hash)
 
-        if is_first and not self._check_update_calc_period(context):
+        if not is_first and not self._check_update_calc_period(context):
             return
 
         path: str = context.storage.rc.create_db_for_calc(block_height)
@@ -353,7 +353,7 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_gv_for_rc(cls, context: 'IconScoreContext'):
+    def _put_gv(cls, context: 'IconScoreContext'):
         current_total_supply = context.storage.icx.get_total_supply(context)
         current_total_prep_delegated = context.storage.iiss.get_total_prep_delegated(context)
         reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
@@ -367,11 +367,11 @@ class Engine(EngineBase):
         irep: int = context.engine.prep.term.irep
         calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
         reward_prep.reward_rate = reward_rep
-        context.storage.iiss.put_reward_prep(context, reward_prep)
 
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(context.block.height,
                                                                               calculated_irep,
                                                                               reward_rep)
+        context.storage.iiss.put_reward_prep(context, reward_prep)
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod

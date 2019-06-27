@@ -368,7 +368,7 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _is_decentralized(context: 'IconScoreContext') -> bool:
-        return context.engine.prep.term.sequence != -1 and context.revision >= REV_DECENTRALIZATION
+        return context.revision >= REV_DECENTRALIZATION and context.engine.prep.term.sequence != -1
 
     # todo: remove None of prev_block_generator, prev_block_validators default
     # todo: is it right setting default value to is_block_editable?
@@ -485,12 +485,12 @@ class IconServiceEngine(ContextContainer):
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
-    @staticmethod
-    def _update_productivity(context: 'IconScoreContext',
+    def _update_productivity(self,
+                             context: 'IconScoreContext',
                              prev_block_generator: Optional['Address'] = None,
                              prev_block_validators: Optional[List['Address']] = None):
 
-        if context.revision < REV_DECENTRALIZATION or context.engine.prep.term.sequence == -1:
+        if not self._is_decentralized(context):
             return
 
         validates: set = set()
@@ -517,6 +517,7 @@ class IconServiceEngine(ContextContainer):
 
         is_first: bool = is_flags_on(precommit_flag, PrecommitFlag.GENESIS_IISS_CALC)
         context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, is_first)
+        context.update_batch()
 
     @staticmethod
     def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
