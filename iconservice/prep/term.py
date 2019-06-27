@@ -79,6 +79,7 @@ class Term(object):
             self._end_block_height = self._start_block_height + term_period - 1
             self._main_preps, self._sub_preps = self._make_preps(context, data[3])
             self._irep = data[4]
+            self._total_supply = data[5]
         else:
             self._period = term_period
             self._irep = irep
