@@ -26,10 +26,10 @@ from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
+from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..icx.issue.issue_formula import IssueFormula
-from ..iconscore.icon_score_context import IconScoreContext
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
@@ -299,7 +299,7 @@ class Engine(EngineBase):
             "icx": self._iscore_to_icx(iscore),
             "blockHeight": block_height
         }
-        
+
         return data
 
     def update_db(self,
@@ -334,18 +334,18 @@ class Engine(EngineBase):
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext') -> bool:
         block_height: int = context.block.height
-        check_next_block_height: Optional[int] = context.storage.iiss.get_calc_next_block_height(context)
-        if check_next_block_height is None:
+        check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        if check_end_block_height is None:
             return False
 
-        return block_height == check_next_block_height
+        return block_height == check_end_block_height
 
     @classmethod
     def _put_next_calc_block_height(cls, context: 'IconScoreContext'):
         calc_period: int = context.storage.iiss.get_calc_period(context)
         if calc_period is None:
             raise InvalidParamsException("Fail put next calc block height: didn't init yet")
-        context.storage.iiss.put_calc_next_block_height(context, context.block.height + calc_period)
+        context.storage.iiss.put_end_block_height_of_calc(context, context.block.height + calc_period)
 
     @classmethod
     def _put_header_for_rc(cls, context: 'IconScoreContext'):
