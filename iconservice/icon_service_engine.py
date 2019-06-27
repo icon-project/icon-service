@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -461,13 +462,10 @@ class IconServiceEngine(ContextContainer):
 
         preps = context.preps.get_snapshot()
 
-        main_prep_as_dict: Optional[dict] = None
-        if self._is_main_prep_updated(context):
-            weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
-            context.engine.prep.save_term(context, weighted_average_of_irep)
-            main_prep_as_dict = context.engine.prep.make_prep_tx_result()
-
-        self._update_reward_calc(context, precommit_flag, prev_block_generator, prev_block_validators)
+        main_prep_as_dict: Optional[dict] = self.after_transaction_process(context,
+                                                                           precommit_flag,
+                                                                           prev_block_generator,
+                                                                           prev_block_validators)
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -484,6 +482,26 @@ class IconServiceEngine(ContextContainer):
         self._precommit_data_manager.push(precommit_data)
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
+
+    def after_transaction_process(self,
+                                  context: 'IconScoreContext',
+                                  flag: 'PrecommitFlag',
+                                  prev_block_generator: Optional['Address'] = None,
+                                  prev_block_validators: Optional[List['Address']] = None) -> Optional[dict]:
+
+        is_first: bool = is_flags_on(flag, PrecommitFlag.GENESIS_IISS_CALC)
+
+        main_prep_as_dict: Optional[dict] = None
+        if self._is_main_prep_updated(context):
+            weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
+            context.engine.prep.save_term(context, weighted_average_of_irep)
+            main_prep_as_dict = context.engine.prep.make_prep_tx_result()
+            self._sync_end_block_height_of_calc_and_term(context)
+
+        self._update_reward_calc(context, prev_block_generator, prev_block_validators, is_first)
+        context.update_batch()
+
+        return main_prep_as_dict
 
     def _update_productivity(self,
                              context: 'IconScoreContext',
@@ -508,16 +526,14 @@ class IconServiceEngine(ContextContainer):
 
     @staticmethod
     def _update_reward_calc(context: 'IconScoreContext',
-                            precommit_flag: 'PrecommitFlag',
                             prev_block_generator: Optional['Address'],
-                            prev_block_validators: Optional[List['Address']]):
+                            prev_block_validators: Optional[List['Address']],
+                            is_first: bool):
 
         if context.revision < REV_IISS:
             return
 
-        is_first: bool = is_flags_on(precommit_flag, PrecommitFlag.GENESIS_IISS_CALC)
         context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, is_first)
-        context.update_batch()
 
     @staticmethod
     def _is_main_prep_updated(context: 'IconScoreContext') -> bool:
@@ -525,9 +541,18 @@ class IconServiceEngine(ContextContainer):
             return False
 
         if context.engine.prep.term.sequence > -1:
-            return context.engine.prep.check_term_end_block_height(context)
+            return context.engine.prep.check_end_block_height_of_term(context)
         else:
             return check_decentralization_condition(context)
+
+    @staticmethod
+    def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext'):
+        end_block_height_of_calc = context.storage.iiss.get_end_block_height_of_calc(context)
+        end_block_height_of_term = context.engine.prep.term.start_block_height - 1
+        if end_block_height_of_calc != end_block_height_of_term:
+            assert context.engine.prep.term.sequence == 0
+            next_end_block_height = context.engine.prep.term.end_block_height
+            context.storage.iiss.put_end_block_height_of_calc(context, next_end_block_height)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',

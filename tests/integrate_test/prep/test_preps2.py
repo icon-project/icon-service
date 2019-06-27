@@ -151,21 +151,21 @@ class TestIntegratePrep(TestIntegrateBase):
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in main_preps[:10]]
+            } for address in main_preps[:10]]
         self._delegate(addr1, data)
 
         data: list = [
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in main_preps[10:20]]
+            } for address in main_preps[10:20]]
         self._delegate(addr2, data)
 
         data: list = [
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in main_preps[20:22]]
+            } for address in main_preps[20:22]]
         self._delegate(addr3, data)
 
     def _send_icx_in_loop(self, to_addr: 'Address', balance: int):
@@ -579,3 +579,44 @@ class TestIntegratePrep(TestIntegrateBase):
         validated_blocks: int = info['stats']['validatedBlocks']
         self.assertEqual(10, total_blocks)
         self.assertEqual(0, validated_blocks)
+
+    def test_sync_end_block_height_of_calc_and_term(self):
+        _PREPS_LEN = 200
+        _MAIN_PREPS_LEN = 22
+        _AMOUNT_DELEGATE = 10000
+        _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
+        _TEST_BLOCK_HEIGHT = 30
+
+        self._update_governance()
+        self._set_revision(REV_IISS)
+
+        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        total_supply = 2_000_000 * self._icx_factor
+
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        delegate_amount = total_supply * 3 // 1000
+
+        # generate preps
+        self._decentralize(addr_array, delegate_amount)
+
+        response = self._get_prep_list()
+        total_delegated: int = response['totalDelegated']
+        prep_list: list = response['preps']
+
+        self.assertEqual(delegate_amount * 22, total_delegated)
+        self.assertEqual(_PREPS_LEN, len(prep_list))
+
+        self._set_revision(REV_DECENTRALIZATION)
+
+        # check if generating main preps
+        main_preps = self._get_main_perps()["preps"]
+        self.assertEqual(_MAIN_PREPS_LEN, len(main_preps))
+
+        for i in range(_TEST_BLOCK_HEIGHT):
+            try:
+                prev_block, tx_results = self._make_and_req_block([])
+                self._write_precommit_state(prev_block)
+            except AssertionError:
+                self.assertTrue(False)

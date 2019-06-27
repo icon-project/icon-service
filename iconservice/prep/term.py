@@ -16,7 +16,6 @@
 from typing import TYPE_CHECKING, List, Optional
 
 from ..icon_constant import PREP_MAIN_PREPS, PREP_SUB_PREPS
-from ..base.type_converter_templates import ConstantKeys
 
 if TYPE_CHECKING:
     from .data.prep import PRep
@@ -31,6 +30,7 @@ class Term(object):
 
     def __init__(self):
         self._sequence: int = -1
+        self._start_block_height: int = -1
         self._end_block_height: int = -1
         self._period: int = -1
         self._main_preps: List['PRep'] = []
@@ -41,6 +41,10 @@ class Term(object):
     @property
     def sequence(self) -> int:
         return self._sequence
+
+    @property
+    def start_block_height(self) -> int:
+        return self._start_block_height
 
     @property
     def end_block_height(self) -> int:
@@ -71,7 +75,8 @@ class Term(object):
         if data:
             version = data[0]
             self._sequence = data[1]
-            self._end_block_height = data[2]
+            self._start_block_height = data[2]
+            self._end_block_height = self._start_block_height + term_period - 1
             self._main_preps, self._sub_preps = self._make_preps(context, data[3])
             self._irep = data[4]
         else:
@@ -84,7 +89,7 @@ class Term(object):
         preps: 'PRepContainer' = context.engine.prep.get_snapshot()
         for i, in range(0, len(data), 2):
             prep: 'PRep' = preps[data[i]]
-            prep.delegated = data[i+1]
+            prep.delegated = data[i + 1]
             prep_list.append(prep)
 
         return prep_list[:PREP_MAIN_PREPS], prep_list[PREP_MAIN_PREPS: PREP_SUB_PREPS]
@@ -99,7 +104,7 @@ class Term(object):
         data: list = [
             self._VERSION,
             self._sequence + 1,
-            current_block_height + self._period,
+            current_block_height + 1,
             self._make_prep_for_db(preps),
             irep,
             total_supply
@@ -107,6 +112,7 @@ class Term(object):
         context.storage.prep.put_term(context, data)
 
         self._sequence += 1
+        self._start_block_height = current_block_height + 1
         self._end_block_height = current_block_height + self._period
         self._main_preps = preps[:PREP_MAIN_PREPS]
         self._sub_preps = preps[PREP_MAIN_PREPS: PREP_SUB_PREPS]
