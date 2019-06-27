@@ -115,10 +115,6 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         expect_ret = {}
         self._assert_get_score_status(score_addr1, expect_ret)
 
-        tx_result = self._deploy_score("install/test_score", value1, self._addr_array[0])
-        self.assertEqual(tx_result.status, int(True))
-        score_addr1 = tx_result.score_address
-
     def test_score_update_governance(self):
         self._update_governance()
 
