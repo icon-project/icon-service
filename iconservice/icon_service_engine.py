@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -466,6 +467,7 @@ class IconServiceEngine(ContextContainer):
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
             context.engine.prep.save_term(context, weighted_average_of_irep)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
+            self._sync_end_block_height_of_calc_and_term(context)
 
         self._update_reward_calc(context, precommit_flag, prev_block_generator, prev_block_validators)
 
@@ -525,9 +527,18 @@ class IconServiceEngine(ContextContainer):
             return False
 
         if context.engine.prep.term.sequence > -1:
-            return context.engine.prep.check_term_end_block_height(context)
+            return context.engine.prep.check_end_block_height_of_term(context)
         else:
             return check_decentralization_condition(context)
+
+    @staticmethod
+    def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext'):
+        end_block_height_of_calc = context.storage.iiss.get_end_block_height_of_calc(context)
+        end_block_height_of_term = context.engine.prep.term.start_block_height - 1
+        if end_block_height_of_calc != end_block_height_of_term:
+            assert context.engine.prep.term.sequence == 0
+            next_end_block_height = context.engine.prep.term.end_block_height
+            context.storage.iiss.put_end_block_height_of_calc(context, next_end_block_height)
 
     def _update_revision_if_necessary(self,
                                       flags: 'PrecommitFlag',
