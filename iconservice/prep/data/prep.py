@@ -119,8 +119,8 @@ class PRep(Sortable):
         self._public_key: bytes = public_key
         self.p2p_end_point: str = p2p_end_point
         # Governance Variables
-        self.irep: int = irep
-        self.irep_block_height: int = irep_block_height
+        self._irep: int = irep
+        self._irep_block_height: int = irep_block_height
 
         # registration time
         self._block_height: int = block_height
@@ -143,13 +143,25 @@ class PRep(Sortable):
         self._status = value
 
     def update_productivity(self, is_validate: bool):
+        """Update the block validation statistics of P-Rep
+
+        :param is_validate:
+        :return:
+        """
+        self._check_access_permission()
+
         if is_validate:
             self._validated_blocks += 1
         self._total_blocks += 1
 
+        utils.toggle_flags(self._flags, PRepFlag.DIRTY, True)
+
     @property
     def productivity(self) -> int:
-        # return : % (percentage)
+        """
+
+        :return: unit: percent
+        """
         return self._validated_blocks * 100 // self._total_blocks
 
     def is_low_productivity(self) -> bool:
@@ -169,14 +181,20 @@ class PRep(Sortable):
 
     @delegated.setter
     def delegated(self, value: int):
-        if self.is_frozen():
-            raise AccessDeniedException("P-Rep is frozen")
-
+        self._check_access_permission()
         self._delegated = value
 
     @property
     def public_key(self) -> bytes:
         return self._public_key
+
+    @property
+    def irep(self) -> int:
+        return self._irep
+
+    @property
+    def irep_block_height(self) -> int:
+        return self._irep_block_height
 
     @property
     def block_height(self) -> int:
@@ -213,15 +231,13 @@ class PRep(Sortable):
         """
         self._flags |= PRepFlag.FROZEN
 
-    def set(self, block_height: int, *,
+    def set(self, *,
             name: str = None,
             email: str = None,
             website: str = None,
             details: str = None,
-            p2p_end_point: str = None,
-            irep: int = None):
+            p2p_end_point: str = None):
         """Update PRep properties on processing setPRep JSON-RPC API
-
         Not allowed to update some properties which can affect PRep order or are immutable
 
         :param name:
@@ -229,24 +245,15 @@ class PRep(Sortable):
         :param website:
         :param details:
         :param p2p_end_point:
-        :param irep:
-        :param irep_block_height: Block height when irep is updated
         """
-        if self.is_frozen():
-            raise AccessDeniedException("P-Rep access denied")
-
-        irep_block_height: int = None if irep is None else block_height
-        assert (irep is None and block_height is None) or \
-            (isinstance(irep, int) and isinstance(irep_block_height, int))
+        self._check_access_permission()
 
         kwargs = {
             "name": name,
             "email": email,
             "website": website,
             "details": details,
-            "p2p_end_point": p2p_end_point,
-            "irep": irep,
-            "irep_block_height": irep_block_height
+            "p2p_end_point": p2p_end_point
         }
 
         for key, value in kwargs.items():
@@ -254,6 +261,18 @@ class PRep(Sortable):
                 setattr(self, key, value)
 
         self._flags |= PRepFlag.DIRTY
+
+    def set_irep(self, irep: int, block_height: int):
+        """Set incentive rep
+
+        :param irep:
+        :param block_height: block height when irep is set
+        :return:
+        """
+        self._check_access_permission()
+
+        self._irep = irep
+        self._irep_block_height = block_height
 
     def __gt__(self, other: 'PRep') -> bool:
         return self.order() > other.order()
@@ -280,8 +299,8 @@ class PRep(Sortable):
             self.p2p_end_point,
             self._public_key,
 
-            self.irep,
-            self.irep_block_height,
+            self._irep,
+            self._irep_block_height,
 
             self._block_height,
             self._tx_index,
@@ -354,8 +373,8 @@ class PRep(Sortable):
                 ConstantKeys.DETAILS: self.details,
                 ConstantKeys.P2P_END_POINT: self.p2p_end_point,
                 ConstantKeys.PUBLIC_KEY: self.public_key,
-                ConstantKeys.IREP: self.irep,
-                ConstantKeys.IREP_BLOCK_HEIGHT: self.irep_block_height
+                ConstantKeys.IREP: self._irep,
+                ConstantKeys.IREP_BLOCK_HEIGHT: self._irep_block_height
             },
             "delegation": {
                 "stake": self.stake,
@@ -375,3 +394,7 @@ class PRep(Sortable):
         prep._flags = flags
 
         return prep
+
+    def _check_access_permission(self):
+        if self.is_frozen():
+            raise AccessDeniedException("P-Rep access denied")

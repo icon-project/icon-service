@@ -44,7 +44,9 @@ if TYPE_CHECKING:
 class Engine(EngineBase):
     """PRepEngine class
 
-    Manages preps and handles P-Rep related JSON-RPC API requests
+    Roles:
+    * Manages term and preps
+    * Handles P-Rep related JSON-RPC API requests
     """
 
     def __init__(self) -> None:
@@ -264,13 +266,25 @@ class Engine(EngineBase):
         prep_storage = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get(address)
+        prep: 'PRep' = context.preps.get_by_address(address)
         if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: str{address}")
-        prev_irep: int = prep.irep
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
-        prep.set(context.block.height, **ret_params)
-        self._validate_irep(context, prep.irep, prev_irep)
+            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+
+        kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
+
+        # Update incentive rep
+        if "irep" in kwargs:
+            irep: int = kwargs["irep"]
+            del kwargs["irep"]
+            self._set_irep_to_prep(context, irep, prep)
+
+        if "p2pEndPoint" in kwargs:
+            p2p_end_point: str = kwargs["p2pEndPoint"]
+            del kwargs["p2pEndPoint"]
+            kwargs["p2p_end_point"] = p2p_end_point
+
+        # Update registration info
+        prep.set(**kwargs)
 
         # Update a new P-Rep registration info to stateDB
         prep_storage.put_prep(context, prep)
@@ -284,8 +298,14 @@ class Engine(EngineBase):
             indexed_args_count=0
         )
 
+    def _set_irep_to_prep(self, context: 'IconScoreContext', irep: int, prep: 'PRep'):
+        prev_irep: int = prep.irep
+        self._validate_irep(context, prep.irep, prev_irep)
+
+        prep.set_irep(irep, context.block.height)
+
     @classmethod
-    def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_irep: int = None):
+    def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_irep: int):
         """Validate irep
 
         :param context:
@@ -295,9 +315,6 @@ class Engine(EngineBase):
         """
         if not (IISS_MIN_IREP <= irep <= IISS_MAX_IREP):
             raise InvalidParamsException(f"Invalid irep: {irep}")
-
-        if prev_irep is None:
-            return
 
         min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
         max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
@@ -351,7 +368,7 @@ class Engine(EngineBase):
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
     def handle_get_main_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns 22 P-Rep list in the present term
+        """Returns 22 P-Rep list in the current term
 
         :param context:
         :param params:
@@ -411,29 +428,20 @@ class Engine(EngineBase):
         total_delegated: int = 0
         prep_list: list = []
 
-        start_index: int = ret_params.get(ConstantKeys.START_RANKING, 1)
-        if start_index <= 0:
-            raise InvalidParamsException("Invalid params: startRanking")
+        start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+        end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
 
-        end_index: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
-        if end_index <= 0:
-            raise InvalidParamsException("Invalid params: endRanking")
+        if 0 <= start_ranking <= end_ranking <= len(preps):
+            raise InvalidParamsException(
+                f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
 
-        if start_index > end_index:
-            raise InvalidParamsException("Invalid params: reverse")
-
-        for i in range(start_index - 1, end_index):
+        for i in range(start_ranking - 1, end_ranking):
             prep: 'PRep' = preps.get_by_index(i)
-
-            item = {
-                "address": prep.address,
-                "delegated": prep.delegated
-            }
-            prep_list.append(item)
+            prep_list.append({"address": prep.address, "delegated": prep.delegated})
             total_delegated += prep.delegated
 
         return {
-            "startRanking": start_index,
+            "startRanking": start_ranking,
             "totalDelegated": total_delegated,
             "preps": prep_list
         }

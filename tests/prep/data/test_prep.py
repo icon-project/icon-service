@@ -19,37 +19,72 @@ import pytest
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import AccessDeniedException
-from iconservice.prep.data import PRep, PRepFlag
+from iconservice.prep.data import PRep
 
 
-def test_frozen_flag():
+NAME = "banana"
+EMAIL = "banana@example.com"
+WEBSITE = "https://banana.example.com"
+DETAILS = "https://banana.example.com/details"
+P2P_END_POINT = "https://banana.example.com:7100"
+IREP = 10_000
+BLOCK_HEIGHT = 777
+TX_INDEX = 0
+
+
+@pytest.fixture
+def prep():
     address = Address(AddressPrefix.EOA, os.urandom(20))
-    prep = PRep(address, flags=PRepFlag.FROZEN)
+    prep = PRep(
+        address,
+        name=NAME,
+        email=EMAIL,
+        website=WEBSITE,
+        details=DETAILS,
+        p2p_end_point=P2P_END_POINT,
+        irep=IREP,
+        irep_block_height=BLOCK_HEIGHT,
+        block_height=BLOCK_HEIGHT,
+        tx_index=TX_INDEX
+    )
+
+    assert prep.name == NAME
+    assert prep.email == EMAIL
+    assert prep.website == WEBSITE
+    assert prep.details == DETAILS
+    assert prep.p2p_end_point == P2P_END_POINT
+
+    return prep
+
+
+def test_freeze(prep):
+    assert not prep.is_frozen()
+
+    fixed_name = "orange"
+    prep.set(name=fixed_name)
+    assert prep.name == fixed_name
+
+    prep.freeze()
+    assert prep.is_frozen()
 
     with pytest.raises(AccessDeniedException):
-        prep.delegated = 100
+        prep.set(name="candy")
+    assert prep.name == fixed_name
+
+    with pytest.raises(AccessDeniedException):
+        prep.set_irep(10_000, 777)
+
+    with pytest.raises(AccessDeniedException):
+        prep.update_productivity(True)
 
 
-def test_set_ok():
-    address = Address(AddressPrefix.EOA, os.urandom(20))
-    prep = PRep(address)
-
-    assert prep.name == ""
-    assert prep.email == ""
-    assert prep.website == ""
-    assert prep.details == ""
-    assert prep.p2p_end_point == ""
-    assert prep.irep == 0
-    assert prep.irep_block_height == 0
-
+def test_set_ok(prep):
     kwargs = {
         "name": "Best P-Rep",
         "email": "best@example.com",
         "website": "https://node.example.com",
         "details": "https://node.example.com/details",
         "p2p_end_point": "https://node.example.com:7100",
-        "irep": 10_000,
-        "irep_block_height": 1234,
     }
 
     prep.set(**kwargs)
@@ -58,5 +93,14 @@ def test_set_ok():
     assert prep.website == kwargs["website"]
     assert prep.details == kwargs["details"]
     assert prep.p2p_end_point == kwargs["p2p_end_point"]
-    assert prep.irep == kwargs["irep"]
-    assert prep.irep_block_height == kwargs["irep_block_height"]
+
+
+def test_set_error(prep):
+    kwargs = {
+        "irep": IREP + 1,
+        "irep_block_height": BLOCK_HEIGHT + 1,
+    }
+
+    with pytest.raises(TypeError):
+        prep.set(**kwargs)
+
