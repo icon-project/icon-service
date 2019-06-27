@@ -51,8 +51,9 @@ class Storage(StorageBase):
 
     def get_prep_iterator(self) -> iter:
         with self._db.key_value_db.get_sub_db(PRep.PREFIX).iterator() as it:
-            for _, value in it:
-                yield PRep.from_bytes(value)
+            for key, value in it:
+                if key[4] == 0x00 and len(key) == 25:
+                    yield PRep.from_bytes(value)
 
     def put_term(self, context: 'IconScoreContext', data: list):
         value: bytes = MsgPackForDB.dumps(data)
