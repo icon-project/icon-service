@@ -199,7 +199,7 @@ class Storage(StorageBase):
                                       deploy_type: 'DeployType',
                                       owner: 'Address',
                                       tx_hash: bytes,
-                                      deploy_data: 'dict') -> None:
+                                      deploy_data: dict) -> None:
         prev_tx_params = self.get_deploy_tx_params(context, tx_hash)
         if prev_tx_params is not None:
             raise InvalidParamsException(f'deploy_params already exists: {tx_hash}')
