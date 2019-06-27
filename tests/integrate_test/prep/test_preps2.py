@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IconScoreContextType, REV_IISS, PREP_SUB_PREPS
+from iconservice.icon_constant import IconScoreContextType, REV_IISS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.icon_constant import REV_DECENTRALIZATION, IISS_MIN_IREP, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss import get_minimum_delegate_for_bottom_prep
@@ -417,7 +417,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         # check if generating sub preps
         sub_preps = self._get_sub_perps()["preps"]
-        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, PREP_SUB_PREPS - PREP_MAIN_PREPS), len(sub_preps))
+        self.assertEqual(min(_PREPS_LEN - PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS - PREP_MAIN_PREPS), len(sub_preps))
 
         # un-register first main prep
         first_main_prep = main_preps[0]["address"]
