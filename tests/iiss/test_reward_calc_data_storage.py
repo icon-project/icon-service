@@ -21,6 +21,7 @@ from unittest.mock import patch
 from iconservice.iiss.reward_calc.data_creator import *
 from iconservice.iiss.reward_calc import RewardCalcStorage
 from iconservice.iiss.reward_calc.msg_data import TxType
+from iconservice.utils.msgpack_for_db import MsgPackForDB
 from tests import create_address
 from tests.iiss.mock_rc_db import MockIissDataBase
 from tests.mock_db import MockPlyvelDB
@@ -184,7 +185,11 @@ class TestRcDataStorage(unittest.TestCase):
 
         # success case: put i score and get i score from the db
         expected_i_score = 10_000
+        expected_version = 0
         self.rc_data_storage.put_prev_calc_period_issued_iscore(expected_i_score)
+        i_score_db_data = MsgPackForDB.loads(self.rc_data_storage._db.get(self.rc_data_storage._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE))
+        assert i_score_db_data[0] == expected_version
+        assert i_score_db_data[1] == expected_i_score
 
         actual_i_score = self.rc_data_storage.get_prev_calc_period_issued_iscore()
         assert actual_i_score == expected_i_score
