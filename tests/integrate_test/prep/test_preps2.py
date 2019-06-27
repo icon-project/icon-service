@@ -115,7 +115,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     # decentralize by delegate to n accounts.
-    def _decentralize(self, preps: list, delegate_amount: int):
+    def _decentralize(self, main_preps: list, delegate_amount: int):
 
         # Can delegate up to 10 preps at a time
         stake_amount: int = delegate_amount * 10
@@ -132,7 +132,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._stake(addr3, stake_amount)
 
         # register preps
-        for i, address in enumerate(preps):
+        for i, address in enumerate(main_preps):
             data: dict = {
                 ConstantKeys.NAME: f"name{i}",
                 ConstantKeys.EMAIL: f"email{i}",
@@ -148,21 +148,21 @@ class TestIntegratePrep(TestIntegrateBase):
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in preps[:10]]
+            } for address in main_preps[:10]]
         self._delegate(addr1, data)
 
         data: list = [
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in preps[10:20]]
+            } for address in main_preps[10:20]]
         self._delegate(addr2, data)
 
         data: list = [
             {
                 "address": str(address),
                 "value": hex(delegate_amount)
-            }for address in preps[20:22]]
+            } for address in main_preps[20:22]]
         self._delegate(addr3, data)
 
     def _send_icx_in_loop(self, to_addr: 'Address', balance: int):
@@ -652,9 +652,13 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
         self.assertNotEqual(set_prep_data2[ConstantKeys.IREP], hex(register[ConstantKeys.IREP]))
 
-    def test_prep_set_irep_in_term2(self):
-        """Test for setting same irep value several time in term and other irep value"""
-        _PREPS_LEN = 22
+    def test_sync_end_block_height_of_calc_and_term(self):
+        _PREPS_LEN = 200
+        _MAIN_PREPS_LEN = 22
+        _AMOUNT_DELEGATE = 10000
+        _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
+        _TEST_BLOCK_HEIGHT = 30
+
         self._update_governance()
         self._set_revision(REV_IISS)
 
@@ -669,65 +673,22 @@ class TestIntegratePrep(TestIntegrateBase):
         # generate preps
         self._decentralize(addr_array, delegate_amount)
 
-        # set revision to REV_DECENTRALIZATION
-        tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                      {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
-        prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
-        self.assertIsNotNone(main_prep_as_dict)
-        data: dict = {
-            ConstantKeys.NAME: "name0",
-            ConstantKeys.EMAIL: "email0",
-            ConstantKeys.WEBSITE: "website0",
-            ConstantKeys.DETAILS: "json0",
-            ConstantKeys.P2P_END_POINT: "ip0",
-            ConstantKeys.PUBLIC_KEY: f'publicKey0'.encode(),
-        }
+        response = self._get_prep_list()
+        total_delegated: int = response['totalDelegated']
+        prep_list: list = response['preps']
 
-        expected_response: dict = data
-        response: dict = self._get_prep(addr_array[0])
-        register = response["registration"]
+        self.assertEqual(delegate_amount * 22, total_delegated)
+        self.assertEqual(_PREPS_LEN, len(prep_list))
 
-        self.assertEqual(expected_response[ConstantKeys.NAME], register[ConstantKeys.NAME])
-        self.assertEqual(expected_response[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
-        self.assertEqual(expected_response[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-        self.assertEqual(expected_response[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
-        self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
-        self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(IISS_INITIAL_IREP, register[ConstantKeys.IREP])
+        self._set_revision(REV_DECENTRALIZATION)
 
-        for i in range(3):
-            irep_set_data: dict = {
-                ConstantKeys.IREP: hex(IISS_INITIAL_IREP),
-            }
-            tx = self._make_score_call_tx(addr_array[0],
-                                          ZERO_SCORE_ADDRESS,
-                                          'setPRep',
-                                          irep_set_data)
-            prev_block, tx_results = self._make_and_req_block([tx])
-            self._write_precommit_state(prev_block)
-            set_result = tx_results[0]
-            self.assertEqual(set_result.status, 1)
+        # check if generating main preps
+        main_preps = self._get_main_perps()["preps"]
+        self.assertEqual(_MAIN_PREPS_LEN, len(main_preps))
 
-        irep_value2 = int(IISS_INITIAL_IREP * 1.2)
-        irep_set_data: dict = {
-            ConstantKeys.IREP: hex(irep_value2),
-        }
-        tx = self._make_score_call_tx(addr_array[0],
-                                      ZERO_SCORE_ADDRESS,
-                                      'setPRep',
-                                      irep_set_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
-        set_result = tx_results[0]
-        self.assertEqual(set_result.status, 1)
-
-        irep_set_data[ConstantKeys.IREP] = hex(int(irep_value2*1.1))
-        tx = self._make_score_call_tx(addr_array[0],
-                                      ZERO_SCORE_ADDRESS,
-                                      'setPRep',
-                                      irep_set_data)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        set_result = tx_results[0]
-        failure_message = set_result.failure.message
-        self.assertEqual(set_result.status, 0)
-        self.assertEqual(failure_message, 'Can update irep only one time in term')
+        for i in range(_TEST_BLOCK_HEIGHT):
+            try:
+                prev_block, tx_results = self._make_and_req_block([])
+                self._write_precommit_state(prev_block)
+            except AssertionError:
+                self.assertTrue(False)

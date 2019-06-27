@@ -73,7 +73,7 @@ class TestIntegrateDecentralization(TestIntegrateBase):
         self._set_revision(REV_IISS)
 
         self._addr_array = [create_address() for _ in range(30)]
-        self._main_preps = self._addr_array[:22]
+        self._main_preps = self._addr_array[:PREP_MAIN_PREPS]
 
         total_supply = 2_000_000 * ICX_IN_LOOP
         # Minimum_delegate_amount is 0.02 * total_supply
