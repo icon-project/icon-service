@@ -463,8 +463,13 @@ class IconServiceEngine(ContextContainer):
         # Make context.preps immutable
         context.preps.freeze()
 
-        main_prep_as_dict: Optional[dict] = self.after_transaction_process(
-            context, precommit_flag, prev_block_generator, prev_block_validators)
+        if self.check_end_block_height_of_calc(context):
+            precommit_flag |= PrecommitFlag.IISS_CALC
+
+        main_prep_as_dict: Optional[dict] = self.after_transaction_process(context,
+                                                                           precommit_flag,
+                                                                           prev_block_generator,
+                                                                           prev_block_validators)
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -488,8 +493,6 @@ class IconServiceEngine(ContextContainer):
                                   prev_block_generator: Optional['Address'] = None,
                                   prev_block_validators: Optional[List['Address']] = None) -> Optional[dict]:
 
-        is_first: bool = is_flags_on(flag, PrecommitFlag.GENESIS_IISS_CALC)
-
         main_prep_as_dict: Optional[dict] = None
         if self._is_prep_term_over(context):
             # The current P-Rep term is over. Prepare the next P-Rep term
@@ -498,7 +501,9 @@ class IconServiceEngine(ContextContainer):
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
             self._sync_end_block_height_of_calc_and_term(context)
 
-        self._update_reward_calc(context, prev_block_generator, prev_block_validators, is_first)
+        if context.revision >= REV_IISS:
+            context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, flag)
+
         context.update_batch()
 
         return main_prep_as_dict
@@ -523,17 +528,6 @@ class IconServiceEngine(ContextContainer):
             p: 'PRep' = context.preps.get(prep.address)
             if p:
                 p.update_productivity(is_validate)
-
-    @staticmethod
-    def _update_reward_calc(context: 'IconScoreContext',
-                            prev_block_generator: Optional['Address'],
-                            prev_block_validators: Optional[List['Address']],
-                            is_first: bool):
-
-        if context.revision < REV_IISS:
-            return
-
-        context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, is_first)
 
     @staticmethod
     def _is_prep_term_over(context: 'IconScoreContext') -> bool:
@@ -586,6 +580,17 @@ class IconServiceEngine(ContextContainer):
                 tx_result.status == TransactionResult.SUCCESS:
             flags |= PrecommitFlag.STEP_ALL_CHANGED
         return flags
+
+    @staticmethod
+    def check_end_block_height_of_calc(context: 'IconScoreContext') -> bool:
+        if context.revision < REV_IISS:
+            return False
+
+        check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        if check_end_block_height is None:
+            return False
+
+        return context.block.height == check_end_block_height
 
     def _update_step_properties_if_necessary(self, context, precommit_flag):
         """
@@ -1488,8 +1493,7 @@ class IconServiceEngine(ContextContainer):
             context.engine.prep.commit(context, precommit_data)
             context.storage.rc.commit(precommit_data.rc_block_batch)
 
-            is_first: bool = is_flags_on(precommit_data.precommit_flag, PrecommitFlag.GENESIS_IISS_CALC)
-            context.engine.iiss.send_ipc(context, precommit_data, is_first)
+            context.engine.iiss.send_ipc(context, precommit_data)
 
     def rollback(self, block_height: int, instant_block_hash: bytes) -> None:
         """Throw away a precommit state

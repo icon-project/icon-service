@@ -41,6 +41,7 @@ class PrecommitFlag(IntFlag):
     STEP_ALL_CHANGED = 0xf0
     # CHANGE REVISION
     GENESIS_IISS_CALC = 0x100
+    IISS_CALC = 0x200
 
 
 class PrecommitData(object):
