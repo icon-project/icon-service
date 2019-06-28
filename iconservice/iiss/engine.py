@@ -16,7 +16,7 @@
 
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
 
@@ -78,7 +78,6 @@ class Engine(EngineBase):
         }
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
-
         self._listeners: List['EngineListener'] = []
 
     def open(self, context: 'IconScoreContext', path: str):
@@ -186,15 +185,8 @@ class Engine(EngineBase):
         :return:
         """
         address: 'Address' = context.tx.origin
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
 
-        delegations: list = ret_params[ConstantKeys.DELEGATIONS]
-        if len(delegations) > IISS_MAX_DELEGATIONS:
-            raise InvalidParamsException
-
-        for address, delegating in delegations:
-            if delegating <= 0:
-                raise InvalidParamsException
+        delegations: List[Tuple['Address', int]] = self._convert_set_delegation_params(params)
 
         delegated_accounts: List['Account'] = \
             self._put_delegation_to_state_db(context, address, delegations)
@@ -202,6 +194,40 @@ class Engine(EngineBase):
 
         for listener in self._listeners:
             listener.on_set_delegation(delegated_accounts)
+
+    @staticmethod
+    def _convert_set_delegation_params(params: dict) -> List[Tuple['Address', int]]:
+        """Convert delegations format
+
+        :param params:
+        :return:
+        """
+        delegations: Optional[List[Dict[str, str]]] = params.get(ConstantKeys.DELEGATIONS)
+        assert delegations is None or isinstance(delegations, list)
+
+        if delegations is None or len(delegations) == 0:
+            return []
+
+        if len(delegations) > IISS_MAX_DELEGATIONS:
+            raise InvalidParamsException("Delegations out of range")
+
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
+        delegations: List[Dict[str, Union['Address', int]]] = \
+            ret_params[ConstantKeys.DELEGATIONS]
+
+        delegation_list = []
+        for delegation in delegations:
+            address: 'Address' = delegation["address"]
+            value: int = delegation["value"]
+            assert isinstance(address, Address)
+            assert isinstance(value, int)
+
+            if value <= 0:
+                raise InvalidParamsException(f"Invalid delegating amount: {value}")
+
+            delegation_list.append((address, value))
+
+        return delegation_list
 
     @staticmethod
     def _put_delegation_to_state_db(
@@ -320,14 +346,16 @@ class Engine(EngineBase):
     #             context.storage.iiss.put_total_prep_delegated(context, total + offset)
     #     return dirty_accounts
 
-    @classmethod
-    def _put_delegation_to_rc_db(cls, context: 'IconScoreContext', address: 'Address', delegations: list):
+    @staticmethod
+    def _put_delegation_to_rc_db(
+            context: 'IconScoreContext',
+            address: 'Address',
+            delegations: List[Tuple['Address', int]]):
 
         delegation_list: list = []
 
         for delegation in delegations:
-            delegation_address, delegation_value = delegation.values()
-            info: 'DelegationInfo' = RewardCalcDataCreator.create_delegation_info(delegation_address, delegation_value)
+            info: 'DelegationInfo' = RewardCalcDataCreator.create_delegation_info(*delegation)
             delegation_list.append(info)
 
         delegation_tx: 'DelegationTx' = RewardCalcDataCreator.create_tx_delegation(delegation_list)
@@ -335,7 +363,12 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, iiss_tx_data)
 
     def handle_get_delegation(self, context: 'IconScoreContext', params: dict) -> dict:
+        """Handles getDelegation JSON-RPC API request
 
+        :param context:
+        :param params:
+        :return:
+        """
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_STAKE)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
         return self._get_delegation(context, address)

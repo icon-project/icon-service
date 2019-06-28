@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
 
-from .data.prep import PRep
+from .data.prep import PRep, PRepFlag
 from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
@@ -250,7 +250,7 @@ class Engine(EngineBase):
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
 
-        prep: 'PRep' = self.preps.get(address)
+        prep: 'PRep' = self.preps.get_by_address(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
@@ -269,6 +269,10 @@ class Engine(EngineBase):
         prep: 'PRep' = context.preps.get_by_address(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+
+        if prep.is_frozen():
+            prep = prep.copy(PRepFlag.NONE)
+            context.preps.replace(prep)
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
@@ -335,9 +339,9 @@ class Engine(EngineBase):
         prep_storage: 'PRepStorage' = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get(address)
+        prep: 'PRep' = context.preps.get_by_address(address)
         if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: str{address}")
+            raise InvalidParamsException(f"P-Rep not found: {address}")
 
         # Update preps in context
         context.preps.remove(address)
@@ -418,6 +422,8 @@ class Engine(EngineBase):
     def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns P-Rep list with start and end rankings
 
+        P-Rep means all P-Reps including main P-Reps and sub P-Reps
+
         :param context:
         :param params:
         :return:
@@ -428,10 +434,13 @@ class Engine(EngineBase):
         total_delegated: int = 0
         prep_list: list = []
 
-        start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
-        end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
+        prep_count: int = len(preps)
 
-        if 0 <= start_ranking <= end_ranking <= len(preps):
+        start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+        end_ranking: int = \
+            min(ret_params.get(ConstantKeys.END_RANKING, prep_count), prep_count)
+
+        if not 0 <= start_ranking <= end_ranking <= prep_count:
             raise InvalidParamsException(
                 f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
 

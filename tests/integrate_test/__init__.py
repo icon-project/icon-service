@@ -8,9 +8,11 @@
 # limitations under the License.
 
 import os
-
 from shutil import rmtree
 from time import time
+from typing import Dict, Union
+
+from iconservice.base.type_converter_templates import ConstantKeys
 
 TEST_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -27,3 +29,18 @@ def root_clear(score_path: str, state_db_path: str, iiss_db_path: str):
 
 def create_timestamp():
     return int(time() * 10 ** 6)
+
+
+def create_random_public_key() -> bytes:
+    return b"\x04" + os.urandom(64)
+
+
+def create_register_prep_params(index: int) -> Dict[str, Union[str, bytes]]:
+    return {
+        ConstantKeys.NAME: f"node{index}",
+        ConstantKeys.EMAIL: f"node{index}@example.com",
+        ConstantKeys.WEBSITE: f"https://node{index}.example.com",
+        ConstantKeys.DETAILS: f"https://node{index}.example.com/details",
+        ConstantKeys.P2P_END_POINT: f"https://node{index}.example.com:7100",
+        ConstantKeys.PUBLIC_KEY: create_random_public_key()
+    }

@@ -55,7 +55,8 @@ from .iiss.reward_calc import RewardCalcStorage
 from .inner_call import inner_call
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
-from .utils import sha3_256, int_to_bytes, is_flags_on, ContextEngine, ContextStorage
+from .prep.data import PRepFlag
+from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 from .utils.hashing.hash_generator import HashGenerator
@@ -407,7 +408,7 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.preps: 'PRepContainer' = context.engine.prep.preps.get_snapshot()
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
 
         self._set_revision_to_context(context)
         block_result = []

@@ -83,8 +83,7 @@ class PRepContainer(object):
         """
         assert prep.status == PRepStatus.ACTIVE
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         if prep.address in self:
             raise InvalidParamsException(f"P-Rep already exists: {str(prep.address)}")
@@ -95,6 +94,23 @@ class PRepContainer(object):
         self._flags |= PRepFlag.DIRTY
 
         assert len(self._active_prep_dict) == len(self._active_prep_list)
+
+    def replace(self, prep: 'PRep'):
+        assert prep.status == PRepStatus.ACTIVE
+
+        self._check_access_permission()
+
+        old_prep: 'PRep' = self._active_prep_dict.get(prep.address)
+        if old_prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {str(prep.address)}")
+
+        if id(old_prep) == id(prep):
+            return
+
+        self._active_prep_list.remove(old_prep)
+
+        self._active_prep_dict[prep.address] = prep
+        self._active_prep_list.add(prep)
 
     def remove(self,
                address: 'Address',
@@ -110,8 +126,7 @@ class PRepContainer(object):
         """
         assert status != PRepStatus.ACTIVE
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
         assert prep.status == PRepStatus.ACTIVE
@@ -136,8 +151,7 @@ class PRepContainer(object):
 
         assert isinstance(address, Address)
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
         if prep is None:
@@ -167,8 +181,7 @@ class PRepContainer(object):
         """
         assert delegated >= 0
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
         if prep is None:
@@ -267,3 +280,7 @@ class PRepContainer(object):
         preps._inactive_prep_dict.update(self._inactive_prep_dict)
 
         return preps
+
+    def _check_access_permission(self):
+        if self.is_frozen():
+            raise AccessDeniedException("PRepContainer access denied")
