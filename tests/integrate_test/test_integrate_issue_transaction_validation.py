@@ -20,9 +20,10 @@ from copy import deepcopy
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidBlockException
+from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
-    IconScoreContextType, ISCORE_EXCHANGE_RATE
+    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, IISS_MIN_IREP
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
 from tests import create_address
@@ -30,6 +31,87 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
+    def _stake(self, address: 'Address', value: int):
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
+                                      'setStake',
+                                      {"value": hex(value)})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+    def _delegate(self, address: 'Address', delegations: list):
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {"delegations": delegations})
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+    def _reg_prep(self, address: 'Address', data: dict):
+
+        data = deepcopy(data)
+        value: str = data[ConstantKeys.PUBLIC_KEY].hex()
+        data[ConstantKeys.PUBLIC_KEY] = value
+        value: str = hex(data[ConstantKeys.IREP])
+        data[ConstantKeys.IREP] = value
+
+        tx = self._make_score_call_tx(address,
+                                      ZERO_SCORE_ADDRESS,
+                                      'registerPRep',
+                                      data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+    def _decentralize(self, main_preps: list, delegate_amount: int):
+
+        # Can delegate up to 10 preps at a time
+        stake_amount: int = delegate_amount * 10
+        addr1, addr2, addr3 = create_address(), create_address(), create_address()
+        tx1 = self._make_icx_send_tx(self._genesis, addr1, stake_amount)
+        tx2 = self._make_icx_send_tx(self._genesis, addr2, stake_amount)
+        tx3 = self._make_icx_send_tx(self._genesis, addr3, stake_amount)
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2, tx3])
+        self._write_precommit_state(prev_block)
+
+        # stake
+        self._stake(addr1, stake_amount)
+        self._stake(addr2, stake_amount)
+        self._stake(addr3, stake_amount)
+
+        # register preps
+        for i, address in enumerate(main_preps):
+            data: dict = {
+                ConstantKeys.NAME: f"name{i}",
+                ConstantKeys.EMAIL: f"email{i}",
+                ConstantKeys.WEBSITE: f"website{i}",
+                ConstantKeys.DETAILS: f"json{i}",
+                ConstantKeys.P2P_END_POINT: f"ip{i}",
+                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
+                ConstantKeys.IREP: IISS_MIN_IREP
+            }
+            self._reg_prep(address, data)
+
+        # delegate
+        data: list = [
+            {
+                "address": str(address),
+                "value": hex(delegate_amount)
+            } for address in main_preps[:10]]
+        self._delegate(addr1, data)
+
+        data: list = [
+            {
+                "address": str(address),
+                "value": hex(delegate_amount)
+            } for address in main_preps[10:20]]
+        self._delegate(addr2, data)
+
+        data: list = [
+            {
+                "address": str(address),
+                "value": hex(delegate_amount)
+            } for address in main_preps[20:22]]
+        self._delegate(addr3, data)
+
     def _update_governance(self):
         tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
@@ -45,10 +127,27 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
+    def _get_prep_list(self) -> dict:
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getPRepList",
+                "params": {}
+            }
+        }
+        return self._query(query_request)
+
     def _make_dummy_tx(self):
         return self._make_icx_send_tx(self._genesis, create_address(), 1)
 
     def setUp(self):
+        _PREPS_LEN = 30
+        _MAIN_PREPS_LEN = 22
+        _AMOUNT_DELEGATE = 10000
+        _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
         default_icon_config[ConfigKey.IREP] = 100_000_000_000
@@ -56,10 +155,30 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self._update_governance()
         self._set_revision(REV_IISS)
 
+        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+
+        total_supply = 2_000_000 * self._icx_factor
+
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        delegate_amount = total_supply * 3 // 1000
+
+        # generate preps
+
+        self._decentralize(addr_array, delegate_amount)
+
+        response = self._get_prep_list()
+        total_delegated: int = response['totalDelegated']
+        prep_list: list = response['preps']
+
+        self.assertEqual(delegate_amount * 22, total_delegated)
+        self.assertEqual(_PREPS_LEN, len(prep_list))
+
+        self._set_revision(REV_DECENTRALIZATION)
+
         # todo: if get_issue_info is redundant, should fix this method
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self.issue_data, self.total_issue_amount = IconScoreContext.engine.issue.create_icx_issue_info(context)
-
         # self.total_issue_amount = 0
         # for group_dict in self.issue_data.values():
         #     self.total_issue_amount += group_dict["value"]
@@ -199,25 +318,30 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         # success case: when iconservice over issued 10 icx than reward carc, icx issue amount
         # should be corrected on calc period.
         calc_period = 10
-        check_point = calc_period + 9
+        calc_point = calc_period
 
+        diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
-        expected_issue_amount = 4642222
-        calculate_response_iscore = 46422210000
-        expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
-                                       (calculate_response_iscore // ISCORE_EXCHANGE_RATE)
+        first_expected_issue_amount = 669710806697108
+        calculate_response_iscore = first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
-        def mock_calculate(self, path, block_height):
+        expected_issue_amount = 579299847792998
+        calculate_response_iscore_after_first_period = expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
+        expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
+                                       (calculate_response_iscore_after_first_period // ISCORE_EXCHANGE_RATE)
+
+        def mock_calculated(self, path, block_height):
             response = CalculateResponse(0, True, 1, calculate_response_iscore, b'mocked_response')
             self._calculation_callback(response)
+
+        self._mock_ipc(mock_calculated)
 
         tx_list = [
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        for x in range(0, 50):
-            if x % 16 == 0:
-                self._mock_ipc(mock_calculate)
+        for x in range(1, 11):
+
             copyed_tx_list = deepcopy(tx_list)
             prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
                                                                              is_block_editable=True,
@@ -226,19 +350,45 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             actual_covered_by_fee = tx_results[0].event_logs[1].data[0]
             actual_covered_by_remain = tx_results[0].event_logs[1].data[1]
             actual_issue_amount = tx_results[0].event_logs[1].data[2]
-            if x == 0:
+            print(f"=================={x}====================")
+            print(tx_results[0].event_logs[0].data)
+            print(tx_results[0].event_logs[1].data)
+            if x == 1:
                 self.assertEqual(0, actual_covered_by_fee)
                 self.assertEqual(0, actual_covered_by_remain)
-                self.assertEqual(expected_issue_amount, actual_issue_amount)
+                self.assertEqual(first_expected_issue_amount, actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+            elif x == calc_point:
+                calc_point += calc_period
+            else:
+                self.assertEqual(cumulative_fee, actual_covered_by_fee)
+                self.assertEqual(0, actual_covered_by_remain)
+                self.assertEqual(first_expected_issue_amount - cumulative_fee, actual_issue_amount)
+                self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+            self.assertEqual(issue_amount, actual_covered_by_fee + actual_covered_by_remain + actual_issue_amount)
+            self._write_precommit_state(prev_block)
 
-            elif x == check_point:
+        calculate_response_iscore = calculate_response_iscore_after_first_period
+
+        for x in range(11, 51):
+            copyed_tx_list = deepcopy(tx_list)
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
+                                                                             is_block_editable=True,
+                                                                             cumulative_fee=cumulative_fee)
+            issue_amount = tx_results[0].event_logs[0].data[3]
+            actual_covered_by_fee = tx_results[0].event_logs[1].data[0]
+            actual_covered_by_remain = tx_results[0].event_logs[1].data[1]
+            actual_issue_amount = tx_results[0].event_logs[1].data[2]
+            print(f"=================={x}====================")
+            print(tx_results[0].event_logs[0].data)
+            print(tx_results[0].event_logs[1].data)
+            if x == calc_point:
                 self.assertEqual(cumulative_fee, actual_covered_by_fee)
                 self.assertEqual(expected_diff_in_calc_period, actual_covered_by_remain)
                 self.assertEqual(expected_issue_amount - cumulative_fee - expected_diff_in_calc_period,
                                  actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
-                check_point += calc_period
+                calc_point += calc_period
             else:
                 self.assertEqual(cumulative_fee, actual_covered_by_fee)
                 self.assertEqual(0, actual_covered_by_remain)

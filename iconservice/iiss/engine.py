@@ -31,6 +31,8 @@ from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..icx.issue.issue_formula import IssueFormula
+from ..precommit_data_manager import PrecommitFlag
+from ..utils import is_flags_on
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
@@ -317,11 +319,11 @@ class Engine(EngineBase):
                   context: 'IconScoreContext',
                   prev_block_generator: Optional['Address'],
                   prev_block_validators: Optional[List['Address']],
-                  is_first: bool):
+                  flag: 'PrecommitFlag'):
         # every block time
         self._put_block_produce_info_for_rc(context, prev_block_generator, prev_block_validators)
 
-        if not is_first and not self._check_update_calc_period(context):
+        if not self._is_iiss_calc(flag):
             return
 
         self._put_next_calc_block_height(context)
@@ -330,17 +332,23 @@ class Engine(EngineBase):
         self._put_gv(context)
         self._put_preps_for_rc(context)
 
-    def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData', is_first: bool):
+    def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         block_height: int = precommit_data.block.height
 
         # every block time
         self._reward_calc_proxy.commit_block(True, block_height, precommit_data.block.hash)
 
-        if not is_first and not self._check_update_calc_period(context):
+        if not self._is_iiss_calc(precommit_data.precommit_flag):
             return
 
         path: str = context.storage.rc.create_db_for_calc(block_height)
         self._reward_calc_proxy.calculate(path, block_height)
+
+    @classmethod
+    def _is_iiss_calc(cls, flag: 'PrecommitFlag'):
+        is_first: bool = is_flags_on(flag, PrecommitFlag.GENESIS_IISS_CALC)
+        is_iiss: bool = is_flags_on(flag, PrecommitFlag.IISS_CALC)
+        return is_first or is_iiss
 
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext') -> bool:
