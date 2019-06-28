@@ -62,6 +62,7 @@ class Block(object):
         # unit: microsecond
         self._timestamp = timestamp
         self._prev_hash = prev_hash
+        # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
 
     @property
