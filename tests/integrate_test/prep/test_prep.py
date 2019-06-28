@@ -19,8 +19,6 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-import pytest
-
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
@@ -50,22 +48,22 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-    def _stake(self, address: 'Address', value: int, revision: int = REV_IISS):
+    def _stake(self, address: 'Address', value: int, _revision: int = REV_IISS):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def _delegate(self, address: 'Address', delegations: list, revision: int = REV_IISS):
+    def _delegate(self, address: 'Address', delegations: list, _revision: int = REV_IISS):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setDelegation', {"delegations": delegations})
 
         tx_list = [tx]
         prev_block, tx_results = self._make_and_req_block(tx_list)
         self._write_precommit_state(prev_block)
 
-    def _reg_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
+    def _reg_prep(self, address: 'Address', data: dict, _revision: int = REV_IISS):
 
         data = deepcopy(data)
-        data[ConstantKeys.PUBLIC_KEY] = data[ConstantKeys.PUBLIC_KEY].hex()
+        data[ConstantKeys.PUBLIC_KEY] = f"0x{data[ConstantKeys.PUBLIC_KEY].hex()}"
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
@@ -74,7 +72,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(address, tx_results[0].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
-    def _set_prep(self, address: 'Address', data: dict, revision: int = REV_IISS):
+    def _set_prep(self, address: 'Address', data: dict, _revision: int = REV_IISS):
 
         data = deepcopy(data)
         value = data.get(ConstantKeys.IREP)
@@ -91,7 +89,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(address, tx_result.event_logs[0].data[0])
         self._write_precommit_state(prev_block)
 
-    def _unreg_prep(self, address: 'Address', revision: int = REV_IISS):
+    def _unreg_prep(self, address: 'Address', _revision: int = REV_IISS):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
         prev_block, tx_results = self._make_and_req_block([tx])

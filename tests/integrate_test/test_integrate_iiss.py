@@ -24,8 +24,8 @@ from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRES
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS
 from tests import create_address
+from tests.integrate_test import create_register_prep_params
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
-from . import create_register_prep_params
 
 
 class TestIntegrateIISS(TestIntegrateBase):

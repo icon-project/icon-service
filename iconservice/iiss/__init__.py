@@ -17,6 +17,7 @@
 from typing import TYPE_CHECKING
 
 from .engine import Engine as IISSEngine
+from .engine import EngineListener as IISSEngineListener
 from .storage import Storage as IISSStorage
 from ..icon_constant import PREP_MAIN_PREPS
 
@@ -30,7 +31,7 @@ def check_decentralization_condition(context: 'IconScoreContext'):
     preps = context.preps
     if len(preps) >= PREP_MAIN_PREPS:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
-        bottom_prep: 'PRep' = preps[PREP_MAIN_PREPS - 1]
+        bottom_prep: 'PRep' = preps.get_by_index(PREP_MAIN_PREPS - 1)
         bottom_prep_delegated = bottom_prep.delegated
         return bottom_prep_delegated >= minimum_delegate
     return False

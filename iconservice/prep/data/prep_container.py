@@ -229,16 +229,44 @@ class PRepContainer(object):
         for prep in self._active_prep_list:
             yield prep
 
-    def get_by_index(self, index: int) -> 'PRep':
-        return self._active_prep_list[index]
+    def get_by_index(self, index: int, mutable: bool = False) -> Optional['PRep']:
+        prep: 'PRep' = self._active_prep_list.get(index)
 
-    def get_by_address(self, address: 'Address') -> Optional['PRep']:
+        if not mutable:
+            return prep
+
+        self._check_access_permission()
+        prep: 'PRep' = self._active_prep_list.get(index)
+
+        return self._get_mutable_prep(index, prep)
+
+    def get_by_address(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
         """Returns an active P-Rep with a given address
 
         :param address: The address of a P-Rep
+        :param mutable: True(prep to return should be mutable)
         :return: The instance of a PRep which has a given address
         """
-        return self._active_prep_dict.get(address)
+        prep: 'PRep' = self._active_prep_dict.get(address)
+
+        if not mutable:
+            return prep
+
+        self._check_access_permission()
+        index: int = self._active_prep_list.index(prep)
+
+        return self._get_mutable_prep(index, prep)
+
+    def _get_mutable_prep(self, index: int, prep: 'PRep') -> Optional['PRep']:
+        if prep is None:
+            return None
+
+        if prep.is_frozen():
+            prep: 'PRep' = prep.copy(PRepFlag.NONE)
+            self._active_prep_dict[prep.address] = prep
+            self._active_prep_list[index] = prep
+
+        return prep
 
     def __len__(self) -> int:
         assert len(self._active_prep_list) == len(self._active_prep_dict)

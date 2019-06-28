@@ -24,6 +24,7 @@ from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
+from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
@@ -38,7 +39,7 @@ from ..utils import is_flags_on
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
-    from ..base.address import Address, ZERO_SCORE_ADDRESS
+    from ..base.address import ZERO_SCORE_ADDRESS
     from ..icx.icx_account import Account
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
@@ -49,11 +50,11 @@ if TYPE_CHECKING:
 
 class EngineListener(metaclass=ABCMeta):
     @abstractmethod
-    def on_set_stake(self, account: 'Account'):
+    def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
         pass
 
     @abstractmethod
-    def on_set_delegation(self, delegated_accounts: List['Account']):
+    def on_set_delegation(self, context: 'IconScoreContext', delegated_accounts: List['Account']):
         pass
 
 
@@ -153,7 +154,7 @@ class Engine(EngineBase):
         # TODO tx_result make if needs
 
         for listener in self._listeners:
-            listener.on_set_stake(account)
+            listener.on_set_stake(context, account)
 
     def handle_get_stake(self, context: 'IconScoreContext', params: dict) -> dict:
 
@@ -193,13 +194,16 @@ class Engine(EngineBase):
         self._put_delegation_to_rc_db(context, address, delegations)
 
         for listener in self._listeners:
-            listener.on_set_delegation(delegated_accounts)
+            listener.on_set_delegation(context, delegated_accounts)
 
     @staticmethod
     def _convert_set_delegation_params(params: dict) -> List[Tuple['Address', int]]:
         """Convert delegations format
 
-        :param params:
+        [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
+        [("hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", 1000000000000000000), ...]
+
+        :param params: params of setDelegation JSON-RPC API request
         :return:
         """
         delegations: Optional[List[Dict[str, str]]] = params.get(ConstantKeys.DELEGATIONS)

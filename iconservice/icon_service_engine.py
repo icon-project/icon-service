@@ -524,11 +524,11 @@ class IconServiceEngine(ContextContainer):
             validates.update(prev_block_validators)
 
         main_preps: list = context.engine.prep.term.main_preps
-        for prep in main_preps:
-            is_validate: bool = prep.address in validates
-            p: 'PRep' = context.preps.get(prep.address)
-            if p:
-                p.update_productivity(is_validate)
+        for main_prep in main_preps:
+            is_validate: bool = main_prep.address in validates
+            prep: 'PRep' = context.preps.get_by_address(main_prep.address, mutable=True)
+            if prep:
+                prep.update_productivity(is_validate)
 
     @staticmethod
     def _is_prep_term_over(context: 'IconScoreContext') -> bool:

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import Union, Tuple, Iterable, List
+from typing import Union, Iterable, List, Optional
 
 
 class Sortable(metaclass=ABCMeta):
@@ -43,6 +43,12 @@ class SortedList(object):
             index += 1
 
         self._items.insert(index, new_item)
+
+    def get(self, index: int) -> Optional['Sortable']:
+        try:
+            return self._items[index]
+        except IndexError:
+            return None
 
     def extend(self, iterable: Iterable['Sortable']):
         self._items.extend(iterable)
@@ -92,6 +98,9 @@ class SortedList(object):
         if isinstance(k, slice):
             return self._items[k]
         return self._items[k]
+
+    def __setitem__(self, index: int, value: 'Sortable'):
+        self._items[index] = value
 
     def __len__(self) -> int:
         return len(self._items)
