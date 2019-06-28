@@ -59,17 +59,18 @@ class Storage(object):
             self._db = None
 
     def put_prev_calc_period_issued_iscore(self, iscore: int):
-        # do not versioning this value as this temporary data
-        iscore = MsgPackForDB.dumps(iscore)
+        version = 0
+        iscore = MsgPackForDB.dumps([version, iscore])
         self._db.put(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE, iscore)
 
     def get_prev_calc_period_issued_iscore(self) -> Optional[int]:
         prev_calc_period_issued_iscore = self._db.get(self._KEY_FOR_PREV_CALC_PERIOD_ISSUED_ISCORE)
         if prev_calc_period_issued_iscore is None:
             return None
-
         iscore = MsgPackForDB.loads(prev_calc_period_issued_iscore)
-        return iscore
+        version = iscore[0]
+
+        return iscore[1]
 
     @staticmethod
     def put(batch: list, iiss_data: 'Data'):
