@@ -1185,13 +1185,9 @@ class IconServiceEngine(ContextContainer):
         """
 
         to: Address = params['to']
-        value: int = params['value']
         data: dict = params['data']
 
         assert to == ZERO_SCORE_ADDRESS, "Invalid to Address"
-
-        if value > 0:
-            raise InvalidParamsException(f'invalid params: value{value}')
 
         # Check if from account can charge a tx fee
         self._icon_pre_validator.execute_to_check_out_of_balance(
