@@ -48,7 +48,7 @@ class Block(object):
                  block_hash: bytes,
                  timestamp: int,
                  prev_hash: Optional[bytes],
-                 cumulative_fee: Optional[int]) -> None:
+                 cumulative_fee: int = 0) -> None:
         """Constructor
 
         :param block_height: block height

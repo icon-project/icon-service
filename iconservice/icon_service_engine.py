@@ -15,7 +15,7 @@
 
 import os
 from copy import deepcopy
-from typing import TYPE_CHECKING, List, Any, Optional
+from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
@@ -350,8 +350,7 @@ class IconServiceEngine(ContextContainer):
             self._clear_context()
 
     def formatting_transaction(self, data_type: str, data: dict, timestamp: int):
-        # todo: stringfy params to make valid tx hash
-        # todo: tests about reverse
+        # todo: check about reverse
         transaction_params = {
             "version": ISSUE_TRANSACTION_VERSION,
             "timestamp": timestamp,
@@ -373,14 +372,12 @@ class IconServiceEngine(ContextContainer):
     def _is_decentralized(context: 'IconScoreContext') -> bool:
         return context.revision >= REV_DECENTRALIZATION and context.engine.prep.term.sequence != -1
 
-    # todo: remove None of prev_block_generator, prev_block_validators default
-    # todo: is it right setting default value to is_block_editable?
     def invoke(self,
                block: 'Block',
                tx_requests: list,
                prev_block_generator: Optional['Address'] = None,
                prev_block_validators: Optional[List['Address']] = None,
-               is_block_editable: bool = False) -> tuple:
+               is_block_editable: bool = False) -> Tuple[List['TransactionResult'], bytes, dict, Optional[dict]]:
 
         """Process transactions in a block sent by loopchain
 
@@ -389,7 +386,7 @@ class IconServiceEngine(ContextContainer):
         :param prev_block_generator: previous block generator
         :param prev_block_validators: previous block validators
         :param is_block_editable: boolean which imply whether creating special transaction or not
-        :return: (TransactionResult[], bytes)
+        :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
         # If the block has already been processed,
         # return the result from PrecommitDataManager
@@ -398,7 +395,7 @@ class IconServiceEngine(ContextContainer):
             Logger.info(
                 tag=ICON_SERVICE_LOG_TAG,
                 msg=f"Block result already exists: {block.height}, 0x{block.hash.hex()}")
-            return precommit_data.block_result, precommit_data.state_root_hash
+            return precommit_data.block_result, precommit_data.state_root_hash, {}, {}
 
         # Check for block validation before invoke
         self._precommit_data_manager.validate_block_to_invoke(block)
@@ -710,7 +707,6 @@ class IconServiceEngine(ContextContainer):
         context.msg_stack.clear()
         context.event_log_stack.clear()
 
-        # todo: get issue related data from iiss engine
         tx_result = self._process_issue_transaction(context, issue_data_in_tx, regulator)
         return tx_result
 
