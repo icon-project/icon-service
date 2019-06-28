@@ -35,7 +35,6 @@ from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
 from ..icx.issue.issue_formula import IssueFormula
 from ..precommit_data_manager import PrecommitFlag
-from ..utils import is_flags_on
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
@@ -187,7 +186,7 @@ class Engine(EngineBase):
         """
         address: 'Address' = context.tx.origin
 
-        delegations: List[Tuple['Address', int]] = self._convert_set_delegation_params(params)
+        delegations: List[Tuple['Address', int]] = self._convert_params_of_set_delegation(params)
 
         delegated_accounts: List['Account'] = \
             self._put_delegation_to_state_db(context, address, delegations)
@@ -197,7 +196,7 @@ class Engine(EngineBase):
             listener.on_set_delegation(context, delegated_accounts)
 
     @staticmethod
-    def _convert_set_delegation_params(params: dict) -> List[Tuple['Address', int]]:
+    def _convert_params_of_set_delegation(params: dict) -> List[Tuple['Address', int]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
@@ -279,83 +278,18 @@ class Engine(EngineBase):
 
         return account_list
 
-    # @classmethod
-    # def _put_delegation_to_state_db(cls,
-    #                                 context: 'IconScoreContext',
-    #                                 delegating_address: 'Address',
-    #                                 delegations: list):
-    #
-    #     if not isinstance(delegations, list):
-    #         raise InvalidParamsException('Failed to delegation: delegations is not list type')
-    #
-    #     if len(delegations) > IISS_MAX_DELEGATIONS:
-    #         raise InvalidParamsException(f'Failed to delegation: Overflow Max Input List')
-    #
-    #     delegating: 'Account' = context.storage.icx.get_account(context, delegating_address, Intent.DELEGATING)
-    #     preps: Dict['Address', Tuple[int, int]] = cls._make_preps(delegating.delegations, delegations)
-    #     cls._set_delegations(delegating, preps)
-    #     dirty_accounts: list = cls._delegated_preps(context, delegating, preps)
-    #     dirty_accounts.append(delegating)
-    #
-    #     for dirty_account in dirty_accounts:
-    #         context.storage.icx.put_account(context, dirty_account)
-    #         if dirty_account.address in context.preps:
-    #             context.preps.update(dirty_account.address, dirty_account.delegated_amount)
-    #     # TODO tx_result make if needs
-    #
-    # @classmethod
-    # def _make_preps(cls, old_delegations: list, new_delegations: list) -> dict:
-    #     preps: dict = {}
-    #
-    #     if old_delegations:
-    #         for address, old in old_delegations:
-    #             preps[address] = (old, 0)
-    #
-    #     for delegation in new_delegations:
-    #         address, new = delegation.values()
-    #         if address in preps:
-    #             old, _ = preps[address]
-    #             preps[address] = (old, new)
-    #         else:
-    #             preps[address] = (0, new)
-    #     return preps
-    #
-    # @classmethod
-    # def _set_delegations(cls, delegating: 'Account', preps: dict):
-    #     new_delegations: list = [(address, new) for address, (before, new) in preps.items() if new > 0]
-    #     delegating.set_delegations(new_delegations)
-    #
-    #     if delegating.delegations_amount > delegating.stake:
-    #         raise InvalidParamsException(
-    #             f"Failed to delegation: delegation_amount{delegating.delegations_amount} > stake{delegating.stake}")
-    #
-    # @classmethod
-    # def _delegated_preps(
-    #         cls, context: 'IconScoreContext',
-    #         delegating: 'Account',
-    #         preps: Dict['Address', Tuple[int, int]]) -> List['Account']:
-    #     dirty_accounts: list = []
-    #     for address, (before, new) in preps.items():
-    #         if address == delegating.address:
-    #             prep: 'Account' = delegating
-    #         else:
-    #             prep: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATED)
-    #             dirty_accounts.append(prep)
-    #
-    #         offset: int = new - before
-    #         prep.update_delegated_amount(offset)
-    #
-    #         if address in context.preps:
-    #             total: int = context.storage.iiss.get_total_prep_delegated(context)
-    #             context.storage.iiss.put_total_prep_delegated(context, total + offset)
-    #     return dirty_accounts
-
     @staticmethod
     def _put_delegation_to_rc_db(
             context: 'IconScoreContext',
             address: 'Address',
             delegations: List[Tuple['Address', int]]):
+        """Put new delegations from setDelegation JSON-RPC API request to RewardCalcDB
 
+        :param context:
+        :param address: The address of delegating account
+        :param delegations: The list of delegations that the given address did
+        :return:
+        """
         delegation_list: list = []
 
         for delegation in delegations:
@@ -394,6 +328,13 @@ class Engine(EngineBase):
 
     @classmethod
     def _iscore_to_icx(cls, iscore: int) -> int:
+        """Exchange iscore to icx
+
+        10 ** -18 icx == 1 loop == 1000 iscore
+
+        :param iscore:
+        :return: icx
+        """
         return iscore // ISCORE_EXCHANGE_RATE
 
     def handle_claim_iscore(self, context: 'IconScoreContext', _params: dict):
@@ -444,16 +385,16 @@ class Engine(EngineBase):
                   prev_block_validators: Optional[List['Address']],
                   flag: 'PrecommitFlag'):
         # every block time
-        self._put_block_produce_info_for_rc(context, prev_block_generator, prev_block_validators)
+        self._put_block_produce_info_to_rc_db(context, prev_block_generator, prev_block_validators)
 
         if not self._is_iiss_calc(flag):
             return
 
         self._put_next_calc_block_height(context)
 
-        self._put_header_for_rc(context)
+        self._put_header_to_rc_db(context)
         self._put_gv(context)
-        self._put_preps_for_rc(context)
+        self._put_preps_to_rc_db(context)
 
     def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         block_height: int = precommit_data.block.height
@@ -468,10 +409,8 @@ class Engine(EngineBase):
         self._reward_calc_proxy.calculate(path, block_height)
 
     @classmethod
-    def _is_iiss_calc(cls, flag: 'PrecommitFlag'):
-        is_first: bool = is_flags_on(flag, PrecommitFlag.GENESIS_IISS_CALC)
-        is_iiss: bool = is_flags_on(flag, PrecommitFlag.IISS_CALC)
-        return is_first or is_iiss
+    def _is_iiss_calc(cls, flag: 'PrecommitFlag') -> bool:
+        return bool(flag & (PrecommitFlag.GENESIS_IISS_CALC | PrecommitFlag.IISS_CALC))
 
     @classmethod
     def _check_update_calc_period(cls, context: 'IconScoreContext') -> bool:
@@ -490,7 +429,7 @@ class Engine(EngineBase):
         context.storage.iiss.put_end_block_height_of_calc(context, context.block.height + calc_period)
 
     @classmethod
-    def _put_header_for_rc(cls, context: 'IconScoreContext'):
+    def _put_header_to_rc_db(cls, context: 'IconScoreContext'):
         data: 'Header' = RewardCalcDataCreator.create_header(0, context.block.height)
         context.storage.rc.put(context.rc_block_batch, data)
 
@@ -517,10 +456,10 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_block_produce_info_for_rc(cls,
-                                       context: 'IconScoreContext',
-                                       prev_block_generator: Optional['Address'] = None,
-                                       prev_block_validators: Optional[List['Address']] = None):
+    def _put_block_produce_info_to_rc_db(cls,
+                                         context: 'IconScoreContext',
+                                         prev_block_generator: Optional['Address'] = None,
+                                         prev_block_validators: Optional[List['Address']] = None):
         if prev_block_generator is None or prev_block_validators is None:
             return
 
@@ -531,7 +470,7 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_preps_for_rc(cls, context: 'IconScoreContext'):
+    def _put_preps_to_rc_db(cls, context: 'IconScoreContext'):
         preps: List['PRep'] = \
             context.engine.prep.preps.get_preps(start_index=0, size=PREP_MAIN_PREPS)
 

@@ -247,7 +247,7 @@ class Engine(EngineBase, IISSEngineListener):
         return total_weighted_irep // total_delegated if total_delegated > 0 else 0
 
     def handle_get_prep(self, _context: 'IconScoreContext', params: dict) -> dict:
-        """Returns the details of a P-Rep including info of registration, delegation and statistics
+        """Returns the details of a P-Rep including information on registration, delegation and statistics
 
         :param _context:
         :param params:
@@ -272,13 +272,9 @@ class Engine(EngineBase, IISSEngineListener):
         prep_storage = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address)
+        prep: 'PRep' = context.preps.get_by_address(address, mutable=True)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {str(address)}")
-
-        if prep.is_frozen():
-            prep = prep.copy(PRepFlag.NONE)
-            context.preps.replace(prep)
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
@@ -443,8 +439,7 @@ class Engine(EngineBase, IISSEngineListener):
         prep_count: int = len(preps)
 
         start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
-        end_ranking: int = \
-            min(ret_params.get(ConstantKeys.END_RANKING, prep_count), prep_count)
+        end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, prep_count)
 
         if not 1 <= start_ranking <= end_ranking <= prep_count:
             raise InvalidParamsException(
@@ -463,20 +458,28 @@ class Engine(EngineBase, IISSEngineListener):
 
     # IISSEngineListener implementation ---------------------------
     def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
+        """Called on IISSEngine.handle_set_stake()
+
+        :param context:
+        :param account:
+        :return:
+        """
         pass
 
     def on_set_delegation(
             self, context: 'IconScoreContext', delegated_accounts: List['Account']):
+        """Called on IISSEngine.handle_set_delegation()
+
+        :param context:
+        :param delegated_accounts:
+        :return:
+        """
         assert 0 <= len(delegated_accounts) <= IISS_MAX_DELEGATIONS
 
         for account in delegated_accounts:
             assert isinstance(account, Account)
+            address = account.address
 
-            # If account is a P-Rep
-            prep: 'PRep' = context.preps.get_by_address(account.address)
-            if prep:
-                if prep.is_frozen():
-                    prep: 'PRep' = prep.copy()
-
-                prep.delegated = account.delegated_amount
-                context.preps.replace(prep)
+            # If a delegated account is a P-Rep, then update its delegated amount
+            if address in context.preps:
+                context.preps.set_delegated_to_prep(address, account.delegated_amount)

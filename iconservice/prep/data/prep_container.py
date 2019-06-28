@@ -174,13 +174,13 @@ class PRepContainer(object):
         Logger.debug(tag="PREP", msg=f"set_to_prep() end")
 
     def set_delegated_to_prep(self, address: 'Address', delegated: int):
-        """
-        :param address:
+        """Update the delegated amount of P-Rep, sorting the P-Rep in ascending order by prep.order()
+
+        :param address: P-Rep address
         :param delegated:
         :return:
         """
         assert delegated >= 0
-
         self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
@@ -230,13 +230,19 @@ class PRepContainer(object):
             yield prep
 
     def get_by_index(self, index: int, mutable: bool = False) -> Optional['PRep']:
-        prep: 'PRep' = self._active_prep_list.get(index)
+        """Returns an active P-Rep with a given index
+
+        :param index:
+        :param mutable:
+        :return:
+        """
+        prep = self._active_prep_list.get(index)
 
         if not mutable:
             return prep
 
         self._check_access_permission()
-        prep: 'PRep' = self._active_prep_list.get(index)
+        prep = self._active_prep_list.get(index)
 
         return self._get_mutable_prep(index, prep)
 
@@ -269,6 +275,10 @@ class PRepContainer(object):
         return prep
 
     def __len__(self) -> int:
+        """Returns the number of active P-Reps
+
+        :return: the number of active P-Reps
+        """
         assert len(self._active_prep_list) == len(self._active_prep_dict)
         return len(self._active_prep_list)
 
@@ -279,12 +289,6 @@ class PRepContainer(object):
         """
         return self._active_prep_list[start_index:start_index + size]
 
-    def get_snapshot(self) -> 'PRepContainer':
-        if not self.is_frozen():
-            raise AccessDeniedException("Failed to get PRepContaienr snapshot")
-
-        return self.copy(PRepFlag.FROZEN)
-
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
 
@@ -292,7 +296,7 @@ class PRepContainer(object):
         """
         prep: 'PRep' = self._active_prep_dict.get(address)
         if prep is None:
-            Logger.info(tag="PREP", msg=f"P-Rep not found on get_ranking: {str(address)}")
+            Logger.info(tag="PREP", msg=f"P-Rep not found: {str(address)}")
             return -1
 
         index: int = self._active_prep_list.index(prep)
