@@ -1,0 +1,551 @@
+{
+    "hostAddress": "127.0.0.1",
+    "port": 9000,
+    "scoreRootPath": "./.score",
+    "stateDbRootPath": "./.statedb",
+    "log": {
+        "logger": "tbears",
+        "level": "info",
+        "filePath": "./tbears.log",
+        "colorLog": true,
+        "outputType": "file",
+        "rotate": {
+            "type": "bytes",
+            "maxBytes": 10485760,
+            "backupCount": 10
+        }
+    },
+    "service": {
+        "fee": false,
+        "audit": false,
+        "deployerWhiteList": false
+    },
+    "builtinScoreOwner": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb",
+    "genesis": {
+        "nid": "0x3",
+        "accounts": [
+            {
+                "name": "genesis",
+                "address": "hx0000000000000000000000000000000000000000",
+                "balance": "0x2961fff8ca4a62327800000"
+            },
+            {
+                "name": "fee_treasury",
+                "address": "hx1000000000000000000000000000000000000000",
+                "balance": "0x0"
+            },
+            {
+                "name": "test1",
+                "address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb",
+                "balance": "0x2961fff8ca4a62327800000"
+            },
+            {
+                "name": "test_wallet0",
+                "address": "hx000e0415037ae871184b2c7154e5924ef2bc075e",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet1",
+                "address": "hx9eec61296a7010c867ce24c20e69588e2832bc52",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet2",
+                "address": "hx2fb8fb849cba40bf59a48ebcef899d6ae45382f4",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet3",
+                "address": "hx0d091baf34fb2b8e144f3e878dc73c35e77f912f",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet4",
+                "address": "hxd2746423a5326d48f812bd492910cf1c462656c2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet5",
+                "address": "hxff2d08625e56c6858c08134abe0cb703fcd6a447",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet6",
+                "address": "hxd8af02c785a973f8209ff64279ca56915c4fe48c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet7",
+                "address": "hx6a9bdb75789556fe0fbdfb34bc9483056977ed6d",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet8",
+                "address": "hxa7d00f90b669de7f4e3407c6d4468ef6fe86b8ce",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet9",
+                "address": "hx54763afdd00604626bfb73f4d2cde0804ca3241a",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet10",
+                "address": "hxea6ce7905fd1d6fbe34f800459a182ec52626de3",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet11",
+                "address": "hx094a8b5324f86c340e1023ab5bba73d4fd58a122",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet12",
+                "address": "hx3134f5e3bf0df3075ba685a3be169e8bd0e2eb35",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet13",
+                "address": "hx96b8bd4731965c7e488bf25fa405e3e94d5a2674",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet14",
+                "address": "hx8f1b225a618848dfa15d837f47d5b3f69292bef8",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet15",
+                "address": "hxbec669efef1cff758a75dbfe3d721bf6ca2b1d0c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet16",
+                "address": "hx77f7fb831fbd799f1b2a83266f25a84aaa2ea9ee",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet17",
+                "address": "hx3730a0991852738f97b940f646d76ceb05d0e393",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet18",
+                "address": "hxcbbe929ec518ecadc5a202581cfe0bf5a45078c3",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet19",
+                "address": "hx0cd0a2eb313b4579724de48c82d8ed1ce6d94611",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet20",
+                "address": "hx9bb77b43ff288395cee8f861376ec7421c6390f3",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet21",
+                "address": "hx4d62056503659b424f4d0ec53a49ab0f617493e1",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet22",
+                "address": "hx441a633a61eed23153b1f7663f9418b19fe0682c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet23",
+                "address": "hxdfa5671efcc853a6de4dfd454e5b22882ebd23f5",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet24",
+                "address": "hxd48a9fa8c046b5c2f7b4dd76d15b6a7071461aad",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet25",
+                "address": "hx75a92c4e8e85243d126fcc84070e8ed9be4bbfd2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet26",
+                "address": "hx243d2388c934fe123a2a2abffe9d48f4c7520c25",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet27",
+                "address": "hx5342342682fb8b0b7a8a8e276a2478c235cb9a72",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet28",
+                "address": "hx42db8be96da3e06e8f6c3210d8dc1253912022ae",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet29",
+                "address": "hx2bd625cf04772f94f486a2f1c9012982b0a8d783",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet30",
+                "address": "hx383dd0d2e36cc2c2ba259a7fc3fae1643773c2fb",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet31",
+                "address": "hx6c459155ee20d475d1f50d214cfc9ac51e175fa4",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet32",
+                "address": "hx80bc9be5f52873cd4c59e081b53f64356e17961f",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet33",
+                "address": "hx506a6c2f6017b9d3cf5a6c83e7dd28cd254b836b",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet34",
+                "address": "hxab44718b13436de41ffc93efa6921ed190aed84e",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet35",
+                "address": "hx56400e7c38bac5fd990556fb54888fd82985f29b",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet36",
+                "address": "hx04efd9708056254ac94f964344349664a3a6189c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet37",
+                "address": "hx2849d12df15a73faa56693e904375f4d6e88dbf6",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet38",
+                "address": "hx5c29dc058653bf68b84a155a49b78ded7001ecd1",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet39",
+                "address": "hx742f0793a27935debd18086e3426b4e3de0816d9",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet40",
+                "address": "hx839d17dca46adc49c6a87a05e8781562e390cee6",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet41",
+                "address": "hx37e769a8ab52427277c9aca4790f6e22819b93a5",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet42",
+                "address": "hx5b1f0a875295d98605091ec42541d5e086ecf27d",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet43",
+                "address": "hxe54077a6298a1560dbd3d5d4bce327e548d53408",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet44",
+                "address": "hx41df8fbc0ecaa299644772ef711561979f986a92",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet45",
+                "address": "hxcf8b700d030b4f61ec654c838ebd7011ed345b30",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet46",
+                "address": "hx8493cf91b76b524a714fa0beb2eaf88fefa1af39",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet47",
+                "address": "hxec364f96fcb732132c9af4f55b36f8939afb37f5",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet48",
+                "address": "hxe1d5f7501aaa4a3022ebd0aec683c553a0c99883",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet49",
+                "address": "hxa8218acd78c386b1323922bc63d2fbf6477b7fb4",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet50",
+                "address": "hx0ad65d95915ee29fdf287cac5ae4e81221e6ddc2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet51",
+                "address": "hx8bcf30bf5709001c8fac24ed3c5e80776071439a",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet52",
+                "address": "hxb3827b8d724c7097734d255aa7fa764f4057406c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet53",
+                "address": "hxe0d649518191031c3195cd41d087dd0e9dd4d0d2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet54",
+                "address": "hxb1f218eb279efe0227783961e940418d76186f2f",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet55",
+                "address": "hxe085140cad943782c63d7ac6613ae21cc064f2ec",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet56",
+                "address": "hx363e0668a38e984bd1c8ea81a01f2c036d4d3a11",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet57",
+                "address": "hx60d55951dd8b6f4577a3fd17ba4040723e5e33c8",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet58",
+                "address": "hx86a0c02f4d03626cc46ae6757f383324a538f748",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet59",
+                "address": "hx6347279a7f0356a058aa27343ee3fa471b1c042d",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet60",
+                "address": "hx4fbf71161be28fb97c270b4a9f291828bd7cc6da",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet61",
+                "address": "hx15f66fc241b57d0c8f6ebaf03c5e315aaf238207",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet62",
+                "address": "hx67cb080c781a4b4230196cf496fc568d40fdb1f2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet63",
+                "address": "hx923849221e6b975ab0501836fb5815d4a8c8b4cf",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet64",
+                "address": "hx3262ee620fb155f0a89b77239c50da5900e12e25",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet65",
+                "address": "hx653a441a5b75e01199214cb575e1602550baa39d",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet66",
+                "address": "hxdbef8a1a485cafc617df648d7c3fb51f2b66091b",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet67",
+                "address": "hx19469ef80691f53cd60d76772ae384307bfd3eb4",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet68",
+                "address": "hxa069ab17c2edbf351a8e47a97aa061691e0d2f04",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet69",
+                "address": "hx60595a5ad830a97417c23eaf6dc09c84bc2d9e8c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet70",
+                "address": "hx8353dbb2d8364f5cab51739da34bc7786a69b2da",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet71",
+                "address": "hx1252cee017f0014118fdf0190e3f0f3518fd9c1d",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet72",
+                "address": "hx048d45dc9edb5148de4fe703325130dc710aaede",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet73",
+                "address": "hx33fff2deaa339805bbe4788724ec7ad18ec50766",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet74",
+                "address": "hx4037b4d01c5bc40fdbb5217b8ef24fd35295aa37",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet75",
+                "address": "hxf01ef3c6dd48daee4470818ae0ce86fdd22a6af7",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet76",
+                "address": "hxebd0f01042b1b313ea55b2fc785a8dd4afde752d",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet77",
+                "address": "hxcb0b91b2f4f16f71b83a73537488b9e5e9f49610",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet78",
+                "address": "hx3b18ea381603539fc35139f8977af1808491c55e",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet79",
+                "address": "hx1a020fff4f7d6edee56613774a45165d4de7fb0b",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet80",
+                "address": "hxbdce3f21ae13c68ebbf7d08fbac5ec65847c05b2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet81",
+                "address": "hxbef09f7100aca6e4aaab5de085140f12c1759a73",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet82",
+                "address": "hx30150dc1dd7eeeea4549ffbbd1de788e360dba00",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet83",
+                "address": "hx1c084c8fd8db3b27732a1bff7ba7111bf630b0f2",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet84",
+                "address": "hx07708e42348c0cdc2a544387bc05f676186cf6ed",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet85",
+                "address": "hx8c8ccfd4f2d8a70ad332c4e7e005007ff05bfb99",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet86",
+                "address": "hx67aef64814a64cf21546eadcfc53eee5eb21773c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet87",
+                "address": "hxdb628febf4688f6ad45571b07f15a3b7183903fb",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet88",
+                "address": "hx8054ae00568a6a5aedebdc5bbb1ff57a5c9f8172",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet89",
+                "address": "hx207f95b1bbd5d956efc37ce9c649d4294cf59e96",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet90",
+                "address": "hx9d2f6f5aad49eea78bd4a431eab547ce8a34eccd",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet91",
+                "address": "hx8e64e8f85893f68ab761e9e92a9b0fa3f986e5eb",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet92",
+                "address": "hx77d85f540fa8aa81b658f4727ceac965aa75c0d8",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet93",
+                "address": "hx8deafa5f3e1c9b8f8b6169236a860d7f2bc7602e",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet94",
+                "address": "hx278d88d636da23db2fbea200c9bd6aed68d7d5e6",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet95",
+                "address": "hx6d3bada078f02eb9f3e04515e8e75e4084642f4f",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet96",
+                "address": "hx3de89c09555729df93eeac157ffe6da9f9ac5e2c",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet97",
+                "address": "hxe064ff8825a522d933f2922b846dfae3c5ecd02f",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet98",
+                "address": "hx82a5806e8159bef5329fa3f6ef8a2d45224ef3d8",
+                "balance": "0x2710"
+            },
+            {
+                "name": "test_wallet99",
+                "address": "hx4491a4dfc2e71474d938ce77d37be0a8654efe73",
+                "balance": "0x2710"
+            }
+        ]
+    },
+    "channel": "loopchain_default",
+    "amqpKey": "7100",
+    "amqpTarget": "127.0.0.1",
+    "blockConfirmInterval": 1,
+    "blockConfirmEmpty": false,
+    "blockGeneratorRotation": true,
+    "blockGenerateCountPerLeader": 10
+}
