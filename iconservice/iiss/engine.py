@@ -314,7 +314,7 @@ class Engine(EngineBase):
     @classmethod
     def _get_delegation(cls, context: 'IconScoreContext', address: 'Address') -> dict:
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATED)
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATING)
         delegation_list: list = []
         for address, value in account.delegations:
             delegation_list.append({"address": address, "value": value})
