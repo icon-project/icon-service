@@ -60,7 +60,7 @@ class Storage(StorageBase):
     def put_reward_prep(self, context: 'IconScoreContext', reward_prep: 'Reward'):
         self._db.put(context, self.REWARD_PREP_KEY, reward_prep.to_bytes())
 
-    def get_reward_prep(self, context: 'IconScoreContext'):
+    def get_reward_prep(self, context: 'IconScoreContext') -> Optional['Reward']:
         reward_prep: Optional[bytes] = self._db.get(context, self.REWARD_PREP_KEY)
         if reward_prep:
             return Reward.from_bytes(reward_prep)

@@ -156,6 +156,34 @@ class TestIntegrateIISS(TestIntegrateBase):
         self._make_and_req_block([])
         self._make_and_req_block([])
 
+    def test_ise_IISS(self):
+        self._update_governance()
+        self._set_revision(REV_IISS)
+
+        query_request = {
+            "version": self._version,
+            "from": self._addr_array[0],
+            "to": ZERO_SCORE_ADDRESS,
+            "dataType": "call",
+            "data": {
+                "method": "getIISSInfo",
+                "params": {
+                }
+            }
+        }
+
+        response = self._query(query_request)
+
+        expected_response = {
+            "variable": {
+                "irep": 10000,
+                "rrep": 800
+            }
+        }
+        self.assertEqual(expected_response, response)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
