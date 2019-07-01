@@ -25,6 +25,7 @@ from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, IISS_MIN_IREP
 from iconservice.icon_constant import REV_IISS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test import create_register_prep_params
 
 if TYPE_CHECKING:
     from iconservice import Address
@@ -70,8 +71,6 @@ class TestIntegratePRep(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.IREP])
-        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -135,19 +134,12 @@ class TestIntegratePRep(TestIntegrateBase):
         self._update_governance()
         self._set_revision(REV_IISS)
 
-        data: dict = {
-            ConstantKeys.NAME: "name",
-            ConstantKeys.EMAIL: "email",
-            ConstantKeys.WEBSITE: "website",
-            ConstantKeys.DETAILS: "json",
-            ConstantKeys.P2P_END_POINT: "ip",
-            ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-            ConstantKeys.IREP: IISS_MIN_IREP
-        }
-        self._reg_prep(self._addr_array[0], data)
+        address: 'Address' = self._addr_array[0]
+        data: dict = create_register_prep_params(0)
+        self._reg_prep(address, data)
 
         expected_response: dict = data
-        response: dict = self._get_prep(self._addr_array[0])
+        response: dict = self._get_prep(address)
         register = response["registration"]
 
         self.assertEqual(expected_response[ConstantKeys.NAME], register[ConstantKeys.NAME])
@@ -156,39 +148,30 @@ class TestIntegratePRep(TestIntegrateBase):
         self.assertEqual(expected_response[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
         self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
         self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(expected_response[ConstantKeys.IREP], register[ConstantKeys.IREP])
 
         data1: dict = {
             ConstantKeys.IREP: IISS_MIN_IREP + 100,
         }
-        self._set_prep(self._addr_array[0], data1)
+        self._set_prep(address, data1)
 
-        response: dict = self._get_prep(self._addr_array[0])
+        response: dict = self._get_prep(address)
         register = response["registration"]
         self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
         self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
         self.assertEqual(hex(data1[ConstantKeys.IREP]), hex(register[ConstantKeys.IREP]))
 
-        self._unreg_prep(self._addr_array[0])
+        self._unreg_prep(address)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self._get_prep(self._addr_array[0])
-        self.assertEqual(f"P-Rep not found: {str(self._addr_array[0])}", e.exception.args[0])
+            self._get_prep(address)
+        self.assertEqual(f"P-Rep not found: {address}", e.exception.args[0])
 
     def test_prep_list(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
         for i in range(10):
-            data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
-            }
+            data: dict = create_register_prep_params(index=i)
             self._reg_prep(self._addr_array[i], data)
 
         response: dict = self._get_prep_list()
@@ -203,15 +186,7 @@ class TestIntegratePRep(TestIntegrateBase):
         self._set_revision(REV_IISS)
 
         for i in range(10):
-            data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey1'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
-            }
+            data: dict = create_register_prep_params(i)
             self._reg_prep(self._addr_array[i], data)
 
         # gain 10 icx

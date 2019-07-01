@@ -81,13 +81,12 @@ def test_remove(create_sorted_list):
     assert len(items) == 0
 
     with pytest.raises(ValueError):
-        removed_item = items.remove(item)
+        items.remove(item)
 
 
 def test_pop(create_sorted_list):
     for size in (1, 99, 100):
         items = create_sorted_list(size)
-        assert len(items) == size
 
         index: int = random.randint(0, size - 1)
         item = items[index]
@@ -107,7 +106,6 @@ def test_pop(create_sorted_list):
 def test_index(create_sorted_list):
     for size in (1, 2, 99, 100):
         items = create_sorted_list(size)
-        assert len(items) == size
 
         indexes = set()
         indexes.add(0)
@@ -118,3 +116,55 @@ def test_index(create_sorted_list):
         for index in indexes:
             i = items.index(items[index])
             assert i == index
+
+
+def test__setitem__(create_sorted_list):
+    items = create_sorted_list(1)
+
+    item0: 'SortedItem' = items[0]
+    new_item = SortedItem(value=item0.value + 1)
+    items[0] = new_item
+
+    assert id(new_item) == id(items[0])
+    assert item0.value + 1 == items[0].value
+
+    # Case 1
+    items = create_sorted_list(2)
+    item0: 'SortedItem' = items[0]
+    item1: 'SortedItem' = items[1]
+
+    new_item0 = SortedItem(item1.value - 1)
+    items[0] = new_item0
+    assert item0 != items[0]
+    assert new_item0 == items[0]
+
+    new_item0 = SortedItem(items[1].value + 1)
+    with pytest.raises(ValueError):
+        items[0] = new_item0
+
+    new_item1 = SortedItem(items[0].value - 1)
+    with pytest.raises(ValueError):
+        items[1] = new_item1
+
+    new_item1 = SortedItem(items[0].value + 1)
+    items[1] = new_item1
+    assert new_item1 == items[1]
+
+    # Case 2
+    items = create_sorted_list(3)
+
+    new_item1 = SortedItem(items[0].value - 1)
+    with pytest.raises(ValueError):
+        items[1] = new_item1
+
+    new_item1 = SortedItem(items[2].value + 1)
+    with pytest.raises(ValueError):
+        items[1] = new_item1
+
+    new_item1 = SortedItem(items[0].value)
+    items[1] = new_item1
+    assert items[1] == new_item1
+
+    new_item1 = SortedItem(items[2].value)
+    items[1] = new_item1
+    assert items[1] == new_item1

@@ -83,8 +83,7 @@ class PRepContainer(object):
         """
         assert prep.status == PRepStatus.ACTIVE
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         if prep.address in self:
             raise InvalidParamsException(f"P-Rep already exists: {str(prep.address)}")
@@ -95,6 +94,23 @@ class PRepContainer(object):
         self._flags |= PRepFlag.DIRTY
 
         assert len(self._active_prep_dict) == len(self._active_prep_list)
+
+    def replace(self, prep: 'PRep'):
+        assert prep.status == PRepStatus.ACTIVE
+
+        self._check_access_permission()
+
+        old_prep: 'PRep' = self._active_prep_dict.get(prep.address)
+        if old_prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {str(prep.address)}")
+
+        if id(old_prep) == id(prep):
+            return
+
+        self._active_prep_list.remove(old_prep)
+
+        self._active_prep_dict[prep.address] = prep
+        self._active_prep_list.add(prep)
 
     def remove(self,
                address: 'Address',
@@ -110,8 +126,7 @@ class PRepContainer(object):
         """
         assert status != PRepStatus.ACTIVE
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
         assert prep.status == PRepStatus.ACTIVE
@@ -136,8 +151,7 @@ class PRepContainer(object):
 
         assert isinstance(address, Address)
 
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
         if prep is None:
@@ -160,15 +174,14 @@ class PRepContainer(object):
         Logger.debug(tag="PREP", msg=f"set_to_prep() end")
 
     def set_delegated_to_prep(self, address: 'Address', delegated: int):
-        """
-        :param address:
+        """Update the delegated amount of P-Rep, sorting the P-Rep in ascending order by prep.order()
+
+        :param address: P-Rep address
         :param delegated:
         :return:
         """
         assert delegated >= 0
-
-        if self.is_frozen():
-            raise AccessDeniedException("PRepContainer access denied")
+        self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
         if prep is None:
@@ -216,18 +229,56 @@ class PRepContainer(object):
         for prep in self._active_prep_list:
             yield prep
 
-    def get_by_index(self, index: int) -> 'PRep':
-        return self._active_prep_list[index]
+    def get_by_index(self, index: int, mutable: bool = False) -> Optional['PRep']:
+        """Returns an active P-Rep with a given index
 
-    def get_by_address(self, address: 'Address') -> Optional['PRep']:
+        :param index:
+        :param mutable:
+        :return:
+        """
+        prep = self._active_prep_list.get(index)
+
+        if not mutable:
+            return prep
+
+        self._check_access_permission()
+        prep = self._active_prep_list.get(index)
+
+        return self._get_mutable_prep(index, prep)
+
+    def get_by_address(self, address: 'Address', mutable: bool = False) -> Optional['PRep']:
         """Returns an active P-Rep with a given address
 
         :param address: The address of a P-Rep
+        :param mutable: True(prep to return should be mutable)
         :return: The instance of a PRep which has a given address
         """
-        return self._active_prep_dict.get(address)
+        prep: 'PRep' = self._active_prep_dict.get(address)
+
+        if not mutable:
+            return prep
+
+        self._check_access_permission()
+        index: int = self._active_prep_list.index(prep)
+
+        return self._get_mutable_prep(index, prep)
+
+    def _get_mutable_prep(self, index: int, prep: 'PRep') -> Optional['PRep']:
+        if prep is None:
+            return None
+
+        if prep.is_frozen():
+            prep: 'PRep' = prep.copy(PRepFlag.NONE)
+            self._active_prep_dict[prep.address] = prep
+            self._active_prep_list[index] = prep
+
+        return prep
 
     def __len__(self) -> int:
+        """Returns the number of active P-Reps
+
+        :return: the number of active P-Reps
+        """
         assert len(self._active_prep_list) == len(self._active_prep_dict)
         return len(self._active_prep_list)
 
@@ -238,12 +289,6 @@ class PRepContainer(object):
         """
         return self._active_prep_list[start_index:start_index + size]
 
-    def get_snapshot(self) -> 'PRepContainer':
-        if not self.is_frozen():
-            raise AccessDeniedException("Failed to get PRepContaienr snapshot")
-
-        return self.copy(PRepFlag.FROZEN)
-
     def index(self, address: 'Address') -> int:
         """Returns the index of a given address in active_prep_list
 
@@ -251,7 +296,7 @@ class PRepContainer(object):
         """
         prep: 'PRep' = self._active_prep_dict.get(address)
         if prep is None:
-            Logger.info(tag="PREP", msg=f"P-Rep not found on get_ranking: {str(address)}")
+            Logger.info(tag="PREP", msg=f"P-Rep not found: {str(address)}")
             return -1
 
         index: int = self._active_prep_list.index(prep)
@@ -267,3 +312,7 @@ class PRepContainer(object):
         preps._inactive_prep_dict.update(self._inactive_prep_dict)
 
         return preps
+
+    def _check_access_permission(self):
+        if self.is_frozen():
+            raise AccessDeniedException("PRepContainer access denied")
