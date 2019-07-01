@@ -1031,6 +1031,13 @@ class IconServiceEngine(ContextContainer):
         response['variable'] = dict()
         response['variable']['irep'] = context.engine.prep.term.irep
         response['variable']['rrep'] = reward.reward_rate
+
+        check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
+        if check_end_block_height is None:
+            check_end_block_height = 0
+        response['nextCalculation'] = check_end_block_height
+        response['nextPRepTerm'] = context.engine.prep.term.end_block_height + 1
+
         return response
 
     def _handle_icx_send_transaction(self,
