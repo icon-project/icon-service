@@ -246,7 +246,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         return total_weighted_irep // total_delegated if total_delegated > 0 else 0
 
-    def handle_get_prep(self, _context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns the details of a P-Rep including information on registration, delegation and statistics
 
         :param _context:
@@ -260,7 +260,11 @@ class Engine(EngineBase, IISSEngineListener):
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
-        return prep.to_dict()
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
+
+        response: dict = prep.to_dict()
+        response['delegation']['stake'] = account.stake
+        return response
 
     def handle_set_prep(self, context: 'IconScoreContext', params: dict):
         """Update a P-Rep registration information
