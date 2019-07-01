@@ -20,9 +20,9 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException, InvalidParamsException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
+from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, \
+    IISS_INITIAL_IREP
 from ...utils.msgpack_for_db import MsgPackForDB
-from ...icon_constant import IISS_MIN_IREP
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -355,7 +355,7 @@ class PRep(Sortable):
             # Required items
             p2p_end_point=data[ConstantKeys.P2P_END_POINT],
             public_key=data[ConstantKeys.PUBLIC_KEY],
-            irep=IISS_MIN_IREP,
+            irep=IISS_INITIAL_IREP,
             irep_block_height=block_height,
 
             # Registration time

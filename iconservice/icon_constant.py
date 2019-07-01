@@ -117,6 +117,7 @@ class ConfigKey:
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
     IREP = 'irep'
+    INITIAL_IREP = 'initialIRep'
 
     # IISS VARIABLE
     IISS_REWARD_VARIABLE = "iissRewardVariable"
@@ -199,6 +200,7 @@ PREP_MAIN_AND_SUB_PREPS = 100
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000
 IISS_MAX_IREP = 50_000
+IISS_INITIAL_IREP = 37_500
 IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000
