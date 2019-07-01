@@ -357,6 +357,7 @@ class IconServiceEngine(ContextContainer):
             "dataType": data_type,
             "data": data
         }
+        # todo: tests about tx hash
         converted_transaction_params = deepcopy(transaction_params)
         converted_transaction_params = TypeConverter.convert_type_reverse(converted_transaction_params)
         tx_hash = HashGenerator.generate_hash(converted_transaction_params)
