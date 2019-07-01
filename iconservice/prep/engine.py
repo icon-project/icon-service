@@ -326,7 +326,10 @@ class Engine(EngineBase, IISSEngineListener):
         prev_irep = prev_prep.irep
         prev_irep_updated_block_height = prev_prep.irep_block_height
 
-        if term.sequence != -1 and prev_irep_updated_block_height >= term.start_block_height:
+        if term.sequence == -1:
+            raise InvalidRequestException("irep can be set after decentralized")
+
+        if prev_irep_updated_block_height >= term.start_block_height:
             raise InvalidRequestException("irep can only be changed once during the term.")
         min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
         max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
