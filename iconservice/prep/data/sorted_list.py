@@ -89,6 +89,19 @@ class SortedList(object):
         return self._items.pop(index)
 
     def append(self, item: 'Sortable'):
+        """Add an item to the end
+
+        :param item:
+        :return:
+        """
+        size: int = len(self._items)
+
+        # prev_item.order() should be not more than item.order()
+        if size > 0:
+            prev_item = self._items[size - 1]
+            if item.order() < prev_item.order():
+                raise ValueError("Out of order")
+
         self._items.append(item)
 
     def __iter__(self):

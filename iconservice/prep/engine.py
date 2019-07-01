@@ -38,7 +38,6 @@ from ..iiss.reward_calc import RewardCalcDataCreator
 if TYPE_CHECKING:
     from . import PRepStorage
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
-    from ..iiss import IISSStorage
     from ..icx import IcxStorage
     from ..precommit_data_manager import PrecommitData
 
@@ -143,7 +142,6 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Update stateDB
         prep_storage.put_prep(context, prep)
-        self._put_total_prep_delegated_in_state_db(context, prep.delegated)
 
         # Update rcDB
         self._put_reg_prep_in_rc_db(context, address)
@@ -172,23 +170,6 @@ class Engine(EngineBase, IISSEngineListener):
         tx: 'PRepRegisterTx' = RewardCalcDataCreator.create_tx_prep_reg()
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
-
-    @staticmethod
-    def _put_total_prep_delegated_in_state_db(context: 'IconScoreContext', offset: int):
-        """Put total prep delegated to StateDatabase
-
-        :param context:
-        :param offset:
-        :return:
-        """
-        if offset == 0:
-            # No need to update total prep delegated
-            return
-
-        storage: 'IISSStorage' = context.storage.iiss
-
-        total_delegated: int = storage.get_total_prep_delegated(context)
-        storage.put_total_prep_delegated(context, total_delegated + offset)
 
     def check_end_block_height_of_term(self, context: 'IconScoreContext') -> bool:
         """Is the last block of the current term
@@ -354,16 +335,11 @@ class Engine(EngineBase, IISSEngineListener):
         prep_storage: 'PRepStorage' = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address)
-        if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {address}")
-
-        # Update preps in context
+        # Remove a given P-Rep from context.preps
         context.preps.remove(address)
 
         # Update stateDB
         prep_storage.delete_prep(context, address)
-        self._put_total_prep_delegated_in_state_db(context, -prep.delegated)
 
         # Update rcDB
         self._put_unreg_prep_for_iiss_db(context, address)

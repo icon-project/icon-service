@@ -437,7 +437,7 @@ class Engine(EngineBase):
     @classmethod
     def _put_gv(cls, context: 'IconScoreContext'):
         current_total_supply = context.storage.icx.get_total_supply(context)
-        current_total_prep_delegated = context.storage.iiss.get_total_prep_delegated(context)
+        current_total_prep_delegated: int = context.preps.total_prep_delegated
         reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
 
         reward_rep: int = IssueFormula.calculate_rrep(reward_prep.reward_min,
