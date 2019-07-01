@@ -18,7 +18,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional
 
 from iconcommons.logger import Logger
-
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -34,7 +33,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, ICX_ISSUE_TRANSACTION_INDEX, \
-    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP
+    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -66,6 +65,7 @@ if TYPE_CHECKING:
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
     from .prep.data import PRep, PRepContainer
+    from .iiss.storage import Reward
 
 
 class IconServiceEngine(ContextContainer):
@@ -92,7 +92,7 @@ class IconServiceEngine(ContextContainer):
             'icx_sendTransaction': self._handle_icx_send_transaction,
             'debug_estimateStep': self._handle_estimate_step,
             'icx_getScoreApi': self._handle_icx_get_score_api,
-            'ise_getStatus': self._handle_ise_get_status,
+            'ise_getStatus': self._handle_ise_get_status
         }
 
         self._precommit_data_manager = PrecommitDataManager()
@@ -1008,6 +1008,8 @@ class IconServiceEngine(ContextContainer):
                 return context.engine.iiss.query(context, data)
             elif self._check_prep_process(params):
                 return context.engine.prep.query(context, data)
+            elif self._check_debug_process(params):
+                return self._get_IISS_info(context, data)
             else:
                 raise InvalidParamsException("Invalid Method")
         else:
@@ -1020,6 +1022,16 @@ class IconServiceEngine(ContextContainer):
                                          icon_score_address,
                                          data_type,
                                          data)
+
+    def _get_IISS_info(self, context: 'IconScoreContext', params: dict) -> dict:
+
+        response = dict()
+
+        reward: 'Reward' = context.storage.iiss.get_reward_prep(context)
+        response['variable'] = dict()
+        response['variable']['irep'] = context.engine.prep.term.irep
+        response['variable']['rrep'] = reward.reward_rate
+        return response
 
     def _handle_icx_send_transaction(self,
                                      context: 'IconScoreContext',
@@ -1145,6 +1157,12 @@ class IconServiceEngine(ContextContainer):
         data: Optional[dict] = params.get('data')
         method_name: Optional[str] = data.get("method")
         return method_name in PREP_METHOD_TABLE
+
+    @staticmethod
+    def _check_debug_process(params: dict) -> bool:
+        data: Optional[dict] = params.get('data')
+        method_name: Optional[str] = data.get("method")
+        return method_name in DEBUG_METHOD_TABLE
 
     def _process_icx_transaction(self,
                                  context: 'IconScoreContext',
