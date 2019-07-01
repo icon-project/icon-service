@@ -321,7 +321,8 @@ class Engine(EngineBase):
 
         data = {
             "delegations": delegation_list,
-            "totalDelegated": account.delegations_amount
+            "totalDelegated": account.delegations_amount,
+            "votingPower": account.voting_power
         }
 
         return data
