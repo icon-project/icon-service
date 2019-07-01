@@ -72,7 +72,6 @@ class PRep(Sortable):
             public_key: bytes = b"",
             irep: int = 0,
             irep_block_height: int = 0,
-            stake: int = 0,
             delegated: int = 0,
             block_height: int = 0,
             tx_index: int = 0,
@@ -105,7 +104,6 @@ class PRep(Sortable):
         self._flags: 'PRepFlag' = flags
 
         # The delegated amount retrieved from account
-        self.stake: int = stake
         self._delegated: int = delegated
 
         # status
@@ -377,7 +375,6 @@ class PRep(Sortable):
                 ConstantKeys.IREP_BLOCK_HEIGHT: self._irep_block_height
             },
             "delegation": {
-                "stake": self.stake,
                 "delegated": self._delegated
             },
             "stats": {
