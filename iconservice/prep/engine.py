@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
 
-from .data.prep import PRep
+from .data.prep import PRep, PRepFlag
 from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
@@ -26,30 +26,31 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import PrepResultState, IISS_MIN_IREP, IISS_MAX_IREP, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP, IISS_MAX_DELEGATIONS
+from ..icon_constant import PrepResultState, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
+from ..icx.icx_account import Account
 from ..icx.storage import Intent
+from ..iiss import IISSEngineListener
 from ..iiss.reward_calc import RewardCalcDataCreator
 
 if TYPE_CHECKING:
     from . import PRepStorage
     from ..iiss.reward_calc.msg_data import PRepRegisterTx, PRepUnregisterTx, TxData
     from ..iiss import IISSStorage
-    from ..iconscore.icon_score_context import IconScoreContext
-    from ..icx.icx_account import Account
     from ..icx import IcxStorage
     from ..precommit_data_manager import PrecommitData
 
 
-class Engine(EngineBase):
+class Engine(EngineBase, IISSEngineListener):
     """PRepEngine class
 
     Roles:
     * Manages term and preps
     * Handles P-Rep related JSON-RPC API requests
     """
-
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         Logger.debug("PRepEngine.__init__() start")
 
@@ -71,12 +72,17 @@ class Engine(EngineBase):
 
         Logger.debug("PRepEngine.__init__() end")
 
-    def open(self, context: 'IconScoreContext', term_period: int, irep: int) -> None:
+    def open(self, context: 'IconScoreContext', term_period: int, irep: int):
         self.preps = PRepContainer()
         self.preps.load(context)
         self.term.load(context, term_period, irep)
 
-    def invoke(self, context: 'IconScoreContext', data: dict) -> None:
+        context.engine.iiss.add_listener(self)
+
+    def close(self):
+        IconScoreContext.engine.iiss.remove_listener(self)
+
+    def invoke(self, context: 'IconScoreContext', data: dict):
         method: str = data['method']
         params: dict = data['params']
 
@@ -91,11 +97,11 @@ class Engine(EngineBase):
         ret = handler(context, params)
         return ret
 
-    def commit(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
+    def commit(self, _context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         """If the current P-Rep term is over, update term with new information
         which has P-Rep list(address, delegated amount), start height, end height, irep
 
-        :param context:
+        :param _context:
         :param precommit_data:
         :return:
         """
@@ -240,17 +246,17 @@ class Engine(EngineBase):
 
         return total_weighted_irep // total_delegated if total_delegated > 0 else 0
 
-    def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns the details of a P-Rep including info of registration, delegation and statistics
+    def handle_get_prep(self, _context: 'IconScoreContext', params: dict) -> dict:
+        """Returns the details of a P-Rep including information on registration, delegation and statistics
 
-        :param context:
+        :param _context:
         :param params:
         :return:
         """
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
 
-        prep: 'PRep' = self.preps.get(address)
+        prep: 'PRep' = self.preps.get_by_address(address)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
@@ -266,7 +272,7 @@ class Engine(EngineBase):
         prep_storage = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get_by_address(address)
+        prep: 'PRep' = context.preps.get_by_address(address, mutable=True)
         if prep is None:
             raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
@@ -325,19 +331,19 @@ class Engine(EngineBase):
 
         raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
 
-    def handle_unregister_prep(self, context: 'IconScoreContext', params: dict):
+    def handle_unregister_prep(self, context: 'IconScoreContext', _params: dict):
         """Unregister a P-Rep
 
         :param context:
-        :param params:
+        :param _params:
         :return:
         """
         prep_storage: 'PRepStorage' = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        prep: 'PRep' = context.preps.get(address)
+        prep: 'PRep' = context.preps.get_by_address(address)
         if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: str{address}")
+            raise InvalidParamsException(f"P-Rep not found: {address}")
 
         # Update preps in context
         context.preps.remove(address)
@@ -367,11 +373,11 @@ class Engine(EngineBase):
         iiss_tx_data: 'TxData' = RewardCalcDataCreator.create_tx(address, block_height, tx)
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
-    def handle_get_main_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_main_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
         """Returns 22 P-Rep list in the current term
 
-        :param context:
-        :param params:
+        :param _context:
+        :param _params:
         :return:
         """
         preps: List['PRep'] = self.term.main_preps
@@ -391,11 +397,11 @@ class Engine(EngineBase):
             "preps": prep_list
         }
 
-    def handle_get_sub_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_sub_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
         """Returns 22 P-Rep list in the present term
 
-        :param context:
-        :param params:
+        :param _context:
+        :param _params:
         :return:
         """
         preps: List['PRep'] = self.term.sub_preps
@@ -415,10 +421,12 @@ class Engine(EngineBase):
             "preps": prep_list
         }
 
-    def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_prep_list(self, _context: 'IconScoreContext', params: dict) -> dict:
         """Returns P-Rep list with start and end rankings
 
-        :param context:
+        P-Rep means all P-Reps including main P-Reps and sub P-Reps
+
+        :param _context:
         :param params:
         :return:
         """
@@ -428,10 +436,12 @@ class Engine(EngineBase):
         total_delegated: int = 0
         prep_list: list = []
 
-        start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
-        end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, len(preps))
+        prep_count: int = len(preps)
 
-        if 0 <= start_ranking <= end_ranking <= len(preps):
+        start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+        end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, prep_count)
+
+        if not 1 <= start_ranking <= end_ranking <= prep_count:
             raise InvalidParamsException(
                 f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
 
@@ -445,3 +455,31 @@ class Engine(EngineBase):
             "totalDelegated": total_delegated,
             "preps": prep_list
         }
+
+    # IISSEngineListener implementation ---------------------------
+    def on_set_stake(self, context: 'IconScoreContext', account: 'Account'):
+        """Called on IISSEngine.handle_set_stake()
+
+        :param context:
+        :param account:
+        :return:
+        """
+        pass
+
+    def on_set_delegation(
+            self, context: 'IconScoreContext', delegated_accounts: List['Account']):
+        """Called on IISSEngine.handle_set_delegation()
+
+        :param context:
+        :param delegated_accounts:
+        :return:
+        """
+        assert 0 <= len(delegated_accounts) <= IISS_MAX_DELEGATIONS
+
+        for account in delegated_accounts:
+            assert isinstance(account, Account)
+            address = account.address
+
+            # If a delegated account is a P-Rep, then update its delegated amount
+            if address in context.preps:
+                context.preps.set_delegated_to_prep(address, account.delegated_amount)

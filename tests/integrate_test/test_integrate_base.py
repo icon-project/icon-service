@@ -25,7 +25,7 @@ from iconcommons import IconConfig
 
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_IISS
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_IISS, REV_DECENTRALIZATION
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
@@ -305,13 +305,6 @@ class TestIntegrateBase(TestCase):
 
         return tx
 
-    def _make_dummy_issue_tx(self):
-        # todo: if get_issue_info is redundant, should fix this method
-        # todo: warning! if the value is less then 0, issue transaction will be failed when testing
-        issue_data = self.icon_service_engine.query("iiss_get_issue_info", {})
-        issue_tx = self._make_issue_tx(issue_data)
-        return issue_tx
-
     def _make_and_req_block(self,
                             tx_list: list,
                             block_height: int = None,
@@ -327,7 +320,7 @@ class TestIntegrateBase(TestCase):
 
         is_block_editable = False
         governance_score = self.icon_service_engine._get_governance_score(context)
-        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_DECENTRALIZATION:
             is_block_editable = True
 
         invoke_response, _, added_transactions, main_prep_as_dict = \
@@ -377,7 +370,7 @@ class TestIntegrateBase(TestCase):
 
         is_block_editable = False
         governance_score = self.icon_service_engine._get_governance_score(context)
-        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_IISS:
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_DECENTRALIZATION:
             is_block_editable = True
 
         invoke_response, _, added_transactions, main_prep_as_dict = \

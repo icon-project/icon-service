@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from typing import Union, Tuple, Iterable, List
+from typing import Union, Iterable, List, Optional
 
 
 class Sortable(metaclass=ABCMeta):
@@ -43,6 +43,12 @@ class SortedList(object):
             index += 1
 
         self._items.insert(index, new_item)
+
+    def get(self, index: int) -> Optional['Sortable']:
+        try:
+            return self._items[index]
+        except IndexError:
+            return None
 
     def extend(self, iterable: Iterable['Sortable']):
         self._items.extend(iterable)
@@ -73,6 +79,7 @@ class SortedList(object):
 
     def remove(self, item: 'Sortable') -> 'Sortable':
         index: int = self.index(item)
+
         if index > -1:
             return self.pop(index)
 
@@ -93,5 +100,31 @@ class SortedList(object):
             return self._items[k]
         return self._items[k]
 
+    def __setitem__(self, index: int, item: 'Sortable'):
+        index = self._to_positive_index(index)
+
+        # prev_item.order() should be not more than item.order()
+        if index > 0:
+            prev_item = self._items[index - 1]
+            if item.order() < prev_item.order():
+                raise ValueError("Out of order")
+
+        # next_item.order() should be not less than item.order()
+        if index < len(self._items) - 1:
+            next_item = self._items[index + 1]
+            if item.order() > next_item.order():
+                raise ValueError("Out of order")
+
+        self._items[index] = item
+
     def __len__(self) -> int:
         return len(self._items)
+
+    def _to_positive_index(self, index: int) -> int:
+        if index < 0:
+            index += len(self._items)
+
+        if index < 0:
+            raise IndexError("Index out of range")
+
+        return index

@@ -323,16 +323,18 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
         first_expected_issue_amount = 669710806697108
-        calculate_response_iscore = first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
+        calculate_response_iscore = \
+            first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
         expected_issue_amount = 579299847792998
-        calculate_response_iscore_after_first_period = expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
+        calculate_response_iscore_after_first_period = \
+            expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
                                        (calculate_response_iscore_after_first_period // ISCORE_EXCHANGE_RATE)
 
-        def mock_calculated(self, path, block_height):
+        def mock_calculated(_self, _path, _block_height):
             response = CalculateResponse(0, True, 1, calculate_response_iscore, b'mocked_response')
-            self._calculation_callback(response)
+            _self._calculation_callback(response)
 
         self._mock_ipc(mock_calculated)
 
@@ -397,4 +399,3 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
             self.assertEqual(issue_amount, actual_covered_by_fee + actual_covered_by_remain + actual_issue_amount)
 
             self._write_precommit_state(prev_block)
-

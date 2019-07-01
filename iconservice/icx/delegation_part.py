@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List, Tuple
+
 from .base_part import BasePart
+from ..base.address import Address
 from ..base.exception import InvalidParamsException
 from ..icon_constant import IISS_MAX_DELEGATIONS
 from ..utils.msgpack_for_db import MsgPackForDB
-from ..base.address import Address
 
 
 class DelegationPart(BasePart):
@@ -31,7 +33,7 @@ class DelegationPart(BasePart):
         if delegations is None:
             delegations = []
 
-        self._delegations: list = delegations
+        self._delegations: List[List['Address', int], ...] = delegations
         self._delegated_amount: int = delegated_amount
         self._delegations_amount: int = self._update_delegations_amount(delegations)
 
@@ -42,6 +44,16 @@ class DelegationPart(BasePart):
     @property
     def delegated_amount(self) -> int:
         return self._delegated_amount
+
+    @delegated_amount.setter
+    def delegated_amount(self, value: int):
+        if value < 0:
+            raise InvalidParamsException(f"Invalid params: delegated_amount({value}) < 0")
+
+        if value == self._delegated_amount:
+            return
+        self._delegated_amount = value
+        self.set_dirty(True)
 
     @property
     def delegations(self) -> list:
@@ -71,7 +83,7 @@ class DelegationPart(BasePart):
         
         self.set_dirty(True)
 
-    def set_delegations(self, new_delegations: list):
+    def set_delegations(self, new_delegations: List[Tuple['Address', int]]):
         if len(new_delegations) > IISS_MAX_DELEGATIONS:
             raise InvalidParamsException('Delegations overflow')
 
@@ -116,7 +128,7 @@ class DelegationPart(BasePart):
             self.delegated_amount
         ]
         delegations: list = []
-        for address, value in self.delegations:
+        for address, value in self._delegations:
             delegations.append(address)
             delegations.append(value)
         data.append(delegations)

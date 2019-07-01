@@ -35,11 +35,11 @@ def create_prep_container():
             address = Address(AddressPrefix.EOA, os.urandom(20))
             prep = PRep(
                 address=address,
-                name=f"name{i}",
-                email=f"email{i}",
-                website=f"website{i}",
-                details=f"details{i}",
-                p2p_end_point=f"p2p_end_point{i}",
+                name=f"node{i}",
+                email=f"node{i}@example.com",
+                website=f"https://node{i}.example.com",
+                details=f"https://node{i}.example.com/details",
+                p2p_end_point=f"https://node{i}.example.com:7100",
                 public_key=hashlib.sha3_256(address.to_bytes()).digest(),
                 delegated=random.randint(0, 1000),
                 irep=10_000,
@@ -74,7 +74,10 @@ def test_getitem(create_prep_container):
     assert len(preps) == size
 
     for i in range(size):
-        assert preps[i] == preps[preps[i].address]
+        prep_by_index: 'PRep' = preps.get_by_index(i)
+        prep_by_address: 'PRep' = preps.get_by_address(prep_by_index.address)
+        assert prep_by_index == prep_by_address
+        assert id(prep_by_index) == id(prep_by_address)
 
 
 def test_remove(create_prep_container):
@@ -84,7 +87,7 @@ def test_remove(create_prep_container):
 
     for _ in range(50):
         i = random.randint(0, size-1)
-        prep = preps[i]
+        prep = preps.get_by_index(i)
         assert prep.address in preps
 
         removed_prep = preps.remove(prep.address)
@@ -101,11 +104,11 @@ def test_index(create_prep_container):
     assert len(preps) == size
 
     i = random.randint(0, size - 1)
-    prep = preps[i]
+    prep = preps.get_by_index(i)
 
     index: int = preps.index(prep.address)
     assert 0 <= index < size
-    assert prep == preps[index]
+    assert prep == preps.get_by_index(index)
 
 
 def test_freeze(create_prep_container):
@@ -116,7 +119,7 @@ def test_freeze(create_prep_container):
     preps.freeze()
 
     i = random.randint(0, size - 1)
-    prep = preps[i]
+    prep = preps.get_by_index(i)
 
     with pytest.raises(AccessDeniedException):
         address = Address.from_data(AddressPrefix.EOA, os.urandom(20))
@@ -124,20 +127,3 @@ def test_freeze(create_prep_container):
 
     with pytest.raises(AccessDeniedException):
         preps.remove(prep.address)
-
-
-
-
-def test_snapshot(create_prep_container):
-    size: int = 100
-    preps: 'PRepContainer' = create_prep_container(size)
-    assert len(preps) == size
-
-    preps.freeze()
-    assert preps.is_frozen()
-
-    snapshot: 'PRepContainer' = preps.get_snapshot()
-    assert isinstance(snapshot, PRepContainer)
-
-    for src_prep, dst_prep in zip(preps, snapshot):
-        assert id(src_prep) == id(dst_prep)
