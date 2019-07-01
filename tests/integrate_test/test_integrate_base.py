@@ -23,9 +23,10 @@ from unittest.mock import Mock
 
 from iconcommons import IconConfig
 
+from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_IISS, REV_DECENTRALIZATION
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse

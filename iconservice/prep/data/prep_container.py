@@ -214,7 +214,6 @@ class PRepContainer(object):
         :return:
         """
         prep: 'PRep' = self._active_prep_list.get(index)
-
         if not mutable:
             return prep
 
@@ -230,8 +229,7 @@ class PRepContainer(object):
         :return: The instance of a PRep which has a given address
         """
         prep: 'PRep' = self._active_prep_dict.get(address)
-
-        if not mutable:
+        if prep is None or not mutable:
             return prep
 
         self._check_access_permission()
