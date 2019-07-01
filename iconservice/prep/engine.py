@@ -306,7 +306,7 @@ class Engine(EngineBase, IISSEngineListener):
 
     def _set_irep_to_prep(self, context: 'IconScoreContext', irep: int, prep: 'PRep'):
         prev_prep: 'PRep' = prep
-        self._validate_irep(context, prep.irep, prev_prep)
+        self._validate_irep(context, irep, prev_prep)
 
         prep.set_irep(irep, context.block.height)
 
