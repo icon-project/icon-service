@@ -136,10 +136,13 @@ class IconScoreInnerTask(object):
         except IconServiceBaseException as icon_e:
             self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
-        except Exception as e:
+        except AssertionError as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
             self._close()
+        except Exception as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         finally:
             Logger.info(f'invoke response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()

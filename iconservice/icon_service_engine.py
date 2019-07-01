@@ -59,9 +59,9 @@ from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 from .utils.hashing.hash_generator import HashGenerator
+from .iconscore.icon_score_event_log import EventLog
 
 if TYPE_CHECKING:
-    from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
     from .prep.data import PRep, PRepContainer
