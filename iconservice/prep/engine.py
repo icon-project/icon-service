@@ -18,12 +18,12 @@ from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
 
-from .data.prep import PRep, PRepFlag
+from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP, IISS_MAX_DELEGATIONS
@@ -305,23 +305,29 @@ class Engine(EngineBase, IISSEngineListener):
         )
 
     def _set_irep_to_prep(self, context: 'IconScoreContext', irep: int, prep: 'PRep'):
-        prev_irep: int = prep.irep
-        self._validate_irep(context, prep.irep, prev_irep)
+        prev_prep: 'PRep' = prep
+        self._validate_irep(context, prep.irep, prev_prep)
 
         prep.set_irep(irep, context.block.height)
 
     @classmethod
-    def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_irep: int):
+    def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_prep: 'PRep'):
         """Validate irep
 
         :param context:
         :param irep:
-        :param prev_irep:
+        :param prev_prep:
         :return:
         """
         if not (IISS_MIN_IREP <= irep <= IISS_MAX_IREP):
             raise InvalidParamsException(f"Invalid irep: {irep}")
 
+        term: 'Term' = context.engine.prep.term
+        prev_irep = prev_prep.irep
+        prev_irep_updated_block_height = prev_prep.irep_block_height
+
+        if term.sequence != -1 and prev_irep_updated_block_height >= term.start_block_height:
+            raise InvalidRequestException("irep can only be changed once during the term.")
         min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
         max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
 
