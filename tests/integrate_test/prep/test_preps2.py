@@ -17,7 +17,7 @@
 """IconScoreEngine testcase
 """
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import InvalidParamsException
@@ -28,6 +28,7 @@ from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss import get_minimum_delegate_for_bottom_prep
 from tests import create_address
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test import create_register_prep_params
 
 if TYPE_CHECKING:
     from iconservice import Address
@@ -69,12 +70,9 @@ class TestIntegratePrep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict):
-
         data = deepcopy(data)
-        value: str = data[ConstantKeys.PUBLIC_KEY].hex()
-        data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.IREP])
-        data[ConstantKeys.IREP] = value
+        public_key: bytes = data[ConstantKeys.PUBLIC_KEY]
+        data[ConstantKeys.PUBLIC_KEY] = f"0x{public_key.hex()}"
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -87,6 +85,9 @@ class TestIntegratePrep(TestIntegrateBase):
         tx_list: list = []
 
         for address, data in bulk:
+            public_key: bytes = data[ConstantKeys.PUBLIC_KEY]
+            data[ConstantKeys.PUBLIC_KEY] = f"0x{public_key.hex()}"
+
             tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
             tx_list.append(tx)
 
@@ -267,15 +268,7 @@ class TestIntegratePrep(TestIntegrateBase):
         bulk: list = []
         preps = 3000
         for i in range(preps):
-            reg_data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode().hex(),
-                ConstantKeys.IREP: hex(IISS_MIN_IREP + i)
-            }
+            reg_data: dict = create_register_prep_params(i)
             bulk.append((create_address(), reg_data))
         self._reg_prep_bulk(bulk)
 
@@ -293,8 +286,7 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         with self.assertRaises(InvalidParamsException) as e:
-            response = self._query(query_request)
-        self.assertEqual("Invalid params: startRanking", e.exception.args[0])
+            self._query(query_request)
 
         query_request = {
             "version": self._version,
@@ -310,8 +302,7 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         with self.assertRaises(InvalidParamsException) as e:
-            response = self._query(query_request)
-        self.assertEqual("Invalid params: endRanking", e.exception.args[0])
+            self._query(query_request)
 
         query_request = {
             "version": self._version,
@@ -327,8 +318,7 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
         with self.assertRaises(InvalidParamsException) as e:
-            response = self._query(query_request)
-        self.assertEqual("Invalid params: reverse", e.exception.args[0])
+            self._query(query_request)
 
         query_request = {
             "version": self._version,
@@ -483,28 +473,25 @@ class TestIntegratePrep(TestIntegrateBase):
 
         self._update_governance()
         self._set_revision(REV_IISS)
-        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+        addresses: List['Address'] = [create_address() for _ in range(_PREPS_LEN)]
 
-        self._send_icx_in_loop(addr_array[0], _AMOUNT_DELEGATE * 10)
-        self._send_icx_in_loop(addr_array[1], _AMOUNT_DELEGATE * 10)
+        self._send_icx_in_loop(addresses[0], _AMOUNT_DELEGATE * 10)
+        self._send_icx_in_loop(addresses[1], _AMOUNT_DELEGATE * 10)
 
         buf_total_irep = 0
-        # generate preps
+        # Generate P-Reps
         for i in range(_PREPS_LEN):
             if i < PREP_MAIN_PREPS:
                 buf_total_irep += IISS_MIN_IREP + i
-            reg_data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
-            }
-            self._reg_prep(addr_array[i], reg_data)
+            reg_data: dict = create_register_prep_params(i)
+            self._reg_prep(addresses[i], reg_data)
 
-        from_addr_for_stake = [self._admin, addr_array[0], addr_array[1]]
+        # Update ireps for P-Reps
+        for i in range(PREP_MAIN_PREPS):
+            params = {ConstantKeys.IREP: IISS_MIN_IREP + i}
+            self._set_prep(addresses[i], params)
+
+        from_addr_for_stake: tuple = (self._admin, addresses[0], addresses[1])
 
         idx_for_stake = 10
         for idx, from_addr in enumerate(from_addr_for_stake):
@@ -515,7 +502,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 if i > 21:
                     break
                 delegations.append({
-                    "address": str(addr_array[i]),
+                    "address": str(addresses[i]),
                     "value": hex(_AMOUNT_DELEGATE)
                 })
             self._delegate(from_addr, delegations)

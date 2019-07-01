@@ -22,8 +22,9 @@ from copy import deepcopy
 from iconservice import Address
 from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS, ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS, IISS_MIN_IREP
-from tests import create_address, create_tx_hash
+from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS
+from tests import create_address
+from tests.integrate_test import create_register_prep_params
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -64,10 +65,7 @@ class TestIntegrateIISS(TestIntegrateBase):
     def _reg_prep(self, address: 'Address', data: dict):
 
         data = deepcopy(data)
-        value: str = data[ConstantKeys.PUBLIC_KEY].hex()
-        data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.IREP])
-        data[ConstantKeys.IREP] = value
+        data[ConstantKeys.PUBLIC_KEY] = data[ConstantKeys.PUBLIC_KEY].hex()
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -82,15 +80,7 @@ class TestIntegrateIISS(TestIntegrateBase):
 
         count = 200
         for i in range(count):
-            reg_data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"details{i}",
-                ConstantKeys.P2P_END_POINT: f"p2pEndPoint{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i,
-            }
+            reg_data: dict = create_register_prep_params(i)
             self._reg_prep(create_address(), reg_data)
 
         query_request = {
@@ -119,15 +109,7 @@ class TestIntegrateIISS(TestIntegrateBase):
 
         count = 5
         for i in range(count):
-            reg_data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP + i
-            }
+            reg_data: dict = create_register_prep_params(i)
             self._reg_prep(self._addr_array[i + 10], reg_data)
 
         # gain 10 icx (addr0 - 5)
@@ -167,7 +149,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                 }
             }
         }
-        response = self._query(query_request)
+        self._query(query_request)
 
         self._make_and_req_block([])
         self._make_and_req_block([])
