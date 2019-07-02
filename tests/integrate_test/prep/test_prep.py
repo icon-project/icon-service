@@ -134,7 +134,6 @@ class TestIntegratePrep(TestIntegrateBase):
 
         update_data: dict = {
             ConstantKeys.NAME: "banana",
-            ConstantKeys.IREP: 10_000,
         }
         self._set_prep(self._addr_array[0], update_data)
 
@@ -159,7 +158,6 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(reg_data[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
         self.assertEqual(reg_data[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
         self.assertEqual(reg_data[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(update_data[ConstantKeys.IREP], register[ConstantKeys.IREP])
 
     def test_unregister_prep(self):
         self._update_governance()

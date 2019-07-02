@@ -183,7 +183,5 @@ class TestIntegrateIISS(TestIntegrateBase):
         self.assertEqual(expected_response, response)
 
 
-
-
 if __name__ == '__main__':
     unittest.main()
