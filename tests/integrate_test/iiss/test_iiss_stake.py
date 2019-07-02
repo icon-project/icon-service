@@ -87,15 +87,12 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         # set stake 1 icx
         stake: int = 1 * 10 ** 18
         unstake: int = 0
-        unstake_block_height: int = 0
         total_stake = stake + unstake
 
         self._stake(self._addr_array[0], stake)
         actual_response: dict = self._get_stake(self._addr_array[0])
         expected_response = {
-            "stake": stake,
-            "unstake": unstake,
-            "unstakedBlockHeight": unstake_block_height
+            "stake": stake
         }
         self.assertEqual(expected_response, actual_response)
         remain_balance: int = balance - total_stake
@@ -104,16 +101,12 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
         # set stake 5 icx
         stake: int = 5 * 10 ** 18
-        unstake: int = 0
-        unstake_block_height: int = 0
         total_stake = stake + unstake
 
         self._stake(self._addr_array[0], stake)
         actual_response: dict = self._get_stake(self._addr_array[0])
         expected_response = {
             "stake": stake,
-            "unstake": unstake,
-            "unstakedBlockHeight": unstake_block_height
         }
         self.assertEqual(expected_response, actual_response)
         remain_balance: int = balance - total_stake
@@ -131,7 +124,7 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         expected_response = {
             "stake": stake,
             "unstake": unstake,
-            "unstakedBlockHeight": block_height + unstake_lock_period
+            "unstakeBlockHeight": block_height + unstake_lock_period
         }
         self.assertEqual(expected_response, actual_response)
         remain_balance: int = balance - total_stake
@@ -149,7 +142,7 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         expected_response = {
             "stake": stake,
             "unstake": unstake,
-            "unstakedBlockHeight": block_height + unstake_lock_period
+            "unstakeBlockHeight": block_height + unstake_lock_period
         }
         self.assertEqual(expected_response, actual_response)
         remain_balance: int = balance - total_stake
@@ -173,8 +166,6 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
         actual_response: dict = self._get_stake(self._addr_array[0])
         expected_response = {
-            "stake": 0,
-            "unstake": 0,
-            "unstakedBlockHeight": 0
+            "stake": 0
         }
         self.assertEqual(expected_response, actual_response)
