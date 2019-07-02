@@ -168,3 +168,18 @@ def test__setitem__(create_sorted_list):
     new_item1 = SortedItem(items[2].value)
     items[1] = new_item1
     assert items[1] == new_item1
+
+
+def test_append(create_sorted_list):
+    items = create_sorted_list(size=0)
+
+    for i in range(100):
+        item = SortedItem(value=i)
+        items.append(item)
+
+        assert item == items[len(items) - 1]
+
+    with pytest.raises(ValueError):
+        last_item: SortedItem = items[len(items) - 1]
+        item = SortedItem(value=last_item.value - 1)
+        items.append(item)

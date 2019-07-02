@@ -214,6 +214,8 @@ class Engine(EngineBase):
         if len(delegations) > IISS_MAX_DELEGATIONS:
             raise InvalidParamsException("Delegations out of range")
 
+        delegated_addresses: Dict['Address', int] = {}
+
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
         delegations: List[Dict[str, Union['Address', int]]] = \
             ret_params[ConstantKeys.DELEGATIONS]
@@ -225,10 +227,14 @@ class Engine(EngineBase):
             assert isinstance(address, Address)
             assert isinstance(value, int)
 
-            if value <= 0:
+            if value < 0:
                 raise InvalidParamsException(f"Invalid delegating amount: {value}")
 
+            if address in delegated_addresses:
+                raise InvalidParamsException(f"Duplicated address: {address}")
+
             delegation_list.append((address, value))
+            delegated_addresses[address] = 1
 
         return delegation_list
 
@@ -237,7 +243,9 @@ class Engine(EngineBase):
             context: 'IconScoreContext',
             delegating_address: 'Address',
             delegations: List[Tuple['Address', int]]) -> List['Account']:
+
         icx_storage: 'IcxStorage' = context.storage.icx
+
         account_dict: Dict['Address', Tuple['Account', int]] = OrderedDict()
         account_list = []
 
@@ -249,8 +257,17 @@ class Engine(EngineBase):
         if old_delegations:
             for address, delegated in old_delegations:
                 assert delegated > 0
-                account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+
+                if address == delegating_address:
+                    account: 'Account' = delegating_account
+                else:
+                    account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+
+                assert account.delegated_amount >= delegated
                 account_dict[address] = (account, -delegated)
+
+        # Update the delegation list of tx.sender
+        delegating_account.delegation_part.set_delegations(delegations)
 
         # Merge old and new delegations
         for address, delegated in delegations:
@@ -260,21 +277,24 @@ class Engine(EngineBase):
                 account, offset = account_dict[address]
                 offset += delegated
             else:
-                account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+                if address == delegating_address:
+                    account: 'Account' = delegating_account
+                else:
+                    account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
                 offset = delegated
 
             if offset != 0:
                 account_dict[address] = (account, offset)
 
-        # Save delegated accounts to stateDB
+        # Save delegating and delegated accounts to stateDB
         for address, (account, offset) in account_dict.items():
             account.delegation_part.delegated_amount += offset
             icx_storage.put_account(context, account)
             account_list.append(account)
 
         # Save delegating account to stateDB
-        delegating_account.delegation_part.set_delegations(delegations)
-        icx_storage.put_account(context, delegating_account)
+        if delegating_address not in account_dict:
+            icx_storage.put_account(context, delegating_account)
 
         return account_list
 
@@ -307,7 +327,7 @@ class Engine(EngineBase):
         :param params:
         :return:
         """
-        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_STAKE)
+        ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_DELEGATION)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
         return self._get_delegation(context, address)
 
@@ -437,7 +457,7 @@ class Engine(EngineBase):
     @classmethod
     def _put_gv(cls, context: 'IconScoreContext'):
         current_total_supply = context.storage.icx.get_total_supply(context)
-        current_total_prep_delegated = context.storage.iiss.get_total_prep_delegated(context)
+        current_total_prep_delegated: int = context.preps.total_prep_delegated
         reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
 
         reward_rep: int = IssueFormula.calculate_rrep(reward_prep.reward_min,

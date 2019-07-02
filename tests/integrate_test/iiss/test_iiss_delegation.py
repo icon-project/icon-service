@@ -17,10 +17,12 @@
 """IconScoreEngine testcase
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS
+from iconservice.iconscore.icon_score_result import TransactionResult
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
@@ -54,13 +56,15 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def _delegate(self, address: 'Address', delegations: list):
+    def _delegate(self, address: 'Address', delegations: list) -> List['TransactionResult']:
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
                                       'setDelegation',
                                       {"delegations": delegations})
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
+
+        return tx_results
 
     def _get_delegation(self, address: 'Address') -> dict:
         query_request = {
@@ -77,7 +81,7 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         }
         return self._query(query_request)
 
-    def test_iiss_overlap_delegations(self):
+    def test_iiss_delegations_with_duplicated_addresses(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
@@ -91,7 +95,7 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         stake: int = balance
         self._stake(self._addr_array[0], stake)
 
-        # delegation 1 icx to addr1
+        # delegate 1 icx to the same addr1 10 times in one request
         delegations: list = []
         delegation_amount: int = 1 * 10 ** 18
         for i in range(IISS_MAX_DELEGATIONS):
@@ -101,13 +105,21 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
             }
             delegations.append(delegation_info)
 
-        self._delegate(self._addr_array[0], delegations)
+        # setDelegation request will be failed due to duplicated addresses
+        tx_results = self._delegate(self._addr_array[0], delegations)
+        tx_result: 'TransactionResult' = tx_results[0]
+
+        assert len(tx_results) == 1
+        assert isinstance(tx_results, list)
+        assert isinstance(tx_result, TransactionResult)
+        assert tx_result.status == 0  # Failure
+        assert tx_result.failure.code == ExceptionCode.INVALID_PARAMETER
 
         response: dict = self._get_delegation(self._addr_array[0])
         delegations: list = response['delegations']
         total_delegated: int = response['totalDelegated']
-        self.assertEqual(1, len(delegations))
-        self.assertEqual(delegation_amount, total_delegated)
+        self.assertEqual(0, len(delegations))
+        self.assertEqual(0, total_delegated)
 
     def test_iiss_delegation(self):
         self._update_governance()
@@ -126,12 +138,17 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         # delegation 1 icx addr0 ~ addr9
         delegations: list = []
         delegation_amount: int = 1 * 10 ** 18
-        for i in range(IISS_MAX_DELEGATIONS):
+        total_delegating: int = 0
+
+        # for i in range(IISS_MAX_DELEGATIONS):
+        for i in range(1):
             delegation_info: dict = {
                 "address": str(self._addr_array[i]),
                 "value": hex(delegation_amount)
             }
             delegations.append(delegation_info)
+            total_delegating += delegation_amount
+
         self._delegate(self._addr_array[0], delegations)
 
         response: dict = self._get_delegation(self._addr_array[0])
@@ -145,17 +162,21 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
 
         expected_response = delegations
         self.assertEqual(expected_response, actual_response)
-        self.assertEqual(balance, response["totalDelegated"])
+        self.assertEqual(total_delegating, response["totalDelegated"])
 
         # other delegation 1 icx addr10 ~ addr19
         delegations: list = []
         delegation_amount: int = 1 * 10 ** 18
-        for i in range(IISS_MAX_DELEGATIONS):
+        total_delegating = 0
+
+        for i in range(1):
             delegation_info: dict = {
                 "address": str(self._addr_array[i + 10]),
                 "value": hex(delegation_amount)
             }
+            print(delegation_info)
             delegations.append(delegation_info)
+            total_delegating += delegation_amount
 
         self._delegate(self._addr_array[0], delegations)
 
@@ -170,5 +191,5 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
 
         expected_response = delegations
         self.assertEqual(expected_response, actual_response)
-        self.assertEqual(balance, response["totalDelegated"])
+        self.assertEqual(total_delegating, response["totalDelegated"])
 
