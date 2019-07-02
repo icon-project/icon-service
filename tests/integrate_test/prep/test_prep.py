@@ -210,21 +210,18 @@ class TestIntegratePrep(TestIntegrateBase):
             reg_data: dict = create_register_prep_params(i)
             self._reg_prep(self._addr_array[i], reg_data)
 
-        query_request = {
-            "version": self._version,
-            "from": self._addr_array[0],
-            "to": ZERO_SCORE_ADDRESS,
-            "dataType": "call",
-            "data": {
-                "method": "getPRepList",
-                "params": {
-                    "address": str(self._addr_array[0])
+            query_request = {
+                "version": self._version,
+                "from": self._addr_array[i],
+                "to": ZERO_SCORE_ADDRESS,
+                "dataType": "call",
+                "data": {
+                    "method": "getPRepList"
                 }
             }
-        }
-        response = self._query(query_request)
-        total_delegated: int = response['totalDelegated']
-        prep_list: list = response['preps']
+            response = self._query(query_request)
+            total_delegated: int = response['totalDelegated']
+            prep_list: list = response['preps']
 
-        self.assertEqual(0, total_delegated)
-        self.assertEqual(10, len(prep_list))
+            self.assertEqual(0, total_delegated)
+            self.assertEqual(i+1, len(prep_list))
