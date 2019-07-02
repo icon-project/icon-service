@@ -32,10 +32,10 @@ class PRepContainer(object):
     PRep objects are sorted in descending order by delegated amount.
     """
 
-    def __init__(self, flags: PRepFlag = PRepFlag.NONE):
+    def __init__(self, flags: PRepFlag = PRepFlag.NONE, total_prep_delegated: int = 0):
         self._flags: 'PRepFlag' = flags
         # Total amount of delegated which all active P-Reps have
-        self._total_prep_delegated: int = 0
+        self._total_prep_delegated: int = total_prep_delegated
         self._active_prep_dict = {}
         self._active_prep_list = SortedList()
         self._inactive_prep_dict = {}
@@ -278,8 +278,14 @@ class PRepContainer(object):
 
         return index
 
-    def copy(self, flags: 'PRepFlag') -> 'PRepContainer':
-        preps = PRepContainer(flags)
+    def copy(self, mutable: bool) -> 'PRepContainer':
+        """Copy PRepContainer without changing PRep objects
+
+        :param mutable:
+        :return:
+        """
+        flags: 'PRepFlag' = PRepFlag.NONE if mutable else PRepFlag.FROZEN
+        preps = PRepContainer(flags, self._total_prep_delegated)
 
         preps._active_prep_dict.update(self._active_prep_dict)
         preps._active_prep_list.extend(self._active_prep_list)

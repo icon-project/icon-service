@@ -208,3 +208,25 @@ def test_total_prep_delegated(create_prep_container):
         preps.set_delegated_to_prep(prep.address, new_delegated)
         assert prep.delegated == new_delegated
         assert preps.total_prep_delegated == expected_total_prep_delegated
+
+
+def test_copy(create_prep_container):
+    size: int = 20
+    preps: 'PRepContainer' = create_prep_container(size)
+
+    for mutable in (True, False):
+        copied_preps: 'PRepContainer' = preps.copy(mutable)
+        assert preps.total_prep_delegated == copied_preps.total_prep_delegated
+
+        assert len(preps._active_prep_list) == len(copied_preps._active_prep_list)
+        assert len(preps._active_prep_dict) == len(copied_preps._active_prep_dict)
+        assert len(preps._inactive_prep_dict) == len(copied_preps._inactive_prep_dict)
+
+        for prep, prep2 in zip(preps._active_prep_list, copied_preps._active_prep_list):
+            assert id(prep) == id(prep2)
+
+        for prep, prep2 in zip(preps._active_prep_dict, copied_preps._active_prep_dict):
+            assert id(prep) == id(prep2)
+
+        for prep, prep2 in zip(preps._inactive_prep_dict, preps._inactive_prep_dict):
+            assert id(prep) == id(prep2)

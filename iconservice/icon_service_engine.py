@@ -409,7 +409,7 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
-        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
 
         self._set_revision_to_context(context)
         block_result = []
