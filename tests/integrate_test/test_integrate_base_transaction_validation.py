@@ -408,6 +408,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         # should be corrected on calc period.
         calc_period = 10
         calc_point = calc_period
+        expected_sequence = 0
 
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
@@ -479,7 +480,24 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                 self.assertEqual(expected_issue_amount - cumulative_fee - expected_diff_in_calc_period,
                                  actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+
+                actual_sequence = tx_results[0].event_logs[2].data[0]
+                actual_start_block = tx_results[0].event_logs[2].data[1]
+                actual_end_block = tx_results[0].event_logs[2].data[2]
+                self.assertEqual(expected_sequence, actual_sequence)
+                self.assertEqual(prev_block._height, actual_start_block)
+                self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
+                expected_sequence += 1
+
                 calc_point += calc_period
+            elif x == calc_point - calc_period + 1:
+                actual_sequence = tx_results[0].event_logs[2].data[0]
+                actual_start_block = tx_results[0].event_logs[2].data[1]
+                actual_end_block = tx_results[0].event_logs[2].data[2]
+                self.assertEqual(expected_sequence, actual_sequence)
+                self.assertEqual(prev_block._height, actual_start_block)
+                self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
+                expected_sequence += 1
             else:
                 self.assertEqual(cumulative_fee, actual_covered_by_fee)
                 self.assertEqual(0, actual_covered_by_remain)
