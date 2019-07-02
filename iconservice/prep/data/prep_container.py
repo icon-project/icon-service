@@ -23,7 +23,6 @@ from .sorted_list import SortedList
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
 from ...iconscore.icon_score_context import IconScoreContext
-from ...utils import toggle_flags
 
 
 class PRepContainer(object):
@@ -35,6 +34,8 @@ class PRepContainer(object):
 
     def __init__(self, flags: PRepFlag = PRepFlag.NONE):
         self._flags: 'PRepFlag' = flags
+        # Total amount of delegated which all active P-Reps have
+        self._total_prep_delegated: int = 0
         self._active_prep_dict = {}
         self._active_prep_list = SortedList()
         self._inactive_prep_dict = {}
@@ -45,16 +46,30 @@ class PRepContainer(object):
     def is_flag_on(self, flags: 'PRepFlag') -> bool:
         return (self._flags & flags) == flags
 
+    @property
+    def total_prep_delegated(self) -> int:
+        """Returns total amount of delegated which all active P-Reps have
+
+        :return:
+        """
+        assert self._total_prep_delegated >= 0
+        return self._total_prep_delegated
+
     def load(self, context: 'IconScoreContext'):
-        """Load P-Rep list from StateDB on startup
+        """Load active and inactive P-Rep list from StateDB on startup
 
         :param context:
         :return:
         """
         for prep in context.storage.prep.get_prep_iterator():
-            self._active_prep_dict[prep.address] = prep
             if prep.status == PRepStatus.ACTIVE:
+                self._active_prep_dict[prep.address] = prep
                 self._active_prep_list.add(prep)
+
+                self._total_prep_delegated += prep.delegated
+                assert self._total_prep_delegated >= 0
+            else:
+                self._inactive_prep_dict[prep.address] = prep
 
             prep.freeze()
 
@@ -91,26 +106,13 @@ class PRepContainer(object):
         self._active_prep_dict[prep.address] = prep
         self._active_prep_list.add(prep)
 
+        # Update self._total_prep_delegated
+        self._total_prep_delegated += prep.delegated
+        assert self._total_prep_delegated >= 0
+
         self._flags |= PRepFlag.DIRTY
 
         assert len(self._active_prep_dict) == len(self._active_prep_list)
-
-    def replace(self, prep: 'PRep'):
-        assert prep.status == PRepStatus.ACTIVE
-
-        self._check_access_permission()
-
-        old_prep: 'PRep' = self._active_prep_dict.get(prep.address)
-        if old_prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {str(prep.address)}")
-
-        if id(old_prep) == id(prep):
-            return
-
-        self._active_prep_list.remove(old_prep)
-
-        self._active_prep_dict[prep.address] = prep
-        self._active_prep_list.add(prep)
 
     def remove(self,
                address: 'Address',
@@ -129,49 +131,20 @@ class PRepContainer(object):
         self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)
-        assert prep.status == PRepStatus.ACTIVE
+        if prep is None:
+            raise InvalidParamsException("P-Rep not found")
 
         self._active_prep_list.remove(prep)
         del self._active_prep_dict[address]
+        assert len(self._active_prep_dict) == len(self._active_prep_list)
 
         prep.status = status
         self._inactive_prep_dict[address] = prep
 
-        assert len(self._active_prep_dict) == len(self._active_prep_list)
+        self._total_prep_delegated -= prep.delegated
+        assert self._total_prep_delegated >= 0
+
         return prep
-
-    def set_to_prep(self, address: 'Address', **kwargs):
-        """Update P-Rep properties from setPRep JSON-RP API
-
-        :param address:
-        :param kwargs:
-        :return:
-        """
-        Logger.debug(tag="PREP", msg=f"set_to_prep() start: address({address}) kwargs({kwargs})")
-
-        assert isinstance(address, Address)
-
-        self._check_access_permission()
-
-        prep: 'PRep' = self._active_prep_dict.get(address)
-        if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
-
-        if prep.is_frozen():
-            self._active_prep_list.remove(prep)
-
-            # copy on write
-            new_prep: 'PRep' = prep.copy(PRepFlag.NONE)
-            new_prep.set(**kwargs)
-
-            self._active_prep_dict[new_prep.address] = new_prep
-            self._active_prep_list.add(new_prep)
-        else:
-            prep.set(**kwargs)
-
-        toggle_flags(self._flags, PRepFlag.DIRTY, True)
-
-        Logger.debug(tag="PREP", msg=f"set_to_prep() end")
 
     def set_delegated_to_prep(self, address: 'Address', delegated: int):
         """Update the delegated amount of P-Rep, sorting the P-Rep in ascending order by prep.order()
@@ -196,7 +169,11 @@ class PRepContainer(object):
             prep: 'PRep' = prep.copy(PRepFlag.NONE)
             self._active_prep_dict[address] = prep
 
+        self._total_prep_delegated += delegated - prep.delegated
+        assert self._total_prep_delegated >= 0
+
         prep.delegated = delegated
+
         self._active_prep_list.add(prep)
 
     def __contains__(self, address: 'Address') -> bool:
@@ -236,13 +213,11 @@ class PRepContainer(object):
         :param mutable:
         :return:
         """
-        prep = self._active_prep_list.get(index)
-
+        prep: 'PRep' = self._active_prep_list.get(index)
         if not mutable:
             return prep
 
         self._check_access_permission()
-        prep = self._active_prep_list.get(index)
 
         return self._get_mutable_prep(index, prep)
 
@@ -254,8 +229,7 @@ class PRepContainer(object):
         :return: The instance of a PRep which has a given address
         """
         prep: 'PRep' = self._active_prep_dict.get(address)
-
-        if not mutable:
+        if prep is None or not mutable:
             return prep
 
         self._check_access_permission()

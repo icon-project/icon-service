@@ -7,6 +7,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import os
 from shutil import rmtree
 from time import time
@@ -31,16 +32,18 @@ def create_timestamp():
     return int(time() * 10 ** 6)
 
 
-def create_random_public_key() -> bytes:
-    return b"\x04" + os.urandom(64)
+def create_dummy_public_key(data: bytes) -> bytes:
+    return b"\x04" + hashlib.sha3_512(data).digest()
 
 
 def create_register_prep_params(index: int) -> Dict[str, Union[str, bytes]]:
+    name = f"node{index}"
+
     return {
-        ConstantKeys.NAME: f"node{index}",
+        ConstantKeys.NAME: name,
         ConstantKeys.EMAIL: f"node{index}@example.com",
         ConstantKeys.WEBSITE: f"https://node{index}.example.com",
         ConstantKeys.DETAILS: f"https://node{index}.example.com/details",
         ConstantKeys.P2P_END_POINT: f"https://node{index}.example.com:7100",
-        ConstantKeys.PUBLIC_KEY: create_random_public_key()
+        ConstantKeys.PUBLIC_KEY: create_dummy_public_key(name.encode())
     }

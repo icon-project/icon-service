@@ -136,14 +136,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         # register preps
         for i, address in enumerate(main_preps):
-            data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-            }
+            data: dict = create_register_prep_params(index=i)
             self._reg_prep(address, data)
 
         # delegate
@@ -232,14 +225,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self._set_revision(REV_IISS)
 
         for i in range(10):
-            reg_data: dict = {
-                ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-            }
+            reg_data: dict = create_register_prep_params(index=i)
             self._reg_prep(self._addr_array[i], reg_data)
 
         query_request = {
@@ -635,14 +621,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 prev_block_validators=[addr_array[1], addr_array[2]])
             self._write_precommit_state(prev_block)
 
-        data: dict = {
-            ConstantKeys.NAME: "name0",
-            ConstantKeys.EMAIL: "email0",
-            ConstantKeys.WEBSITE: "website0",
-            ConstantKeys.DETAILS: "json0",
-            ConstantKeys.P2P_END_POINT: "ip0",
-            ConstantKeys.PUBLIC_KEY: f'publicKey0'.encode(),
-        }
+        data: dict = create_register_prep_params(index=0)
 
         expected_response: dict = data
         response: dict = self._get_prep(addr_array[0])
@@ -721,14 +700,7 @@ class TestIntegratePrep(TestIntegrateBase):
                 prev_block_validators=[addr_array[1], addr_array[2]])
             self._write_precommit_state(prev_block)
 
-        data: dict = {
-            ConstantKeys.NAME: "name0",
-            ConstantKeys.EMAIL: "email0",
-            ConstantKeys.WEBSITE: "website0",
-            ConstantKeys.DETAILS: "json0",
-            ConstantKeys.P2P_END_POINT: "ip0",
-            ConstantKeys.PUBLIC_KEY: f'publicKey0'.encode(),
-        }
+        data: dict = create_register_prep_params(index=0)
 
         expected_response: dict = data
         response: dict = self._get_prep(addr_array[0])
