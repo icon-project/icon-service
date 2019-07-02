@@ -184,14 +184,13 @@ class TestIntegrateIISS(TestIntegrateBase):
         }
         self.assertEqual(expected_response, response)
 
-    def test_delegate4(self):
+    def test_delegate3(self):
         self._update_governance()
         self._set_revision(REV_IISS)
 
         init_balance: int = 100
         init_account_count: int = 2
 
-        # gain 10 icx
         tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[0], init_balance)
         tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[1], init_balance)
         prev_block, tx_results = self._make_and_req_block([tx1, tx2])
@@ -216,15 +215,15 @@ class TestIntegrateIISS(TestIntegrateBase):
         delegations.append(delegation_info)
         self._delegate(self._addr_array[0], delegations)
 
-        # set delegate 1
+        # set delegate 0 again
         delegations: list = []
         delegation_amount: int = init_balance // 2
         delegation_info: dict = {
-            "address": str(self._addr_array[1]),
+            "address": str(self._addr_array[0]),
             "value": hex(delegation_amount)
         }
         delegations.append(delegation_info)
-        self._delegate(self._addr_array[1], delegations)
+        self._delegate(self._addr_array[0], delegations)
 
 
 if __name__ == '__main__':
