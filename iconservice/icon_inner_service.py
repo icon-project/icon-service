@@ -107,7 +107,7 @@ class IconScoreInnerTask(object):
 
             converted_tx_requests = params['transactions']
 
-            converted_is_block_editable = params.get('isBlockEditable')
+            converted_is_block_editable = params.get('isBlockEditable', False)
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
 

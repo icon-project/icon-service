@@ -22,12 +22,12 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix,
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBlockException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
-    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, IISS_MIN_IREP
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
+    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
+from iconservice.prep.data import PRepFlag
 from tests import create_address, create_block_hash
 from tests.integrate_test import create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
@@ -54,8 +54,6 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.IREP])
-        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -89,7 +87,6 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP
             }
             self._reg_prep(address, data)
 
@@ -148,6 +145,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
     def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
         issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
         block_height: int = self._block_height
         block_hash = create_block_hash()
@@ -165,6 +163,23 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         return self.icon_service_engine.formatting_transaction("base", issue_data, context.block.timestamp)
 
+    def _set_prep(self, address: 'Address', data: dict, _revision: int = REV_IISS):
+
+        data = deepcopy(data)
+        value = data.get(ConstantKeys.IREP)
+        if value:
+            data[ConstantKeys.IREP] = hex(value)
+
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_result: 'TransactionResult' = tx_results[0]
+
+        self.assertEqual(1, tx_result.status)
+        self.assertEqual('PRepSet(Address)', tx_result.event_logs[0].indexed[0])
+        self.assertEqual(address, tx_result.event_logs[0].data[0])
+        self._write_precommit_state(prev_block)
+
     def setUp(self):
         _PREPS_LEN = 30
         _MAIN_PREPS_LEN = 22
@@ -172,7 +187,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-        default_icon_config[ConfigKey.IREP] = 100_000_000_000
+        # default_icon_config[ConfigKey.IREP] = 100_000_000_000
         super().setUp()
         self._update_governance()
         self._set_revision(REV_IISS)
@@ -183,10 +198,9 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
-        delegate_amount = total_supply * 3 // 1000
+        delegate_amount = total_supply * 2 // 1000
 
         # generate preps
-
         self._decentralize(addr_array, delegate_amount)
 
         response = self._get_prep_list()
@@ -195,11 +209,19 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         self.assertEqual(delegate_amount * 22, total_delegated)
         self.assertEqual(_PREPS_LEN, len(prep_list))
+        #
+        # for prep in addr_array:
+        #     update_data: dict = {
+        #         ConstantKeys.IREP: 30_000 * ICX_IN_LOOP
+        #     }
+        #     self._set_prep(prep, update_data)
 
         self._set_revision(REV_DECENTRALIZATION)
 
         # todo: if get_issue_info is redundant, should fix this method
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+
         self.issue_data, self.total_issue_amount = IconScoreContext.engine.issue.create_icx_issue_info(context)
         # self.total_issue_amount = 0
         # for group_dict in self.issue_data.values():
@@ -412,11 +434,11 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
-        first_expected_issue_amount = 669710806697108
+        first_expected_issue_amount = 1741314053779807091
         calculate_response_iscore = \
             first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
-        expected_issue_amount = 579299847792998
+        expected_issue_amount = 1741272754946727436
         calculate_response_iscore_after_first_period = \
             expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
@@ -434,8 +456,8 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         ]
         for x in range(1, 11):
 
-            copyed_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
+            copied_tx_list = deepcopy(tx_list)
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copied_tx_list,
                                                                              is_block_editable=True,
                                                                              cumulative_fee=cumulative_fee)
             issue_amount = tx_results[0].event_logs[0].data[3]
@@ -450,6 +472,14 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                 self.assertEqual(0, actual_covered_by_remain)
                 self.assertEqual(first_expected_issue_amount, actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+
+                actual_sequence = tx_results[0].event_logs[2].data[0]
+                actual_start_block = tx_results[0].event_logs[2].data[1]
+                actual_end_block = tx_results[0].event_logs[2].data[2]
+                self.assertEqual(expected_sequence, actual_sequence)
+                self.assertEqual(prev_block._height, actual_start_block)
+                self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
+                expected_sequence += 1
             elif x == calc_point:
                 calc_point += calc_period
             else:
@@ -463,8 +493,8 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         calculate_response_iscore = calculate_response_iscore_after_first_period
 
         for x in range(11, 51):
-            copyed_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
+            copied_tx_list = deepcopy(tx_list)
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copied_tx_list,
                                                                              is_block_editable=True,
                                                                              cumulative_fee=cumulative_fee)
             issue_amount = tx_results[0].event_logs[0].data[3]
@@ -480,15 +510,6 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                 self.assertEqual(expected_issue_amount - cumulative_fee - expected_diff_in_calc_period,
                                  actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
-
-                actual_sequence = tx_results[0].event_logs[2].data[0]
-                actual_start_block = tx_results[0].event_logs[2].data[1]
-                actual_end_block = tx_results[0].event_logs[2].data[2]
-                self.assertEqual(expected_sequence, actual_sequence)
-                self.assertEqual(prev_block._height, actual_start_block)
-                self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
-                expected_sequence += 1
-
                 calc_point += calc_period
             elif x == calc_point - calc_period + 1:
                 actual_sequence = tx_results[0].event_logs[2].data[0]
