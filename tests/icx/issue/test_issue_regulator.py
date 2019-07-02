@@ -14,13 +14,17 @@
 # limitations under the License.
 
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
+from iconservice.base.block import Block
+from iconservice.base.exception import AccessDeniedException
 from iconservice.database.db import ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.icx.issue.storage import RegulatorVariable
+from tests import create_block_hash
+from tests.integrate_test import create_timestamp
 
 
 def create_context_db():
@@ -276,7 +280,6 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
         prev_calc_period_issued_icx = 0
         prev_calc_period_issued_iscore = 0
-        #current_calc_period_issued_icx = 50_000
 
         # context = self.direct_context
 
@@ -436,3 +439,81 @@ class TestIssueRegulator:
         assert covered_icx_by_fee == 0
         assert corrected_icx_issue_amount == icx_issue_amount
         assert remain_over_issued_iscore == 0
+
+    def _create_dummy_block_by_height(self, height: int):
+        block_hash = create_block_hash()
+        prev_block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+        return Block(height, block_hash, timestamp_us, prev_block_hash, 0)
+
+    @patch('iconservice.iconscore.icon_score_context.IconScoreContext.storage')
+    def test_set_corrected_issue_data_with_in_period(self,
+                                                     mocked_context_storage):
+
+        # create dummy block
+        block_height = 5
+        block = self._create_dummy_block_by_height(block_height)
+        self.invoke_context.block = block
+
+        # set regulator_variable
+        over_issued_i_score = 0
+        current_calc_preiod_issued_icx = 50_000
+        prev_calc_period_issued_icx = 5_000
+        rv = RegulatorVariable(current_calc_preiod_issued_icx,
+                               prev_calc_period_issued_icx,
+                               over_issued_i_score)
+        cumulative_fee = 0
+        issue_amount = 10_000
+        mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
+        mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height - 1)
+        mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
+        self.issue_regulator.set_corrected_issue_data(self.invoke_context, issue_amount)
+
+        actual_current_icx = self.issue_regulator._regulator_variable.current_calc_period_issued_icx
+        actual_prev_icx = self.issue_regulator._regulator_variable.prev_calc_period_issued_icx
+        assert actual_current_icx == issue_amount + current_calc_preiod_issued_icx
+        assert actual_prev_icx == prev_calc_period_issued_icx
+
+    @patch('iconservice.iconscore.icon_score_context.IconScoreContext.storage')
+    def test_set_corrected_issue_data_end_of_period(self,
+                                                    mocked_context_storage):
+
+        # create dummy block
+        block_height = 5
+        block = self._create_dummy_block_by_height(block_height)
+        self.invoke_context.block = block
+
+        # set regulator_variable
+        over_issued_i_score = 0
+        current_calc_preiod_issued_icx = 50_000
+        prev_calc_period_issued_icx = 5_000
+        rv = RegulatorVariable(current_calc_preiod_issued_icx,
+                               prev_calc_period_issued_icx,
+                               over_issued_i_score)
+        cumulative_fee = 0
+        issue_amount = 10_000
+        mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
+        mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
+        mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
+        mocked_context_storage.rc.get_prev_calc_period_issued_iscore = Mock(return_value=0)
+        self.issue_regulator.set_corrected_issue_data(self.invoke_context, issue_amount)
+
+        actual_current_icx = self.issue_regulator._regulator_variable.current_calc_period_issued_icx
+        actual_prev_icx = self.issue_regulator._regulator_variable.prev_calc_period_issued_icx
+        assert actual_current_icx == 0
+        assert actual_prev_icx == issue_amount + current_calc_preiod_issued_icx
+
+    def test_regulator_none_set_variable(self):
+        with pytest.raises(AccessDeniedException):
+            _ = self.issue_regulator.covered_icx_by_fee
+
+        with pytest.raises(AccessDeniedException):
+            _ = self.issue_regulator.covered_icx_by_fee
+
+        with pytest.raises(AccessDeniedException):
+            _ = self.issue_regulator.remain_over_issued_icx
+
+        with pytest.raises(AccessDeniedException):
+            _ = self.issue_regulator.corrected_icx_issue_amount
+
+

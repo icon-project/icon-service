@@ -419,7 +419,7 @@ class IconServiceEngine(ContextContainer):
             # todo: need to be refactoring (duplicated codes)
             issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
-            regulator.set_issue_info_about_correction(context, total_issue_amount)
+            regulator.set_corrected_issue_data(context, total_issue_amount)
 
             issue_data["result"] = {
                 "coveredByFee": regulator.covered_icx_by_fee,
@@ -699,7 +699,7 @@ class IconServiceEngine(ContextContainer):
         if not is_block_editable and self._is_decentralized(context):
             issue_data_in_db, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
             regulator = Regulator()
-            regulator.set_issue_info_about_correction(context, total_issue_amount)
+            regulator.set_corrected_issue_data(context, total_issue_amount)
 
             issue_data_in_db["result"] = {
                 "coveredByFee": regulator.covered_icx_by_fee,

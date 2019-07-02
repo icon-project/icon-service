@@ -146,7 +146,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
     def _make_dummy_tx(self):
         return self._make_icx_send_tx(self._genesis, create_address(), 1)
 
-    def _make_base_transaction(self):
+    def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
         issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
         block_height: int = self._block_height
@@ -155,7 +155,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context.block = block
         regulator = Regulator()
-        regulator.set_issue_info_about_correction(context, total_issue_amount)
+        regulator.set_corrected_issue_data(context, total_issue_amount)
 
         issue_data["result"] = {
             "coveredByFee": regulator.covered_icx_by_fee,
@@ -304,7 +304,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         before_total_supply = self._query({}, "icx_getTotalSupply")
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
-        base_transaction = self._make_base_transaction()
+        base_transaction = self._create_base_transaction()
         print(base_transaction)
 
         tx_list = [
@@ -363,7 +363,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         # case of isBlockEditable is False
         before_total_supply = self._query({}, "icx_getTotalSupply")
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
-        base_transaction = self._make_base_transaction()
+        base_transaction = self._create_base_transaction()
 
         tx_list = [
             base_transaction,
@@ -404,7 +404,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         self.assertEqual(before_treasury_icx_amount + self.total_issue_amount, after_treasury_icx_amount)
 
     def test_validate_base_transaction_value_corrected_issue_amount(self):
-        # success case: when iconservice over issued 10 icx than reward carc, icx issue amount
+        # success case: when icon service over issued 10 icx than reward carc, icx issue amount
         # should be corrected on calc period.
         calc_period = 10
         calc_point = calc_period
