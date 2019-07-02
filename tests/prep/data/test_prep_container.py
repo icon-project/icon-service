@@ -14,41 +14,46 @@
 # limitations under the License.
 
 import os
-import hashlib
 import random
 from typing import Optional
 
 import pytest
 
 from iconservice.base.address import Address, AddressPrefix
-from iconservice.prep.data import PRep, PRepContainer
 from iconservice.base.exception import AccessDeniedException
+from iconservice.prep.data import PRep, PRepContainer
+
+
+def _create_dummy_prep(index: int) -> 'PRep':
+    address = Address(AddressPrefix.EOA, os.urandom(20))
+    public_key: bytes = b"\x04" + os.urandom(64)
+
+    return PRep(
+        address=address,
+        name=f"node{index}",
+        email=f"node{index}@example.com",
+        website=f"https://node{index}.example.com",
+        details=f"https://node{index}.example.com/details",
+        p2p_end_point=f"https://node{index}.example.com:7100",
+        public_key=public_key,
+        delegated=random.randint(0, 1000),
+        irep=10_000,
+        irep_block_height=index,
+        block_height=index
+    )
 
 
 @pytest.fixture
-def create_prep_container():
+def create_prep_container() -> callable:
 
-    def _create_prep_container(size: int = 100):
+    def _create_prep_container(size: int = 100) -> 'PRepContainer':
         preps = PRepContainer()
 
         for i in range(size):
-            address = Address(AddressPrefix.EOA, os.urandom(20))
-            prep = PRep(
-                address=address,
-                name=f"node{i}",
-                email=f"node{i}@example.com",
-                website=f"https://node{i}.example.com",
-                details=f"https://node{i}.example.com/details",
-                p2p_end_point=f"https://node{i}.example.com:7100",
-                public_key=hashlib.sha3_256(address.to_bytes()).digest(),
-                delegated=random.randint(0, 1000),
-                irep=10_000,
-                irep_block_height=i,
-                block_height=i
-            )
-
+            prep = _create_dummy_prep(i)
             preps.add(prep)
 
+        assert len(preps) == size
         return preps
 
     return _create_prep_container
@@ -57,7 +62,6 @@ def create_prep_container():
 def test_add(create_prep_container):
     size: int = 100
     preps = create_prep_container(size)
-    assert len(preps) == size
 
     prev_prep: Optional['PRep'] = None
     for prep in preps:
@@ -71,7 +75,6 @@ def test_add(create_prep_container):
 def test_getitem(create_prep_container):
     size: int = 100
     preps = create_prep_container(size)
-    assert len(preps) == size
 
     for i in range(size):
         prep_by_index: 'PRep' = preps.get_by_index(i)
@@ -80,10 +83,46 @@ def test_getitem(create_prep_container):
         assert id(prep_by_index) == id(prep_by_address)
 
 
+def test_get_by_address_with_non_existing_address(create_prep_container):
+    size = 10
+    preps = create_prep_container(size)
+
+    index: int = random.randint(0, size - 1)
+    prep: 'PRep' = preps.get_by_index(index)
+    assert isinstance(prep, PRep)
+
+    removed_prep = preps.remove(prep.address)
+
+    prep = preps.get_by_address(removed_prep.address, mutable=False)
+    assert prep is None
+
+    prep = preps.get_by_address(removed_prep.address, mutable=True)
+    assert prep is None
+
+
+def test_get_by_index(create_prep_container):
+    size = 10
+    preps = create_prep_container(size)
+
+    index: int = random.randint(0, size - 1)
+    prep: 'PRep' = preps.get_by_index(index)
+    assert isinstance(prep, PRep)
+
+    prep = preps.get_by_index(size, mutable=False)
+    assert prep is None
+
+    prep = preps.get_by_index(size, mutable=True)
+    assert prep is None
+
+    for i in range(1, size + 1):
+        prep = preps.get_by_index(-i)
+        assert prep is not None
+        assert prep == preps.get_by_index(size - i)
+
+
 def test_remove(create_prep_container):
     size: int = 100
     preps = create_prep_container(size)
-    assert len(preps) == size
 
     for _ in range(50):
         i = random.randint(0, size-1)
@@ -96,12 +135,13 @@ def test_remove(create_prep_container):
         assert prep == removed_prep
         assert prep.address not in preps
         assert len(preps) == size
+        assert removed_prep.address not in preps
+        assert preps.contains(removed_prep.address, inactive_preps_included=True)
 
 
 def test_index(create_prep_container):
     size: int = 100
     preps = create_prep_container(size)
-    assert len(preps) == size
 
     i = random.randint(0, size - 1)
     prep = preps.get_by_index(i)
@@ -114,7 +154,6 @@ def test_index(create_prep_container):
 def test_freeze(create_prep_container):
     size: int = 100
     preps: 'PRepContainer' = create_prep_container(size)
-    assert len(preps) == size
 
     preps.freeze()
 
@@ -127,3 +166,45 @@ def test_freeze(create_prep_container):
 
     with pytest.raises(AccessDeniedException):
         preps.remove(prep.address)
+
+
+def test_total_prep_delegated(create_prep_container):
+    size: int = 51
+    preps: 'PRepContainer' = create_prep_container(size)
+
+    total_delegated: int = 0
+    for prep in preps:
+        total_delegated += prep.delegated
+
+    assert total_delegated == preps.total_prep_delegated
+
+    # Case: remove a P-Rep
+    for _ in range(size // 2):
+        index: int = random.randint(0, len(preps) - 1)
+        prep: 'PRep' = preps.get_by_index(index)
+
+        expected_total_prep_delegated: int = preps.total_prep_delegated - prep.delegated
+        preps.remove(prep.address)
+        assert preps.total_prep_delegated == expected_total_prep_delegated
+
+    # Case: add a P-Rep
+    for _ in range(size // 2):
+        index: int = len(preps)
+        new_prep: 'PRep' = _create_dummy_prep(index)
+
+        expected_total_prep_delegated: int = preps.total_prep_delegated + new_prep.delegated
+        preps.add(new_prep)
+        assert preps.total_prep_delegated == expected_total_prep_delegated
+
+    assert len(preps) == size
+
+    # Case: change delegated amount of an existing P-Rep
+    for i in range(size):
+        prep: 'PRep' = preps.get_by_index(i)
+        new_delegated: int = random.randint(0, 5000)
+
+        expected_total_prep_delegated: int = \
+            preps.total_prep_delegated - prep.delegated + new_delegated
+        preps.set_delegated_to_prep(prep.address, new_delegated)
+        assert prep.delegated == new_delegated
+        assert preps.total_prep_delegated == expected_total_prep_delegated

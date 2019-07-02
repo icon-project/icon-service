@@ -76,6 +76,7 @@ class Storage(StorageBase):
         if value:
             data: list = MsgPackForDB.loads(value)
             version: int = data[0]
+            assert version == 0
             calc_block_height: int = data[1]
             return calc_block_height
         return None
@@ -91,24 +92,10 @@ class Storage(StorageBase):
         if value:
             data: list = MsgPackForDB.loads(value)
             version: int = data[0]
+            assert version == 0
             calc_period: int = data[1]
             return calc_period
         return None
-
-    def put_total_prep_delegated(self, context: 'IconScoreContext', total_prep_delegated: int):
-        version = 0
-        data: list = [version, total_prep_delegated]
-        value: bytes = MsgPackForDB.dumps(data)
-        self._db.put(context, self.TOTAL_PREP_DELEGATED_KEY, value)
-
-    def get_total_prep_delegated(self, context: 'IconScoreContext') -> int:
-        value: bytes = self._db.get(context, self.TOTAL_PREP_DELEGATED_KEY)
-        if value:
-            data: list = MsgPackForDB.loads(value)
-            version: int = data[0]
-            total_prep_delegated: int = data[1]
-            return total_prep_delegated
-        return 0
 
     def put_unstake_lock_period(self, context: 'IconScoreContext', unstake_lock_period: int):
         version = 0
@@ -120,6 +107,7 @@ class Storage(StorageBase):
         if value:
             data = MsgPackForDB.loads(value)
             version: int = data[0]
+            assert version == 0
             unstake_lock_period: int = data[1]
             return unstake_lock_period
         else:
@@ -143,6 +131,7 @@ class Reward:
     def from_bytes(cls, buf: bytes) -> 'Reward':
         data: list = MsgPackForDB.loads(buf)
         version = data[0]
+        assert version == cls._VERSION
 
         return cls(*data[1:])
 

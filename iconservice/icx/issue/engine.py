@@ -43,7 +43,7 @@ class Engine(EngineBase):
             "prep": {
                 "irep": irep,
                 "rrep": context.storage.iiss.get_reward_prep(context).reward_rate,
-                "totalDelegation": context.storage.iiss.get_total_prep_delegated(context)
+                "totalDelegation": context.preps.total_prep_delegated
             }
         }
         total_issue_amount = 0
