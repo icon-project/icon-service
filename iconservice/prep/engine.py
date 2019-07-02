@@ -230,7 +230,7 @@ class Engine(EngineBase, IISSEngineListener):
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns the details of a P-Rep including information on registration, delegation and statistics
 
-        :param _context:
+        :param context:
         :param params:
         :return:
         """
@@ -456,16 +456,16 @@ class Engine(EngineBase, IISSEngineListener):
         pass
 
     def on_set_delegation(
-            self, context: 'IconScoreContext', delegated_accounts: List['Account']):
+            self, context: 'IconScoreContext', updated_accounts: List['Account']):
         """Called on IISSEngine.handle_set_delegation()
 
         :param context:
-        :param delegated_accounts:
+        :param updated_accounts:
         return:
         """
-        assert 0 <= len(delegated_accounts) <= IISS_MAX_DELEGATIONS * 2
+        assert 0 <= len(updated_accounts) <= IISS_MAX_DELEGATIONS * 2
 
-        for account in delegated_accounts:
+        for account in updated_accounts:
             assert isinstance(account, Account)
             address = account.address
 

@@ -15,7 +15,6 @@
 
 """Test for icon_score_base.py and icon_score_base2.py"""
 
-import random
 import unittest
 from copy import deepcopy
 
@@ -208,7 +207,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         for i in range(init_account_count):
             self._stake(self._addr_array[i], stake)
 
-        # set delegate 0
+        # set 50 to address0.delegated
         delegations: list = []
         delegation_amount: int = init_balance // 2
         delegation_info: dict = {
@@ -218,12 +217,21 @@ class TestIntegrateIISS(TestIntegrateBase):
         delegations.append(delegation_info)
         self._delegate(self._addr_array[0], delegations)
 
-        # set delegate 0 again
+        # set 50 to address0.delegated again
         delegations: list = []
         delegation_amount: int = init_balance // 2
         delegation_info: dict = {
             "address": str(self._addr_array[0]),
             "value": hex(delegation_amount)
+        }
+        delegations.append(delegation_info)
+        self._delegate(self._addr_array[0], delegations)
+
+        # set 0 to address0.delegated
+        delegations = []
+        delegation_info: dict = {
+            "address": str(self._addr_array[0]),
+            "value": hex(0)
         }
         delegations.append(delegation_info)
         self._delegate(self._addr_array[0], delegations)
