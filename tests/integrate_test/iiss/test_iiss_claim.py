@@ -37,6 +37,7 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
@@ -46,14 +47,15 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
                                       {"code": hex(revision),
                                        "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
                                       'setStake',
                                       {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
@@ -62,6 +64,7 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
                                       'setDelegation',
                                       {"delegations": delegations})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _claim(self, address: 'Address'):
@@ -70,6 +73,7 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
                                       'claimIScore',
                                       {})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def test_iiss_claim(self):
@@ -99,6 +103,10 @@ class TestIntegrateIISSClaim(TestIntegrateBase):
         self._delegate(self._addr_array[0], delegations)
 
         # claim
+        block_height = 1000000000000000000
+        icx = 1000000000000000000
+        iscore = icx * 10**3
+        RewardCalcProxy.claim_iscore = Mock(return_value=(iscore, block_height))
         self._claim(self._addr_array[0])
 
         query_request = {

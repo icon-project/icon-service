@@ -42,6 +42,7 @@ class TestIntegratePrep(TestIntegrateBase):
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
@@ -51,14 +52,15 @@ class TestIntegratePrep(TestIntegrateBase):
                                       {"code": hex(revision),
                                        "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
                                       'setStake',
                                       {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
@@ -67,6 +69,7 @@ class TestIntegratePrep(TestIntegrateBase):
                                       'setDelegation',
                                       {"delegations": delegations})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict):
@@ -79,6 +82,7 @@ class TestIntegratePrep(TestIntegrateBase):
                                       'registerPRep',
                                       data)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _reg_prep_bulk(self, bulk: list):
@@ -92,9 +96,10 @@ class TestIntegratePrep(TestIntegrateBase):
             tx_list.append(tx)
 
         prev_block, tx_results = self._make_and_req_block(tx_list)
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
-    def _set_prep(self, address: 'Address', data: dict):
+    def _set_prep(self, address: 'Address', data: dict) -> tuple:
 
         data = deepcopy(data)
         value = data.get(ConstantKeys.IREP)
@@ -106,7 +111,7 @@ class TestIntegratePrep(TestIntegrateBase):
                                       'setPRep',
                                       data)
         prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+        return prev_block, tx_results
 
     def _unreg_prep(self, address: 'Address'):
 
@@ -115,6 +120,7 @@ class TestIntegratePrep(TestIntegrateBase):
                                       'unregisterPRep',
                                       {})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     # decentralize by delegate to n accounts.
@@ -635,7 +641,9 @@ class TestIntegratePrep(TestIntegrateBase):
         set_prep_data1: dict = {
             ConstantKeys.IREP: irep_value,
         }
-        self._set_prep(addr_array[0], set_prep_data1)
+        prev_block, tx_results = self._set_prep(addr_array[0], set_prep_data1)
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
 
         response: dict = self._get_prep(addr_array[0])
         register = response["registration"]
@@ -715,7 +723,9 @@ class TestIntegratePrep(TestIntegrateBase):
         set_prep_data1: dict = {
             ConstantKeys.IREP: irep_value,
         }
-        self._set_prep(addr_array[0], set_prep_data1)
+        prev_block, tx_results = self._set_prep(addr_array[0], set_prep_data1)
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
 
         response: dict = self._get_prep(addr_array[0])
         register = response["registration"]
@@ -728,7 +738,9 @@ class TestIntegratePrep(TestIntegrateBase):
         set_prep_data2: dict = {
             ConstantKeys.IREP: irep_value,
         }
-        self._set_prep(addr_array[0], set_prep_data2)
+        prev_block, tx_results = self._set_prep(addr_array[0], set_prep_data2)
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
 
         response: dict = self._get_prep(addr_array[0])
         register = response["registration"]

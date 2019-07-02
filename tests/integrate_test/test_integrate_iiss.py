@@ -35,6 +35,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
@@ -44,14 +45,15 @@ class TestIntegrateIISS(TestIntegrateBase):
                                       {"code": hex(revision),
                                        "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
                                       'setStake',
                                       {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
@@ -60,6 +62,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                                       'setDelegation',
                                       {"delegations": delegations})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict):
@@ -72,6 +75,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                                       'registerPRep',
                                       data)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def test_reg_prep(self):
@@ -128,10 +132,9 @@ class TestIntegrateIISS(TestIntegrateBase):
         for i in range(5):
             delegations: list = []
             delegation_amount: int = 1 * 10 ** 18
-            for _ in range(IISS_MAX_DELEGATIONS):
-                ran_id: int = random.randint(0, 19)
+            for j in range(IISS_MAX_DELEGATIONS):
                 delegation_info: dict = {
-                    "address": str(self._addr_array[ran_id]),
+                    "address": str(self._addr_array[j]),
                     "value": hex(delegation_amount)
                 }
                 delegations.append(delegation_info)
