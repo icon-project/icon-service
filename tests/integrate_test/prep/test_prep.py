@@ -45,12 +45,13 @@ class TestIntegratePrep(TestIntegrateBase):
         set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
                                                    {"code": hex(revision), "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([set_revision_tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int, _revision: int = REV_IISS):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setStake', {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list, _revision: int = REV_IISS):
@@ -58,6 +59,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         tx_list = [tx]
         prev_block, tx_results = self._make_and_req_block(tx_list)
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict, _revision: int = REV_IISS):
@@ -68,6 +70,7 @@ class TestIntegratePrep(TestIntegrateBase):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', data)
         tx_list = [tx]
         prev_block, tx_results = self._make_and_req_block(tx_list)
+        self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual('PRepRegistered(Address)', tx_results[0].event_logs[0].indexed[0])
         self.assertEqual(address, tx_results[0].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
@@ -84,7 +87,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         tx_result: 'TransactionResult' = tx_results[0]
 
-        self.assertEqual(1, tx_result.status)
+        self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual('PRepSet(Address)', tx_result.event_logs[0].indexed[0])
         self.assertEqual(address, tx_result.event_logs[0].data[0])
         self._write_precommit_state(prev_block)
@@ -93,6 +96,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self.assertEqual('PRepUnregistered(Address)', tx_results[0].event_logs[0].indexed[0])
         self.assertEqual(address, tx_results[0].event_logs[0].data[0])
         self._write_precommit_state(prev_block)
