@@ -156,16 +156,14 @@ class TestIntegratePRep(TestIntegrateBase):
         self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
 
         data1: dict = {
-            ConstantKeys.NAME: "new_name",
-            ConstantKeys.IREP: IISS_MIN_IREP + 100,
+            ConstantKeys.NAME: "new_name"
         }
         self._set_prep(address, data1)
 
         # prep data does not updated
         response: dict = self._get_prep(address)
         register = response["registration"]
-        self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-        self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        self.assertEqual(data1[ConstantKeys.NAME], register[ConstantKeys.NAME])
 
         self._unreg_prep(address)
 

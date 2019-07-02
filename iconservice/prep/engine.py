@@ -90,7 +90,7 @@ class Engine(EngineBase, IISSEngineListener):
 
     def query(self, context: 'IconScoreContext', data: dict) -> Any:
         method: str = data['method']
-        params: dict = data['params']
+        params: dict = data.get('params', {})
 
         handler: callable = self._query_handler[method]
         ret = handler(context, params)
