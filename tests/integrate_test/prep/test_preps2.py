@@ -466,14 +466,9 @@ class TestIntegratePrep(TestIntegrateBase):
         # Generate P-Reps
         for i in range(_PREPS_LEN):
             if i < PREP_MAIN_PREPS:
-                buf_total_irep += IISS_INITIAL_IREP + i
+                buf_total_irep += IISS_INITIAL_IREP
             reg_data: dict = create_register_prep_params(i)
             self._reg_prep(addresses[i], reg_data)
-
-        # Update ireps for P-Reps
-        for i in range(PREP_MAIN_PREPS):
-            params = {ConstantKeys.IREP: IISS_INITIAL_IREP + i}
-            self._set_prep(addresses[i], params)
 
         from_addr_for_stake: tuple = (self._admin, addresses[0], addresses[1])
 
