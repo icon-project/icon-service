@@ -171,10 +171,13 @@ class Engine(EngineBase):
         unstake_block_beight: int = account.unstake_block_height
 
         data = {
-            "stake": stake,
-            "unstake": unstake,
-            "unstakedBlockHeight": unstake_block_beight
+            "stake": stake
         }
+
+        if unstake_block_beight:
+            data["unstake"] = unstake
+            data["unstakeBlockHeight"] = unstake_block_beight
+
         return data
 
     def handle_set_delegation(self, context: 'IconScoreContext', params: dict):
