@@ -35,6 +35,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
@@ -44,14 +45,15 @@ class TestIntegrateIISS(TestIntegrateBase):
                                       {"code": hex(revision),
                                        "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
                                       'setStake',
                                       {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
@@ -60,6 +62,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                                       'setDelegation',
                                       {"delegations": delegations})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict):
@@ -72,6 +75,7 @@ class TestIntegrateIISS(TestIntegrateBase):
                                       'registerPRep',
                                       data)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def test_reg_prep(self):
@@ -128,10 +132,9 @@ class TestIntegrateIISS(TestIntegrateBase):
         for i in range(5):
             delegations: list = []
             delegation_amount: int = 1 * 10 ** 18
-            for _ in range(IISS_MAX_DELEGATIONS):
-                ran_id: int = random.randint(0, 19)
+            for j in range(IISS_MAX_DELEGATIONS):
                 delegation_info: dict = {
-                    "address": str(self._addr_array[ran_id]),
+                    "address": str(self._addr_array[j]),
                     "value": hex(delegation_amount)
                 }
                 delegations.append(delegation_info)
@@ -175,12 +178,55 @@ class TestIntegrateIISS(TestIntegrateBase):
         response = self._query(query_request)
 
         expected_response = {
+            'nextCalculation': 12,
+            'nextPRepTerm': 0,
             "variable": {
                 "irep": 10000,
                 "rrep": 800
             }
         }
         self.assertEqual(expected_response, response)
+
+    def test_delegate3(self):
+        self._update_governance()
+        self._set_revision(REV_IISS)
+
+        init_balance: int = 100
+        init_account_count: int = 2
+
+        tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[0], init_balance)
+        tx2 = self._make_icx_send_tx(self._genesis, self._addr_array[1], init_balance)
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        self._write_precommit_state(prev_block)
+
+        for i in range(init_account_count):
+            reg_data: dict = create_register_prep_params(i)
+            self._reg_prep(self._addr_array[i], reg_data)
+
+        # set stake
+        stake: int = init_balance
+        for i in range(init_account_count):
+            self._stake(self._addr_array[i], stake)
+
+        # set delegate 0
+        delegations: list = []
+        delegation_amount: int = init_balance // 2
+        delegation_info: dict = {
+            "address": str(self._addr_array[0]),
+            "value": hex(delegation_amount)
+        }
+        delegations.append(delegation_info)
+        self._delegate(self._addr_array[0], delegations)
+
+        # set delegate 0 again
+        delegations: list = []
+        delegation_amount: int = init_balance // 2
+        delegation_info: dict = {
+            "address": str(self._addr_array[0]),
+            "value": hex(delegation_amount)
+        }
+        delegations.append(delegation_info)
+        self._delegate(self._addr_array[0], delegations)
 
 
 if __name__ == '__main__':

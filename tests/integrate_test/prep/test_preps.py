@@ -39,6 +39,7 @@ class TestIntegratePRep(TestIntegrateBase):
                                   self._admin,
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _set_revision(self, revision: int):
@@ -48,14 +49,15 @@ class TestIntegratePRep(TestIntegrateBase):
                                       {"code": hex(revision),
                                        "name": f"1.1.{revision}"})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
 
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
                                       'setStake',
                                       {"value": hex(value)})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _delegate(self, address: 'Address', delegations: list):
@@ -64,6 +66,7 @@ class TestIntegratePRep(TestIntegrateBase):
                                       'setDelegation',
                                       {"delegations": delegations})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _reg_prep(self, address: 'Address', data: dict):
@@ -77,6 +80,7 @@ class TestIntegratePRep(TestIntegrateBase):
                                       'registerPRep',
                                       data)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _set_prep(self, address: 'Address', data: dict):
@@ -91,6 +95,7 @@ class TestIntegratePRep(TestIntegrateBase):
                                       'setPRep',
                                       data)
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _unreg_prep(self, address: 'Address'):
@@ -100,6 +105,7 @@ class TestIntegratePRep(TestIntegrateBase):
                                       'unregisterPRep',
                                       {})
         prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
     def _get_prep(self, address: 'Address') -> dict:

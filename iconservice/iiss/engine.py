@@ -19,12 +19,12 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
-
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
+from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
@@ -38,7 +38,6 @@ from ..precommit_data_manager import PrecommitFlag
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
-    from ..base.address import ZERO_SCORE_ADDRESS
     from ..icx.icx_account import Account
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
