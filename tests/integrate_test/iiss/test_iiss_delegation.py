@@ -192,4 +192,3 @@ class TestIntegrateIISSDelegation(TestIntegrateBase):
         expected_response = delegations
         self.assertEqual(expected_response, actual_response)
         self.assertEqual(total_delegating, response["totalDelegated"])
-
