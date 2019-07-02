@@ -461,9 +461,9 @@ class Engine(EngineBase, IISSEngineListener):
 
         :param context:
         :param delegated_accounts:
-        :return:
+        return:
         """
-        assert 0 <= len(delegated_accounts) <= IISS_MAX_DELEGATIONS
+        assert 0 <= len(delegated_accounts) <= IISS_MAX_DELEGATIONS * 2
 
         for account in delegated_accounts:
             assert isinstance(account, Account)
