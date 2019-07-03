@@ -123,7 +123,7 @@ class Engine(EngineBase):
 
     def invoke(self, context: 'IconScoreContext', data: dict) -> None:
         method: str = data['method']
-        params: dict = data['params']
+        params: dict = data.get('params', {})
 
         handler: callable = self._invoke_handlers[method]
         handler(context, params)
