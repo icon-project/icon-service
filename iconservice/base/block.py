@@ -48,7 +48,7 @@ class Block(object):
                  block_hash: bytes,
                  timestamp: int,
                  prev_hash: Optional[bytes],
-                 cumulative_fee: Optional[int]) -> None:
+                 cumulative_fee: int = 0) -> None:
         """Constructor
 
         :param block_height: block height
@@ -62,6 +62,7 @@ class Block(object):
         # unit: microsecond
         self._timestamp = timestamp
         self._prev_hash = prev_hash
+        # set default value for compatibility with t-bears
         self.cumulative_fee = cumulative_fee
 
     @property
