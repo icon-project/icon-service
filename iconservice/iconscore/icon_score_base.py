@@ -136,8 +136,12 @@ def eventlog(func=None, *, indexed=0):
             raise InvalidEventLogException(
                 f'The event log \'{ICX_TRANSFER_EVENT_LOG}\' is reserved')
 
-        return EventLogEmitter.emit_event_log(
-            calling_obj._context, calling_obj.address, event_signature, arguments, indexed)
+        return EventLogEmitter.emit_event_log(context=calling_obj._context,
+                                              score_address=calling_obj.address,
+                                              event_signature=event_signature,
+                                              arguments=arguments,
+                                              indexed_args_count=indexed,
+                                              fee_charge=True)
 
     return __wrapper
 
