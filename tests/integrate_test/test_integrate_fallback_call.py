@@ -548,7 +548,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         }
 
         response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 1_000_000 * self._icx_factor)
+        self.assertEqual(response, 400_230_000 * self._icx_factor)
 
         tx1 = self._make_deploy_tx("sample_fallback_call_scores",
                                    "sample_link_score_send_A",
