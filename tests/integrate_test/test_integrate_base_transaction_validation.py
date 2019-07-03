@@ -23,7 +23,7 @@ from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBlockException
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
-    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION
+    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
@@ -194,7 +194,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        total_supply = 2_000_000 * self._icx_factor
+        total_supply = 800_460_000 * ICX_IN_LOOP
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
@@ -433,11 +433,11 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
-        first_expected_issue_amount = 1741314053779807091
+        first_expected_issue_amount = 1919559817351598060
         calculate_response_iscore = \
             first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
-        expected_issue_amount = 1741272754946727436
+        expected_issue_amount = 1903030785388127740
         calculate_response_iscore_after_first_period = \
             expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \

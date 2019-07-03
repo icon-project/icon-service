@@ -361,7 +361,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        total_supply = 2_000_000 * self._icx_factor
+        total_supply = 800_460_000 * self._icx_factor
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
@@ -511,7 +511,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        total_supply = 2_000_000 * self._icx_factor
+        total_supply = 800_460_000 * self._icx_factor
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
@@ -564,7 +564,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        total_supply = 2_000_000 * self._icx_factor
+        total_supply = 800_460_000 * self._icx_factor
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
@@ -600,7 +600,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        total_supply = 2_000_000 * self._icx_factor
+        total_supply = 800_460_000 * self._icx_factor
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
@@ -636,7 +636,7 @@ class TestIntegratePrep(TestIntegrateBase):
         self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
         self.assertEqual(IISS_INITIAL_IREP, register[ConstantKeys.IREP])
 
-        irep_value = int(IISS_INITIAL_IREP * 1.2)
+        irep_value = int(IISS_INITIAL_IREP * 12 // 10)
 
         set_prep_data1: dict = {
             ConstantKeys.IREP: irep_value,
@@ -681,7 +681,7 @@ class TestIntegratePrep(TestIntegrateBase):
 
         addr_array = [create_address() for _ in range(_PREPS_LEN)]
 
-        total_supply = 2_000_000 * self._icx_factor
+        total_supply = 800_460_000 * self._icx_factor
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
