@@ -236,6 +236,9 @@ class TestIntegrateIISS(TestIntegrateBase):
         delegations.append(delegation_info)
         self._delegate(self._addr_array[0], delegations)
 
+        # set 0 to address0.delegated without params
+        self._delegate(self._addr_array[0], [])
+
 
 if __name__ == '__main__':
     unittest.main()
