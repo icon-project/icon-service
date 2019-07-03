@@ -15,13 +15,13 @@
 
 from typing import TYPE_CHECKING, Tuple, Optional
 
+from .issue_formula import IssueFormula
 from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS, Address
 from ...base.ComponentBase import EngineBase
 from ...base.exception import InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, IISS_ANNUAL_BLOCK
-from ...iconscore.icon_score_event_log import EventLog
-from .issue_formula import IssueFormula
+from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
@@ -65,24 +65,6 @@ class Engine(EngineBase):
             context.storage.icx.put_account(context, to_account)
             context.storage.icx.put_total_supply(context, current_total_supply + amount)
 
-    @staticmethod
-    def _create_issue_event_log(group_key: str, issue_data_in_db: dict) -> 'EventLog':
-        indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]["indexed"]
-        data: list = [issue_data_in_db[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
-        event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
-
-        return event_log
-
-    @staticmethod
-    def _create_total_issue_amount_event_log(deducted_fee: int,
-                                             deducted_over_issued_icx: int,
-                                             remain_over_issued_icx: int,
-                                             total_issue_amount: int) -> 'EventLog':
-        total_issue_indexed: list = ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["indexed"]
-        total_issue_data: list = [deducted_fee, deducted_over_issued_icx, total_issue_amount, remain_over_issued_icx]
-        total_issue_event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, total_issue_indexed, total_issue_data)
-        return total_issue_event_log
-
     def issue(self,
               context: 'IconScoreContext',
               to_address: 'Address',
@@ -95,15 +77,22 @@ class Engine(EngineBase):
         for group_key in ISSUE_CALCULATE_ORDER:
             if group_key not in issue_data:
                 continue
-            issue_event_log: 'EventLog' = self._create_issue_event_log(group_key, issue_data)
-            context.event_logs.append(issue_event_log)
+            event_signature: str = ISSUE_EVENT_LOG_MAPPER[group_key]["event_signature"]
+            data: list = [issue_data[group_key][data_key] for data_key in ISSUE_EVENT_LOG_MAPPER[group_key]["data"]]
+            EventLogEmitter.emit_event_log(context,
+                                           score_address=ZERO_SCORE_ADDRESS,
+                                           event_signature=event_signature,
+                                           arguments=data,
+                                           indexed_args_count=0)
 
-        total_issue_event_log: 'EventLog' = \
-            self._create_total_issue_amount_event_log(regulator.covered_icx_by_fee,
-                                                      regulator.covered_icx_by_over_issue,
-                                                      regulator.remain_over_issued_icx,
-                                                      regulator.corrected_icx_issue_amount)
-        context.event_logs.append(total_issue_event_log)
+        EventLogEmitter.emit_event_log(context,
+                                       score_address=ZERO_SCORE_ADDRESS,
+                                       event_signature=ISSUE_EVENT_LOG_MAPPER[IssueDataKey.TOTAL]["event_signature"],
+                                       arguments=[regulator.covered_icx_by_fee,
+                                                  regulator.covered_icx_by_over_issue,
+                                                  regulator.corrected_icx_issue_amount,
+                                                  regulator.remain_over_issued_icx],
+                                       indexed_args_count=0)
 
     def validate_total_supply_limit(self, context: 'IconScoreContext', expected_irep: int):
         beta: int = self._formula.get_limit_inflation_beta(expected_irep)

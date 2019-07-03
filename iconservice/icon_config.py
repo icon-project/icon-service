@@ -34,9 +34,10 @@ default_icon_config = {
         ConfigKey.REWARD_MAX: 1200,
         ConfigKey.REWARD_POINT: 7000,
     },
-    ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 10,
-    ConfigKey.IISS_CALCULATE_PERIOD: 10,
-    ConfigKey.TERM_PERIOD: 10,
+    # todo: unstaking lock period is temp value. should be changed
+    ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 43_120,
+    ConfigKey.IISS_CALCULATE_PERIOD: 43_120,
+    ConfigKey.TERM_PERIOD: 43_120,
     ConfigKey.IISS_PREP_LIST: [],
     ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP
 }

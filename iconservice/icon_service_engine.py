@@ -33,7 +33,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, IISS_TERM_EVENT_LOG
+    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -668,15 +668,13 @@ class IconServiceEngine(ContextContainer):
                                    regulator)
         # proceed term
         if context.engine.prep.term.start_block_height == context.block.height:
-            EventLogEmitter.emit_event_log(
-                context,
-                score_address=ZERO_SCORE_ADDRESS,
-                event_signature=IISS_TERM_EVENT_LOG,
-                arguments=[context.engine.prep.term.sequence,
-                           context.engine.prep.term.start_block_height,
-                           context.engine.prep.term.end_block_height],
-                indexed_args_count=0
-            )
+            EventLogEmitter.emit_event_log(context,
+                                           score_address=ZERO_SCORE_ADDRESS,
+                                           event_signature='TermStarted(int,int,int)',
+                                           arguments=[context.engine.prep.term.sequence,
+                                                      context.engine.prep.term.start_block_height,
+                                                      context.engine.prep.term.end_block_height],
+                                           indexed_args_count=0)
 
         tx_result.status = TransactionResult.SUCCESS
 

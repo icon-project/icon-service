@@ -47,10 +47,6 @@ PACKAGE_JSON_FILE = 'package.json'
 
 ICX_TRANSFER_EVENT_LOG = 'ICXTransfer(Address,Address,int)'
 
-IISS_TERM_EVENT_LOG = 'TermStarted(int,int,int)'
-
-NON_FEE_EVENT_LOGS = [ICX_TRANSFER_EVENT_LOG, IISS_TERM_EVENT_LOG]
-
 ICON_SCORE_QUEUE_NAME_FORMAT = "IconScore.{channel_name}.{amqp_key}"
 ICON_SERVICE_PROCTITLE_FORMAT = "icon_service." \
                                 "{scoreRootPath}." \
@@ -75,12 +71,12 @@ class IssueDataKey:
 
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
-        "indexed": ["PRepIssued(int,int,int,int)"],
+        "event_signature": "PRepIssued(int,int,int,int)",
         "data": [IssueDataKey.IREP, IssueDataKey.RREP, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": ["ICXIssued(int,int,int,int)"],
+        "event_signature": "ICXIssued(int,int,int,int)",
         "data": []
     }
 }
