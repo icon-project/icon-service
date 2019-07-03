@@ -260,7 +260,7 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
 }
 
-# todo: check if version parameter is redundant
+# todo: Version parameter is redundant, remove this field
 type_convert_templates[ParamType.ICX_CALL] = {
     ConstantKeys.VERSION: ValueType.INT,
     ConstantKeys.FROM: ValueType.ADDRESS,

@@ -294,7 +294,7 @@ class TestIntegrateBase(TestCase):
         request_params = {
             "version": self._version,
             "timestamp": timestamp_us,
-            "dataType": "issue",
+            "dataType": "base",
             "data": data
         }
         method = 'icx_sendTransaction'

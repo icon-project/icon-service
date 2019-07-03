@@ -43,7 +43,7 @@ class RegulatorVariable:
 
     def __init__(self,
                  current_calc_period_issued_icx: int,
-                 prev_calc_period_issued_icx: Optional[int],
+                 prev_calc_period_issued_icx: int,
                  over_issued_iscore: int):
         self.current_calc_period_issued_icx = current_calc_period_issued_icx
         self.prev_calc_period_issued_icx = prev_calc_period_issued_icx
