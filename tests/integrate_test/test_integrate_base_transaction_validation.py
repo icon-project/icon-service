@@ -327,7 +327,6 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
         base_transaction = self._create_base_transaction()
-        print(base_transaction)
 
         tx_list = [
             base_transaction,
