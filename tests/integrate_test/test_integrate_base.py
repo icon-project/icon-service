@@ -23,7 +23,6 @@ from unittest.mock import Mock
 
 from iconcommons import IconConfig
 
-from iconservice.base.address import Address
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION
@@ -123,7 +122,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "genesis",
                         "address": self._genesis,
-                        "balance": 1_000_000 * self._icx_factor
+                        "balance": 400230000 * self._icx_factor
                     },
                     {
                         "name": "fee_treasury",
@@ -133,7 +132,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "_admin",
                         "address": self._admin,
-                        "balance": 1_000_000 * self._icx_factor
+                        "balance": 400230000 * self._icx_factor
                     }
                 ]
             },
