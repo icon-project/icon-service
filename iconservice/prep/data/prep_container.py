@@ -162,6 +162,10 @@ class PRepContainer(object):
             Logger.info(tag="PREP", msg=f"P-Rep not found: {str(address)}")
             return
 
+        if prep.delegated == delegated:
+            # No need to update prep.delegated property
+            return
+
         # Remove old prep from self._active_prep_list
         self._active_prep_list.remove(prep)
 
