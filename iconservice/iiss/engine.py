@@ -15,17 +15,17 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
+
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException
+from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
@@ -33,12 +33,12 @@ from ..icon_constant import PREP_MAIN_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
+from ..icx.icx_account import Account
 from ..icx.issue.issue_formula import IssueFormula
 from ..precommit_data_manager import PrecommitFlag
 
 if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
-    from ..icx.icx_account import Account
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
     from .storage import Reward
@@ -186,43 +186,59 @@ class Engine(EngineBase):
         :param params:
         :return:
         """
-        address: 'Address' = context.tx.origin
+        sender: 'Address' = context.tx.origin
+        cached_accounts: Dict['Address', Tuple['Account', int]] = {}
 
-        delegations: List[Tuple['Address', int]] = self._convert_params_of_set_delegation(params)
+        # Convert setDelegation params
+        total_delegating, new_delegations = \
+            self._convert_params_of_set_delegation(params)
 
-        delegated_accounts: List['Account'] = \
-            self._put_delegation_to_state_db(context, address, delegations)
-        self._put_delegation_to_rc_db(context, address, delegations)
+        # Check whether voting power is enough to delegate
+        self._check_voting_power_is_enough(context, sender, total_delegating, cached_accounts)
+
+        # Get old delegations from delegating accounts
+        self._get_old_delegations_from_sender_account(context, sender, cached_accounts)
+
+        # Calculate delegations with old and new delegations
+        self._calc_delegations(context, new_delegations, cached_accounts)
+
+        # Put updated delegation data to stateDB
+        updated_accounts: List['Account'] = \
+            self._put_delegation_to_state_db(context, sender, new_delegations, cached_accounts)
+
+        # Put updated delegation data to rcDB
+        self._put_delegation_to_rc_db(context, sender, new_delegations)
 
         for listener in self._listeners:
-            listener.on_set_delegation(context, delegated_accounts)
+            listener.on_set_delegation(context, updated_accounts)
 
     @staticmethod
-    def _convert_params_of_set_delegation(params: dict) -> List[Tuple['Address', int]]:
+    def _convert_params_of_set_delegation(params: dict) -> Tuple[int, List[Tuple['Address', int]]]:
         """Convert delegations format
 
         [{"address": "hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", "value", "0xde0b6b3a7640000"}, ...] ->
         [("hxe7af5fcfd8dfc67530a01a0e403882687528dfcb", 1000000000000000000), ...]
 
         :param params: params of setDelegation JSON-RPC API request
-        :return:
+        :return: total_delegating, (address, delegated)
         """
         delegations: Optional[List[Dict[str, str]]] = params.get(ConstantKeys.DELEGATIONS)
         assert delegations is None or isinstance(delegations, list)
 
         if delegations is None or len(delegations) == 0:
-            return []
+            return 0, []
 
         if len(delegations) > IISS_MAX_DELEGATIONS:
             raise InvalidParamsException("Delegations out of range")
-
-        delegated_addresses: Dict['Address', int] = {}
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_DELEGATION)
         delegations: List[Dict[str, Union['Address', int]]] = \
             ret_params[ConstantKeys.DELEGATIONS]
 
-        delegation_list = []
+        total_delegating: int = 0
+        converted_delegations: List[Tuple['Address', int]] = []
+        delegated_addresses: Dict['Address', int] = {}
+
         for delegation in delegations:
             address: 'Address' = delegation["address"]
             value: int = delegation["value"]
@@ -235,70 +251,118 @@ class Engine(EngineBase):
             if address in delegated_addresses:
                 raise InvalidParamsException(f"Duplicated address: {address}")
 
-            delegation_list.append((address, value))
-            delegated_addresses[address] = 1
+            delegated_addresses[address] = value
 
-        return delegation_list
+            if value > 0:
+                total_delegating += value
+                converted_delegations.append((address, value))
+
+        return total_delegating, converted_delegations
+
+    @staticmethod
+    def _check_voting_power_is_enough(
+            context: 'IconScoreContext',
+            sender: 'Address', delegating: int,
+            cached_accounts: Dict['Address', Tuple['Account', int]]):
+        """
+
+        :param context:
+        :param sender:
+        :param cached_accounts:
+        :param delegating:
+        :return:
+        """
+        account: 'Account' = context.storage.icx.get_account(context, sender, Intent.DELEGATING)
+        assert isinstance(account, Account)
+
+        if account.voting_power < delegating:
+            raise InvalidRequestException("Not enough voting power")
+
+        cached_accounts[sender] = account, 0
+
+    @staticmethod
+    def _get_old_delegations_from_sender_account(
+            context: 'IconScoreContext',
+            sender: 'Address',
+            cached_accounts: Dict['Address', Tuple['Account', int]]):
+        """Get old delegations from sender account
+
+        :param context:
+        :param sender:
+        :param cached_accounts:
+        :return:
+        """
+        icx_storage = context.storage.icx
+        sender_account: 'Account' = cached_accounts[sender][0]
+
+        old_delegations: List[Tuple[Address, int]] = sender_account.delegations
+        if not old_delegations:
+            return
+
+        for address, old_delegated in old_delegations:
+            assert old_delegated > 0
+
+            account: 'Account' = cached_accounts.get(address)[0]
+            if account is None:
+                account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+
+            assert account.delegated_amount >= old_delegated
+            cached_accounts[address] = account, -old_delegated
+
+    @staticmethod
+    def _calc_delegations(
+            context: 'IconScoreContext',
+            new_delegations: List[Tuple['Address', int]],
+            cached_accounts: Dict['Address', Tuple['Account', int]]):
+        """Calculate new delegated amounts for each address with old and new delegations
+
+        :param new_delegations:
+        :param cached_accounts:
+        :return:
+        """
+        icx_storage = context.storage.icx
+
+        for address, new_delegated in new_delegations:
+            assert new_delegated > 0
+
+            if address in cached_accounts:
+                account, old_delegated = cached_accounts[address]
+            else:
+                account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+                old_delegated = 0
+
+            cached_accounts[address] = account, new_delegated + old_delegated
 
     @staticmethod
     def _put_delegation_to_state_db(
             context: 'IconScoreContext',
-            delegating_address: 'Address',
-            delegations: List[Tuple['Address', int]]) -> List['Account']:
+            sender: 'Address',
+            delegations: List[Tuple['Address', int]],
+            cached_accounts: Dict['Address', Tuple['Account', int]]) -> List['Account']:
+        """Put updated delegations to stateDB
 
+        :param context:
+        :param sender:
+        :param delegations:
+        :param cached_accounts:
+        :return: updated account list
+        """
         icx_storage: 'IcxStorage' = context.storage.icx
 
-        account_dict: Dict['Address', Tuple['Account', int]] = OrderedDict()
-        account_list = []
+        sender_account: 'Account' = cached_accounts[sender][0]
+        sender_account.set_delegations(delegations)
 
-        delegating_account: 'Account' = \
-            icx_storage.get_account(context, delegating_address, Intent.DELEGATING)
+        updated_accounts: List['Account'] = []
 
-        # Get old delegations from delegating account
-        old_delegations: List[Tuple[Address, int]] = delegating_account.delegations
-        if old_delegations:
-            for address, delegated in old_delegations:
-                assert delegated > 0
+        # Save changed accounts to stateDB
+        for account, delegated_offset in cached_accounts.values():
+            if delegated_offset != 0:
+                account.delegation_part.delegated_amount += delegated_offset
 
-                if address == delegating_address:
-                    account: 'Account' = delegating_account
-                else:
-                    account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
-
-                assert account.delegated_amount >= delegated
-                account_dict[address] = (account, -delegated)
-
-        # Update the delegation list of tx.sender
-        delegating_account.delegation_part.set_delegations(delegations)
-
-        # Merge old and new delegations
-        for address, delegated in delegations:
-            assert delegated > 0
-
-            if address in account_dict:
-                account, offset = account_dict[address]
-                offset += delegated
-            else:
-                if address == delegating_address:
-                    account: 'Account' = delegating_account
-                else:
-                    account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
-                offset = delegated
-
-            if offset != 0:
-                account_dict[address] = (account, offset)
-
-        # Save delegating and delegated accounts to stateDB
-        for address, (account, offset) in account_dict.items():
-            account.delegation_part.delegated_amount += offset
             icx_storage.put_account(context, account)
-            account_list.append(account)
+            updated_accounts.append(account)
 
-        # Save delegating account to stateDB
-        if delegating_address not in account_dict:
-            icx_storage.put_account(context, delegating_account)
-
-        return account_list
+        return updated_accounts
 
     @staticmethod
     def _put_delegation_to_rc_db(
