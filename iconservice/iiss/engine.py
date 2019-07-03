@@ -275,7 +275,7 @@ class Engine(EngineBase):
         account: 'Account' = context.storage.icx.get_account(context, sender, Intent.DELEGATING)
         assert isinstance(account, Account)
 
-        if account.voting_power < delegating:
+        if account.voting_weight < delegating:
             raise InvalidRequestException("Not enough voting power")
 
         cached_accounts[sender] = account, 0
