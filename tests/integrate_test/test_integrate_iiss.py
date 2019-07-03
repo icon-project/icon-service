@@ -211,7 +211,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         delegations: list = []
         delegation_amount: int = init_balance // 2
         delegation_info: dict = {
-            "address": str(self._addr_array[0]),
+            "address": str(self._addr_array[1]),
             "value": hex(delegation_amount)
         }
         delegations.append(delegation_info)
@@ -221,7 +221,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         delegations: list = []
         delegation_amount: int = init_balance // 2
         delegation_info: dict = {
-            "address": str(self._addr_array[0]),
+            "address": str(self._addr_array[1]),
             "value": hex(delegation_amount)
         }
         delegations.append(delegation_info)
@@ -230,7 +230,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         # set 0 to address0.delegated
         delegations = []
         delegation_info: dict = {
-            "address": str(self._addr_array[0]),
+            "address": str(self._addr_array[1]),
             "value": hex(0)
         }
         delegations.append(delegation_info)
