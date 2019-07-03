@@ -13,39 +13,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from .storage import RegulatorVariable
+from ...base.exception import AccessDeniedException
 from ...icon_constant import ISCORE_EXCHANGE_RATE
 from ...iconscore.icon_score_context import IconScoreContext
 
 
 class Regulator:
     def __init__(self):
-        self._regulator_variable: 'RegulatorVariable' = None
-
-        self._covered_icx_by_fee: int = None
-        self._covered_icx_by_remain: int = None
-
-        self._corrected_icx_issue_amount: int = None
+        self._regulator_variable: Optional['RegulatorVariable'] = None
+        self._covered_icx_by_fee: Optional[int] = None
+        self._covered_icx_by_remain: Optional[int] = None
+        self._corrected_icx_issue_amount: Optional[int] = None
 
     @property
     def covered_icx_by_fee(self):
+        self._check_is_set(self._covered_icx_by_fee)
         return self._covered_icx_by_fee
 
     @property
     def covered_icx_by_over_issue(self):
+        self._check_is_set(self._covered_icx_by_remain)
         return self._covered_icx_by_remain
 
     @property
     def remain_over_issued_icx(self):
+        self._check_is_set(self._regulator_variable)
         return self._regulator_variable.over_issued_iscore // ISCORE_EXCHANGE_RATE
 
     @property
     def corrected_icx_issue_amount(self):
+        self._check_is_set(self._corrected_icx_issue_amount)
         return self._corrected_icx_issue_amount
 
-    def set_issue_info_about_correction(self, context: 'IconScoreContext', issue_amount: int):
+    @staticmethod
+    def _check_is_set(regulator_variable: Union[None, int, 'RegulatorVariable']):
+        if regulator_variable is None:
+            raise AccessDeniedException("Set corrected issue data before access the variables")
+
+    def set_corrected_issue_data(self, context: 'IconScoreContext', issue_amount: int):
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
         prev_block_cumulative_fee = context.storage.icx.last_block.cumulative_fee
         calc_next_block_height = context.storage.iiss.get_end_block_height_of_calc(context)

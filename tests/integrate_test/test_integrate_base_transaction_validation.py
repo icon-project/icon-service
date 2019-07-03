@@ -19,18 +19,21 @@
 from copy import deepcopy
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
+from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBlockException
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, ConfigKey, REV_IISS, \
-    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, IISS_MIN_IREP
+from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
+    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icx.issue.regulator import Regulator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
-from tests import create_address
+from iconservice.prep.data import PRepFlag
+from tests import create_address, create_block_hash
+from tests.integrate_test import create_timestamp
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
-class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
+class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
     def _stake(self, address: 'Address', value: int):
         tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS,
                                       'setStake',
@@ -51,8 +54,6 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         data = deepcopy(data)
         value: str = data[ConstantKeys.PUBLIC_KEY].hex()
         data[ConstantKeys.PUBLIC_KEY] = value
-        value: str = hex(data[ConstantKeys.IREP])
-        data[ConstantKeys.IREP] = value
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -86,7 +87,6 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 ConstantKeys.DETAILS: f"json{i}",
                 ConstantKeys.P2P_END_POINT: f"ip{i}",
                 ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
-                ConstantKeys.IREP: IISS_MIN_IREP
             }
             self._reg_prep(address, data)
 
@@ -143,6 +143,43 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
     def _make_dummy_tx(self):
         return self._make_icx_send_tx(self._genesis, create_address(), 1)
 
+    def _create_base_transaction(self):
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+        issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
+        block_height: int = self._block_height
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
+        context.block = block
+        regulator = Regulator()
+        regulator.set_corrected_issue_data(context, total_issue_amount)
+
+        issue_data["result"] = {
+            "coveredByFee": regulator.covered_icx_by_fee,
+            "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
+            "issue": regulator.corrected_icx_issue_amount
+        }
+
+        return self.icon_service_engine.formatting_transaction("base", issue_data, context.block.timestamp)
+
+    def _set_prep(self, address: 'Address', data: dict, _revision: int = REV_IISS):
+
+        data = deepcopy(data)
+        value = data.get(ConstantKeys.IREP)
+        if value:
+            data[ConstantKeys.IREP] = hex(value)
+
+        tx = self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_result: 'TransactionResult' = tx_results[0]
+
+        self.assertEqual(1, tx_result.status)
+        self.assertEqual('PRepSet(Address)', tx_result.event_logs[0].indexed[0])
+        self.assertEqual(address, tx_result.event_logs[0].data[0])
+        self._write_precommit_state(prev_block)
+
     def setUp(self):
         _PREPS_LEN = 30
         _MAIN_PREPS_LEN = 22
@@ -150,7 +187,7 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-        default_icon_config[ConfigKey.IREP] = 100_000_000_000
+        # default_icon_config[ConfigKey.IREP] = 100_000_000_000
         super().setUp()
         self._update_governance()
         self._set_revision(REV_IISS)
@@ -161,10 +198,9 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
 
         # Minimum_delegate_amount is 0.02 * total_supply
         # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
-        delegate_amount = total_supply * 3 // 1000
+        delegate_amount = total_supply * 2 // 1000
 
         # generate preps
-
         self._decentralize(addr_array, delegate_amount)
 
         response = self._get_prep_list()
@@ -173,17 +209,27 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
 
         self.assertEqual(delegate_amount * 22, total_delegated)
         self.assertEqual(_PREPS_LEN, len(prep_list))
+        #
+        # for prep in addr_array:
+        #     update_data: dict = {
+        #         ConstantKeys.IREP: 30_000 * ICX_IN_LOOP
+        #     }
+        #     self._set_prep(prep, update_data)
 
         self._set_revision(REV_DECENTRALIZATION)
 
         # todo: if get_issue_info is redundant, should fix this method
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+
         self.issue_data, self.total_issue_amount = IconScoreContext.engine.issue.create_icx_issue_info(context)
         # self.total_issue_amount = 0
         # for group_dict in self.issue_data.values():
         #     self.total_issue_amount += group_dict["value"]
 
-    def test_validate_issue_transaction_position(self):
+    def test_validate_base_transaction_position(self):
+        # isBlockEditable is false in this method
+
         # failure case: when first transaction is not a issue transaction, should raise error
         invalid_tx_list = [
             self._make_dummy_tx()
@@ -213,7 +259,9 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         ]
         self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
-    def test_validate_issue_transaction_format(self):
+    def test_validate_base_transaction_format(self):
+        # isBlockEditable is false in this method
+
         # failure case: when group(i.e. prep, eep, dapp) key in the issue transaction's data is different with
         # stateDB, should raise error
 
@@ -269,14 +317,29 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
                 data[key] = temp
 
-    def test_validate_issue_transaction_value(self):
+    def test_validate_base_transaction_value_editable_block(self):
         expected_step_price = 0
         expected_step_used = 0
 
-        # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
+        # failure case: when issue transaction invoked even though isBlockEditable is true, should raise error
+        # case of isBlockEditable is True
         before_total_supply = self._query({}, "icx_getTotalSupply")
         before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
 
+        base_transaction = self._create_base_transaction()
+        print(base_transaction)
+
+        tx_list = [
+            base_transaction,
+            self._make_dummy_tx(),
+            self._make_dummy_tx()
+        ]
+        self.assertRaises(KeyError,
+                          self._make_and_req_block_for_issue_test,
+                          tx_list, None, None, None, True, 0)
+
+        # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
+        # case of isBlockEditable is True
         tx_list = [
             self._make_dummy_tx(),
             self._make_dummy_tx()
@@ -314,19 +377,68 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         self.assertEqual(before_total_supply + self.total_issue_amount, after_total_supply)
         self.assertEqual(before_treasury_icx_amount + self.total_issue_amount, after_treasury_icx_amount)
 
-    def test_validate_issue_transaction_value_corrected_issue_amount(self):
-        # success case: when iconservice over issued 10 icx than reward carc, icx issue amount
+    def test_validate_base_transaction_value_not_editable_block(self):
+        expected_step_price = 0
+        expected_step_used = 0
+
+        # success case: when valid issue transaction invoked, should issue icx according to calculated icx issue amount
+        # case of isBlockEditable is False
+        before_total_supply = self._query({}, "icx_getTotalSupply")
+        before_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
+        base_transaction = self._create_base_transaction()
+
+        tx_list = [
+            base_transaction,
+            self._make_dummy_tx(),
+            self._make_dummy_tx()
+        ]
+        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        self._write_precommit_state(prev_block)
+        expected_tx_status = 1
+        expected_failure = None
+        expected_trace = []
+        self.assertEqual(expected_tx_status, tx_results[0].status)
+        self.assertEqual(expected_failure, tx_results[0].failure)
+        self.assertEqual(expected_step_price, tx_results[0].step_price)
+        self.assertEqual(expected_step_used, tx_results[0].step_used)
+        self.assertEqual(expected_trace, tx_results[0].traces)
+
+        for index, group_key in enumerate(ISSUE_CALCULATE_ORDER):
+            if group_key not in self.issue_data:
+                continue
+            expected_score_address = ZERO_SCORE_ADDRESS
+            expected_indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]['indexed']
+            expected_data: list = [self.issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
+            self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
+            self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
+            self.assertEqual(expected_data, tx_results[0].event_logs[index].data)
+
+        # event log about correction
+        self.assertEqual(0, tx_results[0].event_logs[1].data[0])
+        self.assertEqual(0, tx_results[0].event_logs[1].data[1])
+        self.assertEqual(self.total_issue_amount, tx_results[0].event_logs[1].data[2])
+        self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+
+        after_total_supply = self._query({}, "icx_getTotalSupply")
+        after_treasury_icx_amount = self._query({"address": self._fee_treasury}, 'icx_getBalance')
+
+        self.assertEqual(before_total_supply + self.total_issue_amount, after_total_supply)
+        self.assertEqual(before_treasury_icx_amount + self.total_issue_amount, after_treasury_icx_amount)
+
+    def test_validate_base_transaction_value_corrected_issue_amount(self):
+        # success case: when icon service over issued 10 icx than reward carc, icx issue amount
         # should be corrected on calc period.
         calc_period = 10
         calc_point = calc_period
+        expected_sequence = 0
 
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
-        first_expected_issue_amount = 669710806697108
+        first_expected_issue_amount = 1741314053779807091
         calculate_response_iscore = \
             first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
-        expected_issue_amount = 579299847792998
+        expected_issue_amount = 1741272754946727436
         calculate_response_iscore_after_first_period = \
             expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
@@ -344,8 +456,8 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         ]
         for x in range(1, 11):
 
-            copyed_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
+            copied_tx_list = deepcopy(tx_list)
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copied_tx_list,
                                                                              is_block_editable=True,
                                                                              cumulative_fee=cumulative_fee)
             issue_amount = tx_results[0].event_logs[0].data[3]
@@ -360,6 +472,14 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                 self.assertEqual(0, actual_covered_by_remain)
                 self.assertEqual(first_expected_issue_amount, actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
+
+                actual_sequence = tx_results[0].event_logs[2].data[0]
+                actual_start_block = tx_results[0].event_logs[2].data[1]
+                actual_end_block = tx_results[0].event_logs[2].data[2]
+                self.assertEqual(expected_sequence, actual_sequence)
+                self.assertEqual(prev_block._height, actual_start_block)
+                self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
+                expected_sequence += 1
             elif x == calc_point:
                 calc_point += calc_period
             else:
@@ -373,8 +493,8 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
         calculate_response_iscore = calculate_response_iscore_after_first_period
 
         for x in range(11, 51):
-            copyed_tx_list = deepcopy(tx_list)
-            prev_block, tx_results = self._make_and_req_block_for_issue_test(copyed_tx_list,
+            copied_tx_list = deepcopy(tx_list)
+            prev_block, tx_results = self._make_and_req_block_for_issue_test(copied_tx_list,
                                                                              is_block_editable=True,
                                                                              cumulative_fee=cumulative_fee)
             issue_amount = tx_results[0].event_logs[0].data[3]
@@ -391,6 +511,14 @@ class TestIntegrateIssueTransactionValidation(TestIntegrateBase):
                                  actual_issue_amount)
                 self.assertEqual(0, tx_results[0].event_logs[1].data[3])
                 calc_point += calc_period
+            elif x == calc_point - calc_period + 1:
+                actual_sequence = tx_results[0].event_logs[2].data[0]
+                actual_start_block = tx_results[0].event_logs[2].data[1]
+                actual_end_block = tx_results[0].event_logs[2].data[2]
+                self.assertEqual(expected_sequence, actual_sequence)
+                self.assertEqual(prev_block._height, actual_start_block)
+                self.assertEqual(prev_block._height + calc_period - 1, actual_end_block)
+                expected_sequence += 1
             else:
                 self.assertEqual(cumulative_fee, actual_covered_by_fee)
                 self.assertEqual(0, actual_covered_by_remain)
