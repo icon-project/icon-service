@@ -160,8 +160,7 @@ class InternalCall(object):
                                        score_address=from_,
                                        event_signature=event_signature,
                                        arguments=arguments,
-                                       indexed_args_count=indexed_args_count,
-                                       fee_charge=True)
+                                       indexed_args_count=indexed_args_count)
 
     @staticmethod
     def enter_call(context: 'IconScoreContext') -> None:
