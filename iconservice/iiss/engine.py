@@ -302,9 +302,11 @@ class Engine(EngineBase):
         for address, old_delegated in old_delegations:
             assert old_delegated > 0
 
-            account: 'Account' = cached_accounts.get(address)[0]
-            if account is None:
+            cached: Tuple['Account', int] = cached_accounts.get(address)
+            if cached is None:
                 account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+            else:
+                account: 'Account' = cached[0]
 
             assert account.delegated_amount >= old_delegated
             cached_accounts[address] = account, -old_delegated
