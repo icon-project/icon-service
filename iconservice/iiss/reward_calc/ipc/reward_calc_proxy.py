@@ -37,7 +37,7 @@ class RewardCalcProxy(object):
 
     """
 
-    IPC_TIMEOUT = 0.1
+    IPC_TIMEOUT = 1
 
     def __init__(self,
                  version_callback: Callable[['Response'], Any] = None,
