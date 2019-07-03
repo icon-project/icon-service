@@ -71,12 +71,12 @@ class IssueDataKey:
 
 ISSUE_EVENT_LOG_MAPPER = {
     IssueDataKey.PREP: {
-        "indexed": ["PRepIssued(int,int,int,int)"],
+        "event_signature": "PRepIssued(int,int,int,int)",
         "data": [IssueDataKey.IREP, IssueDataKey.RREP, IssueDataKey.TOTAL_DELEGATION,
                  IssueDataKey.VALUE]
     },
     IssueDataKey.TOTAL: {
-        "indexed": ["ICXIssued(int,int,int,int)"],
+        "event_signature": "ICXIssued(int,int,int,int)",
         "data": []
     }
 }
@@ -203,8 +203,8 @@ PREP_MAIN_AND_SUB_PREPS = 100
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000 * ICX_IN_LOOP
-IISS_MAX_IREP = 50_000 * ICX_IN_LOOP
-IISS_INITIAL_IREP = 37_500 * ICX_IN_LOOP
+IISS_MAX_IREP = 84_000 * ICX_IN_LOOP
+IISS_INITIAL_IREP = 50_000 * ICX_IN_LOOP
 IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000

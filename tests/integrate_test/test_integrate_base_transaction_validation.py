@@ -22,8 +22,9 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix,
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBlockException
 from iconservice.base.type_converter_templates import ConstantKeys
+from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
-    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP
+    IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, ConfigKey
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
@@ -187,7 +188,8 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
         # same as fee treasury address constant value
         self._fee_treasury = Address.from_prefix_and_int(AddressPrefix.CONTRACT, 1)
-        # default_icon_config[ConfigKey.IREP] = 100_000_000_000
+        default_icon_config[ConfigKey.IISS_CALCULATE_PERIOD] = 10
+        default_icon_config[ConfigKey.TERM_PERIOD] = 10
         super().setUp()
         self._update_governance()
         self._set_revision(REV_IISS)
@@ -358,7 +360,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
             if group_key not in self.issue_data:
                 continue
             expected_score_address = ZERO_SCORE_ADDRESS
-            expected_indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]['indexed']
+            expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
             expected_data: list = [self.issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
@@ -406,7 +408,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
             if group_key not in self.issue_data:
                 continue
             expected_score_address = ZERO_SCORE_ADDRESS
-            expected_indexed: list = ISSUE_EVENT_LOG_MAPPER[group_key]['indexed']
+            expected_indexed: list = [ISSUE_EVENT_LOG_MAPPER[group_key]['event_signature']]
             expected_data: list = [self.issue_data[group_key][key] for key in ISSUE_EVENT_LOG_MAPPER[group_key]['data']]
             self.assertEqual(expected_score_address, tx_results[0].event_logs[index].score_address)
             self.assertEqual(expected_indexed, tx_results[0].event_logs[index].indexed)
@@ -433,11 +435,11 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
-        first_expected_issue_amount = 1919559817351598060
+        first_expected_issue_amount = 2589195129375951183
         calculate_response_iscore = \
             first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
-        expected_issue_amount = 1903030785388127740
+        expected_issue_amount = 2561944563165905521
         calculate_response_iscore_after_first_period = \
             expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \
