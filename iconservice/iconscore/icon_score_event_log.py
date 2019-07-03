@@ -16,11 +16,11 @@
 
 from typing import TYPE_CHECKING, List, Optional, Any
 
+from .icon_score_step import StepType
 from ..base.address import Address, ICON_ADDRESS_BYTES_SIZE, ICON_ADDRESS_BODY_SIZE
 from ..base.exception import InvalidEventLogException
-from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG, REVISION_3
+from ..icon_constant import DATA_BYTE_ORDER, REVISION_3, NON_FEE_EVENT_LOGS
 from ..utils import int_to_bytes, byte_length_of_int
-from .icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_constant import BaseType
@@ -110,7 +110,7 @@ class EventLogEmitter(object):
                 data.append(argument)
 
         # skip counting steps for auto emitted event 'ICXTransfer(Address,Address,int)'
-        if event_signature != ICX_TRANSFER_EVENT_LOG:
+        if event_signature not in NON_FEE_EVENT_LOGS:
             context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
 
         event = EventLog(score_address, indexed, data)

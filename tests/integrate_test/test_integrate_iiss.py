@@ -180,8 +180,8 @@ class TestIntegrateIISS(TestIntegrateBase):
             'nextCalculation': 12,
             'nextPRepTerm': 0,
             "variable": {
-                "irep": 10000,
-                "rrep": 800
+                "irep": 50000000000000000000000,
+                "rrep": 1200
             }
         }
         self.assertEqual(expected_response, response)

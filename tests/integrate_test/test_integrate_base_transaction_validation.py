@@ -433,11 +433,11 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         diff_between_is_and_rc = 10 * ISCORE_EXCHANGE_RATE
         cumulative_fee = 10
-        first_expected_issue_amount = 1919559817351598060
+        first_expected_issue_amount = 2589195129375951183
         calculate_response_iscore = \
             first_expected_issue_amount * calc_period * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
 
-        expected_issue_amount = 1903030785388127740
+        expected_issue_amount = 2561944563165905521
         calculate_response_iscore_after_first_period = \
             expected_issue_amount * 10 * ISCORE_EXCHANGE_RATE - diff_between_is_and_rc
         expected_diff_in_calc_period = (expected_issue_amount * calc_period) - \

@@ -33,7 +33,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE
+    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, IISS_TERM_EVENT_LOG
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -138,7 +138,7 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
-                                     conf[ConfigKey.IREP])
+                                     conf[ConfigKey.INITIAL_IREP])
 
         last_block: 'Block' = IconScoreContext.storage.icx.last_block
         self._precommit_data_manager.last_block = last_block
@@ -652,15 +652,6 @@ class IconServiceEngine(ContextContainer):
 
         return tx_result
 
-    @staticmethod
-    def _create_term_event_log(context: 'IconScoreContext') -> 'EventLog':
-        indexed: list = ["TermStarted(int,int,int)"]
-        data: list = [context.engine.prep.term.sequence,
-                      context.engine.prep.term.start_block_height,
-                      context.engine.prep.term.end_block_height]
-        event_log: 'EventLog' = EventLog(ZERO_SCORE_ADDRESS, indexed, data)
-        return event_log
-
     def _process_base_transaction(self,
                                   context: 'IconScoreContext',
                                   issue_data: dict,
@@ -677,7 +668,15 @@ class IconServiceEngine(ContextContainer):
                                    regulator)
         # proceed term
         if context.engine.prep.term.start_block_height == context.block.height:
-            context.event_logs.append(self._create_term_event_log(context))
+            EventLogEmitter.emit_event_log(
+                context,
+                score_address=ZERO_SCORE_ADDRESS,
+                event_signature=IISS_TERM_EVENT_LOG,
+                arguments=[context.engine.prep.term.sequence,
+                           context.engine.prep.term.start_block_height,
+                           context.engine.prep.term.end_block_height],
+                indexed_args_count=0
+            )
 
         tx_result.status = TransactionResult.SUCCESS
 
