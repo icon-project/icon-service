@@ -156,7 +156,12 @@ class InternalCall(object):
         event_signature = ICX_TRANSFER_EVENT_LOG
         arguments = [from_, to, value]
         indexed_args_count = 3
-        EventLogEmitter.emit_event_log(context, from_, event_signature, arguments, indexed_args_count)
+        EventLogEmitter.emit_event_log(context=context,
+                                       score_address=from_,
+                                       event_signature=event_signature,
+                                       arguments=arguments,
+                                       indexed_args_count=indexed_args_count,
+                                       fee_charge=True)
 
     @staticmethod
     def enter_call(context: 'IconScoreContext') -> None:

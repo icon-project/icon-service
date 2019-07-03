@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Optional, Any
 from .icon_score_step import StepType
 from ..base.address import Address, ICON_ADDRESS_BYTES_SIZE, ICON_ADDRESS_BODY_SIZE
 from ..base.exception import InvalidEventLogException
-from ..icon_constant import DATA_BYTE_ORDER, REVISION_3, NON_FEE_EVENT_LOGS
+from ..icon_constant import DATA_BYTE_ORDER, REVISION_3
 from ..utils import int_to_bytes, byte_length_of_int
 
 if TYPE_CHECKING:
@@ -76,7 +76,8 @@ class EventLogEmitter(object):
                        score_address: 'Address',
                        event_signature: str,
                        arguments: List[Any],
-                       indexed_args_count: int):
+                       indexed_args_count: int,
+                       fee_charge: bool = False):
         """
         Puts a eventlog to the running context
 
@@ -85,6 +86,8 @@ class EventLogEmitter(object):
         :param event_signature: signature of the eventlog
         :param arguments: arguments of eventlog call
         :param indexed_args_count: count of the indexed arguments
+        :param fee_charge: If True, charge fee about emitting event logs
+
         :return:
         """
 
@@ -109,8 +112,8 @@ class EventLogEmitter(object):
             else:
                 data.append(argument)
 
-        # skip counting steps for auto emitted event 'ICXTransfer(Address,Address,int)'
-        if event_signature not in NON_FEE_EVENT_LOGS:
+        # skip counting steps if fee_charge is False
+        if fee_charge:
             context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
 
         event = EventLog(score_address, indexed, data)
