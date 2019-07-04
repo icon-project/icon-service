@@ -83,7 +83,7 @@ class Engine(EngineBase, IISSEngineListener):
 
     def invoke(self, context: 'IconScoreContext', data: dict):
         method: str = data['method']
-        params: dict = data['params']
+        params: dict = data.get('params', {})
 
         handler: callable = self._invoke_handlers[method]
         handler(context, params)
