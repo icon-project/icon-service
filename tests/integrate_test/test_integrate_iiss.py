@@ -179,7 +179,7 @@ class TestIntegrateIISS(TestIntegrateBase):
         expected_response = {
             'nextCalculation': 12,
             'nextPRepTerm': 0,
-            "variable": {
+            'variable': {
                 "irep": 50000000000000000000000,
                 "rrep": 1200
             }
