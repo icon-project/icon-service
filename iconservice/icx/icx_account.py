@@ -156,10 +156,11 @@ class Account(object):
         offset: int = value - self.total_stake
 
         if offset == 0:
-            return
+            self.stake_part.reset_unstake()
         elif offset > 0:
             self.coin_part.withdraw(offset)
             self.stake_part.add_stake(offset)
+            self.stake_part.reset_unstake()
         else:
             unlock_block_height: int = self._current_block_height + unstake_lock_period
             self.coin_part.toggle_has_unstake(True)
