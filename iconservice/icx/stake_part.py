@@ -86,6 +86,15 @@ class StakePart(BasePart):
 
         self.set_dirty(True)
 
+    def reset_unstake(self):
+        assert self.is_set(BasePartState.COMPLETE)
+
+        self._stake = self.total_stake
+        self._unstake = 0
+        self._unstake_block_height: int = 0
+
+        self.set_dirty(True)
+
     def normalize(self, block_height: int) -> int:
         unstake: int = 0
         state: 'BasePartState' = BasePartState.COMPLETE
