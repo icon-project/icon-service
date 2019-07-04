@@ -82,7 +82,7 @@ class EventLogEmitter(object):
         :param event_signature: signature of the eventlog
         :param arguments: arguments of eventlog call
         :param indexed_args_count: count of the indexed arguments
-        :param fee_charge: used for deciding whether charge fee or not. if True, charge fee about emitting event logs
+        :param fee_charge: used for deciding whether fee will be charged for the event logs
 
         :return:
         """
@@ -108,7 +108,7 @@ class EventLogEmitter(object):
             else:
                 data.append(argument)
 
-        # skip counting steps if fee_charge is False
+        # Counting steps only if fee_charge is True
         if fee_charge:
             context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
 
