@@ -156,7 +156,7 @@ class Account(object):
         offset: int = value - self.total_stake
 
         if offset == 0:
-            return
+            self.stake_part.reset_unstake()
         elif offset > 0:
             self.coin_part.withdraw(offset)
             self.stake_part.add_stake(offset)

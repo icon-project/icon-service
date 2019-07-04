@@ -30,6 +30,9 @@ if TYPE_CHECKING:
 
 class TestIntegrateIISSStake(TestIntegrateBase):
 
+    def _make_init_config(self) -> dict:
+        return {ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 10}
+
     def _update_governance(self):
         tx = self._make_deploy_tx("sample_builtin",
                                   "latest_version/governance",
@@ -76,16 +79,14 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         self._update_governance()
         self._set_revision(REV_IISS)
 
-        unstake_lock_period: int = default_icon_config[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD]
-
-        # gain 10 icx
-        balance: int = 10 * 10 ** 18
+        # gain 1000 icx
+        balance: int = 1000 * 10 ** 18
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-        # set stake 1 icx
-        stake: int = 1 * 10 ** 18
+        # set stake 50 icx
+        stake: int = 50 * 10 ** 18
         unstake: int = 0
         total_stake = stake + unstake
 
@@ -99,8 +100,8 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         actual_balance = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
         self.assertEqual(remain_balance, actual_balance)
 
-        # set stake 5 icx
-        stake: int = 5 * 10 ** 18
+        # set stake 100 icx
+        stake: int = 100 * 10 ** 18
         total_stake = stake + unstake
 
         self._stake(self._addr_array[0], stake)
@@ -113,18 +114,48 @@ class TestIntegrateIISSStake(TestIntegrateBase):
         actual_balance = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
         self.assertEqual(remain_balance, actual_balance)
 
-        # set stake 4 icx
-        stake: int = 4 * 10 ** 18
-        unstake: int = 1 * 10 ** 18
-        block_height: int = self._block_height
+        # set stake 50 icx again
+        stake: int = 50 * 10 ** 18
+        unstake: int = 50 * 10 ** 18
         total_stake = stake + unstake
 
         self._stake(self._addr_array[0], stake)
         actual_response: dict = self._get_stake(self._addr_array[0])
         expected_response = {
             "stake": stake,
-            "unstake": unstake,
-            "unstakeBlockHeight": block_height + unstake_lock_period
+            "unstake": unstake
+        }
+        self.assertEqual(expected_response['stake'], actual_response['stake'])
+        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
+        self.assertIn('unstakeBlockHeight', actual_response)
+        remain_balance: int = balance - total_stake
+        actual_balance = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
+        self.assertEqual(remain_balance, actual_balance)
+
+        # set stake 100 icx again
+        stake: int = 100 * 10 ** 18
+        unstake: int = 0 * 10 ** 18
+        total_stake = stake + unstake
+
+        self._stake(self._addr_array[0], stake)
+        actual_response: dict = self._get_stake(self._addr_array[0])
+        expected_response = {
+            "stake": stake
+        }
+        self.assertEqual(expected_response, actual_response)
+        remain_balance: int = balance - total_stake
+        actual_balance = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
+        self.assertEqual(remain_balance, actual_balance)
+
+        # set stake 150 icx
+        stake: int = 150 * 10 ** 18
+        unstake: int = 0 * 10 ** 18
+        total_stake = stake + unstake
+
+        self._stake(self._addr_array[0], stake)
+        actual_response: dict = self._get_stake(self._addr_array[0])
+        expected_response = {
+            "stake": stake
         }
         self.assertEqual(expected_response, actual_response)
         remain_balance: int = balance - total_stake
@@ -133,23 +164,24 @@ class TestIntegrateIISSStake(TestIntegrateBase):
 
         # set stake 0 icx
         stake: int = 0 * 10 ** 18
-        unstake: int = 5 * 10 ** 18
-        block_height: int = self._block_height
+        unstake: int = 150 * 10 ** 18
         total_stake = stake + unstake
-
         self._stake(self._addr_array[0], stake)
         actual_response: dict = self._get_stake(self._addr_array[0])
         expected_response = {
             "stake": stake,
             "unstake": unstake,
-            "unstakeBlockHeight": block_height + unstake_lock_period
         }
-        self.assertEqual(expected_response, actual_response)
+        self.assertEqual(expected_response['stake'], actual_response['stake'])
+        self.assertEqual(expected_response['unstake'], actual_response['unstake'])
+        self.assertIn('unstakeBlockHeight', actual_response)
+
         remain_balance: int = balance - total_stake
         actual_balance = self._query({"address": self._addr_array[0]}, 'icx_getBalance')
         self.assertEqual(remain_balance, actual_balance)
 
-        for _ in range(unstake_lock_period + 1):
+        expired_block_height: int = actual_response['unstakeBlockHeight'] - self._block_height
+        for _ in range(expired_block_height + 1):
             tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], 0)
             prev_block, tx_results = self._make_and_req_block([tx])
             self._write_precommit_state(prev_block)
