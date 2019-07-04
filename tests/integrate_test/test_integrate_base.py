@@ -62,7 +62,7 @@ class TestIntegrateBase(TestCase):
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
 
-        self._block_height = 0
+        self._block_height = -1
         self._prev_block_hash = None
 
         config = IconConfig("", default_icon_config)
@@ -139,7 +139,7 @@ class TestIntegrateBase(TestCase):
         }
 
         block_hash = create_block_hash()
-        block = Block(self._block_height, block_hash, timestamp_us, None, 0)
+        block = Block(self._block_height + 1, block_hash, timestamp_us, None, 0)
         invoke_response: tuple = self.icon_service_engine.invoke(
             block,
             [tx]
@@ -311,7 +311,7 @@ class TestIntegrateBase(TestCase):
                             prev_block_generator: Optional['Address'] = None,
                             prev_block_validators: Optional[List['Address']] = None) -> tuple:
         if block_height is None:
-            block_height: int = self._block_height
+            block_height: int = self._block_height + 1
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
@@ -340,7 +340,7 @@ class TestIntegrateBase(TestCase):
                                            is_block_editable=False,
                                            cumulative_fee: int = 0) -> tuple:
         if block_height is None:
-            block_height: int = self._block_height
+            block_height: int = self._block_height + 1
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
@@ -361,7 +361,7 @@ class TestIntegrateBase(TestCase):
                                           prev_block_generator: Optional['Address'] = None,
                                           prev_block_validators: Optional[List['Address']] = None) -> tuple:
         if block_height is None:
-            block_height: int = self._block_height
+            block_height: int = self._block_height + 1
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
