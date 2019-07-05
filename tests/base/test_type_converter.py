@@ -138,6 +138,57 @@ class TestTypeConverter(unittest.TestCase):
         self.assertNotEqual(data_to, params[ConstantKeys.TO])
         self.assertNotEqual(data_value, params[ConstantKeys.VALUE])
 
+    def test_issue_data_convert(self):
+        prep_incentive = 1
+        prep_reward_rate = 1
+        prep_total_delegation = 1
+        prep_value = 1
+
+        eep_incentive = 2
+        eep_reward_rate = 2
+        eep_total_delegation = 2
+        eep_value = 2
+
+        dapp_incentive = 3
+        dapp_reward_rate = 3
+        dapp_total_delegation = 3
+        dapp_value = 3
+        request = {
+            ConstantKeys.PREP: {
+                ConstantKeys.PREP_INCENTIVE: hex(prep_incentive),
+                ConstantKeys.PREP_REWARD_RATE: hex(prep_reward_rate),
+                ConstantKeys.PREP_TOTAL_DELEGATION: hex(prep_total_delegation),
+                ConstantKeys.PREP_VALUE: hex(prep_value)
+            },
+            ConstantKeys.EEP: {
+                ConstantKeys.EEP_INCENTIVE: hex(eep_incentive),
+                ConstantKeys.EEP_REWARD_RATE: hex(eep_reward_rate),
+                ConstantKeys.EEP_TOTAL_DELEGATION: hex(eep_total_delegation),
+                ConstantKeys.EEP_VALUE: hex(eep_value)
+            },
+            ConstantKeys.DAPP: {
+                ConstantKeys.DAPP_INCENTIVE: hex(dapp_incentive),
+                ConstantKeys.DAPP_REWARD_RATE: hex(dapp_reward_rate),
+                ConstantKeys.DAPP_TOTAL_DELEGATION: hex(dapp_total_delegation),
+                ConstantKeys.DAPP_VALUE: hex(dapp_value)
+            }
+        }
+        ret_params = TypeConverter.convert(request, ParamType.ISSUE_DATA)
+        self.assertEqual(prep_incentive, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_INCENTIVE])
+        self.assertEqual(prep_reward_rate, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_REWARD_RATE])
+        self.assertEqual(prep_total_delegation, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_TOTAL_DELEGATION])
+        self.assertEqual(prep_value, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_VALUE])
+
+        self.assertEqual(eep_incentive, ret_params[ConstantKeys.EEP][ConstantKeys.EEP_INCENTIVE])
+        self.assertEqual(eep_reward_rate, ret_params[ConstantKeys.EEP][ConstantKeys.EEP_REWARD_RATE])
+        self.assertEqual(eep_total_delegation, ret_params[ConstantKeys.EEP][ConstantKeys.EEP_TOTAL_DELEGATION])
+        self.assertEqual(eep_value, ret_params[ConstantKeys.EEP][ConstantKeys.EEP_VALUE])
+
+        self.assertEqual(dapp_incentive, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_INCENTIVE])
+        self.assertEqual(dapp_reward_rate, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_REWARD_RATE])
+        self.assertEqual(dapp_total_delegation, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_TOTAL_DELEGATION])
+        self.assertEqual(dapp_value, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_VALUE])
+
     def test_transaction_convert_success1(self):
         method = "icx_sendTransaction"
         tx_hash = create_block_hash()
@@ -194,6 +245,62 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self.assertEqual(e.exception.message,
                          "TypeConvert Exception None value, template: ValueType.ADDRESS_OR_MALFORMED_ADDRESS")
+
+    def test_issue_transaction_convert(self):
+        prep_data = {
+            ConstantKeys.PREP_INCENTIVE: 1,
+            ConstantKeys.PREP_REWARD_RATE: 1,
+            ConstantKeys.PREP_TOTAL_DELEGATION: 1,
+            ConstantKeys.PREP_VALUE: 1
+        }
+        eep_data = {
+            ConstantKeys.EEP_INCENTIVE: 2,
+            ConstantKeys.EEP_REWARD_RATE: 2,
+            ConstantKeys.EEP_TOTAL_DELEGATION: 2,
+            ConstantKeys.EEP_VALUE: 2
+        }
+        dapp_data = {
+            ConstantKeys.DAPP_INCENTIVE: 3,
+            ConstantKeys.DAPP_REWARD_RATE: 3,
+            ConstantKeys.DAPP_TOTAL_DELEGATION: 3,
+            ConstantKeys.DAPP_VALUE: 3
+        }
+        # todo: consider more cases (total 7 case)
+        self._test_issue_transaction_convert({"prep": prep_data, "eep": eep_data, "dapp": dapp_data})
+
+    def _test_issue_transaction_convert(self,
+                                        data: dict,
+                                        method: str = "icx_sendTransaction"):
+        version = 3
+        timestamp = 12345
+        data_type = 'issue'
+        nonce = 123
+
+        request = {
+            ConstantKeys.METHOD: method,
+            ConstantKeys.PARAMS: {
+                ConstantKeys.VERSION: hex(version),
+                ConstantKeys.TIMESTAMP: hex(timestamp),
+                ConstantKeys.NONCE: hex(nonce),
+                ConstantKeys.DATA_TYPE: data_type,
+                ConstantKeys.DATA: {
+                }
+            }
+        }
+        data_params = request[ConstantKeys.PARAMS][ConstantKeys.DATA]
+        for group in data.keys():
+            data_params[group] = {key: hex(value) for key, value in data[group].items()}
+
+        ret_params = TypeConverter.convert(request, ParamType.INVOKE_TRANSACTION)
+        self.assertEqual(method, ret_params[ConstantKeys.METHOD])
+        self.assertEqual(version, ret_params[ConstantKeys.PARAMS][ConstantKeys.VERSION])
+        self.assertEqual(timestamp, ret_params[ConstantKeys.PARAMS][ConstantKeys.TIMESTAMP])
+        self.assertEqual(nonce, ret_params[ConstantKeys.PARAMS][ConstantKeys.NONCE])
+        self.assertEqual(data_type, ret_params[ConstantKeys.PARAMS][ConstantKeys.DATA_TYPE])
+        ret_data_params = ret_params[ConstantKeys.PARAMS][ConstantKeys.DATA]
+        for group in data.keys():
+            for key in data[group].keys():
+                self.assertEqual(data[group][key], ret_data_params[group][key])
 
     def _test_transaction_convert(self,
                                   method: str,
@@ -303,6 +410,9 @@ class TestTypeConverter(unittest.TestCase):
         data_value = 1 * 10 ** 18
         fixed_fee = 10 ** 16
 
+        prev_block_generator = create_address()
+        prev_block_validators = [create_address() for _ in range(0, 10)]
+
         request = {
             ConstantKeys.BLOCK: {
                 ConstantKeys.BLOCK_HEIGHT: hex(block_height),
@@ -347,7 +457,9 @@ class TestTypeConverter(unittest.TestCase):
                         ConstantKeys.SIGNATURE: signature,
                     }
                 }
-            ]
+            ],
+            ConstantKeys.PREV_BLOCK_GENERATOR: str(prev_block_generator),
+            ConstantKeys.PREV_BLOCK_VALIDATORS: [str(addr) for addr in prev_block_validators]
         }
 
         ret_params = TypeConverter.convert(request, ParamType.INVOKE)
@@ -392,6 +504,10 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(timestamp, transaction_params_params[ConstantKeys.TIMESTAMP])
         self.assertEqual(nonce, transaction_params_params[ConstantKeys.NONCE])
         self.assertEqual(signature, transaction_params_params[ConstantKeys.SIGNATURE])
+
+        # Check the previous block generator, validators
+        self.assertEqual(prev_block_generator, ret_params[ConstantKeys.PREV_BLOCK_GENERATOR])
+        self.assertEqual(prev_block_validators, ret_params[ConstantKeys.PREV_BLOCK_VALIDATORS])
 
     def test_genesis_invoke_convert(self):
         block_height = 1001

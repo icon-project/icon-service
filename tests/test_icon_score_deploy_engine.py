@@ -25,10 +25,10 @@ from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.factory import ContextDatabaseFactory
-from iconservice.deploy import DeployType
-from iconservice.deploy import icon_score_deploy_engine as isde
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage, IconScoreDeployTXParams, \
-    IconScoreDeployInfo
+from iconservice.icon_constant import DeployType
+from iconservice.deploy import engine as isde
+from iconservice.deploy import DeployStorage
+from iconservice.deploy.storage import IconScoreDeployTXParams, IconScoreDeployInfo
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
 from iconservice.icon_constant import ICON_DEX_DB_NAME, IconServiceFlag
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
@@ -36,8 +36,9 @@ from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_mapper import IconScoreMapper
 from iconservice.iconscore.icon_score_step import IconScoreStepCounter
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory
-from iconservice.icx.icx_engine import IcxEngine
-from iconservice.icx.icx_storage import IcxStorage
+from iconservice.icx import IcxEngine
+from iconservice.icx import IcxStorage
+from iconservice.utils import ContextStorage
 from tests import rmtree, create_address, create_tx_hash, create_block_hash
 
 PROJECT_ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
@@ -53,16 +54,16 @@ VALIDATE_DEPLOYER = patch('iconservice.iconscore.icon_score_context_util.\
 IconScoreContextUtil.validate_deployer')
 VALIDATE_PACKAGE_PATCHER = patch('iconservice.iconscore.icon_score_context_util.\
 IconScoreContextUtil.validate_score_package')
-MAKE_DIR_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.os.makedirs')
-GET_SCORE_DEPLOY_PATH_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.get_score_deploy_path')
-OS_PATH_JOIN_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.os.path.join')
-GET_SCORE_PATH_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.get_score_path', return_value='aa')
-SYMLINK_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.os.symlink')
+MAKE_DIR_PATCHER = patch('iconservice.deploy.engine.os.makedirs')
+GET_SCORE_DEPLOY_PATH_PATCHER = patch('iconservice.deploy.engine.get_score_deploy_path')
+OS_PATH_JOIN_PATCHER = patch('iconservice.deploy.engine.os.path.join')
+GET_SCORE_PATH_PATCHER = patch('iconservice.deploy.engine.get_score_path', return_value='aa')
+SYMLINK_PATCHER = patch('iconservice.deploy.engine.os.symlink')
 GET_SCORE_INFO_PATCHER = patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.get_score_info')
 CREATE_SCORE_INFO_PATCHER = patch('iconservice.iconscore.icon_score_context_util.IconScoreContextUtil.create_score_info')
 DEPLOY_PATCHER = patch('iconservice.deploy.icon_score_deployer.IconScoreDeployer.deploy')
 DEPLOY_LEGACY_PATCHER = patch('iconservice.deploy.icon_score_deployer.IconScoreDeployer.deploy_legacy')
-REMOVE_PATH_PATCHER = patch('iconservice.deploy.icon_score_deploy_engine.remove_path')
+REMOVE_PATH_PATCHER = patch('iconservice.deploy.engine.remove_path')
 MAKE_ANNOTATIONS_FROM_METHOD_PATCHER = patch('iconservice.base.type_converter.'
                                              'TypeConverter.make_annotations_from_method', return_value="annotations")
 CONVERT_DATA_PARAMS_PATCHER = patch('iconservice.base.type_converter.'
@@ -126,16 +127,24 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._icx_db = ContextDatabaseFactory.create_by_name(ICON_DEX_DB_NAME)
         self._icx_db.address = ICX_ENGINE_ADDRESS
         self._icx_storage = IcxStorage(self._icx_db)
-        self._score_deploy_engine = isde.IconScoreDeployEngine()
-        self._deploy_storage = IconScoreDeployStorage(self._icx_db)
+        self._score_deploy_engine = isde.Engine()
+        self._deploy_storage = DeployStorage(self._icx_db)
 
         self._icon_score_mapper = IconScoreMapper()
 
         self.addr1 = create_address(AddressPrefix.EOA)
         self.addr2 = create_address(AddressPrefix.EOA)
         self.score_address = create_address(AddressPrefix.CONTRACT)
-        self._score_deploy_engine.open(
-            score_deploy_storage=self._deploy_storage)
+        self._score_deploy_engine.open()
+        IconScoreContext.storage = ContextStorage(
+            deploy=self._deploy_storage,
+            fee=None,
+            icx=None,
+            iiss=None,
+            prep=None,
+            issue=None,
+            rc=None
+        )
 
         self.make_context()
 
@@ -156,7 +165,7 @@ class TestScoreDeployEngine(unittest.TestCase):
 
         self._context.tx = Transaction(
             create_tx_hash(), origin=self.addr1)
-        self._context.block = Block(1, create_block_hash(), 0, None)
+        self._context.block = Block(1, create_block_hash(), 0, None, 0)
         self._context.icon_score_mapper = self._icon_score_mapper
         self._context.icx = IcxEngine()
         self.__step_counter_factory = IconScoreStepCounterFactory()
@@ -393,7 +402,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._deploy_storage.get_deploy_tx_params.assert_called_with(self._context, self._context.tx.hash)
         self.assertEqual(e.exception.code, ExceptionCode.INVALID_PARAMETER)
         self._score_deploy_engine._score_deploy.assert_not_called()
-        self._score_deploy_engine._score_deploy_storage.update_score_info.assert_not_called()
+        IconScoreContext.storage.deploy.update_score_info.assert_not_called()
 
     # case when tx_param is not None
     @patch_several(GET_DEPLOY_TX_PARAMS_PATCHER)
@@ -405,7 +414,7 @@ class TestScoreDeployEngine(unittest.TestCase):
         self._score_deploy_engine.deploy(self._context, self._context.tx.hash)
 
         self._score_deploy_engine._score_deploy.assert_called_with(self._context, tx_params)
-        self._score_deploy_engine._score_deploy_storage.\
+        IconScoreContext.storage.deploy.\
             update_score_info.assert_called_with(self._context, GOVERNANCE_SCORE_ADDRESS, self._context.tx.hash)
 
     # test for tbears mode, legacy_tbears_mode is True

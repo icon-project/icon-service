@@ -13,19 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import signal
 
 import argparse
-import setproctitle
+import os
+import signal
 import sys
 
-from earlgrey import MessageQueueService, aio_pika, asyncio
-
+import setproctitle
+from earlgrey import MessageQueueService, aio_pika
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
+
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey
+from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey, \
+    ICON_EXCEPTION_LOG_TAG
 from iconservice.icon_inner_service import IconScoreInnerService
 from iconservice.icon_service_cli import ICON_SERVICE_CLI, ExitCode
 
@@ -74,6 +75,10 @@ class IconService(object):
 
         try:
             loop.run_forever()
+        except Exception as e:
+            Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
+            Logger.error(e, ICON_EXCEPTION_LOG_TAG)
+            self._inner_service.clean_close()
         finally:
             """
             If the function is called when the operation is not an endless loop 

@@ -16,11 +16,11 @@
 
 from typing import TYPE_CHECKING, List, Optional, Any
 
+from .icon_score_step import StepType
 from ..base.address import Address, ICON_ADDRESS_BYTES_SIZE, ICON_ADDRESS_BODY_SIZE
 from ..base.exception import InvalidEventLogException
-from ..icon_constant import DATA_BYTE_ORDER, ICX_TRANSFER_EVENT_LOG, REVISION_3
+from ..icon_constant import DATA_BYTE_ORDER, REVISION_3
 from ..utils import int_to_bytes, byte_length_of_int
-from .icon_score_step import StepType
 
 if TYPE_CHECKING:
     from .icon_score_constant import BaseType
@@ -34,8 +34,8 @@ class EventLog(object):
     def __init__(
             self,
             score_address: 'Address',
-            indexed: List['BaseType'] = None,
-            data: List['BaseType'] = None) -> None:
+            indexed: List['BaseType'],
+            data: List['BaseType']) -> None:
         """
         Constructor
 
@@ -43,6 +43,10 @@ class EventLog(object):
         :param indexed: a list of indexed arguments including a event signature
         :param data: a list of normal arguments
         """
+        assert isinstance(score_address, Address)
+        assert isinstance(indexed, list)
+        assert isinstance(data, list)
+
         self.score_address: 'Address' = score_address
         self.indexed: 'List[BaseType]' = indexed
         self.data: 'List[BaseType]' = data
@@ -72,7 +76,8 @@ class EventLogEmitter(object):
                        score_address: 'Address',
                        event_signature: str,
                        arguments: List[Any],
-                       indexed_args_count: int):
+                       indexed_args_count: int,
+                       fee_charge: bool = False):
         """
         Puts a eventlog to the running context
 
@@ -81,6 +86,8 @@ class EventLogEmitter(object):
         :param event_signature: signature of the eventlog
         :param arguments: arguments of eventlog call
         :param indexed_args_count: count of the indexed arguments
+        :param fee_charge: used for deciding whether fee will be charged for the event logs
+
         :return:
         """
 
@@ -105,8 +112,8 @@ class EventLogEmitter(object):
             else:
                 data.append(argument)
 
-        # skip counting steps for auto emitted event 'ICXTransfer(Address,Address,int)'
-        if event_signature != ICX_TRANSFER_EVENT_LOG:
+        # Counting steps only if fee_charge is True
+        if fee_charge:
             context.step_counter.apply_step(StepType.EVENT_LOG, event_size)
 
         event = EventLog(score_address, indexed, data)

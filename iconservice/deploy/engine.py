@@ -17,47 +17,33 @@ import os
 from typing import TYPE_CHECKING
 
 from iconcommons import Logger
-from . import DeployType
 from .icon_score_deployer import IconScoreDeployer
-from .utils import remove_path, get_score_deploy_path, get_score_path
+from .utils import remove_path, get_score_path
+from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
+from ..icon_constant import DeployType
 from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
 from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
+from ..iconscore.utils import get_score_deploy_path
 from ..utils import is_builtin_score
 
 if TYPE_CHECKING:
-    from .icon_score_deploy_storage import IconScoreDeployInfo
-    from .icon_score_deploy_storage import IconScoreDeployStorage
-    from .icon_score_deploy_storage import IconScoreDeployTXParams
+    from .storage import IconScoreDeployInfo
+    from .storage import IconScoreDeployTXParams
     from ..iconscore.icon_score_context import IconScoreContext
     from ..iconscore.icon_score_mapper import IconScoreMapper
     from ..iconscore.icon_score_base import IconScoreBase
 
 
-class IconScoreDeployEngine(object):
+class Engine(EngineBase):
     """It handles transactions to install, update and audit a SCORE
     """
-
-    def __init__(self) -> None:
-        """Constructor
-        """
-        self._score_deploy_storage: 'IconScoreDeployStorage' = None
-
-    def open(self, score_deploy_storage: 'IconScoreDeployStorage') -> None:
-        """open
-        :param score_deploy_storage:
-        """
-        self._score_deploy_storage = score_deploy_storage
-
-    @property
-    def icon_deploy_storage(self) -> 'IconScoreDeployStorage':
-        return self._score_deploy_storage
 
     def invoke(self,
                context: 'IconScoreContext',
@@ -86,7 +72,7 @@ class IconScoreDeployEngine(object):
             deploy_type: 'DeployType' = \
                 DeployType.INSTALL if to == ZERO_SCORE_ADDRESS else DeployType.UPDATE
 
-            self._score_deploy_storage.put_deploy_info_and_tx_params(
+            context.storage.deploy.put_deploy_info_and_tx_params(
                 context, icon_score_address, deploy_type,
                 context.tx.origin, context.tx.hash, data)
 
@@ -128,13 +114,16 @@ class IconScoreDeployEngine(object):
         """
 
         tx_params: 'IconScoreDeployTXParams' =\
-            self._score_deploy_storage.get_deploy_tx_params(context, tx_hash)
+            context.storage.deploy.get_deploy_tx_params(context, tx_hash)
         if tx_params is None:
             raise InvalidParamsException(f'tx_params is None: 0x{tx_hash.hex()}')
 
         score_address: 'Address' = tx_params.score_address
+        tmp_current = context.current_address
+        context.current_address = score_address
         self._score_deploy(context, tx_params)
-        self._score_deploy_storage.update_score_info(context, score_address, tx_hash)
+        context.storage.deploy.update_score_info(context, score_address, tx_hash)
+        context.current_address = tmp_current
 
     def _score_deploy(self, context: 'IconScoreContext', tx_params: 'IconScoreDeployTXParams'):
         """
@@ -171,8 +160,7 @@ class IconScoreDeployEngine(object):
         score_address = tx_params.score_address
         params: dict = data.get('params', {})
 
-        deploy_info: 'IconScoreDeployInfo' =\
-            self.icon_deploy_storage.get_deploy_info(context, tx_params.score_address)
+        deploy_info: 'IconScoreDeployInfo' = context.storage.deploy.get_deploy_info(context, tx_params.score_address)
         next_tx_hash: bytes = deploy_info.next_tx_hash
 
         self._write_score_to_filesystem(context, score_address, next_tx_hash, data)
@@ -228,8 +216,7 @@ class IconScoreDeployEngine(object):
         :param tx_hash:
         :return:
         """
-        current_score_info: 'IconScoreInfo' =\
-            IconScoreContextUtil.get_score_info(context, score_address)
+        current_score_info: 'IconScoreInfo' = IconScoreContextUtil.get_score_info(context, score_address)
 
         # Reuse score_db if it has already existed.
         score_db = None
@@ -298,4 +285,3 @@ class IconScoreDeployEngine(object):
         annotations = TypeConverter.make_annotations_from_method(on_init)
         TypeConverter.convert_data_params(annotations, params)
         on_init(**params)
-

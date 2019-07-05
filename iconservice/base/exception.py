@@ -44,6 +44,11 @@ class ExceptionCode(IntEnum):
         return str(self.name).capitalize().replace('_', ' ')
 
 
+class InvalidBlockException(BaseException):
+    # if this exception is raised on invoke, icon service will be closed
+    pass
+
+
 class IconServiceBaseException(BaseException):
     """All custom exceptions used in IconService should inherit from this
     """
@@ -139,6 +144,11 @@ class InvalidInterfaceException(IconServiceBaseException):
 class OutOfBalanceException(IconServiceBaseException):
     def __init__(self, message: Optional[str]):
         super().__init__(message, ExceptionCode.OUT_OF_BALANCE)
+
+
+class TimeoutException(IconServiceBaseException):
+    def __init__(self, message: Optional[str]):
+        super().__init__(message, ExceptionCode.TIMEOUT_ERROR)
 
 
 class StackOverflowException(IconServiceBaseException):

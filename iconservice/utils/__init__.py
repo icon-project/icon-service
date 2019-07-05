@@ -20,20 +20,21 @@ Functions and classes in this module don't have any external dependencies.
 """
 
 import hashlib
-
 import re
+from collections import namedtuple
+from enum import Flag
 from typing import Any, Union
 
-from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER
+from ..icon_constant import BUILTIN_SCORE_ADDRESS_MAPPER, DATA_BYTE_ORDER
 
 
 def int_to_bytes(n: int) -> bytes:
     length = byte_length_of_int(n)
-    return n.to_bytes(length, byteorder='big', signed=True)
+    return n.to_bytes(length, byteorder=DATA_BYTE_ORDER, signed=True)
 
 
 def bytes_to_int(v: bytes) -> int:
-    return int.from_bytes(v, "big", signed=True)
+    return int.from_bytes(v, byteorder=DATA_BYTE_ORDER, signed=True)
 
 
 def byte_length_of_int(n: int):
@@ -92,3 +93,20 @@ def get_main_type_from_annotations_type(annotations_type: type) -> type:
 
 def is_builtin_score(score_address: str) -> bool:
     return score_address in BUILTIN_SCORE_ADDRESS_MAPPER.values()
+
+
+def is_flags_on(src_flags: int, dest_flags: int) -> bool:
+    return src_flags & dest_flags == dest_flags
+
+
+def toggle_flags(src_flags: Flag, dest_flags: Flag, on: bool) -> Flag:
+    if on:
+        src_flags |= dest_flags
+    else:
+        src_flags &= ~dest_flags
+
+    return src_flags
+
+
+ContextEngine = namedtuple("engine", "deploy fee icx iiss prep issue")
+ContextStorage = namedtuple("storage", "deploy fee icx iiss prep issue rc")

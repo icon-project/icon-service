@@ -15,24 +15,26 @@
 # limitations under the License.
 
 import unittest
-from typing import Optional
 from unittest.mock import Mock, patch
 
 from iconservice import VarDB
 from iconservice.base.address import AddressPrefix, Address, ICON_CONTRACT_ADDRESS_BYTES_SIZE
 from iconservice.builtin_scores.governance import governance
 from iconservice.database.db import IconScoreDatabase
-from iconservice.fee.fee_engine import FeeEngine
+from iconservice.fee import FeeEngine
 from iconservice.icon_constant import REVISION_3
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import \
     IconScoreBase, eventlog, external
 from iconservice.iconscore.icon_score_base2 import sha3_256
-from iconservice.iconscore.icon_score_context import ContextContainer
+from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_context_util import IconScoreContextUtil
 from iconservice.iconscore.icon_score_engine import IconScoreEngine
 from iconservice.iconscore.icon_score_step import \
     StepType, IconScoreStepCounter, IconScoreStepCounterFactory
+from iconservice.icx import IcxEngine
+from iconservice.prep import PRepEngine
+from iconservice.utils import ContextEngine
 from tests import create_tx_hash, create_address
 from tests.mock_generator import generate_inner_task, create_request, ReqData, clear_inner_task
 
@@ -52,6 +54,18 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self.step_counter.step_price = 0
         self.step_counter.step_limit = 5000000
         self.step_cost_dict = self._init_step_cost()
+        prep_engine = PRepEngine()
+        prep_engine.preps = Mock()
+        fee_engine = FeeEngine()
+        icx_engine = IcxEngine()
+        IconScoreContext.engine = ContextEngine(
+            deploy=Mock(),
+            fee=fee_engine,
+            icx=icx_engine,
+            iiss=None,
+            prep=prep_engine,
+            issue=None
+        )
 
     def tearDown(self):
         ContextContainer._clear_context()
@@ -60,10 +74,9 @@ class TestIconScoreStepCounter(unittest.TestCase):
     def test_install_step(self):
         # Ignores deploy
         deploy_engine_invoke = Mock()
-        self._inner_task._icon_service_engine. \
-            _icon_score_deploy_engine.invoke = deploy_engine_invoke
+        IconScoreContext.engine.deploy.invoke = deploy_engine_invoke
 
-        tx_hash1 = bytes.hex(create_tx_hash())
+        tx_hash1: str = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = Address.from_string('cx0000000000000000000000000000000000000000')
         content_type = 'application/zip'
@@ -82,7 +95,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         # for StepType.CONTRACT_UPDATE
         to_ = result['txResults'][tx_hash1]['scoreAddress']
-        tx_hash2 = bytes.hex(create_tx_hash())
+        tx_hash2: str = bytes.hex(create_tx_hash())
 
         request2 = create_request([
             ReqData(tx_hash2, from_, to_, 0, 'deploy', data),
@@ -169,6 +182,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_internal_transfer_step(self, score_invoke):
+        IconScoreContext.engine.icx.transfer = Mock()
         tx_hash = bytes.hex(create_tx_hash())
         from_ = create_address(AddressPrefix.EOA)
         to_ = create_address(AddressPrefix.CONTRACT)
@@ -263,19 +277,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine.\
             _icx_context_db.get = Mock(return_value=b'1' * 100)
 
-        self._inner_task._icon_service_engine._fee_engine = Mock(spec=FeeEngine)
-
         def charge_transaction_fee(*args, **kwargs):
             return {args[1]: args[4]}
 
-        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee \
-            = Mock(side_effect=charge_transaction_fee)
+        IconScoreContext.engine.fee.charge_transaction_fee = Mock(side_effect=charge_transaction_fee)
 
         def get_total_available_step(*args, **kwargs):
             return args[2]
 
-        self._inner_task._icon_service_engine._fee_engine.get_total_available_step \
-            = Mock(side_effect=get_total_available_step)
+        IconScoreContext.engine.fee.get_total_available_step = Mock(side_effect=get_total_available_step)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
@@ -363,19 +373,15 @@ class TestIconScoreStepCounter(unittest.TestCase):
         self._inner_task._icon_service_engine.\
             _icx_context_db.get = Mock(return_value=b'1' * 100)
 
-        self._inner_task._icon_service_engine._fee_engine = Mock(spec=FeeEngine)
-
         def charge_transaction_fee(*args, **kwargs):
             return {args[1]: args[4]}
 
-        self._inner_task._icon_service_engine._fee_engine.charge_transaction_fee \
-            = Mock(side_effect=charge_transaction_fee)
+        IconScoreContext.engine.fee.charge_transaction_fee = Mock(side_effect=charge_transaction_fee)
 
         def get_total_available_step(*args, **kwargs):
             return args[2]
 
-        self._inner_task._icon_service_engine._fee_engine.get_total_available_step \
-            = Mock(side_effect=get_total_available_step)
+        IconScoreContext.engine.fee.get_total_available_step = Mock(side_effect=get_total_available_step)
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):
@@ -736,7 +742,7 @@ class TestIconScoreStepCounter(unittest.TestCase):
 
         return step_used
 
-    def _assert_step_used(self, step_used: int, request: dict, tx_hash: bytes):
+    def _assert_step_used(self, step_used: int, request: dict, tx_hash: str):
         self.step_counter = IconScoreStepCounter(0, self.step_cost_dict, 5_000_000)
         self.step_counter.reset(step_limit=5_000_000)
         factory = self._inner_task._icon_service_engine._step_counter_factory

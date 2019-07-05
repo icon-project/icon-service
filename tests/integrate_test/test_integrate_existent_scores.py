@@ -39,8 +39,8 @@ class TestIntegrateExistentScores(TestIntegrateBase):
 
     # override setUp method for making directory before begin tests.
     def setUp(self):
-        root_clear(self._score_root_path, self._state_db_root_path)
-        self._block_height = 0
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
+        self._block_height = -1
         self._prev_block_hash = None
 
         self.config = IconConfig("", default_icon_config)

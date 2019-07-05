@@ -13,14 +13,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from enum import IntFlag
 from threading import Lock
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, List
 
 from .base.block import Block
 from .base.exception import InvalidParamsException
 from .database.batch import BlockBatch
 from .iconscore.icon_score_mapper import IconScoreMapper
+
+if TYPE_CHECKING:
+    from .base.address import Address
+    from .prep.data.prep_container import PRepContainer
 
 
 class PrecommitFlag(IntFlag):
@@ -34,13 +39,21 @@ class PrecommitFlag(IntFlag):
     STEP_MAX_LIMIT_CHANGED = 0x40
     # STEP changed flag mask
     STEP_ALL_CHANGED = 0xf0
+    # CHANGE REVISION
+    GENESIS_IISS_CALC = 0x100
+    IISS_CALC = 0x200
 
 
 class PrecommitData(object):
     def __init__(self,
+                 revision: int,
                  block_batch: 'BlockBatch',
                  block_result: list,
-                 score_mapper: Optional['IconScoreMapper']=None,
+                 rc_block_batch: list,
+                 preps: 'PRepContainer',
+                 prev_block_generator: Optional['Address'],
+                 prev_block_validators: Optional[List['Address']],
+                 score_mapper: Optional['IconScoreMapper'] = None,
                  precommit_flag: PrecommitFlag = PrecommitFlag.NONE):
         """
 
@@ -50,23 +63,30 @@ class PrecommitData(object):
         :param precommit_flag: precommit flag
 
         """
+        self.revision: int = revision
         self.block_batch = block_batch
         self.block_result = block_result
+        self.rc_block_batch = rc_block_batch
+        # Snapshot of preps
+        self.preps = preps
+        self.prev_block_generator = prev_block_generator
+        self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper
         self.precommit_flag = precommit_flag
-        self.block = block_batch.block
+
         self.state_root_hash: bytes = self.block_batch.digest()
+        self.block = block_batch.block
 
 
 class PrecommitDataManager(object):
-    """Manages multiple precommit data made from next candidate block
+    """Manages multiple precommit block data
 
     """
 
     def __init__(self):
         self._lock = Lock()
         self._precommit_data_mapper = {}
-        self._last_block: 'Block' = None
+        self._last_block: Optional['Block'] = None
 
     @property
     def last_block(self) -> 'Block':

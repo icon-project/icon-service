@@ -20,19 +20,18 @@ from unittest.mock import Mock, ANY, patch, MagicMock
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, InvalidRequestException, \
     InvalidParamsException, OutOfBalanceException
-from iconservice.deploy.icon_score_deploy_storage import IconScoreDeployStorage
-from iconservice.fee.fee_engine import FeeEngine
+from iconservice.deploy import DeployEngine
+from iconservice.fee import FeeEngine
 from iconservice.icon_constant import MAX_DATA_SIZE, FIXED_FEE
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
-from iconservice.icx.icx_engine import IcxEngine
+from iconservice.icx import IcxEngine
 from tests import create_address
 
 
 class TestTransactionValidator(unittest.TestCase):
 
     def setUp(self):
-        self.validator = IconPreValidator(
-            Mock(spec=IcxEngine), Mock(spec=FeeEngine), Mock(spec=IconScoreDeployStorage))
+        self.validator = IconPreValidator()
 
     def test_excute_v2(self):
         self.validator._check_data_size = Mock()

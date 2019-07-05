@@ -23,13 +23,12 @@ from unittest.mock import Mock, patch
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import IconServiceBaseException
+from iconservice.base.exception import InvalidParamsException
 from iconservice.base.message import Message
 from iconservice.base.transaction import Transaction
 from iconservice.base.type_converter import TypeConverter
 from iconservice.database.batch import TransactionBatch
 from iconservice.database.db import IconScoreDatabase
-from iconservice.deploy.icon_score_deploy_engine import IconScoreDeployEngine
 from iconservice.iconscore.icon_pre_validator import IconPreValidator
 from iconservice.iconscore.icon_score_base import IconScoreBase, eventlog, \
     external
@@ -48,11 +47,10 @@ from tests.mock_generator import generate_service_engine, generate_inner_task, \
 class TestTransactionResult(unittest.TestCase):
     def setUp(self):
         self._icon_service_engine = generate_service_engine()
-        self._icon_service_engine._icon_score_deploy_engine = \
-            Mock(spec=IconScoreDeployEngine)
 
         self._icon_service_engine._charge_transaction_fee = \
             Mock(return_value=({}, 0))
+        IconScoreContext.engine.iiss.open = Mock()
 
         step_counter_factory = IconScoreStepCounterFactory()
         step_counter_factory.get_step_cost = Mock(return_value=6000)
@@ -66,7 +64,7 @@ class TestTransactionResult(unittest.TestCase):
         self._mock_context.block = Mock(spec=Block)
         self._mock_context.event_logs = []
         self._mock_context.traces = []
-        self._mock_context.step_counter = step_counter_factory.create(5000000)
+        self._mock_context.step_counter = step_counter_factory.create(IconScoreContextType.INVOKE)
         self._mock_context.current_address = Mock(spec=Address)
         self._mock_context.revision = 0
 
@@ -78,10 +76,8 @@ class TestTransactionResult(unittest.TestCase):
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         tx_index = randrange(0, 100)
-        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, to_, 0)
         self._mock_context.msg = Message(from_)
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=False), 'is_data_type_supported')
 
         params = {
             'version': 3,
@@ -107,14 +103,12 @@ class TestTransactionResult(unittest.TestCase):
 
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_tx_failure(self, score_invoke):
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=False), 'is_data_type_supported')
-        score_invoke.side_effect = IconServiceBaseException("error")
+        score_invoke.side_effect = Mock(side_effect=InvalidParamsException("error"))
 
         from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
         to_ = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         tx_index = randrange(0, 100)
-        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, 0)
+        self._mock_context.tx = Transaction(os.urandom(32), tx_index, from_, to_, 0)
         self._mock_context.msg = Message(from_)
         self._mock_context.tx_batch = TransactionBatch()
 
@@ -131,11 +125,11 @@ class TestTransactionResult(unittest.TestCase):
         self.assertNotIn('scoreAddress', camel_dict)
 
     def test_install_result(self):
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=True), 'is_data_type_supported')
+        IconScoreContext.engine.deploy.invoke = Mock()
 
-        from_ = Address.from_data(AddressPrefix.EOA, os.urandom(20))
-        self._mock_context.tx = Transaction(os.urandom(32), 0, from_, 0)
+        from_ = Address(AddressPrefix.EOA, os.urandom(20))
+        to_ = Address(AddressPrefix.EOA, os.urandom(20))
+        self._mock_context.tx = Transaction(os.urandom(32), 0, from_, to_, 0)
         self._mock_context.msg = Message(from_)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
@@ -164,11 +158,10 @@ class TestTransactionResult(unittest.TestCase):
     def test_sample_result(self):
         from_ = Address.from_data(AddressPrefix.EOA, b'from')
         to_ = Address.from_data(AddressPrefix.CONTRACT, b'to')
-        self._mock_context.tx = Transaction(os.urandom(32), 1234, from_, 0)
+        self._mock_context.tx = Transaction(os.urandom(32), 1234, from_, to_, 0)
         self._mock_context.msg = Message(from_)
 
-        self._icon_service_engine._icon_score_deploy_engine.attach_mock(
-            Mock(return_value=False), 'is_data_type_supported')
+        IconScoreContext.engine.deploy.invoke = Mock()
         self._icon_service_engine._process_transaction = Mock(return_value=to_)
 
         tx_result = self._icon_service_engine._handle_icx_send_transaction(
@@ -186,7 +179,7 @@ class TestTransactionResult(unittest.TestCase):
         tx_result.logs_bloom.add(b'1')
         tx_result.logs_bloom.add(b'2')
         tx_result.logs_bloom.add(b'3')
-        tx_result.block = Block(123, hashlib.sha3_256(b'block').digest(), 1, None)
+        tx_result.block = Block(123, hashlib.sha3_256(b'block').digest(), 1, None, 0)
 
         camel_dict = tx_result.to_dict(to_camel_case)
 
@@ -219,6 +212,7 @@ class TestTransactionResult(unittest.TestCase):
     @patch('iconservice.iconscore.icon_score_engine.IconScoreEngine.invoke')
     def test_request(self, score_invoke):
         inner_task = generate_inner_task(3)
+        IconScoreContext.engine.prep.preps = Mock()
 
         # noinspection PyUnusedLocal
         def intercept_invoke(*args, **kwargs):

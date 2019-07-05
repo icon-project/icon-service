@@ -35,7 +35,7 @@ class InternalCall(object):
 
     @staticmethod
     def icx_get_balance(context: 'IconScoreContext', address: 'Address') -> int:
-        return context.icx_engine.get_balance(context, address)
+        return context.engine.icx.get_balance(context, address)
 
     @staticmethod
     def other_external_call(context: 'IconScoreContext',
@@ -65,7 +65,7 @@ class InternalCall(object):
 
             context.step_counter.apply_step(StepType.CONTRACT_CALL, 1)
 
-            context.icx_engine.transfer(context, addr_from, addr_to, amount)
+            context.engine.icx.transfer(context, addr_from, addr_to, amount)
 
             if amount > 0:
                 InternalCall.emit_event_log_for_icx_transfer(context, addr_from, addr_to, amount)
@@ -156,7 +156,11 @@ class InternalCall(object):
         event_signature = ICX_TRANSFER_EVENT_LOG
         arguments = [from_, to, value]
         indexed_args_count = 3
-        EventLogEmitter.emit_event_log(context, from_, event_signature, arguments, indexed_args_count)
+        EventLogEmitter.emit_event_log(context=context,
+                                       score_address=from_,
+                                       event_signature=event_signature,
+                                       arguments=arguments,
+                                       indexed_args_count=indexed_args_count)
 
     @staticmethod
     def enter_call(context: 'IconScoreContext') -> None:

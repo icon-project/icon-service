@@ -14,18 +14,18 @@
 
 from asyncio import get_event_loop
 from concurrent.futures.thread import ThreadPoolExecutor
+from typing import Any, TYPE_CHECKING, Optional, Tuple
 
 from earlgrey import message_queue_task, MessageQueueStub, MessageQueueService
-from typing import Any, TYPE_CHECKING, Optional, Tuple
 
 from iconcommons.logger import Logger
 from iconservice.base.address import Address
 from iconservice.base.block import Block
-from iconservice.base.exception import ExceptionCode, IconServiceBaseException
+from iconservice.base.exception import ExceptionCode, IconServiceBaseException, InvalidBlockException
 from iconservice.base.type_converter import TypeConverter, ParamType
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ICON_INNER_LOG_TAG, ICON_SERVICE_LOG_TAG, \
-    EnableThreadFlag, ENABLE_THREAD_FLAG
+    EnableThreadFlag, ENABLE_THREAD_FLAG, ConfigKey
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.utils import check_error_response, to_camel_case
 
@@ -57,13 +57,18 @@ class IconScoreInnerTask(object):
     def _is_thread_flag_on(self, flag: 'EnableThreadFlag') -> bool:
         return (self._thread_flag & flag) == flag
 
-    def _log_exception(self, e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
+    @staticmethod
+    def _log_exception(e: BaseException, tag: str = ICON_INNER_LOG_TAG) -> None:
         Logger.exception(e, tag)
         Logger.error(e, tag)
 
     @message_queue_task
     async def hello(self):
-        Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
+        response = MakeResponse.make_response({"isIssuable": True,
+                                               "pRepList": self._conf[ConfigKey.IISS_PREP_LIST]
+                                               })
+        Logger.info(f'icon_score_hello with response: {response}', ICON_INNER_LOG_TAG)
+        return response
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
@@ -101,19 +106,45 @@ class IconScoreInnerTask(object):
             block = Block.from_dict(converted_block_params)
 
             converted_tx_requests = params['transactions']
-            tx_results, state_root_hash = self._icon_service_engine.invoke(
-                block=block, tx_requests=converted_tx_requests)
 
-            convert_tx_results = \
-                {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case) for tx_result in tx_results}
+            converted_is_block_editable = params.get('isBlockEditable', False)
+            converted_prev_block_generator = params.get('prevBlockGenerator')
+            converted_prev_block_validators = params.get('prevBlockValidators')
+
+            # todo: consider compativity
+            tx_results, state_root_hash, added_transactions, main_prep_as_dict = self._icon_service_engine.invoke(
+                block=block,
+                tx_requests=converted_tx_requests,
+                prev_block_generator=converted_prev_block_generator,
+                prev_block_validators=converted_prev_block_validators,
+                is_block_editable=converted_is_block_editable)
+
+            # old version
+            convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case)
+                                  for tx_result in tx_results}
+
+            # for IISS
+            # convert_tx_results = \
+            #     [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
             results = {
                 'txResults': convert_tx_results,
-                'stateRootHash': bytes.hex(state_root_hash)
+                'stateRootHash': bytes.hex(state_root_hash),
+                'addedTransactions': added_transactions
             }
+
+            if main_prep_as_dict:
+                results["prep"] = main_prep_as_dict
             response = MakeResponse.make_response(results)
+        except InvalidBlockException as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
         except IconServiceBaseException as icon_e:
             self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except AssertionError as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+            self._close()
         except Exception as e:
             self._log_exception(e, ICON_SERVICE_LOG_TAG)
             response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
@@ -157,6 +188,34 @@ class IconScoreInnerTask(object):
         finally:
             Logger.info(f'query response with {response}', ICON_INNER_LOG_TAG)
             self._icon_service_engine.clear_context_stack()
+            return response
+
+    @message_queue_task
+    async def call(self, request: dict):
+        Logger.info(f'call request with {request}', ICON_INNER_LOG_TAG)
+        if self._is_thread_flag_on(EnableThreadFlag.QUERY):
+            loop = get_event_loop()
+            return await loop.run_in_executor(self._thread_pool[THREAD_QUERY],
+                                              self._call, request)
+        else:
+            return self._call(request)
+
+    def _call(self, request: dict):
+        response = None
+
+        try:
+            response = self._icon_service_engine.inner_call(request)
+
+            if isinstance(response, Address):
+                response = str(response)
+        except IconServiceBaseException as icon_e:
+            self._log_exception(icon_e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(icon_e.code, icon_e.message)
+        except Exception as e:
+            self._log_exception(e, ICON_SERVICE_LOG_TAG)
+            response = MakeResponse.make_error_response(ExceptionCode.SYSTEM_ERROR, str(e))
+        finally:
+            Logger.info(f'call response with {response}', ICON_INNER_LOG_TAG)
             return response
 
     @message_queue_task
@@ -271,7 +330,7 @@ class MakeResponse:
             return TypeConverter.convert_type_reverse(response)
 
     @staticmethod
-    def make_error_response(code: Any, message: str):
+    def make_error_response(code: Any, message: str) -> dict:
         _code: int = int(code) + 32000
         return {'error': {'code': _code, 'message': message}}
 

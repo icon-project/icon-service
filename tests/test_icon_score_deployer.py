@@ -20,8 +20,9 @@ import unittest
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import ExceptionCode
 from iconservice.deploy.icon_score_deployer import IconScoreDeployer
-from iconservice.deploy.utils import remove_path, get_score_path, get_score_deploy_path
+from iconservice.deploy.utils import remove_path, get_score_path
 from iconservice.icon_constant import REVISION_2, REVISION_3
+from iconservice.iconscore.utils import get_score_deploy_path
 from tests import create_address, create_tx_hash
 
 DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))

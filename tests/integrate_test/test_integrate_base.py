@@ -17,15 +17,18 @@
 """IconServiceEngine testcase
 """
 
-from typing import TYPE_CHECKING, Union, Optional, Any
+from typing import TYPE_CHECKING, Union, Optional, Any, List
 from unittest import TestCase
+from unittest.mock import Mock
 
 from iconcommons import IconConfig
 
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION
 from iconservice.icon_service_engine import IconServiceEngine
+from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
 from tests import create_address, create_tx_hash, create_block_hash
 from tests.integrate_test import root_clear, create_timestamp, get_score_path
 from tests.integrate_test.in_memory_zip import InMemoryZip
@@ -42,6 +45,7 @@ class TestIntegrateBase(TestCase):
         cls._score_root_path = '.score'
         cls._state_db_root_path = '.statedb'
         cls._iiss_db_root_path = '.iissdb'
+
         cls._test_sample_root = "samples"
         cls._signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
@@ -53,12 +57,12 @@ class TestIntegrateBase(TestCase):
         cls._genesis: 'Address' = create_address()
         cls._fee_treasury: 'Address' = create_address()
 
-        cls._addr_array = [create_address() for _ in range(10)]
+        cls._addr_array = [create_address() for _ in range(20)]
 
     def setUp(self):
-        root_clear(self._score_root_path, self._state_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
 
-        self._block_height = 0
+        self._block_height = -1
         self._prev_block_hash = None
 
         config = IconConfig("", default_icon_config)
@@ -73,13 +77,30 @@ class TestIntegrateBase(TestCase):
         config.update_conf(self._make_init_config())
 
         self.icon_service_engine = IconServiceEngine()
+
+        self._mock_ipc()
         self.icon_service_engine.open(config)
 
         self._genesis_invoke()
 
+    def mock_calculate(self, path, block_height):
+        response = CalculateResponse(0, True, 1, 0, b'mocked_response')
+        self._calculation_callback(response)
+
+    def _mock_ipc(self, mock_calculate: callable = mock_calculate):
+        RewardCalcProxy.open = Mock()
+        RewardCalcProxy.start = Mock()
+        RewardCalcProxy.stop = Mock()
+        RewardCalcProxy.close = Mock()
+        RewardCalcProxy.get_version = Mock()
+        RewardCalcProxy.calculate = mock_calculate
+        RewardCalcProxy.claim_iscore = Mock()
+        RewardCalcProxy.query_iscore = Mock()
+        RewardCalcProxy.commit_block = Mock()
+
     def tearDown(self):
         self.icon_service_engine.close()
-        root_clear(self._score_root_path, self._state_db_root_path)
+        root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
 
     def _make_init_config(self) -> dict:
         return {}
@@ -101,7 +122,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "genesis",
                         "address": self._genesis,
-                        "balance": 1_000_000 * self._icx_factor
+                        "balance": 400230000 * self._icx_factor
                     },
                     {
                         "name": "fee_treasury",
@@ -111,14 +132,14 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "_admin",
                         "address": self._admin,
-                        "balance": 1_000_000 * self._icx_factor
+                        "balance": 400230000 * self._icx_factor
                     }
                 ]
             },
         }
 
         block_hash = create_block_hash()
-        block = Block(self._block_height, block_hash, timestamp_us, None)
+        block = Block(self._block_height + 1, block_hash, timestamp_us, None, 0)
         invoke_response: tuple = self.icon_service_engine.invoke(
             block,
             [tx]
@@ -227,7 +248,8 @@ class TestIntegrateBase(TestCase):
     def _make_icx_send_tx(self,
                           addr_from: Optional['Address'],
                           addr_to: Union['Address', 'MalformedAddress'],
-                          value: int, disable_pre_validate: bool = False,
+                          value: int,
+                          disable_pre_validate: bool = False,
                           support_v2: bool = False,
                           step_limit: int = -1):
 
@@ -264,16 +286,101 @@ class TestIntegrateBase(TestCase):
             self.icon_service_engine.validate_transaction(tx)
         return tx
 
-    def _make_and_req_block(self, tx_list: list, block_height: int = None) -> tuple:
+    def _make_issue_tx(self,
+                       data: dict):
+        timestamp_us = create_timestamp()
+
+        request_params = {
+            "version": self._version,
+            "timestamp": timestamp_us,
+            "dataType": "base",
+            "data": data
+        }
+        method = 'icx_sendTransaction'
+        request_params['txHash'] = create_tx_hash()
+        tx = {
+            'method': method,
+            'params': request_params
+        }
+
+        return tx
+
+    def _make_and_req_block(self,
+                            tx_list: list,
+                            block_height: int = None,
+                            prev_block_generator: Optional['Address'] = None,
+                            prev_block_validators: Optional[List['Address']] = None) -> tuple:
         if block_height is None:
-            block_height: int = self._block_height
+            block_height: int = self._block_height + 1
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
-        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
 
-        invoke_response, _ = self.icon_service_engine.invoke(block, tx_list)
+        is_block_editable = False
+        governance_score = self.icon_service_engine._get_governance_score(context)
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_DECENTRALIZATION:
+            is_block_editable = True
+
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
         return block, invoke_response
+
+    def _make_and_req_block_for_issue_test(self,
+                                           tx_list: list,
+                                           block_height: int = None,
+                                           prev_block_generator: Optional['Address'] = None,
+                                           prev_block_validators: Optional[List['Address']] = None,
+                                           is_block_editable=False,
+                                           cumulative_fee: int = 0) -> tuple:
+        if block_height is None:
+            block_height: int = self._block_height + 1
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, cumulative_fee)
+
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
+        return block, invoke_response
+
+    def _make_and_req_block_for_prep_test(self,
+                                          tx_list: list,
+                                          block_height: int = None,
+                                          prev_block_generator: Optional['Address'] = None,
+                                          prev_block_validators: Optional[List['Address']] = None) -> tuple:
+        if block_height is None:
+            block_height: int = self._block_height + 1
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
+        context = IconScoreContext(IconScoreContextType.DIRECT)
+
+        is_block_editable = False
+        governance_score = self.icon_service_engine._get_governance_score(context)
+        if hasattr(governance_score, 'revision_code') and governance_score.revision_code >= REV_DECENTRALIZATION:
+            is_block_editable = True
+
+        invoke_response, _, added_transactions, main_prep_as_dict = \
+            self.icon_service_engine.invoke(block=block,
+                                            tx_requests=tx_list,
+                                            prev_block_generator=prev_block_generator,
+                                            prev_block_validators=prev_block_validators,
+                                            is_block_editable=is_block_editable)
+
+        return block, invoke_response, main_prep_as_dict
 
     def _write_precommit_state(self, block: 'Block') -> None:
         self.icon_service_engine.commit(block.height, block.hash, None)
@@ -293,4 +400,4 @@ class TestIntegrateBase(TestCase):
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
 
-        return Block(block_height, block_hash, timestamp_us, self._prev_block_hash)
+        return Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)

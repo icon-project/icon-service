@@ -22,58 +22,63 @@ from unittest.mock import Mock
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
 from iconservice.base.exception import MethodNotFoundException, InvalidParamsException
-from iconservice.fee.fee_engine import FeeEngine
+from iconservice.fee import FeeEngine, FeeStorage
 from iconservice.icon_constant import IconScoreContextType, GOVERNANCE_ADDRESS
 from iconservice.iconscore import system_call_handler
+from iconservice.deploy import DeployStorage
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.utils import ContextEngine, ContextStorage
 
 
 # noinspection PyUnresolvedReferences
 class TestSystemCallHandler(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.context = IconScoreContext(IconScoreContextType.INVOKE)
+        self.context.engine = ContextEngine(
+            deploy=None,
+            fee=Mock(FeeEngine),
+            icx=None,
+            iiss=None,
+            prep=None,
+            issue=None
+        )
+        self.context.storage = ContextStorage(
+            deploy=Mock(DeployStorage),
+            fee=Mock(FeeStorage),
+            icx=None,
+            iiss=None,
+            prep=None,
+            issue=None,
+            rc=None
+        )
+        self.block_height = randrange(0, 100000)
+        self.context.block = Block(self.block_height, os.urandom(32), 0, os.urandom(32), 0)
 
     def tearDown(self):
         pass
 
     def test_handle_system_call_with_args(self):
-        block_height = randrange(0, 100000)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.fee_engine = Mock(spec=FeeEngine)
-        context.block = Block(block_height, os.urandom(32), 0, os.urandom(32))
 
         from_ = GOVERNANCE_ADDRESS
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         args = (score_address,)
         system_call_handler.handle_system_call(
-            context, from_, 0, 'getScoreDepositInfo', args, None)
+            self.context, from_, 0, 'getScoreDepositInfo', args, None)
 
-        context.fee_engine.get_deposit_info.assert_called_with(context, score_address, block_height)
+        self.context.engine.fee.get_deposit_info.assert_called_with(self.context, score_address, self.block_height)
 
     def test_handle_system_call_with_kwargs(self):
-        block_height = randrange(0, 100000)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.fee_engine = Mock(spec=FeeEngine)
-        context.block = Block(block_height, os.urandom(32), 0, os.urandom(32))
 
         from_ = GOVERNANCE_ADDRESS
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         args = {'address': score_address}
         system_call_handler.handle_system_call(
-            context, from_, 0, 'getScoreDepositInfo', None, args)
+            self.context, from_, 0, 'getScoreDepositInfo', None, args)
 
-        context.fee_engine.get_deposit_info.assert_called_with(context, score_address, block_height)
+        self.context.engine.fee.get_deposit_info.assert_called_with(self.context, score_address, self.block_height)
 
     def test_handle_system_call_with_invalid_args(self):
-        block_height = randrange(0, 100000)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.fee_engine = Mock(spec=FeeEngine)
-        context.block = Block(block_height, os.urandom(32), 0, os.urandom(32))
-
         from_ = GOVERNANCE_ADDRESS
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         args = (score_address, score_address)
@@ -82,17 +87,11 @@ class TestSystemCallHandler(unittest.TestCase):
         with self.assertRaises(InvalidParamsException) as e:
             assert e is not None
             system_call_handler.handle_system_call(
-                context, from_, 0, 'getScoreDepositInfo', args, None)
+                self.context, from_, 0, 'getScoreDepositInfo', args, None)
 
-        context.fee_engine.get_deposit_info.assert_not_called()
+        self.context.engine.fee.get_deposit_info.assert_not_called()
 
     def test_handle_system_call_with_invalid_kwargs(self):
-        block_height = randrange(0, 100000)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.fee_engine = Mock(spec=FeeEngine)
-        context.block = Block(block_height, os.urandom(32), 0, os.urandom(32))
-
         from_ = GOVERNANCE_ADDRESS
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         args = {'address1': score_address}
@@ -101,17 +100,11 @@ class TestSystemCallHandler(unittest.TestCase):
         with self.assertRaises(InvalidParamsException) as e:
             assert e is not None
             system_call_handler.handle_system_call(
-                context, from_, 0, 'getScoreDepositInfo', None, args)
+                self.context, from_, 0, 'getScoreDepositInfo', None, args)
 
-        context.fee_engine.get_deposit_info.assert_not_called()
+        self.context.engine.fee.get_deposit_info.assert_not_called()
 
     def test_handle_system_call_with_unknown_method(self):
-        block_height = randrange(0, 100000)
-
-        context = IconScoreContext(IconScoreContextType.INVOKE)
-        context.fee_engine = Mock(spec=FeeEngine)
-        context.block = Block(block_height, os.urandom(32), 0, os.urandom(32))
-
         from_ = GOVERNANCE_ADDRESS
         score_address = Address.from_data(AddressPrefix.CONTRACT, os.urandom(20))
         args = {'address': score_address}
@@ -120,6 +113,6 @@ class TestSystemCallHandler(unittest.TestCase):
         with self.assertRaises(MethodNotFoundException) as e:
             assert e is not None
             system_call_handler.handle_system_call(
-                context, from_, 0, 'getScoreDepositInfo1', None, args)
+                self.context, from_, 0, 'getScoreDepositInfo1', None, args)
 
-        context.fee_engine.get_deposit_info.assert_not_called()
+        self.context.engine.fee.get_deposit_info.assert_not_called()

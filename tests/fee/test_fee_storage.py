@@ -21,8 +21,8 @@ from unittest import TestCase, main
 from iconservice.base.address import AddressPrefix
 from iconservice.database.batch import BlockBatch, TransactionBatch
 from iconservice.database.db import ContextDatabase
+from iconservice.fee import FeeStorage
 from iconservice.fee.deposit import Deposit
-from iconservice.fee.fee_storage import FeeStorage
 from iconservice.fee.deposit_meta import DepositMeta
 from iconservice.iconscore.icon_score_context import IconScoreContextType, IconScoreContext
 from tests import create_address, create_tx_hash

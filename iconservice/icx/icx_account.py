@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 ICON Foundation
+# Copyright 2019 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,253 +14,184 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import IntEnum, unique
-from struct import Struct
+from typing import TYPE_CHECKING, Optional
 
-from ..base.exception import InvalidParamsException, OutOfBalanceException
-from ..icon_constant import DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER
-
-from typing import TYPE_CHECKING
+from ..base.exception import InvalidParamsException
 
 if TYPE_CHECKING:
+    from .coin_part import CoinPart
+    from .delegation_part import DelegationPart
+    from .stake_part import StakePart
     from ..base.address import Address
-
-ACCOUNT_DATA_STRUCTURE_VERSION = 0
-
-
-@unique
-class AccountType(IntEnum):
-    """Account Type
-    """
-    GENERAL = 0
-    GENESIS = 1
-    TREASURY = 2
-    CONTRACT = 3
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __int__(self) -> int:
-        return self.value
-
-    @staticmethod
-    def from_int(value: int) -> IntEnum:
-        for _type in AccountType:
-            if value == _type:
-                return _type
-
-        raise ValueError('Invalid AccountType value')
-
-
-@unique
-class AccountFlag(IntEnum):
-    """Account bitwise flags
-    """
-    # Whether account is locked or not
-    LOCKED = 0x01
-    # Is community representative
-    C_REP = 0x02
-    # Is this score installed successfully?
-    INSTALLED = 0x04
 
 
 class Account(object):
-    """Account class
-    Contains information of the account indicated by address.
-    """
+    def __init__(self, address: 'Address', current_block_height: int, *,
+                 coin_part: Optional['CoinPart'] = None,
+                 stake_part: Optional['StakePart'] = None,
+                 delegation_part: Optional['DelegationPart'] = None):
+        self._address: 'Address' = address
+        self._current_block_height: int = current_block_height
 
-    # leveldb account value structure (bigendian, 36 bytes)
-    # version(1) | type(1) | flags(1) | reserved(1) |
-    # icx(DEFAULT_BYTE_SIZE)
-    _struct = Struct(f'>BBBx{DEFAULT_BYTE_SIZE}s')
+        self._coin_part: 'CoinPart' = coin_part
+        self._stake_part: 'StakePart' = stake_part
+        self._delegation_part: 'DelegationPart' = delegation_part
 
-    def __init__(self,
-                 account_type: 'AccountType'=AccountType.GENERAL,
-                 address: 'Address'=None,
-                 icx: int=0,
-                 locked: bool=False,
-                 c_rep: bool=False,
-                 installed: bool=False) -> None:
-        """Constructor
-        """
-        self._type = account_type
-        self._address = address
-        self._icx = icx
-        self._locked = locked
-        self._c_rep = c_rep
-        self._installed = installed
+        self.normalize()
 
     @property
-    def address(self) -> 'Address':
-        """Address object
-
-        :return: (Address)
-        """
+    def address(self):
         return self._address
 
-    @address.setter
-    def address(self, value: 'Address') -> None:
-        """address setter
-
-        :param value: account address
-        """
-        self._address = value
+    @property
+    def coin_part(self) -> 'CoinPart':
+        return self._coin_part
 
     @property
-    def type(self) -> 'AccountType':
-        """AccountType getter
-
-        :return: AccountType value
-        """
-        return self._type
-
-    @type.setter
-    def type(self, value: 'AccountType') -> None:
-        """AccountType setter
-
-        :param value: (AccountType)
-        """
-        if not isinstance(value, AccountType):
-            raise ValueError('Invalid AccountType')
-        self._type = value
+    def stake_part(self) -> 'StakePart':
+        return self._stake_part
 
     @property
-    def locked(self) -> bool:
-        """Is this locked?
-
-        :return: True(locked) False(unlocked)
-        """
-        return self._locked
-
-    @locked.setter
-    def locked(self, value: bool) -> None:
-        """locked setter
-
-        :param value: True(locked) False(unlocked)
-        """
-        self._locked = bool(value)
+    def delegation_part(self) -> 'DelegationPart':
+        return self._delegation_part
 
     @property
-    def c_rep(self) -> bool:
-        """Is this community representative?
+    def balance(self) -> int:
+        balance = 0
 
-        :return: True(c_rep) False(not c_rep)
-        """
-        return self._c_rep
-
-    @c_rep.setter
-    def c_rep(self, value: bool) -> None:
-        """c_rep setter
-
-        :param value: True(c_rep) False(not c_rep)
-        """
-        self._c_rep = bool(value)
+        if self.coin_part:
+            balance = self.coin_part.balance
+        return balance
 
     @property
-    def installed(self) -> bool:
-        """Is this score installed successfully?
-        """
-        return self._installed
-
-    @installed.setter
-    def installed(self, value: bool) -> None:
-        """Is this score installed successfully?
-        """
-        self._installed = bool(value)
+    def stake(self) -> int:
+        if self.stake_part:
+            return self.stake_part.stake
+        return 0
 
     @property
-    def icx(self) -> int:
-        """Returns the balance of the account in loop unit (1 icx == 1e18 loop)
+    def voting_weight(self) -> int:
+        if self.stake_part:
+            return self.stake_part.voting_weight
+        return 0
 
-        :return: balance in loop
-        """
-        return self._icx
+    @property
+    def unstake(self) -> int:
+        if self.stake_part:
+            return self.stake_part.unstake
+        return 0
 
-    def deposit(self, value: int) -> None:
-        """Deposit coin
+    @property
+    def total_stake(self) -> int:
+        if self.stake_part:
+            return self.stake_part.total_stake
+        return 0
 
-        :param value: amount to deposit in loop (1 icx == 1e18 loop)
+    @property
+    def unstake_block_height(self) -> int:
+        if self.stake_part:
+            return self.stake_part.unstake_block_height
+        return 0
 
-        """
+    @property
+    def delegated_amount(self) -> int:
+        if self.delegation_part:
+            return self.delegation_part.delegated_amount
+        return 0
+
+    @property
+    def delegations(self) -> Optional[list]:
+        if self.delegation_part:
+            return self.delegation_part.delegations
+        return None
+
+    @property
+    def delegations_amount(self) -> int:
+        if self.delegation_part:
+            return self.delegation_part.delegations_amount
+        return 0
+
+    @property
+    def voting_power(self) -> int:
+        if self.stake_part and self.delegation_part:
+            return self.stake_part.voting_weight - self.delegation_part.delegations_amount
+        return 0
+
+    def deposit(self, value: int):
+        if self.coin_part is None:
+            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+
+        self.coin_part.deposit(value)
+
+    def withdraw(self, value: int):
+        if self.coin_part is None:
+            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+
+        self.coin_part.withdraw(value)
+
+    def normalize(self):
+        if self.coin_part is None or self.stake_part is None:
+            return
+
+        balance: int = self.stake_part.normalize(self._current_block_height)
+        if balance > 0:
+            if self.coin_part is None:
+                raise InvalidParamsException('Failed to normalize: no coin part')
+
+            self.coin_part.toggle_has_unstake(False)
+            self.coin_part.deposit(balance)
+
+    def set_stake(self, value: int, unstake_lock_period: int):
+        if self.coin_part is None or self.stake_part is None:
+            raise InvalidParamsException('Failed to stake: InvalidAccount')
+
         if not isinstance(value, int) or value < 0:
-            raise InvalidParamsException(
-                'Failed to deposit: value is not int type or value < 0')
+            raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
-        self._icx += value
+        total: int = self.balance + self.total_stake
 
-    def withdraw(self, value: int) -> None:
-        """Withdraw coin
+        if total < value:
+            raise InvalidParamsException(f'Failed to stake: total{total} < stake{value}')
 
-        :param value: coin amount to withdraw
-        """
-        if not isinstance(value, int) or value < 0:
-            raise InvalidParamsException(
-                'Failed to withdraw: value is not int type or value < 0')
-        if self._icx < value:
-            raise OutOfBalanceException('Out of balance')
+        offset: int = value - self.total_stake
 
-        self._icx -= value
+        if offset == 0:
+            self.stake_part.reset_unstake()
+        elif offset > 0:
+            self.coin_part.withdraw(offset)
+            self.stake_part.add_stake(offset)
+            self.stake_part.reset_unstake()
+        else:
+            unlock_block_height: int = self._current_block_height + unstake_lock_period
+            self.coin_part.toggle_has_unstake(True)
+            self.stake_part.set_unstake(unlock_block_height,  self.total_stake - value)
+
+    def update_delegated_amount(self, offset: int):
+        if self.delegation_part is None:
+            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+
+        self.delegation_part.update_delegated_amount(offset)
+
+    def set_delegations(self, new_delegations: list):
+        if self.delegation_part is None:
+            raise InvalidParamsException('Failed to delegation: InvalidAccount')
+        
+        self.delegation_part.set_delegations(new_delegations)
 
     def __eq__(self, other) -> bool:
         """operator == overriding
 
-        :param other: (Account)
+        :param other: (CoinPart)
         """
         return isinstance(other, Account) \
-            and self.address == other.address \
-            and self.icx == other.icx \
-            and self.type == other.type \
-            and self.locked == other.locked \
-            and self.c_rep == other.c_rep
+            and self._address == other.address \
+            and self._coin_part == other.coin_part \
+            and self._stake_part == other.stake_part \
+            and self._delegation_part == other.delegation_part
 
     def __ne__(self, other) -> bool:
         """operator != overriding
 
-        :param other: (Account)
+        :param other: (CoinPart)
         """
         return not self.__eq__(other)
-
-    @staticmethod
-    def from_bytes(buf: bytes):
-        """Create Account object from bytes data
-
-        :param buf: (bytes) bytes data including Account information
-        :return: (Account) account object
-        """
-
-        version, account_type, flags, amount = \
-            Account._struct.unpack(buf)
-
-        amount = int.from_bytes(amount, DATA_BYTE_ORDER)
-
-        account = Account()
-        account.type = AccountType.from_int(account_type)
-        account._locked = bool(flags & AccountFlag.LOCKED)
-        account._c_rep = bool(flags & AccountFlag.C_REP)
-        account._icx = amount
-
-        return account
-
-    def to_bytes(self) -> bytes:
-        """Convert Account object to bytes
-
-        :return: data including information of account object
-        """
-
-        # for extendability
-        version = ACCOUNT_DATA_STRUCTURE_VERSION
-
-        flags = 0
-        if self._locked:
-            flags |= AccountFlag.LOCKED
-        if self._c_rep:
-            flags |= AccountFlag.C_REP
-
-        return Account._struct.pack(version, self._type, flags, self._icx.to_bytes(DEFAULT_BYTE_SIZE, DATA_BYTE_ORDER))
-
-    def __bytes__(self) -> bytes:
-        """operator bytes() overriding
-
-        :return: binary data including information of account object
-        """
-        return self.to_bytes()

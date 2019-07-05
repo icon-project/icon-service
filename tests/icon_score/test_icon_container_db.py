@@ -32,6 +32,7 @@ class TestIconContainerDB(unittest.TestCase):
     def setUp(self):
         self.db = self.create_db()
         self._context = IconScoreContext(IconScoreContextType.DIRECT)
+        self._context.current_address = self.db.address
 
         ContextContainer._push_context(self._context)
         pass

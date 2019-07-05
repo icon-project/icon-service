@@ -18,22 +18,21 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
+from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import IconScoreContextType, IconScoreFuncType
-from .icon_score_trace import Trace
 
 if TYPE_CHECKING:
-    from ..base.address import Address
-    from ..deploy.icon_score_deploy_engine import IconScoreDeployEngine
-    from ..icx.icx_engine import IcxEngine
-    from ..fee.fee_engine import FeeEngine
     from .icon_score_base import IconScoreBase
     from .icon_score_event_log import EventLog
     from .icon_score_mapper import IconScoreMapper
     from .icon_score_step import IconScoreStepCounter
+    from ..base.address import Address
+    from ..prep.data.prep_container import PRepContainer
+    from ..utils import ContextEngine, ContextStorage
 
 _thread_local_data = threading.local()
 
@@ -98,11 +97,12 @@ class IconScoreContext(object):
 
     score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
-    icon_score_deploy_engine: 'IconScoreDeployEngine' = None
-    icx_engine: 'IcxEngine' = None
-    fee_engine: 'FeeEngine' = None
     icon_service_flag: int = 0
-    legacy_tbears_mode = False
+    legacy_tbears_mode: bool = False
+    iiss_initial_irep: int = 0
+
+    engine: 'ContextEngine' = None
+    storage: 'ContextStorage' = None
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -112,9 +112,9 @@ class IconScoreContext(object):
 
         :param context_type: IconScoreContextType.GENESIS, INVOKE, QUERY
         """
-        self.type: IconScoreContextType = context_type
+        self.type: 'IconScoreContextType' = context_type
         # The type of external function which is called latest
-        self.func_type: IconScoreFuncType = IconScoreFuncType.WRITABLE
+        self.func_type: 'IconScoreFuncType' = IconScoreFuncType.WRITABLE
         self.block: 'Block' = None
         self.tx: 'Transaction' = None
         self.msg: 'Message' = None
@@ -122,6 +122,8 @@ class IconScoreContext(object):
         self.revision: int = 0
         self.block_batch: 'BlockBatch' = None
         self.tx_batch: 'TransactionBatch' = None
+        self.rc_block_batch: list = []
+        self.rc_tx_batch: list = []
         self.new_icon_score_mapper: 'IconScoreMapper' = None
         self.cumulative_step_used: int = 0
         self.step_counter: 'IconScoreStepCounter' = None
@@ -132,10 +134,16 @@ class IconScoreContext(object):
         self.msg_stack = []
         self.event_log_stack = []
 
+        # PReps to update on invoke
+        self.preps: Optional['PRepContainer'] = None
+
     @property
     def readonly(self):
-        return self.type == IconScoreContextType.QUERY or \
-               self.func_type == IconScoreFuncType.READONLY
+        return self.type == IconScoreContextType.QUERY or self.func_type == IconScoreFuncType.READONLY
+
+    @property
+    def total_supply(self):
+        return self.storage.icx.get_total_supply(self)
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
@@ -147,4 +155,17 @@ class IconScoreContext(object):
     # TODO should remove after update GOVERNANCE 0.0.6 afterward
     def deploy(self, tx_hash: bytes) -> None:
         warnings.warn("legacy function don't use.", DeprecationWarning, stacklevel=2)
-        self.icon_score_deploy_engine.deploy(self, tx_hash)
+        self.engine.deploy.deploy(self, tx_hash)
+
+    def update_batch(self):
+        self.block_batch.update(self.tx_batch)
+        self.tx_batch.clear()
+
+        self.rc_block_batch.extend(self.rc_tx_batch)
+        self.rc_tx_batch.clear()
+
+    def clear_batch(self):
+        if self.tx_batch:
+            self.tx_batch.clear()
+        if self.rc_tx_batch:
+            self.rc_tx_batch.clear()
