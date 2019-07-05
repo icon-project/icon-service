@@ -119,8 +119,13 @@ class IconScoreInnerTask(object):
                 prev_block_validators=converted_prev_block_validators,
                 is_block_editable=converted_is_block_editable)
 
-            convert_tx_results = \
-                [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
+            # old version
+            convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case)
+                                  for tx_result in tx_results}
+
+            # for IISS
+            # convert_tx_results = \
+            #     [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
             results = {
                 'txResults': convert_tx_results,
                 'stateRootHash': bytes.hex(state_root_hash),
