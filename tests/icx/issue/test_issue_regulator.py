@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from iconservice.base.block import Block
 from iconservice.base.exception import AccessDeniedException
-from iconservice.database.db import ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator

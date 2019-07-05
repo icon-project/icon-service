@@ -33,7 +33,9 @@ class IssueFormula(object):
         self._handler: dict = {
             'prep': self._handle_icx_issue_formula_for_prep
         }
+        # todo: in case of issuing from IISS_REV, get from the storage (not constant value)
         self._prep_count: int = prep_count
+        # todo: in case of issuing from IISS_REV, get from the storage (not constant value)
         self._sub_prep_count: int = sub_prep_count
 
     def calculate(self, group: str, data: dict) -> int:

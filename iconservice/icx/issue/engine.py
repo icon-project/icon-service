@@ -70,6 +70,7 @@ class Engine(EngineBase):
               to_address: 'Address',
               issue_data: dict,
               regulator: 'Regulator'):
+        assert isinstance(regulator, Regulator)
 
         self._issue(context, to_address, regulator.corrected_icx_issue_amount)
         regulator.put_regulate_variable(context)

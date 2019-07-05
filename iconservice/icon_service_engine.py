@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
 
+from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -34,7 +35,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, RC_SOCKET
+    BASE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, RC_SOCKET
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -354,15 +355,14 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
+    # todo: remove this method and fix the tests code
     def formatting_transaction(self, data_type: str, data: dict, timestamp: int):
-        # todo: check about reverse
         transaction_params = {
-            "version": ISSUE_TRANSACTION_VERSION,
+            "version": BASE_TRANSACTION_VERSION,
             "timestamp": timestamp,
             "dataType": data_type,
             "data": data
         }
-        # todo: tests about tx hash
         converted_transaction_params = deepcopy(transaction_params)
         converted_transaction_params = TypeConverter.convert_type_reverse(converted_transaction_params)
         tx_hash = HashGenerator.generate_hash(converted_transaction_params)
@@ -391,7 +391,7 @@ class IconServiceEngine(ContextContainer):
         :param tx_requests: transactions in a block
         :param prev_block_generator: previous block generator
         :param prev_block_validators: previous block validators
-        :param is_block_editable: boolean which imply whether creating special transaction or not
+        :param is_block_editable: boolean which imply whether creating base transaction or not
         :return: (TransactionResult[], bytes, added transaction{}, main prep as dict{})
         """
         # If the block has already been processed,
@@ -419,20 +419,10 @@ class IconServiceEngine(ContextContainer):
         precommit_flag = PrecommitFlag.NONE
         added_transactions = {}
 
-        regulator: 'Regulator' = None
+        regulator: Optional['Regulator'] = None
         if is_block_editable and self._is_decentralized(context):
-            # todo: need to be refactoring (duplicated codes)
-            issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
-            regulator = Regulator()
-            regulator.set_corrected_issue_data(context, total_issue_amount)
-
-            issue_data["result"] = {
-                "coveredByFee": regulator.covered_icx_by_fee,
-                "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
-                "issue": regulator.corrected_icx_issue_amount
-            }
-            # todo: need to refactor (dirty)
-            base_transaction = self.formatting_transaction("base", issue_data, context.block.timestamp)
+            base_transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
+            # todo: if the txhash field is add to addedTransaction, should remove this logic
             tx_params_to_added = deepcopy(base_transaction["params"])
             del tx_params_to_added["txHash"]
             added_transactions[base_transaction["params"]["txHash"]] = tx_params_to_added
@@ -672,6 +662,10 @@ class IconServiceEngine(ContextContainer):
                                    issue_data,
                                    regulator)
         # proceed term
+
+        # todo: in case of issuing from IISS_REV, should use below comments
+        # if context.engine.prep.term.sequence != -1 and \
+        # context.engine.prep.term.start_block_height == context.block.height:
         if context.engine.prep.term.start_block_height == context.block.height:
             EventLogEmitter.emit_event_log(context,
                                            score_address=ZERO_SCORE_ADDRESS,
@@ -698,16 +692,8 @@ class IconServiceEngine(ContextContainer):
         assert 'data' in request['params']
 
         issue_data_in_tx: dict = request['params'].get('data')
-        if not is_block_editable and self._is_decentralized(context):
-            issue_data_in_db, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
-            regulator = Regulator()
-            regulator.set_corrected_issue_data(context, total_issue_amount)
-
-            issue_data_in_db["result"] = {
-                "coveredByFee": regulator.covered_icx_by_fee,
-                "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
-                "issue": regulator.corrected_icx_issue_amount
-            }
+        if not is_block_editable:
+            issue_data_in_db, regulator = BaseTransactionCreator.create_issue_data(context)
             if issue_data_in_tx != issue_data_in_db:
                 raise InvalidBlockException("Have difference between "
                                             "base transaction and actual db data")
@@ -723,7 +709,6 @@ class IconServiceEngine(ContextContainer):
         context.msg_stack.clear()
         context.event_log_stack.clear()
 
-        # todo: get issue related data from iiss engine
         tx_result = self._process_base_transaction(context, issue_data_in_tx, regulator)
         return tx_result
 
