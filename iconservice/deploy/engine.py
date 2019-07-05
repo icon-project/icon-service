@@ -17,7 +17,6 @@ import os
 from typing import TYPE_CHECKING
 
 from iconcommons import Logger
-
 from .icon_score_deployer import IconScoreDeployer
 from .utils import remove_path, get_score_path
 from ..base.ComponentBase import EngineBase
@@ -26,7 +25,8 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException
 from ..base.message import Message
 from ..base.type_converter import TypeConverter
-from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3, DeployType
+from ..icon_constant import DeployType
+from ..icon_constant import IconServiceFlag, ICON_DEPLOY_LOG_TAG, REVISION_2, REVISION_3
 from ..iconscore.icon_score_api_generator import ScoreApiGenerator
 from ..iconscore.icon_score_context_util import IconScoreContextUtil
 from ..iconscore.icon_score_mapper_object import IconScoreInfo
