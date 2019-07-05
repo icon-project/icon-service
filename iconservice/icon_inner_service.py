@@ -107,7 +107,7 @@ class IconScoreInnerTask(object):
 
             converted_tx_requests = params['transactions']
 
-            convert_tx_result_to_dict: bool = 'isBlockEditable' is params
+            convert_tx_result_to_dict: bool = 'isBlockEditable' in params
 
             converted_is_block_editable = params.get('isBlockEditable', False)
             converted_prev_block_generator = params.get('prevBlockGenerator')
