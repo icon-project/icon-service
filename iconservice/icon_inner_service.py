@@ -64,11 +64,8 @@ class IconScoreInnerTask(object):
 
     @message_queue_task
     async def hello(self):
-        response = MakeResponse.make_response({"isIssuable": True,
-                                               "pRepList": self._conf[ConfigKey.IISS_PREP_LIST]
-                                               })
-        Logger.info(f'icon_score_hello with response: {response}', ICON_INNER_LOG_TAG)
-        return response
+        Logger.info('icon_score_hello', ICON_INNER_LOG_TAG)
+        return {}
 
     def _close(self):
         Logger.info("icon_score_service close", ICON_INNER_LOG_TAG)
