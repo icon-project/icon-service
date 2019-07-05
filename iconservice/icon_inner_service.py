@@ -107,6 +107,8 @@ class IconScoreInnerTask(object):
 
             converted_tx_requests = params['transactions']
 
+            convert_tx_result_to_dict: bool = 'isBlockEditable' in params
+
             converted_is_block_editable = params.get('isBlockEditable', False)
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
@@ -119,13 +121,13 @@ class IconScoreInnerTask(object):
                 prev_block_validators=converted_prev_block_validators,
                 is_block_editable=converted_is_block_editable)
 
-            # old version
-            convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case)
-                                  for tx_result in tx_results}
-
-            # for IISS
-            # convert_tx_results = \
-            #     [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
+            if convert_tx_result_to_dict:
+                convert_tx_results = \
+                    [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
+            else:
+                # old version
+                convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case)
+                                      for tx_result in tx_results}
             results = {
                 'txResults': convert_tx_results,
                 'stateRootHash': bytes.hex(state_root_hash),
