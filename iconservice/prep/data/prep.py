@@ -134,10 +134,7 @@ class PRep(Sortable):
 
     @status.setter
     def status(self, value: 'PRepStatus'):
-        if value == PRepStatus.ACTIVE and self._status != PRepStatus.NONE:
-            raise InvalidParamsException(f"Invalid init status setting: {value}")
-        elif value != PRepStatus.ACTIVE and self._status == PRepStatus.NONE:
-            raise InvalidParamsException(f"Invalid status setting: {value}")
+        assert self._status == PRepStatus.ACTIVE
         self._status = value
 
     def update_productivity(self, is_validate: bool):
@@ -363,7 +360,7 @@ class PRep(Sortable):
 
     def to_dict(self) -> dict:
         return {
-            "status": PREP_STATUS_MAPPER[self.status],
+            "status": self._status.value,
             "registration": {
                 ConstantKeys.NAME: self.name,
                 ConstantKeys.EMAIL: self.email,

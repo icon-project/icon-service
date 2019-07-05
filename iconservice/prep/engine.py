@@ -232,14 +232,16 @@ class Engine(EngineBase, IISSEngineListener):
 
         :param context:
         :param params:
-        :return:
+        :return: the response for getPRep JSON-RPC request
         """
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP)
         address: 'Address' = ret_params[ConstantKeys.ADDRESS]
 
         prep: 'PRep' = self.preps.get_by_address(address)
         if prep is None:
-            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+            prep: 'PRep' = self.preps.get_inactive_prep_by_address(address)
+            if prep is None:
+                raise InvalidParamsException(f"P-Rep not found: {str(address)}")
 
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
 
