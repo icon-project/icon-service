@@ -21,6 +21,7 @@ import sys
 from typing import TYPE_CHECKING
 
 from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
+from ..base.address import Address
 from ..base.exception import IllegalFormatException
 from ..icon_constant import PACKAGE_JSON_FILE
 
