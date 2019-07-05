@@ -21,7 +21,7 @@ import plyvel
 
 from iconservice.iiss.reward_calc.msg_data import Header, GovernanceVariable, PRepsData, TxData, TxType, \
     DelegationTx, DelegationInfo, PRepRegisterTx, PRepUnregisterTx, BlockProduceInfoData
-from tests import create_address
+from tests import create_address, rmtree
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -94,7 +94,8 @@ class TestIissDataUsingLevelDB(unittest.TestCase):
         self.tx_prep_un_reg.data: 'PRepUnregisterTx' = PRepUnregisterTx()
 
     def tearDown(self):
-        #rmtree(self.db_path)
+        self.db.close()
+        rmtree(self.db_path)
         pass
 
     def test_iiss_data_using_level_db(self):

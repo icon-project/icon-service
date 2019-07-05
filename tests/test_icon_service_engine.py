@@ -24,7 +24,6 @@ from unittest.mock import Mock, patch
 
 from iconcommons.icon_config import IconConfig
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.address import Address, AddressPrefix, MalformedAddress
 from iconservice.base.block import Block
 from iconservice.base.exception import ExceptionCode, InvalidParamsException, IconScoreException
@@ -242,7 +241,7 @@ class TestIconServiceEngine(unittest.TestCase):
             return ret
 
         self._engine._invoke_request = Mock(side_effect=intercept_invoke_req)
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -277,7 +276,7 @@ class TestIconServiceEngine(unittest.TestCase):
         # Check whether fee charging works well
         context = _create_context(IconScoreContextType.DIRECT)
         from_balance: int = \
-            self._engine._icx_engine.get_balance(context, self.from_)
+            IconScoreContext.engine.icx.get_balance(context, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -307,7 +306,7 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash,
                       0)
 
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
@@ -337,7 +336,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # Check whether fee charging works well
         context = _create_context(IconScoreContextType.DIRECT)
-        from_balance: int = self._engine._icx_engine.get_balance(
+        from_balance: int = IconScoreContext.engine.icx.get_balance(
             context, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
@@ -369,7 +368,7 @@ class TestIconServiceEngine(unittest.TestCase):
                       block_timestamp,
                       self.genesis_block.hash,
                       0)
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v2])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v2])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
@@ -394,9 +393,9 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # Check whether fee charging works well
         context = _create_context(IconScoreContextType.DIRECT)
-        from_balance: int = self._engine._icx_engine.get_balance(
+        from_balance: int = IconScoreContext.engine.icx.get_balance(
             context, self.from_)
-        to_balance: int = self._engine._icx_engine.get_balance(context, to)
+        to_balance: int = IconScoreContext.engine.icx.get_balance(context, to)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(0, fee)
         self.assertEqual(value, to_balance)
@@ -429,7 +428,7 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash,
                       0)
 
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -463,7 +462,7 @@ class TestIconServiceEngine(unittest.TestCase):
         # Check whether fee charging works well
         context = _create_context(IconScoreContextType.DIRECT)
         from_balance: int = \
-            self._engine._icx_engine.get_balance(context, self.from_)
+            IconScoreContext.engine.icx.get_balance(context, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(fee, 0)
         self.assertEqual(from_balance, self._total_supply - value - fee)
@@ -506,9 +505,9 @@ class TestIconServiceEngine(unittest.TestCase):
 
         context = _create_context(IconScoreContextType.DIRECT)
         before_from_balance: int = \
-            self._engine._icx_engine.get_balance(context, self.from_)
+            IconScoreContext.engine.icx.get_balance(context, self.from_)
 
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -542,7 +541,7 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # Check whether fee charging works well
         after_from_balance: int = \
-            self._engine._icx_engine.get_balance(context, self.from_)
+            IconScoreContext.engine.icx.get_balance(context, self.from_)
         fee = tx_result.step_price * tx_result.step_used
         value = value if tx_result.status == TransactionResult.SUCCESS else 0
         self.assertEqual(after_from_balance, before_from_balance - value - fee)
@@ -585,13 +584,13 @@ class TestIconServiceEngine(unittest.TestCase):
 
         context = _create_context(IconScoreContextType.QUERY)
         before_from_balance: int = \
-            self._engine._icx_engine.get_balance(context, self.from_)
+            IconScoreContext.engine.icx.get_balance(context, self.from_)
 
         self._engine._handle_score_invoke = \
             Mock(return_value=None, side_effect=IconScoreException("force revert"))
 
         raise_exception_start_tag("test_score_invoke_with_revert")
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v3])
         raise_exception_end_tag("test_score_invoke_with_revert")
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
@@ -627,7 +626,7 @@ class TestIconServiceEngine(unittest.TestCase):
         # Check whether fee charging works well
         context = _create_context(IconScoreContextType.QUERY)
         after_from_balance: int = \
-            self._engine._icx_engine.get_balance(context, self.from_)
+            IconScoreContext.engine.icx.get_balance(context, self.from_)
 
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(after_from_balance, before_from_balance - fee)
@@ -715,7 +714,7 @@ class TestIconServiceEngine(unittest.TestCase):
                       self.genesis_block.hash,
                       0)
 
-        tx_results, state_root_hash = self._engine.invoke(block, [tx_v3])
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, [tx_v3])
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
 
@@ -775,7 +774,7 @@ class TestIconServiceEngine(unittest.TestCase):
         self._engine.commit(block.height, instant_block_hash, block_hash)
 
         self.assertEqual(self._engine._get_last_block().hash, block_hash)
-        self.assertEqual(self._engine._icx_storage.last_block.hash, block_hash)
+        self.assertEqual(IconScoreContext.storage.icx.last_block.hash, block_hash)
 
     def test_rollback(self):
         block = Block(
@@ -785,7 +784,7 @@ class TestIconServiceEngine(unittest.TestCase):
             prev_hash=self.genesis_block.hash,
             cumulative_fee=0)
 
-        block_result, state_root_hash = self._engine.invoke(block, [])
+        block_result, state_root_hash, _, _ = self._engine.invoke(block, [])
         self.assertIsInstance(block_result, list)
         self.assertEqual(state_root_hash, hashlib.sha3_256(b'').digest())
 
@@ -839,7 +838,7 @@ class TestIconServiceEngine(unittest.TestCase):
         transactions: list = params['transactions']
         self.assertIsInstance(transactions[0]['params']['to'], MalformedAddress)
 
-        tx_results, state_root_hash = self._engine.invoke(block, transactions)
+        tx_results, state_root_hash, _, _ = self._engine.invoke(block, transactions)
         self.assertIsInstance(state_root_hash, bytes)
         self.assertEqual(len(state_root_hash), 32)
         self.assertEqual(len(tx_results), 1)
@@ -864,9 +863,9 @@ class TestIconServiceEngine(unittest.TestCase):
 
         # Check whether fee charging works well
         context = _create_context(IconScoreContextType.DIRECT)
-        from_balance: int = self._engine._icx_engine.get_balance(
+        from_balance: int = IconScoreContext.engine.icx.get_balance(
             context, self.from_)
-        to_balance: int = self._engine._icx_engine.get_balance(context, to_address)
+        to_balance: int = IconScoreContext.engine.icx.get_balance(context, to_address)
         fee = tx_result.step_price * tx_result.step_used
         self.assertEqual(0, fee)
         self.assertEqual(value, to_balance)

@@ -40,7 +40,10 @@ class TestMessageUnpacker(unittest.TestCase):
             (
                 MessageType.VERSION,
                 msg_id,
-                version
+                (
+                    version,
+                    block_height
+                )
             ),
             (
                 MessageType.CALCULATE,
@@ -48,6 +51,7 @@ class TestMessageUnpacker(unittest.TestCase):
                 (
                     success,
                     block_height,
+                    MsgPackForIpc.encode(iscore),
                     state_hash
                 )
             ),
