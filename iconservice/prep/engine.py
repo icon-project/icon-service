@@ -23,10 +23,10 @@ from .data.prep_container import PRepContainer
 from .term import Term
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, InvalidRequestException
+from ..base.exception import InvalidParamsException, InvalidRequestException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_MAX_IREP, IISS_MAX_DELEGATIONS
+from ..icon_constant import IISS_INITIAL_IREP, IISS_MIN_IREP, IISS_MAX_IREP, IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
 from ..icon_constant import PrepResultState, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -56,6 +56,7 @@ class Engine(EngineBase, IISSEngineListener):
         self._invoke_handlers: dict = {
             "registerPRep": self.handle_register_prep,
             "setPRep": self.handle_set_prep,
+            "setGovernanceVariables": self.handle_set_governance_variables,
             "unregisterPRep": self.handle_unregister_prep
         }
 
@@ -136,6 +137,10 @@ class Engine(EngineBase, IISSEngineListener):
         # prep.irep is set to IISS_MIN_IREP by default
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
         prep.delegated = account.delegated_amount
+
+        # Set an initial value to irep of a P-Rep on registerPRep
+        if self.term.irep > 0:
+            prep.set_irep(self.term.irep, context.block.height)
 
         # Update preps in context
         context.preps.add(prep)
@@ -265,12 +270,6 @@ class Engine(EngineBase, IISSEngineListener):
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
-        # Update incentive rep
-        if "irep" in kwargs:
-            irep: int = kwargs["irep"]
-            del kwargs["irep"]
-            self._set_irep_to_prep(context, irep, prep)
-
         if "p2pEndPoint" in kwargs:
             p2p_end_point: str = kwargs["p2pEndPoint"]
             del kwargs["p2pEndPoint"]
@@ -291,41 +290,63 @@ class Engine(EngineBase, IISSEngineListener):
             indexed_args_count=0
         )
 
-    def _set_irep_to_prep(self, context: 'IconScoreContext', irep: int, prep: 'PRep'):
-        prev_prep: 'PRep' = prep
-        self._validate_irep(context, irep, prev_prep)
+    def handle_set_governance_variables(self, context: 'IconScoreContext', params: dict):
+        """Handles setGovernanceVariables JSON-RPC API request
 
+        :param context:
+        :param params:
+        :return:
+        """
+        # This API is available after IISS decentralization is enabled.
+        if context.revision < REV_DECENTRALIZATION or self.term.sequence < 0:
+            raise MethodNotFoundException("setGovernanceVariables is disabled")
+
+        address: 'Address' = context.tx.origin
+
+        prep: 'PRep' = context.preps.get_by_address(address, mutable=True)
+        if prep is None:
+            raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+
+        kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
+
+        # Update incentive rep
+        irep: int = kwargs["irep"]
+        self._validate_irep(context, irep, prep)
         prep.set_irep(irep, context.block.height)
 
-    @classmethod
-    def _validate_irep(cls, context: 'IconScoreContext', irep: int, prev_prep: 'PRep'):
+        # Update the changed properties of a P-Rep to stateDB
+        context.storage.prep.put_prep(context, prep)
+
+        # EventLog
+        EventLogEmitter.emit_event_log(
+            context,
+            score_address=ZERO_SCORE_ADDRESS,
+            event_signature="GovernanceVariablesSet(Address,int)",
+            arguments=[address, irep],
+            indexed_args_count=1
+        )
+
+    def _validate_irep(self, context: 'IconScoreContext', irep: int, prep: 'PRep'):
         """Validate irep
 
         :param context:
         :param irep:
-        :param prev_prep:
+        :param prep:
         :return:
         """
-        if not (IISS_MIN_IREP <= irep <= IISS_MAX_IREP):
-            raise InvalidParamsException(f"Invalid irep: {irep}")
+        prev_irep: int = prep.irep
+        prev_irep_block_height: int = prep.irep_block_height
 
-        term: 'Term' = context.engine.prep.term
-        prev_irep = prev_prep.irep
-        prev_irep_updated_block_height = prev_prep.irep_block_height
+        if prev_irep_block_height >= self.term.start_block_height:
+            raise InvalidRequestException("Irep can be changed only once during a term")
 
-        if term.sequence == -1:
-            raise InvalidRequestException("irep can be set after decentralized")
-
-        if prev_irep_updated_block_height >= term.start_block_height:
-            raise InvalidRequestException("irep can only be changed once during the term.")
-        min_irep: int = prev_irep * 8 // 10  # 80% of previous irep
-        max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
+        min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)   # 80% of previous irep
+        max_irep: int = min(prev_irep * 12 // 10, IISS_MAX_IREP)  # 120% of previous irep
 
         if min_irep <= irep <= max_irep:
             context.engine.issue.validate_total_supply_limit(context, irep)
-            return
-
-        raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
+        else:
+            raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
 
     def handle_unregister_prep(self, context: 'IconScoreContext', _params: dict):
         """Unregister a P-Rep

@@ -114,10 +114,10 @@ class TestIISSBase(TestIntegrateBase):
 
         return {
             ConstantKeys.NAME: name,
-            ConstantKeys.EMAIL: f"node{address}@example.com",
-            ConstantKeys.WEBSITE: f"https://node{address}.example.com",
-            ConstantKeys.DETAILS: f"https://node{address}.example.com/details",
-            ConstantKeys.P2P_END_POINT: f"https://node{address}.example.com:7100",
+            ConstantKeys.EMAIL: f"{name}@example.com",
+            ConstantKeys.WEBSITE: f"https://{name}.example.com",
+            ConstantKeys.DETAILS: f"https://{name}.example.com/details",
+            ConstantKeys.P2P_END_POINT: f"https://{name}.example.com:7100",
             ConstantKeys.PUBLIC_KEY: self._create_dummy_public_key(name.encode()).hex()
         }
 
@@ -127,6 +127,21 @@ class TestIISSBase(TestIntegrateBase):
         if set_data is None:
             set_data: dict = {}
         return self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', set_data)
+
+    def create_set_governance_variables(
+            self, address: 'Address', irep: int) -> dict:
+        """Create a setGovernanceVariables TX
+
+        :param address: from address
+        :param irep: irep in loop
+        :return:
+        """
+        return self._make_score_call_tx(
+            addr_from=address,
+            addr_to=ZERO_SCORE_ADDRESS,
+            method="setGovernanceVariables",
+            params={"irep": hex(irep)}
+        )
 
     def create_unregister_prep_tx(self,
                                   address: 'Address'):

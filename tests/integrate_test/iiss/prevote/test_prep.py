@@ -17,7 +17,9 @@
 """IconScoreEngine testcase
 """
 
-from iconservice.base.exception import InvalidParamsException
+from iconservice.base.exception import InvalidParamsException, ExceptionCode
+from iconservice.base.type_converter_templates import ConstantKeys
+from iconservice.icon_constant import IISS_INITIAL_IREP
 from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
 from tests import create_address
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
@@ -246,3 +248,38 @@ class TestIntegratePrep(TestIISSBase):
     # TODO
     def test_prep_fail1(self):
         pass
+
+    def test_set_governance_variables_failure(self):
+        """setGovernanceVariable request causes MethodNotFound exception under prevoting revision
+
+        :return:
+        """
+        self.update_governance()
+
+        prep_address: 'Address' = self._addr_array[0]
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        tx: dict = self.create_register_prep_tx(prep_address)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        response = self.get_prep(prep_address)
+
+        registration = response["registration"]
+        self.assertEqual(IISS_INITIAL_IREP, registration[ConstantKeys.IREP])
+
+        # setGovernanceVariables call should be failed until IISS decentralization feature is enabled
+        irep: int = registration[ConstantKeys.IREP]
+
+        tx: dict = self.create_set_governance_variables(prep_address, irep + 10)
+        prev_block, tx_results = self._make_and_req_block([tx])
+
+        tx_result = tx_results[0]
+        self.assertEqual(int(False), tx_result.status)
+        self.assertEqual(ExceptionCode.METHOD_NOT_FOUND, tx_result.failure.code)

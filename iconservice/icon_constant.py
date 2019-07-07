@@ -184,6 +184,7 @@ PREP_METHOD_TABLE = [
     "registerPRep",
     "unregisterPRep",
     "setPRep",
+    "setGovernanceVariables",
     "getPRep",
     "getMainPRepList",
     "getSubPRepList",
