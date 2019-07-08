@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
 
-from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -27,7 +26,6 @@ from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFou
     AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBlockException
 from .base.message import Message
 from .base.transaction import Transaction
-from .base.type_converter import TypeConverter
 from .database.batch import BlockBatch, TransactionBatch
 from .database.factory import ContextDatabaseFactory
 from .deploy import DeployEngine, DeployStorage
@@ -35,7 +33,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    BASE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, RC_SOCKET
+    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, RC_SOCKET
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -51,6 +49,7 @@ from .iconscore.icon_score_step import IconScoreStepCounterFactory, StepType, ge
 from .iconscore.icon_score_trace import Trace, TraceType
 from .icx import IcxEngine, IcxStorage
 from .icx.issue import IssueEngine, IssueStorage
+from .icx.issue.base_transaction_creator import BaseTransactionCreator
 from .icx.issue.regulator import Regulator
 from .iiss import IISSEngine, IISSStorage, check_decentralization_condition
 from .iiss.reward_calc import RewardCalcStorage
@@ -60,7 +59,6 @@ from .prep import PRepEngine, PRepStorage
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
-from .utils.hashing.hash_generator import HashGenerator
 
 if TYPE_CHECKING:
     from .builtin_scores.governance.governance import Governance
