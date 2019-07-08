@@ -355,25 +355,6 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
-    # todo: remove this method and fix the tests code
-    def formatting_transaction(self, data_type: str, data: dict, timestamp: int):
-        transaction_params = {
-            "version": BASE_TRANSACTION_VERSION,
-            "timestamp": timestamp,
-            "dataType": data_type,
-            "data": data
-        }
-        converted_transaction_params = deepcopy(transaction_params)
-        converted_transaction_params = TypeConverter.convert_type_reverse(converted_transaction_params)
-        tx_hash = HashGenerator.generate_hash(converted_transaction_params)
-        transaction_params["txHash"] = tx_hash
-        transaction = {
-            "method": "icx_sendTransaction",
-            "params": transaction_params
-        }
-
-        return transaction
-
     @staticmethod
     def _is_decentralized(context: 'IconScoreContext') -> bool:
         return context.revision >= REV_DECENTRALIZATION and context.engine.prep.term.sequence != -1
@@ -662,7 +643,6 @@ class IconServiceEngine(ContextContainer):
                                    issue_data,
                                    regulator)
         # proceed term
-
         # todo: in case of issuing from IISS_REV, should use below comments
         # if context.engine.prep.term.sequence != -1 and \
         # context.engine.prep.term.start_block_height == context.block.height:
@@ -693,7 +673,7 @@ class IconServiceEngine(ContextContainer):
 
         issue_data_in_tx: dict = request['params'].get('data')
         if not is_block_editable:
-            issue_data_in_db, regulator = BaseTransactionCreator.create_issue_data(context)
+            issue_data_in_db, regulator = context.engine.issue.create_icx_issue_info(context)
             if issue_data_in_tx != issue_data_in_db:
                 raise InvalidBlockException("Have difference between "
                                             "base transaction and actual db data")

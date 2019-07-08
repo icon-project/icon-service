@@ -37,7 +37,7 @@ class Engine(EngineBase):
     def open(self, context: 'IconScoreContext'):
         self._formula = IssueFormula()
 
-    def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, int]:
+    def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
         irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
             "prep": {
@@ -52,7 +52,15 @@ class Engine(EngineBase):
             iiss_data_for_issue[group]["value"] = issue_amount_per_group
             total_issue_amount += issue_amount_per_group
 
-        return iiss_data_for_issue, total_issue_amount
+        regulator = Regulator()
+        regulator.set_corrected_issue_data(context, total_issue_amount)
+
+        iiss_data_for_issue["result"] = {
+            "coveredByFee": regulator.covered_icx_by_fee,
+            "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
+            "issue": regulator.corrected_icx_issue_amount
+        }
+        return iiss_data_for_issue, regulator
 
     @staticmethod
     def _issue(context: 'IconScoreContext',

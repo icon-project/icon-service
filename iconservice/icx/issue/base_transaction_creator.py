@@ -23,21 +23,8 @@ from iconservice.utils.hashing.hash_generator import HashGenerator
 
 class BaseTransactionCreator(object):
     @staticmethod
-    def create_issue_data(context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
-        issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
-        regulator = Regulator()
-        regulator.set_corrected_issue_data(context, total_issue_amount)
-
-        issue_data["result"] = {
-            "coveredByFee": regulator.covered_icx_by_fee,
-            "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
-            "issue": regulator.corrected_icx_issue_amount
-        }
-        return issue_data, regulator
-
-    @staticmethod
     def create_base_transaction(context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
-        issue_data, regulator = BaseTransactionCreator.create_issue_data(context)
+        issue_data, regulator = context.engine.issue.create_icx_issue_info(context)
         # todo: check about reverse
         params = {
             "version": BASE_TRANSACTION_VERSION,
