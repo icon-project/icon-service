@@ -96,6 +96,7 @@ REV_IISS = REVISION_5
 REV_DECENTRALIZATION = REV_IISS + 1
 
 IISS_DB = 'iiss'
+RC_SOCKET = 'iiss.sock'
 
 
 class ConfigKey:
@@ -116,7 +117,6 @@ class ConfigKey:
     IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
-    IREP = 'irep'
     INITIAL_IREP = 'initialIRep'
 
     # IISS VARIABLE
@@ -205,7 +205,6 @@ IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000 * ICX_IN_LOOP
 IISS_MAX_IREP = 84_000 * ICX_IN_LOOP
 IISS_INITIAL_IREP = 50_000 * ICX_IN_LOOP
-IISS_SOCKET_PATH = "/tmp/iiss.sock"
 
 IISS_ANNUAL_BLOCK = 15_768_000
 IISS_MONTH = 12

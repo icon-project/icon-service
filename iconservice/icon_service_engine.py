@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, List, Any, Optional, Tuple
 
 from iconcommons.logger import Logger
+
 from .base.address import Address, generate_score_address, generate_score_address_for_tbears
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
@@ -33,13 +34,14 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE
+    ISSUE_TRANSACTION_VERSION, REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, RC_SOCKET
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
+from .iconscore.icon_score_event_log import EventLog
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
@@ -54,12 +56,10 @@ from .iiss.reward_calc import RewardCalcStorage
 from .inner_call import inner_call
 from .precommit_data_manager import PrecommitData, PrecommitDataManager, PrecommitFlag
 from .prep import PRepEngine, PRepStorage
-from .prep.data import PRepFlag
 from .utils import sha3_256, int_to_bytes, ContextEngine, ContextStorage
 from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 from .utils.hashing.hash_generator import HashGenerator
-from .iconscore.icon_score_event_log import EventLog
 
 if TYPE_CHECKING:
     from .builtin_scores.governance.governance import Governance
@@ -107,12 +107,14 @@ class IconServiceEngine(ContextContainer):
         score_root_path: str = conf[ConfigKey.SCORE_ROOT_PATH].rstrip('/')
         score_root_path: str = os.path.abspath(score_root_path)
         state_db_root_path: str = conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
-        iiss_db_root_path: str = os.path.join(state_db_root_path, IISS_DB)
-        iiss_db_root_path: str = os.path.abspath(iiss_db_root_path)
+        rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
+        rc_data_path: str = os.path.abspath(rc_data_path)
+        rc_socket_path: str = os.path.join(state_db_root_path, RC_SOCKET)
+        rc_socket_path: str = os.path.abspath(rc_socket_path)
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
-        os.makedirs(iiss_db_root_path, exist_ok=True)
+        os.makedirs(rc_data_path, exist_ok=True)
 
         # Share one context db with all SCOREs
         ContextDatabaseFactory.open(state_db_root_path, ContextDatabaseFactory.Mode.SINGLE_DB)
@@ -133,7 +135,8 @@ class IconServiceEngine(ContextContainer):
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._open_component_context(context,
-                                     iiss_db_root_path,
+                                     rc_data_path,
+                                     rc_socket_path,
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
                                      conf[ConfigKey.IISS_REWARD_VARIABLE],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
@@ -168,7 +171,8 @@ class IconServiceEngine(ContextContainer):
 
     def _open_component_context(self,
                                 context: 'IconScoreContext',
-                                iiss_db_root_path: str,
+                                rc_data_path: str,
+                                rc_socket_path: str,
                                 unstake_lock_period: int,
                                 reward_meta_data: dict,
                                 calc_period: int,
@@ -178,7 +182,9 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
         IconScoreContext.engine.icx.open(context)
-        IconScoreContext.engine.iiss.open(context, iiss_db_root_path)
+        IconScoreContext.engine.iiss.open(context,
+                                          rc_data_path,
+                                          rc_socket_path)
         IconScoreContext.engine.prep.open(context,
                                           term_period,
                                           irep)
@@ -193,7 +199,7 @@ class IconServiceEngine(ContextContainer):
                                            calc_period)
         IconScoreContext.storage.prep.open(context)
         IconScoreContext.storage.issue.open(context)
-        IconScoreContext.storage.rc.open(iiss_db_root_path)
+        IconScoreContext.storage.rc.open(rc_data_path)
 
     def _close_component_context(self, context: 'IconScoreContext'):
         IconScoreContext.engine.deploy.close()
