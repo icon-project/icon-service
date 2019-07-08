@@ -109,8 +109,7 @@ class IconServiceEngine(ContextContainer):
         state_db_root_path: str = conf[ConfigKey.STATE_DB_ROOT_PATH].rstrip('/')
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
         rc_data_path: str = os.path.abspath(rc_data_path)
-        rc_socket_path: str = os.path.join(state_db_root_path, RC_SOCKET)
-        rc_socket_path: str = os.path.abspath(rc_socket_path)
+        rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
