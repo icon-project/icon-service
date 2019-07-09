@@ -37,7 +37,7 @@ class TestIntegratePrep(TestIISSBase):
         # register prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_register_perp_tx(self._addr_array[i])
+            tx: dict = self.create_register_prep_tx(self._addr_array[i])
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -79,7 +79,7 @@ class TestIntegratePrep(TestIISSBase):
         # set prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_set_perp_tx(self._addr_array[i], {"name": f"new{str(self._addr_array[i])}"})
+            tx: dict = self.create_set_prep_tx(self._addr_array[i], {"name": f"new{str(self._addr_array[i])}"})
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -120,7 +120,7 @@ class TestIntegratePrep(TestIISSBase):
         # unregister prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_unregister_perp_tx(self._addr_array[i])
+            tx: dict = self.create_unregister_prep_tx(self._addr_array[i])
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -148,7 +148,7 @@ class TestIntegratePrep(TestIISSBase):
         prep_count: int = 3000
         tx_list: list = []
         for i in range(prep_count):
-            tx: dict = self.create_register_perp_tx(create_address())
+            tx: dict = self.create_register_prep_tx(create_address())
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -190,7 +190,7 @@ class TestIntegratePrep(TestIISSBase):
         # register prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_register_perp_tx(self._addr_array[i])
+            tx: dict = self.create_register_prep_tx(self._addr_array[i])
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:

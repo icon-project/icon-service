@@ -96,7 +96,7 @@ class TestIISSBase(TestIntegrateBase):
                 for (address, value) in params
                 if value > 0]
 
-    def create_register_perp_tx(self,
+    def create_register_prep_tx(self,
                                 address: 'Address',
                                 reg_data: Dict[str, Union[str, bytes]] = None):
         if reg_data is None:
@@ -121,14 +121,14 @@ class TestIISSBase(TestIntegrateBase):
             ConstantKeys.PUBLIC_KEY: self._create_dummy_public_key(name.encode()).hex()
         }
 
-    def create_set_perp_tx(self,
+    def create_set_prep_tx(self,
                            address: 'Address',
                            set_data: Dict[str, Union[str, bytes]] = None):
         if set_data is None:
             set_data: dict = {}
         return self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'setPRep', set_data)
 
-    def create_unregister_perp_tx(self,
+    def create_unregister_prep_tx(self,
                                   address: 'Address'):
         return self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'unregisterPRep', {})
 
