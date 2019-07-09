@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, TYPE_CHECKING
 
-from .storage import RegulatorVariable
 from ...base.exception import AccessDeniedException
 from ...icon_constant import ISCORE_EXCHANGE_RATE
-from ...iconscore.icon_score_context import IconScoreContext
+
+if TYPE_CHECKING:
+    from .storage import RegulatorVariable
+    from ...iconscore.icon_score_context import IconScoreContext
 
 
 class Regulator:

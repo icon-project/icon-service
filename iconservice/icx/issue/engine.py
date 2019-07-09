@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Tuple, Optional
 
 from .issue_formula import IssueFormula
 from .regulator import Regulator
-from ... import ZERO_SCORE_ADDRESS, Address
+from ... import ZERO_SCORE_ADDRESS
 from ...base.ComponentBase import EngineBase
 from ...base.exception import InvalidParamsException
 from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, IISS_ANNUAL_BLOCK
@@ -25,6 +25,7 @@ from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext
+    from ...base.address import Address
 
 
 class Engine(EngineBase):

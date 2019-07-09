@@ -12,13 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from copy import deepcopy
+from typing import TYPE_CHECKING
 from typing import Tuple
 
 from iconservice.base.type_converter import TypeConverter
 from iconservice.icon_constant import BASE_TRANSACTION_VERSION
-from iconservice.icx.issue.regulator import Regulator
 from iconservice.utils.hashing.hash_generator import HashGenerator
+
+if TYPE_CHECKING:
+    from ...iconscore.icon_score_context import IconScoreContext
+    from .regulator import Regulator
 
 
 class BaseTransactionCreator(object):

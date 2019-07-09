@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
-from ...icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, \
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 
 
 class IssueFormula(object):
