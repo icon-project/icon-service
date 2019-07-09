@@ -25,12 +25,12 @@ class HashGenerator:
     _ORIGIN_GENERATOR = HashOriginGeneratorV1()
 
     @classmethod
-    def generate_origin(cls, origin_data: dict):
+    def generate_origin(cls, origin_data: dict) -> str:
         copied_origin_data = copy.deepcopy(origin_data)
         return cls._ORIGIN_GENERATOR.generate(copied_origin_data)
 
     @classmethod
-    def generate_salted_origin(cls, origin_data: dict):
+    def generate_salted_origin(cls, origin_data: dict) -> str:
         def _gen():
             if HashGenerator._SALT is not None:
                 yield HashGenerator._SALT
@@ -38,7 +38,7 @@ class HashGenerator:
         return '.'.join(_gen())
 
     @classmethod
-    def generate_hash(cls, origin_data: dict):
+    def generate_hash(cls, origin_data: dict) -> str:
         origin = cls.generate_salted_origin(origin_data)
         return f'0x{hashlib.sha3_256(origin.encode()).hexdigest()}'
 

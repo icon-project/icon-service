@@ -29,22 +29,22 @@ class Regulator:
         self._corrected_icx_issue_amount: Optional[int] = None
 
     @property
-    def covered_icx_by_fee(self):
+    def covered_icx_by_fee(self) -> int:
         self._check_is_set(self._covered_icx_by_fee)
         return self._covered_icx_by_fee
 
     @property
-    def covered_icx_by_over_issue(self):
+    def covered_icx_by_over_issue(self) -> int:
         self._check_is_set(self._covered_icx_by_remain)
         return self._covered_icx_by_remain
 
     @property
-    def remain_over_issued_icx(self):
+    def remain_over_issued_icx(self) -> int:
         self._check_is_set(self._regulator_variable)
         return self._regulator_variable.over_issued_iscore // ISCORE_EXCHANGE_RATE
 
     @property
-    def corrected_icx_issue_amount(self):
+    def corrected_icx_issue_amount(self) -> int:
         self._check_is_set(self._corrected_icx_issue_amount)
         return self._corrected_icx_issue_amount
 
@@ -55,14 +55,14 @@ class Regulator:
 
     def set_corrected_issue_data(self, context: 'IconScoreContext', issue_amount: int):
         regulator_variable: 'RegulatorVariable' = context.storage.issue.get_regulator_variable(context)
-        prev_block_cumulative_fee = context.storage.icx.last_block.cumulative_fee
-        calc_next_block_height = context.storage.iiss.get_end_block_height_of_calc(context)
+        prev_block_cumulative_fee: int = context.storage.icx.last_block.cumulative_fee
+        calc_next_block_height: int = context.storage.iiss.get_end_block_height_of_calc(context)
 
         # update current calculated period total issued icx
         current_calc_period_total_issued_icx: int = regulator_variable.current_calc_period_issued_icx
         current_calc_period_total_issued_icx += issue_amount
         if calc_next_block_height == context.block.height:
-            prev_calc_period_issued_iscore = context.storage.rc.get_prev_calc_period_issued_iscore()
+            prev_calc_period_issued_iscore: Optional[int] = context.storage.rc.get_prev_calc_period_issued_iscore()
             covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
                 self._correct_issue_amount_on_calc_period(regulator_variable.prev_calc_period_issued_icx,
                                                           prev_calc_period_issued_iscore,
@@ -171,7 +171,7 @@ class Regulator:
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
             self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx, prev_block_cumulative_fee)
 
-        remain_over_issued_iscore = remain_over_issued_icx * ISCORE_EXCHANGE_RATE + over_issued_iscore
+        remain_over_issued_iscore: int = remain_over_issued_icx * ISCORE_EXCHANGE_RATE + over_issued_iscore
 
         # covered_icx can be negative value (in case of reward calculator having been issued more)
         return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, icx_issue_amount
@@ -188,6 +188,6 @@ class Regulator:
         # covered_icx_by_remain is always positive value
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_icx, icx_issue_amount = \
             self._reflect_difference_in_issuing(icx_issue_amount, over_issued_icx, prev_block_cumulative_fee)
-        remain_over_issued_iscore = remain_over_issued_icx * ISCORE_EXCHANGE_RATE + over_issued_iscore
+        remain_over_issued_iscore: int = remain_over_issued_icx * ISCORE_EXCHANGE_RATE + over_issued_iscore
 
         return covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, icx_issue_amount

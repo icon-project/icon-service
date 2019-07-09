@@ -33,7 +33,7 @@ class BaseTransactionCreator(object):
             "data": issue_data
         }
         # todo: tests about tx hash
-        params["txHash"] = BaseTransactionCreator._generate_transaction_hash(params)
+        params["txHash"]: str = BaseTransactionCreator._generate_transaction_hash(params)
 
         transaction = {
             "method": "icx_sendTransaction",
@@ -43,6 +43,6 @@ class BaseTransactionCreator(object):
 
     @staticmethod
     def _generate_transaction_hash(transaction_params: dict) -> str:
-        copied_transaction_params = deepcopy(transaction_params)
-        converted_transaction_params = TypeConverter.convert_type_reverse(copied_transaction_params)
+        copied_transaction_params: dict = deepcopy(transaction_params)
+        converted_transaction_params: dict = TypeConverter.convert_type_reverse(copied_transaction_params)
         return HashGenerator.generate_hash(converted_transaction_params)
