@@ -33,14 +33,13 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, RC_SOCKET
+    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
 from .iconscore.icon_score_context import IconScoreContextType
 from .iconscore.icon_score_context_util import IconScoreContextUtil
 from .iconscore.icon_score_engine import IconScoreEngine
-from .iconscore.icon_score_event_log import EventLog
 from .iconscore.icon_score_event_log import EventLogEmitter
 from .iconscore.icon_score_mapper import IconScoreMapper
 from .iconscore.icon_score_result import TransactionResult
@@ -61,6 +60,7 @@ from .utils import to_camel_case
 from .utils.bloom import BloomFilter
 
 if TYPE_CHECKING:
+    from .iconscore.icon_score_event_log import EventLog
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
     from .prep.data import PRep, PRepContainer
