@@ -20,9 +20,9 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from iconservice.base.exception import InvalidParamsException
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import REV_IISS
+from iconservice.prep.data.prep import PRepStatus
 from tests.integrate_test import create_register_prep_params
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -186,9 +186,8 @@ class TestIntegratePrep(TestIntegrateBase):
             }
         }
 
-        with self.assertRaises(InvalidParamsException) as e:
-            self._query(query_request)
-        self.assertEqual(f"P-Rep not found: {str(address)}", e.exception.args[0])
+        response: dict = self._query(query_request)
+        self.assertEqual(PRepStatus.UNREGISTERED.value, response["status"])
 
         # Unregister a non-existing P-Rep
         address: 'Address' = self._addr_array[1]

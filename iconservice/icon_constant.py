@@ -220,11 +220,10 @@ ISSUE_TRANSACTION_VERSION = 3
 
 
 class PRepStatus(Enum):
-    NONE = 0
-    ACTIVE = 1
-    UNREGISTERED = 2
-    PENALTY1 = 3
-    PENALTY2 = 4
+    ACTIVE = 0
+    UNREGISTERED = 1
+    PENALTY1 = 2
+    PENALTY2 = 3
 
 
 PREP_STATUS_MAPPER = {

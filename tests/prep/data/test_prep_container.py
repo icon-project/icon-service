@@ -21,7 +21,7 @@ import pytest
 
 from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import AccessDeniedException
-from iconservice.prep.data import PRep, PRepContainer
+from iconservice.prep.data import PRep, PRepContainer, PRepStatus
 
 
 def _create_dummy_prep(index: int) -> 'PRep':
@@ -118,6 +118,36 @@ def test_get_by_index(create_prep_container):
         prep = preps.get_by_index(-i)
         assert prep is not None
         assert prep == preps.get_by_index(size - i)
+
+
+def test_get_inactive_prep_by_address(create_prep_container):
+    size = 11
+    preps = create_prep_container(size)
+
+    for prep_status in (PRepStatus.UNREGISTERED, PRepStatus.PENALTY1, PRepStatus.PENALTY2):
+        # Make sure that the prep to remove is active
+        index: int = random.randint(0, size - 1)
+        prep: 'PRep' = preps.get_by_index(index)
+        assert isinstance(prep, PRep)
+        assert prep.status == PRepStatus.ACTIVE
+        assert not prep.is_frozen()
+
+        # Remove a prep from PRepContainer with a given index
+        removed_prep = preps.remove(prep.address, prep_status)
+        assert id(prep) == id(removed_prep)
+        assert removed_prep.is_frozen()
+        assert removed_prep.address not in preps
+        assert preps.contains(removed_prep.address, inactive_preps_included=True)
+
+        # Check whether the prep is removed
+        active_prep: 'PRep' = preps.get_by_address(removed_prep.address)
+        assert active_prep is None
+
+        # Get the prep from preps._inactive_prep_list
+        inactive_preps: 'PRep' = preps.get_inactive_prep_by_address(removed_prep.address)
+        assert inactive_preps is not None
+        assert id(inactive_preps) == id(removed_prep)
+        assert inactive_preps.status == prep_status
 
 
 def test_remove(create_prep_container):

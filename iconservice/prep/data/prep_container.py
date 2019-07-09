@@ -120,7 +120,7 @@ class PRepContainer(object):
         """Remove a prep
 
         * Remove a prep from active_prep_dict and active_prep_list
-        * Add a prep to inactive_prep_dict
+        * Add a prep to inactive_prep_dict with frozen flag
 
         :param address:
         :param status:
@@ -139,6 +139,8 @@ class PRepContainer(object):
         assert len(self._active_prep_dict) == len(self._active_prep_list)
 
         prep.status = status
+        prep.freeze()
+
         self._inactive_prep_dict[address] = prep
 
         self._total_prep_delegated -= prep.delegated
@@ -250,6 +252,19 @@ class PRepContainer(object):
             self._active_prep_dict[prep.address] = prep
             self._active_prep_list[index] = prep
 
+        return prep
+
+    def get_inactive_prep_by_address(self, address: 'Address') -> Optional['PRep']:
+        """Returns an inactive prep indicated by a given address
+
+        :param address:
+        :return:
+        """
+        prep: 'PRep' = self._inactive_prep_dict.get(address)
+        if prep is None:
+            raise InvalidParamsException("P-Rep not found")
+
+        assert prep.is_frozen()
         return prep
 
     def __len__(self) -> int:
