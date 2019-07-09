@@ -40,25 +40,25 @@ class Engine(EngineBase):
     def create_icx_issue_info(self, context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
         irep: int = context.engine.prep.term.irep
         iiss_data_for_issue = {
-            "prep": {
-                "irep": irep,
-                "rrep": context.storage.iiss.get_reward_prep(context).reward_rate,
-                "totalDelegation": context.preps.total_prep_delegated
+            IssueDataKey.PREP: {
+                IssueDataKey.IREP: irep,
+                IssueDataKey.RREP: context.storage.iiss.get_reward_prep(context).reward_rate,
+                IssueDataKey.TOTAL_DELEGATION: context.preps.total_prep_delegated
             }
         }
         total_issue_amount = 0
         for group in iiss_data_for_issue:
             issue_amount_per_group = self._formula.calculate(group, iiss_data_for_issue[group])
-            iiss_data_for_issue[group]["value"] = issue_amount_per_group
+            iiss_data_for_issue[group][IssueDataKey.VALUE] = issue_amount_per_group
             total_issue_amount += issue_amount_per_group
 
         regulator = Regulator()
         regulator.set_corrected_issue_data(context, total_issue_amount)
 
-        iiss_data_for_issue["result"] = {
-            "coveredByFee": regulator.covered_icx_by_fee,
-            "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
-            "issue": regulator.corrected_icx_issue_amount
+        iiss_data_for_issue[IssueDataKey.ISSUE_RESULT] = {
+            IssueDataKey.COVERED_BY_FEE: regulator.covered_icx_by_fee,
+            IssueDataKey.COVERED_BY_OVER_ISSUED_ICX: regulator.covered_icx_by_over_issue,
+            IssueDataKey.ISSUE: regulator.corrected_icx_issue_amount
         }
         return iiss_data_for_issue, regulator
 

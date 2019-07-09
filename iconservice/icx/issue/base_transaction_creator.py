@@ -25,14 +25,12 @@ class BaseTransactionCreator(object):
     @staticmethod
     def create_base_transaction(context: 'IconScoreContext') -> Tuple[dict, 'Regulator']:
         issue_data, regulator = context.engine.issue.create_icx_issue_info(context)
-        # todo: check about reverse
         params = {
             "version": BASE_TRANSACTION_VERSION,
             "timestamp": context.block.timestamp,
             "dataType": "base",
             "data": issue_data
         }
-        # todo: tests about tx hash
         params["txHash"]: str = BaseTransactionCreator._generate_transaction_hash(params)
 
         transaction = {

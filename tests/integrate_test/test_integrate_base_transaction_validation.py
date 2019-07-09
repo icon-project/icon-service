@@ -213,7 +213,6 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         self._set_revision(REV_DECENTRALIZATION)
 
-        # todo: if get_issue_info is redundant, should fix this method
         context = IconScoreContext(IconScoreContextType.DIRECT)
         context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
         block_height: int = self._block_height

@@ -61,12 +61,26 @@ ZERO_TX_HASH = bytes(32)
 
 class IssueDataKey:
     PREP = "prep"
-    TOTAL = "total"
-
     IREP = "irep"
     RREP = "rrep"
+
+    EEP = "eep"
+    IEEP = "ieep"
+    REEP = "reep"
+
+    DAPP = "dapp"
+    IDAPP = "idapp"
+    RDAPP = "rdapp"
+
+    ISSUE_RESULT = "result"
+    COVERED_BY_FEE = "coveredByFee"
+    COVERED_BY_OVER_ISSUED_ICX = "coveredByOverIssuedICX"
+    ISSUE = "issue"
+
     TOTAL_DELEGATION = "totalDelegation"
     VALUE = "value"
+
+    TOTAL = "total"
 
 
 ISSUE_EVENT_LOG_MAPPER = {

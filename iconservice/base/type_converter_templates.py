@@ -16,6 +16,8 @@
 
 from enum import IntEnum
 
+from ..icon_constant import IssueDataKey
+
 
 class ParamType(IntEnum):
     BLOCK = 0
@@ -26,7 +28,7 @@ class ParamType(IntEnum):
     DEPLOY_DATA = 103
     TRANSACTION_PARAMS_DATA = 104
     DEPOSIT_DATA = 105
-    ISSUE_DATA = 106
+    BASE_DATA = 106
 
     INVOKE = 200
 
@@ -112,24 +114,29 @@ class ConstantKeys:
     CALL = "call"
     DEPLOY = "deploy"
 
-    ISSUE = "issue"
-    PREP = "prep"
-    PREP_INCENTIVE = "incentive"
-    PREP_REWARD_RATE = "rewardRate"
-    PREP_TOTAL_DELEGATION = "totalDelegation"
-    PREP_VALUE = "value"
+    BASE = "base"
+    PREP = IssueDataKey.PREP
+    PREP_INCENTIVE = IssueDataKey.IREP
+    PREP_REWARD_RATE = IssueDataKey.RREP
+    PREP_TOTAL_DELEGATION = IssueDataKey.TOTAL_DELEGATION
+    PREP_VALUE = IssueDataKey.VALUE
 
-    EEP = "eep"
-    EEP_INCENTIVE = "incentive"
-    EEP_REWARD_RATE = "rewardRate"
-    EEP_TOTAL_DELEGATION = "totalDelegation"
-    EEP_VALUE = "value"
+    EEP = IssueDataKey.EEP
+    EEP_INCENTIVE = IssueDataKey.IEEP
+    EEP_REWARD_RATE = IssueDataKey.REEP
+    EEP_TOTAL_DELEGATION = IssueDataKey.TOTAL_DELEGATION
+    EEP_VALUE = IssueDataKey.VALUE
 
-    DAPP = "dapp"
-    DAPP_INCENTIVE = "incentive"
-    DAPP_REWARD_RATE = "rewardRate"
-    DAPP_TOTAL_DELEGATION = "totalDelegation"
-    DAPP_VALUE = "value"
+    DAPP = IssueDataKey.DAPP
+    DAPP_INCENTIVE = IssueDataKey.IDAPP
+    DAPP_REWARD_RATE = IssueDataKey.RDAPP
+    DAPP_TOTAL_DELEGATION = IssueDataKey.TOTAL_DELEGATION
+    DAPP_VALUE = IssueDataKey.VALUE
+
+    ISSUE_RESULT = IssueDataKey.ISSUE_RESULT
+    COVERED_BY_FEE = IssueDataKey.COVERED_BY_FEE
+    COVERED_BY_OVER_ISSUED_ICX = IssueDataKey.COVERED_BY_OVER_ISSUED_ICX
+    ISSUE = IssueDataKey.ISSUE
 
     OLD_TX_HASH = "tx_hash"
 
@@ -193,7 +200,7 @@ type_convert_templates[ParamType.DEPLOY_DATA] = {
     ConstantKeys.PARAMS: ValueType.LATER
 }
 
-type_convert_templates[ParamType.ISSUE_DATA] = {
+type_convert_templates[ParamType.BASE_DATA] = {
     ConstantKeys.PREP: {
         ConstantKeys.PREP_INCENTIVE: ValueType.INT,
         ConstantKeys.PREP_REWARD_RATE: ValueType.INT,
@@ -211,7 +218,13 @@ type_convert_templates[ParamType.ISSUE_DATA] = {
         ConstantKeys.DAPP_REWARD_RATE: ValueType.INT,
         ConstantKeys.DAPP_TOTAL_DELEGATION: ValueType.INT,
         ConstantKeys.DAPP_VALUE: ValueType.INT
+    },
+    ConstantKeys.ISSUE_RESULT: {
+        ConstantKeys.COVERED_BY_FEE: ValueType.INT,
+        ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: ValueType.INT,
+        ConstantKeys.ISSUE: ValueType.INT
     }
+
 }
 
 type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
@@ -231,7 +244,7 @@ type_convert_templates[ParamType.TRANSACTION_PARAMS_DATA] = {
             SWITCH_KEY: ConstantKeys.DATA_TYPE,
             ConstantKeys.CALL: type_convert_templates[ParamType.CALL_DATA],
             ConstantKeys.DEPLOY: type_convert_templates[ParamType.DEPLOY_DATA],
-            ConstantKeys.ISSUE: type_convert_templates[ParamType.ISSUE_DATA]
+            ConstantKeys.BASE: type_convert_templates[ParamType.BASE_DATA]
         }
     },
     KEY_CONVERTER: {
@@ -260,7 +273,6 @@ type_convert_templates[ParamType.INVOKE] = {
     ConstantKeys.PREV_BLOCK_VALIDATORS: [ValueType.ADDRESS]
 }
 
-# todo: Version parameter is redundant, remove this field
 type_convert_templates[ParamType.ICX_CALL] = {
     ConstantKeys.VERSION: ValueType.INT,
     ConstantKeys.FROM: ValueType.ADDRESS,
