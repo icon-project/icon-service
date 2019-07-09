@@ -28,7 +28,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_SOCKET_PATH, IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
+from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
 from ..icon_constant import PREP_MAIN_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -79,8 +79,8 @@ class Engine(EngineBase):
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
         self._listeners: List['EngineListener'] = []
 
-    def open(self, context: 'IconScoreContext', path: str):
-        self._init_reward_calc_proxy(path)
+    def open(self, context: 'IconScoreContext', data_path: str, socket_path: str):
+        self._init_reward_calc_proxy(data_path, socket_path)
 
     def add_listener(self, listener: 'EngineListener'):
         assert isinstance(listener, EngineListener)
@@ -104,10 +104,10 @@ class Engine(EngineBase):
         IconScoreContext.storage.rc.put_prev_calc_period_issued_iscore(cb_data.iscore)
         Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)
 
-    def _init_reward_calc_proxy(self, data_path: str):
+    def _init_reward_calc_proxy(self, data_path: str, socket_path: str):
         self._reward_calc_proxy = RewardCalcProxy(calc_callback=self.calculate_callback,
                                                   version_callback=self.version_callback)
-        self._reward_calc_proxy.open(sock_path=IISS_SOCKET_PATH, iiss_db_path=data_path)
+        self._reward_calc_proxy.open(sock_path=socket_path, iiss_db_path=data_path)
         self._reward_calc_proxy.start()
 
     def _close_reward_calc_proxy(self):
