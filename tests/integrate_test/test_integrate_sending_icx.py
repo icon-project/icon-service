@@ -20,6 +20,7 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -39,7 +40,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         score_address = tx_results[0].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 1 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -79,7 +80,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         score_address = tx_results[0].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 2 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -118,7 +119,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         score_address = tx_results[0].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 1 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -157,7 +158,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         score_address = tx_results[0].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 2 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -200,7 +201,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 1 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -249,7 +250,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 2 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
@@ -299,7 +300,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
@@ -349,7 +350,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
@@ -399,7 +400,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -448,7 +449,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 2 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
@@ -492,7 +493,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
@@ -536,7 +537,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         receiving_score_address = tx_results[1].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
@@ -574,7 +575,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         sending_score_address = tx_results[0].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 1 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -613,7 +614,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         sending_score_address = tx_results[0].score_address
 
         # Calls `send` with 1 ICX then, SCORE sends 1 ICX to `_to`
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -655,7 +656,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         sending_score_address = tx_results[0].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -688,7 +689,7 @@ class TestIntegrateSendingIcx(TestIntegrateBase):
         sending_score_address = tx_results[0].score_address
 
         # Calls `transfer` with 1 ICX then, SCORE sends 1 ICX to receiving SCORE
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,

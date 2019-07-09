@@ -21,6 +21,7 @@ import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -53,7 +54,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -90,7 +91,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
 
         self.assertEqual(tx_results[0].status, int(True))
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx3 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3])
@@ -116,7 +117,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -146,7 +147,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -180,7 +181,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_addr1 = tx_results[0].score_address
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -222,7 +223,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -263,7 +264,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -304,7 +305,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -351,7 +352,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -394,7 +395,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -437,7 +438,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -480,7 +481,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -523,7 +524,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_score_func',
                                        {"score_addr": str(score_addr1)})
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx4 = self._make_icx_send_tx(self._genesis, score_addr2, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4])
@@ -548,7 +549,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         }
 
         response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 400_230_000 * self._icx_factor)
+        self.assertEqual(response, 400_230_000 * ICX_IN_LOOP)
 
         tx1 = self._make_deploy_tx("sample_fallback_call_scores",
                                    "sample_link_score_send_A",
@@ -585,7 +586,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
                                        'add_user_addr2',
                                        {"eoa_addr": str(self._addr_array[2])})
 
-        value = 20 * self._icx_factor
+        value = 20 * ICX_IN_LOOP
         tx7 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4, tx5, tx6, tx7])
@@ -615,13 +616,13 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
             "address": self._addr_array[2]
         }
         response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 15 * self._icx_factor)
+        self.assertEqual(response, 15 * ICX_IN_LOOP)
 
         query_request = {
             "address": self._addr_array[3]
         }
         response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 5 * self._icx_factor)
+        self.assertEqual(response, 5 * ICX_IN_LOOP)
 
     def test_base_fallback_send_0_and_1(self):
         tx = self._make_deploy_tx("sample_fallback_call_scores",
@@ -639,7 +640,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         score_addr = tx_results[0].score_address
 
         raise_exception_start_tag("sample_base_fallback_send_0_and_1")
-        value = 0 * self._icx_factor
+        value = 0 * ICX_IN_LOOP
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
@@ -647,7 +648,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
@@ -672,7 +673,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         score_addr = tx_results[0].score_address
 
         raise_exception_start_tag("sample_non_payable_fallback_send_0_and_1")
-        value = 0 * self._icx_factor
+        value = 0 * ICX_IN_LOOP
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
@@ -680,7 +681,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].failure.code, ExceptionCode.METHOD_NOT_FOUND)
         self.assertTrue(tx_results[0].failure.message.startswith("Method not found"))
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx = self._make_icx_send_tx(self._genesis, score_addr, value)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
@@ -711,7 +712,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx = self._make_score_call_tx(self._genesis,
                                       score_addr,
                                       'set_value1', {}, value)

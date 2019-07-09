@@ -19,7 +19,8 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
-from iconservice.base.exception import ExceptionCode, AccessDeniedException
+from iconservice.base.exception import ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
@@ -27,7 +28,7 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 class TestIntegrateScoreInternalCall(TestIntegrateBase):
 
     def test_link_score(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_internal_call_scores",
                                    "sample_score",
                                    self._addr_array[0],
@@ -72,7 +73,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, value1)
 
-        value2 = 1 * self._icx_factor
+        value2 = 1 * ICX_IN_LOOP
         tx4 = self._make_score_call_tx(self._addr_array[0],
                                        score_addr2,
                                        'set_value',
@@ -88,7 +89,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self.assertEqual(response, value2)
 
     def test_link_score_cross(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_internal_call_scores",
                                    "sample_score",
                                    self._addr_array[0],
@@ -137,7 +138,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self.assertEqual(e.exception.code, ExceptionCode.ACCESS_DENIED)
         self.assertEqual(e.exception.message, "No permission to write")
 
-        value2 = 1 * self._icx_factor
+        value2 = 1 * ICX_IN_LOOP
         tx4 = self._make_score_call_tx(self._addr_array[0],
                                        score_addr2,
                                        'set_value',
@@ -202,7 +203,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
 
         self.assertEqual(context.exception.message, 'Max call stack size exceeded')
 
-        value2 = 1 * self._icx_factor
+        value2 = 1 * ICX_IN_LOOP
         tx4 = self._make_score_call_tx(self._addr_array[0],
                                        score_addr2,
                                        'set_value',
@@ -218,7 +219,7 @@ class TestIntegrateScoreInternalCall(TestIntegrateBase):
         self.assertEqual(tx_results[0].failure.message, 'Max call stack size exceeded')
 
     def test_get_other_score_db(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_internal_call_scores",
                                    "sample_score",
                                    self._addr_array[0],

@@ -38,6 +38,5 @@ default_icon_config = {
     ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 43_120,
     ConfigKey.IISS_CALCULATE_PERIOD: 43_120,
     ConfigKey.TERM_PERIOD: 43_120,
-    ConfigKey.IISS_PREP_LIST: [],
     ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP
 }
