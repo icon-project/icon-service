@@ -110,6 +110,7 @@ class IconServiceEngine(ContextContainer):
         rc_data_path: str = os.path.join(state_db_root_path, IISS_DB)
         rc_data_path: str = os.path.abspath(rc_data_path)
         rc_socket_path: str = f"/tmp/iiss_{conf[ConfigKey.AMQP_KEY]}.sock"
+        log_dir: str = os.path.dirname(conf[ConfigKey.LOG].get(ConfigKey.LOG_FILE_PATH, "./"))
 
         os.makedirs(score_root_path, exist_ok=True)
         os.makedirs(state_db_root_path, exist_ok=True)
@@ -134,6 +135,7 @@ class IconServiceEngine(ContextContainer):
 
         context = IconScoreContext(IconScoreContextType.DIRECT)
         self._open_component_context(context,
+                                     log_dir,
                                      rc_data_path,
                                      rc_socket_path,
                                      conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
@@ -170,6 +172,7 @@ class IconServiceEngine(ContextContainer):
 
     def _open_component_context(self,
                                 context: 'IconScoreContext',
+                                log_dir: str,
                                 rc_data_path: str,
                                 rc_socket_path: str,
                                 unstake_lock_period: int,
@@ -182,6 +185,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.engine.fee.open(context)
         IconScoreContext.engine.icx.open(context)
         IconScoreContext.engine.iiss.open(context,
+                                          log_dir,
                                           rc_data_path,
                                           rc_socket_path)
         IconScoreContext.engine.prep.open(context,

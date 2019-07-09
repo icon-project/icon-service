@@ -119,6 +119,10 @@ class ConfigKey:
     TERM_PERIOD = 'termPeriod'
     INITIAL_IREP = 'initialIRep'
 
+    # log
+    LOG = 'log'
+    LOG_FILE_PATH = 'filePath'
+
     # IISS VARIABLE
     IISS_REWARD_VARIABLE = "iissRewardVariable"
     REWARD_POINT = 'rewardPoint'
