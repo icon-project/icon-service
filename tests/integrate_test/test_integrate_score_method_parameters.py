@@ -18,6 +18,7 @@
 
 from iconservice import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -396,7 +397,7 @@ class TestIntegrateMethodParamters(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, 0)
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1', {"value": hex(value)})
 
         prev_block, tx_results = self._make_and_req_block([tx2])

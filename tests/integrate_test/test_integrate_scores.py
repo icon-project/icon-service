@@ -22,8 +22,9 @@ import unittest
 from iconservice import IconServiceFlag
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, ScoreNotFoundException
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIntegrateScores(TestIntegrateBase):
@@ -56,7 +57,7 @@ class TestIntegrateScores(TestIntegrateBase):
         response = self._query(query_request)
         self.assertEqual(response, 0)
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_score_call_tx(self._addr_array[0], score_addr1, 'set_value1', {"value": hex(value)})
 
         prev_block, tx_results = self._make_and_req_block([tx2])

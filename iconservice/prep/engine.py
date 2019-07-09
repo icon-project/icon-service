@@ -429,6 +429,13 @@ class Engine(EngineBase, IISSEngineListener):
 
         prep_count: int = len(preps)
 
+        if prep_count == 0:
+            return {
+                "startRanking": 0,
+                "totalDelegated": 0,
+                "preps": []
+            }
+
         start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
         end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, prep_count)
 

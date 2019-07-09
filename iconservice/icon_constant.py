@@ -114,7 +114,6 @@ class ConfigKey:
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
     IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
-    IISS_PREP_LIST = "iissPRepList"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
     INITIAL_IREP = 'initialIRep'

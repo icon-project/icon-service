@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Any
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -251,7 +251,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self.assertEqual(tx_result.failure.message, f"Invalid sender: not yourself")
 
     def test_score_add_deployer(self):
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         with self.assertRaises(BaseException) as e:
             self._deploy_score(self._addr_array[0],
@@ -281,7 +281,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
     def test_score_add_deployer_update_governance(self):
         self._update_governance()
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         with self.assertRaises(BaseException) as e:
             self._deploy_score(self._addr_array[0],
@@ -315,7 +315,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
     def test_score_remove_deployer(self):
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,
@@ -348,7 +348,7 @@ class TestIntegrateDeployWhiteList(TestIntegrateBase):
     def test_score_remove_deployer_update_governance(self):
         self._update_governance()
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
 
         tx_result = self._external_call(self._admin,
                                         GOVERNANCE_SCORE_ADDRESS,

@@ -21,7 +21,6 @@ from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import AccessDeniedException
 from iconservice.prep.data import PRep
 
-
 NAME = "banana"
 EMAIL = "banana@example.com"
 WEBSITE = "https://banana.example.com"

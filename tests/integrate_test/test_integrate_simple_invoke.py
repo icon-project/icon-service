@@ -21,6 +21,7 @@ import unittest
 
 from iconservice.base.address import MalformedAddress
 from iconservice.base.exception import ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -63,14 +64,14 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertTrue(last_block['timestamp'])
 
     def test_invoke_success(self):
-        value1 = 3 * self._icx_factor
+        value1 = 3 * ICX_IN_LOOP
         tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
 
         prev_block, tx_results = self._make_and_req_block([tx1])
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._addr_array[0], self._addr_array[1], value2)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -90,7 +91,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(response, value2)
 
     def test_make_invalid_block_height(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
 
         # have to NextBlockHeight[2] != LastBlockHeight[0] + 1 (32000)
 
@@ -114,7 +115,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_make_invalid_block_hash(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
 
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
         prev_block, tx_results = self._make_and_req_block([tx], block_height=1)
@@ -134,7 +135,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(response, 0)
 
     def test_send_icx_using_malformed_address1(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
 
         malformed_address = MalformedAddress.from_string("hx1234")
         tx = self._make_icx_send_tx(self._genesis, malformed_address, value1,
@@ -151,7 +152,7 @@ class TestIntegrateSimpleInvoke(TestIntegrateBase):
         self.assertEqual(response, value1)
 
     def test_send_icx_using_malformed_address2(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
 
         malformed_address = MalformedAddress.from_string("11")
         tx = self._make_icx_send_tx(self._genesis, malformed_address, value1,
