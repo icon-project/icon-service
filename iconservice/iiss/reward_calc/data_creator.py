@@ -83,7 +83,6 @@ class DataCreator:
         tx.delegation_info: list = delegation_infos
         return tx
 
-    # todo: need to modify
     @staticmethod
     def create_delegation_info(address: 'Address', value: int) -> 'DelegationInfo':
         info = DelegationInfo()

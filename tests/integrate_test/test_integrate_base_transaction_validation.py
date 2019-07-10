@@ -26,6 +26,7 @@ from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
     IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, ConfigKey
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.icx.issue.regulator import Regulator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
 from iconservice.prep.data import PRepFlag
@@ -147,22 +148,14 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
     def _create_base_transaction(self):
         context = IconScoreContext(IconScoreContextType.DIRECT)
         context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
-        issue_data, total_issue_amount = context.engine.issue.create_icx_issue_info(context)
         block_height: int = self._block_height
         block_hash = create_block_hash()
         timestamp_us = create_timestamp()
         block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
         context.block = block
-        regulator = Regulator()
-        regulator.set_corrected_issue_data(context, total_issue_amount)
-
-        issue_data["result"] = {
-            "coveredByFee": regulator.covered_icx_by_fee,
-            "coveredByOverIssuedICX": regulator.covered_icx_by_over_issue,
-            "issue": regulator.corrected_icx_issue_amount
-        }
-
-        return self.icon_service_engine.formatting_transaction("base", issue_data, context.block.timestamp)
+        issue_data, _ = context.engine.issue.create_icx_issue_info(context)
+        transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
+        return transaction
 
     def _set_prep(self, address: 'Address', data: dict, _revision: int = REV_IISS):
 
@@ -220,14 +213,19 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
 
         self._set_revision(REV_DECENTRALIZATION)
 
-        # todo: if get_issue_info is redundant, should fix this method
         context = IconScoreContext(IconScoreContextType.DIRECT)
         context.preps: 'PRepContainer' = context.engine.prep.preps.copy(PRepFlag.NONE)
+        block_height: int = self._block_height
+        block_hash = create_block_hash()
+        timestamp_us = create_timestamp()
+        block = Block(block_height, block_hash, timestamp_us, self._prev_block_hash, 0)
+        context.block = block
 
-        self.issue_data, self.total_issue_amount = IconScoreContext.engine.issue.create_icx_issue_info(context)
-        # self.total_issue_amount = 0
-        # for group_dict in self.issue_data.values():
-        #     self.total_issue_amount += group_dict["value"]
+        self.issue_data, regulator = IconScoreContext.engine.issue.create_icx_issue_info(context)
+        self.total_issue_amount = 0
+        for group_dict in self.issue_data.values():
+            if "value" in group_dict:
+                self.total_issue_amount += group_dict["value"]
 
     def test_validate_base_transaction_position(self):
         # isBlockEditable is false in this method
@@ -251,7 +249,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
             self._make_issue_tx(self.issue_data),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(KeyError, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [

@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from iconservice.base.block import Block
 from iconservice.base.exception import AccessDeniedException
-from iconservice.database.db import ContextDatabase
 from iconservice.icon_constant import IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
@@ -27,42 +27,10 @@ from tests import create_block_hash
 from tests.integrate_test import create_timestamp
 
 
-# def create_context_db():
-#     """
-#     Create memory db for ContextDatabase
-#
-#     :return: ContextDatabase
-#     """
-#     memory_db = {}
-#
-#     # noinspection PyUnusedLocal
-#     def put(context, key, value):
-#         memory_db[key] = value
-#
-#     # noinspection PyUnusedLocal
-#     def get(context, key):
-#         return memory_db.get(key)
-#
-#     # noinspection PyUnusedLocal
-#     def delete(context, key):
-#         del memory_db[key]
-#
-#     context_db = Mock(spec=ContextDatabase)
-#     context_db.get = get
-#     context_db.put = put
-#     context_db.delete = delete
-#
-#     return context_db
-
-
 class TestIssueRegulator:
 
     def setup(self):
-        self.issue_regulator = Regulator()
-
-        self.invoke_context = IconScoreContext(IconScoreContextType.INVOKE)
-        self.direct_context = IconScoreContext(IconScoreContextType.DIRECT)
-        self.query_context = IconScoreContext(IconScoreContextType.QUERY)
+        self.context = IconScoreContext(IconScoreContextType.INVOKE)
 
     def test_reflect_difference_in_issuing(self):
         # success case: when input negative over_issued_icx, should return below
@@ -76,9 +44,9 @@ class TestIssueRegulator:
         max_covered_by_fee = icx_issue_amount - over_issued_icx
         for cumulative_fee in range(0, 2005):
             actual_covered_by_fee, actual_covered_by_remain, actual_remain_over_issued_icx, actual_corrected_icx_issue_amount = \
-                self.issue_regulator._reflect_difference_in_issuing(icx_issue_amount,
-                                                                    over_issued_icx,
-                                                                    cumulative_fee)
+                Regulator._reflect_difference_in_issuing(icx_issue_amount,
+                                                         over_issued_icx,
+                                                         cumulative_fee)
             expected_cumulative_fee = 0 if cumulative_fee <= max_covered_by_fee else cumulative_fee - max_covered_by_fee
             assert actual_covered_by_fee == cumulative_fee if cumulative_fee <= max_covered_by_fee else max_covered_by_fee
             assert actual_covered_by_remain == over_issued_icx
@@ -96,9 +64,9 @@ class TestIssueRegulator:
 
         for cumulative_fee in range(0, 2000):
             actual_covered_by_fee, actual_covered_by_remain, actual_remain_over_issued_icx, actual_corrected_icx_issue_amount = \
-                self.issue_regulator._reflect_difference_in_issuing(icx_issue_amount,
-                                                                    over_issued_icx,
-                                                                    cumulative_fee)
+                Regulator._reflect_difference_in_issuing(icx_issue_amount,
+                                                         over_issued_icx,
+                                                         cumulative_fee)
             assert actual_covered_by_fee == 0
             assert actual_covered_by_remain == icx_issue_amount
             assert actual_remain_over_issued_icx == abs(icx_issue_amount - over_issued_icx) + cumulative_fee
@@ -114,9 +82,9 @@ class TestIssueRegulator:
         max_covered_by_fee = icx_issue_amount - over_issued_icx
         for cumulative_fee in range(0, 1005):
             actual_covered_by_fee, actual_covered_by_remain, actual_remain_over_issued_icx, actual_corrected_icx_issue_amount = \
-                self.issue_regulator._reflect_difference_in_issuing(icx_issue_amount,
-                                                                    over_issued_icx,
-                                                                    cumulative_fee)
+                Regulator._reflect_difference_in_issuing(icx_issue_amount,
+                                                         over_issued_icx,
+                                                         cumulative_fee)
             assert actual_covered_by_fee == cumulative_fee \
                 if cumulative_fee <= max_covered_by_fee else max_covered_by_fee
             assert actual_covered_by_remain == over_issued_icx
@@ -134,9 +102,9 @@ class TestIssueRegulator:
         over_issued_icx = 0
         for cumulative_fee in range(0, 1005):
             actual_covered_by_fee, actual_covered_by_remain, actual_remain_over_issued_icx, actual_corrected_icx_issue_amount = \
-                self.issue_regulator._reflect_difference_in_issuing(icx_issue_amount,
-                                                                    over_issued_icx,
-                                                                    cumulative_fee)
+                Regulator._reflect_difference_in_issuing(icx_issue_amount,
+                                                         over_issued_icx,
+                                                         cumulative_fee)
 
             assert actual_covered_by_fee == 0
             assert actual_covered_by_remain == 0
@@ -149,7 +117,7 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
+            Regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
 
         assert remain_over_issued_iscore == 0
         assert covered_icx_by_fee == 0
@@ -163,7 +131,7 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
+            Regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
 
         assert remain_over_issued_iscore == over_issued_i_score - icx_issue_amount * ISCORE_EXCHANGE_RATE + \
                (prev_block_cumulative_fee * ISCORE_EXCHANGE_RATE)
@@ -178,7 +146,7 @@ class TestIssueRegulator:
         over_issued_icx = over_issued_i_score // ISCORE_EXCHANGE_RATE
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
+            Regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
 
         assert remain_over_issued_iscore == over_issued_icx * ISCORE_EXCHANGE_RATE + (prev_block_cumulative_fee * ISCORE_EXCHANGE_RATE)
         assert covered_icx_by_fee == 0
@@ -191,7 +159,7 @@ class TestIssueRegulator:
         over_issued_i_score = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
+            Regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
 
         assert remain_over_issued_iscore == 0
         assert covered_icx_by_fee == 0
@@ -204,7 +172,7 @@ class TestIssueRegulator:
         over_issued_i_score = 0
 
         with pytest.raises(AssertionError):
-            self.issue_regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
+            Regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
 
     def test_correct_issue_amount_fee_less_than_0(self):
         icx_issue_amount = 1000
@@ -212,7 +180,7 @@ class TestIssueRegulator:
         over_issued_i_score = 0
 
         with pytest.raises(AssertionError):
-            self.issue_regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
+            Regulator._correct_issue_amount(over_issued_i_score, icx_issue_amount, prev_block_cumulative_fee)
 
     def test_correct_issue_amount_on_calc_period_when_first_calc_period(self):
         # success case: when prev issued i score and prev issued icx data is zero, should return below
@@ -228,11 +196,11 @@ class TestIssueRegulator:
         prev_calc_period_issued_iscore = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
         assert remain_over_issued_iscore == 0
 
@@ -251,11 +219,11 @@ class TestIssueRegulator:
         over_issued_i_score = 0
 
         with pytest.raises(AssertionError):
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
     def test_correct_issue_amount_on_calc_period_prev_icx_is_more_than_prev_i_score(self):
         # success case: when remain over issued icx + prev calc over issued icx < icx_issue amount
@@ -267,11 +235,11 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
         expected_diff_without_fee = prev_calc_period_issued_icx * ISCORE_EXCHANGE_RATE - prev_calc_period_issued_iscore \
                         + over_issued_i_score
@@ -288,11 +256,11 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
         expected_diff_without_fee = prev_calc_period_issued_icx * ISCORE_EXCHANGE_RATE - prev_calc_period_issued_iscore \
                                     + over_issued_i_score
@@ -312,11 +280,11 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
         expected_diff_without_fee = prev_calc_period_issued_icx * ISCORE_EXCHANGE_RATE - prev_calc_period_issued_iscore \
                                     + over_issued_i_score
@@ -336,11 +304,11 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
         expected_diff_without_fee = prev_calc_period_issued_icx * ISCORE_EXCHANGE_RATE - prev_calc_period_issued_iscore \
                                     + over_issued_i_score
@@ -360,11 +328,11 @@ class TestIssueRegulator:
         prev_block_cumulative_fee = 0
 
         covered_icx_by_fee, covered_icx_by_remain, remain_over_issued_iscore, corrected_icx_issue_amount = \
-            self.issue_regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
-                                                                      prev_calc_period_issued_iscore,
-                                                                      over_issued_i_score,
-                                                                      icx_issue_amount,
-                                                                      prev_block_cumulative_fee)
+            Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
+                                                           prev_calc_period_issued_iscore,
+                                                           over_issued_i_score,
+                                                           icx_issue_amount,
+                                                           prev_block_cumulative_fee)
 
         assert covered_icx_by_remain == 0
         assert covered_icx_by_fee == 0
@@ -380,11 +348,10 @@ class TestIssueRegulator:
     @patch('iconservice.iconscore.icon_score_context.IconScoreContext.storage')
     def test_set_corrected_issue_data_with_in_period(self,
                                                      mocked_context_storage):
-
         # create dummy block
         block_height = 5
         block = self._create_dummy_block_by_height(block_height)
-        self.invoke_context.block = block
+        self.context.block = block
 
         # set regulator_variable
         over_issued_i_score = 0
@@ -398,21 +365,20 @@ class TestIssueRegulator:
         mocked_context_storage.icx.last_block.cumulative_fee = cumulative_fee
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height - 1)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
-        self.issue_regulator.set_corrected_issue_data(self.invoke_context, issue_amount)
+        regulator = Regulator(self.context, issue_amount)
 
-        actual_current_icx = self.issue_regulator._regulator_variable.current_calc_period_issued_icx
-        actual_prev_icx = self.issue_regulator._regulator_variable.prev_calc_period_issued_icx
+        actual_current_icx = regulator._regulator_variable.current_calc_period_issued_icx
+        actual_prev_icx = regulator._regulator_variable.prev_calc_period_issued_icx
         assert actual_current_icx == issue_amount + current_calc_preiod_issued_icx
         assert actual_prev_icx == prev_calc_period_issued_icx
 
     @patch('iconservice.iconscore.icon_score_context.IconScoreContext.storage')
     def test_set_corrected_issue_data_end_of_period(self,
                                                     mocked_context_storage):
-
         # create dummy block
         block_height = 5
         block = self._create_dummy_block_by_height(block_height)
-        self.invoke_context.block = block
+        self.context.block = block
 
         # set regulator_variable
         over_issued_i_score = 0
@@ -427,24 +393,9 @@ class TestIssueRegulator:
         mocked_context_storage.iiss.get_end_block_height_of_calc = Mock(return_value=block_height)
         mocked_context_storage.issue.get_regulator_variable = Mock(return_value=rv)
         mocked_context_storage.rc.get_prev_calc_period_issued_iscore = Mock(return_value=0)
-        self.issue_regulator.set_corrected_issue_data(self.invoke_context, issue_amount)
+        regulator = Regulator(self.context, issue_amount)
 
-        actual_current_icx = self.issue_regulator._regulator_variable.current_calc_period_issued_icx
-        actual_prev_icx = self.issue_regulator._regulator_variable.prev_calc_period_issued_icx
+        actual_current_icx = regulator._regulator_variable.current_calc_period_issued_icx
+        actual_prev_icx = regulator._regulator_variable.prev_calc_period_issued_icx
         assert actual_current_icx == 0
         assert actual_prev_icx == issue_amount + current_calc_preiod_issued_icx
-
-    def test_regulator_none_set_variable(self):
-        with pytest.raises(AccessDeniedException):
-            _ = self.issue_regulator.covered_icx_by_fee
-
-        with pytest.raises(AccessDeniedException):
-            _ = self.issue_regulator.covered_icx_by_fee
-
-        with pytest.raises(AccessDeniedException):
-            _ = self.issue_regulator.remain_over_issued_icx
-
-        with pytest.raises(AccessDeniedException):
-            _ = self.issue_regulator.corrected_icx_issue_amount
-
-
