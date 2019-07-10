@@ -62,6 +62,18 @@ class TestIISSDecentralization(TestIISSBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
+        # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self._make_icx_send_tx(self._genesis,
+                                              self._addr_array[i],
+                                              3000 * ICX_IN_LOOP)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
         # register PRep
         tx_list: list = []
         for address in main_preps:

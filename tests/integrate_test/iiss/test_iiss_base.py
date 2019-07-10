@@ -30,9 +30,9 @@ class TestIISSBase(TestIntegrateBase):
 
     def _make_init_config(self) -> dict:
         return {
-            # ConfigKey.SERVICE: {
-            #     ConfigKey.SERVICE_FEE: True
-            # },
+            ConfigKey.SERVICE: {
+                ConfigKey.SERVICE_FEE: True
+            },
             ConfigKey.IISS_CALCULATE_PERIOD: 10,
             ConfigKey.TERM_PERIOD: 10}
 

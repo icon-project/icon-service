@@ -17,8 +17,9 @@
 """IconScoreEngine testcase
 """
 
-from iconservice.icon_constant import ConfigKey, REV_IISS, ICX_IN_LOOP
+from iconservice.icon_constant import ConfigKey, REV_IISS, ICX_IN_LOOP, FIXED_FEE
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+from tests.integrate_test.test_integrate_base import MINIMUM_STEP_LIMIT
 
 
 class TestIISSStake(TestIISSBase):
@@ -50,6 +51,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -70,6 +72,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -91,6 +94,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -115,6 +119,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -136,6 +141,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -160,6 +166,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -181,6 +188,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -205,6 +213,7 @@ class TestIISSStake(TestIISSBase):
         total_stake = stake + unstake
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
+        balance -= tx_results[0].step_used * tx_results[0].step_price
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
@@ -232,7 +241,10 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(remain_balance, actual_balance)
 
         # update icx balance
-        tx = self._make_icx_send_tx(self._addr_array[0], self._genesis, balance)
+        tx = self._make_icx_send_tx(self._addr_array[0],
+                                    self._genesis,
+                                    balance - FIXED_FEE,
+                                    step_limit=MINIMUM_STEP_LIMIT)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
