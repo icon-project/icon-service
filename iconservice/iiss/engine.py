@@ -159,10 +159,9 @@ class Engine(EngineBase):
     @classmethod
     def _check_from_can_charge_fee_v3(cls, context: 'IconScoreContext', value: int, balance: int, total_stake: int):
         fee: int = context.step_counter.step_price * context.step_counter.step_used
-        amount: int = balance + total_stake
-        if amount < value + fee:
+        if balance + total_stake < value + fee:
             raise OutOfBalanceException(
-                f'Out of balance: balance({amount}) < value({value}) + fee({fee})')
+                f'Out of balance: balance{balance} + total_stake({total_stake}) < value({value}) + fee({fee})')
 
     def handle_get_stake(self, context: 'IconScoreContext', params: dict) -> dict:
 
