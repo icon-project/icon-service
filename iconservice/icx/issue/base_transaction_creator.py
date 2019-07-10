@@ -17,9 +17,9 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 from typing import Tuple
 
-from iconservice.base.type_converter import TypeConverter
-from iconservice.icon_constant import BASE_TRANSACTION_VERSION
-from iconservice.utils.hashing.hash_generator import HashGenerator
+from ...base.type_converter import TypeConverter
+from ...icon_constant import BASE_TRANSACTION_VERSION
+from ...utils.hashing.hash_generator import HashGenerator
 
 if TYPE_CHECKING:
     from ...iconscore.icon_score_context import IconScoreContext

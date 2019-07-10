@@ -53,8 +53,7 @@ class Engine(EngineBase):
             iiss_data_for_issue[group][IssueDataKey.VALUE] = issue_amount_per_group
             total_issue_amount += issue_amount_per_group
 
-        regulator = Regulator()
-        regulator.set_corrected_issue_data(context, total_issue_amount)
+        regulator = Regulator(context, total_issue_amount)
 
         iiss_data_for_issue[IssueDataKey.ISSUE_RESULT] = {
             IssueDataKey.COVERED_BY_FEE: regulator.covered_icx_by_fee,
