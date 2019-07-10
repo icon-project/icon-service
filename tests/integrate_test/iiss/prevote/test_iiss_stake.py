@@ -29,6 +29,37 @@ class TestIISSStake(TestIISSBase):
         config[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD] = 10
         return config
 
+    def test_full_stake(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # gain 100 icx
+        balance: int = 100 * ICX_IN_LOOP
+        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set full stake
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], balance // 2)
+        step_price: int = tx_results[0].step_price
+        estimate_step: int = self.estimate_step(tx)
+        fee: int = step_price * estimate_step
+
+        stake: int = balance
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake - fee)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        response: int = self.get_balance(self._addr_array[0])
+        self.assertEqual(0, response)
+
     def test_iiss_stake(self):
         self.update_governance()
 

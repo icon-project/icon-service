@@ -17,6 +17,7 @@
 """IconScoreEngine testcase
 """
 import hashlib
+from copy import deepcopy
 from typing import List, Tuple, Dict, Union, Optional
 
 from iconservice.base.address import Address
@@ -54,6 +55,21 @@ class TestIISSBase(TestIntegrateBase):
         self.assertEqual(self._block_height, next_calculation)
 
         return next_calculation
+
+    @staticmethod
+    def _make_tx_for_estimating_step_from_origin_tx(tx: dict):
+        tx = deepcopy(tx)
+        tx["method"] = "debug_estimateStep"
+        del tx["params"]["nonce"]
+        del tx["params"]["stepLimit"]
+        del tx["params"]["timestamp"]
+        del tx["params"]["txHash"]
+        del tx["params"]["signature"]
+        return tx
+
+    def estimate_step(self, tx: dict):
+        converted_tx = self._make_tx_for_estimating_step_from_origin_tx(tx)
+        return self.icon_service_engine.estimate_step(request=converted_tx)
 
     def update_governance(self):
         tx = self._make_deploy_tx("sample_builtin",

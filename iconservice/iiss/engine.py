@@ -18,14 +18,13 @@ from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
-
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, InvalidRequestException, FatalException
+from ..base.exception import InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
@@ -146,6 +145,7 @@ class Engine(EngineBase):
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
+
         unstake_lock_period = context.storage.iiss.get_unstake_lock_period(context)
         account.set_stake(value, unstake_lock_period)
         context.storage.icx.put_account(context, account)
@@ -153,6 +153,16 @@ class Engine(EngineBase):
 
         for listener in self._listeners:
             listener.on_set_stake(context, account)
+
+        self._check_from_can_charge_fee_v3(context, value, account.balance, account.total_stake)
+
+    @classmethod
+    def _check_from_can_charge_fee_v3(cls, context: 'IconScoreContext', value: int, balance: int, total_stake: int):
+        fee: int = context.step_counter.step_price * context.step_counter.step_used
+        amount: int = balance + total_stake
+        if amount < value + fee:
+            raise OutOfBalanceException(
+                f'Out of balance: balance({amount}) < value({value}) + fee({fee})')
 
     def handle_get_stake(self, context: 'IconScoreContext', params: dict) -> dict:
 
