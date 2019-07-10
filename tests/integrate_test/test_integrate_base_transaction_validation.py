@@ -20,7 +20,7 @@ from copy import deepcopy
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.block import Block
-from iconservice.base.exception import InvalidBlockException
+from iconservice.base.exception import InvalidBaseTransactionException
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
@@ -236,7 +236,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         invalid_tx_list = [
             self._make_dummy_tx()
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: when first transaction is not a issue transaction
         # but 2nd is a issue transaction, should raise error
@@ -244,14 +244,14 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: if there are more than 2 issue transaction, should raise error
         invalid_tx_list = [
             self._make_issue_tx(self.issue_data),
             self._make_issue_tx(self.issue_data)
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
         # failure case: when there is no issue transaction, should raise error
         invalid_tx_list = [
@@ -259,7 +259,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, invalid_tx_list)
+        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, invalid_tx_list)
 
     def test_validate_base_transaction_format(self):
         # isBlockEditable is false in this method
@@ -277,7 +277,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
+            self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
             copied_issue_data[group_key] = temp
 
         # more than
@@ -288,7 +288,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
             self._make_dummy_tx(),
             self._make_dummy_tx()
         ]
-        self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
+        self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
 
         # failure case: when group's inner data key (i.e. incentiveRep, rewardRep, etc) is different
         # with stateDB (except value), should raise error
@@ -302,7 +302,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                 self._make_dummy_tx(),
                 self._make_dummy_tx()
             ]
-            self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
+            self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
             del data['dummy_key']
 
         # less than
@@ -316,7 +316,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
                     self._make_dummy_tx(),
                     self._make_dummy_tx()
                 ]
-                self.assertRaises(InvalidBlockException, self._make_and_req_block_for_issue_test, tx_list)
+                self.assertRaises(InvalidBaseTransactionException, self._make_and_req_block_for_issue_test, tx_list)
                 data[key] = temp
 
     def test_validate_base_transaction_value_editable_block(self):

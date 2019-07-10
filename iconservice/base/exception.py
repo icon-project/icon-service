@@ -44,8 +44,12 @@ class ExceptionCode(IntEnum):
         return str(self.name).capitalize().replace('_', ' ')
 
 
-class InvalidBlockException(BaseException):
-    # if this exception is raised on invoke, icon service will be closed
+class FatalException(BaseException):
+    # if this exception is raised on invoke or commit, icon service will be closed
+    pass
+
+
+class InvalidBaseTransactionException(BaseException):
     pass
 
 

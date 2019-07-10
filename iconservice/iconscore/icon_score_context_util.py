@@ -22,7 +22,7 @@ from .icon_score_mapper_object import IconScoreInfo
 from .score_package_validator import ScorePackageValidator
 from .utils import get_package_name_by_address_and_tx_hash, get_score_deploy_path
 from ..base.address import Address, ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from ..base.exception import ScoreNotFoundException, AccessDeniedException
+from ..base.exception import ScoreNotFoundException, AccessDeniedException, FatalException
 from ..database.db import IconScoreDatabase
 from ..database.factory import ContextDatabaseFactory
 from ..icon_constant import IconScoreContextType, IconServiceFlag, DeployState
@@ -125,7 +125,7 @@ class IconScoreContextUtil(object):
                 IconScoreContextUtil.create_score_info(context, address, current_tx_hash)
             score_mapper[address] = score_info
         elif score_info.tx_hash != current_tx_hash:
-            raise AssertionError(
+            raise FatalException(
                 f'scoreInfo.txHash(0x{score_info.tx_hash.hex()}) != txHash(0x{current_tx_hash.hex()})')
 
         return score_info

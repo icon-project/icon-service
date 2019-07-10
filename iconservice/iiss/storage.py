@@ -14,6 +14,7 @@
 
 from typing import TYPE_CHECKING, Optional
 
+from ..base.exception import FatalException
 from ..base.ComponentBase import StorageBase
 from ..icon_constant import IISS_MAX_REWARD_RATE, ConfigKey
 from ..utils.msgpack_for_db import MsgPackForDB
@@ -54,7 +55,7 @@ class Storage(StorageBase):
     def check_config_before_init(reward_variable: dict):
         for value in reward_variable.values():
             if not 0 < value <= IISS_MAX_REWARD_RATE:
-                raise AssertionError(f"Invalid reward variable: Cannot set zero or under "
+                raise FatalException(f"Invalid reward variable: Cannot set zero or under "
                                      f"and more than {IISS_MAX_REWARD_RATE}")
 
     def put_reward_prep(self, context: 'IconScoreContext', reward_prep: 'Reward'):

@@ -18,6 +18,7 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
+from ..base.exception import FatalException
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.message import Message
@@ -72,7 +73,7 @@ class ContextContainer(object):
         if context_stack is not None and len(context_stack) > 0:
             return context_stack.pop()
         else:
-            raise AssertionError('Failed to pop a context out of context_stack')
+            raise FatalException('Failed to pop a context out of context_stack')
 
     @staticmethod
     def _clear_context() -> None:
