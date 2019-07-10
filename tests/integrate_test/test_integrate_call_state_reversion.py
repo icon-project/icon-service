@@ -20,6 +20,7 @@
 import unittest
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
@@ -105,7 +106,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_a = tx_results[0].score_address
 
-        value = 100 * self._icx_factor
+        value = 100 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,
@@ -287,7 +288,7 @@ class TestIntegrateCallStateReversion(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         score_a = tx_results[0].score_address
 
-        value = 100 * self._icx_factor
+        value = 100 * ICX_IN_LOOP
         prev_block, tx_results = self._make_and_req_block([
             self._make_score_call_tx(
                 self._genesis,

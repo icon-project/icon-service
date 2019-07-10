@@ -14,6 +14,7 @@
 # limitations under the License.
 from math import ceil
 
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from tests.integrate_test import create_timestamp
@@ -128,7 +129,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
 
     def test_score(self):
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
@@ -137,7 +138,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 3. set value: value2
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
 
         # 4. assert get value: 2 * value2
@@ -147,7 +148,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self._assert_get_score_status(score_addr1, expect_ret)
 
     def test_estimate_step_when_transfer_coin_to_eoa(self):
-        value1 = 3 * self._icx_factor
+        value1 = 3 * ICX_IN_LOOP
         tx1 = self._make_icx_send_tx(self._genesis, self._addr_array[0], value1)
 
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -159,7 +160,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         estimate = self.icon_service_engine.estimate_step(request=converted_tx)
         self.assertEqual(estimate, tx_results[0].step_used)
 
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._addr_array[0], self._addr_array[1], value2)
 
         prev_block, tx_results = self._make_and_req_block([tx2])
@@ -187,7 +188,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         estimate = self.icon_service_engine.estimate_step(request=converted_tx)
         self.assertEqual(estimate, tx_results[0].step_used)
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
@@ -228,7 +229,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self._write_precommit_state(prev_block)
         self.assertEqual(tx_results[0].status, int(True))
 
-        value = 1 * self._icx_factor
+        value = 1 * ICX_IN_LOOP
         tx3 = self._make_icx_send_tx(self._genesis, score_addr1, value)
         prev_block, tx_results = self._make_and_req_block([tx3])
         self._write_precommit_state(prev_block)
@@ -245,12 +246,12 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(estimate, tx_results[0].step_used)
 
     def test_estimate_step_when_call_score_function(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
 
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx1 = self._make_score_call_tx(addr_from=self._addr_array[0], addr_to=score_addr1, method="set_value",
                                                      params={"value": hex(value2)})
         prev_block, tx_results = self._make_and_req_block([tx1])
@@ -304,7 +305,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(estimate, tx_results[0].step_used)
 
     def test_estimate_step_when_transfer_message_without_sending_coin_to_score(self):
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address

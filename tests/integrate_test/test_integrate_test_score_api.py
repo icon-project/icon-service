@@ -20,6 +20,7 @@ import hashlib
 import json
 from iconservice.base.exception import ExceptionCode, AccessDeniedException, IconScoreException
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 from tests import create_tx_hash, create_address
 from typing import TYPE_CHECKING, Any
@@ -33,7 +34,7 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
 
     def _test_deploy_score(self):
         # Deploys test SCORE
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx_result = self._deploy_score("sample_score_base", value1, self._addr_array[0])
 
         # Uses it when testing `test_get_tx_hashes_by_score_address`
@@ -45,7 +46,7 @@ class TestIntegrateScoreAPI(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", {}, value1)
 
         # Set value to value2
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
 
         # Asserts if get value is 2 * value2

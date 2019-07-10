@@ -25,7 +25,7 @@ from iconcommons import IconConfig
 
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION
+from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION, ICX_IN_LOOP
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import RewardCalcProxy, CalculateResponse
@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from iconservice.base.address import Address, MalformedAddress
 
 LATEST_GOVERNANCE = "0_0_6/governance"
+
+TOTAL_SUPPLY = 800_460_000
 
 
 class TestIntegrateBase(TestCase):
@@ -51,13 +53,12 @@ class TestIntegrateBase(TestCase):
 
         cls._version = 3
         cls._step_limit = 1 * 10 ** 12
-        cls._icx_factor = 10 ** 18
 
         cls._admin: 'Address' = create_address()
         cls._genesis: 'Address' = create_address()
         cls._fee_treasury: 'Address' = create_address()
 
-        cls._addr_array = [create_address() for _ in range(20)]
+        cls._addr_array = [create_address() for _ in range(100)]
 
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
@@ -75,6 +76,8 @@ class TestIntegrateBase(TestCase):
         config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                             ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
         config.update_conf(self._make_init_config())
+
+        self._config: 'IconConfig' = config
 
         self.icon_service_engine = IconServiceEngine()
 
@@ -122,7 +125,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "genesis",
                         "address": self._genesis,
-                        "balance": 400230000 * self._icx_factor
+                        "balance": TOTAL_SUPPLY * ICX_IN_LOOP // 2
                     },
                     {
                         "name": "fee_treasury",
@@ -132,7 +135,7 @@ class TestIntegrateBase(TestCase):
                     {
                         "name": "_admin",
                         "address": self._admin,
-                        "balance": 400230000 * self._icx_factor
+                        "balance": TOTAL_SUPPLY * ICX_IN_LOOP // 2
                     }
                 ]
             },

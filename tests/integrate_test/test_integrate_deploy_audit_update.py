@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Any, Union
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -142,7 +142,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -156,7 +156,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             self._value.set(value * 2)
             self.Changed(value)
         """
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx_result = self._deploy_score("update/sample_score", value2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
@@ -180,11 +180,11 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
     def test_invalid_owner(self):
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_deploy_scores",
                                    "update/sample_score",
                                    self._addr_array[1],
@@ -214,7 +214,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -224,11 +224,11 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_deploy_scores",
                                    "update/sample_score",
                                    self._addr_array[1],
@@ -258,7 +258,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -268,7 +268,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -297,7 +297,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1,  "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -307,7 +307,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -335,7 +335,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -345,7 +345,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -373,7 +373,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -383,7 +383,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
         print(f'tx_hash1: {tx_hash1.hex()}\ntx_hash2: {tx_hash2.hex()}')
 
@@ -413,7 +413,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -423,7 +423,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -450,7 +450,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -460,7 +460,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -487,7 +487,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 5. set value: value3
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value3)})
 
         # 6. assert get value: value3
@@ -497,7 +497,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -511,13 +511,13 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             self._value.set(value * 2)
             self.Changed(value)
         """
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx_result = self._deploy_score("update/sample_score", value2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
         # new update deploy
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         tx_result = self._deploy_score("update/sample_score", value3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash
@@ -548,7 +548,7 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
         self._update_governance()
 
         # 1. install done
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         score_addr1, tx_hash1, tx_hash2 = self._install_normal_score(value1)
 
         # 2. deploy update (wait audit)
@@ -562,13 +562,13 @@ class TestIntegrateDeployAuditUpdate(TestIntegrateBase):
             self._value.set(value * 2)
             self.Changed(value)
         """
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx_result = self._deploy_score("update/sample_score", value2, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash3 = tx_result.tx_hash
 
         # new update deploy
-        value3 = 3 * self._icx_factor
+        value3 = 3 * ICX_IN_LOOP
         tx_result = self._deploy_score("update/sample_score", value3, score_addr1)
         self.assertEqual(tx_result.status, int(True))
         tx_hash4 = tx_result.tx_hash

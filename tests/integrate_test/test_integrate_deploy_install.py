@@ -22,9 +22,10 @@ from typing import TYPE_CHECKING, Any
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
+from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_tx_hash
 from tests.integrate_test import create_timestamp
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -97,7 +98,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
     def test_score(self):
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
@@ -106,7 +107,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 3. set value: value2
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
 
         # 4. assert get value: 2 * value2
@@ -119,7 +120,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx_result = self._deploy_score("install/sample_score", value1, self._addr_array[0])
         self.assertEqual(tx_result.status, int(True))
         score_addr1 = tx_result.score_address
@@ -129,7 +130,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 3. set value: value2
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
 
         # 4. assert get value: 2 * value2
@@ -145,7 +146,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("test_fake_system_score")
         tx_result = self._deploy_score("install/fake_system_score", value1, self._admin)
         raise_exception_end_tag("test_fake_system_score")
@@ -158,7 +159,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("test_fake_system_score_wrong_owner")
         tx_result = self._deploy_score("install/fake_system_score", value1, self._addr_array[0])
         raise_exception_end_tag("test_fake_system_score_wrong_owner")
@@ -172,7 +173,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
 
         # 1. deploy
         timestamp = 1
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_deploy_scores",
                                    "install/sample_score",
                                    self._addr_array[0],
@@ -180,7 +181,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
                                    timestamp_us=timestamp,
                                    deploy_params={'value': hex(value1)})
 
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         tx2 = self._make_deploy_tx("sample_deploy_scores",
                                    "install/sample_score",
                                    self._addr_array[0],
@@ -205,7 +206,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._assert_get_value(self._addr_array[0], score_addr1, "get_value", value1)
 
         # 3. set value: value2
-        value2 = 2 * self._icx_factor
+        value2 = 2 * ICX_IN_LOOP
         self._set_value(self._addr_array[0], score_addr1, "set_value", {"value": hex(value2)})
 
         # 4. assert get value: 2 * value2
@@ -328,7 +329,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_deploy_scores",
                                    "install/sample_score",
                                    self._addr_array[0],
@@ -348,7 +349,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("test_score_no_scorebase")
         tx_result = self._deploy_score("install/sample_score_no_scorebase", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_no_scorebase")
@@ -361,7 +362,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("test_score_on_install_error")
         tx_result = self._deploy_score("install/sample_score_on_install_error", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_on_install_error")
@@ -374,7 +375,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("test_score_no_external_func")
         tx_result = self._deploy_score("install/sample_score_no_external_func", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_no_external_func")
@@ -387,7 +388,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("test_score_with_korean_comments")
         tx_result = self._deploy_score("install/sample_score_with_korean_comments", value1, self._addr_array[0])
         raise_exception_end_tag("test_score_with_korean_comments")
@@ -399,7 +400,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         raise_exception_start_tag("sample_deploy_scores")
         tx_result = self._deploy_score("install/sample_score_no_python", value1, self._addr_array[0])
         raise_exception_end_tag("sample_deploy_scores")
@@ -410,7 +411,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
     def test_score_tbears_mode(self):
         self._update_governance()
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
         tx1 = self._make_deploy_tx("sample_deploy_scores",
                                    "install/sample_score",
                                    self._addr_array[0],
@@ -431,7 +432,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         block_height = 1
 
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
 
         tx = self._make_deploy_tx("sample_deploy_scores",
                                   "install/sample_score",
@@ -454,7 +455,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
         self._update_governance()
         block_height = 2
         # 1. deploy
-        value1 = 1 * self._icx_factor
+        value1 = 1 * ICX_IN_LOOP
 
         tx = self._make_deploy_tx("sample_deploy_scores",
                                   "install/sample_score",

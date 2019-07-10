@@ -22,9 +22,9 @@ from typing import TYPE_CHECKING, Any, Union
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode, IconScoreException
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_address
-from tests.integrate_test.test_integrate_base import TestIntegrateBase, LATEST_GOVERNANCE
+from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -73,7 +73,7 @@ class TestIntegrateDeployAudit(TestIntegrateBase):
                                   score_path,
                                   self._addr_array[0],
                                   address,
-                                  deploy_params={'value': hex(value * self._icx_factor)})
+                                  deploy_params={'value': hex(value * ICX_IN_LOOP)})
 
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)

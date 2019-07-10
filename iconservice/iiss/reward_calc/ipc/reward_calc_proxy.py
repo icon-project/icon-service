@@ -53,7 +53,7 @@ class RewardCalcProxy(object):
 
         Logger.debug(tag=_TAG, msg="__init__() end")
 
-    def open(self, sock_path: str, iiss_db_path: str):
+    def open(self, log_dir: str, sock_path: str, iiss_db_path: str):
         Logger.debug(tag=_TAG, msg="open() start")
 
         self._loop = asyncio.get_event_loop()
@@ -62,7 +62,7 @@ class RewardCalcProxy(object):
                                            notify_handler=self.notify_handler)
         self._ipc_server.open(self._loop, self._message_queue, sock_path)
 
-        self.start_reward_calc(sock_path=sock_path, iiss_db_path=iiss_db_path)
+        self.start_reward_calc(log_dir=log_dir, sock_path=sock_path, iiss_db_path=iiss_db_path)
 
         Logger.debug(tag=_TAG, msg="open() end")
 
@@ -295,9 +295,10 @@ class RewardCalcProxy(object):
         elif isinstance(response, CalculateResponse):
             self.calculate_handler(response=response)
 
-    def start_reward_calc(self, sock_path: str, iiss_db_path: str):
+    def start_reward_calc(self, log_dir: str, sock_path: str, iiss_db_path: str):
         """ Start reward calculator process
 
+        :param log_dir: log directory
         :param sock_path: unix domain socket path for IPC
         :param iiss_db_path: IISS data DB path
         :return: void
@@ -306,10 +307,11 @@ class RewardCalcProxy(object):
 
         iscore_db_path, _ = os.path.split(iiss_db_path)
         iscore_db_path = os.path.join(iscore_db_path, 'rc')
+        log_path = os.path.join(log_dir, 'rc.log')
 
         if self._reward_calc is None:
             cmd = f'icon_rc -client -monitor -db-count 16 -db {iscore_db_path} -iissdata {iiss_db_path}' \
-                f' -ipc-addr {sock_path}'
+                f' -ipc-addr {sock_path} -log-file {log_path}'
             self._reward_calc = Popen(cmd.split(" "))
 
     def stop_reward_calc(self):
