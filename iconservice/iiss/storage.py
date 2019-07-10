@@ -55,8 +55,7 @@ class Storage(StorageBase):
     def check_config_before_init(reward_variable: dict):
         for value in reward_variable.values():
             if not 0 < value <= IISS_MAX_REWARD_RATE:
-                raise FatalException(f"Invalid reward variable: Cannot set zero or under "
-                                     f"and more than {IISS_MAX_REWARD_RATE}")
+                raise FatalException(f"Out of reward rate range: 0 < {value} <= {IISS_MAX_REWARD_RATE}")
 
     def put_reward_prep(self, context: 'IconScoreContext', reward_prep: 'Reward'):
         self._db.put(context, self.REWARD_PREP_KEY, reward_prep.to_bytes())

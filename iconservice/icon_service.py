@@ -85,7 +85,7 @@ class IconService(object):
             If the function is called when the operation is not an endless loop 
             in an asynchronous function, the await is terminated immediately.
             """
-            Logger.debug("loop has been stopped and will close the loop")
+            Logger.debug("loop has been stopped and will be closed")
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
