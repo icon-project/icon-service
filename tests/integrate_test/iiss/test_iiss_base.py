@@ -29,8 +29,12 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 class TestIISSBase(TestIntegrateBase):
 
     def _make_init_config(self) -> dict:
-        return {ConfigKey.IISS_CALCULATE_PERIOD: 10,
-                ConfigKey.TERM_PERIOD: 10}
+        return {
+            # ConfigKey.SERVICE: {
+            #     ConfigKey.SERVICE_FEE: True
+            # },
+            ConfigKey.IISS_CALCULATE_PERIOD: 10,
+            ConfigKey.TERM_PERIOD: 10}
 
     def make_blocks(self, to: int):
         block_height = self._block_height

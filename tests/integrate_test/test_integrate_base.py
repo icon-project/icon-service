@@ -39,6 +39,9 @@ if TYPE_CHECKING:
 LATEST_GOVERNANCE = "0_0_6/governance"
 
 TOTAL_SUPPLY = 800_460_000
+DEFAULT_STEP_LIMIT = 2 * 10 ** 6
+DEFAULT_BIG_STEP_LIMIT = 1 * 10 ** 8
+DEFAULT_DEPLOY_STEP_LIMIT = 1 * 10 ** 12
 
 
 class TestIntegrateBase(TestCase):
@@ -52,7 +55,6 @@ class TestIntegrateBase(TestCase):
         cls._signature = "VAia7YZ2Ji6igKWzjR2YsGa2m53nKPrfK7uXYW78QLE+ATehAVZPC40szvAiA6NEU5gCYB4c4qaQzqDh2ugcHgA="
 
         cls._version = 3
-        cls._step_limit = 1 * 10 ** 12
 
         cls._admin: 'Address' = create_address()
         cls._genesis: 'Address' = create_address()
@@ -161,7 +163,8 @@ class TestIntegrateBase(TestCase):
                         timestamp_us: int = None,
                         data: bytes = None,
                         is_sys: bool = False,
-                        pre_validation_enabled: bool = True):
+                        pre_validation_enabled: bool = True,
+                        step_limit: int = DEFAULT_DEPLOY_STEP_LIMIT):
 
         if deploy_params is None:
             deploy_params = {}
@@ -187,7 +190,7 @@ class TestIntegrateBase(TestCase):
             "version": self._version,
             "from": addr_from,
             "to": addr_to,
-            "stepLimit": self._step_limit,
+            "stepLimit": step_limit,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature,
@@ -214,7 +217,8 @@ class TestIntegrateBase(TestCase):
                             method: str,
                             params: dict,
                             value: int = 0,
-                            pre_validation_enabled: bool = True):
+                            pre_validation_enabled: bool = True,
+                            step_limit: int = DEFAULT_BIG_STEP_LIMIT):
 
         timestamp_us = create_timestamp()
         nonce = 0
@@ -224,7 +228,7 @@ class TestIntegrateBase(TestCase):
             "from": addr_from,
             "to": addr_to,
             "value": value,
-            "stepLimit": self._step_limit,
+            "stepLimit": step_limit,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature,
@@ -254,13 +258,10 @@ class TestIntegrateBase(TestCase):
                           value: int,
                           disable_pre_validate: bool = False,
                           support_v2: bool = False,
-                          step_limit: int = -1):
+                          step_limit: int = DEFAULT_STEP_LIMIT):
 
         timestamp_us = create_timestamp()
         nonce = 0
-
-        if step_limit < 0:
-            step_limit = self._step_limit
 
         request_params = {
             "from": addr_from,

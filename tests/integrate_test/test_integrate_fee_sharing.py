@@ -29,7 +29,7 @@ from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests import create_tx_hash
 from tests.integrate_test import root_clear, create_timestamp
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, DEFAULT_BIG_STEP_LIMIT
 
 STEP_PRICE = 10 ** 10
 
@@ -125,7 +125,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                          action: str,
                          params: dict,
                          value: int = 0,
-                         pre_validation_enabled: bool = True):
+                         pre_validation_enabled: bool = True,
+                         step_limit: int = DEFAULT_BIG_STEP_LIMIT):
 
         timestamp_us = create_timestamp()
         nonce = 0
@@ -135,7 +136,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
             "from": addr_from,
             "to": addr_to,
             "value": value,
-            "stepLimit": self._step_limit,
+            "stepLimit": step_limit,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature,
