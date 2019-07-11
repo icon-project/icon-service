@@ -98,5 +98,5 @@ class Engine(EngineBase):
         beta: int = self._formula.get_limit_inflation_beta(expected_irep)
 
         # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
-        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply ** IISS_MAX_IREP_PERCENTAGE // 100:
+        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
             raise InvalidParamsException(f"Out of range: expected irep")

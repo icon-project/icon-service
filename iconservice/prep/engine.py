@@ -340,8 +340,9 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidRequestException("Irep can be changed only once during a term")
 
         min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)   # 80% of previous irep
+        max_irep: int = prev_irep * 12 // 10  # 120% of previous irep.
 
-        if min_irep <= irep:
+        if min_irep <= irep <= max_irep:
             context.engine.issue.validate_total_supply_limit(context, irep)
         else:
             raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
