@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
-from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    IISS_MIN_IREP, PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_MAX_DELEGATIONS
+    PREP_MAIN_PREPS, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -76,8 +74,8 @@ class TestIISSDecentralization(TestIISSBase):
 
         # register PRep
         tx_list: list = []
-        for address in main_preps:
-            tx: dict = self.create_register_prep_tx(address)
+        for i, address in enumerate(main_preps):
+            tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:

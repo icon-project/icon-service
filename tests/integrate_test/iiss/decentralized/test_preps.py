@@ -83,8 +83,8 @@ class TestPreps(TestIISSBase):
 
         # register PRep
         tx_list: list = []
-        for address in main_preps:
-            tx: dict = self.create_register_prep_tx(address)
+        for i, address in enumerate(main_preps):
+            tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -188,7 +188,8 @@ class TestPreps(TestIISSBase):
         self.assertEqual(1, response['status'])
 
         # register user[PREP_MAIN_PREPS]
-        tx: dict = self.create_register_prep_tx(self._addr_array[PREP_MAIN_PREPS])
+        tx: dict = self.create_register_prep_tx(self._addr_array[PREP_MAIN_PREPS],
+                                                public_key=f"0x{self.public_key_array[PREP_MAIN_PREPS].hex()}")
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)

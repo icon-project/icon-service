@@ -16,9 +16,11 @@
 
 """IconScoreEngine testcase
 """
+import hashlib
+import os
 from copy import deepcopy
 
-from iconservice.base.address import ZERO_SCORE_ADDRESS
+from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
@@ -44,6 +46,10 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
         tx: dict = self.create_set_revision_tx(REV_IISS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
+
+        self.public_key_list = [os.urandom(32) for _ in range(PREP_MAIN_PREPS)]
+        self._addr_array = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
+                            for public_key in self.public_key_array]
 
         main_preps = self._addr_array[:PREP_MAIN_PREPS]
 
@@ -91,8 +97,8 @@ class TestIISSBaseTransactionValidation(TestIISSBase):
 
         # register PRep
         tx_list: list = []
-        for address in main_preps:
-            tx: dict = self.create_register_prep_tx(address)
+        for i, address in enumerate(main_preps):
+            tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:

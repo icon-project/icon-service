@@ -16,13 +16,27 @@
 
 """IconScoreEngine testcase
 """
+import hashlib
+import os
+from copy import deepcopy
+
 from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP
 from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
-from tests import create_address
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
+
+name = "prep"
+
+prep_register_data = {
+    ConstantKeys.NAME: name,
+    ConstantKeys.EMAIL: f"{name}@example.com",
+    ConstantKeys.WEBSITE: f"https://{name}.example.com",
+    ConstantKeys.DETAILS: f"https://{name}.example.com/details",
+    ConstantKeys.P2P_END_POINT: f"{name}.example.com:7100",
+    ConstantKeys.PUBLIC_KEY: "0x12"
+}
 
 
 class TestIntegratePrep(TestIISSBase):
@@ -51,7 +65,8 @@ class TestIntegratePrep(TestIISSBase):
         # register prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_register_prep_tx(self._addr_array[i])
+            tx: dict = self.create_register_prep_tx(self._addr_array[i],
+                                                    public_key=f"0x{self.public_key_array[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -62,7 +77,8 @@ class TestIntegratePrep(TestIISSBase):
         register_block_height: int = self._block_height
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._addr_array[i])
-            expected_params: dict = self.create_register_prep_params(self._addr_array[i])
+            expected_params: dict = self.create_register_prep_params(self._addr_array[i],
+                                                                     f"0x{self.public_key_array[i].hex()}")
             expected_response: dict = \
                 {
                     "delegation":
@@ -78,7 +94,7 @@ class TestIntegratePrep(TestIISSBase):
                             "irepUpdateBlockHeight": register_block_height,
                             "name": expected_params['name'],
                             "p2pEndPoint": expected_params['p2pEndPoint'],
-                            "publicKey": bytes.fromhex(expected_params['publicKey']),
+                            "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                             "website": expected_params['website']
                         },
                     "stats":
@@ -103,7 +119,8 @@ class TestIntegratePrep(TestIISSBase):
         # get prep 0 ~ PREP_MAIN_PREPS
         for i in range(PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._addr_array[i])
-            expected_params: dict = self.create_register_prep_params(self._addr_array[i])
+            expected_params: dict = self.create_register_prep_params(self._addr_array[i],
+                                                                     public_key=f"0x{self.public_key_array[i].hex()}")
             expected_response: dict = \
                 {
                     "delegation":
@@ -119,7 +136,7 @@ class TestIntegratePrep(TestIISSBase):
                             "irepUpdateBlockHeight": register_block_height,
                             "name": f"new{str(self._addr_array[i])}",
                             "p2pEndPoint": expected_params['p2pEndPoint'],
-                            "publicKey": bytes.fromhex(expected_params['publicKey']),
+                            "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                             "website": expected_params['website']
                         },
                     "stats":
@@ -160,7 +177,9 @@ class TestIntegratePrep(TestIISSBase):
         self._write_precommit_state(prev_block)
 
         prep_count: int = 3000
-        address_list: list = [create_address() for _ in range(prep_count)]
+        public_key_list: list = [os.urandom(32) for _ in range(prep_count)]
+        address_list = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
+                        for public_key in public_key_list]
 
         # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
         tx_list: list = []
@@ -177,7 +196,7 @@ class TestIntegratePrep(TestIISSBase):
         # register prep
         tx_list: list = []
         for i in range(prep_count):
-            tx: dict = self.create_register_prep_tx(address_list[i])
+            tx: dict = self.create_register_prep_tx(address_list[i], public_key=f"0x{public_key_list[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -231,7 +250,8 @@ class TestIntegratePrep(TestIISSBase):
         # register prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
         for i in range(PREP_MAIN_PREPS):
-            tx: dict = self.create_register_prep_tx(self._addr_array[i])
+            tx: dict = self.create_register_prep_tx(self._addr_array[i],
+                                                    public_key=f"0x{self.public_key_array[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
@@ -311,8 +331,7 @@ class TestIntegratePrep(TestIISSBase):
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
-        # register prep
-        tx: dict = self.create_register_prep_tx(prep_address)
+        tx: dict = self.create_register_prep_tx(prep_address, public_key=f"0x{self.public_key_array[0].hex()}")
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
@@ -331,3 +350,159 @@ class TestIntegratePrep(TestIISSBase):
         tx_result = tx_results[0]
         self.assertEqual(int(False), tx_result.status)
         self.assertEqual(ExceptionCode.METHOD_NOT_FOUND, tx_result.failure.code)
+
+    def test_reg_prep_validator(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # gain 10 icx user0
+        balance: int = ICX_IN_LOOP
+        tx_list = []
+        for i in range(8):
+            tx = self._make_icx_send_tx(self._genesis, self._addr_array[i], balance)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+
+        self._validate_name()
+        self._validate_email()
+        self._validate_website()
+        self._validate_country()
+        self._validate_city()
+        self._validate_details()
+        self._validate_p2p_endpoint()
+        self._validate_public_key()
+
+    def _validate_name(self):
+        reg_data: dict = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.NAME] = ''
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[0].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[0], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertFalse(tx_result.status)
+
+        reg_data[ConstantKeys.NAME] = "valid name"
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[0].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[0], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status)
+
+    def _validate_email(self):
+        invalid_email_list = ['', 'invalid email', 'invalid.com', 'invalid@', 'invalid@a', 'invalid@a.',
+                              'invalid@.com']
+
+        for email in invalid_email_list:
+            reg_data: dict = deepcopy(prep_register_data)
+            reg_data[ConstantKeys.EMAIL] = email
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[1].hex()}"
+            tx = self.create_register_prep_tx(self._addr_array[1], reg_data)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            tx_result = tx_results[0]
+            self.assertFalse(tx_result.status)
+
+        reg_data: dict = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.EMAIL] = "valid@validexample.com"
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[1].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[1], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status)
+
+    def _validate_website(self):
+        invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
+                                'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."]
+
+        for website in invalid_website_list:
+            reg_data: dict = deepcopy(prep_register_data)
+            reg_data[ConstantKeys.WEBSITE] = website
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[2].hex()}"
+            tx = self.create_register_prep_tx(self._addr_array[2], reg_data)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            tx_result = tx_results[0]
+            self.assertFalse(tx_result.status)
+
+        reg_data: dict = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.WEBSITE] = "https://validurl.com"
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[2].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[2], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status)
+
+    # TODO
+    def _validate_country(self):
+        pass
+
+    # TODO
+    def _validate_city(self):
+        pass
+
+    def _validate_details(self):
+        invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
+                                'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."]
+
+        for website in invalid_website_list:
+            reg_data: dict = deepcopy(prep_register_data)
+            reg_data[ConstantKeys.WEBSITE] = website
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[5].hex()}"
+            tx = self.create_register_prep_tx(self._addr_array[5], reg_data)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            tx_result = tx_results[0]
+            self.assertFalse(tx_result.status)
+
+        reg_data: dict = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.WEBSITE] = "https://validurl.com/json"
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[5].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[5], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status)
+
+    def _validate_p2p_endpoint(self):
+        invalid_website_list = ['', 'invalid website', 'invalid.com', 'invalid_.com', 'c.com', 'http://c.com',
+                                'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid."
+                                "https://target.asdf:7100"]
+
+        for website in invalid_website_list:
+            reg_data: dict = deepcopy(prep_register_data)
+            reg_data[ConstantKeys.P2P_END_POINT] = website
+            reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
+            tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            tx_result = tx_results[0]
+            self.assertFalse(tx_result.status)
+
+        validate_endpoint = "20.20.7.8:8000"
+
+        reg_data: dict = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.P2P_END_POINT] = validate_endpoint
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status)
+
+    def _validate_public_key(self):
+        invalid_public_key_list = ['', f'0x{b"dummy".hex()}']
+
+        for public_key in invalid_public_key_list:
+            reg_data: dict = deepcopy(prep_register_data)
+            reg_data[ConstantKeys.PUBLIC_KEY] = public_key
+            tx = self.create_register_prep_tx(self._addr_array[7], reg_data)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            tx_result = tx_results[0]
+            self.assertFalse(tx_result.status)
+
+        reg_data: dict = deepcopy(prep_register_data)
+        reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
+        tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        tx_result = tx_results[0]
+        self.assertTrue(tx_result.status)

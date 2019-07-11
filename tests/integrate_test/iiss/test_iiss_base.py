@@ -17,6 +17,7 @@
 """IconScoreEngine testcase
 """
 import hashlib
+import os
 from copy import deepcopy
 from typing import List, Tuple, Dict, Union, Optional
 
@@ -28,6 +29,11 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIISSBase(TestIntegrateBase):
+    def setUp(self):
+        super().setUp()
+        self.public_key_array = [os.urandom(32) for _ in range(100)]
+        self._addr_array = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
+                            for public_key in self.public_key_array]
 
     def _make_init_config(self) -> dict:
         return {
@@ -118,9 +124,10 @@ class TestIISSBase(TestIntegrateBase):
 
     def create_register_prep_tx(self,
                                 address: 'Address',
-                                reg_data: Dict[str, Union[str, bytes]] = None):
+                                reg_data: Dict[str, Union[str, bytes]] = None,
+                                public_key: str=None):
         if reg_data is None:
-            reg_data: dict = self.create_register_prep_params(address)
+            reg_data: dict = self.create_register_prep_params(address, public_key)
 
         return self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', reg_data)
 
@@ -129,16 +136,18 @@ class TestIISSBase(TestIntegrateBase):
         return b"\x04" + hashlib.sha3_512(data).digest()
 
     def create_register_prep_params(self,
-                                    address: 'Address') -> Dict[str, str]:
+                                    address: 'Address', public_key: str) -> Dict[str, str]:
         name = f"node{address}"
+        if public_key is None:
+            public_key = self._create_dummy_public_key(name.encode()).hex()
 
         return {
             ConstantKeys.NAME: name,
             ConstantKeys.EMAIL: f"{name}@example.com",
             ConstantKeys.WEBSITE: f"https://{name}.example.com",
             ConstantKeys.DETAILS: f"https://{name}.example.com/details",
-            ConstantKeys.P2P_END_POINT: f"https://{name}.example.com:7100",
-            ConstantKeys.PUBLIC_KEY: self._create_dummy_public_key(name.encode()).hex()
+            ConstantKeys.P2P_END_POINT: f"{name}.example.com:7100",
+            ConstantKeys.PUBLIC_KEY: public_key
         }
 
     def create_set_prep_tx(self,
