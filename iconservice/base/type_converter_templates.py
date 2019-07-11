@@ -59,6 +59,7 @@ class ParamType(IntEnum):
     IISS_GET_PREP_DELEGATION_INFO = 711
     IISS_GET_MAIN_PREP_LIST = 712
     IISS_GET_PREP_LIST = 713
+    IISS_SET_GOVERNANCE_VARIABLES = 714
 
 
 class ValueType(IntEnum):
@@ -355,13 +356,18 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
     ConstantKeys.P2P_END_POINT: ValueType.STRING,
-    ConstantKeys.PUBLIC_KEY: ValueType.BYTES,
-    ConstantKeys.IREP: ValueType.INT
+    ConstantKeys.PUBLIC_KEY: ValueType.BYTES
+}
+
+type_convert_templates[ParamType.IISS_SET_PREP] = {
+    ConstantKeys.NAME: ValueType.STRING,
+    ConstantKeys.EMAIL: ValueType.STRING,
+    ConstantKeys.WEBSITE: ValueType.STRING,
+    ConstantKeys.DETAILS: ValueType.STRING,
+    ConstantKeys.P2P_END_POINT: ValueType.STRING,
 }
 
 type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]
-
-type_convert_templates[ParamType.IISS_SET_PREP] = type_convert_templates[ParamType.IISS_REG_PREP]
 
 type_convert_templates[ParamType.IISS_GET_PREP] = type_convert_templates[ParamType.IISS_GET_STAKE]
 
@@ -373,4 +379,8 @@ type_convert_templates[ParamType.IISS_GET_MAIN_PREP_LIST] = type_convert_templat
 type_convert_templates[ParamType.IISS_GET_PREP_LIST] = {
     ConstantKeys.START_RANKING: ValueType.INT,
     ConstantKeys.END_RANKING: ValueType.INT
+}
+
+type_convert_templates[ParamType.IISS_SET_GOVERNANCE_VARIABLES] = {
+    ConstantKeys.IREP: ValueType.INT
 }

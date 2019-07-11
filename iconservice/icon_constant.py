@@ -202,6 +202,7 @@ PREP_METHOD_TABLE = [
     "registerPRep",
     "unregisterPRep",
     "setPRep",
+    "setGovernanceVariables",
     "getPRep",
     "getMainPRepList",
     "getSubPRepList",
@@ -220,7 +221,7 @@ PREP_MAIN_AND_SUB_PREPS = 100
 
 IISS_MAX_REWARD_RATE = 10_000
 IISS_MIN_IREP = 10_000 * ICX_IN_LOOP
-IISS_MAX_IREP = 84_000 * ICX_IN_LOOP
+IISS_MAX_IREP_PERCENTAGE = 14
 IISS_INITIAL_IREP = 50_000 * ICX_IN_LOOP
 
 IISS_ANNUAL_BLOCK = 15_768_000

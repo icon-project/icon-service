@@ -104,7 +104,6 @@ class TestTypeConverter(unittest.TestCase):
         json = "json"
         ip = "ip"
         public_key = create_tx_hash()
-        irep = 10000
 
         request = {
             ConstantKeys.NAME: name,
@@ -113,7 +112,6 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.DETAILS: json,
             ConstantKeys.P2P_END_POINT: ip,
             ConstantKeys.PUBLIC_KEY: public_key.hex(),
-            ConstantKeys.IREP: hex(irep)
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_REG_PREP)
@@ -123,7 +121,6 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
         self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
         self.assertEqual(public_key, ret_params[ConstantKeys.PUBLIC_KEY])
-        self.assertEqual(irep, ret_params[ConstantKeys.IREP])
 
     def test_unreg_prep(self):
 
@@ -133,16 +130,35 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual({}, ret_params)
 
     def test_set_prep(self):
+        name = "name"
+        email = 'email'
         website = "website"
-        irep = 10000
+        json = "json"
+        ip = "ip"
 
         request = {
+            ConstantKeys.NAME: name,
+            ConstantKeys.EMAIL: email,
             ConstantKeys.WEBSITE: website,
-            ConstantKeys.IREP: hex(irep)
+            ConstantKeys.DETAILS: json,
+            ConstantKeys.P2P_END_POINT: ip,
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP)
+        self.assertEqual(name, ret_params[ConstantKeys.NAME])
+        self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
+        self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
+        self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
+
+    def test_set_governance_variable(self):
+        irep = 12345
+
+        request = {
+            ConstantKeys.IREP: hex(irep),
+        }
+
+        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
         self.assertEqual(irep, ret_params[ConstantKeys.IREP])
 
     def test_get_prep(self):
