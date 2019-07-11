@@ -151,6 +151,16 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
         self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
 
+    def test_set_governance_variable(self):
+        irep = 12345
+
+        request = {
+            ConstantKeys.IREP: hex(irep),
+        }
+
+        ret_params = TypeConverter.convert(request, ParamType.IISS_SET_GOVERNANCE_VARIABLES)
+        self.assertEqual(irep, ret_params[ConstantKeys.IREP])
+
     def test_get_prep(self):
         address = create_address()
 
