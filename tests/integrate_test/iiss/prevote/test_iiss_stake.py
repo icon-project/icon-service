@@ -45,20 +45,33 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
-        # set full stake
-        tx: dict = self.create_set_stake_tx(self._addr_array[0], balance // 2)
-        step_price: int = tx_results[0].step_price
+        # estimate
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], balance)
         estimate_step: int = self.estimate_step(tx)
-        fee: int = step_price * estimate_step
 
+        # set full stake
+        step_price: int = tx_results[0].step_price
+        estimate_fee: int = step_price * estimate_step
+
+        # set full stake
         stake: int = balance
-        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake - fee)
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+        balance -= tx_results[0].step_used * tx_results[0].step_price
+
+        # set full stake - estimated_fee
+        stake: int = balance - estimate_fee
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - stake - fee
         response: int = self.get_balance(self._addr_array[0])
-        self.assertEqual(0, response)
+        self.assertEqual(expected_balance, response)
 
     def test_iiss_stake(self):
         self.update_governance()
