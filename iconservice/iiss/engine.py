@@ -470,7 +470,7 @@ class Engine(EngineBase):
 
         data = {
             "iscore": iscore,
-            "icx": self._iscore_to_icx(iscore),
+            "estimatedICX": self._iscore_to_icx(iscore),
             "blockHeight": block_height
         }
 
