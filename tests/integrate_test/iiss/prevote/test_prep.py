@@ -16,7 +16,7 @@
 
 """IconScoreEngine testcase
 """
-
+from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP
@@ -299,6 +299,14 @@ class TestIntegratePrep(TestIISSBase):
 
         # set Revision REV_IISS
         tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # distribute icx for prep
+        tx: dict = self._make_icx_send_tx(self._genesis,
+                                          prep_address,
+                                          3000 * ICX_IN_LOOP)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
