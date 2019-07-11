@@ -28,13 +28,13 @@ if TYPE_CHECKING:
 IP_REGEX = r'^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])' \
            r'(:[0-9]{1,5})$'
 HOST_NAME_REGEX = r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])\.)+' \
-                  r'[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](:[0-9]{1,5})?(\/\S*)*'
-URL_REGEX = r'^(http:\/\/|https:\/\/)' + HOST_NAME_REGEX + r'\S+$'
+                  r'[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](:[0-9]{1,5})?'
+URL_REGEX = r'^(http:\/\/|https:\/\/)' + HOST_NAME_REGEX + r'(?:[^:]\/(\S)*)*$'
 EMAIL_REGEX = r'^[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\w$'
 
 
-def validate_prep_data(context: 'IconScoreContext', data: dict, set_prep: bool = False):
-    address: 'Address' = context.tx.origin
+def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
+    address: 'Address' = tx_origin
     validate_list = [ConstantKeys.NAME, ConstantKeys.EMAIL, ConstantKeys.WEBSITE, ConstantKeys.DETAILS,
                      ConstantKeys.PUBLIC_KEY, ConstantKeys.P2P_END_POINT]
 
@@ -92,7 +92,7 @@ def _validate_port(port: str):
         raise InvalidParamsException(f"Invalid port value '{port}'")
 
     if port < 0 or port > 65535:
-        raise InvalidParamsException(f"Invalid port '{port}'. Port must be 0 < port < 65536")
+        raise InvalidParamsException(f"Invalid port value '{port}'. Port must be 0 < port < 65536")
 
 
 def _validate_email(email: str):
