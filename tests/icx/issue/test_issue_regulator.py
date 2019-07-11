@@ -18,7 +18,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from iconservice.base.block import Block
-from iconservice.base.exception import AccessDeniedException
+from iconservice.base.exception import FatalException
 from iconservice.icon_constant import IconScoreContextType, ISCORE_EXCHANGE_RATE
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.regulator import Regulator
@@ -218,7 +218,7 @@ class TestIssueRegulator:
         icx_issue_amount = 1000
         over_issued_i_score = 0
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(FatalException):
             Regulator._correct_issue_amount_on_calc_period(prev_calc_period_issued_icx,
                                                            prev_calc_period_issued_iscore,
                                                            over_issued_i_score,

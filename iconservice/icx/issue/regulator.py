@@ -15,6 +15,7 @@
 
 from typing import Optional, Tuple, TYPE_CHECKING
 
+from ...base.exception import FatalException
 from ...icon_constant import ISCORE_EXCHANGE_RATE
 
 if TYPE_CHECKING:
@@ -158,7 +159,7 @@ class Regulator:
 
         # check if RC has sent response about 'CALCULATE' requests. every period should get response
         if prev_calc_period_issued_iscore is None:
-            raise AssertionError("There is no prev_calc_period_iscore")
+            raise FatalException("There is no prev_calc_period_iscore")
 
         # get difference between icon_service and reward_calc after set exchange rates
         prev_calc_over_issued_iscore: int = \

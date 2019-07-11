@@ -25,7 +25,7 @@ from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address
 from ..base.address import ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, InvalidRequestException
+from ..base.exception import InvalidParamsException, InvalidRequestException, FatalException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
@@ -99,7 +99,7 @@ class Engine(EngineBase):
     def calculate_callback(cb_data: 'CalculateResponse'):
         # cb_data.success == False: RC has reset the state to before 'CALCULATE' request
         if not cb_data.success:
-            raise AssertionError(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
+            raise FatalException(f"Reward calc has failed calculating about block height:{cb_data.block_height}")
 
         IconScoreContext.storage.rc.put_prev_calc_period_issued_iscore(cb_data.iscore)
         Logger.debug(f"calculate callback called with {cb_data}", ICON_SERVICE_LOG_TAG)

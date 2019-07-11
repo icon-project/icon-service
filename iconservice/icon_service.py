@@ -24,6 +24,7 @@ from earlgrey import MessageQueueService, aio_pika
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
 
+from iconservice.base.exception import FatalException
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey, \
     ICON_EXCEPTION_LOG_TAG
@@ -75,7 +76,7 @@ class IconService(object):
 
         try:
             loop.run_forever()
-        except Exception as e:
+        except FatalException as e:
             Logger.exception(e, ICON_EXCEPTION_LOG_TAG)
             Logger.error(e, ICON_EXCEPTION_LOG_TAG)
             self._inner_service.clean_close()
@@ -84,6 +85,7 @@ class IconService(object):
             If the function is called when the operation is not an endless loop 
             in an asynchronous function, the await is terminated immediately.
             """
+            Logger.debug("loop has been stopped and will be closed")
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 

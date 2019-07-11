@@ -23,7 +23,7 @@ from .base.address import Address, generate_score_address, generate_score_addres
 from .base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from .base.block import Block
 from .base.exception import ExceptionCode, IconServiceBaseException, ScoreNotFoundException, \
-    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBlockException
+    AccessDeniedException, IconScoreException, InvalidParamsException, InvalidBaseTransactionException
 from .base.message import Message
 from .base.transaction import Transaction
 from .database.batch import BlockBatch, TransactionBatch
@@ -423,7 +423,8 @@ class IconServiceEngine(ContextContainer):
             for index, tx_request in enumerate(tx_requests):
                 if index == BASE_TRANSACTION_INDEX and self._is_decentralized(context):
                     if not tx_request['params'].get('dataType') == "base":
-                        raise InvalidBlockException("Invalid block: first transaction must be an base transaction")
+                        raise InvalidBaseTransactionException("Invalid block: "
+                                                              "first transaction must be an base transaction")
                     tx_result = self._invoke_base_request(context, tx_request, is_block_editable, regulator)
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
@@ -677,8 +678,8 @@ class IconServiceEngine(ContextContainer):
         if not is_block_editable:
             issue_data_in_db, regulator = context.engine.issue.create_icx_issue_info(context)
             if issue_data_in_tx != issue_data_in_db:
-                raise InvalidBlockException("Have difference between "
-                                            "base transaction and actual db data")
+                raise InvalidBaseTransactionException("Have difference between "
+                                                      "base transaction and actual db data")
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=BASE_TRANSACTION_INDEX,
