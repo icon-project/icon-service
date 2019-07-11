@@ -16,6 +16,8 @@
 
 """IconScoreEngine testcase
 """
+import hashlib
+import os
 from copy import deepcopy
 
 from iconservice.base.address import ZERO_SCORE_ADDRESS, Address, AddressPrefix, GOVERNANCE_SCORE_ADDRESS
@@ -27,7 +29,6 @@ from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAP
     IconScoreContextType, ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, ConfigKey
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
-from iconservice.icx.issue.regulator import Regulator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
 from iconservice.prep.data import PRepFlag
 from tests import create_address, create_block_hash
@@ -54,8 +55,6 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
     def _reg_prep(self, address: 'Address', data: dict):
 
         data = deepcopy(data)
-        value: str = data[ConstantKeys.PUBLIC_KEY].hex()
-        data[ConstantKeys.PUBLIC_KEY] = value
 
         tx = self._make_score_call_tx(address,
                                       ZERO_SCORE_ADDRESS,
@@ -64,7 +63,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-    def _decentralize(self, main_preps: list, delegate_amount: int):
+    def _decentralize(self, main_preps_public_key: list, delegate_amount: int):
 
         # Can delegate up to 10 preps at a time
         stake_amount: int = delegate_amount * 10
@@ -80,15 +79,18 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         self._stake(addr2, stake_amount)
         self._stake(addr3, stake_amount)
 
+        main_preps = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
+                      for public_key in main_preps_public_key]
+
         # register preps
         for i, address in enumerate(main_preps):
             data: dict = {
                 ConstantKeys.NAME: f"name{i}",
-                ConstantKeys.EMAIL: f"email{i}",
-                ConstantKeys.WEBSITE: f"website{i}",
-                ConstantKeys.DETAILS: f"json{i}",
-                ConstantKeys.P2P_END_POINT: f"ip{i}",
-                ConstantKeys.PUBLIC_KEY: f'publicKey{i}'.encode(),
+                ConstantKeys.EMAIL: f"email{i}@example.com",
+                ConstantKeys.WEBSITE: f"http://website{i}.com",
+                ConstantKeys.DETAILS: f"http://website{i}.com/json",
+                ConstantKeys.P2P_END_POINT: f"{i}.{i}.{i}.1{i}:7100",
+                ConstantKeys.PUBLIC_KEY: f'0x{main_preps_public_key[i].hex()}',
             }
             self._reg_prep(address, data)
 
@@ -187,7 +189,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         self._update_governance()
         self._set_revision(REV_IISS)
 
-        addr_array = [create_address() for _ in range(_PREPS_LEN)]
+        preps_public_key = [os.urandom(32) for _ in range(_PREPS_LEN)]
 
         total_supply = 800_460_000 * ICX_IN_LOOP
 
@@ -196,7 +198,7 @@ class TestIntegrateBaseTransactionValidation(TestIntegrateBase):
         delegate_amount = total_supply * 2 // 1000
 
         # generate preps
-        self._decentralize(addr_array, delegate_amount)
+        self._decentralize(preps_public_key, delegate_amount)
 
         response = self._get_prep_list()
         total_delegated: int = response['totalDelegated']
