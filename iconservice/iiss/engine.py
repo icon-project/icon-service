@@ -145,11 +145,11 @@ class Engine(EngineBase):
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
+        self._check_from_can_charge_fee_v3(context, stake, account.balance, account.total_stake)
 
         unstake_lock_period = context.storage.iiss.get_unstake_lock_period(context)
         account.set_stake(stake, unstake_lock_period)
         context.storage.icx.put_account(context, account)
-        self._check_from_can_charge_fee_v3(context, stake, account.balance, account.total_stake)
 
         # TODO tx_result make if needs
         for listener in self._listeners:
