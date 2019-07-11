@@ -89,7 +89,7 @@ class TestIISSClaim(TestIISSBase):
         response: dict = self.query_iscore(self._addr_array[0])
         expected_response = {
             "blockHeight": block_height,
-            "icx": icx,
+            "estimatedICX": icx,
             "iscore": iscore
         }
         self.assertEqual(expected_response, response)
