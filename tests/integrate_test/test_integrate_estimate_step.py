@@ -12,16 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from math import ceil
-
-from iconservice.icon_constant import ICX_IN_LOOP
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
-from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
-from tests.integrate_test import create_timestamp
-from tests import create_tx_hash
-
-from typing import TYPE_CHECKING, Any, Union
 from copy import deepcopy
+from math import ceil
+from typing import TYPE_CHECKING, Any, Union
+
+from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
+from iconservice.icon_constant import ICX_IN_LOOP
+from tests import create_tx_hash
+from tests.integrate_test import create_timestamp
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, DEFAULT_BIG_STEP_LIMIT
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -42,7 +41,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
             "from": addr_from,
             "to": addr_to,
             "value": value,
-            "stepLimit": self._step_limit,
+            "stepLimit": DEFAULT_BIG_STEP_LIMIT,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature,
@@ -189,7 +188,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(estimate, tx_results[0].step_used)
 
         value = 1 * ICX_IN_LOOP
-        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value)
+        tx2 = self._make_icx_send_tx(self._genesis, score_addr1, value, step_limit=DEFAULT_BIG_STEP_LIMIT)
         prev_block, tx_results = self._make_and_req_block([tx2])
         self._write_precommit_state(prev_block)
 
@@ -233,6 +232,7 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         tx3 = self._make_icx_send_tx(self._genesis, score_addr1, value)
         prev_block, tx_results = self._make_and_req_block([tx3])
         self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
 
         query_request = {
             "address": self._addr_array[1]

@@ -23,7 +23,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRES
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY
 
 
 class TestIntegrateFallbackCall(TestIntegrateBase):
@@ -549,7 +549,7 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         }
 
         response = self._query(query_request, 'icx_getBalance')
-        self.assertEqual(response, 400_230_000 * ICX_IN_LOOP)
+        self.assertEqual(response, TOTAL_SUPPLY * ICX_IN_LOOP // 2)
 
         tx1 = self._make_deploy_tx("sample_fallback_call_scores",
                                    "sample_link_score_send_A",
@@ -590,13 +590,9 @@ class TestIntegrateFallbackCall(TestIntegrateBase):
         tx7 = self._make_icx_send_tx(self._genesis, score_addr1, value)
 
         prev_block, tx_results = self._make_and_req_block([tx3, tx4, tx5, tx6, tx7])
-
+        for tx_result in tx_results:
+            self.assertEqual(tx_result.status, int(True))
         self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
-        self.assertEqual(tx_results[1].status, int(True))
-        self.assertEqual(tx_results[2].status, int(True))
-        self.assertEqual(tx_results[3].status, int(True))
-        self.assertEqual(tx_results[4].status, int(True))
 
         query_request = {
             "address": score_addr1

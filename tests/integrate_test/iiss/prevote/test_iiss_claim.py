@@ -35,15 +35,15 @@ class TestIISSClaim(TestIISSBase):
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
-        # gain 10 icx
-        balance: int = 10 * ICX_IN_LOOP
+        # gain 100 icx
+        balance: int = 100 * ICX_IN_LOOP
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
         # stake 10 icx
-        stake: int = balance
+        stake: int = 10 * ICX_IN_LOOP
         tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)

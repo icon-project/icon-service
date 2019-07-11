@@ -71,89 +71,11 @@ class TestIcxEngine(unittest.TestCase, ContextContainer):
         # Remove a state db for test
         shutil.rmtree(self.db_name)
 
-    # TODO : Move to icx_storage test
-    # def test_put_genesis_data_account(self):
-    #     def intercept_storage_put_account(context: 'IconScoreContext', account: 'Account'):
-    #         if not isinstance(account, Account):
-    #             raise Exception("invalid type of params was set when calling put_account")
-    #
-    #     self.storage.put_account = Mock(side_effect=intercept_storage_put_account)
-    #     query_context = IconScoreContext(IconScoreContextType.QUERY)
-    #
-    #     # genesis
-    #     self.storage._put_special_account = Mock()
-    #     genesis_address = Address.from_string('hx' + 'f' * 40)
-    #     self.storage._put_genesis_data_account(
-    #         self.context, CoinPartType.GENESIS, genesis_address, 1000)
-    #     self.total_supply += 1000
-    #
-    #     self.storage.put_account.assert_called()
-    #     self.storage._put_special_account.assert_called()
-    #     self.assertEqual(self.total_supply, self.storage.get_total_supply(query_context))
-    #
-    #     # general
-    #     self.engine._put_special_account = Mock()
-    #     self.engine._init_special_account = Mock()
-    #     general_addr = Address.from_string('hx' + 'f' * 40)
-    #     self.storage._put_genesis_data_account(
-    #         self.context, CoinPartType.GENERAL, general_addr, 1000)
-    #     self.total_supply += 1000
-    #
-    #     self.storage.put_account.assert_called()
-    #     self.storage._put_special_account.assert_not_called()
-    #     self.assertEqual(self.total_supply, self.storage.get_total_supply(query_context))
-    #
-    # def test_put_special_account(self):
-    #     # failure case: input general account
-    #     account = Mock(spec=Account)
-    #     coin_part = Mock(spec=CoinPart)
-    #     coin_part.attach_mock(CoinPartType.GENERAL, 'type')
-    #     account.attach_mock(coin_part, 'coin_part')
-    #
-    #     self.assertRaises(AssertionError,
-    #                       self.storage._put_special_account, self.context, account)
-    #
-    #     # success case: input genesis and treasury account
-    #     account = Mock(spec=Account)
-    #     coin_part = Mock(spec=CoinPart)
-    #     coin_part.attach_mock(CoinPartType.GENESIS, 'type')
-    #     account.attach_mock(coin_part, 'coin_part')
-    #
-    #     self.storage._put_special_account(self.context, account)
-    #     self.assertEqual(account.address, self.storage.genesis)
-    #
-    #     account = Mock(spec=Account)
-    #     coin_part = Mock(spec=CoinPart)
-    #     coin_part.attach_mock(CoinPartType.TREASURY, 'type')
-    #     account.attach_mock(coin_part, 'coin_part')
-    #
-    #     self.storage._put_special_account(self.context, account)
-    #     self.assertEqual(account.address, self.storage.fee_treasury)
-    #
-    #     def intercept_storage_put_text(*args, **kwargs):
-    #         text = args[-1]
-    #         text_dict = json.loads(text)
-    #
-    #         expected_version = 0
-    #         expected_address = str(account.address)
-    #         self.assertEqual(expected_version, text_dict['version'])
-    #         self.assertEqual(expected_address, text_dict['address'])
-    #
-    #     self.storage.put_text = Mock(side_effect=intercept_storage_put_text)
-    #     self.storage._put_special_account(self.context, account)
-    #     self.storage.put_text.assert_called()
-
     def test_get_balance(self):
         address = Address.from_string('hx0123456789012345678901234567890123456789')
         balance = self.engine.get_balance(self.context, address)
 
         self.assertEqual(0, balance)
-
-    # TODO : Move to storage test
-    # def test_get_total_supply(self):
-    #     total_supply = self.storage.get_total_supply(self.context)
-    #
-    #     self.assertEqual(self.total_supply, total_supply)
 
     def test_get_charge_fee(self):
         pass

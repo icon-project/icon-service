@@ -138,7 +138,7 @@ class TestTypeConverter(unittest.TestCase):
         self.assertNotEqual(data_to, params[ConstantKeys.TO])
         self.assertNotEqual(data_value, params[ConstantKeys.VALUE])
 
-    def test_issue_data_convert(self):
+    def test_base_data_convert(self):
         prep_incentive = 1
         prep_reward_rate = 1
         prep_total_delegation = 1
@@ -153,6 +153,10 @@ class TestTypeConverter(unittest.TestCase):
         dapp_reward_rate = 3
         dapp_total_delegation = 3
         dapp_value = 3
+
+        covered_by_fee = 1
+        covered_by_over_issued_icx = 2
+        issue = 3
         request = {
             ConstantKeys.PREP: {
                 ConstantKeys.PREP_INCENTIVE: hex(prep_incentive),
@@ -171,9 +175,15 @@ class TestTypeConverter(unittest.TestCase):
                 ConstantKeys.DAPP_REWARD_RATE: hex(dapp_reward_rate),
                 ConstantKeys.DAPP_TOTAL_DELEGATION: hex(dapp_total_delegation),
                 ConstantKeys.DAPP_VALUE: hex(dapp_value)
+            },
+            ConstantKeys.ISSUE_RESULT: {
+                ConstantKeys.COVERED_BY_FEE: hex(covered_by_fee),
+                ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: hex(covered_by_over_issued_icx),
+                ConstantKeys.ISSUE: hex(issue)
             }
+
         }
-        ret_params = TypeConverter.convert(request, ParamType.ISSUE_DATA)
+        ret_params = TypeConverter.convert(request, ParamType.BASE_DATA)
         self.assertEqual(prep_incentive, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_INCENTIVE])
         self.assertEqual(prep_reward_rate, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_REWARD_RATE])
         self.assertEqual(prep_total_delegation, ret_params[ConstantKeys.PREP][ConstantKeys.PREP_TOTAL_DELEGATION])
@@ -188,6 +198,11 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(dapp_reward_rate, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_REWARD_RATE])
         self.assertEqual(dapp_total_delegation, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_TOTAL_DELEGATION])
         self.assertEqual(dapp_value, ret_params[ConstantKeys.DAPP][ConstantKeys.DAPP_VALUE])
+
+        self.assertEqual(covered_by_fee, ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.COVERED_BY_FEE])
+        self.assertEqual(covered_by_over_issued_icx,
+                         ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.COVERED_BY_OVER_ISSUED_ICX])
+        self.assertEqual(issue, ret_params[ConstantKeys.ISSUE_RESULT][ConstantKeys.ISSUE])
 
     def test_transaction_convert_success1(self):
         method = "icx_sendTransaction"
@@ -246,7 +261,7 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(e.exception.message,
                          "TypeConvert Exception None value, template: ValueType.ADDRESS_OR_MALFORMED_ADDRESS")
 
-    def test_issue_transaction_convert(self):
+    def test_base_transaction_convert(self):
         prep_data = {
             ConstantKeys.PREP_INCENTIVE: 1,
             ConstantKeys.PREP_REWARD_RATE: 1,
@@ -265,15 +280,23 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.DAPP_TOTAL_DELEGATION: 3,
             ConstantKeys.DAPP_VALUE: 3
         }
+        result_data = {
+            ConstantKeys.COVERED_BY_FEE: 4,
+            ConstantKeys.COVERED_BY_OVER_ISSUED_ICX: 4,
+            ConstantKeys.ISSUE: 4
+        }
         # todo: consider more cases (total 7 case)
-        self._test_issue_transaction_convert({"prep": prep_data, "eep": eep_data, "dapp": dapp_data})
+        self._test_base_transaction_convert({"prep": prep_data,
+                                             "eep": eep_data,
+                                             "dapp": dapp_data,
+                                             "result": result_data})
 
-    def _test_issue_transaction_convert(self,
-                                        data: dict,
-                                        method: str = "icx_sendTransaction"):
+    def _test_base_transaction_convert(self,
+                                       data: dict,
+                                       method: str = "icx_sendTransaction"):
         version = 3
         timestamp = 12345
-        data_type = 'issue'
+        data_type = 'base'
         nonce = 123
 
         request = {

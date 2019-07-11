@@ -111,7 +111,6 @@ class IconScoreInnerTask(object):
             converted_prev_block_generator = params.get('prevBlockGenerator')
             converted_prev_block_validators = params.get('prevBlockValidators')
 
-            # todo: consider compativity
             tx_results, state_root_hash, added_transactions, main_prep_as_dict = self._icon_service_engine.invoke(
                 block=block,
                 tx_requests=converted_tx_requests,

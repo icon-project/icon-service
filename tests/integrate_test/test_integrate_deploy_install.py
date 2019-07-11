@@ -25,7 +25,7 @@ from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import ICX_IN_LOOP
 from tests import raise_exception_start_tag, raise_exception_end_tag, create_tx_hash
 from tests.integrate_test import create_timestamp
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, DEFAULT_DEPLOY_STEP_LIMIT
 
 if TYPE_CHECKING:
     from iconservice.base.address import Address
@@ -294,7 +294,7 @@ class TestIntegrateDeployInstall(TestIntegrateBase):
             "version": self._version,
             "from": addr_from,
             "to": addr_to,
-            "stepLimit": self._step_limit,
+            "stepLimit": DEFAULT_DEPLOY_STEP_LIMIT,
             "timestamp": timestamp_us,
             "nonce": nonce,
             "signature": self._signature,

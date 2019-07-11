@@ -126,7 +126,7 @@ def test_get_inactive_prep_by_address(create_prep_container):
 
     for prep_status in (PRepStatus.UNREGISTERED, PRepStatus.PENALTY1, PRepStatus.PENALTY2):
         # Make sure that the prep to remove is active
-        index: int = random.randint(0, size - 1)
+        index: int = random.randint(0, len(preps) - 1)
         prep: 'PRep' = preps.get_by_index(index)
         assert isinstance(prep, PRep)
         assert prep.status == PRepStatus.ACTIVE
