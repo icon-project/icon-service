@@ -17,7 +17,6 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
-
 from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -26,7 +25,7 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, InvalidRequestException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_INITIAL_IREP, IISS_MIN_IREP, IISS_MAX_IREP, IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
+from ..icon_constant import IISS_MIN_IREP, IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
 from ..icon_constant import PrepResultState, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -341,9 +340,8 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidRequestException("Irep can be changed only once during a term")
 
         min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)   # 80% of previous irep
-        max_irep: int = min(prev_irep * 12 // 10, IISS_MAX_IREP)  # 120% of previous irep
 
-        if min_irep <= irep <= max_irep:
+        if min_irep <= irep:
             context.engine.issue.validate_total_supply_limit(context, irep)
         else:
             raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")

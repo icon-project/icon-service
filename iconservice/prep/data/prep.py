@@ -18,10 +18,9 @@ from typing import TYPE_CHECKING, Tuple
 
 from .sorted_list import Sortable
 from ... import utils
-from ...base.exception import AccessDeniedException, InvalidParamsException
+from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepStatus, PREP_STATUS_MAPPER, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, \
-    IISS_INITIAL_IREP
+from ...icon_constant import PRepStatus, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, IISS_INITIAL_IREP
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
