@@ -25,7 +25,8 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, InvalidRequestException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
+from ..icon_constant import IISS_MIN_IREP, IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_ANNUAL_BLOCK, \
+    IISS_MAX_IREP_PERCENTAGE
 from ..icon_constant import PrepResultState, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -343,7 +344,12 @@ class Engine(EngineBase, IISSEngineListener):
         max_irep: int = prev_irep * 12 // 10  # 120% of previous irep.
 
         if min_irep <= irep <= max_irep:
-            context.engine.issue.validate_total_supply_limit(context, irep)
+            beta: int = context.engine.issue.get_limit_inflation_beta(irep)
+            # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
+            if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
+                raise InvalidParamsException(f"Irep out of range: beta{beta} * ANNUAL_BLOCK > "
+                                             f"prev_term_total_supply{context.engine.prep.term.total_supply} * "
+                                             f"{IISS_MAX_IREP_PERCENTAGE} // 100")
         else:
             raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
 

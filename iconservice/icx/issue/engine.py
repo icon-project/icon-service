@@ -19,8 +19,7 @@ from .issue_formula import IssueFormula
 from .regulator import Regulator
 from ... import ZERO_SCORE_ADDRESS, Address
 from ...base.ComponentBase import EngineBase
-from ...base.exception import InvalidParamsException
-from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey, IISS_ANNUAL_BLOCK, IISS_MAX_IREP_PERCENTAGE
+from ...icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, IssueDataKey
 from ...iconscore.icon_score_event_log import EventLogEmitter
 
 if TYPE_CHECKING:
@@ -94,9 +93,5 @@ class Engine(EngineBase):
                                                   regulator.remain_over_issued_icx],
                                        indexed_args_count=0)
 
-    def validate_total_supply_limit(self, context: 'IconScoreContext', expected_irep: int):
-        beta: int = self._formula.get_limit_inflation_beta(expected_irep)
-
-        # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
-        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
-            raise InvalidParamsException(f"Out of range: expected irep")
+    def get_limit_inflation_beta(self, expected_irep: int) -> int:
+        return self._formula.get_limit_inflation_beta(expected_irep)
