@@ -27,7 +27,8 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, IISS_MAX_REWARD_RATE
+from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, IISS_MAX_REWARD_RATE, \
+    IconScoreContextType
 from ..icon_constant import PREP_MAIN_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -468,8 +469,11 @@ class Engine(EngineBase):
         address: 'Address' = context.tx.origin
 
         # TODO: error handling
-        iscore, block_height = self._reward_calc_proxy.claim_iscore(
-            address, context.block.height, context.block.hash)
+        if context.type == IconScoreContextType.INVOKE:
+            iscore, block_height = self._reward_calc_proxy.claim_iscore(
+                address, context.block.height, context.block.hash)
+        else:
+            iscore, block_height = 0, 0
 
         icx: int = self._iscore_to_icx(iscore)
 
