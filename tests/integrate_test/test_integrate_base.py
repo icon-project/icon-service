@@ -22,7 +22,6 @@ from unittest import TestCase
 from unittest.mock import Mock
 
 from iconcommons import IconConfig
-
 from iconservice.base.block import Block
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ConfigKey, IconScoreContextType, REV_DECENTRALIZATION, ICX_IN_LOOP
@@ -289,25 +288,6 @@ class TestIntegrateBase(TestCase):
 
         if not disable_pre_validate:
             self.icon_service_engine.validate_transaction(tx)
-        return tx
-
-    def _make_issue_tx(self,
-                       data: dict):
-        timestamp_us = create_timestamp()
-
-        request_params = {
-            "version": self._version,
-            "timestamp": timestamp_us,
-            "dataType": "base",
-            "data": data
-        }
-        method = 'icx_sendTransaction'
-        request_params['txHash'] = create_tx_hash()
-        tx = {
-            'method': method,
-            'params': request_params
-        }
-
         return tx
 
     def _make_and_req_block(self,

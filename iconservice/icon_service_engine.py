@@ -990,7 +990,7 @@ class IconServiceEngine(ContextContainer):
             elif self._check_prep_process(params):
                 return context.engine.prep.query(context, data)
             elif self._check_debug_process(params):
-                return self._get_IISS_info(context, data)
+                return self._handle_get_IISS_info(context, data)
             else:
                 raise InvalidParamsException("Invalid Method")
         else:
@@ -1004,7 +1004,7 @@ class IconServiceEngine(ContextContainer):
                                          data_type,
                                          data)
 
-    def _get_IISS_info(self, context: 'IconScoreContext', params: dict) -> dict:
+    def _handle_get_IISS_info(self, context: 'IconScoreContext', params: dict) -> dict:
 
         response = dict()
 
@@ -1016,7 +1016,7 @@ class IconServiceEngine(ContextContainer):
         check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
         if check_end_block_height is None:
             check_end_block_height = 0
-        response['nextCalculation'] = check_end_block_height
+        response['nextCalculation'] = check_end_block_height + 1
         response['nextPRepTerm'] = context.engine.prep.term.end_block_height + 1
 
         return response
