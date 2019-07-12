@@ -40,6 +40,7 @@ class PRep(Sortable):
     class Index(IntEnum):
         VERSION = 0
 
+        ADDRESS = auto()
         STATUS = auto()
         NAME = auto()
         EMAIL = auto()

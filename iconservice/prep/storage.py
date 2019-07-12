@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
 
 class Storage(StorageBase):
-    PREFIX: bytes = b'prep'
     TERM_KEY: bytes = b'term'
 
     def get_prep(self, context: 'IconScoreContext', address: 'Address') -> 'PRep':
@@ -52,7 +51,7 @@ class Storage(StorageBase):
     def get_prep_iterator(self) -> iter:
         with self._db.key_value_db.get_sub_db(PRep.PREFIX).iterator() as it:
             for key, value in it:
-                if key[4] == 0x00 and len(key) == 25:
+                if key[0] == 0x00 and len(key) == 21:
                     yield PRep.from_bytes(value)
 
     def put_term(self, context: 'IconScoreContext', data: list):
