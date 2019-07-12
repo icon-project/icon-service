@@ -119,8 +119,7 @@ class IconScoreInnerTask(object):
                 is_block_editable=converted_is_block_editable)
 
             if convert_tx_result_to_dict:
-                convert_tx_results = \
-                    [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
+                convert_tx_results = [tx_result.to_dict(to_camel_case) for tx_result in tx_results]
             else:
                 # old version
                 convert_tx_results = {bytes.hex(tx_result.tx_hash): tx_result.to_dict(to_camel_case)
