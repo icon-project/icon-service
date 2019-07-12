@@ -26,11 +26,9 @@ if TYPE_CHECKING:
     from .data import PRep
     from .term import Term
 
-IP_REGEX = r'^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])' \
-           r'(:[0-9]{1,5})$'
-HOST_NAME_REGEX = r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])\.)+' \
-                  r'[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](:[0-9]{1,5})?'
-URL_REGEX = r'^(http:\/\/|https:\/\/)' + HOST_NAME_REGEX + r'(?:[^:]\/(\S)*)*$'
+IP_REGEX = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])' \
+           r'(:[0-9]{1,5})?'
+HOST_NAME_REGEX = r'(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d](:[0-9]{1,5})?'
 EMAIL_REGEX = r'^[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\w$'
 
 
@@ -79,16 +77,22 @@ def _validate_p2p_endpoint(p2p_end_point: str):
 
     _validate_port(network_locate_info[1])
 
-    if re.match(IP_REGEX, p2p_end_point):
+    if re.match('^'+IP_REGEX+'$', p2p_end_point):
         return
 
-    if not re.match(HOST_NAME_REGEX, p2p_end_point):
+    if not re.match('^'+HOST_NAME_REGEX+'$', p2p_end_point):
         raise InvalidParamsException("Invalid endpoint format")
 
 
 def _validate_uri(uri: str):
-    if not re.match(URL_REGEX, uri):
-        raise InvalidParamsException("Invalid uri format")
+    uri_for_domain = r'^(http:\/\/|https:\/\/)' + HOST_NAME_REGEX + r'(\/\S*)*$'
+    uri_for_ip = r'^(http:\/\/|https:\/\/)' + IP_REGEX + r'(\/\S*)*$'
+    if re.match(uri_for_domain, uri):
+        return
+    if re.match(uri_for_ip, uri):
+        return
+
+    raise InvalidParamsException("Invalid uri format")
 
 
 def _validate_port(port: str):

@@ -56,19 +56,28 @@ def test_validate_public_key_invalid_case(public_key_address_pair):
 
 
 def test_validate_uri():
-    invalid_website_list = ['invalid website', 'invalid.com', 'http://c.com',
-                            'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid.",
-                            "https://abcd.com:812345", "http://abcd.com:812345", "http://asdf.aa-"]
+    invalid_uri_list = ["http://", "http://.", "http://..", "http://../", "http://?", "http://??", "http://??/",
+                        "http://#", "http://##", "http://##/", "http://foo.bar?q=Spaces should be encoded",
+                        "//", "//a", "///a", "///", "http:///a", "foo.com", "rdar://1234", "h://test",
+                        "http:// shouldfail.com", "http://foo.bar/foo(bar)baz quux", "ftps://foo.bar/",
+                        "http://-error-.invalid/", "http://-a.b.co", "http://a.b-.co", "http://3628126748",
+                        "http://.www.foo.bar/", "http://www.foo.bar./", "http://.www.foo.bar./",
+                        "http://022.107.254.1"]
 
-    valid_website_list = ['https://valid.com:8080', 'http://valid.com:8080', 'http://valid.com:8080/asdf',
-                          'https://valid.com:8080/abcd']
-
-    for uri in invalid_website_list:
+    valid_uri_list = ["http://foo.com/blah_blah", "http://foo.com/blah_blah/", "http://foo.com/blah_blah_(wikipedia)",
+                      "http://foo.com/blah_blah_(wikipedia)_(again)", "http://www.example.com/wpstyle/?p=364",
+                      "https://www.example.com/foo/?bar=baz&inga=42&quux", "http://odf.ws/123",
+                      "http://foo.com/blah_(wikipedia)#cite-1", "http://foo.com/blah_(wikipedia)_blah#cite-1",
+                      "http://foo.com/unicode_(✪)_in_parens", "http://foo.com/(something)?after=parens",
+                      "http://code.google.com/events/#&product=browser", "http://foo.bar/?q=Test%20URL-encoded%20stuff",
+                      "http://1337.net", "http://223.255.255.254", "http://foo.bar:8080", "https://foo.bar:8000",
+                      "https://192.10.2.3:1234"]
+    for uri in invalid_uri_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_uri(uri)
         assert e.value.message == 'Invalid uri format'
 
-    for uri in valid_website_list:
+    for uri in valid_uri_list:
         try:
             _validate_uri(uri)
         except BaseException:
@@ -76,15 +85,23 @@ def test_validate_uri():
 
 
 def test_validate_endpoint():
-    invalid_endpoint_list = ['invalid website', 'invalid.com', 'http://c.com',
-                             'https://c.com', 'ftp://caaa.com', "http://valid.", "https://valid.",
-                             "https://123.123.123.123:8080", "https://abcd.com:812345",
-                             "http://abcd.com:812345", "http://asdf.aa-", "https://invalid.com:8080",
-                             "http://invalid.com:8080", "invalid.com:abcd",
-                             ]
+    invalid_endpoint_list = ["http://", "http://.", "http://..", "http://../", "http://?", "http://??", "http://??/",
+                             "http://#", "http://##", "http://##/", "http://foo.bar?q=Spaces should be encoded",
+                             "//", "//a", "///a", "///", "http:///a", "foo.com", "rdar://1234", "h://test",
+                             "http:// shouldfail.com", "http://foo.bar/foo(bar)baz quux", "ftps://foo.bar/",
+                             "http://-error-.invalid/", "http://-a.b.co", "http://a.b-.co", "http://0.0.0.0:8080",
+                             "http://3628126748", "http://.www.foo.bar/", "http://www.foo.bar./",
+                             "http://.www.foo.bar./", "http://:8080", "http://.:8080", "http://..:8080",
+                             "http://../:8080", "http://?:8080", "http://??:8080", "http://??/:8080", "http://#:8080",
+                             "http://##:8080", "http://##/:8080", "http://foo.bar?q=Spaces should be encoded:8080",
+                             "//:8080", "//a:8080", "///a:8080", "///:8080", "http:///a:8080", "rdar://1234:8080",
+                             "h://test:8080", "http:// shouldfail.com:8080",  "http://foo.bar/foo(bar)baz quux:8080",
+                             "ftps://foo.bar/:8080", "http://-error-.invalid/:8080", "http://-a.b.co:8080",
+                             "http://a.b-.co:8080", "http://3628126748:8080", "http://.www.foo.bar/:8080",
+                             "http://www.foo.bar./:8080", "http://.www.foo.bar./:8080", "022.107.254.1:8080",
+                             "256.123.1.1:8000"]
 
-    valid_endpoint_list = ['valid.com:8080', '123.222.134.255:8080']
-
+    valid_endpoint_list = ["foo.com:1", "192.10.6.2:8000"]
     for endpoint in invalid_endpoint_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_p2p_endpoint(endpoint)
@@ -98,7 +115,7 @@ def test_validate_endpoint():
 
 def test_validate_email():
     invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', 'invalid@a', 'invalid@a.', 'invalid@.com',
-                          'invalid.@asdf.com-']
+                          'invalid.@asdf.com-', "email@domain..com", "invalid@abcd@abcd.com"]
 
     for email in invalid_email_list:
         with pytest.raises(InvalidParamsException) as e:
