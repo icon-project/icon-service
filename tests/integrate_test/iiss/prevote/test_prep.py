@@ -34,7 +34,7 @@ prep_register_data = {
     ConstantKeys.EMAIL: f"{name}@example.com",
     ConstantKeys.WEBSITE: f"https://{name}.example.com",
     ConstantKeys.DETAILS: f"https://{name}.example.com/details",
-    ConstantKeys.P2P_END_POINT: f"{name}.example.com:7100",
+    ConstantKeys.P2P_ENDPOINT: f"{name}.example.com:7100",
     ConstantKeys.PUBLIC_KEY: "0x12"
 }
 
@@ -472,7 +472,7 @@ class TestIntegratePrep(TestIISSBase):
 
         for website in invalid_website_list:
             reg_data: dict = deepcopy(prep_register_data)
-            reg_data[ConstantKeys.P2P_END_POINT] = website
+            reg_data[ConstantKeys.P2P_ENDPOINT] = website
             reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
             tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
             prev_block, tx_results = self._make_and_req_block([tx])
@@ -482,7 +482,7 @@ class TestIntegratePrep(TestIISSBase):
         validate_endpoint = "20.20.7.8:8000"
 
         reg_data: dict = deepcopy(prep_register_data)
-        reg_data[ConstantKeys.P2P_END_POINT] = validate_endpoint
+        reg_data[ConstantKeys.P2P_ENDPOINT] = validate_endpoint
         reg_data[ConstantKeys.PUBLIC_KEY] = f"0x{self.public_key_array[6].hex()}"
         tx = self.create_register_prep_tx(self._addr_array[6], reg_data)
         prev_block, tx_results = self._make_and_req_block([tx])

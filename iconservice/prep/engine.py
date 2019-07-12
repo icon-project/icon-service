@@ -206,7 +206,7 @@ class Engine(EngineBase, IISSEngineListener):
                 prep_info_as_dict = OrderedDict()
                 prep_info_as_dict[ConstantKeys.PREP_ID] = prep.address
                 prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
-                prep_info_as_dict[ConstantKeys.P2P_END_POINT] = prep.p2p_endpoint
+                prep_info_as_dict[ConstantKeys.P2P_ENDPOINT] = prep.p2p_endpoint
                 preps_as_list.append(prep_info_as_dict)
                 prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
             prep_as_dict["preps"] = preps_as_list

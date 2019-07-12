@@ -347,7 +347,7 @@ class PRep(Sortable):
             details=data.get(ConstantKeys.DETAILS, ""),
 
             # Required items
-            p2p_endpoint=data[ConstantKeys.P2P_END_POINT],
+            p2p_endpoint=data[ConstantKeys.P2P_ENDPOINT],
             public_key=data[ConstantKeys.PUBLIC_KEY],
             irep=IISS_INITIAL_IREP,
             irep_block_height=block_height,
@@ -365,7 +365,7 @@ class PRep(Sortable):
                 ConstantKeys.EMAIL: self.email,
                 ConstantKeys.WEBSITE: self.website,
                 ConstantKeys.DETAILS: self.details,
-                ConstantKeys.P2P_END_POINT: self.p2p_endpoint,
+                ConstantKeys.P2P_ENDPOINT: self.p2p_endpoint,
                 ConstantKeys.PUBLIC_KEY: self.public_key,
                 ConstantKeys.IREP: self._irep,
                 ConstantKeys.IREP_BLOCK_HEIGHT: self._irep_block_height

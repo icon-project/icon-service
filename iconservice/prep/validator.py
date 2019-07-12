@@ -40,7 +40,7 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
             ConstantKeys.WEBSITE,
             ConstantKeys.DETAILS,
             ConstantKeys.PUBLIC_KEY,
-            ConstantKeys.P2P_END_POINT
+            ConstantKeys.P2P_ENDPOINT
         )
 
         for key in fields_to_validate:
@@ -54,7 +54,7 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.PUBLIC_KEY:
             _validate_prep_public_key(data[key], tx_origin)
-        elif key == ConstantKeys.P2P_END_POINT:
+        elif key == ConstantKeys.P2P_ENDPOINT:
             _validate_p2p_endpoint(data[key])
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
             _validate_uri(data[key])
