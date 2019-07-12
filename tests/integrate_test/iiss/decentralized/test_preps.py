@@ -421,3 +421,56 @@ class TestPreps(TestIISSBase):
     def test_sync_end_block_height_of_calc_and_term(self):
         response: dict = self.get_iiss_info()
         self.assertEqual(response['nextCalculation'], response['nextPRepTerm'])
+
+    def test_register_prep_apply_terms_irep(self):
+
+        delegation1: int = 1
+        tx1: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS],
+                                                  [
+                                                      (
+                                                          self._addr_array[0],
+                                                          delegation1
+                                                      )
+                                                  ])
+        delegation2: int = 3
+        tx2: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + 1],
+                                                  [
+                                                      (
+                                                          self._addr_array[1],
+                                                          delegation2
+                                                      )
+                                                  ])
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        irep1: int = IISS_INITIAL_IREP * 12 // 10
+        tx1: dict = self.create_set_governance_variables(self._addr_array[0], irep1)
+        irep2: int = IISS_INITIAL_IREP * 8 // 10
+        tx2: dict = self.create_set_governance_variables(self._addr_array[1], irep2)
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        self.make_blocks_to_next_calculation()
+
+        response: dict = self.get_iiss_info()
+        expected_sum: int = IISS_INITIAL_IREP * 12 // 10 * delegation1 + IISS_INITIAL_IREP * 8 // 10 * delegation2
+        expected_sum_delegation: int = delegation1 + delegation2
+        expected_avg_irep: int = expected_sum // expected_sum_delegation
+        self.assertEqual(expected_avg_irep, response['variable']['irep'])
+
+        # register new user
+        tx: dict = self.create_register_prep_tx(self._addr_array[PREP_MAIN_PREPS + 1],
+                                                public_key=f"0x{self.public_key_array[PREP_MAIN_PREPS + 1].hex()}")
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        expected_block_height: int = self._block_height
+
+        response: dict = self.get_prep(self._addr_array[PREP_MAIN_PREPS + 1])
+        self.assertEqual(expected_avg_irep, response['registration']['irep'])
+        self.assertEqual(expected_block_height, response['registration']['irepUpdateBlockHeight'])

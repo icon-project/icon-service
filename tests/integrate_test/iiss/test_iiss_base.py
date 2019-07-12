@@ -24,14 +24,14 @@ from typing import List, Tuple, Dict, Union, Optional
 from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, PREP_MAIN_AND_SUB_PREPS
 from tests.integrate_test.test_integrate_base import TestIntegrateBase
 
 
 class TestIISSBase(TestIntegrateBase):
     def setUp(self):
         super().setUp()
-        self.public_key_array = [os.urandom(32) for _ in range(100)]
+        self.public_key_array = [os.urandom(32) for _ in range(PREP_MAIN_AND_SUB_PREPS)]
         self._addr_array = [Address.from_bytes(hashlib.sha3_256(public_key[1:]).digest()[-20:])
                             for public_key in self.public_key_array]
 
