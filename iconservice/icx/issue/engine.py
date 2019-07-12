@@ -106,13 +106,15 @@ class Engine(EngineBase):
 
     @staticmethod
     def _burn(context: 'IconScoreContext', address: 'Address', amount: int):
-        to_account: 'Account' = context.storage.icx.get_account(context, address)
-        if to_account.balance < amount:
+        account: 'Account' = context.storage.icx.get_account(context, address)
+        if account.balance < amount:
             raise OutOfBalanceException(f'Not enough ICX to Burn: '
-                                        f'balance({to_account.balance }) < intended burn amount({amount})')
+                                        f'balance({account.balance }) < intended burn amount({amount})')
         else:
-            to_account.withdraw(amount)
+            account.withdraw(amount)
             current_total_supply = context.storage.icx.get_total_supply(context)
+
+            context.storage.icx.put_account(context, account)
             context.storage.icx.put_total_supply(context, current_total_supply - amount)
 
     def burn(self, context: 'IconScoreContext', address: 'Address', amount: int):
