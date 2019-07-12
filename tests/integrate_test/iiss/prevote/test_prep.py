@@ -93,7 +93,7 @@ class TestIntegratePrep(TestIISSBase):
                             "irep": self._config[ConfigKey.INITIAL_IREP],
                             "irepUpdateBlockHeight": register_block_height,
                             "name": expected_params['name'],
-                            "p2pEndPoint": expected_params['p2pEndPoint'],
+                            "p2pEndpoint": expected_params['p2pEndpoint'],
                             "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                             "website": expected_params['website']
                         },
@@ -135,7 +135,7 @@ class TestIntegratePrep(TestIISSBase):
                             "irep": self._config[ConfigKey.INITIAL_IREP],
                             "irepUpdateBlockHeight": register_block_height,
                             "name": f"new{str(self._addr_array[i])}",
-                            "p2pEndPoint": expected_params['p2pEndPoint'],
+                            "p2pEndpoint": expected_params['p2pEndpoint'],
                             "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                             "website": expected_params['website']
                         },

@@ -275,10 +275,10 @@ class Engine(EngineBase, IISSEngineListener):
 
         validate_prep_data(context.tx.origin, kwargs, True)
 
-        if "p2pEndPoint" in kwargs:
-            p2p_end_point: str = kwargs["p2pEndPoint"]
-            del kwargs["p2pEndPoint"]
-            kwargs["p2p_endpoint"] = p2p_end_point
+        if ConstantKeys.P2P_ENDPOINT in kwargs:
+            p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]
+            del kwargs[ConstantKeys.P2P_ENDPOINT]
+            kwargs["p2p_endpoint"] = p2p_endpoint
 
         # Update registration info
         prep.set(**kwargs)

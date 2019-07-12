@@ -68,19 +68,19 @@ def _validate_prep_public_key(public_key: bytes, address: 'Address'):
         raise InvalidParamsException("Invalid publicKey")
 
 
-def _validate_p2p_endpoint(p2p_end_point: str):
+def _validate_p2p_endpoint(p2p_endpoint: str):
 
-    network_locate_info = p2p_end_point.split(":")
+    network_locate_info = p2p_endpoint.split(":")
 
     if len(network_locate_info) != 2:
         raise InvalidParamsException("Invalid endpoint format")
 
     _validate_port(network_locate_info[1])
 
-    if re.match('^'+IP_REGEX+'$', p2p_end_point):
+    if re.match('^'+IP_REGEX+'$', p2p_endpoint):
         return
 
-    if not re.match('^'+HOST_NAME_REGEX+'$', p2p_end_point):
+    if not re.match('^'+HOST_NAME_REGEX+'$', p2p_endpoint):
         raise InvalidParamsException("Invalid endpoint format")
 
 
