@@ -88,7 +88,6 @@ def test_validate_endpoint():
     for endpoint in invalid_endpoint_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_p2p_endpoint(endpoint)
-        assert e.value.message == "Invalid endpoint format" or e.value.message.startswith("Invalid port value")
 
     for endpoint in valid_endpoint_list:
         try:

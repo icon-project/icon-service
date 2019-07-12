@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import hashlib
 import re
 from typing import TYPE_CHECKING
@@ -34,14 +35,19 @@ EMAIL_REGEX = r'^[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\w$'
 
 
 def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
-    address: 'Address' = tx_origin
-    validate_list = [ConstantKeys.NAME, ConstantKeys.EMAIL, ConstantKeys.WEBSITE, ConstantKeys.DETAILS,
-                     ConstantKeys.PUBLIC_KEY, ConstantKeys.P2P_END_POINT]
-
     if not set_prep:
-        for key in validate_list:
+        fields_to_validate = (
+            ConstantKeys.NAME,
+            ConstantKeys.EMAIL,
+            ConstantKeys.WEBSITE,
+            ConstantKeys.DETAILS,
+            ConstantKeys.PUBLIC_KEY,
+            ConstantKeys.P2P_END_POINT
+        )
+
+        for key in fields_to_validate:
             if key not in data:
-                raise InvalidParamsException(f"{key} not exists")
+                raise InvalidParamsException(f'"{key}" not found')
             elif len(data[key].strip()) < 1:
                 raise InvalidParamsException("Can not set empty data")
 
@@ -49,7 +55,7 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
         if len(data[key].strip()) < 1:
             raise InvalidParamsException("Can not set empty data")
         if key == ConstantKeys.PUBLIC_KEY:
-            _validate_prep_public_key(data[key], address)
+            _validate_prep_public_key(data[key], tx_origin)
         elif key == ConstantKeys.P2P_END_POINT:
             _validate_p2p_endpoint(data[key])
         elif key in (ConstantKeys.WEBSITE, ConstantKeys.DETAILS):
@@ -89,10 +95,10 @@ def _validate_port(port: str):
     try:
         port = int(port, 10)
     except ValueError:
-        raise InvalidParamsException(f"Invalid port value '{port}'")
+        raise InvalidParamsException(f'Invalid port: "{port}"')
 
-    if port < 0 or port > 65535:
-        raise InvalidParamsException(f"Invalid port value '{port}'. Port must be 0 < port < 65536")
+    if not 0 < port < 65536:
+        raise InvalidParamsException(f"Port out of range: {port}")
 
 
 def _validate_email(email: str):
@@ -109,15 +115,15 @@ def validate_irep(context: 'IconScoreContext', irep: int, prep: 'PRep'):
     if prev_irep_block_height >= term.start_block_height:
         raise InvalidRequestException("Irep can be changed only once during a term")
 
-    min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)   # 80% of previous irep
-    max_irep: int = prev_irep * 12 // 10  # 120% of previous irep.
+    min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)  # 80% of previous irep
+    max_irep: int = prev_irep * 12 // 10  # 120% of previous irep
 
     if min_irep <= irep <= max_irep:
         beta: int = context.engine.issue.get_limit_inflation_beta(irep)
         # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
-        if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
+        if beta * IISS_ANNUAL_BLOCK > term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
             raise InvalidParamsException(f"Irep out of range: beta{beta} * ANNUAL_BLOCK > "
-                                         f"prev_term_total_supply{context.engine.prep.term.total_supply} * "
+                                         f"prev_term_total_supply{term.total_supply} * "
                                          f"{IISS_MAX_IREP_PERCENTAGE} // 100")
     else:
         raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")

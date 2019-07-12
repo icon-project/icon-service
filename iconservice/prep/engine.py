@@ -132,9 +132,9 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidParamsException(f"{str(address)} has been already registered")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
-        account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+        validate_prep_data(address, ret_params)
 
-        validate_prep_data(context.tx.origin, ret_params)
+        account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
         # prep.irep is set to IISS_MIN_IREP by default
