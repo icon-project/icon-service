@@ -347,8 +347,8 @@ class Engine(EngineBase, IISSEngineListener):
             beta: int = context.engine.issue.get_limit_inflation_beta(irep)
             # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
             if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
-                raise InvalidParamsException(f"Irep out of range: beta{beta} * ANNUAL_BLOCK > "
-                                             f"prev_term_total_supply{context.engine.prep.term.total_supply} * "
+                raise InvalidParamsException(f"Irep out of range: beta({beta}) * ANNUAL_BLOCK > "
+                                             f"prev_term_total_supply({context.engine.prep.term.total_supply}) * "
                                              f"{IISS_MAX_IREP_PERCENTAGE} // 100")
         else:
             raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")

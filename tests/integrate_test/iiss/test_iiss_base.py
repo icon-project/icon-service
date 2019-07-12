@@ -306,3 +306,6 @@ class TestIISSBase(TestIntegrateBase):
             address: 'Address' = Address.from_string(address)
 
         return self._query({"address": address}, 'icx_getBalance')
+
+    def get_total_supply(self) -> int:
+        return self._query({}, 'icx_getTotalSupply')

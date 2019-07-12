@@ -16,14 +16,12 @@
 
 """IconScoreEngine testcase
 """
-from typing import TYPE_CHECKING
-
-from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, REV_DECENTRALIZATION
+from iconservice.base.exception import ExceptionCode
+from iconservice.base.type_converter_templates import ConstantKeys
+from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, REV_DECENTRALIZATION, IISS_INITIAL_IREP, \
+    IISS_MAX_IREP_PERCENTAGE
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
-
-if TYPE_CHECKING:
-    pass
 
 
 class TestPreps(TestIISSBase):
@@ -243,7 +241,6 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_response, response)
 
     def test_low_productivity(self):
-        self.make_blocks_to_next_calculation()
 
         # get totalBlocks in main prep
         response: dict = self.get_prep(self._addr_array[0])
@@ -275,290 +272,151 @@ class TestPreps(TestIISSBase):
             }
         self.assertEqual(expected_response, response["stats"])
 
+    def test_set_governance_variables1(self):
+        origin_irep: int = IISS_INITIAL_IREP
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], origin_irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        response: dict = self.get_prep(self._addr_array[0])
+        expected_irep: int = origin_irep
+        expected_update_block_height: int = self._block_height
+        self.assertEqual(expected_irep, response['registration']['irep'])
+        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+
+        self.make_blocks_to_next_calculation()
+
+        irep: int = origin_irep * 12 // 10
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        response: dict = self.get_prep(self._addr_array[0])
+        expected_irep: int = irep
+        expected_update_block_height: int = self._block_height
+        self.assertEqual(expected_irep, response['registration']['irep'])
+        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+
+    def test_set_governance_variables2(self):
+        origin_irep: int = IISS_INITIAL_IREP
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], origin_irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        response: dict = self.get_prep(self._addr_array[0])
+        expected_irep: int = origin_irep
+        expected_update_block_height: int = self._block_height
+        self.assertEqual(expected_irep, response['registration']['irep'])
+        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+
+        # term validate
+        irep: int = origin_irep
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self.assertEqual(int(False), tx_results[1].status)
+        self._write_precommit_state(prev_block)
+
+        self.make_blocks_to_next_calculation()
+
+        # 20% below
+        irep: int = origin_irep * 8 - 1 // 10
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self.assertEqual(int(False), tx_results[1].status)
+        self._write_precommit_state(prev_block)
+
+        # 20 above
+        irep: int = origin_irep * 12 + 1 // 10
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self.assertEqual(int(False), tx_results[1].status)
+        self._write_precommit_state(prev_block)
+
+    def test_set_governance_variables3(self):
+        origin_irep: int = IISS_INITIAL_IREP
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], origin_irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        response: dict = self.get_prep(self._addr_array[0])
+        expected_irep: int = origin_irep
+        expected_update_block_height: int = self._block_height
+        self.assertEqual(expected_irep, response['registration']['irep'])
+        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+
+        irep: int = origin_irep
+
+        possible_maximum_raise_irep_count: int = 6
+        for i in range(possible_maximum_raise_irep_count):
+            self.make_blocks_to_next_calculation()
+
+            irep: int = irep * 12 // 10
+            tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            for tx_result in tx_results:
+                self.assertEqual(int(True), tx_result.status)
+            self._write_precommit_state(prev_block)
+
+        # max totalsupply limitation
+        self.make_blocks_to_next_calculation()
+        irep: int = irep * 12 // 10
+        tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self.assertEqual(int(False), tx_results[1].status)
+        self._write_precommit_state(prev_block)
+
+    def test_weighted_average_of_irep(self):
+
+        delegation1: int = 1
+        tx1: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS],
+                                                 [
+                                                     (
+                                                         self._addr_array[0],
+                                                         delegation1
+                                                     )
+                                                 ])
+        delegation2: int = 3
+        tx2: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + 1],
+                                                  [
+                                                      (
+                                                          self._addr_array[1],
+                                                          delegation2
+                                                      )
+                                                  ])
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        irep1: int = IISS_INITIAL_IREP * 12 // 10
+        tx1: dict = self.create_set_governance_variables(self._addr_array[0], irep1)
+        irep2: int = IISS_INITIAL_IREP * 8 // 10
+        tx2: dict = self.create_set_governance_variables(self._addr_array[1], irep2)
+        prev_block, tx_results = self._make_and_req_block([tx1, tx2])
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        self.make_blocks_to_next_calculation()
+
+        response: dict = self.get_iiss_info()
+        expected_sum: int = IISS_INITIAL_IREP * 12 // 10 * delegation1 + IISS_INITIAL_IREP * 8 // 10 * delegation2
+        expected_sum_delegation: int = delegation1 + delegation2
+        expected_avg_irep: int = expected_sum // expected_sum_delegation
+        self.assertEqual(expected_avg_irep, response['variable']['irep'])
+
     def test_sync_end_block_height_of_calc_and_term(self):
-        # TODO We need to remake this logic
-        pass
-
-        # _PREPS_LEN = 200
-        # _MAIN_PREPS_LEN = 22
-        # _AMOUNT_DELEGATE = 10000
-        # _MINIMUM_DELEGATE_AMOUNT = 10 ** 18
-        # _TEST_BLOCK_HEIGHT = 30
-        #
-        # self._update_governance()
-        # self._set_revision(REV_IISS)
-        #
-        # addr_array = [create_address() for _ in range(_PREPS_LEN)]
-        #
-        # total_supply = 800_460_000 * self._icx_factor
-        #
-        # # Minimum_delegate_amount is 0.02 * total_supply
-        # # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
-        # delegate_amount = total_supply * 3 // 1000
-        #
-        # # generate preps
-        # self._decentralize(addr_array, delegate_amount)
-        #
-        # response = self._get_prep_list()
-        # total_delegated: int = response['totalDelegated']
-        # prep_list: list = response['preps']
-        #
-        # self.assertEqual(delegate_amount * 22, total_delegated)
-        # self.assertEqual(_PREPS_LEN, len(prep_list))
-        #
-        # self._set_revision(REV_DECENTRALIZATION)
-        #
-        # # check if generating main preps
-        # main_preps = self._get_main_perps()["preps"]
-        # self.assertEqual(_MAIN_PREPS_LEN, len(main_preps))
-        #
-        # for i in range(_TEST_BLOCK_HEIGHT):
-        #     try:
-        #         prev_block, tx_results = self._make_and_req_block([])
-        #         self._write_precommit_state(prev_block)
-        #     except AssertionError:
-        #         self.assertTrue(False)
-
-    # TODO We need to fix after implement method "setGovernanceVariable
-
-    # def test_weighted_average_of_irep(self):
-    #     """
-    #     Scenario
-    #     1. generates preps and delegates more than minumum delegated amount to 22 preps
-    #     2. sets revision to REV_DECENTRALIZATION and generates main and sub preps
-    #     3. check wighted average of irep correct
-    #     :return:
-    #     """
-    #
-    #     _PREPS_LEN = 50
-    #     context = IconScoreContext(IconScoreContextType.DIRECT)
-    #     _AMOUNT_DELEGATE = int(get_minimum_delegate_for_bottom_prep(context=context) * 2)
-    #
-    #     self._update_governance()
-    #     self._set_revision(REV_IISS)
-    #     addresses: List['Address'] = [create_address() for _ in range(_PREPS_LEN)]
-    #
-    #     self._send_icx_in_loop(addresses[0], _AMOUNT_DELEGATE * 10)
-    #     self._send_icx_in_loop(addresses[1], _AMOUNT_DELEGATE * 10)
-    #
-    #     buf_total_irep = 0
-    #     # Generate P-Reps
-    #     for i in range(_PREPS_LEN):
-    #         if i < PREP_MAIN_PREPS:
-    #             buf_total_irep += IISS_INITIAL_IREP
-    #             reg_data: dict = create_register_prep_params(i)
-    #             self._reg_prep(addresses[i], reg_data)
-    #
-    #         from_addr_for_stake: tuple = (self._admin, addresses[0], addresses[1])
-    #
-    #         idx_for_stake = 10
-    #         for idx, from_addr in enumerate(from_addr_for_stake):
-    #             # stake
-    #             self._stake(from_addr, _AMOUNT_DELEGATE * 10)
-    #             delegations = []
-    #             for i in range(idx_for_stake - 10, idx_for_stake):
-    #                 if i > 21:
-    #                     break
-    #                 delegations.append({
-    #                     "address": str(addresses[i]),
-    #                     "value": hex(_AMOUNT_DELEGATE)
-    #                 })
-    #             self._delegate(from_addr, delegations)
-    #             idx_for_stake += 10
-    #
-    #         # set revision to REV_DECENTRALIZATION
-    #         tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-    #                                       {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
-    #         block, invoke_response, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
-    #         self.assertEqual((_AMOUNT_DELEGATE * buf_total_irep) // (_AMOUNT_DELEGATE * PREP_MAIN_PREPS),
-    #                          main_prep_as_dict['irep'])
-
-    # def test_prep_set_irep_in_term(self):
-    #     _PREPS_LEN = 22
-    #     self._update_governance()
-    #     self._set_revision(REV_IISS)
-    #
-    #     addr_array = [create_address() for _ in range(_PREPS_LEN)]
-    #
-    #     total_supply = 800_460_000 * self._icx_factor
-    #
-    #     # Minimum_delegate_amount is 0.02 * total_supply
-    #     # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
-    #     delegate_amount = total_supply * 3 // 1000
-    #
-    #     # generate preps
-    #     self._decentralize(addr_array, delegate_amount)
-    #
-    #     # set revision to REV_DECENTRALIZATION
-    #     tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-    #                                   {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
-    #     prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
-    #     self.assertIsNotNone(main_prep_as_dict)
-    #
-    #     for i in range(2):
-    #         prev_block, tx_results = self._make_and_req_block(
-    #             [],
-    #             prev_block_generator=addr_array[0],
-    #             prev_block_validators=[addr_array[1], addr_array[2]])
-    #         self._write_precommit_state(prev_block)
-    #
-    #     data: dict = create_register_prep_params(index=0)
-    #
-    #     expected_response: dict = data
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #
-    #     self.assertEqual(expected_response[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(expected_response[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
-    #     self.assertEqual(expected_response[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertEqual(expected_response[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
-    #     self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
-    #     self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-    #     self.assertEqual(IISS_INITIAL_IREP, register[ConstantKeys.IREP])
-    #
-    #     irep_value = int(IISS_INITIAL_IREP * 12 // 10)
-    #
-    #     set_prep_data1: dict = {
-    #         ConstantKeys.IREP: irep_value,
-    #     }
-    #     prev_block, tx_results = self._set_prep(addr_array[0], set_prep_data1)
-    #     self.assertEqual(int(True), tx_results[0].status)
-    #     self._write_precommit_state(prev_block)
-    #
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #     self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertEqual(hex(set_prep_data1[ConstantKeys.IREP]), hex(register[ConstantKeys.IREP]))
-    #
-    #     irep_value2 = int(irep_value * 1.1)
-    #
-    #     set_prep_data2: dict = {
-    #         ConstantKeys.IREP: hex(irep_value2),
-    #     }
-    #     tx = self._make_score_call_tx(addr_array[0],
-    #                                   ZERO_SCORE_ADDRESS,
-    #                                   'setPRep',
-    #                                   set_prep_data2)
-    #     prev_block, tx_results = self._make_and_req_block([tx])
-    #     set_result = tx_results[0]
-    #     self.assertEqual(set_result.status, 0)
-    #     failure_message = set_result.failure.message
-    #     self.assertEqual(failure_message, "irep can only be changed once during the term.")
-    #
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #     self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertNotEqual(set_prep_data2[ConstantKeys.IREP], hex(register[ConstantKeys.IREP]))
-    #
-    # def test_prep_set_irep_in_term_case2(self):
-    #     """Case when prep tries to set invalid irep(less than 0.8*prev_irep, greater than 1.2*prev_irep)
-    #     after that prep tries to set same irep twice in term"""
-    #     _PREPS_LEN = 22
-    #     self._update_governance()
-    #     self._set_revision(REV_IISS)
-    #
-    #     addr_array = [create_address() for _ in range(_PREPS_LEN)]
-    #
-    #     total_supply = 800_460_000 * self._icx_factor
-    #
-    #     # Minimum_delegate_amount is 0.02 * total_supply
-    #     # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
-    #     delegate_amount = total_supply * 3 // 1000
-    #
-    #     # generate preps
-    #     self._decentralize(addr_array, delegate_amount)
-    #
-    #     # set revision to REV_DECENTRALIZATION
-    #     tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-    #                                   {"code": hex(REV_DECENTRALIZATION), "name": f"1.1.{REV_DECENTRALIZATION}"})
-    #     prev_block, tx_results, main_prep_as_dict = self._make_and_req_block_for_prep_test([tx])
-    #     self.assertIsNotNone(main_prep_as_dict)
-    #
-    #     for i in range(2):
-    #         prev_block, tx_results = self._make_and_req_block(
-    #             [],
-    #             prev_block_generator=addr_array[0],
-    #             prev_block_validators=[addr_array[1], addr_array[2]])
-    #         self._write_precommit_state(prev_block)
-    #
-    #     data: dict = create_register_prep_params(index=0)
-    #
-    #     expected_response: dict = data
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #
-    #     self.assertEqual(expected_response[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(expected_response[ConstantKeys.EMAIL], register[ConstantKeys.EMAIL])
-    #     self.assertEqual(expected_response[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertEqual(expected_response[ConstantKeys.DETAILS], register[ConstantKeys.DETAILS])
-    #     self.assertEqual(expected_response[ConstantKeys.P2P_END_POINT], register[ConstantKeys.P2P_END_POINT])
-    #     self.assertEqual(expected_response[ConstantKeys.PUBLIC_KEY], register[ConstantKeys.PUBLIC_KEY])
-    #     self.assertEqual(IISS_INITIAL_IREP, register[ConstantKeys.IREP])
-    #
-    #     # irep < prev_irep * 0.8
-    #     irep_value = int(IISS_INITIAL_IREP * 0.79)
-    #
-    #     set_prep_data1: dict = {
-    #         ConstantKeys.IREP: irep_value,
-    #     }
-    #     prev_block, tx_results = self._set_prep(addr_array[0], set_prep_data1)
-    #     self.assertEqual(int(False), tx_results[0].status)
-    #     self._write_precommit_state(prev_block)
-    #
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #     self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertEqual(hex(IISS_INITIAL_IREP), hex(register[ConstantKeys.IREP]))
-    #
-    #     # irep > prev_irep * 1.2
-    #     irep_value = int(IISS_INITIAL_IREP * 1.21)
-    #     set_prep_data2: dict = {
-    #         ConstantKeys.IREP: irep_value,
-    #     }
-    #     prev_block, tx_results = self._set_prep(addr_array[0], set_prep_data2)
-    #     self.assertEqual(int(False), tx_results[0].status)
-    #     self._write_precommit_state(prev_block)
-    #
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #     self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertEqual(hex(IISS_INITIAL_IREP), hex(register[ConstantKeys.IREP]))
-    #
-    #     # set same irep twice in term
-    #     irep_value3 = int(IISS_INITIAL_IREP * 1.1)
-    #     set_prep_data3: dict = {
-    #         ConstantKeys.IREP: hex(irep_value3),
-    #     }
-    #     tx = self._make_score_call_tx(addr_array[0],
-    #                                   ZERO_SCORE_ADDRESS,
-    #                                   'setPRep',
-    #                                   set_prep_data3)
-    #     prev_block, tx_results = self._make_and_req_block([tx])
-    #     self._write_precommit_state(prev_block)
-    #     set_result = tx_results[0]
-    #     self.assertEqual(set_result.status, 1)
-    #
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #     self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
-    #     self.assertNotEqual(set_prep_data2[ConstantKeys.IREP], hex(register[ConstantKeys.IREP]))
-    #
-    #     tx = self._make_score_call_tx(addr_array[0],
-    #                                   ZERO_SCORE_ADDRESS,
-    #                                   'setPRep',
-    #                                   set_prep_data3)
-    #     prev_block, tx_results = self._make_and_req_block([tx])
-    #     set_result = tx_results[0]
-    #     self.assertEqual(set_result.status, 0)
-    #     failure_message = set_result.failure.message
-    #     self.assertEqual(failure_message, "irep can only be changed once during the term.")
-    #
-    #     response: dict = self._get_prep(addr_array[0])
-    #     register = response["registration"]
-    #     self.assertEqual(data[ConstantKeys.NAME], register[ConstantKeys.NAME])
-    #     self.assertEqual(data[ConstantKeys.WEBSITE], register[ConstantKeys.WEBSITE])
+        response: dict = self.get_iiss_info()
+        self.assertEqual(response['nextCalculation'], response['nextPRepTerm'])

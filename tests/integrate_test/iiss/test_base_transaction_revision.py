@@ -15,34 +15,18 @@
 # limitations under the License.
 
 
-from iconservice.base.address import GOVERNANCE_SCORE_ADDRESS
 from iconservice.icon_constant import REV_IISS, \
     IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
-from tests import create_address
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
-class TestIntegrateBaseTransactionRevision(TestIntegrateBase):
-    def _update_governance(self):
-        tx = self._make_deploy_tx("sample_builtin",
-                                  "latest_version/governance",
-                                  self._admin,
-                                  GOVERNANCE_SCORE_ADDRESS)
-        prev_block, tx_results = self._make_and_req_block([tx])
-        self._write_precommit_state(prev_block)
+class TestIISSBaseTransactionRevision(TestIISSBase):
 
-    def _set_revision(self, revision: int):
-        set_revision_tx = self._make_score_call_tx(self._admin, GOVERNANCE_SCORE_ADDRESS, 'setRevision',
-                                                   {"code": hex(revision), "name": f"1.1.{revision}"})
-        prev_block, tx_results = self._make_and_req_block([set_revision_tx])
-        self._write_precommit_state(prev_block)
-        self.assertEqual(tx_results[0].status, int(True))
+    def _create_dummy_tx(self):
+        return self._make_icx_send_tx(self._genesis, self._admin, 0)
 
-    def _make_dummy_tx(self):
-        return self._make_icx_send_tx(self._genesis, create_address(), 1)
-
-    def _make_dummy_base_transaction(self):
+    def _create_dummy_base_transaction(self):
         dummy_base_transacion = {
             'method': 'icx_sendTransaction',
             'params': {
@@ -57,45 +41,66 @@ class TestIntegrateBaseTransactionRevision(TestIntegrateBase):
         }
         return dummy_base_transacion
 
-    def setUp(self):
-        super().setUp()
-
     def test_base_transaction_under_rev_iiss(self):
         # success case: when isBlockEditable is false, block which does not have base tx should be invoked successfully.
         tx_list = [
-            self._make_dummy_tx(),
+            self._create_dummy_tx()
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list,
-                                                                         is_block_editable=False)
+        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
         self._write_precommit_state(prev_block)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 
         # success case: when isBlockEditable is true, block which does not have base tx should be invoked successfully.
         tx_list = [
-            self._make_dummy_tx(),
+            self._create_dummy_tx(),
         ]
-        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list,
-                                                                         is_block_editable=True)
+        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
         self._write_precommit_state(prev_block)
         expected_tx_status = 1
         self.assertEqual(expected_tx_status, tx_results[0].status)
 
         # failure case: when isBlockEditable is false, block which has base tx should be failed to invoke.
         tx_list_with_base_transaction = [
-            self._make_dummy_base_transaction(),
-            self._make_dummy_tx()
+            self._create_dummy_base_transaction(),
+            self._create_dummy_tx()
         ]
         self.assertRaises(KeyError,
                           self._make_and_req_block_for_issue_test,
                           tx_list_with_base_transaction, None, None, None, True, 0)
 
     def test_base_transaction_between_rev_iiss_and_rev_decentralization(self):
-        self._update_governance()
-        self._set_revision(REV_IISS)
-        context = IconScoreContext(IconScoreContextType.DIRECT)
-        governance_score = self.icon_service_engine._get_governance_score(context)
-        print("current tests revision: ", governance_score.revision_code)
+        self.update_governance()
 
-        self.test_base_transaction_under_rev_iiss()
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        # success case: when isBlockEditable is false, block which does not have base tx should be invoked successfully.
+        tx_list = [
+            self._create_dummy_tx()
+        ]
+        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=False)
+        self._write_precommit_state(prev_block)
+        expected_tx_status = 1
+        self.assertEqual(expected_tx_status, tx_results[0].status)
+
+        # success case: when isBlockEditable is true, block which does not have base tx should be invoked successfully.
+        tx_list = [
+            self._create_dummy_tx(),
+        ]
+        prev_block, tx_results = self._make_and_req_block_for_issue_test(tx_list, is_block_editable=True)
+        self._write_precommit_state(prev_block)
+        expected_tx_status = 1
+        self.assertEqual(expected_tx_status, tx_results[0].status)
+
+        # failure case: when isBlockEditable is false, block which has base tx should be failed to invoke.
+        tx_list_with_base_transaction = [
+            self._create_dummy_base_transaction(),
+            self._create_dummy_tx()
+        ]
+        self.assertRaises(KeyError,
+                          self._make_and_req_block_for_issue_test,
+                          tx_list_with_base_transaction, None, None, None, True, 0)
 

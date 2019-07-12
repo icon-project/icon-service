@@ -311,19 +311,20 @@ class TestIntegratePrep(TestIISSBase):
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
+        # register prep
         tx: dict = self.create_register_prep_tx(prep_address)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
+        # get prep
         response = self.get_prep(prep_address)
-
         registration = response["registration"]
         self.assertEqual(IISS_INITIAL_IREP, registration[ConstantKeys.IREP])
 
-        # setGovernanceVariables call should be failed until IISS decentralization feature is enabled
         irep: int = registration[ConstantKeys.IREP]
 
+        # setGovernanceVariables call should be failed until IISS decentralization feature is enabled
         tx: dict = self.create_set_governance_variables(prep_address, irep + 10)
         prev_block, tx_results = self._make_and_req_block([tx])
 

@@ -30,13 +30,13 @@ class TestIISS(TestIISSBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-        term_period: int = self._config[ConfigKey.TERM_PERIOD]
+        calc_period: int = self._config[ConfigKey.IISS_CALCULATE_PERIOD]
         block_height: int = self._block_height
 
         # get iiss info
         response: dict = self.get_iiss_info()
         expected_response = {
-            'nextCalculation': block_height + term_period,
+            'nextCalculation': block_height + calc_period + 1,
             'nextPRepTerm': 0,
             'variable': {
                 "irep": self._config[ConfigKey.INITIAL_IREP],

@@ -24,6 +24,5 @@
 		"audit": false,
 		"deployerWhiteList": false,
 		"scorePackageValidator": false
-	},
-	"iissPRepList": []
+	}
 }
