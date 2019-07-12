@@ -24,7 +24,7 @@ from iconservice.base.address import ZERO_SCORE_ADDRESS, Address
 from iconservice.base.block import Block
 from iconservice.base.exception import InvalidBaseTransactionException
 from iconservice.icon_constant import ISSUE_CALCULATE_ORDER, ISSUE_EVENT_LOG_MAPPER, REV_IISS, \
-    ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType
+    ISCORE_EXCHANGE_RATE, REV_DECENTRALIZATION, ICX_IN_LOOP, PREP_MAIN_PREPS, IconScoreContextType, ConfigKey
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx.issue.base_transaction_creator import BaseTransactionCreator
 from iconservice.iiss.reward_calc.ipc.reward_calc_proxy import CalculateResponse
@@ -36,6 +36,11 @@ from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
 
 class TestIISSBaseTransactionValidation(TestIISSBase):
+    def _make_init_config(self) -> dict:
+        config: dict = super()._make_init_config()
+        config[ConfigKey.PREP_REGISTRATION_FEE] = 0
+        return config
+
     def setUp(self):
         super().setUp()
 

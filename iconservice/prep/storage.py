@@ -26,6 +26,38 @@ if TYPE_CHECKING:
 
 class Storage(StorageBase):
     TERM_KEY: bytes = b'term'
+    PREP_REGISTRATION_FEE_KEY: bytes = PREFIX + b'prf'
+
+    def __init__(self, db: 'ContextDatabase'):
+        super().__init__(db)
+        self.prep_registration_fee: Optional[int] = None
+
+    def open(self,
+             context: 'IconScoreContext',
+             prep_registration_fee: int):
+
+        prep_reg_fee_from_db: Optional[int] = self.get_prep_registration_fee(context)
+        if prep_reg_fee_from_db is None:
+            self.put_prep_registration_fee(context, prep_registration_fee)
+            self.prep_registration_fee = prep_registration_fee
+        else:
+            self.prep_registration_fee = prep_reg_fee_from_db
+
+    def get_prep_registration_fee(self, context: 'IconScoreContext') -> Optional[int]:
+        value: bytes = self._db.get(context, self.PREP_REGISTRATION_FEE_KEY)
+        if value:
+            data = MsgPackForDB.loads(value)
+            version: int = data[0]
+            assert version == 0
+            prep_reg_fee: int = data[1]
+            return prep_reg_fee
+        else:
+            return None
+
+    def put_prep_registration_fee(self, context: 'IconScoreContext', prep_reg_fee: int):
+        version = 0
+        data: bytes = MsgPackForDB.dumps([version, prep_reg_fee])
+        self._db.put(context, self.PREP_REGISTRATION_FEE_KEY, data)
 
     def get_prep(self, context: 'IconScoreContext', address: 'Address') -> 'PRep':
         key: bytes = PRep.make_key(address)
