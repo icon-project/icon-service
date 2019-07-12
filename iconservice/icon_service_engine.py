@@ -816,6 +816,8 @@ class IconServiceEngine(ContextContainer):
         context.block_batch = BlockBatch(Block.from_block(context.block))
         context.tx_batch = TransactionBatch()
         context.new_icon_score_mapper = IconScoreMapper()
+        context.preps: 'PRepContainer' = context.engine.prep.preps.copy(mutable=True)
+
         self._set_revision_to_context(context)
         # Fills the step_limit as the max step limit to proceed the transaction.
         step_limit: int = context.step_counter.max_step_limit

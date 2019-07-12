@@ -14,13 +14,13 @@
 # limitations under the License.
 
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP
+    PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_INITIAL_IREP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
 
-class TestIISSDecentralization(TestIISSBase):
-    def test_decentralization1(self):
+class TestIISSDecentralized(TestIISSBase):
+    def test_decentralized1(self):
         self.update_governance()
 
         # set Revision REV_IISS
@@ -126,3 +126,52 @@ class TestIISSDecentralization(TestIISSBase):
             "totalDelegated": expected_total_delegated
         }
         self.assertEqual(expected_response, response)
+
+    def test_estimate_step(self):
+        self.init_decentralized()
+
+        prep_id: int = PREP_MAIN_PREPS + 1
+        balance: int = 3000 * ICX_IN_LOOP
+        tx = self._make_icx_send_tx(self._genesis, self._addr_array[prep_id], balance)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set stake
+        tx: dict = self.create_set_stake_tx(self._addr_array[prep_id], 0)
+        self.estimate_step(tx)
+
+        # set delegation
+        tx: dict = self.create_set_delegation_tx(self._addr_array[prep_id], [(self._addr_array[prep_id], 0)])
+        self.estimate_step(tx)
+
+        # claim iscore
+        tx: dict = self.create_claim_tx(self._addr_array[prep_id])
+        self.estimate_step(tx)
+
+        # register prep
+        tx: dict = self.create_register_prep_tx(self._addr_array[prep_id],
+                                                public_key=f"0x{self.public_key_array[prep_id].hex()}")
+        self.estimate_step(tx)
+
+        # real register prep
+        tx: dict = self.create_register_prep_tx(self._addr_array[prep_id],
+                                                public_key=f"0x{self.public_key_array[prep_id].hex()}")
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set prep
+        tx: dict = self.create_set_prep_tx(self._addr_array[prep_id],
+                                           {"name": f"new{str(self._addr_array[prep_id])}"})
+        self.estimate_step(tx)
+
+        self.make_blocks_to_next_calculation()
+
+        # set governance variable
+        tx: dict = self.create_set_governance_variables(self._addr_array[prep_id], IISS_INITIAL_IREP)
+        self.estimate_step(tx)
+
+        # unregister prep
+        tx: dict = self.create_unregister_prep_tx(self._addr_array[prep_id])
+        self.estimate_step(tx)

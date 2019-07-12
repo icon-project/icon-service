@@ -24,8 +24,9 @@ from typing import List, Tuple, Dict, Union, Optional
 from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import ConfigKey, PREP_MAIN_AND_SUB_PREPS
-from tests.integrate_test.test_integrate_base import TestIntegrateBase
+from iconservice.icon_constant import ConfigKey, PREP_MAIN_AND_SUB_PREPS, REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, \
+    REV_DECENTRALIZATION
+from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY
 
 
 class TestIISSBase(TestIntegrateBase):
@@ -318,3 +319,143 @@ class TestIISSBase(TestIntegrateBase):
 
     def get_total_supply(self) -> int:
         return self._query({}, 'icx_getTotalSupply')
+
+    def init_decentralized(self):
+        # decentralized
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        main_preps = self._addr_array[:PREP_MAIN_PREPS]
+
+        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
+        init_balance: int = minimum_delegate_amount_for_decentralization * 10
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self._make_icx_send_tx(self._genesis,
+                                              self._addr_array[PREP_MAIN_PREPS + i],
+                                              init_balance)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        stake_amount: int = minimum_delegate_amount_for_decentralization
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_stake_tx(self._addr_array[PREP_MAIN_PREPS + i],
+                                                stake_amount)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self._make_icx_send_tx(self._genesis,
+                                              self._addr_array[i],
+                                              3000 * ICX_IN_LOOP)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # register PRep
+        tx_list: list = []
+        for i, address in enumerate(main_preps):
+            tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + i],
+                                                     [
+                                                         (
+                                                             self._addr_array[i],
+                                                             minimum_delegate_amount_for_decentralization
+                                                         )
+                                                     ])
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # get main prep
+        response: dict = self.get_main_prep_list()
+        expected_response: dict = {
+            "preps": [],
+            "totalDelegated": 0
+        }
+        self.assertEqual(expected_response, response)
+
+        # set Revision REV_IISS (decentralization)
+        tx: dict = self.create_set_revision_tx(REV_DECENTRALIZATION)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        # get main prep
+        response: dict = self.get_main_prep_list()
+        expected_preps: list = []
+        expected_total_delegated: int = 0
+        for address in main_preps:
+            expected_preps.append({
+                'address': address,
+                'delegated': minimum_delegate_amount_for_decentralization
+            })
+            expected_total_delegated += minimum_delegate_amount_for_decentralization
+        expected_response: dict = {
+            "preps": expected_preps,
+            "totalDelegated": expected_total_delegated
+        }
+        self.assertEqual(expected_response, response)
+
+        # delegate to PRep 0
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + i],
+                                                     [
+                                                         (
+                                                             self._addr_array[i],
+                                                             0
+                                                         )
+                                                     ])
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        self.make_blocks_to_next_calculation()
+
+        # get main prep
+        response: dict = self.get_main_prep_list()
+        expected_preps: list = []
+        for address in main_preps:
+            expected_preps.append({
+                'address': address,
+                'delegated': 0
+            })
+        expected_response: dict = {
+            "preps": expected_preps,
+            "totalDelegated": 0
+        }
+        self.assertEqual(expected_response, response)
