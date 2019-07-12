@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .icon_constant import ConfigKey, ICX_IN_LOOP
+from .icon_constant import ConfigKey, ICX_IN_LOOP, IISS_DAY_BLOCK
 
 default_icon_config = {
     "log": {
@@ -29,14 +29,14 @@ default_icon_config = {
         ConfigKey.SERVICE_DEPLOYER_WHITE_LIST: False,
         ConfigKey.SERVICE_SCORE_PACKAGE_VALIDATOR: False
     },
-    ConfigKey.IISS_REWARD_VARIABLE: {
+    ConfigKey.IISS_META_DATA: {
         ConfigKey.REWARD_MIN: 200,
         ConfigKey.REWARD_MAX: 1200,
         ConfigKey.REWARD_POINT: 7000,
+        ConfigKey.UN_STAKE_LOCK_MIN: IISS_DAY_BLOCK * 5,
+        ConfigKey.UN_STAKE_LOCK_MAX: IISS_DAY_BLOCK * 20
     },
-    # todo: unstaking lock period is temp value. should be changed
-    ConfigKey.IISS_UNSTAKE_LOCK_PERIOD: 43_120,
-    ConfigKey.IISS_CALCULATE_PERIOD: 43_120,
-    ConfigKey.TERM_PERIOD: 43_120,
+    ConfigKey.IISS_CALCULATE_PERIOD: IISS_DAY_BLOCK,
+    ConfigKey.TERM_PERIOD: IISS_DAY_BLOCK,
     ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP
 }

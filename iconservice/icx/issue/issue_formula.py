@@ -49,6 +49,8 @@ class IssueFormula(object):
     @staticmethod
     def calculate_rrep(rmin: int, rmax: int, rpoint: int, total_supply: int, total_delegated: int) -> int:
         stake_percentage: float = total_delegated / total_supply * IISS_MAX_REWARD_RATE
+        if stake_percentage >= rpoint:
+            return rmin
 
         first_operand: float = (rmax - rmin) / (rpoint ** 2)
         second_operand: float = (stake_percentage - rpoint) ** 2

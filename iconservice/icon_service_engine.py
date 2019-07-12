@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from .builtin_scores.governance.governance import Governance
     from iconcommons.icon_config import IconConfig
     from .prep.data import PRep, PRepContainer
-    from .iiss.storage import Reward
+    from .iiss.storage import RewardRate
 
 
 class IconServiceEngine(ContextContainer):
@@ -137,8 +137,7 @@ class IconServiceEngine(ContextContainer):
                                      log_dir,
                                      rc_data_path,
                                      rc_socket_path,
-                                     conf[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD],
-                                     conf[ConfigKey.IISS_REWARD_VARIABLE],
+                                     conf[ConfigKey.IISS_META_DATA],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.INITIAL_IREP])
@@ -174,8 +173,7 @@ class IconServiceEngine(ContextContainer):
                                 log_dir: str,
                                 rc_data_path: str,
                                 rc_socket_path: str,
-                                unstake_lock_period: int,
-                                reward_meta_data: dict,
+                                iiss_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
                                 irep: int):
@@ -196,8 +194,7 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.fee.open(context)
         IconScoreContext.storage.icx.open(context)
         IconScoreContext.storage.iiss.open(context,
-                                           unstake_lock_period,
-                                           reward_meta_data,
+                                           iiss_meta_data,
                                            calc_period)
         IconScoreContext.storage.prep.open(context)
         IconScoreContext.storage.issue.open(context)
@@ -1008,10 +1005,10 @@ class IconServiceEngine(ContextContainer):
 
         response = dict()
 
-        reward: 'Reward' = context.storage.iiss.get_reward_prep(context)
+        reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
         response['variable'] = dict()
         response['variable']['irep'] = context.engine.prep.term.irep
-        response['variable']['rrep'] = reward.reward_rate
+        response['variable']['rrep'] = reward_rate.reward_prep
 
         check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
         if check_end_block_height is None:

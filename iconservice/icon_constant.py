@@ -127,7 +127,6 @@ class ConfigKey:
     AMQP_TARGET = 'amqpTarget'
     CONFIG = 'config'
     TBEARS_MODE = 'tbearsMode'
-    IISS_UNSTAKE_LOCK_PERIOD = "iissUnstakeLockPeriod"
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
     INITIAL_IREP = 'initialIRep'
@@ -136,11 +135,13 @@ class ConfigKey:
     LOG = 'log'
     LOG_FILE_PATH = 'filePath'
 
-    # IISS VARIABLE
-    IISS_REWARD_VARIABLE = "iissRewardVariable"
+    # IISS meta data
+    IISS_META_DATA = "iissMetaData"
     REWARD_POINT = 'rewardPoint'
     REWARD_MIN = "rewardMin"
     REWARD_MAX = "rewardMAX"
+    UN_STAKE_LOCK_MIN = "lockMin"
+    UN_STAKE_LOCK_MAX = "lockMax"
 
 
 class EnableThreadFlag(IntFlag):
@@ -225,6 +226,7 @@ IISS_MAX_IREP_PERCENTAGE = 14
 IISS_INITIAL_IREP = 50_000 * ICX_IN_LOOP
 
 IISS_ANNUAL_BLOCK = 15_768_000
+IISS_DAY_BLOCK = 43_120
 IISS_MONTH = 12
 
 ISCORE_EXCHANGE_RATE = 1_000

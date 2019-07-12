@@ -26,7 +26,11 @@ class TestIISSStake(TestIISSBase):
 
     def _make_init_config(self) -> dict:
         config: dict = super()._make_init_config()
-        config[ConfigKey.IISS_UNSTAKE_LOCK_PERIOD] = 10
+        config[ConfigKey.IISS_META_DATA] = {
+            ConfigKey.UN_STAKE_LOCK_MIN: 10,
+            ConfigKey.UN_STAKE_LOCK_MAX: 20
+        }
+
         return config
 
     def test_full_stake(self):

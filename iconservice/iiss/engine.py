@@ -27,7 +27,7 @@ from ..base.address import ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, InvalidRequestException, OutOfBalanceException, FatalException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
-from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG
+from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, IISS_MAX_REWARD_RATE
 from ..icon_constant import PREP_MAIN_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from ..precommit_data_manager import PrecommitData
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
-    from .storage import Reward
+    from ..iiss.storage import RewardRate
     from ..prep.data.prep import PRep
     from ..icx import IcxStorage
 
@@ -77,6 +77,7 @@ class Engine(EngineBase):
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
         self._listeners: List['EngineListener'] = []
+        self.iiss_meta_data: 'IISSMetaData' = None
 
     def open(self, context: 'IconScoreContext', log_dir: str, data_path: str, socket_path: str):
         self._init_reward_calc_proxy(log_dir, data_path, socket_path)
@@ -140,6 +141,7 @@ class Engine(EngineBase):
         address: 'Address' = context.tx.origin
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_SET_STAKE)
         stake: int = ret_params[ConstantKeys.VALUE]
+        total_stake: int = context.storage.iiss.get_total_stake(context)
 
         if not isinstance(stake, int) or stake < 0:
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
@@ -147,10 +149,18 @@ class Engine(EngineBase):
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
         self._check_from_can_charge_fee_v3(context, stake, account.balance, account.total_stake)
 
-        unstake_lock_period = context.storage.iiss.get_unstake_lock_period(context)
+        unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
+                                                                       context.storage.iiss.lock_max,
+                                                                       context.storage.iiss.reward_point,
+                                                                       total_stake,
+                                                                       context.total_supply)
+        # subtract account's staked amount from the total stake
+        total_stake -= account.stake
         account.set_stake(stake, unstake_lock_period)
+        # add account's newly set staked amount from the total stake
+        total_stake += account.stake
         context.storage.icx.put_account(context, account)
-
+        context.storage.iiss.put_total_stake(context, total_stake)
         # TODO tx_result make if needs
         for listener in self._listeners:
             listener.on_set_stake(context, account)
@@ -161,6 +171,20 @@ class Engine(EngineBase):
         if balance + total_stake < stake + fee:
             raise OutOfBalanceException(
                 f'Out of balance: balance({balance}) + total_stake({total_stake}) < stake({stake}) + fee({fee})')
+
+    @staticmethod
+    def _calculate_unstake_lock_period(lmin: int,
+                                       lmax: int,
+                                       rpoint: int,
+                                       total_stake: int,
+                                       total_supply: int):
+        stake_percentage: float = total_stake / total_supply
+        if stake_percentage >= rpoint / IISS_MAX_REWARD_RATE:
+            return lmin
+
+        first_operand: float = (lmax - lmin) / (rpoint / IISS_MAX_REWARD_RATE) ** 2
+        second_operand: float = (stake_percentage - (rpoint / IISS_MAX_REWARD_RATE)) ** 2
+        return int(first_operand * second_operand) + lmin
 
     def handle_get_stake(self, context: 'IconScoreContext', params: dict) -> dict:
 
@@ -534,22 +558,22 @@ class Engine(EngineBase):
     def _put_gv(cls, context: 'IconScoreContext'):
         current_total_supply = context.storage.icx.get_total_supply(context)
         current_total_prep_delegated: int = context.preps.total_prep_delegated
-        reward_prep: 'Reward' = context.storage.iiss.get_reward_prep(context)
 
-        reward_rep: int = IssueFormula.calculate_rrep(reward_prep.reward_min,
-                                                      reward_prep.reward_max,
-                                                      reward_prep.reward_point,
-                                                      current_total_supply,
-                                                      current_total_prep_delegated)
+        reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
+        reward_prep: int = IssueFormula.calculate_rrep(context.storage.iiss.reward_min,
+                                                       context.storage.iiss.reward_max,
+                                                       context.storage.iiss.reward_point,
+                                                       current_total_supply,
+                                                       current_total_prep_delegated)
 
+        reward_rate.reward_prep = reward_prep
         irep: int = context.engine.prep.term.irep
         calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
-        reward_prep.reward_rate = reward_rep
 
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(context.block.height,
                                                                               calculated_irep,
-                                                                              reward_rep)
-        context.storage.iiss.put_reward_prep(context, reward_prep)
+                                                                              reward_prep)
+        context.storage.iiss.put_reward_rate(context, reward_rate)
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
