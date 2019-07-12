@@ -16,7 +16,7 @@
 
 """IconServiceEngine testcase
 """
-
+from copy import deepcopy
 from typing import TYPE_CHECKING, Union, Optional, Any, List
 from unittest import TestCase
 from unittest.mock import Mock
@@ -68,7 +68,8 @@ class TestIntegrateBase(TestCase):
         self._block_height = -1
         self._prev_block_hash = None
 
-        config = IconConfig("", default_icon_config)
+        config = IconConfig("", deepcopy(default_icon_config))
+
         config.load()
         config.update_conf({ConfigKey.BUILTIN_SCORE_OWNER: str(self._admin)})
         config.update_conf({ConfigKey.SERVICE: {ConfigKey.SERVICE_AUDIT: False,
