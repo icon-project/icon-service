@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     from .prep.data import PRep, PRepContainer
     from .iiss.storage import RewardRate
 
+
 class IconServiceEngine(ContextContainer):
     """The entry of all icon service related components
 
