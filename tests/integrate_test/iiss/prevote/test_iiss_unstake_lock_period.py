@@ -17,10 +17,10 @@
 """IconScoreEngine testcase
 """
 
-from iconservice.icon_constant import ConfigKey, REV_IISS, ICX_IN_LOOP, FIXED_FEE
+from iconservice.icon_constant import REV_IISS, ICX_IN_LOOP
 from tests.iiss.test_iiss_engine import EXPECTED_LOCK_PERIOD_PRE_STAKE_PERCENT
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
-from tests.integrate_test.test_integrate_base import MINIMUM_STEP_LIMIT, TOTAL_SUPPLY
+from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
 
 class TestIISSUnStakeLockPeriod(TestIISSBase):
