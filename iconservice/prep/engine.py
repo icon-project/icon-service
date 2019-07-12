@@ -17,16 +17,17 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
+
 from .data.prep import PRep
 from .data.prep_container import PRepContainer
 from .term import Term
+from .validator import validate_prep_data, validate_irep
 from ..base.ComponentBase import EngineBase
 from ..base.address import Address, ZERO_SCORE_ADDRESS
-from ..base.exception import InvalidParamsException, InvalidRequestException, MethodNotFoundException
+from ..base.exception import InvalidParamsException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MIN_IREP, IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_ANNUAL_BLOCK, \
-    IISS_MAX_IREP_PERCENTAGE
+from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
 from ..icon_constant import PrepResultState, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -131,6 +132,8 @@ class Engine(EngineBase, IISSEngineListener):
             raise InvalidParamsException(f"{str(address)} has been already registered")
 
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
+        validate_prep_data(address, ret_params)
+
         account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
@@ -270,6 +273,8 @@ class Engine(EngineBase, IISSEngineListener):
 
         kwargs: dict = TypeConverter.convert(params, ParamType.IISS_SET_PREP)
 
+        validate_prep_data(context.tx.origin, kwargs, True)
+
         if "p2pEndPoint" in kwargs:
             p2p_end_point: str = kwargs["p2pEndPoint"]
             del kwargs["p2pEndPoint"]
@@ -311,7 +316,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Update incentive rep
         irep: int = kwargs["irep"]
-        self._validate_irep(context, irep, prep)
+        validate_irep(context, irep, prep)
         prep.set_irep(irep, context.block.height)
 
         # Update the changed properties of a P-Rep to stateDB
@@ -325,33 +330,6 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[address, irep],
             indexed_args_count=1
         )
-
-    def _validate_irep(self, context: 'IconScoreContext', irep: int, prep: 'PRep'):
-        """Validate irep
-
-        :param context:
-        :param irep:
-        :param prep:
-        :return:
-        """
-        prev_irep: int = prep.irep
-        prev_irep_block_height: int = prep.irep_block_height
-
-        if prev_irep_block_height >= self.term.start_block_height:
-            raise InvalidRequestException("Irep can be changed only once during a term")
-
-        min_irep: int = max(prev_irep * 8 // 10, IISS_MIN_IREP)   # 80% of previous irep
-        max_irep: int = prev_irep * 12 // 10  # 120% of previous irep.
-
-        if min_irep <= irep <= max_irep:
-            beta: int = context.engine.issue.get_limit_inflation_beta(irep)
-            # Prevent irep from causing to issue more than IISS_MAX_IREP% of total supply for a year
-            if beta * IISS_ANNUAL_BLOCK > context.engine.prep.term.total_supply * IISS_MAX_IREP_PERCENTAGE // 100:
-                raise InvalidParamsException(f"Irep out of range: beta({beta}) * ANNUAL_BLOCK > "
-                                             f"prev_term_total_supply({context.engine.prep.term.total_supply}) * "
-                                             f"{IISS_MAX_IREP_PERCENTAGE} // 100")
-        else:
-            raise InvalidParamsException(f"Irep out of range: {irep}, {prev_irep}")
 
     def handle_unregister_prep(self, context: 'IconScoreContext', _params: dict):
         """Unregister a P-Rep
