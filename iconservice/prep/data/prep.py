@@ -45,7 +45,7 @@ class PRep(Sortable):
         EMAIL = auto()
         WEBSITE = auto()
         DETAILS = auto()
-        P2P_END_POINT = auto()
+        P2P_ENDPOINT = auto()
         PUBLIC_KEY = auto()
         IREP = auto()
         IREP_BLOCK_HEIGHT = auto()
@@ -315,7 +315,7 @@ class PRep(Sortable):
             email=items[cls.Index.EMAIL],
             website=items[cls.Index.WEBSITE],
             details=items[cls.Index.DETAILS],
-            p2p_end_point=items[cls.Index.P2P_END_POINT],
+            p2p_end_point=items[cls.Index.P2P_ENDPOINT],
             public_key=items[cls.Index.PUBLIC_KEY],
             irep=items[cls.Index.IREP],
             irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
