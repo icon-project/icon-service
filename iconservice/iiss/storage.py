@@ -90,9 +90,9 @@ class Storage(StorageBase):
         self._db.put(context, self.IISS_META_DATA_KEY, constant.to_bytes())
 
     def get_meta_data(self, context: 'IconScoreContext') -> Optional['IISSMetaData']:
-        constant: Optional[bytes] = self._db.get(context, self.IISS_META_DATA_KEY)
-        if constant:
-            return IISSMetaData.from_bytes(constant)
+        value: Optional[bytes] = self._db.get(context, self.IISS_META_DATA_KEY)
+        if value:
+            return IISSMetaData.from_bytes(value)
         else:
             return None
 
@@ -100,9 +100,9 @@ class Storage(StorageBase):
         self._db.put(context, self.REWARD_RATE_KEY, reward_rate.to_bytes())
 
     def get_reward_rate(self, context: 'IconScoreContext') -> Optional['RewardRate']:
-        reward_rate: Optional[bytes] = self._db.get(context, self.REWARD_RATE_KEY)
-        if reward_rate:
-            return RewardRate.from_bytes(reward_rate)
+        value: Optional[bytes] = self._db.get(context, self.REWARD_RATE_KEY)
+        if value:
+            return RewardRate.from_bytes(value)
         else:
             return RewardRate(reward_prep=None)
 
