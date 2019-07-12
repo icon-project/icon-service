@@ -168,7 +168,7 @@ class ConstantKeys:
     EMAIL = 'email'
     WEBSITE = 'website'
     DETAILS = 'details'
-    P2P_END_POINT = 'p2pEndPoint'
+    P2P_ENDPOINT = 'p2pEndpoint'
     PUBLIC_KEY = 'publicKey'
     PREP_ID = 'id'
     START_RANKING = "startRanking"
@@ -355,7 +355,7 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
-    ConstantKeys.P2P_END_POINT: ValueType.STRING,
+    ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
     ConstantKeys.PUBLIC_KEY: ValueType.BYTES
 }
 
@@ -364,7 +364,7 @@ type_convert_templates[ParamType.IISS_SET_PREP] = {
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,
-    ConstantKeys.P2P_END_POINT: ValueType.STRING,
+    ConstantKeys.P2P_ENDPOINT: ValueType.STRING,
 }
 
 type_convert_templates[ParamType.IISS_UNREG_PREP] = type_convert_templates[ParamType.IISS_CLAIM_ISCORE]

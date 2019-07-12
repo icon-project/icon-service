@@ -206,7 +206,7 @@ class Engine(EngineBase, IISSEngineListener):
                 prep_info_as_dict = OrderedDict()
                 prep_info_as_dict[ConstantKeys.PREP_ID] = prep.address
                 prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
-                prep_info_as_dict[ConstantKeys.P2P_END_POINT] = prep.p2p_end_point
+                prep_info_as_dict[ConstantKeys.P2P_ENDPOINT] = prep.p2p_endpoint
                 preps_as_list.append(prep_info_as_dict)
                 prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
             prep_as_dict["preps"] = preps_as_list
@@ -275,10 +275,10 @@ class Engine(EngineBase, IISSEngineListener):
 
         validate_prep_data(context.tx.origin, kwargs, True)
 
-        if "p2pEndPoint" in kwargs:
-            p2p_end_point: str = kwargs["p2pEndPoint"]
-            del kwargs["p2pEndPoint"]
-            kwargs["p2p_end_point"] = p2p_end_point
+        if ConstantKeys.P2P_ENDPOINT in kwargs:
+            p2p_endpoint: str = kwargs[ConstantKeys.P2P_ENDPOINT]
+            del kwargs[ConstantKeys.P2P_ENDPOINT]
+            kwargs["p2p_endpoint"] = p2p_endpoint
 
         # Update registration info
         prep.set(**kwargs)

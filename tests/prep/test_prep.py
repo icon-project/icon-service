@@ -40,7 +40,7 @@ def prep():
         email=EMAIL,
         website=WEBSITE,
         details=DETAILS,
-        p2p_end_point=P2P_END_POINT,
+        p2p_endpoint=P2P_END_POINT,
         irep=IREP,
         irep_block_height=BLOCK_HEIGHT,
         block_height=BLOCK_HEIGHT,
@@ -51,7 +51,7 @@ def prep():
     assert prep.email == EMAIL
     assert prep.website == WEBSITE
     assert prep.details == DETAILS
-    assert prep.p2p_end_point == P2P_END_POINT
+    assert prep.p2p_endpoint == P2P_END_POINT
 
     return prep
 
@@ -83,7 +83,7 @@ def test_set_ok(prep):
         "email": "best@example.com",
         "website": "https://node.example.com",
         "details": "https://node.example.com/details",
-        "p2p_end_point": "https://node.example.com:7100",
+        "p2p_endpoint": "https://node.example.com:7100",
     }
 
     prep.set(**kwargs)
@@ -91,7 +91,7 @@ def test_set_ok(prep):
     assert prep.email == kwargs["email"]
     assert prep.website == kwargs["website"]
     assert prep.details == kwargs["details"]
-    assert prep.p2p_end_point == kwargs["p2p_end_point"]
+    assert prep.p2p_endpoint == kwargs["p2p_endpoint"]
 
 
 def test_set_error(prep):

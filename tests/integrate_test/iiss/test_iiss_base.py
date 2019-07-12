@@ -146,7 +146,7 @@ class TestIISSBase(TestIntegrateBase):
             ConstantKeys.EMAIL: f"{name}@example.com",
             ConstantKeys.WEBSITE: f"https://{name}.example.com",
             ConstantKeys.DETAILS: f"https://{name}.example.com/details",
-            ConstantKeys.P2P_END_POINT: f"{name}.example.com:7100",
+            ConstantKeys.P2P_ENDPOINT: f"{name}.example.com:7100",
             ConstantKeys.PUBLIC_KEY: public_key
         }
 

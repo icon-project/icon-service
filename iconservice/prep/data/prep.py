@@ -45,7 +45,7 @@ class PRep(Sortable):
         EMAIL = auto()
         WEBSITE = auto()
         DETAILS = auto()
-        P2P_END_POINT = auto()
+        P2P_ENDPOINT = auto()
         PUBLIC_KEY = auto()
         IREP = auto()
         IREP_BLOCK_HEIGHT = auto()
@@ -67,7 +67,7 @@ class PRep(Sortable):
             email: str = "",
             website: str = "",
             details: str = "",
-            p2p_end_point: str = "",
+            p2p_endpoint: str = "",
             public_key: bytes = b"",
             irep: int = 0,
             irep_block_height: int = 0,
@@ -88,7 +88,7 @@ class PRep(Sortable):
         :param website:
         :param details:
         :param public_key:
-        :param p2p_end_point:
+        :param p2p_endpoint:
         :param irep:
         :param delegated:
         :param block_height:
@@ -114,7 +114,7 @@ class PRep(Sortable):
         self.details: str = details
         # information required for PRep Consensus
         self._public_key: bytes = public_key
-        self.p2p_end_point: str = p2p_end_point
+        self.p2p_endpoint: str = p2p_endpoint
         # Governance Variables
         self._irep: int = irep
         self._irep_block_height: int = irep_block_height
@@ -230,7 +230,7 @@ class PRep(Sortable):
             email: str = None,
             website: str = None,
             details: str = None,
-            p2p_end_point: str = None):
+            p2p_endpoint: str = None):
         """Update PRep properties on processing setPRep JSON-RPC API
         Not allowed to update some properties which can affect PRep order or are immutable
 
@@ -238,7 +238,7 @@ class PRep(Sortable):
         :param email:
         :param website:
         :param details:
-        :param p2p_end_point:
+        :param p2p_endpoint:
         """
         self._check_access_permission()
 
@@ -247,7 +247,7 @@ class PRep(Sortable):
             "email": email,
             "website": website,
             "details": details,
-            "p2p_end_point": p2p_end_point
+            "p2p_endpoint": p2p_endpoint
         }
 
         for key, value in kwargs.items():
@@ -290,7 +290,7 @@ class PRep(Sortable):
             self.email,
             self.website,
             self.details,
-            self.p2p_end_point,
+            self.p2p_endpoint,
             self._public_key,
 
             self._irep,
@@ -315,7 +315,7 @@ class PRep(Sortable):
             email=items[cls.Index.EMAIL],
             website=items[cls.Index.WEBSITE],
             details=items[cls.Index.DETAILS],
-            p2p_end_point=items[cls.Index.P2P_END_POINT],
+            p2p_endpoint=items[cls.Index.P2P_ENDPOINT],
             public_key=items[cls.Index.PUBLIC_KEY],
             irep=items[cls.Index.IREP],
             irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
@@ -347,7 +347,7 @@ class PRep(Sortable):
             details=data.get(ConstantKeys.DETAILS, ""),
 
             # Required items
-            p2p_end_point=data[ConstantKeys.P2P_END_POINT],
+            p2p_endpoint=data[ConstantKeys.P2P_ENDPOINT],
             public_key=data[ConstantKeys.PUBLIC_KEY],
             irep=IISS_INITIAL_IREP,
             irep_block_height=block_height,
@@ -365,7 +365,7 @@ class PRep(Sortable):
                 ConstantKeys.EMAIL: self.email,
                 ConstantKeys.WEBSITE: self.website,
                 ConstantKeys.DETAILS: self.details,
-                ConstantKeys.P2P_END_POINT: self.p2p_end_point,
+                ConstantKeys.P2P_ENDPOINT: self.p2p_endpoint,
                 ConstantKeys.PUBLIC_KEY: self.public_key,
                 ConstantKeys.IREP: self._irep,
                 ConstantKeys.IREP_BLOCK_HEIGHT: self._irep_block_height

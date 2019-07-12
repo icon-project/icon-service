@@ -110,7 +110,7 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.EMAIL: email,
             ConstantKeys.WEBSITE: website,
             ConstantKeys.DETAILS: json,
-            ConstantKeys.P2P_END_POINT: ip,
+            ConstantKeys.P2P_ENDPOINT: ip,
             ConstantKeys.PUBLIC_KEY: public_key.hex(),
         }
 
@@ -119,7 +119,7 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
         self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
-        self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
+        self.assertEqual(ip, ret_params[ConstantKeys.P2P_ENDPOINT])
         self.assertEqual(public_key, ret_params[ConstantKeys.PUBLIC_KEY])
 
     def test_unreg_prep(self):
@@ -141,7 +141,7 @@ class TestTypeConverter(unittest.TestCase):
             ConstantKeys.EMAIL: email,
             ConstantKeys.WEBSITE: website,
             ConstantKeys.DETAILS: json,
-            ConstantKeys.P2P_END_POINT: ip,
+            ConstantKeys.P2P_ENDPOINT: ip,
         }
 
         ret_params = TypeConverter.convert(request, ParamType.IISS_SET_PREP)
@@ -149,7 +149,7 @@ class TestTypeConverter(unittest.TestCase):
         self.assertEqual(email, ret_params[ConstantKeys.EMAIL])
         self.assertEqual(website, ret_params[ConstantKeys.WEBSITE])
         self.assertEqual(json, ret_params[ConstantKeys.DETAILS])
-        self.assertEqual(ip, ret_params[ConstantKeys.P2P_END_POINT])
+        self.assertEqual(ip, ret_params[ConstantKeys.P2P_ENDPOINT])
 
     def test_set_governance_variable(self):
         irep = 12345
