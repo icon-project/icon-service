@@ -16,11 +16,14 @@ import copy
 from enum import auto, Flag, IntEnum
 from typing import TYPE_CHECKING, Tuple
 
+import iso3166
+
 from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PRepStatus, PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, IISS_INITIAL_IREP
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, IISS_INITIAL_IREP
+from ...icon_constant import PRepGrade, PRepStatus
 from ...utils.msgpack_for_db import MsgPackForDB
 
 if TYPE_CHECKING:
@@ -36,13 +39,17 @@ class PRepFlag(Flag):
 class PRep(Sortable):
     PREFIX: bytes = b"prep"
     _VERSION: int = 0
+    _UNKNOWN_COUNTRY = iso3166.Country(u"Unknown", "ZZ", "ZZZ", "000", u"Unknown")
 
     class Index(IntEnum):
         VERSION = 0
 
         ADDRESS = auto()
         STATUS = auto()
+        GRADE = auto()
         NAME = auto()
+        COUNTRY = auto()
+        CITY = auto()
         EMAIL = auto()
         WEBSITE = auto()
         DETAILS = auto()
@@ -64,7 +71,10 @@ class PRep(Sortable):
             *,
             flags: 'PRepFlag' = PRepFlag.NONE,
             status: 'PRepStatus' = PRepStatus.ACTIVE,
+            grade: 'PRepGrade' = PRepGrade.CANDIDATE,
             name: str = "",
+            country: str = "",
+            city: str = "Unknown",
             email: str = "",
             website: str = "",
             details: str = "",
@@ -84,7 +94,11 @@ class PRep(Sortable):
 
         :param address:
         :param flags:
+        :param status:
+        :param grade:
         :param name:
+        :param country: alpha3 country code (ISO3166)
+        :param city:
         :param email:
         :param website:
         :param details:
@@ -108,8 +122,12 @@ class PRep(Sortable):
 
         # status
         self._status: 'PRepStatus' = status
+        self._grade: 'PRepGrade' = grade
+
         # registration info
         self.name: str = name
+        self._country: 'iso3166.Country' = self._get_country(country)
+        self.city: str = city
         self.email: str = email
         self.website: str = website
         self.details: str = details
@@ -136,6 +154,29 @@ class PRep(Sortable):
     def status(self, value: 'PRepStatus'):
         assert self._status == PRepStatus.ACTIVE
         self._status = value
+        
+    @property
+    def grade(self) -> 'PRepGrade':
+        """The grade of P-Rep
+        0: MAIN
+        1: SUB
+        2: CANDIDATE
+
+        :return:
+        """
+        return self._grade
+
+    @property
+    def country(self) -> str:
+        return self._country.alpha3
+
+    @country.setter
+    def country(self, alpha3_country_code: str):
+        self._country = self._get_country(alpha3_country_code)
+
+    @classmethod
+    def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
+        return iso3166.countries_by_alpha3.get(alpha3_country_code, cls._UNKNOWN_COUNTRY)
 
     def update_productivity(self, is_validate: bool):
         """Update the block validation statistics of P-Rep
@@ -228,6 +269,8 @@ class PRep(Sortable):
 
     def set(self, *,
             name: str = None,
+            country: str = None,
+            city: str = None,
             email: str = None,
             website: str = None,
             details: str = None,
@@ -236,6 +279,8 @@ class PRep(Sortable):
         Not allowed to update some properties which can affect PRep order or are immutable
 
         :param name:
+        :param country: alpha3 country code
+        :param city:
         :param email:
         :param website:
         :param details:
@@ -245,6 +290,8 @@ class PRep(Sortable):
 
         kwargs = {
             "name": name,
+            "country": country,
+            "city": city,
             "email": email,
             "website": website,
             "details": details,
@@ -287,7 +334,9 @@ class PRep(Sortable):
             self._VERSION,
             self.address,
             self.status.value,
+            self.grade.value,
             self.name,
+            self.country,
             self.email,
             self.website,
             self.details,
@@ -312,7 +361,10 @@ class PRep(Sortable):
         return PRep(
             address=items[cls.Index.ADDRESS],
             status=PRepStatus(items[cls.Index.STATUS]),
+            grade=PRepGrade(items[cls.Index.GRADE]),
             name=items[cls.Index.NAME],
+            country=items[cls.Index.COUNTRY],
+            city=items[cls.Index.CITY],
             email=items[cls.Index.EMAIL],
             website=items[cls.Index.WEBSITE],
             details=items[cls.Index.DETAILS],
@@ -340,9 +392,12 @@ class PRep(Sortable):
             flags=PRepFlag.NONE,
             address=address,
             status=PRepStatus.ACTIVE,
+            grade=PRepGrade.CANDIDATE,
 
             # Optional items
             name=data.get(ConstantKeys.NAME, ""),
+            country=data.get(ConstantKeys.COUNTRY, ""),
+            city=data.get(ConstantKeys.CITY, ""),
             email=data.get(ConstantKeys.EMAIL, ""),
             website=data.get(ConstantKeys.WEBSITE, ""),
             details=data.get(ConstantKeys.DETAILS, ""),
@@ -361,8 +416,11 @@ class PRep(Sortable):
     def to_dict(self) -> dict:
         return {
             "status": self._status.value,
+            "grade": self._grade.value,
             "registration": {
                 ConstantKeys.NAME: self.name,
+                ConstantKeys.COUNTRY: self.country,
+                ConstantKeys.CITY: self.city,
                 ConstantKeys.EMAIL: self.email,
                 ConstantKeys.WEBSITE: self.website,
                 ConstantKeys.DETAILS: self.details,

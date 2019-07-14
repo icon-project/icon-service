@@ -165,6 +165,8 @@ class ConstantKeys:
 
     # IISS
     DELEGATIONS = "delegations"
+    COUNTRY = "country"
+    CITY = "city"
     EMAIL = 'email'
     WEBSITE = 'website'
     DETAILS = 'details'
@@ -361,6 +363,8 @@ type_convert_templates[ParamType.IISS_REG_PREP] = {
 
 type_convert_templates[ParamType.IISS_SET_PREP] = {
     ConstantKeys.NAME: ValueType.STRING,
+    ConstantKeys.COUNTRY: ValueType.STRING,
+    ConstantKeys.CITY: ValueType.STRING,
     ConstantKeys.EMAIL: ValueType.STRING,
     ConstantKeys.WEBSITE: ValueType.STRING,
     ConstantKeys.DETAILS: ValueType.STRING,

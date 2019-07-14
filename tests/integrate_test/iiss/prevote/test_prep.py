@@ -23,7 +23,7 @@ from copy import deepcopy
 from iconservice.base.address import Address
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import IISS_INITIAL_IREP
+from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus
 from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ConfigKey, IISS_MAX_DELEGATIONS, ICX_IN_LOOP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
@@ -97,6 +97,8 @@ class TestIntegratePrep(TestIISSBase):
                             "irep": self._config[ConfigKey.INITIAL_IREP],
                             "irepUpdateBlockHeight": register_block_height,
                             "name": expected_params['name'],
+                            "country": expected_params["country"],
+                            "city": expected_params["city"],
                             "p2pEndpoint": expected_params['p2pEndpoint'],
                             "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                             "website": expected_params['website']
@@ -106,7 +108,8 @@ class TestIntegratePrep(TestIISSBase):
                             "totalBlocks": 0,
                             "validatedBlocks": 0
                         },
-                    "status": 0
+                    "status": PRepStatus.ACTIVE.value,
+                    "grade": PRepGrade.CANDIDATE.value
                 }
             self.assertEqual(expected_response, response)
 
@@ -139,6 +142,8 @@ class TestIntegratePrep(TestIISSBase):
                             "irep": self._config[ConfigKey.INITIAL_IREP],
                             "irepUpdateBlockHeight": register_block_height,
                             "name": f"new{str(self._addr_array[i])}",
+                            "country": expected_params["country"],
+                            "city": expected_params["city"],
                             "p2pEndpoint": expected_params['p2pEndpoint'],
                             "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
                             "website": expected_params['website']
@@ -148,7 +153,8 @@ class TestIntegratePrep(TestIISSBase):
                             "totalBlocks": 0,
                             "validatedBlocks": 0
                         },
-                    "status": 0
+                    "status": PRepStatus.ACTIVE.value,
+                    "grade": PRepGrade.CANDIDATE.value
                 }
             self.assertEqual(expected_response, response)
 
