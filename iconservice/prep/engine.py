@@ -131,6 +131,13 @@ class Engine(EngineBase, IISSEngineListener):
         if context.preps.contains(address, inactive_preps_included=True):
             raise InvalidParamsException(f"{str(address)} has been already registered")
 
+        # Check Prep registration fee
+        value = context.msg.value
+        if value != context.storage.prep.prep_registration_fee:
+            raise InvalidParamsException(f"Invalid prep registration fee. "
+                                         f"Registration Fee Must be {context.storage.prep.prep_registration_fee} "
+                                         f"not {value}")
+
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
         validate_prep_data(address, ret_params)
 
@@ -153,6 +160,9 @@ class Engine(EngineBase, IISSEngineListener):
 
         # Update rcDB
         self._put_reg_prep_in_rc_db(context, address)
+
+        # Burn Prep registration fee
+        context.engine.issue.burn(context, address, value)
 
         # EventLog
         EventLogEmitter.emit_event_log(

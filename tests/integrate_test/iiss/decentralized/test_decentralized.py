@@ -14,12 +14,17 @@
 # limitations under the License.
 
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_INITIAL_IREP
+    PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_INITIAL_IREP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
 
 class TestIISSDecentralized(TestIISSBase):
+    def _make_init_config(self) -> dict:
+        config: dict = super()._make_init_config()
+        config[ConfigKey.PREP_REGISTRATION_FEE] = 0
+        return config
+
     def test_decentralized1(self):
         self.update_governance()
 

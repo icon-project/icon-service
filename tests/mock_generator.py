@@ -43,7 +43,7 @@ ICX_STORAGE_PATH = 'iconservice.icx.storage'
 DB_FACTORY_PATH = 'iconservice.database.factory.ContextDatabaseFactory'
 ReqData = namedtuple("ReqData", "tx_hash, from_, to_, value, data_type, data")
 QueryData = namedtuple("QueryData", "from_, to_, data_type, data")
-IISS_DB_PATH = 'iconservice.iiss.reward_calc.db'
+RC_DB_PATH = 'iconservice.iiss.reward_calc.db'
 IISS_RC_DATA_STORAGE_PATH = 'iconservice.iiss.reward_calc.storage'
 IISS_ENGINE_PATH = 'iconservice.iiss.engine'
 IISS_STORAGE_PATH = 'iconservice.iiss.storage'
@@ -65,7 +65,7 @@ def generate_inner_task(revision=0):
 @patch(f'{SERVICE_ENGINE_PATH}._load_builtin_scores')
 @patch(f'{ICX_ENGINE_PATH}.Engine.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{IISS_DB_PATH}.Database.from_path')
+@patch(f'{RC_DB_PATH}.Database.from_path')
 @patch(f'{IISS_RC_DATA_STORAGE_PATH}.Storage._load_last_transaction_index')
 @patch(f'{IISS_ENGINE_PATH}.Engine.open')
 @patch(f'{IISS_STORAGE_PATH}.Storage.open')
@@ -77,13 +77,13 @@ def _create_inner_task(
         iiss_storage_open,
         iiss_engine_open,
         load_last_tx_index,
-        iiss_db_from_path,
+        rc_db_from_path,
         db_factory_create_by_name,
         icx_engine_open,
         service_engine_load_builtin_scores,
         service_engine_init_global_value_by_governance_score):
     state_db = {}
-    iiss_db = {}
+    rc_db = {}
 
     def state_put(self, key, value):
         state_db[key] = value
@@ -91,22 +91,22 @@ def _create_inner_task(
     def state_get(self, key):
         return state_db.get(key)
 
-    def iiss_put(key, value):
-        iiss_db[key] = value
+    def rc_put(key, value):
+        rc_db[key] = value
 
-    def iiss_get(key):
-        return iiss_db.get(key)
+    def rc_get(key):
+        return rc_db.get(key)
 
     context_db = Mock(spec=ContextDatabase)
     context_db.get = state_get
     context_db.put = state_put
 
     iiss_mock_db = Mock(spec=RewardCalcDatabase)
-    iiss_mock_db.get = iiss_get
-    iiss_mock_db.put = iiss_put
+    iiss_mock_db.get = rc_get
+    iiss_mock_db.put = rc_put
 
     db_factory_create_by_name.return_value = context_db
-    iiss_db_from_path.return_value = iiss_mock_db
+    rc_db_from_path.return_value = iiss_mock_db
     load_last_tx_index.return_value = 0
     inner_task = IconScoreInnerTask(IconConfig("", default_icon_config))
 
@@ -144,9 +144,9 @@ def generate_service_engine(revision=0):
 @patch(f'{ICX_STORAGE_PATH}.Storage.open')
 @patch(f'{ICX_ENGINE_PATH}.Engine.open')
 @patch(f'{DB_FACTORY_PATH}.create_by_name')
-@patch(f'{IISS_DB_PATH}.Database.from_path')
+@patch(f'{RC_DB_PATH}.Database.from_path')
 def _create_service_engine(
-        iiss_db_from_path,
+        rc_db_from_path,
         db_factory_create_by_name,
         icx_engine_open,
         icx_storage_open,
@@ -161,10 +161,36 @@ def _create_service_engine(
     # to ignore initializing governance SCORE
     service_engine._init_global_value_by_governance_score = Mock()
 
+    state_db = {}
+    rc_db = {}
+
+    def state_put(self, key, value):
+        state_db[key] = value
+
+    def state_get(self, key):
+        return state_db.get(key)
+
+    def rc_put(key, value):
+        rc_db[key] = value
+
+    def rc_get(key):
+        return rc_db.get(key)
+
+    context_db = Mock(spec=ContextDatabase)
+    context_db.get = state_get
+    context_db.put = state_put
+
+    iiss_mock_db = Mock(spec=RewardCalcDatabase)
+    iiss_mock_db.get = rc_get
+    iiss_mock_db.put = rc_put
+
+    db_factory_create_by_name.return_value = context_db
+    rc_db_from_path.return_value = iiss_mock_db
+
     service_engine.open(IconConfig("", default_icon_config))
 
     # Patches create_by_name to pass creating DB
-    iiss_db_from_path.assert_called()
+    rc_db_from_path.assert_called()
     db_factory_create_by_name.assert_called()
     icx_engine_open.assert_called()
 

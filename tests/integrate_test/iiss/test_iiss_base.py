@@ -126,11 +126,12 @@ class TestIISSBase(TestIntegrateBase):
     def create_register_prep_tx(self,
                                 address: 'Address',
                                 reg_data: Dict[str, Union[str, bytes]] = None,
-                                public_key: str=None):
+                                public_key: str = None,
+                                value: int = 0):
         if reg_data is None:
             reg_data: dict = self.create_register_prep_params(address, public_key)
 
-        return self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', reg_data)
+        return self._make_score_call_tx(address, ZERO_SCORE_ADDRESS, 'registerPRep', reg_data, value)
 
     @staticmethod
     def _create_dummy_public_key(data: bytes) -> bytes:

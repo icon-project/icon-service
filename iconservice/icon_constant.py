@@ -143,6 +143,8 @@ class ConfigKey:
     UN_STAKE_LOCK_MIN = "lockMin"
     UN_STAKE_LOCK_MAX = "lockMax"
 
+    PREP_REGISTRATION_FEE = "prepRegistrationFee"
+
 
 class EnableThreadFlag(IntFlag):
     INVOKE = 1

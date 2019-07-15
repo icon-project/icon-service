@@ -140,7 +140,8 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.IISS_META_DATA],
                                      conf[ConfigKey.IISS_CALCULATE_PERIOD],
                                      conf[ConfigKey.TERM_PERIOD],
-                                     conf[ConfigKey.INITIAL_IREP])
+                                     conf[ConfigKey.INITIAL_IREP],
+                                     conf[ConfigKey.PREP_REGISTRATION_FEE])
 
         last_block: 'Block' = IconScoreContext.storage.icx.last_block
         self._precommit_data_manager.last_block = last_block
@@ -176,7 +177,8 @@ class IconServiceEngine(ContextContainer):
                                 iiss_meta_data: dict,
                                 calc_period: int,
                                 term_period: int,
-                                irep: int):
+                                irep: int,
+                                prep_reg_fee: int):
 
         IconScoreContext.engine.deploy.open(context)
         IconScoreContext.engine.fee.open(context)
@@ -196,7 +198,8 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.storage.iiss.open(context,
                                            iiss_meta_data,
                                            calc_period)
-        IconScoreContext.storage.prep.open(context)
+        IconScoreContext.storage.prep.open(context,
+                                           prep_reg_fee)
         IconScoreContext.storage.issue.open(context)
         IconScoreContext.storage.rc.open(rc_data_path)
 
@@ -1195,6 +1198,10 @@ class IconServiceEngine(ContextContainer):
         data: dict = params['data']
 
         assert to == ZERO_SCORE_ADDRESS, "Invalid to Address"
+
+        # Only 'registerPRep' method allow to set value
+        if context.msg.value > 0 and data.get("method") != "registerPRep":
+            raise InvalidParamsException(f"Do not allow to set value in this method: {data.get('method')}")
 
         # Check if from account can charge a tx fee
         self._icon_pre_validator.execute_to_check_out_of_balance(

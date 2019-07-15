@@ -38,5 +38,6 @@ default_icon_config = {
     },
     ConfigKey.IISS_CALCULATE_PERIOD: IISS_DAY_BLOCK,
     ConfigKey.TERM_PERIOD: IISS_DAY_BLOCK,
-    ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP
+    ConfigKey.INITIAL_IREP: 50_000 * ICX_IN_LOOP,
+    ConfigKey.PREP_REGISTRATION_FEE: 2_000 * ICX_IN_LOOP
 }

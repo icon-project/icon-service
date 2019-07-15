@@ -20,14 +20,10 @@ from unittest.mock import Mock, patch
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.block import Block
-from iconservice.fee import FeeEngine, FeeStorage
 from iconservice.fee.engine import DepositInfo, BLOCKS_IN_ONE_MONTH
 from iconservice.icon_constant import LATEST_REVISION
 from iconservice.iconscore.icon_score_context import ContextContainer, IconScoreContext
 from iconservice.iconscore.icon_score_event_log import EventLogEmitter
-from iconservice.icx import IcxEngine, IcxStorage
-from iconservice.prep import PRepEngine
-from iconservice.utils import ContextEngine, ContextStorage
 from tests.mock_generator import generate_inner_task, clear_inner_task, create_request, ReqData, \
     create_transaction_req
 

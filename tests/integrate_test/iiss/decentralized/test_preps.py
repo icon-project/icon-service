@@ -16,11 +16,15 @@
 
 """IconScoreEngine testcase
 """
-from iconservice.icon_constant import PREP_MAIN_PREPS, IISS_INITIAL_IREP
+from iconservice.icon_constant import PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
 class TestPreps(TestIISSBase):
+    def _make_init_config(self) -> dict:
+        config: dict = super()._make_init_config()
+        config[ConfigKey.PREP_REGISTRATION_FEE] = 0
+        return config
 
     def setUp(self):
         super().setUp()
