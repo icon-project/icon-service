@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import unittest
 # Copyright 2019 ICON Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from typing import Any, Optional
-import unittest
 
 from iconcommons import IconConfig
 
@@ -24,7 +24,7 @@ from iconservice.base.exception import InvalidRequestException
 from iconservice.fee import FeeEngine
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey
+from iconservice.icon_constant import ConfigKey, REV_IISS
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests import create_tx_hash
@@ -40,6 +40,13 @@ MIN_DEPOSIT_TERM = FeeEngine._MIN_DEPOSIT_TERM
 
 
 class TestIntegrateFeeSharing(TestIntegrateBase):
+    def update_governance(self):
+        tx = self._make_deploy_tx("sample_builtin",
+                                  "latest_version/governance",
+                                  self._admin,
+                                  GOVERNANCE_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
 
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
@@ -57,6 +64,8 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         config.update_conf({ConfigKey.SCORE_ROOT_PATH: self._score_root_path,
                             ConfigKey.STATE_DB_ROOT_PATH: self._state_db_root_path})
         config.update_conf(self._make_init_config())
+
+        self._mock_ipc()
 
         self.icon_service_engine = IconServiceEngine()
         self.icon_service_engine.open(config)
@@ -197,6 +206,29 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         after_balance = self._query({"address": self._admin}, "icx_getBalance")
 
         self.assertEqual(before_balance - MIN_DEPOSIT_AMOUNT - deposit_fee, after_balance)
+
+    def test_deposit_fee_eventlog(self):
+        self.update_governance()
+        # success case: before IISS_REV revision, should charge fee about event log
+        deposit_tx_result = self._deposit_icx(self.score_address, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM)
+
+        step_used_before_iiss_rev = deposit_tx_result.step_used
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision',
+                                      {
+                                          "code": hex(REV_IISS),
+                                          "name": f"1.1.{REV_IISS}"
+                                      })
+
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        deposit_tx_result = self._deposit_icx(self.score_address, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM)
+
+        step_used_after_iiss_rev = deposit_tx_result.step_used
+
+        self.assertTrue(step_used_before_iiss_rev > step_used_after_iiss_rev)
 
     def test_deposit_fee_icx_range(self):
         deposit_tx_result = self._deposit_icx(self.score_address,
