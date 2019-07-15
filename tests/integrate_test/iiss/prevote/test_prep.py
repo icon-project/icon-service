@@ -83,35 +83,17 @@ class TestIntegratePrep(TestIISSBase):
             response: dict = self.get_prep(self._addr_array[i])
             expected_params: dict = self.create_register_prep_params(self._addr_array[i],
                                                                      f"0x{self.public_key_array[i].hex()}")
-            expected_response: dict = \
-                {
-                    "delegation":
-                        {
-                            "delegated": 0,
-                            "stake": 0
-                        },
-                    "registration":
-                        {
-                            "details": expected_params["details"],
-                            "email": expected_params["email"],
-                            "irep": self._config[ConfigKey.INITIAL_IREP],
-                            "irepUpdateBlockHeight": register_block_height,
-                            "name": expected_params['name'],
-                            "country": expected_params["country"],
-                            "city": expected_params["city"],
-                            "p2pEndpoint": expected_params['p2pEndpoint'],
-                            "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
-                            "website": expected_params['website']
-                        },
-                    "stats":
-                        {
-                            "totalBlocks": 0,
-                            "validatedBlocks": 0
-                        },
-                    "status": PRepStatus.ACTIVE.value,
-                    "grade": PRepGrade.CANDIDATE.value
-                }
-            self.assertEqual(expected_response, response)
+            self.assertEqual(0, response["delegated"])
+            self.assertEqual(0, response["stake"])
+            self.assertEqual(self._config[ConfigKey.INITIAL_IREP], response["irep"])
+            self.assertEqual(register_block_height, response["irepUpdateBlockHeight"])
+            self.assertEqual(bytes.fromhex(expected_params['publicKey'][2:]), response["publicKey"])
+            for key in ("details", "email", "name", "country", "city", "p2pEndpoint", "website"):
+                self.assertEqual(expected_params[key], response[key])
+            self.assertEqual(0, response["totalBlocks"])
+            self.assertEqual(0, response["validatedBlocks"])
+            self.assertEqual(PRepStatus.ACTIVE.value, response["status"])
+            self.assertEqual(PRepGrade.CANDIDATE.value, response["grade"])
 
         # set prep 0 ~ PREP_MAIN_PREPS - 1
         tx_list: list = []
@@ -128,34 +110,24 @@ class TestIntegratePrep(TestIISSBase):
             response: dict = self.get_prep(self._addr_array[i])
             expected_params: dict = self.create_register_prep_params(self._addr_array[i],
                                                                      public_key=f"0x{self.public_key_array[i].hex()}")
-            expected_response: dict = \
-                {
-                    "delegation":
-                        {
-                            "delegated": 0,
-                            "stake": 0
-                        },
-                    "registration":
-                        {
-                            "details": expected_params["details"],
-                            "email": expected_params["email"],
-                            "irep": self._config[ConfigKey.INITIAL_IREP],
-                            "irepUpdateBlockHeight": register_block_height,
-                            "name": f"new{str(self._addr_array[i])}",
-                            "country": expected_params["country"],
-                            "city": expected_params["city"],
-                            "p2pEndpoint": expected_params['p2pEndpoint'],
-                            "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
-                            "website": expected_params['website']
-                        },
-                    "stats":
-                        {
-                            "totalBlocks": 0,
-                            "validatedBlocks": 0
-                        },
-                    "status": PRepStatus.ACTIVE.value,
-                    "grade": PRepGrade.CANDIDATE.value
-                }
+            expected_response: dict = {
+                "delegated": 0,
+                "stake": 0,
+                "details": expected_params["details"],
+                "email": expected_params["email"],
+                "irep": self._config[ConfigKey.INITIAL_IREP],
+                "irepUpdateBlockHeight": register_block_height,
+                "name": f"new{str(self._addr_array[i])}",
+                "country": expected_params["country"],
+                "city": expected_params["city"],
+                "p2pEndpoint": expected_params['p2pEndpoint'],
+                "publicKey": bytes.fromhex(expected_params['publicKey'][2:]),
+                "website": expected_params['website'],
+                "totalBlocks": 0,
+                "validatedBlocks": 0,
+                "status": PRepStatus.ACTIVE.value,
+                "grade": PRepGrade.CANDIDATE.value
+            }
             self.assertEqual(expected_response, response)
 
         # unregister prep 0 ~ PREP_MAIN_PREPS - 1
@@ -169,12 +141,13 @@ class TestIntegratePrep(TestIISSBase):
         self._write_precommit_state(prev_block)
 
         response: dict = self.get_prep_list()
-        expected_response: dict = \
-            {
-                "startRanking": 0,
-                "totalDelegated": 0,
-                "preps": []
-            }
+        expected_response: dict = {
+            "blockHeight": prev_block.height,
+            "startRanking": 0,
+            "totalDelegated": 0,
+            "totalStake": 0,
+            "preps": []
+        }
         self.assertEqual(expected_response, response)
 
     def test_get_prep_list(self):
@@ -300,17 +273,27 @@ class TestIntegratePrep(TestIISSBase):
         response: dict = self.get_prep_list(end_index=IISS_MAX_DELEGATIONS)
         preps: list = []
         for i in range(IISS_MAX_DELEGATIONS):
+            address: 'Address' = self._addr_array[i]
             preps.append(
                 {
-                    "address": self._addr_array[i],
-                    "delegated": delegation_amount
+                    "status": 0,
+                    "grade": PRepGrade.CANDIDATE.value,
+                    "country": "ZZZ",
+                    "city": "Unknown",
+                    "address": address,
+                    "delegated": delegation_amount,
+                    "name": f"node{address}",
+                    "totalBlocks": 0,
+                    "validatedBlocks": 0
                 }
             )
         expected_response: dict = \
             {
-                "preps": preps,
+                "blockHeight": prev_block.height,
                 "startRanking": 1,
-                "totalDelegated": stake_amount
+                "totalDelegated": stake_amount,
+                "totalStake": stake_amount,
+                "preps": preps,
             }
         self.assertEqual(expected_response, response)
 
@@ -348,10 +331,9 @@ class TestIntegratePrep(TestIISSBase):
 
         # get prep
         response = self.get_prep(prep_address)
-        registration = response["registration"]
-        self.assertEqual(IISS_INITIAL_IREP, registration[ConstantKeys.IREP])
+        self.assertEqual(IISS_INITIAL_IREP, response[ConstantKeys.IREP])
 
-        irep: int = registration[ConstantKeys.IREP]
+        irep: int = response[ConstantKeys.IREP]
 
         # setGovernanceVariables call should be failed until IISS decentralization feature is enabled
         tx: dict = self.create_set_governance_variables(prep_address, irep + 10)

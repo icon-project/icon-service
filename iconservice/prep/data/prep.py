@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import copy
-from enum import auto, Flag, IntEnum
+from enum import auto, Flag, IntEnum, Enum
 from typing import TYPE_CHECKING, Tuple
 
 import iso3166
@@ -34,6 +34,11 @@ class PRepFlag(Flag):
     NONE = 0
     DIRTY = auto()
     FROZEN = auto()
+
+
+class PRepDictType(Enum):
+    FULL = auto()  # getPRep
+    ABRIDGED = auto()  # getXXXList
 
 
 class PRep(Sortable):
@@ -105,6 +110,7 @@ class PRep(Sortable):
         :param public_key:
         :param p2p_endpoint:
         :param irep:
+        :param irep_block_height:
         :param delegated:
         :param block_height:
         :param tx_index:
@@ -166,6 +172,10 @@ class PRep(Sortable):
         """
         return self._grade
 
+    @grade.setter
+    def grade(self, value: 'PRepGrade'):
+        self._grade = value
+
     @property
     def country(self) -> str:
         return self._country.alpha3
@@ -206,6 +216,14 @@ class PRep(Sortable):
             return False
 
         return self.productivity < MIN_PRODUCTIVITY_PERCENTAGE
+
+    @property
+    def total_blocks(self) -> int:
+        return self._total_blocks
+
+    @property
+    def validated_blocks(self) -> int:
+        return self._validated_blocks
 
     @property
     def address(self) -> 'Address':
@@ -413,30 +431,30 @@ class PRep(Sortable):
             tx_index=tx_index
         )
 
-    def to_dict(self) -> dict:
-        return {
+    def to_dict(self, dict_type: 'PRepDictType') -> dict:
+        data = {
             "status": self._status.value,
-            "grade": self._grade.value,
-            "registration": {
-                ConstantKeys.NAME: self.name,
-                ConstantKeys.COUNTRY: self.country,
-                ConstantKeys.CITY: self.city,
-                ConstantKeys.EMAIL: self.email,
-                ConstantKeys.WEBSITE: self.website,
-                ConstantKeys.DETAILS: self.details,
-                ConstantKeys.P2P_ENDPOINT: self.p2p_endpoint,
-                ConstantKeys.PUBLIC_KEY: self.public_key,
-                ConstantKeys.IREP: self._irep,
-                ConstantKeys.IREP_BLOCK_HEIGHT: self._irep_block_height
-            },
-            "delegation": {
-                "delegated": self._delegated
-            },
-            "stats": {
-                "totalBlocks": self._total_blocks,
-                "validatedBlocks": self._validated_blocks
-            }
+            "grade": self.grade.value,
+            "name": self.name,
+            "country": self.country,
+            "city": self.city,
+            "delegated": self._delegated,
+            "totalBlocks": self._total_blocks,
+            "validatedBlocks": self._validated_blocks
         }
+
+        if dict_type == PRepDictType.FULL:
+            data[ConstantKeys.EMAIL] = self.email
+            data[ConstantKeys.WEBSITE] = self.website
+            data[ConstantKeys.DETAILS] = self.details
+            data[ConstantKeys.P2P_ENDPOINT] = self.p2p_endpoint
+            data[ConstantKeys.PUBLIC_KEY] = self.public_key
+            data[ConstantKeys.IREP] = self._irep
+            data[ConstantKeys.IREP_BLOCK_HEIGHT] = self._irep_block_height
+        else:
+            data[ConstantKeys.ADDRESS] = self.address
+
+        return data
 
     def __str__(self) -> str:
         return str(self.to_dict())

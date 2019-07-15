@@ -14,11 +14,11 @@
 
 import hashlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List
+from typing import TYPE_CHECKING, Any, Optional, List, Dict
 
 from iconcommons.logger import Logger
 
-from .data.prep import PRep
+from .data.prep import PRep, PRepDictType, PRepGrade
 from .data.prep_container import PRepContainer
 from .term import Term
 from .validator import validate_prep_data, validate_irep
@@ -107,6 +107,48 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         self.preps = precommit_data.preps
+        # self._reset_prep_grade()
+
+    # def _reset_prep_grade(self):
+    #     prep_grades: Dict['Address', 'PRepGrade'] = {}
+    #
+    #     for prep in self.term.main_preps:
+    #         prep_grades[prep.address] = prep.grade
+    #
+    #     for prep in self.term.sub_preps:
+    #         prep_grades[prep.address] = prep.grade
+    #
+    #     # Set Main P-Rep grade
+    #     new_grade: 'PRepGrade' = PRepGrade.MAIN
+    #     for i in range(PREP_MAIN_PREPS):
+    #         prep: 'PRep' = self.preps.get_by_index(i, False)
+    #
+    #         old_grade: 'PRepGrade' = prep_grades.get(prep.address, PRepGrade.CANDIDATE)
+    #         if old_grade == PRepGrade.CANDIDATE:
+    #             # This P-Rep is not Main or Sub P-Rep in the previous term
+    #             prep.grade = new_grade
+    #         else:
+    #             if prep.grade != old_grade:
+    #                 prep.grade = new_grade
+    #             del prep_grades[prep.address]
+    #
+    #     # Set Sub P-Rep grade
+    #     new_grade: 'PRepGrade' = PRepGrade.SUB
+    #     for i in range(PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS):
+    #         prep: 'PRep' = self.preps.get_by_index(i, False)
+    #
+    #         old_grade: 'PRepGrade' = prep_grades.get(prep.address, PRepGrade.CANDIDATE)
+    #         if old_grade == PRepGrade.CANDIDATE:
+    #             prep.grade = new_grade
+    #         else:
+    #             if prep.grade != old_grade:
+    #                 prep.grade = new_grade
+    #             del prep_grades[prep.address]
+    #
+    #     # Reset old Main P-Reps and Sub P-Reps
+    #     for address in prep_grades:
+    #         prep: 'PRep' = self.preps.get_by_address(address, mutable=False)
+    #         prep.grade = PRepGrade.CANDIDATE
 
     def rollback(self):
         pass
@@ -263,11 +305,12 @@ class Engine(EngineBase, IISSEngineListener):
 
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
 
-        response: dict = prep.to_dict()
-        response['delegation']['stake'] = account.stake
+        response: dict = prep.to_dict(PRepDictType.FULL)
+        response["stake"] = account.stake
         return response
 
-    def handle_set_prep(self, context: 'IconScoreContext', params: dict):
+    @staticmethod
+    def handle_set_prep(context: 'IconScoreContext', params: dict):
         """Update a P-Rep registration information
 
         :param context:
@@ -426,45 +469,40 @@ class Engine(EngineBase, IISSEngineListener):
             "preps": prep_list
         }
 
-    def handle_get_prep_list(self, _context: 'IconScoreContext', params: dict) -> dict:
+    def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns P-Rep list with start and end rankings
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
 
-        :param _context:
+        :param context:
         :param params:
         :return:
         """
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_GET_PREP_LIST)
 
         preps: 'PRepContainer' = self.preps
-        total_delegated: int = 0
+        start_ranking: int = 0
         prep_list: list = []
 
         prep_count: int = len(preps)
 
-        if prep_count == 0:
-            return {
-                "startRanking": 0,
-                "totalDelegated": 0,
-                "preps": []
-            }
+        if prep_count > 0:
+            start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
+            end_ranking: int = min(ret_params.get(ConstantKeys.END_RANKING, prep_count), prep_count)
 
-        start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
-        end_ranking: int = ret_params.get(ConstantKeys.END_RANKING, prep_count)
+            if not 1 <= start_ranking <= end_ranking:
+                raise InvalidParamsException(
+                    f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
 
-        if not 1 <= start_ranking <= end_ranking <= prep_count:
-            raise InvalidParamsException(
-                f"Invalid ranking: startRanking({start_ranking}), endRanking({end_ranking})")
-
-        for i in range(start_ranking - 1, end_ranking):
-            prep: 'PRep' = preps.get_by_index(i)
-            prep_list.append({"address": prep.address, "delegated": prep.delegated})
-            total_delegated += prep.delegated
+            for i in range(start_ranking - 1, end_ranking):
+                prep: 'PRep' = preps.get_by_index(i)
+                prep_list.append(prep.to_dict(PRepDictType.ABRIDGED))
 
         return {
+            "blockHeight": context.block.height,
             "startRanking": start_ranking,
-            "totalDelegated": total_delegated,
+            "totalDelegated": preps.total_prep_delegated,
+            "totalStake": context.storage.iiss.get_total_stake(context),
             "preps": prep_list
         }
 

@@ -34,7 +34,7 @@ def _create_dummy_prep(index: int) -> 'PRep':
         email=f"node{index}@example.com",
         website=f"https://node{index}.example.com",
         details=f"https://node{index}.example.com/details",
-        p2p_endpoint=f"https://node{index}.example.com:7100",
+        p2p_endpoint=f"node{index}.example.com:7100",
         public_key=public_key,
         delegated=random.randint(0, 1000),
         irep=10_000,
