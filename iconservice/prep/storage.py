@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 class Storage(StorageBase):
     TERM_KEY: bytes = b'term'
-    PREP_REGISTRATION_FEE_KEY: bytes = PREFIX + b'prf'
+    PREP_REGISTRATION_FEE_KEY: bytes = b'prf'
 
     def __init__(self, db: 'ContextDatabase'):
         super().__init__(db)
