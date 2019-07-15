@@ -137,7 +137,7 @@ class Term(object):
         data: list = [
             self._VERSION,
             self._sequence + 1,
-            current_block_height + self._period,
+            current_block_height + 1,
             self._serialize_preps(preps),
             irep,
             total_supply
