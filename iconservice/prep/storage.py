@@ -22,6 +22,7 @@ from ..utils.msgpack_for_db import MsgPackForDB
 if TYPE_CHECKING:
     from ..base.address import Address
     from ..iconscore.icon_score_context import IconScoreContext
+    from ..database.db import ContextDatabase
 
 
 class Storage(StorageBase):
