@@ -25,7 +25,7 @@ from ..base.ComponentBase import EngineBase
 from ..base.exception import InvalidRequestException, InvalidParamsException
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ParamType
-from ..icon_constant import ICX_IN_LOOP
+from ..icon_constant import ICX_IN_LOOP, REV_IISS
 from ..iconscore.icon_score_event_log import EventLogEmitter
 
 if typing.TYPE_CHECKING:
@@ -780,5 +780,6 @@ class DepositHandler:
     def _emit_event(context: 'IconScoreContext', event_type: 'DepositHandler.EventType', event_log_args: list):
         signature, index_count = DepositHandler.get_signature_and_index_count(event_type)
 
+        fee_charge: bool = True if context.revision < REV_IISS else False
         EventLogEmitter.emit_event_log(
-            context, context.tx.to, signature, event_log_args, index_count)
+            context, context.tx.to, signature, event_log_args, index_count, fee_charge)
