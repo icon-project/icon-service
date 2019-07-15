@@ -18,7 +18,7 @@
 """
 from iconservice import ZERO_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
-from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP
+from iconservice.icon_constant import REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 name = "prep"
@@ -34,7 +34,6 @@ prep_register_data = {
 
 
 class TestIntegratePrepRegistration(TestIISSBase):
-    PREP_REGISTRATION_FEE = 2000 * ICX_IN_LOOP
 
     def setUp(self):
         super().setUp()
@@ -94,7 +93,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
             icx_amount_before_reg: int = self.get_balance(self._addr_array[i])
             tx: dict = self.create_register_prep_tx(self._addr_array[i],
                                                     public_key=f"0x{self.public_key_array[i].hex()}",
-                                                    value=self.PREP_REGISTRATION_FEE)
+                                                    value=self._config[ConfigKey.PREP_REGISTRATION_FEE])
             prev_block, tx_results = self._make_and_req_block([tx])
             self._write_precommit_state(prev_block)
             self.assertEqual(int(True), tx_results[0].status)
@@ -111,7 +110,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
         # register prep
         tx: dict = self.create_register_prep_tx(self._addr_array[0],
                                                 public_key=f"0x{self.public_key_array[0].hex()}",
-                                                value=self.PREP_REGISTRATION_FEE)
+                                                value=self._config[ConfigKey.PREP_REGISTRATION_FEE])
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
         self.assertEqual(int(True), tx_results[0].status)
