@@ -208,11 +208,28 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.assertEqual(before_balance - MIN_DEPOSIT_AMOUNT - deposit_fee, after_balance)
 
     def test_deposit_fee_eventlog(self):
+        # deploy same score for
+        deploy_tx_hash = self._deploy_score('install/sample_score_fee_sharing', 0, self._admin, {"value": hex(100)})
+        self.assertEqual(deploy_tx_hash.status, int(True))
+        same_score_address = deploy_tx_hash.score_address
         self.update_governance()
+
+        # set revision 4
+        tx = self._make_score_call_tx(self._admin,
+                                      GOVERNANCE_SCORE_ADDRESS,
+                                      'setRevision',
+                                      {
+                                          "code": hex(4),
+                                          "name": f"1.1.{4}"
+                                      })
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
         # success case: before IISS_REV revision, should charge fee about event log
         deposit_tx_result = self._deposit_icx(self.score_address, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM)
-
         step_used_before_iiss_rev = deposit_tx_result.step_used
+
+        # set revision 5 (IISS_REV)
         tx = self._make_score_call_tx(self._admin,
                                       GOVERNANCE_SCORE_ADDRESS,
                                       'setRevision',
@@ -224,11 +241,12 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
-        deposit_tx_result = self._deposit_icx(self.score_address, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM)
+        deposit_tx_result = self._deposit_icx(same_score_address, MIN_DEPOSIT_AMOUNT, MIN_DEPOSIT_TERM)
 
         step_used_after_iiss_rev = deposit_tx_result.step_used
-
-        self.assertTrue(step_used_before_iiss_rev > step_used_after_iiss_rev)
+        # event log count: 101 , event log step:100
+        event_log_fee = 101 * 100
+        self.assertEqual(step_used_before_iiss_rev, step_used_after_iiss_rev + event_log_fee)
 
     def test_deposit_fee_icx_range(self):
         deposit_tx_result = self._deposit_icx(self.score_address,
