@@ -105,7 +105,7 @@ class TestIntegratePrepRegistration(TestIISSBase):
                              self.get_balance(self._addr_array[i]))
 
     def test_set_value_when_prep_related_set_method(self):
-        # failure case: except registerPRep, all setting method can not set value when calling
+        # failure case: except registerPRep, value can not be set when calling prep related setting method
         arbitrary_value = 10
         # register prep
         tx: dict = self.create_register_prep_tx(self._addr_array[0],
