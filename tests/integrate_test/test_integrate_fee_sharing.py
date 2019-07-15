@@ -24,7 +24,7 @@ from iconservice.base.exception import InvalidRequestException
 from iconservice.fee import FeeEngine
 from iconservice.fee.engine import FIXED_TERM
 from iconservice.icon_config import default_icon_config
-from iconservice.icon_constant import ConfigKey, REV_IISS
+from iconservice.icon_constant import ConfigKey, REV_IISS, REVISION_4
 from iconservice.icon_service_engine import IconServiceEngine
 from iconservice.iconscore.icon_score_result import TransactionResult
 from tests import create_tx_hash
@@ -47,6 +47,16 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
                                   GOVERNANCE_SCORE_ADDRESS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
+
+    def create_set_revision_tx(self,
+                               revision: int) -> dict:
+        return self._make_score_call_tx(self._admin,
+                                        GOVERNANCE_SCORE_ADDRESS,
+                                        'setRevision',
+                                        {
+                                            "code": hex(revision),
+                                            "name": f"1.1.{revision}"
+                                        })
 
     def setUp(self):
         root_clear(self._score_root_path, self._state_db_root_path, self._iiss_db_root_path)
@@ -215,13 +225,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         self.update_governance()
 
         # set revision 4
-        tx = self._make_score_call_tx(self._admin,
-                                      GOVERNANCE_SCORE_ADDRESS,
-                                      'setRevision',
-                                      {
-                                          "code": hex(4),
-                                          "name": f"1.1.{4}"
-                                      })
+        tx = self.create_set_revision_tx(REVISION_4)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
@@ -230,14 +234,7 @@ class TestIntegrateFeeSharing(TestIntegrateBase):
         step_used_before_iiss_rev = deposit_tx_result.step_used
 
         # set revision 5 (IISS_REV)
-        tx = self._make_score_call_tx(self._admin,
-                                      GOVERNANCE_SCORE_ADDRESS,
-                                      'setRevision',
-                                      {
-                                          "code": hex(REV_IISS),
-                                          "name": f"1.1.{REV_IISS}"
-                                      })
-
+        tx = self.create_set_revision_tx(REV_IISS)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
