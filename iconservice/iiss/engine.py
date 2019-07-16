@@ -18,6 +18,7 @@ from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple, Union
 
 from iconcommons.logger import Logger
+
 from .reward_calc.data_creator import DataCreator as RewardCalcDataCreator
 from .reward_calc.ipc.message import CalculateResponse, VersionResponse
 from .reward_calc.ipc.reward_calc_proxy import RewardCalcProxy
@@ -78,7 +79,6 @@ class Engine(EngineBase):
 
         self._reward_calc_proxy: Optional['RewardCalcProxy'] = None
         self._listeners: List['EngineListener'] = []
-        self.iiss_meta_data: 'IISSMetaData' = None
 
     def open(self, context: 'IconScoreContext', log_dir: str, data_path: str, socket_path: str):
         self._init_reward_calc_proxy(log_dir, data_path, socket_path)
@@ -574,9 +574,10 @@ class Engine(EngineBase):
         irep: int = context.engine.prep.term.irep
         calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
 
+        reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_prep)
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(context.block.height,
                                                                               calculated_irep,
-                                                                              reward_prep)
+                                                                              reward_prep_for_rc)
         context.storage.iiss.put_reward_rate(context, reward_rate)
         context.storage.rc.put(context.rc_block_batch, data)
 
