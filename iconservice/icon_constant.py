@@ -243,16 +243,10 @@ BASE_TRANSACTION_VERSION = 3
 class PRepStatus(Enum):
     ACTIVE = 0
     UNREGISTERED = 1
+    # "prep disqualification penalty"
     PENALTY1 = 2
+    # "low productivity penalty"
     PENALTY2 = 3
-
-
-PREP_STATUS_MAPPER = {
-    PRepStatus.ACTIVE: "active",
-    PRepStatus.UNREGISTERED: "unregistered",
-    PRepStatus.PENALTY1: "prep disqualification penalty",
-    PRepStatus.PENALTY2: "low productivity penalty"
-}
 
 
 class PrepResultState(Enum):

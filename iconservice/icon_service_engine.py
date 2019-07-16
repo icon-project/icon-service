@@ -33,7 +33,7 @@ from .deploy.icon_builtin_score_loader import IconBuiltinScoreLoader
 from .fee import FeeEngine, FeeStorage, DepositHandler
 from .icon_constant import ICON_DEX_DB_NAME, ICON_SERVICE_LOG_TAG, IconServiceFlag, ConfigKey, \
     IISS_METHOD_TABLE, PREP_METHOD_TABLE, NEW_METHOD_TABLE, REVISION_3, REV_IISS, BASE_TRANSACTION_INDEX, \
-    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE
+    REV_DECENTRALIZATION, IISS_DB, IISS_INITIAL_IREP, DEBUG_METHOD_TABLE, PRepStatus
 from .iconscore.icon_pre_validator import IconPreValidator
 from .iconscore.icon_score_class_loader import IconScoreClassLoader
 from .iconscore.icon_score_context import IconScoreContext, IconScoreFuncType, ContextContainer
@@ -474,6 +474,7 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict: Optional[dict] = None
         if self._is_prep_term_over(context):
+
             # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
             context.engine.prep.save_term(context, weighted_average_of_irep)
@@ -486,6 +487,16 @@ class IconServiceEngine(ContextContainer):
         context.update_batch()
 
         return main_prep_as_dict
+
+    def _update_preps_apply_low_productivity_penalty(self,
+                                                     context: 'IconScoreContext'):
+        low_productivities: list = []
+        for prep in context.preps:
+            if prep.is_low_productivity():
+                low_productivities.append(prep.address)
+
+        for address in low_productivities:
+            context.preps.remove(address, PRepStatus.PENALTY2)
 
     def _update_productivity(self,
                              context: 'IconScoreContext',
