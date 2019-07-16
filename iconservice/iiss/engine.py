@@ -574,8 +574,7 @@ class Engine(EngineBase):
         irep: int = context.engine.prep.term.irep
         calculated_irep: int = IssueFormula.calculate_irep_per_block_contributor(irep)
 
-        # todo: after eep and dapp is added, do not multiple 3 to reward_prep
-        reward_prep_for_rc = reward_prep * 3
+        reward_prep_for_rc = IssueFormula.calculate_temporary_reward_prep(reward_prep)
         data: 'GovernanceVariable' = RewardCalcDataCreator.create_gv_variable(context.block.height,
                                                                               calculated_irep,
                                                                               reward_prep_for_rc)

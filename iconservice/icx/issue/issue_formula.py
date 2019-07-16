@@ -64,9 +64,10 @@ class IssueFormula(object):
         calculated_irep: int = self.calculate_irep_per_block_contributor(irep)
         beta_1: int = calculated_irep * self._prep_count
         beta_2: int = calculated_irep * self._sub_prep_count
-        beta_3: int = rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
-        # todo: after eep and dapp is added, do not multiple 3 to beta3
-        beta_3 *= 3
+
+        temp_rrep = IssueFormula.calculate_temporary_reward_prep(rrep)
+        beta_3: int = temp_rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
+
         return beta_1 + beta_2 + beta_3
 
     def get_limit_inflation_beta(self, irep: int) -> int:
@@ -74,3 +75,8 @@ class IssueFormula(object):
         beta_1: int = calculated_irep * self._prep_count
         beta_2: int = calculated_irep * self._sub_prep_count
         return beta_1 + beta_2
+
+    @staticmethod
+    def calculate_temporary_reward_prep(rrep: int) -> int:
+        # todo: after eep and dapp is added, do not multiple 3 to beta3
+        return rrep * 3
