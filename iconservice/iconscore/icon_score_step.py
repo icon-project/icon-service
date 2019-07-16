@@ -288,6 +288,7 @@ class IconScoreStepCounter(object):
         self._step_limit: int = 0
         self._step_used: int = 0
         self._external_call_count: int = 0
+        self._max_step_used: int = 0
 
     @property
     def step_price(self) -> int:
@@ -322,6 +323,14 @@ class IconScoreStepCounter(object):
         return max(self._step_used,
                    self._step_costs.get(StepType.DEFAULT, 0))
 
+    @property
+    def max_step_used(self) -> int:
+        """
+        Returns max used steps in the transaction
+        :return: max used steps in the transaction
+        """
+        return self._max_step_used
+
     def apply_step(self, step_type: StepType, count: int) -> int:
         """ Increases steps for given step cost
         """
@@ -337,6 +346,8 @@ class IconScoreStepCounter(object):
 
     def consume_step(self, step_type: StepType, step: int) -> int:
         step_used: int = self._step_used + step
+
+        self._max_step_used = max(self._max_step_used, step_used)
 
         if step_used > self._step_limit:
             step_used = self._step_used
@@ -356,6 +367,7 @@ class IconScoreStepCounter(object):
         self._step_limit: int = min(step_limit, self._max_step_limit)
         self._step_used: int = 0
         self._external_call_count: int = 0
+        self._max_step_used: int = 0
 
     def set_step_price(self, step_price: int):
         """Sets the step price
