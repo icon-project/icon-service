@@ -19,6 +19,7 @@ from unittest.mock import Mock
 from iconservice.base.address import Address
 from iconservice.icon_constant import PREP_MAIN_AND_SUB_PREPS, IconScoreContextType, PREP_MAIN_PREPS
 from iconservice.iconscore.icon_score_context import IconScoreContext
+from iconservice.icx import IcxStorage
 from iconservice.prep import PRepStorage
 from iconservice.prep.data import PRep
 from iconservice.prep.term import Term
@@ -27,7 +28,8 @@ from iconservice.utils import ContextStorage
 PREPS = [PRep(Address.from_bytes(os.urandom(32))) for _ in range(PREP_MAIN_AND_SUB_PREPS)]
 
 context = IconScoreContext(IconScoreContextType.DIRECT)
-context.storage = ContextStorage(deploy=None, fee=None, icx=None, iiss=None, issue=None, rc=None, prep=PRepStorage)
+context.storage = ContextStorage(deploy=None, fee=None, icx=Mock(spec=IcxStorage), iiss=None,
+                                 issue=None, rc=None, prep=Mock(spec=PRepStorage))
 context.storage.prep.put_term = Mock()
 
 
@@ -62,7 +64,9 @@ def test_save_and_load():
     current_block = random.randint(10, 100)
     irep = random.randint(10, 100)
     total_supply = random.randint(10, 100)
+    period = random.randint(10, 100)
 
+    # case when term data is None
     term = Term()
     assert term.sequence == -1
     assert term.total_supply == -1
@@ -72,10 +76,23 @@ def test_save_and_load():
     assert term.start_block_height == -1
     assert term.end_block_height == -1
 
+    context.storage.prep.get_term = Mock(return_value=None)
+    context.storage.icx.get_total_supply = Mock(return_value=total_supply)
+    term._make_main_and_sub_preps = Mock()
+    term.load(context, period, irep)
+    assert term.period == period
+    assert term.total_supply == total_supply
+    assert term.irep == irep
+    assert term.sequence == -1
+    assert term.main_preps == []
+    assert term.sub_preps == []
+    assert term.start_block_height == -1
+    assert term.end_block_height == -1
+
+    # cases when term data is not None
     for i in range(random.randint(1, 5)):
         sequence = term.sequence
         current_block += 1
-        period = 10
         term._period = period
         term.save(context, current_block, PREPS, irep, total_supply)
         assert term.sequence == sequence + 1
