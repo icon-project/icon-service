@@ -65,6 +65,8 @@ class IssueFormula(object):
         beta_1: int = calculated_irep * self._prep_count
         beta_2: int = calculated_irep * self._sub_prep_count
         beta_3: int = rrep * total_delegation // (IISS_ANNUAL_BLOCK * IISS_MAX_REWARD_RATE)
+        # todo: after eep and dapp is added, do not multiple 3 to beta3
+        beta_3 *= 3
         return beta_1 + beta_2 + beta_3
 
     def get_limit_inflation_beta(self, irep: int) -> int:
