@@ -84,7 +84,7 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_response, response)
 
         # make blocks
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         # get main prep list
         expected_preps: list = []
@@ -149,7 +149,7 @@ class TestPreps(TestIISSBase):
         self.assertEqual(expected_irep, response['registration']['irep'])
         self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         irep: int = origin_irep * 12 // 10
         tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
@@ -186,7 +186,7 @@ class TestPreps(TestIISSBase):
         self.assertEqual(int(False), tx_results[1].status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         # 20% below
         irep: int = origin_irep * 8 - 1 // 10
@@ -222,7 +222,7 @@ class TestPreps(TestIISSBase):
 
         possible_maximum_raise_irep_count: int = 6
         for i in range(possible_maximum_raise_irep_count):
-            self.make_blocks_to_next_calculation()
+            self.make_blocks_to_end_calculation()
 
             irep: int = irep * 12 // 10
             tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
@@ -232,7 +232,7 @@ class TestPreps(TestIISSBase):
             self._write_precommit_state(prev_block)
 
         # max totalsupply limitation
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
         irep: int = irep * 12 // 10
         tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -272,7 +272,7 @@ class TestPreps(TestIISSBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         response: dict = self.get_iiss_info()
         expected_sum: int = IISS_INITIAL_IREP * 12 // 10 * delegation1 + IISS_INITIAL_IREP * 8 // 10 * delegation2
@@ -316,7 +316,7 @@ class TestPreps(TestIISSBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         response: dict = self.get_iiss_info()
         expected_sum: int = IISS_INITIAL_IREP * 12 // 10 * delegation1 + IISS_INITIAL_IREP * 8 // 10 * delegation2

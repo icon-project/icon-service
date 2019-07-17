@@ -53,15 +53,15 @@ class TestIISSBase(TestIntegrateBase):
             self._write_precommit_state(prev_block)
             block_height = self._block_height
 
-    def make_blocks_to_next_calculation(self) -> int:
+    def make_blocks_to_end_calculation(self) -> int:
         iiss_info: dict = self.get_iiss_info()
         next_calculation: int = iiss_info.get('nextCalculation', 0)
 
-        self.make_blocks(to=next_calculation)
+        self.make_blocks(to=next_calculation - 1)
 
-        self.assertEqual(self._block_height, next_calculation)
+        self.assertEqual(self._block_height, next_calculation - 1)
 
-        return next_calculation
+        return next_calculation - 1
 
     @staticmethod
     def _make_tx_for_estimating_step_from_origin_tx(tx: dict):
@@ -445,7 +445,7 @@ class TestIISSBase(TestIntegrateBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         # get main prep
         response: dict = self.get_main_prep_list()
