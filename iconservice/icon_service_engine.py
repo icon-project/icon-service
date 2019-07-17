@@ -474,6 +474,7 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict: Optional[dict] = None
         if self._is_prep_term_over(context):
+            self._update_preps_apply_low_productivity_penalty(context)
 
             # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)

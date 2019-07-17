@@ -30,6 +30,9 @@ from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SU
 
 
 class TestIISSBase(TestIntegrateBase):
+    CALCULATE_PERIOD = 10
+    TERM_PERIOD = 10
+
     def setUp(self):
         super().setUp()
         self.public_key_array = [os.urandom(32) for _ in range(PREP_MAIN_AND_SUB_PREPS)]
@@ -41,8 +44,8 @@ class TestIISSBase(TestIntegrateBase):
             ConfigKey.SERVICE: {
                 ConfigKey.SERVICE_FEE: True
             },
-            ConfigKey.IISS_CALCULATE_PERIOD: 10,
-            ConfigKey.TERM_PERIOD: 10}
+            ConfigKey.IISS_CALCULATE_PERIOD: self.CALCULATE_PERIOD,
+            ConfigKey.TERM_PERIOD: self.TERM_PERIOD}
 
     def make_blocks(self, to: int):
         block_height = self._block_height
