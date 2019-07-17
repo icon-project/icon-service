@@ -474,6 +474,7 @@ class IconServiceEngine(ContextContainer):
 
         main_prep_as_dict: Optional[dict] = None
         if self._is_prep_term_over(context):
+            self._update_preps_apply_low_productivity_penalty(context)
 
             # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
@@ -493,10 +494,12 @@ class IconServiceEngine(ContextContainer):
         low_productivities: list = []
         for prep in context.preps:
             if prep.is_low_productivity():
-                low_productivities.append(prep.address)
+                low_productivities.append(prep)
 
-        for address in low_productivities:
-            context.preps.remove(address, PRepStatus.PENALTY2)
+        for prep in low_productivities:
+            context.preps.remove(prep.address, PRepStatus.PENALTY2)
+            EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, "PenaltyImposed(Address,int,int)",
+                                           [prep.address, PRepStatus.PENALTY2.value, prep.productivity], 1)
 
     def _update_productivity(self,
                              context: 'IconScoreContext',
