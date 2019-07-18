@@ -18,7 +18,8 @@
 """
 from unittest.mock import patch
 
-from iconservice.icon_constant import PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, ICX_IN_LOOP
+from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey
+from iconservice.icon_constant import PRepStatus, PRepGrade
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
@@ -49,21 +50,22 @@ class TestPreps(TestIISSBase):
         self._write_precommit_state(prev_block)
 
         response: dict = self.get_prep(self._addr_array[0])
-        self.assertEqual(1, response['status'])
+        self.assertEqual(PRepStatus.UNREGISTERED.value, response['status'])
 
         # register user[PREP_MAIN_PREPS]
-        tx: dict = self.create_register_prep_tx(self._addr_array[PREP_MAIN_PREPS],
-                                                public_key=f"0x{self.public_key_array[PREP_MAIN_PREPS].hex()}")
+        index: int = PREP_MAIN_PREPS
+        tx: dict = self.create_register_prep_tx(self._addr_array[index],
+                                                public_key=f"0x{self.public_key_array[index].hex()}")
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
         # delegate to PRep
         delegation_amount: int = 10000
-        tx: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS],
+        tx: dict = self.create_set_delegation_tx(self._addr_array[index],
                                                  [
                                                      (
-                                                         self._addr_array[PREP_MAIN_PREPS],
+                                                         self._addr_array[index],
                                                          delegation_amount
                                                      )
                                                  ])
@@ -71,22 +73,26 @@ class TestPreps(TestIISSBase):
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
+        prep_from_get_prep: dict = self.get_prep(str(self._addr_array[index]))
+
         # get prep list
         response: dict = self.get_prep_list(1, 1)
-        expected_response: dict = \
-            {
-                "preps":
-                    [{
-                        "address": self._addr_array[PREP_MAIN_PREPS],
-                        "delegated": delegation_amount
-                    }],
-                "startRanking": 1,
-                "totalDelegated": delegation_amount
-            }
-        self.assertEqual(expected_response, response)
+        self.assertEqual(1, response["startRanking"])
+        self.assertEqual(delegation_amount, response["totalDelegated"])
+        self.assertIsInstance(response["totalStake"], int)
+        preps: list = response["preps"]
+        prep: dict = preps[0]
+        self.assertEqual(1, len(preps))
+        self.assertIsInstance(preps, list)
+        self.assertEqual(self._addr_array[index], prep["address"])
+        self.assertEqual(f"node{self._addr_array[index]}", prep["name"])
+        self.assertEqual(delegation_amount, prep["delegated"])
+        self.assertIsInstance(PRepGrade(prep["grade"]), PRepGrade)
+        for key in ("name", "country", "city", "delegated", "grade", "totalBlocks", "validatedBlocks"):
+            self.assertEqual(prep_from_get_prep[key], prep[key])
 
         # make blocks
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         # get main prep list
         expected_preps: list = []
@@ -109,7 +115,7 @@ class TestPreps(TestIISSBase):
 
         # get totalBlocks in main prep
         response: dict = self.get_prep(self._addr_array[0])
-        total_blocks: int = response['stats']['totalBlocks']
+        total_blocks: int = response['totalBlocks']
 
         # make blocks with prev_block_generator and prev_block_validators
         block_count: int = 20
@@ -122,26 +128,18 @@ class TestPreps(TestIISSBase):
 
         for i in range(3):
             response: dict = self.get_prep(self._addr_array[i])
-            expected_response: dict = \
-                {
-                    "totalBlocks": total_blocks + block_count,
-                    "validatedBlocks": block_count
-                }
-            self.assertEqual(expected_response, response["stats"])
+            self.assertEqual(total_blocks + block_count, response["totalBlocks"])
+            self.assertEqual(block_count, response["validatedBlocks"])
 
         response: dict = self.get_prep(self._addr_array[3])
-        expected_response: dict = \
-            {
-                "totalBlocks": total_blocks + block_count,
-                "validatedBlocks": 0
-            }
-        self.assertEqual(expected_response, response["stats"])
+        self.assertEqual(total_blocks + block_count, response["totalBlocks"])
+        self.assertEqual(0, response["validatedBlocks"])
 
     @patch('iconservice.prep.data.prep.PENALTY_GRACE_PERIOD', 80)
     def test_low_productivity_penalty1(self):
         # get totalBlocks in main prep
         response: dict = self.get_prep(self._addr_array[0])
-        total_blocks: int = response['stats']['totalBlocks']
+        total_blocks: int = response['totalBlocks']
         _STEADY_PREPS_COUNT = 13
 
         initial_main_preps_info = self.get_main_prep_list()['preps']
@@ -181,7 +179,8 @@ class TestPreps(TestIISSBase):
                     "totalBlocks": total_blocks + block_count + 2,
                     "validatedBlocks": block_count
                 }
-            self.assertEqual(expected_response, response["stats"])
+            self.assertEqual(expected_response['totalBlocks'], response['totalBlocks'])
+            self.assertEqual(expected_response['validatedBlocks'], response['validatedBlocks'])
 
         for i in range(_STEADY_PREPS_COUNT, PREP_MAIN_PREPS):
             response: dict = self.get_prep(self._addr_array[i])
@@ -190,7 +189,8 @@ class TestPreps(TestIISSBase):
                     "totalBlocks": block_count,
                     "validatedBlocks": 0
                 }
-            self.assertEqual(expected_response, response["stats"])
+            self.assertEqual(expected_response['totalBlocks'], response['totalBlocks'])
+            self.assertEqual(expected_response['validatedBlocks'], response['validatedBlocks'])
 
         main_preps_info = self.get_main_prep_list()['preps']
         main_preps = list(map(lambda prep_dict: prep_dict['address'], main_preps_info))
@@ -219,10 +219,10 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_prep(self._addr_array[0])
         expected_irep: int = origin_irep
         expected_update_block_height: int = self._block_height
-        self.assertEqual(expected_irep, response['registration']['irep'])
-        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+        self.assertEqual(expected_irep, response['irep'])
+        self.assertEqual(expected_update_block_height, response['irepUpdateBlockHeight'])
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         irep: int = origin_irep * 12 // 10
         tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
@@ -234,8 +234,8 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_prep(self._addr_array[0])
         expected_irep: int = irep
         expected_update_block_height: int = self._block_height
-        self.assertEqual(expected_irep, response['registration']['irep'])
-        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+        self.assertEqual(expected_irep, response['irep'])
+        self.assertEqual(expected_update_block_height, response['irepUpdateBlockHeight'])
 
     def test_set_governance_variables2(self):
         origin_irep: int = IISS_INITIAL_IREP
@@ -248,8 +248,8 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_prep(self._addr_array[0])
         expected_irep: int = origin_irep
         expected_update_block_height: int = self._block_height
-        self.assertEqual(expected_irep, response['registration']['irep'])
-        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+        self.assertEqual(expected_irep, response['irep'])
+        self.assertEqual(expected_update_block_height, response['irepUpdateBlockHeight'])
 
         # term validate
         irep: int = origin_irep
@@ -259,7 +259,7 @@ class TestPreps(TestIISSBase):
         self.assertEqual(int(False), tx_results[1].status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         # 20% below
         irep: int = origin_irep * 8 - 1 // 10
@@ -288,14 +288,14 @@ class TestPreps(TestIISSBase):
         response: dict = self.get_prep(self._addr_array[0])
         expected_irep: int = origin_irep
         expected_update_block_height: int = self._block_height
-        self.assertEqual(expected_irep, response['registration']['irep'])
-        self.assertEqual(expected_update_block_height, response['registration']['irepUpdateBlockHeight'])
+        self.assertEqual(expected_irep, response['irep'])
+        self.assertEqual(expected_update_block_height, response['irepUpdateBlockHeight'])
 
         irep: int = origin_irep
 
         possible_maximum_raise_irep_count: int = 6
         for i in range(possible_maximum_raise_irep_count):
-            self.make_blocks_to_next_calculation()
+            self.make_blocks_to_end_calculation()
 
             irep: int = irep * 12 // 10
             tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
@@ -305,7 +305,7 @@ class TestPreps(TestIISSBase):
             self._write_precommit_state(prev_block)
 
         # max totalsupply limitation
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
         irep: int = irep * 12 // 10
         tx: dict = self.create_set_governance_variables(self._addr_array[0], irep)
         prev_block, tx_results = self._make_and_req_block([tx])
@@ -345,7 +345,7 @@ class TestPreps(TestIISSBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         response: dict = self.get_iiss_info()
         expected_sum: int = IISS_INITIAL_IREP * 12 // 10 * delegation1 + IISS_INITIAL_IREP * 8 // 10 * delegation2
@@ -389,7 +389,7 @@ class TestPreps(TestIISSBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         response: dict = self.get_iiss_info()
         expected_sum: int = IISS_INITIAL_IREP * 12 // 10 * delegation1 + IISS_INITIAL_IREP * 8 // 10 * delegation2
@@ -407,5 +407,5 @@ class TestPreps(TestIISSBase):
         expected_block_height: int = self._block_height
 
         response: dict = self.get_prep(self._addr_array[PREP_MAIN_PREPS + 1])
-        self.assertEqual(expected_avg_irep, response['registration']['irep'])
-        self.assertEqual(expected_block_height, response['registration']['irepUpdateBlockHeight'])
+        self.assertEqual(expected_avg_irep, response['irep'])
+        self.assertEqual(expected_block_height, response['irepUpdateBlockHeight'])

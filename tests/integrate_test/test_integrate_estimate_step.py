@@ -359,6 +359,32 @@ class TestIntegrateEstimateStep(TestIntegrateBase):
         self.assertEqual(tx_results[0].status, int(True))
         self.assertEqual(estimate, tx_results[0].step_used)
 
+    def test_minus_step(self):
+        tx1 = self._make_deploy_tx("sample_scores",
+                                   "minus_step",
+                                   self._addr_array[0],
+                                   ZERO_SCORE_ADDRESS)
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        score_addr1 = tx_results[0].score_address
+
+        tx1 = self._make_score_call_tx(addr_from=self._addr_array[0], addr_to=score_addr1, method="func", params={})
+
+        converted_tx = self._make_tx_for_estimating_step_from_origin_tx(tx1)
+        estimate = self.icon_service_engine.estimate_step(request=converted_tx)
+
+        # step * input_length = used_step
+        # used_step * count = total_step
+        # 150 * 9 = 1350
+        # 1350 * 100 = 135000
+        minus_step: int = 135000
+        # Compares estimate to the real step_used
+        prev_block, tx_results = self._make_and_req_block([tx1])
+        self._write_precommit_state(prev_block)
+        self.assertEqual(tx_results[0].status, int(True))
+        self.assertEqual(estimate - minus_step, tx_results[0].step_used)
+
     def test_migration_input_step(self):
         self._update_governance_0_0_4()
         self.assertEqual(2, self._query_revision())

@@ -249,6 +249,12 @@ class PRepStatus(Enum):
     PENALTY2 = 3
 
 
+class PRepGrade(Enum):
+    MAIN = 0
+    SUB = 1
+    CANDIDATE = 2
+
+
 class PrepResultState(Enum):
     NORMAL = 0
     PENALTY = 1

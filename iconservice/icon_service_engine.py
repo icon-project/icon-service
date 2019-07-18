@@ -1099,7 +1099,7 @@ class IconServiceEngine(ContextContainer):
         tx_result: 'TransactionResult' = TransactionResult(context.tx, context.block)
         self._process_transaction(context, params, tx_result)
 
-        return context.step_counter.step_used
+        return context.step_counter.max_step_used
 
     def _process_transaction(self,
                              context: 'IconScoreContext',

@@ -171,7 +171,7 @@ class TestIISSDecentralized(TestIISSBase):
                                            {"name": f"new{str(self._addr_array[prep_id])}"})
         self.estimate_step(tx)
 
-        self.make_blocks_to_next_calculation()
+        self.make_blocks_to_end_calculation()
 
         # set governance variable
         tx: dict = self.create_set_governance_variables(self._addr_array[prep_id], IISS_INITIAL_IREP)
