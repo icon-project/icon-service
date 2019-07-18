@@ -239,6 +239,8 @@ MIN_PRODUCTIVITY_PERCENTAGE = 85
 
 BASE_TRANSACTION_VERSION = 3
 
+PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
+
 
 class PRepStatus(Enum):
     ACTIVE = 0

@@ -18,8 +18,10 @@
 """
 from unittest.mock import patch
 
-from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey
+from iconservice import ZERO_SCORE_ADDRESS
+from iconservice.icon_constant import ICX_IN_LOOP, PREP_MAIN_PREPS, IISS_INITIAL_IREP, ConfigKey, PREP_PENALTY_SIGNATURE
 from iconservice.icon_constant import PRepStatus, PRepGrade
+from iconservice.iconscore.icon_score_event_log import EventLog
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 
 
@@ -140,8 +142,16 @@ class TestPreps(TestIISSBase):
         # get totalBlocks in main prep
         response: dict = self.get_prep(self._addr_array[0])
         total_blocks: int = response['totalBlocks']
+        expected_prep_penalty_event_logs: list = []
+        _MAXIMUM_COUNT_FOR_ISSUE_EVENT_LOG = 5
         _STEADY_PREPS_COUNT = 13
+        _UNCOOPERATIVE_PREP_COUNT = PREP_MAIN_PREPS - _STEADY_PREPS_COUNT
 
+        expected_penalty_event_log_data = [PRepStatus.PENALTY2.value, 0]
+        expected_penalty_event_logs = [EventLog(ZERO_SCORE_ADDRESS,
+                                                [PREP_PENALTY_SIGNATURE, prep],
+                                                expected_penalty_event_log_data)
+                                       for prep in self._addr_array[_STEADY_PREPS_COUNT:PREP_MAIN_PREPS]]
         initial_main_preps_info = self.get_main_prep_list()['preps']
         initial_main_preps = list(map(lambda prep_dict: prep_dict['address'], initial_main_preps_info))
         for prep in self._addr_array[:PREP_MAIN_PREPS]:
@@ -170,6 +180,11 @@ class TestPreps(TestIISSBase):
                 prev_block_generator=self._addr_array[0],
                 prev_block_validators=self._addr_array[1:_STEADY_PREPS_COUNT])
             self._write_precommit_state(prev_block)
+            if len(tx_results[0].event_logs) > _MAXIMUM_COUNT_FOR_ISSUE_EVENT_LOG:
+                event_logs = tx_results[0].event_logs
+                for event_log in event_logs:
+                    if event_log.indexed[0] == PREP_PENALTY_SIGNATURE:
+                        expected_prep_penalty_event_logs.append(event_log)
 
         # uncooperative preps got penalty on 90th block since PENALTY_GRACE_PERIOD is 80
         for i in range(_STEADY_PREPS_COUNT):
@@ -204,9 +219,13 @@ class TestPreps(TestIISSBase):
             self.assertNotIn(prep, main_preps)
 
         # prep22~30 became new preps(14th prep ~ 22th prep)
-        uncooperative_prep_count = PREP_MAIN_PREPS - _STEADY_PREPS_COUNT
-        for index, prep in enumerate(self._addr_array[PREP_MAIN_PREPS:PREP_MAIN_PREPS + uncooperative_prep_count]):
-            self.assertEqual(prep, main_preps[index + PREP_MAIN_PREPS - uncooperative_prep_count])
+        for index, prep in enumerate(self._addr_array[PREP_MAIN_PREPS:PREP_MAIN_PREPS + _UNCOOPERATIVE_PREP_COUNT]):
+            self.assertEqual(prep, main_preps[index + PREP_MAIN_PREPS - _UNCOOPERATIVE_PREP_COUNT])
+
+        for index, event_log in enumerate(expected_penalty_event_logs):
+            self.assertEqual(event_log.indexed[0], expected_prep_penalty_event_logs[index].indexed[0])
+            self.assertEqual(event_log.indexed[1], expected_prep_penalty_event_logs[index].indexed[1])
+            self.assertEqual(event_log.data, expected_prep_penalty_event_logs[index].data)
 
     def test_set_governance_variables1(self):
         origin_irep: int = IISS_INITIAL_IREP
