@@ -439,16 +439,17 @@ class IconServiceEngine(ContextContainer):
                 if context.revision >= REV_IISS:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-        # Make context.preps immutable
-        context.preps.freeze()
-
         if self.check_end_block_height_of_calc(context):
             precommit_flag |= PrecommitFlag.IISS_CALC
 
         main_prep_as_dict: Optional[dict] = self.after_transaction_process(context,
+                                                                           block_result[0],
                                                                            precommit_flag,
                                                                            prev_block_generator,
                                                                            prev_block_validators)
+
+        # Make context.preps immutable
+        context.preps.freeze()
 
         # Save precommit data
         # It will be written to levelDB on commit
@@ -468,18 +469,20 @@ class IconServiceEngine(ContextContainer):
 
     def after_transaction_process(self,
                                   context: 'IconScoreContext',
+                                  base_transaction: 'TransactionResult',
                                   flag: 'PrecommitFlag',
                                   prev_block_generator: Optional['Address'] = None,
                                   prev_block_validators: Optional[List['Address']] = None) -> Optional[dict]:
 
         main_prep_as_dict: Optional[dict] = None
         if self._is_prep_term_over(context):
-
             # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
             context.engine.prep.save_term(context, weighted_average_of_irep)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
             self._sync_end_block_height_of_calc_and_term(context)
+            self._update_preps_apply_low_productivity_penalty(context)
+            base_transaction.event_logs.extend(context.event_logs)
 
         if context.revision >= REV_IISS:
             context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, flag)
@@ -671,9 +674,6 @@ class IconServiceEngine(ContextContainer):
                                                       context.engine.prep.term.start_block_height,
                                                       context.engine.prep.term.end_block_height],
                                            indexed_args_count=0)
-
-        if self._is_prep_term_over(context):
-            self._update_preps_apply_low_productivity_penalty(context)
 
         tx_result.status = TransactionResult.SUCCESS
 
