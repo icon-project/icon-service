@@ -247,6 +247,12 @@ class PRepStatus(Enum):
     PENALTY2 = 3
 
 
+class PRepGrade(Enum):
+    MAIN = 0
+    SUB = 1
+    CANDIDATE = 2
+
+
 PREP_STATUS_MAPPER = {
     PRepStatus.ACTIVE: "active",
     PRepStatus.UNREGISTERED: "unregistered",
