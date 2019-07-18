@@ -439,9 +439,6 @@ class IconServiceEngine(ContextContainer):
                 if context.revision >= REV_IISS:
                     context.block_batch.block.cumulative_fee += tx_result.step_price * tx_result.step_used
 
-        # Make context.preps immutable
-        context.preps.freeze()
-
         if self.check_end_block_height_of_calc(context):
             precommit_flag |= PrecommitFlag.IISS_CALC
 
@@ -449,6 +446,8 @@ class IconServiceEngine(ContextContainer):
                                                                            precommit_flag,
                                                                            prev_block_generator,
                                                                            prev_block_validators)
+        # Make context.preps immutable
+        context.preps.freeze()
 
         # Save precommit data
         # It will be written to levelDB on commit

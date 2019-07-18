@@ -128,9 +128,6 @@ class PRepContainer(object):
         """
         assert status != PRepStatus.ACTIVE
 
-        if status in (PRepStatus.PENALTY1, PRepStatus.PENALTY2):
-            self._flags &= ~PRepFlag.FROZEN
-
         self._check_access_permission()
 
         prep: 'PRep' = self._active_prep_dict.get(address)

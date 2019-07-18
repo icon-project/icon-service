@@ -173,6 +173,7 @@ class TestPreps(TestIISSBase):
                 prev_block_validators=self._addr_array[1:_STEADY_PREPS_COUNT])
             self._write_precommit_state(prev_block)
 
+        # uncooperative preps got penalty on 90th block since PENALTY_GRACE_PERIOD is 80
         for i in range(_STEADY_PREPS_COUNT):
             response: dict = self.get_prep(self._addr_array[i])
             expected_response: dict = \
@@ -193,16 +194,19 @@ class TestPreps(TestIISSBase):
 
         main_preps_info = self.get_main_prep_list()['preps']
         main_preps = list(map(lambda prep_dict: prep_dict['address'], main_preps_info))
-        # prep0~14 are still prep
-        for prep in self._addr_array[:_STEADY_PREPS_COUNT]:
-            self.assertIn(prep, main_preps)
-        # prep15~21 got penalty
+
+        # prep0~12 are still prep
+        for index, prep in enumerate(self._addr_array[:_STEADY_PREPS_COUNT]):
+            self.assertEqual(prep, main_preps[index])
+
+        # prep13~21 got penalty
         for prep in self._addr_array[_STEADY_PREPS_COUNT:PREP_MAIN_PREPS]:
             self.assertNotIn(prep, main_preps)
 
-        # prep22~28 became new preps
-        for prep in self._addr_array[PREP_MAIN_PREPS:PREP_MAIN_PREPS + PREP_MAIN_PREPS - _STEADY_PREPS_COUNT]:
-            self.assertIn(prep, main_preps)
+        # prep22~30 became new preps(14th prep ~ 22th prep)
+        uncooperative_prep_count = PREP_MAIN_PREPS - _STEADY_PREPS_COUNT
+        for index, prep in enumerate(self._addr_array[PREP_MAIN_PREPS:PREP_MAIN_PREPS + uncooperative_prep_count]):
+            self.assertEqual(prep, main_preps[index + PREP_MAIN_PREPS - uncooperative_prep_count])
 
     def test_set_governance_variables1(self):
         origin_irep: int = IISS_INITIAL_IREP
