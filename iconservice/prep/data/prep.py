@@ -457,7 +457,7 @@ class PRep(Sortable):
         return data
 
     def __str__(self) -> str:
-        return str(self.to_dict())
+        return str(self.to_dict(PRepDictType.FULL))
 
     def copy(self, flags: 'PRepFlag' = PRepFlag.NONE) -> 'PRep':
         prep = copy.copy(self)

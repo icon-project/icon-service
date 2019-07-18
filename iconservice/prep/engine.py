@@ -14,11 +14,10 @@
 
 import hashlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List, Dict
+from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
-
-from .data.prep import PRep, PRepDictType, PRepGrade
+from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
 from .term import Term
 from .validator import validate_prep_data, validate_irep
