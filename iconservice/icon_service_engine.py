@@ -480,7 +480,6 @@ class IconServiceEngine(ContextContainer):
         if self._is_prep_term_over(context):
             if base_tx_result is not None:
                 self._update_preps_apply_low_productivity_penalty(context, base_tx_result)
-                base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
             # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
             context.engine.prep.save_term(context, weighted_average_of_irep)
@@ -508,6 +507,7 @@ class IconServiceEngine(ContextContainer):
             EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
                                            [prep.address, PRepStatus.PENALTY2.value, prep.productivity], 1)
         base_tx_result.event_logs.extend(context.event_logs)
+        base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
 
     def _update_productivity(self,
                              context: 'IconScoreContext',
