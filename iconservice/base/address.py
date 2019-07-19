@@ -227,10 +227,8 @@ class Address(object):
             return None
 
         if size == ICON_ADDRESS_BYTES_SIZE:
-            if buf[0] != AddressPrefix.CONTRACT:
-                return None
-
-            return Address(AddressPrefix.CONTRACT, buf[1:])
+            prefix: 'AddressPrefix' = AddressPrefix(buf[0])
+            return Address(prefix, buf[1:])
         else:
             return Address(AddressPrefix.EOA, buf)
 

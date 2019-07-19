@@ -87,6 +87,15 @@ class TestAddress(unittest.TestCase):
         addr2 = Address.from_bytes(buf)
         self.assertEqual(addr1, addr2)
 
+    def test_address_from_to_bytes_OTHER(self):
+        addr1 = create_address()
+        buf = addr1.to_bytes()
+        prefix: int = 0
+        prefix_buf: bytes = prefix.to_bytes(1, 'big')
+        buf = prefix_buf + buf
+        addr2 = Address.from_bytes(buf)
+        self.assertEqual(addr1, addr2)
+
     def test_address_from_to_string_EOA(self):
         addr1 = create_address()
         buf = str(addr1)
