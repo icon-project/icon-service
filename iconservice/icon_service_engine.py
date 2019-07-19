@@ -401,6 +401,7 @@ class IconServiceEngine(ContextContainer):
         block_result = []
         precommit_flag = PrecommitFlag.NONE
         added_transactions = {}
+        base_tx_result: Optional['TransactionResult'] = None
 
         regulator: Optional['Regulator'] = None
         if is_block_editable and self._is_decentralized(context):
@@ -426,6 +427,7 @@ class IconServiceEngine(ContextContainer):
                         raise InvalidBaseTransactionException("Invalid block: "
                                                               "first transaction must be an base transaction")
                     tx_result = self._invoke_base_request(context, tx_request, is_block_editable, regulator)
+                    base_tx_result = tx_result
                 else:
                     tx_result = self._invoke_request(context, tx_request, index)
 
@@ -443,8 +445,8 @@ class IconServiceEngine(ContextContainer):
             precommit_flag |= PrecommitFlag.IISS_CALC
 
         main_prep_as_dict: Optional[dict] = self.after_transaction_process(context,
-                                                                           block_result[0],
                                                                            precommit_flag,
+                                                                           base_tx_result,
                                                                            prev_block_generator,
                                                                            prev_block_validators)
 
@@ -469,20 +471,21 @@ class IconServiceEngine(ContextContainer):
 
     def after_transaction_process(self,
                                   context: 'IconScoreContext',
-                                  base_transaction: 'TransactionResult',
                                   flag: 'PrecommitFlag',
+                                  base_tx_result: Optional['TransactionResult'],
                                   prev_block_generator: Optional['Address'] = None,
                                   prev_block_validators: Optional[List['Address']] = None) -> Optional[dict]:
 
         main_prep_as_dict: Optional[dict] = None
         if self._is_prep_term_over(context):
+            if base_tx_result is not None:
+                self._update_preps_apply_low_productivity_penalty(context, base_tx_result)
+                base_tx_result.logs_bloom = self._generate_logs_bloom(base_tx_result.event_logs)
             # The current P-Rep term is over. Prepare the next P-Rep term
             weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
             context.engine.prep.save_term(context, weighted_average_of_irep)
             main_prep_as_dict = context.engine.prep.make_prep_tx_result()
             self._sync_end_block_height_of_calc_and_term(context)
-            self._update_preps_apply_low_productivity_penalty(context)
-            base_transaction.event_logs.extend(context.event_logs)
 
         if context.revision >= REV_IISS:
             context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, flag)
@@ -492,7 +495,8 @@ class IconServiceEngine(ContextContainer):
         return main_prep_as_dict
 
     def _update_preps_apply_low_productivity_penalty(self,
-                                                     context: 'IconScoreContext'):
+                                                     context: 'IconScoreContext',
+                                                     base_tx_result: 'TransactionResult'):
         low_productivities: list = []
         for main_prep in context.engine.prep.term.main_preps:
             prep = context.preps.get_by_address(main_prep.address)
@@ -503,6 +507,7 @@ class IconServiceEngine(ContextContainer):
             context.preps.remove(prep.address, PRepStatus.PENALTY2)
             EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
                                            [prep.address, PRepStatus.PENALTY2.value, prep.productivity], 1)
+        base_tx_result.event_logs.extend(context.event_logs)
 
     def _update_productivity(self,
                              context: 'IconScoreContext',
@@ -678,7 +683,6 @@ class IconServiceEngine(ContextContainer):
         tx_result.status = TransactionResult.SUCCESS
 
         tx_result.event_logs = context.event_logs
-        tx_result.logs_bloom = self._generate_logs_bloom(context.event_logs)
         tx_result.traces = context.traces
 
         return tx_result
