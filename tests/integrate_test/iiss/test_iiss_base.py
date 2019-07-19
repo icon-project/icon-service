@@ -214,13 +214,13 @@ class TestIISSBase(TestIntegrateBase):
         return self._query(query_request)
 
     def get_prep_list(self,
-                      start_index: Optional[int] = None,
-                      end_index: Optional[int] = None) -> dict:
+                      start_ranking: Optional[int] = None,
+                      end_ranking: Optional[int] = None) -> dict:
         params = {}
-        if start_index is not None:
-            params['startRanking'] = hex(start_index)
-        if end_index is not None:
-            params['endRanking'] = hex(end_index)
+        if start_ranking is not None:
+            params['startRanking'] = hex(start_ranking)
+        if end_ranking is not None:
+            params['endRanking'] = hex(end_ranking)
 
         query_request = {
             "version": self._version,

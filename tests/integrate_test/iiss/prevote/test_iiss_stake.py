@@ -42,7 +42,7 @@ class TestIISSStake(TestIISSBase):
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
-        # gain 100 icx
+        # transfer 100 icx to self.addr_array[0]
         balance: int = 100 * ICX_IN_LOOP
         tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
         prev_block, tx_results = self._make_and_req_block([tx])
