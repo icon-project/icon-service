@@ -700,7 +700,9 @@ class IconServiceEngine(ContextContainer):
             issue_data_in_db, regulator = context.engine.issue.create_icx_issue_info(context)
             if issue_data_in_tx != issue_data_in_db:
                 raise InvalidBaseTransactionException("Have difference between "
-                                                      "base transaction and actual db data")
+                                                      "base transaction and actual db data. "
+                                                      f"base tx: {issue_data_in_tx} "
+                                                      f"db: {issue_data_in_db} ")
 
         context.tx = Transaction(tx_hash=request['params']['txHash'],
                                  index=BASE_TRANSACTION_INDEX,
