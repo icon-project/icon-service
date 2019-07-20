@@ -14,7 +14,7 @@
 
 import hashlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List
+from typing import TYPE_CHECKING, Any, Optional, List, Dict
 
 from iconcommons.logger import Logger
 
@@ -29,7 +29,7 @@ from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
 from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-from ..icon_constant import PrepResultState
+from ..icon_constant import PRepGrade, PrepResultState
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -127,51 +127,43 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         self.preps = precommit_data.preps
-        # self._reset_prep_grade()
-
-    # def _reset_prep_grade(self):
-    #     prep_grades: Dict['Address', 'PRepGrade'] = {}
-    #
-    #     for prep in self.term.main_preps:
-    #         prep_grades[prep.address] = prep.grade
-    #
-    #     for prep in self.term.sub_preps:
-    #         prep_grades[prep.address] = prep.grade
-    #
-    #     # Set Main P-Rep grade
-    #     new_grade: 'PRepGrade' = PRepGrade.MAIN
-    #     for i in range(PREP_MAIN_PREPS):
-    #         prep: 'PRep' = self.preps.get_by_index(i, False)
-    #
-    #         old_grade: 'PRepGrade' = prep_grades.get(prep.address, PRepGrade.CANDIDATE)
-    #         if old_grade == PRepGrade.CANDIDATE:
-    #             # This P-Rep is not Main or Sub P-Rep in the previous term
-    #             prep.grade = new_grade
-    #         else:
-    #             if prep.grade != old_grade:
-    #                 prep.grade = new_grade
-    #             del prep_grades[prep.address]
-    #
-    #     # Set Sub P-Rep grade
-    #     new_grade: 'PRepGrade' = PRepGrade.SUB
-    #     for i in range(PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS):
-    #         prep: 'PRep' = self.preps.get_by_index(i, False)
-    #
-    #         old_grade: 'PRepGrade' = prep_grades.get(prep.address, PRepGrade.CANDIDATE)
-    #         if old_grade == PRepGrade.CANDIDATE:
-    #             prep.grade = new_grade
-    #         else:
-    #             if prep.grade != old_grade:
-    #                 prep.grade = new_grade
-    #             del prep_grades[prep.address]
-    #
-    #     # Reset old Main P-Reps and Sub P-Reps
-    #     for address in prep_grades:
-    #         prep: 'PRep' = self.preps.get_by_address(address, mutable=False)
-    #         prep.grade = PRepGrade.CANDIDATE
 
     def rollback(self):
         pass
+
+    def _on_term_ended(self):
+        """The term has been ended
+
+        Update P-Rep grades according to PRep.delegated
+        """
+        prep_grades: Dict['Address', 'PRepGrade'] = {}
+        old_preps: List['PRep'] = self.term.main_preps + self.term.sub_preps
+
+        # Put address and old grade pair to prep_grades dict
+        for prep in old_preps:
+            prep_grades[prep.address] = prep.grade
+
+        # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
+        for i in range(PREP_MAIN_AND_SUB_PREPS):
+            prep: 'PRep' = self.preps.get_by_index(i, mutable=False)
+            if prep is None:
+                # Not enough P-Rep candidates
+                break
+
+            prep_address: 'Address' = prep_address
+            old_grade: 'PRepGrade' = prep_grades.get(prep_address, PRepGrade.CANDIDATE)
+            new_grade: 'PRepGrade' = PRepGrade.MAIN if i < PREP_MAIN_PREPS else PRepGrade.SUB
+
+            if old_grade == new_grade:
+                del prep_grades[prep_address]
+            else:
+                prep_grades[prep_address] = new_grade
+
+        # Update the grades of P-Reps for the next term
+        for address, new_grade in prep_grades.items():
+            prep: 'PRep' = self.preps.get_by_address(address, mutable=True)
+            assert prep is not None
+            prep.grade = new_grade
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
@@ -493,7 +485,7 @@ class Engine(EngineBase, IISSEngineListener):
         }
 
     def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns P-Rep list with start and end rankings
+        """Returns P-Reps ranging in ranking from start_ranking to end_ranking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
 
