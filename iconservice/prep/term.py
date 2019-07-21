@@ -33,8 +33,8 @@ class Term(object):
         self._start_block_height: int = -1
         self._end_block_height: int = -1
         self._period: int = -1
-        self._main_preps: List['PRep'] = []
-        self._sub_preps: List['PRep'] = []
+        # Main and Sub P-Reps
+        self._preps: List['PRep'] = []
         self._irep: int = -1
         self._total_supply: int = -1
 
@@ -56,14 +56,22 @@ class Term(object):
 
     @property
     def main_preps(self) -> List['PRep']:
-        return self._main_preps
+        return self._preps[:PREP_MAIN_PREPS]
 
     @property
     def sub_preps(self) -> List['PRep']:
-        return self._sub_preps
+        return self._preps[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
+
+    @property
+    def preps(self) -> List['PRep']:
+        return self._preps
 
     @property
     def irep(self) -> int:
+        """Returns weighted average irep used during a term
+
+        :return: weighted average irep that is calculated with ireps submitted by 22 Main P-Reps
+        """
         return self._irep
 
     @property
@@ -79,7 +87,7 @@ class Term(object):
             self._sequence = data[1]
             self._start_block_height = data[2]
             self._end_block_height = self._start_block_height + term_period - 1
-            self._main_preps, self._sub_preps = self._make_main_and_sub_preps(context, data[3])
+            self._preps: List['PRep'] = self._make_main_and_sub_preps(context, data[3])
             self._irep = data[4]
             self._total_supply = data[5]
         else:
@@ -88,7 +96,7 @@ class Term(object):
             self._total_supply = context.total_supply
 
     @staticmethod
-    def _make_main_and_sub_preps(context: 'IconScoreContext', data: list) -> tuple:
+    def _make_main_and_sub_preps(context: 'IconScoreContext', data: list) -> List['PRep']:
         """Returns tuple of Main P-Rep List and Sub P-Rep List
 
         :param context:
@@ -116,7 +124,7 @@ class Term(object):
             assert prep.is_frozen()
             prep_list.append(prep)
 
-        return prep_list[:PREP_MAIN_PREPS], prep_list[PREP_MAIN_PREPS: PREP_MAIN_AND_SUB_PREPS]
+        return prep_list
 
     def save(self,
              context: 'IconScoreContext',
@@ -133,24 +141,22 @@ class Term(object):
         :param total_supply:
         :return:
         """
-
-        data: list = [
-            self._VERSION,
-            self._sequence + 1,
-            current_block_height + 1,
-            self._serialize_preps(preps),
-            irep,
-            total_supply
-        ]
-        context.storage.prep.put_term(context, data)
-
         self._sequence += 1
         self._start_block_height = current_block_height + 1
         self._end_block_height = current_block_height + self._period
-        self._main_preps = preps[:PREP_MAIN_PREPS]
-        self._sub_preps = preps[PREP_MAIN_PREPS: PREP_MAIN_AND_SUB_PREPS]
+        self._preps = preps[:PREP_MAIN_AND_SUB_PREPS]  # shallow copy
         self._irep = irep
         self._total_supply = total_supply
+
+        data: list = [
+            self._VERSION,
+            self._sequence,
+            self._start_block_height,
+            self._serialize_preps(preps),
+            self._irep,
+            self._total_supply
+        ]
+        context.storage.prep.put_term(context, data)
 
     @staticmethod
     def _serialize_preps(preps: List['PRep']) -> List:

@@ -106,8 +106,7 @@ def test_save_and_load():
 
         context.storage.prep.get_term = Mock(return_value=[
             0, saved_sequence, current_block + 1, term._serialize_preps(PREPS), irep, total_supply])
-        term._make_main_and_sub_preps = Mock(return_value=(PREPS[:PREP_MAIN_PREPS],
-                                                           PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]))
+        term._make_main_and_sub_preps = Mock(return_value=PREPS)
         term.load(context, period)
         assert term.sequence == saved_sequence
         assert term.total_supply == total_supply

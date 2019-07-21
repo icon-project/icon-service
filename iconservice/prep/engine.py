@@ -136,21 +136,21 @@ class Engine(EngineBase, IISSEngineListener):
 
         Update P-Rep grades according to PRep.delegated
         """
+        new_preps: 'PRepContainer' = self.preps
         prep_grades: Dict['Address', 'PRepGrade'] = {}
-        old_preps: List['PRep'] = self.term.main_preps + self.term.sub_preps
 
         # Put address and old grade pair to prep_grades dict
-        for prep in old_preps:
+        for prep in self.term.preps:
             prep_grades[prep.address] = prep.grade
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
         for i in range(PREP_MAIN_AND_SUB_PREPS):
-            prep: 'PRep' = self.preps.get_by_index(i, mutable=False)
+            prep: 'PRep' = new_preps.get_by_index(i, mutable=False)
             if prep is None:
                 # Not enough P-Rep candidates
                 break
 
-            prep_address: 'Address' = prep_address
+            prep_address: 'Address' = prep.address
             old_grade: 'PRepGrade' = prep_grades.get(prep_address, PRepGrade.CANDIDATE)
             new_grade: 'PRepGrade' = PRepGrade.MAIN if i < PREP_MAIN_PREPS else PRepGrade.SUB
 
@@ -255,6 +255,10 @@ class Engine(EngineBase, IISSEngineListener):
         return self.term.end_block_height == context.block.height
 
     def make_prep_tx_result(self) -> Optional[dict]:
+        """Returns dict containing main preps which is appended to invoke result
+
+        :return:
+        """
         prep_as_dict = self.get_main_preps_in_term()
         if prep_as_dict:
             prep_as_dict['irep'] = self.term.irep
