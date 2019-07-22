@@ -130,9 +130,15 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = conf.get(ConfigKey.TBEARS_MODE, False)
         IconScoreContext.iiss_initial_irep = conf.get(ConfigKey.INITIAL_IREP, IISS_INITIAL_IREP)
+
         self._init_component_context()
 
+        # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.storage.icx.load_last_block_info(context)
+        self._precommit_data_manager.last_block: 'Block' = IconScoreContext.storage.icx.last_block
+        context.block: 'Block' = self._get_last_block()
+
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
@@ -142,9 +148,6 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.INITIAL_IREP],
                                      conf[ConfigKey.PREP_REGISTRATION_FEE])
-
-        last_block: 'Block' = IconScoreContext.storage.icx.last_block
-        self._precommit_data_manager.last_block = last_block
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))

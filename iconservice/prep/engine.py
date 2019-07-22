@@ -89,8 +89,7 @@ class Engine(EngineBase, IISSEngineListener):
         icx_storage: 'IcxStorage' = context.storage.icx
 
         for prep in context.storage.prep.get_prep_iterator():
-            account: 'Account' = \
-                icx_storage.get_account(context, prep.address, Intent.LOAD_PREP)
+            account: 'Account' = icx_storage.get_account(context, prep.address, Intent.ALL)
 
             prep.stake = account.stake
             prep.delegated = account.delegated_amount

@@ -19,14 +19,6 @@ from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
 
 
 class IssueFormula(object):
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if not isinstance(cls._instance, IssueFormula):
-            cls._instance = super().__new__(cls, *args, **kwargs)
-
-        return cls._instance
-
     def __init__(self,
                  prep_count: int = PREP_MAIN_PREPS,
                  sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS):
