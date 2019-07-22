@@ -19,10 +19,12 @@ from ..base.type_converter import TypeConverter
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
     from ..base.block import Block
+    from ..prep.term import Term
 
 
-def get_main_preps(context: 'IconScoreContext', **kwargs):
-    preps: dict = context.engine.prep.get_main_preps_in_term()
+def get_main_preps(context: 'IconScoreContext', **_kwargs):
+    term: 'Term' = context.engine.prep.term
+    preps: dict = context.engine.prep.get_main_preps_in_dict(term.main_preps)
     if preps is None:
         preps = {}
 

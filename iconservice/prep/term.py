@@ -126,33 +126,48 @@ class Term(object):
 
         return prep_list
 
-    def save(self,
-             context: 'IconScoreContext',
-             current_block_height: int,
-             preps: List['PRep'],
-             irep: int,
-             total_supply: int):
-        """Save term data to stateDB
+    def update(
+            self, current_block_height: int, preps: List['PRep'],
+            total_supply: int, term_period: int, irep: int):
+        """
 
-        :param context:
         :param current_block_height:
-        :param preps: P-Rep list including main P-Reps and sub P-Reps
+        :param preps:
         :param irep:
         :param total_supply:
+        :param term_period: P-Rep term period in block
         :return:
         """
         self._sequence += 1
         self._start_block_height = current_block_height + 1
-        self._end_block_height = current_block_height + self._period
+        self._end_block_height = current_block_height + term_period
+        self._period = term_period
         self._preps = preps[:PREP_MAIN_AND_SUB_PREPS]  # shallow copy
-        self._irep = irep
         self._total_supply = total_supply
+        self._irep = irep
 
+    # def _calculate_weighted_average_of_irep(self) -> int:
+    #     total_delegated = 0  # total delegated of top 22 preps
+    #     total_weighted_irep = 0
+    #
+    #     for i in range(PREP_MAIN_PREPS):
+    #         prep: 'PRep' = self._preps[i]
+    #         total_weighted_irep += prep.irep * prep.delegated
+    #         total_delegated += prep.delegated
+    #
+    #     return total_weighted_irep // total_delegated if total_delegated > 0 else 0
+
+    def save(self, context: 'IconScoreContext'):
+        """Save term data to stateDB
+
+        :param context:
+        :return:
+        """
         data: list = [
             self._VERSION,
             self._sequence,
             self._start_block_height,
-            self._serialize_preps(preps),
+            self._serialize_preps(self.preps),
             self._irep,
             self._total_supply
         ]
