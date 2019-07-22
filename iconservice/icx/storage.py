@@ -46,6 +46,7 @@ class Intent(IntEnum):
     TRANSFER = AccountPartFlag.COIN
     STAKE = AccountPartFlag.COIN | AccountPartFlag.STAKE
     DELEGATED = AccountPartFlag.DELEGATION
+    INIT_PREP = AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
     ALL = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
 
 
