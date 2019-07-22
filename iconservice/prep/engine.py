@@ -17,6 +17,7 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Optional, List
 
 from iconcommons.logger import Logger
+
 from .data.prep import PRep, PRepDictType
 from .data.prep_container import PRepContainer
 from .term import Term
@@ -27,7 +28,8 @@ from ..base.exception import InvalidParamsException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
-from ..icon_constant import PrepResultState, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ..icon_constant import PrepResultState
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -67,17 +69,35 @@ class Engine(EngineBase, IISSEngineListener):
             "getPRepList": self.handle_get_prep_list
         }
 
-        self.preps: Optional['PRepContainer'] = None
+        self.preps = PRepContainer()
         self.term = Term()
 
         Logger.debug("PRepEngine.__init__() end")
 
     def open(self, context: 'IconScoreContext', term_period: int, irep: int):
-        self.preps = PRepContainer()
-        self.preps.load(context)
+        self._load_preps(context)
         self.term.load(context, term_period, irep)
 
         context.engine.iiss.add_listener(self)
+
+    def _load_preps(self, context: 'IconScoreContext'):
+        """Load a prep from db
+
+        :param prep:
+        :return:
+        """
+        icx_storage: 'IcxStorage' = context.storage.icx
+
+        for prep in context.storage.prep.get_prep_iterator():
+            account: 'Account' = \
+                icx_storage.get_account(context, prep.address, Intent.STAKE | Intent.DELEGATED)
+
+            prep.stake = account.stake
+            prep.delegated = account.delegated_amount
+
+            self.preps.put(prep)
+
+        self.preps.freeze()
 
     def close(self):
         IconScoreContext.engine.iiss.remove_listener(self)
@@ -182,11 +202,12 @@ class Engine(EngineBase, IISSEngineListener):
         ret_params: dict = TypeConverter.convert(params, ParamType.IISS_REG_PREP)
         validate_prep_data(address, ret_params)
 
-        account: 'Account' = icx_storage.get_account(context, address, Intent.DELEGATED)
+        account: 'Account' = icx_storage.get_account(context, address, Intent.STAKE | Intent.DELEGATED)
 
         # Create a PRep object and assign delegated amount from account to prep
         # prep.irep is set to IISS_MIN_IREP by default
         prep = PRep.from_dict(address, ret_params, context.block.height, context.tx.index)
+        prep.stake = account.stake
         prep.delegated = account.delegated_amount
 
         # Set an initial value to irep of a P-Rep on registerPRep
@@ -513,7 +534,9 @@ class Engine(EngineBase, IISSEngineListener):
         :param account:
         :return:
         """
-        pass
+        prep: 'PRep' = context.preps.get_by_address(account.address, mutable=True)
+        if prep:
+            prep.stake = account.stake
 
     def on_set_delegation(
             self, context: 'IconScoreContext', updated_accounts: List['Account']):
@@ -530,5 +553,5 @@ class Engine(EngineBase, IISSEngineListener):
             address = account.address
 
             # If a delegated account is a P-Rep, then update its delegated amount
-            if address in context.preps:
+            if context.preps.contains(address, inactive_preps_included=False):
                 context.preps.set_delegated_to_prep(address, account.delegated_amount)

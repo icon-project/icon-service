@@ -19,8 +19,9 @@
 import hashlib
 import os
 from copy import deepcopy
+from typing import List
 
-from iconservice.base.address import Address
+from iconservice.base.address import Address, AddressPrefix
 from iconservice.base.exception import InvalidParamsException, ExceptionCode
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import IISS_INITIAL_IREP, PRepGrade, PRepStatus
@@ -187,10 +188,10 @@ class TestIntegratePrep(TestIISSBase):
         self._write_precommit_state(prev_block)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self.get_prep_list(start_index=-1)
+            self.get_prep_list(start_ranking=-1)
 
         with self.assertRaises(InvalidParamsException) as e:
-            self.get_prep_list(end_index=-1)
+            self.get_prep_list(end_ranking=-1)
 
         with self.assertRaises(InvalidParamsException) as e:
             self.get_prep_list(0, 1)
@@ -205,7 +206,7 @@ class TestIntegratePrep(TestIISSBase):
         actual_preps: list = response['preps']
         self.assertEqual(1, len(actual_preps))
 
-        response: dict = self.get_prep_list(start_index=1)
+        response: dict = self.get_prep_list(start_ranking=1)
         actual_preps: list = response['preps']
         self.assertEqual(prep_count, len(actual_preps))
 
@@ -270,7 +271,7 @@ class TestIntegratePrep(TestIISSBase):
         actual_list: list = response["preps"]
         self.assertEqual(0, len(actual_list))
 
-        response: dict = self.get_prep_list(end_index=IISS_MAX_DELEGATIONS)
+        response: dict = self.get_prep_list(end_ranking=IISS_MAX_DELEGATIONS)
         preps: list = []
         for i in range(IISS_MAX_DELEGATIONS):
             address: 'Address' = self._addr_array[i]
@@ -281,8 +282,9 @@ class TestIntegratePrep(TestIISSBase):
                     "country": "ZZZ",
                     "city": "Unknown",
                     "address": address,
-                    "delegated": delegation_amount,
                     "name": f"node{address}",
+                    "stake": stake_amount if i == 0 else 0,
+                    "delegated": delegation_amount,
                     "totalBlocks": 0,
                     "validatedBlocks": 0
                 }
@@ -498,3 +500,132 @@ class TestIntegratePrep(TestIISSBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         tx_result = tx_results[0]
         self.assertTrue(tx_result.status)
+
+    def test_prep_stake(self):
+        """Test P-Rep stake management
+        """
+
+        # Update governance SCORE
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # Create a user address
+        user_address: 'Address' = Address.from_prefix_and_int(AddressPrefix.EOA, 1234)
+
+        # The number of address is 100
+        prep_addresses: List['Address'] = self._addr_array
+        public_keys: List[bytes] = self.public_key_array
+        prep_count = 30
+
+        # Transfer 100 icx to 30 prep addresses and one user address
+        tx_list: list = [
+            self._make_icx_send_tx(self._genesis, user_address, 100 * ICX_IN_LOOP)
+        ]
+        for i in range(prep_count):
+            prep_address: 'Address' = prep_addresses[i]
+            assert user_address != prep_address
+
+            tx: dict = self._make_icx_send_tx(self._genesis, prep_address, 3000 * ICX_IN_LOOP)
+            tx_list.append(tx)
+
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+        self.assertEqual(prep_count + 1, len(tx_results))
+
+        # Check whether transactions succeeded
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+
+        # Register 30 P-Rep candidates
+        tx_list: list = []
+        for i in range(prep_count):
+            prep_address: 'Address' = prep_addresses[i]
+            public_key: str = f"0x{public_keys[i].hex()}"
+
+            tx: dict = self.create_register_prep_tx(prep_address, public_key=public_key)
+            tx_list.append(tx)
+
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+
+        # Check whether transactions succeeded
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+
+        # Check whether the stake of each P-Rep is 0
+        response: dict = self.get_prep_list(start_ranking=1)
+        preps: list = response["preps"]
+        self.assertEqual(prep_count, len(preps))
+        for prep in preps:
+            self.assertEqual(0, prep["stake"])
+
+        # Change the stake of each P-Rep
+        total_stake: int = 0
+        tx_list = []
+        for i in range(prep_count):
+            prep_address: 'Address' = prep_addresses[i]
+            stake: int = i * 10 * ICX_IN_LOOP
+            total_stake += stake
+
+            tx = self.create_set_stake_tx(prep_address, stake)
+            tx_list.append(tx)
+
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+
+        # Check whether transactions succeeded
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+
+        # Check whether the stake of each P-Rep is correct.
+        response: dict = self.get_prep_list(start_ranking=1)
+        self.assertEqual(total_stake, response["totalStake"])
+
+        preps: list = response["preps"]
+        self.assertEqual(prep_count, len(preps))
+        for i in range(prep_count):
+            stake: int = i * 10 * ICX_IN_LOOP
+            prep: dict = preps[i]
+            self.assertEqual(stake, prep["stake"])
+
+        # Change the stake of each P-Rep
+        total_stake = 0
+        stake: int = 10 * ICX_IN_LOOP
+        tx_list = []
+        for i in range(prep_count):
+            prep_address: 'Address' = prep_addresses[i]
+            total_stake += stake
+
+            tx = self.create_set_stake_tx(prep_address, stake)
+            tx_list.append(tx)
+
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+
+        # setStake with user_address
+        stake = 50 * ICX_IN_LOOP
+        tx_list = [self.create_set_stake_tx(user_address, stake)]
+
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        self._write_precommit_state(prev_block)
+        total_stake += stake
+
+        # Check the stakes of P-Reps
+        response: dict = self.get_prep_list(start_ranking=1)
+        # total_stake means the sum of stakes which all addresses have
+        self.assertEqual(total_stake, response["totalStake"])
+
+        preps: list = response["preps"]
+        self.assertEqual(prep_count, len(preps))
+
+        for i in range(prep_count):
+            prep: dict = preps[i]
+            self.assertEqual(10 * ICX_IN_LOOP, prep["stake"])
+
+            prep: dict = self.get_prep(prep["address"])
+            self.assertEqual(10 * ICX_IN_LOOP, prep["stake"])

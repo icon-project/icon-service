@@ -22,7 +22,6 @@ from .prep import PRep, PRepFlag, PRepStatus
 from .sorted_list import SortedList
 from ...base.address import Address
 from ...base.exception import InvalidParamsException, AccessDeniedException
-from ...iconscore.icon_score_context import IconScoreContext
 
 
 class PRepContainer(object):
@@ -55,25 +54,22 @@ class PRepContainer(object):
         assert self._total_prep_delegated >= 0
         return self._total_prep_delegated
 
-    def load(self, context: 'IconScoreContext'):
-        """Load active and inactive P-Rep list from StateDB on startup
+    def put(self, prep: 'PRep'):
+        """Put a P-Rep object loaded from db into PRepContainer
 
-        :param context:
+        DO NOT CALL this method anywhere but for PRepEngine.open()
+
+        :param prep:
         :return:
         """
-        for prep in context.storage.prep.get_prep_iterator():
-            if prep.status == PRepStatus.ACTIVE:
-                self._active_prep_dict[prep.address] = prep
-                self._active_prep_list.add(prep)
+        if prep.status == PRepStatus.ACTIVE:
+            self._active_prep_dict[prep.address] = prep
+            self._active_prep_list.add(prep)
 
-                self._total_prep_delegated += prep.delegated
-                assert self._total_prep_delegated >= 0
-            else:
-                self._inactive_prep_dict[prep.address] = prep
-
-            prep.freeze()
-
-        self._flags |= PRepFlag.FROZEN
+            self._total_prep_delegated += prep.delegated
+            assert self._total_prep_delegated >= 0
+        else:
+            self._inactive_prep_dict[prep.address] = prep
 
     def freeze(self):
         """Freeze data in PRepContainer
