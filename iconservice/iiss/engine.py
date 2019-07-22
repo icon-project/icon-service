@@ -261,7 +261,14 @@ class Engine(EngineBase):
         :param params: params of setDelegation JSON-RPC API request
         :return: total_delegating, (address, delegated)
         """
-        delegations: Optional[List[Dict[str, str]]] = params.get(ConstantKeys.DELEGATIONS)
+
+        if len(params) == 1:
+            delegations: List[Dict[str, str]] = params[ConstantKeys.DELEGATIONS]
+        elif len(params) == 0:
+            delegations = None
+        else:
+            raise InvalidParamsException(f"Invalid params: {params}")
+
         assert delegations is None or isinstance(delegations, list)
 
         if delegations is None or len(delegations) == 0:
