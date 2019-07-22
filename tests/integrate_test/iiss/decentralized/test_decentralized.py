@@ -272,19 +272,12 @@ class TestIISSDecentralized(TestIISSBase):
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
 
-        # get main prep
-        response: dict = self.get_main_prep_list()
-        expected_response: dict = {
-            "preps": [],
-            "totalDelegated": 0
-        }
-        self.assertEqual(expected_response, response)
-
         # set Revision REV_IISS (decentralization)
         tx: dict = self.create_set_revision_tx(REV_DECENTRALIZATION)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
+        # after decentralization, irep should be 50,000
         expected_irep_when_decentralized = IISS_INITIAL_IREP
         response: dict = self.get_iiss_info()
         self.assertEqual(expected_irep_when_decentralized, response['variable']['irep'])
