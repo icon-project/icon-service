@@ -24,7 +24,7 @@ from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icon_constant import IconScoreContextType, IconScoreFuncType
+from ..icon_constant import IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -145,6 +145,9 @@ class IconScoreContext(object):
     @property
     def total_supply(self):
         return self.storage.icx.get_total_supply(self)
+
+    def is_decentralized(self) -> bool:
+        return self.revision >= REV_DECENTRALIZATION and self.engine.prep.term.sequence != -1
 
     def set_func_type_by_icon_score(self, icon_score: 'IconScoreBase', func_name: str):
         is_func_readonly = getattr(icon_score, '_IconScoreBase__is_func_readonly')
