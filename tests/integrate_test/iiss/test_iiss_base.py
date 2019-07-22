@@ -25,7 +25,7 @@ from iconservice.base.address import Address
 from iconservice.base.address import ZERO_SCORE_ADDRESS, GOVERNANCE_SCORE_ADDRESS
 from iconservice.base.type_converter_templates import ConstantKeys
 from iconservice.icon_constant import ConfigKey, PREP_MAIN_AND_SUB_PREPS, REV_IISS, PREP_MAIN_PREPS, ICX_IN_LOOP, \
-    REV_DECENTRALIZATION
+    REV_DECENTRALIZATION, IISS_INITIAL_IREP
 from tests.integrate_test.test_integrate_base import TestIntegrateBase, TOTAL_SUPPLY
 
 
@@ -335,6 +335,10 @@ class TestIISSBase(TestIntegrateBase):
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
 
+        expected_irep_when_rev_iiss = 0
+        response: dict = self.get_iiss_info()
+        self.assertEqual(expected_irep_when_rev_iiss, response['variable']['irep'])
+
         main_preps = self._addr_array[:PREP_MAIN_PREPS]
 
         total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
@@ -381,13 +385,20 @@ class TestIISSBase(TestIntegrateBase):
 
         # register PRep
         tx_list: list = []
+
         for i, address in enumerate(main_preps):
             tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
             tx_list.append(tx)
         prev_block, tx_results = self._make_and_req_block(tx_list)
         for tx_result in tx_results:
             self.assertEqual(int(True), tx_result.status)
+
         self._write_precommit_state(prev_block)
+        # irep of each prep should be 50000 ICX when revision IISS_REV
+        expected_inital_irep_of_prep = IISS_INITIAL_IREP
+        for address in main_preps:
+            response = self.get_prep(address)
+            self.assertEqual(expected_inital_irep_of_prep, response['irep'])
 
         # delegate to PRep
         tx_list: list = []
@@ -417,6 +428,10 @@ class TestIISSBase(TestIntegrateBase):
         tx: dict = self.create_set_revision_tx(REV_DECENTRALIZATION)
         prev_block, tx_results = self._make_and_req_block([tx])
         self._write_precommit_state(prev_block)
+
+        expected_irep_when_decentralized = IISS_INITIAL_IREP
+        response: dict = self.get_iiss_info()
+        self.assertEqual(expected_irep_when_decentralized, response['variable']['irep'])
 
         # get main prep
         response: dict = self.get_main_prep_list()
