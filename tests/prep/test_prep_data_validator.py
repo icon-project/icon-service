@@ -71,7 +71,8 @@ def test_validate_uri():
                       "http://foo.com/unicode_(✪)_in_parens", "http://foo.com/(something)?after=parens",
                       "http://code.google.com/events/#&product=browser", "http://foo.bar/?q=Test%20URL-encoded%20stuff",
                       "http://1337.net", "http://223.255.255.254", "http://foo.bar:8080", "https://foo.bar:8000",
-                      "https://192.10.2.3:1234"]
+                      "https://192.10.2.3:1234", "https://localhost:1234", "http://localhost:1234", "http://localhost",
+                      "https://localhost"]
     for uri in invalid_uri_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_uri(uri)
@@ -101,7 +102,7 @@ def test_validate_endpoint():
                              "http://www.foo.bar./:8080", "http://.www.foo.bar./:8080", "022.107.254.1:8080",
                              "256.123.1.1:8000"]
 
-    valid_endpoint_list = ["foo.com:1", "192.10.6.2:8000"]
+    valid_endpoint_list = ["foo.com:1", "192.10.6.2:8000", "localhost:1234"]
     for endpoint in invalid_endpoint_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_p2p_endpoint(endpoint)
