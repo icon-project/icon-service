@@ -27,7 +27,7 @@ from ..base.address import Address, ZERO_SCORE_ADDRESS
 from ..base.exception import InvalidParamsException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
-from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION
+from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
 from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..icon_constant import PrepResultState
 from ..iconscore.icon_score_context import IconScoreContext
@@ -71,12 +71,14 @@ class Engine(EngineBase, IISSEngineListener):
 
         self.preps = PRepContainer()
         self.term = Term()
+        self._initial_irep: Optional[int] = None
 
         Logger.debug("PRepEngine.__init__() end")
 
     def open(self, context: 'IconScoreContext', term_period: int, irep: int):
         self._load_preps(context)
-        self.term.load(context, term_period, irep)
+        self.term.load(context, term_period)
+        self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
 
@@ -210,8 +212,10 @@ class Engine(EngineBase, IISSEngineListener):
         prep.delegated = account.delegated_amount
 
         # Set an initial value to irep of a P-Rep on registerPRep
-        if self.term.irep > 0:
+        if context.is_decentralized():
             prep.set_irep(self.term.irep, context.block.height)
+        else:
+            prep.set_irep(self._initial_irep, context.block.height)
 
         # Update preps in context
         context.preps.add(prep)
@@ -304,7 +308,7 @@ class Engine(EngineBase, IISSEngineListener):
             total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated
 
-        return total_weighted_irep // total_delegated if total_delegated > 0 else 0
+        return total_weighted_irep // total_delegated if total_delegated > 0 else IISS_MIN_IREP
 
     def handle_get_prep(self, context: 'IconScoreContext', params: dict) -> dict:
         """Returns the details of a P-Rep including information on registration, delegation and statistics

@@ -360,10 +360,6 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
-    @staticmethod
-    def _is_decentralized(context: 'IconScoreContext') -> bool:
-        return context.revision >= REV_DECENTRALIZATION and context.engine.prep.term.sequence != -1
-
     def invoke(self,
                block: 'Block',
                tx_requests: list,
@@ -407,7 +403,7 @@ class IconServiceEngine(ContextContainer):
         base_tx_result: Optional['TransactionResult'] = None
 
         regulator: Optional['Regulator'] = None
-        if is_block_editable and self._is_decentralized(context):
+        if is_block_editable and context.is_decentralized():
             base_transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
             # todo: if the txhash field is add to addedTransaction, should remove this logic
             tx_params_to_added = deepcopy(base_transaction["params"])
@@ -425,7 +421,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == BASE_TRANSACTION_INDEX and self._is_decentralized(context):
+                if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
                         raise InvalidBaseTransactionException("Invalid block: "
                                                               "first transaction must be an base transaction")
@@ -517,7 +513,7 @@ class IconServiceEngine(ContextContainer):
                              prev_block_generator: Optional['Address'] = None,
                              prev_block_validators: Optional[List['Address']] = None):
 
-        if not self._is_decentralized(context):
+        if not context.is_decentralized():
             return
 
         validates: set = set()

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_INITIAL_IREP, ConfigKey
+    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_MIN_IREP, IISS_INITIAL_IREP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -174,9 +174,110 @@ class TestIISSDecentralized(TestIISSBase):
         self.make_blocks_to_end_calculation()
 
         # set governance variable
-        tx: dict = self.create_set_governance_variables(self._addr_array[prep_id], IISS_INITIAL_IREP)
+        tx: dict = self.create_set_governance_variables(self._addr_array[prep_id], IISS_MIN_IREP)
         self.estimate_step(tx)
 
         # unregister prep
         tx: dict = self.create_unregister_prep_tx(self._addr_array[prep_id])
         self.estimate_step(tx)
+
+    def test_irep_each_revision(self):
+        # decentralized
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        expected_irep_when_rev_iiss = 0
+        response: dict = self.get_iiss_info()
+        self.assertEqual(expected_irep_when_rev_iiss, response['variable']['irep'])
+
+        main_preps = self._addr_array[:PREP_MAIN_PREPS]
+
+        total_supply = TOTAL_SUPPLY * ICX_IN_LOOP
+        # Minimum_delegate_amount is 0.02 * total_supply
+        # In this test delegate 0.03*total_supply because `Issue transaction` exists since REV_IISS
+        minimum_delegate_amount_for_decentralization: int = total_supply * 2 // 1000 + 1
+        init_balance: int = minimum_delegate_amount_for_decentralization * 10
+
+        # distribute icx PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self._make_icx_send_tx(self._genesis,
+                                              self._addr_array[PREP_MAIN_PREPS + i],
+                                              init_balance)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # stake PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        stake_amount: int = minimum_delegate_amount_for_decentralization
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_stake_tx(self._addr_array[PREP_MAIN_PREPS + i],
+                                                stake_amount)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # distribute icx for register PREP_MAIN_PREPS ~ PREP_MAIN_PREPS + PREP_MAIN_PREPS - 1
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self._make_icx_send_tx(self._genesis,
+                                              self._addr_array[i],
+                                              3000 * ICX_IN_LOOP)
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # register PRep
+        tx_list: list = []
+
+        for i, address in enumerate(main_preps):
+            tx: dict = self.create_register_prep_tx(address, public_key=f"0x{self.public_key_array[i].hex()}")
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+
+        self._write_precommit_state(prev_block)
+
+        # irep of each prep should be 50,000 ICX when revision IISS_REV
+        expected_inital_irep_of_prep = IISS_INITIAL_IREP
+        for address in main_preps:
+            response = self.get_prep(address)
+            self.assertEqual(expected_inital_irep_of_prep, response['irep'])
+
+        # delegate to PRep
+        tx_list: list = []
+        for i in range(PREP_MAIN_PREPS):
+            tx: dict = self.create_set_delegation_tx(self._addr_array[PREP_MAIN_PREPS + i],
+                                                     [
+                                                         (
+                                                             self._addr_array[i],
+                                                             minimum_delegate_amount_for_decentralization
+                                                         )
+                                                     ])
+            tx_list.append(tx)
+        prev_block, tx_results = self._make_and_req_block(tx_list)
+        for tx_result in tx_results:
+            self.assertEqual(int(True), tx_result.status)
+        self._write_precommit_state(prev_block)
+
+        # set Revision REV_IISS (decentralization)
+        tx: dict = self.create_set_revision_tx(REV_DECENTRALIZATION)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        # after decentralization, irep should be 50,000
+        expected_irep_when_decentralized = IISS_INITIAL_IREP
+        response: dict = self.get_iiss_info()
+        self.assertEqual(expected_irep_when_decentralized, response['variable']['irep'])

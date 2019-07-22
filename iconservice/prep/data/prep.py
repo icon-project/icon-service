@@ -437,7 +437,7 @@ class PRep(Sortable):
             # Required items
             p2p_endpoint=data[ConstantKeys.P2P_ENDPOINT],
             public_key=data[ConstantKeys.PUBLIC_KEY],
-            irep=IISS_INITIAL_IREP,
+            irep=0,
             irep_block_height=block_height,
 
             # Registration time
