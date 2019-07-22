@@ -147,7 +147,7 @@ class Engine(EngineBase):
         if not isinstance(stake, int) or stake < 0:
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         self._check_from_can_stake(context, stake, account)
 
         unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
@@ -311,7 +311,7 @@ class Engine(EngineBase):
         :param delegating:
         :return:
         """
-        account: 'Account' = context.storage.icx.get_account(context, sender, Intent.DELEGATING)
+        account: 'Account' = context.storage.icx.get_account(context, sender, Intent.ALL)
         assert isinstance(account, Account)
 
         if account.voting_weight < delegating:
@@ -441,7 +441,7 @@ class Engine(EngineBase):
     @classmethod
     def _get_delegation(cls, context: 'IconScoreContext', address: 'Address') -> dict:
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATING)
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         delegation_list: list = []
         for address, value in account.delegations:
             delegation_list.append({"address": address, "value": value})

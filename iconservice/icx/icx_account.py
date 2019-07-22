@@ -57,65 +57,63 @@ class Account(object):
 
     @property
     def balance(self) -> int:
-        balance = 0
-
         if self.coin_part:
-            balance = self.coin_part.balance
-        return balance
+            return self.coin_part.balance
+        raise InvalidParamsException("Invalid intend: coin_part is None")
 
     @property
     def stake(self) -> int:
         if self.stake_part:
             return self.stake_part.stake
-        return 0
+        raise InvalidParamsException("Invalid intend: stake_part is None")
 
     @property
     def voting_weight(self) -> int:
         if self.stake_part:
             return self.stake_part.voting_weight
-        return 0
+        raise InvalidParamsException("Invalid intend: stake_part is None")
 
     @property
     def unstake(self) -> int:
         if self.stake_part:
             return self.stake_part.unstake
-        return 0
+        raise InvalidParamsException("Invalid intend: stake_part is None")
 
     @property
     def total_stake(self) -> int:
         if self.stake_part:
             return self.stake_part.total_stake
-        return 0
+        raise InvalidParamsException("Invalid intend: stake_part is None")
 
     @property
     def unstake_block_height(self) -> int:
         if self.stake_part:
             return self.stake_part.unstake_block_height
-        return 0
+        raise InvalidParamsException("Invalid intend: start_part is None")
 
     @property
     def delegated_amount(self) -> int:
         if self.delegation_part:
             return self.delegation_part.delegated_amount
-        return 0
+        raise InvalidParamsException("Invalid intend: delegation_part is None")
 
     @property
     def delegations(self) -> Optional[list]:
         if self.delegation_part:
             return self.delegation_part.delegations
-        return None
+        raise InvalidParamsException("Invalid intend: delegation_part is None")
 
     @property
     def delegations_amount(self) -> int:
         if self.delegation_part:
             return self.delegation_part.delegations_amount
-        return 0
+        raise InvalidParamsException("Invalid intend: delegation_part is None")
 
     @property
     def voting_power(self) -> int:
         if self.stake_part and self.delegation_part:
             return self.stake_part.voting_weight - self.delegation_part.delegations_amount
-        return 0
+        raise InvalidParamsException("Invalid intend: stake_part or delegation_part is None")
 
     def deposit(self, value: int):
         if self.coin_part is None:

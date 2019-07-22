@@ -44,9 +44,9 @@ class AccountPartFlag(IntFlag):
 
 class Intent(IntEnum):
     TRANSFER = AccountPartFlag.COIN
-    STAKE = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
+    STAKE = AccountPartFlag.COIN | AccountPartFlag.STAKE
     DELEGATED = AccountPartFlag.DELEGATION
-    DELEGATING = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
+    ALL = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
 
 
 class Storage(StorageBase):
