@@ -303,3 +303,120 @@ class TestIISSStake(TestIISSBase):
             "stake": 0
         }
         self.assertEqual(expected_response, actual_response)
+
+    def test_unstake(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # gain 10 icx
+        balance: int = 10 * ICX_IN_LOOP
+        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set stake
+        stake: int = 8 * ICX_IN_LOOP
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        fee = tx_results[0].step_used * tx_results[0].step_price
+        expected_balance: int = balance - stake - fee
+        response: int = self.get_balance(self._addr_array[0])
+        self.assertEqual(expected_balance, response)
+
+        # test scenario 1
+        total_stake: int = 8
+        for i in range(0, total_stake // 2):
+            # stake reset
+            tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            self.assertEqual(int(True), tx_results[0].status)
+            self._write_precommit_state(prev_block)
+
+            # delegation
+            delegation_amount: int = stake - i * ICX_IN_LOOP
+            delegations: list = [(self._addr_array[1], delegation_amount)]
+            tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            self.assertEqual(int(True), tx_results[0].status)
+            self._write_precommit_state(prev_block)
+
+            # stake
+            tx: dict = self.create_set_stake_tx(self._addr_array[0], i * ICX_IN_LOOP)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            self.assertEqual(int(False), tx_results[0].status)
+            self._write_precommit_state(prev_block)
+
+            response: dict = self.get_delegation(self._addr_array[0])
+            voting_power: int = response['votingPower']
+            self.assertFalse(voting_power < 0)
+
+        # test scenario 2
+        for i in range(total_stake // 2 + 1, total_stake + 1):
+            # stake reset
+            tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            self.assertEqual(int(True), tx_results[0].status)
+            self._write_precommit_state(prev_block)
+
+            # delegation
+            delegation_amount: int = stake - i * ICX_IN_LOOP
+            delegations: list = [(self._addr_array[1], delegation_amount)]
+            tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            self.assertEqual(int(True), tx_results[0].status)
+            self._write_precommit_state(prev_block)
+
+            # stake
+            tx: dict = self.create_set_stake_tx(self._addr_array[0], i * ICX_IN_LOOP)
+            prev_block, tx_results = self._make_and_req_block([tx])
+            self.assertEqual(int(True), tx_results[0].status)
+            self._write_precommit_state(prev_block)
+
+            response: dict = self.get_delegation(self._addr_array[0])
+            voting_power: int = response['votingPower']
+            self.assertFalse(voting_power < 0)
+
+        # test scenario 3
+        # stake reset
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # delegation
+        delegation_amount: int = stake - 1
+        delegations: list = [(self._addr_array[1], delegation_amount)]
+        tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # unstake 1 loop
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake - 1)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        response: dict = self.get_delegation(self._addr_array[0])
+        voting_power: int = response['votingPower']
+        self.assertFalse(voting_power < 0)
+
+        # Fail
+        # unstake 2 loop
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake - 2)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        response: dict = self.get_delegation(self._addr_array[0])
+        voting_power: int = response['votingPower']
+        self.assertFalse(voting_power < 0)
