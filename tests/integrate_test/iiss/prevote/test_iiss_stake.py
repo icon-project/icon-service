@@ -343,7 +343,7 @@ class TestIISSStake(TestIISSBase):
 
             # delegation
             delegation_amount: int = stake - i * ICX_IN_LOOP
-            delegations: list = [(self._addr_array[1], delegation_amount)]
+            delegations: list = [(self._addr_array[0], delegation_amount)]
             tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
             prev_block, tx_results = self._make_and_req_block([tx])
             self.assertEqual(int(True), tx_results[0].status)
@@ -369,7 +369,7 @@ class TestIISSStake(TestIISSBase):
 
             # delegation
             delegation_amount: int = stake - i * ICX_IN_LOOP
-            delegations: list = [(self._addr_array[1], delegation_amount)]
+            delegations: list = [(self._addr_array[0], delegation_amount)]
             tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
             prev_block, tx_results = self._make_and_req_block([tx])
             self.assertEqual(int(True), tx_results[0].status)
@@ -394,7 +394,7 @@ class TestIISSStake(TestIISSBase):
 
         # delegation
         delegation_amount: int = stake - 1
-        delegations: list = [(self._addr_array[1], delegation_amount)]
+        delegations: list = [(self._addr_array[0], delegation_amount)]
         tx: dict = self.create_set_delegation_tx(self._addr_array[0], delegations)
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
