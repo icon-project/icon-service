@@ -77,7 +77,7 @@ class Engine(EngineBase, IISSEngineListener):
 
     def open(self, context: 'IconScoreContext', term_period: int, irep: int):
         self._load_preps(context)
-        self.term.load(context, term_period, irep)
+        self.term.load(context, term_period)
         self._initial_irep = irep
 
         context.engine.iiss.add_listener(self)
