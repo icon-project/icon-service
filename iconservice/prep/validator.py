@@ -26,9 +26,10 @@ if TYPE_CHECKING:
     from .data import PRep
     from .term import Term
 
-IP_REGEX = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])' \
-           r'(:[0-9]{1,5})?'
-HOST_NAME_REGEX = r'(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d](:[0-9]{1,5})?'
+PORT_REGEX = r'(:[0-9]{1,5})?'
+IP_REGEX = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'\
+           + PORT_REGEX
+HOST_NAME_REGEX = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])' + PORT_REGEX
 EMAIL_REGEX = r'^[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\w$'
 
 
@@ -36,6 +37,8 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
     if not set_prep:
         fields_to_validate = (
             ConstantKeys.NAME,
+            ConstantKeys.COUNTRY,
+            ConstantKeys.CITY,
             ConstantKeys.EMAIL,
             ConstantKeys.WEBSITE,
             ConstantKeys.DETAILS,
@@ -73,9 +76,9 @@ def _validate_p2p_endpoint(p2p_endpoint: str):
     network_locate_info = p2p_endpoint.split(":")
 
     if len(network_locate_info) != 2:
-        raise InvalidParamsException("Invalid endpoint format")
+        raise InvalidParamsException("Invalid endpoint format. endpoint must have port info")
 
-    _validate_port(network_locate_info[1])
+    _validate_port(network_locate_info[1], ConstantKeys.P2P_ENDPOINT)
 
     if re.match('^'+IP_REGEX+'$', p2p_endpoint):
         return
@@ -85,8 +88,10 @@ def _validate_p2p_endpoint(p2p_endpoint: str):
 
 
 def _validate_uri(uri: str):
-    uri_for_domain = r'^(http:\/\/|https:\/\/)' + HOST_NAME_REGEX + r'(\/\S*)*$'
-    uri_for_ip = r'^(http:\/\/|https:\/\/)' + IP_REGEX + r'(\/\S*)*$'
+    scheme_pattern = r'^(http:\/\/|https:\/\/)'
+    path_pattern = r'(\/\S*)?$'
+    uri_for_domain = scheme_pattern + HOST_NAME_REGEX + path_pattern
+    uri_for_ip = scheme_pattern + IP_REGEX + path_pattern
     if re.match(uri_for_domain, uri):
         return
     if re.match(uri_for_ip, uri):
@@ -95,14 +100,14 @@ def _validate_uri(uri: str):
     raise InvalidParamsException("Invalid uri format")
 
 
-def _validate_port(port: str):
+def _validate_port(port: str, validating_field: str):
     try:
         port = int(port, 10)
     except ValueError:
-        raise InvalidParamsException(f'Invalid port: "{port}"')
+        raise InvalidParamsException(f'Invalid {validating_field} format. port: "{port}"')
 
     if not 0 < port < 65536:
-        raise InvalidParamsException(f"Port out of range: {port}")
+        raise InvalidParamsException(f"Invalid {validating_field} format. Port out of range: {port}")
 
 
 def _validate_email(email: str):

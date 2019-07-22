@@ -35,7 +35,9 @@ prep_register_data = {
     ConstantKeys.WEBSITE: f"https://{name}.example.com",
     ConstantKeys.DETAILS: f"https://{name}.example.com/details",
     ConstantKeys.P2P_ENDPOINT: f"{name}.example.com:7100",
-    ConstantKeys.PUBLIC_KEY: "0x12"
+    ConstantKeys.PUBLIC_KEY: "0x12",
+    ConstantKeys.CITY: "city",
+    ConstantKeys.COUNTRY: "country"
 }
 
 
