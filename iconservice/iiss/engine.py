@@ -147,8 +147,8 @@ class Engine(EngineBase):
         if not isinstance(stake, int) or stake < 0:
             raise InvalidParamsException('Failed to stake: value is not int type or value < 0')
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
-        self._check_from_can_charge_fee_v3(context, stake, account.balance, account.total_stake)
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
+        self._check_from_can_stake(context, stake, account)
 
         unstake_lock_period: int = self._calculate_unstake_lock_period(context.storage.iiss.lock_min,
                                                                        context.storage.iiss.lock_max,
@@ -167,11 +167,17 @@ class Engine(EngineBase):
             listener.on_set_stake(context, account)
 
     @classmethod
-    def _check_from_can_charge_fee_v3(cls, context: 'IconScoreContext', stake: int, balance: int, total_stake: int):
+    def _check_from_can_stake(cls, context: 'IconScoreContext', stake: int, account: 'Account'):
         fee: int = context.step_counter.step_price * context.step_counter.step_used
-        if balance + total_stake < stake + fee:
+
+        if account.balance + account.total_stake < stake + fee:
             raise OutOfBalanceException(
-                f'Out of balance: balance({balance}) + total_stake({total_stake}) < stake({stake}) + fee({fee})')
+                f'Out of balance: balance({account.balance}) + total_stake({account.total_stake})'
+                f' < stake({stake}) + fee({fee})')
+
+        if stake < account.delegations_amount:
+            raise InvalidParamsException(f"Failed to stake: stake({stake})"
+                                         f" < delegations_amount({account.delegations_amount})")
 
     @staticmethod
     def _calculate_unstake_lock_period(lmin: int,
@@ -305,7 +311,7 @@ class Engine(EngineBase):
         :param delegating:
         :return:
         """
-        account: 'Account' = context.storage.icx.get_account(context, sender, Intent.DELEGATING)
+        account: 'Account' = context.storage.icx.get_account(context, sender, Intent.ALL)
         assert isinstance(account, Account)
 
         if account.voting_weight < delegating:
@@ -435,7 +441,7 @@ class Engine(EngineBase):
     @classmethod
     def _get_delegation(cls, context: 'IconScoreContext', address: 'Address') -> dict:
 
-        account: 'Account' = context.storage.icx.get_account(context, address, Intent.DELEGATING)
+        account: 'Account' = context.storage.icx.get_account(context, address, Intent.ALL)
         delegation_list: list = []
         for address, value in account.delegations:
             delegation_list.append({"address": address, "value": value})
