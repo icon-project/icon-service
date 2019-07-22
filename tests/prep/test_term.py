@@ -79,10 +79,10 @@ def test_save_and_load():
     context.storage.prep.get_term = Mock(return_value=None)
     context.storage.icx.get_total_supply = Mock(return_value=total_supply)
     term._make_main_and_sub_preps = Mock()
-    term.load(context, period, irep)
+    term.load(context, period)
     assert term.period == period
     assert term.total_supply == total_supply
-    assert term.irep == irep
+    assert term.irep == 0
     assert term.sequence == -1
     assert term.main_preps == []
     assert term.sub_preps == []
@@ -108,7 +108,7 @@ def test_save_and_load():
             0, saved_sequence, current_block + 1, term._serialize_preps(PREPS), irep, total_supply])
         term._make_main_and_sub_preps = Mock(return_value=(PREPS[:PREP_MAIN_PREPS],
                                                            PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]))
-        term.load(context, period, irep)
+        term.load(context, period)
         assert term.sequence == saved_sequence
         assert term.total_supply == total_supply
         assert term.main_preps == PREPS[:PREP_MAIN_PREPS]

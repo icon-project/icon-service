@@ -70,7 +70,7 @@ class Term(object):
     def total_supply(self) -> int:
         return self._total_supply
 
-    def load(self, context: 'IconScoreContext', term_period: int, irep: int):
+    def load(self, context: 'IconScoreContext', term_period: int):
         data: Optional[list] = context.storage.prep.get_term(context)
         if data:
             version = data[0]
@@ -84,7 +84,7 @@ class Term(object):
             self._total_supply = data[5]
         else:
             self._period = term_period
-            self._irep = irep
+            self._irep = 0
             self._total_supply = context.total_supply
 
     @staticmethod

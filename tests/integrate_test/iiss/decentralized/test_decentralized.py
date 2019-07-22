@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from iconservice.icon_constant import REV_DECENTRALIZATION, REV_IISS, \
-    PREP_MAIN_PREPS, ICX_IN_LOOP, IISS_INITIAL_IREP, ConfigKey
+    PREP_MAIN_PREPS, ICX_IN_LOOP, ConfigKey, IISS_MIN_IREP
 from tests.integrate_test.iiss.test_iiss_base import TestIISSBase
 from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 
@@ -174,7 +174,7 @@ class TestIISSDecentralized(TestIISSBase):
         self.make_blocks_to_end_calculation()
 
         # set governance variable
-        tx: dict = self.create_set_governance_variables(self._addr_array[prep_id], IISS_INITIAL_IREP)
+        tx: dict = self.create_set_governance_variables(self._addr_array[prep_id], IISS_MIN_IREP)
         self.estimate_step(tx)
 
         # unregister prep

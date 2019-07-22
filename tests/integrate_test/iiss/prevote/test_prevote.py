@@ -45,7 +45,7 @@ class TestIISS(TestIISSBase):
             'nextCalculation': block_height + calc_period + 1,
             'nextPRepTerm': 0,
             'variable': {
-                "irep": self._config[ConfigKey.INITIAL_IREP],
+                "irep": 0,
                 "rrep": 1200
             }
         }
