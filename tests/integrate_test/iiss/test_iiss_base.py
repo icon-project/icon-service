@@ -148,7 +148,7 @@ class TestIISSBase(TestIntegrateBase):
 
         return {
             ConstantKeys.NAME: name,
-            ConstantKeys.COUNTRY: "ZZZ",
+            ConstantKeys.COUNTRY: "KOR",
             ConstantKeys.CITY: "Unknown",
             ConstantKeys.EMAIL: f"{name}@example.com",
             ConstantKeys.WEBSITE: f"https://{name}.example.com",
