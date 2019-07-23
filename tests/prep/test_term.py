@@ -35,8 +35,10 @@ context.storage.prep.put_term = Mock()
 
 def test_save():
     current_block = random.randint(10, 100)
-    irep = random.randint(10, 100)
+    # irep = random.randint(10, 100)
     total_supply = random.randint(10, 100)
+    term_period = random.randint(10, 100)
+    irep = random.randint(10, 100)
 
     term = Term()
     assert term.sequence == -1
@@ -50,7 +52,8 @@ def test_save():
     for i in range(random.randint(1, 5)):
         sequence = term.sequence
         current_block += 1
-        term.save(context, current_block, PREPS, irep, total_supply)
+        term.update(current_block, PREPS, total_supply, term_period, irep)
+        term.save(context)
         assert term.sequence == sequence + 1
         assert term.total_supply == total_supply
         assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
@@ -94,7 +97,8 @@ def test_save_and_load():
         sequence = term.sequence
         current_block += 1
         term._period = period
-        term.save(context, current_block, PREPS, irep, total_supply)
+        term.update(current_block, PREPS, total_supply, period, irep)
+        term.save(context)
         assert term.sequence == sequence + 1
         assert term.total_supply == total_supply
         assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
@@ -106,8 +110,7 @@ def test_save_and_load():
 
         context.storage.prep.get_term = Mock(return_value=[
             0, saved_sequence, current_block + 1, term._serialize_preps(PREPS), irep, total_supply])
-        term._make_main_and_sub_preps = Mock(return_value=(PREPS[:PREP_MAIN_PREPS],
-                                                           PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]))
+        term._make_main_and_sub_preps = Mock(return_value=PREPS)
         term.load(context, period)
         assert term.sequence == saved_sequence
         assert term.total_supply == total_supply

@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import hashlib
-from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Optional, List
+from typing import TYPE_CHECKING, Any, Optional, List, Dict, Tuple
 
 from iconcommons.logger import Logger
 
@@ -29,7 +28,7 @@ from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
 from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-from ..icon_constant import PrepResultState
+from ..icon_constant import PRepGrade, PrepResultState
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -126,52 +125,60 @@ class Engine(EngineBase, IISSEngineListener):
         :param precommit_data:
         :return:
         """
+        # Updated every block
         self.preps = precommit_data.preps
-        # self._reset_prep_grade()
 
-    # def _reset_prep_grade(self):
-    #     prep_grades: Dict['Address', 'PRepGrade'] = {}
-    #
-    #     for prep in self.term.main_preps:
-    #         prep_grades[prep.address] = prep.grade
-    #
-    #     for prep in self.term.sub_preps:
-    #         prep_grades[prep.address] = prep.grade
-    #
-    #     # Set Main P-Rep grade
-    #     new_grade: 'PRepGrade' = PRepGrade.MAIN
-    #     for i in range(PREP_MAIN_PREPS):
-    #         prep: 'PRep' = self.preps.get_by_index(i, False)
-    #
-    #         old_grade: 'PRepGrade' = prep_grades.get(prep.address, PRepGrade.CANDIDATE)
-    #         if old_grade == PRepGrade.CANDIDATE:
-    #             # This P-Rep is not Main or Sub P-Rep in the previous term
-    #             prep.grade = new_grade
-    #         else:
-    #             if prep.grade != old_grade:
-    #                 prep.grade = new_grade
-    #             del prep_grades[prep.address]
-    #
-    #     # Set Sub P-Rep grade
-    #     new_grade: 'PRepGrade' = PRepGrade.SUB
-    #     for i in range(PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS):
-    #         prep: 'PRep' = self.preps.get_by_index(i, False)
-    #
-    #         old_grade: 'PRepGrade' = prep_grades.get(prep.address, PRepGrade.CANDIDATE)
-    #         if old_grade == PRepGrade.CANDIDATE:
-    #             prep.grade = new_grade
-    #         else:
-    #             if prep.grade != old_grade:
-    #                 prep.grade = new_grade
-    #             del prep_grades[prep.address]
-    #
-    #     # Reset old Main P-Reps and Sub P-Reps
-    #     for address in prep_grades:
-    #         prep: 'PRep' = self.preps.get_by_address(address, mutable=False)
-    #         prep.grade = PRepGrade.CANDIDATE
+        # Updated every term
+        if precommit_data.term is not None:
+            self.term: 'Term' = precommit_data.term
 
     def rollback(self):
         pass
+
+    def on_term_ended(self, context: 'IconScoreContext') -> Tuple[dict, 'Term']:
+        """Called in IconServiceEngine.invoke() every time when a term is ended
+
+        Update P-Rep grades according to PRep.delegated
+        """
+        self._update_prep_grades(context)
+        main_preps_as_dict: dict = self.get_next_main_preps(context)
+        next_term: 'Term' = self._create_next_term(context)
+        next_term.save(context)
+
+        return main_preps_as_dict, next_term
+
+    def _update_prep_grades(self, context: 'IconScoreContext'):
+        new_preps: 'PRepContainer' = context.preps
+        prep_grades: Dict['Address', 'PRepGrade'] = {}
+
+        # Put the address and grade of a old P-Rep to prep_grades dict
+        for prep in self.term.preps:
+            prep_grades[prep.address] = prep.grade
+
+        # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
+        for i in range(PREP_MAIN_AND_SUB_PREPS):
+            prep: 'PRep' = new_preps.get_by_index(i, mutable=False)
+            if prep is None:
+                Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {len(new_preps)}")
+                break
+
+            prep_address: 'Address' = prep.address
+            old_grade: 'PRepGrade' = prep_grades.get(prep_address, PRepGrade.CANDIDATE)
+            new_grade: 'PRepGrade' = PRepGrade.MAIN if i < PREP_MAIN_PREPS else PRepGrade.SUB
+
+            if old_grade == new_grade:
+                del prep_grades[prep_address]
+            else:
+                prep_grades[prep_address] = new_grade
+
+        # Update the grades of P-Reps for the next term
+        for address, new_grade in prep_grades.items():
+            prep: 'PRep' = new_preps.get_by_address(address, mutable=True)
+            if prep is None:
+                prep: 'PRep' = new_preps.get_inactive_prep_by_address(address)
+
+            assert prep is not None
+            prep.grade = new_grade
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
@@ -262,49 +269,69 @@ class Engine(EngineBase, IISSEngineListener):
         """
         return self.term.end_block_height == context.block.height
 
-    def make_prep_tx_result(self) -> Optional[dict]:
-        prep_as_dict = self.get_main_preps_in_term()
+    def get_next_main_preps(self, context: 'IconScoreContext') -> Optional[dict]:
+        """Returns preps which will run as main preps during the next term in dict format
+
+        :return:
+        """
+        prep_as_dict: Optional[dict] = \
+            self.get_main_preps_in_dict(context.preps.get_preps(0, PREP_MAIN_PREPS))
+
         if prep_as_dict:
             prep_as_dict['irep'] = self.term.irep
             prep_as_dict['state'] = PrepResultState.NORMAL.value
-            return prep_as_dict
-        return None
 
-    def get_main_preps_in_term(self) -> Optional[dict]:
-        main_preps = self.term.main_preps
-        prep_as_dict = None
-        if len(main_preps) > 0:
-            prep_as_dict = OrderedDict()
-            preps_as_list = []
-            prep_addresses_for_roothash = b''
-            for prep in main_preps:
-                prep_info_as_dict = OrderedDict()
-                prep_info_as_dict[ConstantKeys.PREP_ID] = prep.address
-                prep_info_as_dict[ConstantKeys.PUBLIC_KEY] = prep.public_key
-                prep_info_as_dict[ConstantKeys.P2P_ENDPOINT] = prep.p2p_endpoint
-                preps_as_list.append(prep_info_as_dict)
-                prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
-            prep_as_dict["preps"] = preps_as_list
-            prep_as_dict["rootHash"] = hashlib.sha3_256(prep_addresses_for_roothash).digest()
         return prep_as_dict
 
-    def save_term(self, context: 'IconScoreContext', weighted_average_of_irep: int):
-        self.term.save(context,
-                       context.block.height,
-                       context.preps.get_preps(start_index=0, size=PREP_MAIN_AND_SUB_PREPS),
-                       weighted_average_of_irep,
-                       context.total_supply)
+    @staticmethod
+    def get_main_preps_in_dict(preps: List['PRep']) -> Optional[dict]:
+        count: int = min(len(preps), PREP_MAIN_PREPS)
+        if count == 0:
+            Logger.warning(tag="PREP", msg="No P-Rep candidates")
+            return None
+
+        prep_as_dict = {}
+        preps_as_list = []
+        prep_addresses_for_roothash = b''
+
+        for i in range(count):
+            prep: 'PRep' = preps[i]
+            preps_as_list.append({
+                ConstantKeys.PREP_ID: prep.address,
+                ConstantKeys.PUBLIC_KEY: prep.public_key,
+                ConstantKeys.P2P_ENDPOINT: prep.p2p_endpoint
+            })
+            prep_addresses_for_roothash += prep.address.to_bytes_including_prefix()
+
+        prep_as_dict["preps"] = preps_as_list
+        prep_as_dict["rootHash"]: bytes = hashlib.sha3_256(prep_addresses_for_roothash).digest()
+
+        return prep_as_dict
+
+    def _create_next_term(self, context: 'IconScoreContext') -> 'Term':
+        # The current P-Rep term is over. Prepare the next P-Rep term
+        irep: int = self._calculate_weighted_average_of_irep(context)
+
+        next_term = Term()
+        next_term.update(
+            context.block.height,
+            context.preps.get_preps(start_index=0, size=PREP_MAIN_AND_SUB_PREPS),
+            context.total_supply,
+            self.term.period,
+            irep
+        )
+
+        return next_term
 
     @staticmethod
-    def calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
+    def _calculate_weighted_average_of_irep(context: 'IconScoreContext') -> int:
         preps: 'PRepContainer' = context.preps
-        assert len(preps) >= PREP_MAIN_PREPS
 
-        total_delegated = 0  # total delegated of prep
+        total_delegated = 0  # total delegated of top 22 preps
         total_weighted_irep = 0
 
         for i in range(PREP_MAIN_PREPS):
-            prep: 'PRep' = preps.get_by_index(i)
+            prep: 'PRep' = preps.get_by_index(i, mutable=False)
             total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated
 
@@ -493,7 +520,7 @@ class Engine(EngineBase, IISSEngineListener):
         }
 
     def handle_get_prep_list(self, context: 'IconScoreContext', params: dict) -> dict:
-        """Returns P-Rep list with start and end rankings
+        """Returns P-Reps ranging in ranking from start_ranking to end_ranking
 
         P-Rep means all P-Reps including main P-Reps and sub P-Reps
 
