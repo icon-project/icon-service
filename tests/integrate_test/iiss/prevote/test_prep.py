@@ -38,7 +38,7 @@ prep_register_data = {
     ConstantKeys.P2P_ENDPOINT: f"{name}.example.com:7100",
     ConstantKeys.PUBLIC_KEY: "0x12",
     ConstantKeys.CITY: "city",
-    ConstantKeys.COUNTRY: "country"
+    ConstantKeys.COUNTRY: "KOR"
 }
 
 
@@ -281,7 +281,7 @@ class TestIntegratePrep(TestIISSBase):
                 {
                     "status": 0,
                     "grade": PRepGrade.CANDIDATE.value,
-                    "country": "ZZZ",
+                    "country": "KOR",
                     "city": "Unknown",
                     "address": address,
                     "name": f"node{address}",

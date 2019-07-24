@@ -22,7 +22,7 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, IISS_INITIAL_IREP
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
 from ...icon_constant import PRepGrade, PRepStatus
 from ...utils.msgpack_for_db import MsgPackForDB
 

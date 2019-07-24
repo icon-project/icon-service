@@ -16,6 +16,8 @@ import hashlib
 import re
 from typing import TYPE_CHECKING
 
+import iso3166
+
 from ..base.address import Address
 from ..base.exception import InvalidParamsException, InvalidRequestException
 from ..base.type_converter_templates import ConstantKeys
@@ -63,6 +65,8 @@ def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
             _validate_uri(data[key])
         elif key == ConstantKeys.EMAIL:
             _validate_email(data[key])
+        elif key == ConstantKeys.COUNTRY:
+            _validate_country(data[key])
 
 
 def _validate_prep_public_key(public_key: bytes, address: 'Address'):
@@ -114,6 +118,11 @@ def _validate_email(email: str):
     if re.match(EMAIL_REGEX, email):
         return
     raise InvalidParamsException("Invalid email format")
+
+
+def _validate_country(country_code: str):
+    if country_code.upper() not in iso3166.countries_by_alpha3:
+        raise InvalidParamsException("Invalid alpha-3 country code")
 
 
 def validate_irep(context: 'IconScoreContext', irep: int, prep: 'PRep'):
