@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import random
+import copy
 
 import pytest
 
@@ -36,6 +37,7 @@ def check_sorted_list(items: 'SortedList'):
         if prev_item:
             assert prev_item.order() <= item.order()
 
+        prev_item = item
 
 @pytest.fixture
 def create_sorted_list():
@@ -84,6 +86,36 @@ def test_remove(create_sorted_list):
         items.remove(item)
 
 
+def test_remove_with_same_order_items(create_sorted_list):
+    size = 100
+    items = create_sorted_list(size)
+    assert len(items) == size
+
+    index: int = random.randint(0, size - 1)
+
+    for _ in range(10):
+        item = items[index]
+        copied_item = copy.copy(item)
+        items._items.insert(index, copied_item)
+
+    check_sorted_list(items)
+
+    for _ in range(10):
+        size = len(items)
+
+        item = items[index]
+        assert item is not None
+
+        removed_item = items.remove(item)
+        assert item == removed_item
+        assert len(items) == size - 1
+
+        with pytest.raises(ValueError):
+            items.remove(item)
+
+        check_sorted_list(items)
+
+
 def test_pop(create_sorted_list):
     for size in (1, 99, 100):
         items = create_sorted_list(size)
@@ -116,6 +148,25 @@ def test_index(create_sorted_list):
         for index in indexes:
             i = items.index(items[index])
             assert i == index
+
+
+def test_index_with_the_same_order_items(create_sorted_list):
+    size = 100
+    base_index = 30
+    items = create_sorted_list(size)
+
+    for _ in range(10):
+        item = items[base_index]
+        copied_item = copy.copy(item)
+        items._items.insert(base_index, copied_item)
+
+    check_sorted_list(items)
+
+    for i in range(10):
+        item = items[base_index + i]
+        index: int = items.index(item)
+        assert index == base_index + i
+        assert id(item) == id(items[index])
 
 
 def test__setitem__(create_sorted_list):

@@ -49,12 +49,12 @@ def test_save():
     assert term.start_block_height == -1
     assert term.end_block_height == -1
 
-    for i in range(random.randint(1, 5)):
-        sequence = term.sequence
+    for _ in range(5):
+        next_sequence = term.sequence + 1
         current_block += 1
-        term.update(current_block, PREPS, total_supply, term_period, irep)
+        term.update(next_sequence, current_block, PREPS, total_supply, term_period, irep)
         term.save(context)
-        assert term.sequence == sequence + 1
+        assert term.sequence == next_sequence
         assert term.total_supply == total_supply
         assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
         assert term.sub_preps == PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
@@ -93,20 +93,20 @@ def test_save_and_load():
     assert term.end_block_height == -1
 
     # cases when term data is not None
-    for i in range(random.randint(1, 5)):
-        sequence = term.sequence
+    for _ in range(5):
+        next_sequence = term.sequence + 1
         current_block += 1
         term._period = period
-        term.update(current_block, PREPS, total_supply, period, irep)
+        term.update(next_sequence, current_block, PREPS, total_supply, period, irep)
         term.save(context)
-        assert term.sequence == sequence + 1
+        assert term.sequence == next_sequence
         assert term.total_supply == total_supply
         assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
         assert term.sub_preps == PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
         assert term.irep == irep
         assert term.start_block_height == current_block + 1
         assert term.end_block_height == term.start_block_height + term.period - 1
-        saved_sequence = sequence + 1
+        saved_sequence = next_sequence
 
         context.storage.prep.get_term = Mock(return_value=[
             0, saved_sequence, current_block + 1, term._serialize_preps(PREPS), irep, total_supply])
