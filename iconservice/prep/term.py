@@ -79,6 +79,7 @@ class Term(object):
         return self._total_supply
 
     def load(self, context: 'IconScoreContext', term_period: int):
+        self._period = term_period
         data: Optional[list] = context.storage.prep.get_term(context)
         if data:
             version = data[0]
@@ -91,7 +92,6 @@ class Term(object):
             self._irep = data[4]
             self._total_supply = data[5]
         else:
-            self._period = term_period
             self._irep = 0
             self._total_supply = context.total_supply
 
@@ -127,10 +127,10 @@ class Term(object):
         return prep_list
 
     def update(
-            self, current_block_height: int, preps: List['PRep'],
+            self, sequence: int, current_block_height: int, preps: List['PRep'],
             total_supply: int, term_period: int, irep: int):
         """
-
+        :param sequence:
         :param current_block_height:
         :param preps:
         :param irep:
@@ -138,7 +138,7 @@ class Term(object):
         :param term_period: P-Rep term period in block
         :return:
         """
-        self._sequence += 1
+        self._sequence = sequence
         self._start_block_height = current_block_height + 1
         self._end_block_height = current_block_height + term_period
         self._period = term_period

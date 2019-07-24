@@ -317,6 +317,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         next_term = Term()
         next_term.update(
+            self.term.sequence + 1,
             context.block.height,
             context.preps.get_preps(start_index=0, size=PREP_MAIN_AND_SUB_PREPS),
             context.total_supply,
