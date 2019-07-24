@@ -140,20 +140,21 @@ class Engine(EngineBase, IISSEngineListener):
 
         Update P-Rep grades according to PRep.delegated
         """
-        self._update_prep_grades(context)
+        self._update_prep_grades(old_preps=self.term.preps, new_preps=context.preps)
         main_preps_as_dict: dict = self.get_next_main_preps(context)
         next_term: 'Term' = self._create_next_term(context)
         next_term.save(context)
 
         return main_preps_as_dict, next_term
 
-    def _update_prep_grades(self, context: 'IconScoreContext'):
-        new_preps: 'PRepContainer' = context.preps
-        prep_grades: Dict['Address', 'PRepGrade'] = {}
+    @staticmethod
+    def _update_prep_grades(old_preps: List['PRep'], new_preps: 'PRepContainer'):
+        prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
         # Put the address and grade of a old P-Rep to prep_grades dict
-        for prep in self.term.preps:
-            prep_grades[prep.address] = prep.grade
+        for prep in old_preps:
+            # grades[0] is an old grade and grades[1] is a new grade
+            prep_grades[prep.address] = (prep.grade, PRepGrade.CANDIDATE)
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
         for i in range(PREP_MAIN_AND_SUB_PREPS):
@@ -163,22 +164,24 @@ class Engine(EngineBase, IISSEngineListener):
                 break
 
             prep_address: 'Address' = prep.address
-            old_grade: 'PRepGrade' = prep_grades.get(prep_address, PRepGrade.CANDIDATE)
+            grades: tuple = prep_grades.get(prep_address, (PRepGrade.CANDIDATE, PRepGrade.CANDIDATE))
+
+            old_grade: 'PRepGrade' = grades[0]
             new_grade: 'PRepGrade' = PRepGrade.MAIN if i < PREP_MAIN_PREPS else PRepGrade.SUB
 
             if old_grade == new_grade:
                 del prep_grades[prep_address]
             else:
-                prep_grades[prep_address] = new_grade
+                prep_grades[prep_address] = (old_grade, new_grade)
 
         # Update the grades of P-Reps for the next term
-        for address, new_grade in prep_grades.items():
+        for address, grades in prep_grades.items():
             prep: 'PRep' = new_preps.get_by_address(address, mutable=True)
             if prep is None:
                 prep: 'PRep' = new_preps.get_inactive_prep_by_address(address)
 
             assert prep is not None
-            prep.grade = new_grade
+            prep.grade = grades[1]
 
     def handle_register_prep(
             self, context: 'IconScoreContext', params: dict):
