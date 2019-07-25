@@ -491,7 +491,12 @@ class Engine(EngineBase):
         icx: int = self._iscore_to_icx(iscore)
 
         from_account: 'Account' = context.storage.icx.get_account(context, address)
+        treasury_address: 'Address' = context.storage.icx.fee_treasury
+        treasury_account: 'Account' = context.storage.icx.get_account(context, treasury_address)
+
+        treasury_account.withdraw(icx)
         from_account.deposit(icx)
+        context.storage.icx.put_account(context, treasury_account)
         context.storage.icx.put_account(context, from_account)
 
         EventLogEmitter.emit_event_log(
