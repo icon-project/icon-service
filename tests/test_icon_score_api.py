@@ -17,16 +17,22 @@
 import base64
 import hashlib
 import unittest
+from typing import List
 
 from iconservice.base.address import Address
-from iconservice.icon_constant import REVISION_3
+from iconservice.icon_constant import REVISION_3, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from iconservice.iconscore.icon_score_base2 import ScoreApiStepRatio
 from iconservice.iconscore.icon_score_base2 import _create_address_with_key, _recover_key
 from iconservice.iconscore.icon_score_base2 import create_address_with_key, recover_key
 from iconservice.iconscore.icon_score_base2 import sha3_256, json_dumps, json_loads
+from iconservice.iconscore.icon_score_base2 import PRepInfo, get_main_prep_info, get_sub_prep_info
 from iconservice.iconscore.icon_score_context import ContextContainer
 from iconservice.iconscore.icon_score_context import IconScoreContext, IconScoreContextType
 from iconservice.iconscore.icon_score_step import IconScoreStepCounterFactory, StepType
+from iconservice.utils import ContextEngine
+from iconservice.prep import PRepEngine
+from iconservice.prep.data import PRep
+from tests import create_address
 
 
 def create_msg_hash(tx: dict, excluded_keys: tuple) -> bytes:
@@ -84,6 +90,8 @@ class TestIconScoreApi(unittest.TestCase):
         }
         self.step_limit = 1_000_000_000
 
+        self._prep_engine = PRepEngine()
+
         self.context = self._create_context()
         ContextContainer._push_context(self.context)
 
@@ -96,6 +104,8 @@ class TestIconScoreApi(unittest.TestCase):
 
         context.step_counter = step_counter
         context.revision = REVISION_3
+
+        context.engine = ContextEngine(deploy=None, fee=None, icx=None, iiss=None, prep=self._prep_engine, issue=None)
 
         return context
 
@@ -287,6 +297,46 @@ class TestIconScoreApi(unittest.TestCase):
             expected_step: int = step_cost + step_cost * len(text.encode('utf-8')) // 100
             step_used: int = self.context.step_counter.step_used
             self.assertEqual(expected_step, step_used)
+
+    def test_get_prep_info(self):
+        main_prep_list, end_block_height = get_main_prep_info()
+        self.assertEqual([], main_prep_list)
+        self.assertEqual(-1, end_block_height)
+
+        sub_prep_list, end_block_height = get_sub_prep_info()
+        self.assertEqual([], main_prep_list)
+        self.assertEqual(-1, end_block_height)
+
+        # term._preps to contexts
+        test_data: List['PRepInfo'] = []
+        test_preps: List['PRep'] = []
+        for i in range(PREP_MAIN_AND_SUB_PREPS):
+            test_data.append(PRepInfo(address=create_address(), delegated=i))
+            test_preps.append(PRep(address=test_data[i].address, delegated=test_data[i].delegated))
+        self.context.engine.prep.term._prep = test_preps
+        self.context.engine.prep.term._end_block_height = 100
+
+        # check main P-Rep info
+        main_prep_list, end_block_height = get_main_prep_info()
+        for i, prep in main_prep_list:
+            self.assertEqual(test_data[i].address, test_preps[i].address)
+            self.assertEqual(test_data[i].delegated, test_preps[i].delegated)
+
+            self.assertEqual(test_preps[i].address, prep.address)
+            self.assertEqual(test_preps[i].delegated, prep.delegated)
+        self.assertEqual(self.context.engine.prep.term.end_block_height, end_block_height)
+
+        # check sub P-Rep info
+        for i, prep in sub_prep_list:
+            j = i + PREP_MAIN_PREPS
+            self.assertEqual(test_data[j].address, test_preps[j].address)
+            self.assertEqual(test_data[j].delegated, test_preps[j].delegated)
+
+            self.assertEqual(test_preps[j].address, prep.address)
+            self.assertEqual(test_preps[j].delegated, prep.delegated)
+
+        # check end block height
+        self.assertEqual(self.context.engine.prep.term.end_block_height, end_block_height)
 
 
 if __name__ == '__main__':

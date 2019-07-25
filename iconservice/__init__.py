@@ -24,6 +24,7 @@ from .base.exception import IconScoreException
 from .icon_constant import IconServiceFlag
 from .iconscore.icon_container_db import VarDB, DictDB, ArrayDB
 from .iconscore.icon_score_base import interface, eventlog, external, payable, IconScoreBase, IconScoreDatabase
-from .iconscore.icon_score_base2 import InterfaceScore, revert, sha3_256, json_loads, json_dumps
+from .iconscore.icon_score_base2 import (InterfaceScore, revert, sha3_256, json_loads, json_dumps,
+                                         get_main_prep_info, get_sub_prep_info)
 from .iconscore.icon_score_base2 import recover_key, create_address_with_key
 from .iconscore.icon_system_score_base import IconSystemScoreBase
