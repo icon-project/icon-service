@@ -66,7 +66,6 @@ class Engine(EngineBase):
             raise InvalidParamsException(f'Invalid SCORE address: {icon_score_address}')
 
         try:
-            IconScoreContextUtil.validate_score_blacklist(context, icon_score_address)
             IconScoreContextUtil.validate_deployer(context, context.tx.origin)
 
             deploy_type: 'DeployType' = \

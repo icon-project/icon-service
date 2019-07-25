@@ -946,7 +946,10 @@ class IconServiceEngine(ContextContainer):
 
             self._icon_pre_validator.execute(context, params, step_price, minimum_step)
 
-            IconScoreContextUtil.validate_score_blacklist(context, to)
+            # SCORE updating is not blocked by SCORE blacklist
+            if 'dataType' in params and params['dataType'] == 'call':
+                IconScoreContextUtil.validate_score_blacklist(context, to)
+
             if IconScoreContextUtil.is_service_flag_on(context, IconServiceFlag.DEPLOYER_WHITE_LIST):
                 self._validate_deployer_whitelist(context, params)
         finally:
