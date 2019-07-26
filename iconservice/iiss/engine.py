@@ -29,8 +29,7 @@ from ..base.exception import InvalidParamsException, InvalidRequestException, Ou
 from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, IISS_MAX_REWARD_RATE, \
-    IconScoreContextType
-from ..icon_constant import PREP_MAIN_PREPS
+    IconScoreContextType, PREP_MAIN_AND_SUB_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -616,7 +615,7 @@ class Engine(EngineBase):
     @classmethod
     def _put_preps_to_rc_db(cls, context: 'IconScoreContext'):
         preps: List['PRep'] = \
-            context.engine.prep.preps.get_preps(start_index=0, size=PREP_MAIN_PREPS)
+            context.engine.prep.preps.get_preps(start_index=0, size=PREP_MAIN_AND_SUB_PREPS)
 
         if len(preps) == 0:
             return
