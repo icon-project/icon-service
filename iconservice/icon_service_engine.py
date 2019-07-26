@@ -1029,7 +1029,7 @@ class IconServiceEngine(ContextContainer):
             elif self._check_prep_process(params):
                 return context.engine.prep.query(context, data)
             elif self._check_debug_process(params):
-                return self._handle_get_IISS_info(context, data)
+                return self._handle_get_iiss_info(context, data)
             else:
                 raise InvalidParamsException("Invalid Method")
         else:
@@ -1043,8 +1043,7 @@ class IconServiceEngine(ContextContainer):
                                          data_type,
                                          data)
 
-    def _handle_get_IISS_info(self, context: 'IconScoreContext', params: dict) -> dict:
-
+    def _handle_get_iiss_info(self, context: 'IconScoreContext', params: dict) -> dict:
         response = dict()
 
         reward_rate: 'RewardRate' = context.storage.iiss.get_reward_rate(context)
@@ -1054,9 +1053,22 @@ class IconServiceEngine(ContextContainer):
 
         check_end_block_height: Optional[int] = context.storage.iiss.get_end_block_height_of_calc(context)
         if check_end_block_height is None:
-            check_end_block_height = 0
-        response['nextCalculation'] = check_end_block_height + 1
-        response['nextPRepTerm'] = context.engine.prep.term.end_block_height + 1
+            check_end_block_height = -1
+
+        calc_period: int = context.storage.iiss.get_calc_period(context)
+        estimate_end_block: int = check_end_block_height - calc_period
+        if context.block.height == estimate_end_block:
+            response['nextCalculation'] = estimate_end_block + 1
+        else:
+            response['nextCalculation'] = check_end_block_height + 1
+
+        term_end_block_height: int = context.engine.prep.term.end_block_height
+        term_period: int = context.engine.prep.term.period
+        estimate_end_block: int = term_end_block_height - term_period
+        if context.block.height == estimate_end_block:
+            response['nextPRepTerm'] = estimate_end_block + 1
+        else:
+            response['nextPRepTerm'] = term_end_block_height + 1
 
         return response
 
