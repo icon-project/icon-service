@@ -151,3 +151,14 @@ def test_from_bytes_and_to_bytes(prep):
     # Properties which is not serialized in PRep.to_bytes()
     assert prep2.stake == 0
     assert prep2.delegated == 0
+
+
+def test_country(prep):
+    assert prep.country == COUNTRY
+
+    for code in "Usa", "uSa", "usA", "uSA", "UsA", "USa", "usa", "USA":
+        prep.country = code
+        assert prep.country == "USA"
+
+    prep.country = "hello"
+    assert prep.country == "ZZZ"

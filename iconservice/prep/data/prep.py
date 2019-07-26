@@ -188,7 +188,8 @@ class PRep(Sortable):
 
     @classmethod
     def _get_country(cls, alpha3_country_code: str) -> 'iso3166.Country':
-        return iso3166.countries_by_alpha3.get(alpha3_country_code, cls._UNKNOWN_COUNTRY)
+        return iso3166.countries_by_alpha3.get(
+            alpha3_country_code.upper(), cls._UNKNOWN_COUNTRY)
 
     def update_productivity(self, is_validate: bool):
         """Update the block validation statistics of P-Rep
