@@ -68,12 +68,36 @@ class SortedList(object):
             item_in_list: 'Sortable' = self._items[i]
 
             if order == item_in_list.order():
-                return i
+                return self._precise_index(i, item)
 
             if order < item_in_list.order():
                 right = i
             else:
                 left = i + 1
+
+        return -1
+
+    def _precise_index(self, base_index: int, target_item: 'Sortable') -> int:
+        if id(target_item) == id(self._items[base_index]):
+            return base_index
+
+        # Check the previous items
+        for i in range(base_index - 1, -1, -1):
+            item: 'Sortable' = self._items[i]
+            if target_item.order() != item.order():
+                break
+
+            if id(target_item) == id(item):
+                return i
+
+        # Check the next items
+        for i in range(base_index + 1, len(self._items)):
+            item: 'Sortable' = self._items[i]
+            if target_item.order() != item.order():
+                break
+
+            if id(target_item) == id(item):
+                return i
 
         return -1
 

@@ -73,12 +73,16 @@ class TestIISSClaim(TestIISSBase):
         iscore = icx * 10 ** 3
         RewardCalcProxy.claim_iscore = Mock(return_value=(iscore, block_height))
 
+        # get_treasury account balance
+        treasury_balance_before_claim: int = self.get_balance(self._fee_treasury)
+
         # claim iscore
         tx: dict = self.create_claim_tx(self._addr_array[0])
         prev_block, tx_results = self._make_and_req_block([tx])
         self.assertEqual(int(True), tx_results[0].status)
         self._write_precommit_state(prev_block)
 
+        accumulative_fee = tx_results[0].step_price * tx_results[0].step_used
         # query mocking
         block_height = 10 ** 2
         icx = 10 ** 3
@@ -93,3 +97,9 @@ class TestIISSClaim(TestIISSBase):
             "iscore": iscore
         }
         self.assertEqual(expected_response, response)
+
+        # get_treasury account balance after claim
+        treasury_balance_after_claim: int = self.get_balance(self._fee_treasury)
+        expected_withdraw_icx_amount_from_treasury: int = icx
+        self.assertEqual(expected_withdraw_icx_amount_from_treasury,
+                         treasury_balance_before_claim - (treasury_balance_after_claim - accumulative_fee))

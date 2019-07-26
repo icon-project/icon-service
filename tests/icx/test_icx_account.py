@@ -154,52 +154,71 @@ class TestAccount(unittest.TestCase):
             self.assertEqual(10, target_accounts[i].delegation_part.delegated_amount)
 
     def test_account_balance(self):
-        account = Account(create_address(), 0)
-        self.assertEqual(0, account.balance)
-
-        balance = 100
-        coin_part = Mock(spec=CoinPart, balance=balance)
+        value: int = 0
+        coin_part = Mock(spec=CoinPart, balance=value)
         account = Account(create_address(), 0, coin_part=coin_part)
-        self.assertEqual(balance, account.balance)
+        self.assertEqual(value, account.balance)
+
+        value: int = 100
+        coin_part = Mock(spec=CoinPart, balance=value)
+        account = Account(create_address(), 0, coin_part=coin_part)
+        self.assertEqual(value, account.balance)
 
     def test_account_stake(self):
-        account = Account(create_address(), 0)
-        self.assertEqual(0, account.stake)
-
-        stake_part = StakePart(stake=100)
+        value: int = 0
+        stake_part = StakePart(stake=value)
         stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
-        self.assertEqual(100, account.stake)
+        self.assertEqual(value, account.stake)
+
+        value: int = 100
+        stake_part = StakePart(stake=value)
+        stake_part.set_complete(True)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual(value, account.stake)
 
     def test_account_unstake(self):
-        account = Account(create_address(), 0)
+        value: int = 0
+        stake_part = StakePart(unstake=value)
+        stake_part.set_complete(True)
+        account = Account(create_address(), 0, stake_part=stake_part)
         self.assertEqual(0, account.unstake)
 
-        stake_part = StakePart(unstake=200)
+        value: int = 200
+        stake_part = StakePart(unstake=value)
         stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
-        self.assertEqual(200, account.unstake)
+        self.assertEqual(value, account.unstake)
 
     def test_account_unstake_block_height(self):
-        account = Account(create_address(), 0)
-        self.assertEqual(0, account.unstake_block_height)
-
-        stake_part = StakePart(unstake_block_height=300)
+        value: int = 0
+        stake_part = StakePart(unstake_block_height=value)
         stake_part.set_complete(True)
         account = Account(create_address(), 0, stake_part=stake_part)
-        self.assertEqual(300, account.unstake_block_height)
+        self.assertEqual(0, account.unstake_block_height)
+
+        value: int = 300
+        stake_part = StakePart(unstake_block_height=value)
+        stake_part.set_complete(True)
+        account = Account(create_address(), 0, stake_part=stake_part)
+        self.assertEqual(value, account.unstake_block_height)
 
     def test_account_delegated_amount(self):
-        account = Account(create_address(), 0)
-        self.assertEqual(0, account.delegated_amount)
-
-        delegation_part = DelegationPart(delegated_amount=100)
+        value: int = 0
+        delegation_part = DelegationPart(delegated_amount=value)
         account = Account(create_address(), 0, delegation_part=delegation_part)
-        self.assertEqual(100, account.delegated_amount)
+        self.assertEqual(value, account.delegated_amount)
+
+        value: int = 100
+        delegation_part = DelegationPart(delegated_amount=value)
+        account = Account(create_address(), 0, delegation_part=delegation_part)
+        self.assertEqual(value, account.delegated_amount)
 
     def test_account_delegations(self):
-        account = Account(create_address(), 0)
-        self.assertEqual(None, account.delegations)
+        value: list = []
+        delegation_part = DelegationPart(delegations=value)
+        account = Account(create_address(), 0, delegation_part=delegation_part)
+        self.assertEqual(value, account.delegations)
 
         delegations = [
             (create_address(), 100),

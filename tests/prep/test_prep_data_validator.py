@@ -14,12 +14,14 @@
 # limitations under the License.
 import hashlib
 import os
+from typing import List
 
 import pytest
 
 from iconservice.base.address import AddressPrefix, Address
 from iconservice.base.exception import InvalidParamsException
-from iconservice.prep.validator import _validate_p2p_endpoint, _validate_prep_public_key, _validate_uri, _validate_email
+from iconservice.prep.validator import _validate_p2p_endpoint, _validate_prep_public_key
+from iconservice.prep.validator import _validate_uri, _validate_email, _validate_country
 
 NAME = "banana"
 EMAIL = "banana@example.com"
@@ -128,3 +130,18 @@ def test_validate_email():
         _validate_email(valid_email)
     except BaseException:
         pytest.fail("Validating email test failed")
+
+
+def test_validate_country():
+    valid_country_codes: List[str] = ["KOR", "USA", "CHN", "JPN", "FRA", "RUS", "DEU", "CAN"]
+    invalid_country_codes: List[str] = ["123", "hello", "KR", "US", "CA", "FR"]
+
+    for code in valid_country_codes:
+        _validate_country(code)
+        _validate_country(code.lower())
+
+    for code in invalid_country_codes:
+        with pytest.raises(InvalidParamsException):
+            _validate_country(code)
+        with pytest.raises(InvalidParamsException):
+            _validate_country(code.lower())

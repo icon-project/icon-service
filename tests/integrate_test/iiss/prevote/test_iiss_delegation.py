@@ -16,7 +16,9 @@
 
 """IconScoreEngine testcase
 """
+from typing import List, Dict
 
+from iconservice.base.address import ZERO_SCORE_ADDRESS
 from iconservice.base.exception import ExceptionCode
 from iconservice.icon_constant import IISS_MAX_DELEGATIONS, REV_IISS, ICX_IN_LOOP
 from iconservice.iconscore.icon_score_result import TransactionResult
@@ -147,3 +149,78 @@ class TestIISSDelegate(TestIISSBase):
         expected_response: list = [{"address": address, "value": value} for (address, value) in delegations]
         self.assertEqual(expected_response, response["delegations"])
         self.assertEqual(total_delegating, response["totalDelegated"])
+
+    def test_delegation_invalid_params(self):
+        self.update_governance()
+
+        # set Revision REV_IISS
+        tx: dict = self.create_set_revision_tx(REV_IISS)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self._write_precommit_state(prev_block)
+
+        # gain 10 icx
+        balance: int = 100 * ICX_IN_LOOP
+        tx = self._make_icx_send_tx(self._genesis, self._addr_array[0], balance)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # stake 10 icx
+        stake: int = 10 * ICX_IN_LOOP
+        tx: dict = self.create_set_stake_tx(self._addr_array[0], stake)
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set delegation 1
+        delegations: list = [(self._addr_array[0], 1)]
+        delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
+        tx = self._make_score_call_tx(self._addr_array[0],
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {
+                                          "invalid": delegations
+                                      })
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set delegation 2
+        delegations: list = [(self._addr_array[0], 1)]
+        delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
+        tx = self._make_score_call_tx(self._addr_array[0],
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {
+                                          "delegations": delegations,
+                                          "delegations2": []
+                                      })
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set delegation 3
+        delegations: list = [(self._addr_array[0], 1)]
+        delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
+        tx = self._make_score_call_tx(self._addr_array[0],
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {
+                                          "delegations1": delegations,
+                                          "delegations2": []
+                                      })
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(False), tx_results[0].status)
+        self._write_precommit_state(prev_block)
+
+        # set delegation 3
+        delegations: list = [(self._addr_array[0], 1)]
+        delegations: List[Dict[str, str]] = self.create_delegation_params(delegations)
+        tx = self._make_score_call_tx(self._addr_array[0],
+                                      ZERO_SCORE_ADDRESS,
+                                      'setDelegation',
+                                      {
+                                      })
+        prev_block, tx_results = self._make_and_req_block([tx])
+        self.assertEqual(int(True), tx_results[0].status)
+        self._write_precommit_state(prev_block)

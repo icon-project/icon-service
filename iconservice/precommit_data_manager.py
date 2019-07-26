@@ -51,6 +51,7 @@ class PrecommitData(object):
                  block_result: list,
                  rc_block_batch: list,
                  preps: 'PRepContainer',
+                 term: Optional['Term'],
                  prev_block_generator: Optional['Address'],
                  prev_block_validators: Optional[List['Address']],
                  score_mapper: Optional['IconScoreMapper'] = None,
@@ -69,6 +70,7 @@ class PrecommitData(object):
         self.rc_block_batch = rc_block_batch
         # Snapshot of preps
         self.preps = preps
+        self.term = term
         self.prev_block_generator = prev_block_generator
         self.prev_block_validators = prev_block_validators
         self.score_mapper = score_mapper

@@ -46,7 +46,8 @@ class Intent(IntEnum):
     TRANSFER = AccountPartFlag.COIN
     STAKE = AccountPartFlag.COIN | AccountPartFlag.STAKE
     DELEGATED = AccountPartFlag.DELEGATION
-    DELEGATING = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
+    INIT_PREP = AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
+    ALL = AccountPartFlag.COIN | AccountPartFlag.STAKE | AccountPartFlag.DELEGATION
 
 
 class Storage(StorageBase):
@@ -71,7 +72,6 @@ class Storage(StorageBase):
         self._fee_treasury: 'Address' = None
 
     def open(self, context: 'IconScoreContext'):
-        self._load_last_block_info(context)
         self._load_special_address(context, self._GENESIS_DB_KEY)
         self._load_special_address(context, self._TREASURY_DB_KEY)
 
@@ -87,7 +87,7 @@ class Storage(StorageBase):
     def fee_treasury(self) -> 'Address':
         return self._fee_treasury
 
-    def _load_last_block_info(self, context: 'IconScoreContext'):
+    def load_last_block_info(self, context: 'IconScoreContext'):
         block_bytes = self._db.get(context, self._LAST_BLOCK_KEY)
         if block_bytes is None:
             return

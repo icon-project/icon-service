@@ -130,9 +130,15 @@ class IconServiceEngine(ContextContainer):
         IconScoreContext.icon_service_flag = service_config_flag
         IconScoreContext.legacy_tbears_mode = conf.get(ConfigKey.TBEARS_MODE, False)
         IconScoreContext.iiss_initial_irep = conf.get(ConfigKey.INITIAL_IREP, IISS_INITIAL_IREP)
+
         self._init_component_context()
 
+        # load last_block_info
         context = IconScoreContext(IconScoreContextType.DIRECT)
+        context.storage.icx.load_last_block_info(context)
+        self._precommit_data_manager.last_block: 'Block' = IconScoreContext.storage.icx.last_block
+        context.block: 'Block' = self._get_last_block()
+
         self._open_component_context(context,
                                      log_dir,
                                      rc_data_path,
@@ -142,9 +148,6 @@ class IconServiceEngine(ContextContainer):
                                      conf[ConfigKey.TERM_PERIOD],
                                      conf[ConfigKey.INITIAL_IREP],
                                      conf[ConfigKey.PREP_REGISTRATION_FEE])
-
-        last_block: 'Block' = IconScoreContext.storage.icx.last_block
-        self._precommit_data_manager.last_block = last_block
 
         self._load_builtin_scores(
             context, Address.from_string(conf[ConfigKey.BUILTIN_SCORE_OWNER]))
@@ -357,10 +360,6 @@ class IconServiceEngine(ContextContainer):
             ContextDatabaseFactory.close()
             self._clear_context()
 
-    @staticmethod
-    def _is_decentralized(context: 'IconScoreContext') -> bool:
-        return context.revision >= REV_DECENTRALIZATION and context.engine.prep.term.sequence != -1
-
     def invoke(self,
                block: 'Block',
                tx_requests: list,
@@ -404,7 +403,7 @@ class IconServiceEngine(ContextContainer):
         base_tx_result: Optional['TransactionResult'] = None
 
         regulator: Optional['Regulator'] = None
-        if is_block_editable and self._is_decentralized(context):
+        if is_block_editable and context.is_decentralized():
             base_transaction, regulator = BaseTransactionCreator.create_base_transaction(context)
             # todo: if the txhash field is add to addedTransaction, should remove this logic
             tx_params_to_added = deepcopy(base_transaction["params"])
@@ -422,7 +421,7 @@ class IconServiceEngine(ContextContainer):
             context.tx_batch.clear()
         else:
             for index, tx_request in enumerate(tx_requests):
-                if index == BASE_TRANSACTION_INDEX and self._is_decentralized(context):
+                if index == BASE_TRANSACTION_INDEX and context.is_decentralized():
                     if not tx_request['params'].get('dataType') == "base":
                         raise InvalidBaseTransactionException("Invalid block: "
                                                               "first transaction must be an base transaction")
@@ -444,11 +443,8 @@ class IconServiceEngine(ContextContainer):
         if self.check_end_block_height_of_calc(context):
             precommit_flag |= PrecommitFlag.IISS_CALC
 
-        main_prep_as_dict: Optional[dict] = self.after_transaction_process(context,
-                                                                           precommit_flag,
-                                                                           base_tx_result,
-                                                                           prev_block_generator,
-                                                                           prev_block_validators)
+        main_prep_as_dict, next_term = self.after_transaction_process(
+            context, precommit_flag, base_tx_result, prev_block_generator, prev_block_validators)
 
         # Make context.preps immutable
         context.preps.freeze()
@@ -461,6 +457,7 @@ class IconServiceEngine(ContextContainer):
             block_result,
             context.rc_block_batch,
             context.preps,
+            next_term,
             prev_block_generator,
             prev_block_validators,
             context.new_icon_score_mapper,
@@ -469,29 +466,45 @@ class IconServiceEngine(ContextContainer):
 
         return block_result, precommit_data.state_root_hash, added_transactions, main_prep_as_dict
 
-    def after_transaction_process(self,
-                                  context: 'IconScoreContext',
-                                  flag: 'PrecommitFlag',
-                                  base_tx_result: Optional['TransactionResult'],
-                                  prev_block_generator: Optional['Address'] = None,
-                                  prev_block_validators: Optional[List['Address']] = None) -> Optional[dict]:
+    def after_transaction_process(
+            self,
+            context: 'IconScoreContext',
+            flag: 'PrecommitFlag',
+            base_tx_result: Optional['TransactionResult'],
+            prev_block_generator: Optional['Address'] = None,
+            prev_block_validators: Optional[List['Address']] = None) -> Tuple[Optional[dict], Optional['Term']]:
+        """If the current term is ended, prepare the next term,
+        - Prepare the list of main P-Reps for the next term which is passed to loopchain
+        - Calculate the weighted average of ireps
+        submitted by P-Rep candidates that will run as main P-Reps during the next term
+        - Impose low productivity penalty on the current main P-Reps which did not validate more than 15% of blocks
 
+        :param context:
+        :param flag:
+        :param base_tx_result:
+        :param prev_block_generator:
+        :param prev_block_validators:
+        :return:
+        """
         main_prep_as_dict: Optional[dict] = None
+        next_term: Optional['Term'] = None
+
         if self._is_prep_term_over(context):
             if base_tx_result is not None:
                 self._update_preps_apply_low_productivity_penalty(context, base_tx_result)
+
             # The current P-Rep term is over. Prepare the next P-Rep term
-            weighted_average_of_irep = context.engine.prep.calculate_weighted_average_of_irep(context)
-            context.engine.prep.save_term(context, weighted_average_of_irep)
-            main_prep_as_dict = context.engine.prep.make_prep_tx_result()
-            self._sync_end_block_height_of_calc_and_term(context)
+            main_prep_as_dict, next_term = context.engine.prep.on_term_ended(context)
+
+            # Synchronize the timing between I-Score calculation and term change
+            self._sync_end_block_height_of_calc_and_term(context, next_term)
 
         if context.revision >= REV_IISS:
             context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
 
-        return main_prep_as_dict
+        return main_prep_as_dict, next_term
 
     def _update_preps_apply_low_productivity_penalty(self,
                                                      context: 'IconScoreContext',
@@ -514,7 +527,7 @@ class IconServiceEngine(ContextContainer):
                              prev_block_generator: Optional['Address'] = None,
                              prev_block_validators: Optional[List['Address']] = None):
 
-        if not self._is_decentralized(context):
+        if not context.is_decentralized():
             return
 
         validates: set = set()
@@ -541,12 +554,13 @@ class IconServiceEngine(ContextContainer):
             return check_decentralization_condition(context)
 
     @staticmethod
-    def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext'):
+    def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext', next_term: 'Term'):
         end_block_height_of_calc = context.storage.iiss.get_end_block_height_of_calc(context)
-        end_block_height_of_term = context.engine.prep.term.start_block_height - 1
+        end_block_height_of_term = next_term.start_block_height - 1
+
         if end_block_height_of_calc != end_block_height_of_term:
-            assert context.engine.prep.term.sequence == 0
-            next_end_block_height = context.engine.prep.term.end_block_height
+            assert next_term.sequence == 0
+            next_end_block_height: int = next_term.end_block_height
             context.storage.iiss.put_end_block_height_of_calc(context, next_end_block_height)
 
     def _update_revision_if_necessary(self,

@@ -22,7 +22,7 @@ from .sorted_list import Sortable
 from ... import utils
 from ...base.exception import AccessDeniedException
 from ...base.type_converter_templates import ConstantKeys
-from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE, IISS_INITIAL_IREP
+from ...icon_constant import PENALTY_GRACE_PERIOD, MIN_PRODUCTIVITY_PERCENTAGE
 from ...icon_constant import PRepGrade, PRepStatus
 from ...utils.msgpack_for_db import MsgPackForDB
 
@@ -87,6 +87,7 @@ class PRep(Sortable):
             public_key: bytes = b"",
             irep: int = 0,
             irep_block_height: int = 0,
+            stake: int = 0,
             delegated: int = 0,
             block_height: int = 0,
             tx_index: int = 0,
@@ -111,6 +112,7 @@ class PRep(Sortable):
         :param p2p_endpoint:
         :param irep:
         :param irep_block_height:
+        :param stake:
         :param delegated:
         :param block_height:
         :param tx_index:
@@ -123,7 +125,7 @@ class PRep(Sortable):
         # flags
         self._flags: 'PRepFlag' = flags
 
-        # The delegated amount retrieved from account
+        self._stake: int = stake
         self._delegated: int = delegated
 
         # status
@@ -230,11 +232,22 @@ class PRep(Sortable):
         return self._address
 
     @property
+    def stake(self) -> int:
+        return self._stake
+
+    @stake.setter
+    def stake(self, value: int):
+        assert value >= 0
+        self._check_access_permission()
+        self._stake = value
+
+    @property
     def delegated(self) -> int:
         return self._delegated
 
     @delegated.setter
     def delegated(self, value: int):
+        assert value >= 0
         self._check_access_permission()
         self._delegated = value
 
@@ -355,6 +368,7 @@ class PRep(Sortable):
             self.grade.value,
             self.name,
             self.country,
+            self.city,
             self.email,
             self.website,
             self.details,
@@ -423,7 +437,7 @@ class PRep(Sortable):
             # Required items
             p2p_endpoint=data[ConstantKeys.P2P_ENDPOINT],
             public_key=data[ConstantKeys.PUBLIC_KEY],
-            irep=IISS_INITIAL_IREP,
+            irep=0,
             irep_block_height=block_height,
 
             # Registration time
@@ -432,12 +446,18 @@ class PRep(Sortable):
         )
 
     def to_dict(self, dict_type: 'PRepDictType') -> dict:
+        """Returns the P-Rep information in dict format
+
+        :param dict_type: FULL(getPRep), ABRIDGED(getPRepList)
+        :return:
+        """
         data = {
             "status": self._status.value,
             "grade": self.grade.value,
             "name": self.name,
             "country": self.country,
             "city": self.city,
+            "stake": self._stake,
             "delegated": self._delegated,
             "totalBlocks": self._total_blocks,
             "validatedBlocks": self._validated_blocks
