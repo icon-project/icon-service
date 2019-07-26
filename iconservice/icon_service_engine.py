@@ -500,7 +500,7 @@ class IconServiceEngine(ContextContainer):
             self._sync_end_block_height_of_calc_and_term(context, next_term)
 
         if context.revision >= REV_IISS:
-            context.engine.iiss.update_db(context, prev_block_generator, prev_block_validators, flag)
+            context.engine.iiss.update_db(context, next_term, prev_block_generator, prev_block_validators, flag)
 
         context.update_batch()
 
