@@ -30,7 +30,6 @@ from ..base.type_converter import TypeConverter
 from ..base.type_converter_templates import ConstantKeys, ParamType
 from ..icon_constant import IISS_MAX_DELEGATIONS, ISCORE_EXCHANGE_RATE, ICON_SERVICE_LOG_TAG, IISS_MAX_REWARD_RATE, \
     IconScoreContextType
-from ..icon_constant import PREP_MAIN_PREPS
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx import Intent
@@ -43,8 +42,8 @@ if TYPE_CHECKING:
     from .reward_calc.msg_data import TxData, DelegationInfo, DelegationTx, Header, BlockProduceInfoData, PRepsData
     from .reward_calc.msg_data import GovernanceVariable
     from ..iiss.storage import RewardRate
-    from ..prep.data.prep import PRep
     from ..icx import IcxStorage
+    from ..prep.term import Term
 
 
 class EngineListener(metaclass=ABCMeta):
@@ -524,6 +523,7 @@ class Engine(EngineBase):
 
     def update_db(self,
                   context: 'IconScoreContext',
+                  term: Optional['Term'],
                   prev_block_generator: Optional['Address'],
                   prev_block_validators: Optional[List['Address']],
                   flag: 'PrecommitFlag'):
@@ -537,7 +537,7 @@ class Engine(EngineBase):
 
         self._put_header_to_rc_db(context)
         self._put_gv(context)
-        self._put_preps_to_rc_db(context)
+        self._put_preps_to_rc_db(context, term)
 
     def send_ipc(self, context: 'IconScoreContext', precommit_data: 'PrecommitData'):
         block_height: int = precommit_data.block.height
@@ -614,20 +614,18 @@ class Engine(EngineBase):
         context.storage.rc.put(context.rc_block_batch, data)
 
     @classmethod
-    def _put_preps_to_rc_db(cls, context: 'IconScoreContext'):
-        preps: List['PRep'] = \
-            context.engine.prep.preps.get_preps(start_index=0, size=PREP_MAIN_PREPS)
-
-        if len(preps) == 0:
+    def _put_preps_to_rc_db(cls, context: 'IconScoreContext', term: Optional['Term']):
+        # if not decentralized, term is None.
+        if term is None:
             return
 
         total_prep_delegated: int = 0
-        for prep in preps:
+        for prep in term.preps:
             total_prep_delegated += prep.delegated
 
         Logger.debug(f"put_preps_for_rc: total_prep_delegated{total_prep_delegated}", "iiss")
 
         data: 'PRepsData' = RewardCalcDataCreator.create_prep_data(context.block.height,
                                                                    total_prep_delegated,
-                                                                   preps)
+                                                                   term.preps)
         context.storage.rc.put(context.rc_block_batch, data)
