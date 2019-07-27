@@ -15,15 +15,16 @@
 # limitations under the License.
 
 import argparse
+import asyncio
 import os
 import signal
 import sys
 
 import setproctitle
+
 from earlgrey import MessageQueueService, aio_pika
 from iconcommons.icon_config import IconConfig
 from iconcommons.logger import Logger
-
 from iconservice.base.exception import FatalException
 from iconservice.icon_config import default_icon_config
 from iconservice.icon_constant import ICON_SERVICE_PROCTITLE_FORMAT, ICON_SCORE_QUEUE_NAME_FORMAT, ConfigKey, \
@@ -67,9 +68,14 @@ class IconService(object):
         Logger.info(f'icon_score_queue_name  : {self._icon_score_queue_name}', ICON_SERVICE)
         Logger.info(f'==========IconService Service params==========', ICON_SERVICE)
 
+        # Before creating IconScoreInnerService instance,
+        # loop SHOULD be set as a current event loop for the current thread.
+        # Otherwise connection between iconservice and rc will be failed.
+        loop = MessageQueueService.loop
+        asyncio.set_event_loop(loop)
+
         self._inner_service = IconScoreInnerService(amqp_target, self._icon_score_queue_name, conf=config)
 
-        loop = MessageQueueService.loop
         loop.create_task(_serve())
         loop.add_signal_handler(signal.SIGINT, self.close)
         loop.add_signal_handler(signal.SIGTERM, self.close)
