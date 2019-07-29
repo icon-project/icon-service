@@ -148,7 +148,7 @@ class TestPreps(TestIISSBase):
         _STEADY_PREPS_COUNT = 13
         _UNCOOPERATIVE_PREP_COUNT = PREP_MAIN_PREPS - _STEADY_PREPS_COUNT
 
-        expected_penalty_event_log_data = [PRepStatus.PENALTY2.value, 0]
+        expected_penalty_event_log_data = [PRepStatus.LOW_PRODUCTIVITY.value, 0]
         expected_penalty_event_logs = [EventLog(ZERO_SCORE_ADDRESS,
                                                 [PREP_PENALTY_SIGNATURE, prep],
                                                 expected_penalty_event_log_data)

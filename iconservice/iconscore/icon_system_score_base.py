@@ -73,4 +73,4 @@ class IconSystemScoreBase(IconScoreBase):
         return IconScoreContextUtil.get_owner(self._context, score_address)
 
     def unregister_prep(self, address: 'Address'):
-        self._context.engine.prep.unregister_prep(self._context, address, PRepStatus.PENALTY1)
+        self._context.engine.prep.unregister_prep(self._context, address, PRepStatus.DISQUALIFIED)
