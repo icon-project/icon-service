@@ -243,7 +243,7 @@ class TestIntegratePrep(TestIISSBase):
         for tx_result in tx_results:
             self.assertEqual(int(True), tx_result.status)
         self._write_precommit_state(prev_block)
-        irep_updated_block = prev_block.height
+        irep_update_block_height: int = prev_block.height
 
         # gain 10 icx user0
         balance: int = 100 * ICX_IN_LOOP
@@ -289,7 +289,7 @@ class TestIntegratePrep(TestIISSBase):
                     "stake": stake_amount if i == 0 else 0,
                     "delegated": delegation_amount,
                     "irep": IISS_INITIAL_IREP,
-                    "irepUpdateBlockHeight": irep_updated_block,
+                    "irepUpdateBlockHeight": irep_update_block_height,
                     "totalBlocks": 0,
                     "validatedBlocks": 0
                 }
