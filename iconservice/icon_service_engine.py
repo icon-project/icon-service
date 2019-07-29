@@ -521,7 +521,7 @@ class IconServiceEngine(ContextContainer):
                 low_productivities.append(prep)
 
         for prep in low_productivities:
-            context.preps.remove(prep.address, PRepStatus.LOW_PRODUCTIVITY)
+            context.preps.unregister(prep.address, PRepStatus.LOW_PRODUCTIVITY)
             EventLogEmitter.emit_event_log(context, ZERO_SCORE_ADDRESS, PREP_PENALTY_SIGNATURE,
                                            [prep.address, PRepStatus.LOW_PRODUCTIVITY.value, prep.productivity], 1)
         base_tx_result.event_logs.extend(context.event_logs)

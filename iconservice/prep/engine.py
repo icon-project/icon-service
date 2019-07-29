@@ -94,7 +94,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep.stake = account.stake
             prep.delegated = account.delegated_amount
 
-            self.preps.put(prep)
+            self.preps.add(prep)
 
         self.preps.freeze()
 
@@ -163,7 +163,7 @@ class Engine(EngineBase, IISSEngineListener):
         for i in range(main_and_sub_prep_count):
             prep: 'PRep' = new_preps.get_by_index(i, mutable=False)
             if prep is None:
-                Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {len(new_preps)}")
+                Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {new_preps.size(active_prep_only=True)}")
                 break
 
             prep_address: 'Address' = prep.address
@@ -180,9 +180,6 @@ class Engine(EngineBase, IISSEngineListener):
         # Update the grades of P-Reps for the next term
         for address, grades in prep_grades.items():
             prep: 'PRep' = new_preps.get_by_address(address, mutable=True)
-            if prep is None:
-                prep: 'PRep' = new_preps.get_inactive_prep_by_address(address)
-
             assert prep is not None
             prep.grade = grades[1]
 
@@ -203,8 +200,8 @@ class Engine(EngineBase, IISSEngineListener):
         prep_storage: 'PRepStorage' = context.storage.prep
 
         address: 'Address' = context.tx.origin
-        if context.preps.contains(address, inactive_preps_included=True):
-            raise InvalidParamsException(f"{str(address)} has been already registered")
+        if context.preps.contains(address, active_prep_only=False):
+            raise InvalidParamsException(f"{address} has been already registered")
 
         # Check Prep registration fee
         value = context.msg.value
@@ -231,7 +228,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep.set_irep(self._initial_irep, context.block.height)
 
         # Update preps in context
-        context.preps.add(prep)
+        context.preps.register(prep)
 
         # Update stateDB
         prep_storage.put_prep(context, prep)
@@ -358,9 +355,7 @@ class Engine(EngineBase, IISSEngineListener):
 
         prep: 'PRep' = self.preps.get_by_address(address)
         if prep is None:
-            prep: 'PRep' = self.preps.get_inactive_prep_by_address(address)
-            if prep is None:
-                raise InvalidParamsException(f"P-Rep not found: {str(address)}")
+            raise InvalidParamsException(f"P-Rep not found: {address}")
 
         account: 'Account' = context.storage.icx.get_account(context, address, Intent.STAKE)
 
@@ -468,7 +463,7 @@ class Engine(EngineBase, IISSEngineListener):
         prep_storage: 'PRepStorage' = context.storage.prep
 
         # Remove a given P-Rep from context.preps
-        context.preps.remove(address, status)
+        context.preps.unregister(address, status)
 
         # Update stateDB
         prep_storage.delete_prep(context, address)
@@ -548,7 +543,7 @@ class Engine(EngineBase, IISSEngineListener):
         start_ranking: int = 0
         prep_list: list = []
 
-        prep_count: int = len(preps)
+        prep_count: int = preps.size(active_prep_only=True)
 
         if prep_count > 0:
             start_ranking: int = ret_params.get(ConstantKeys.START_RANKING, 1)
@@ -597,5 +592,5 @@ class Engine(EngineBase, IISSEngineListener):
             address = account.address
 
             # If a delegated account is a P-Rep, then update its delegated amount
-            if context.preps.contains(address, inactive_preps_included=False):
+            if context.preps.contains(address, active_prep_only=True):
                 context.preps.set_delegated_to_prep(address, account.delegated_amount)
