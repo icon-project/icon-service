@@ -47,7 +47,10 @@ class TestEngine(unittest.TestCase):
         new_preps: 'PRepContainer' = self.new_preps
 
         # Case0: Network has just decentralized without any delegation
-        PRepEngine._update_prep_grades(old_preps=[], new_preps=new_preps)
+        PRepEngine._update_prep_grades(main_prep_count=PREP_MAIN_PREPS,
+                                       main_and_sub_prep_count=PREP_MAIN_AND_SUB_PREPS,
+                                       old_preps=[],
+                                       new_preps=new_preps)
 
         for i, prep in enumerate(new_preps):
             if i < PREP_MAIN_PREPS:
@@ -73,7 +76,10 @@ class TestEngine(unittest.TestCase):
             prep2 = new_preps.get_by_address(prep.address)
             self.assertEqual(id(prep), id(prep2))
 
-        PRepEngine._update_prep_grades(old_preps=old_prep_list, new_preps=new_preps)
+        PRepEngine._update_prep_grades(main_prep_count=PREP_MAIN_PREPS,
+                                       main_and_sub_prep_count=PREP_MAIN_AND_SUB_PREPS,
+                                       old_preps=old_prep_list,
+                                       new_preps=new_preps)
 
         i = 0
         for delegated, index in delegated_list:

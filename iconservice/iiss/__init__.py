@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 from .engine import Engine as IISSEngine
 from .engine import EngineListener as IISSEngineListener
 from .storage import Storage as IISSStorage
-from ..icon_constant import PREP_MAIN_PREPS
 
 if TYPE_CHECKING:
     from ..iconscore.icon_score_context import IconScoreContext
@@ -29,9 +28,9 @@ if TYPE_CHECKING:
 def check_decentralization_condition(context: 'IconScoreContext'):
     """ICON network decentralize when 22th prep get delegation more than some value(total-supply * 0.002icx)"""
     preps = context.preps
-    if len(preps) >= PREP_MAIN_PREPS:
+    if len(preps) >= context.main_prep_count:
         minimum_delegate = get_minimum_delegate_for_bottom_prep(context)
-        bottom_prep: 'PRep' = preps.get_by_index(PREP_MAIN_PREPS - 1)
+        bottom_prep: 'PRep' = preps.get_by_index(context.main_prep_count - 1)
         bottom_prep_delegated = bottom_prep.delegated
         return bottom_prep_delegated >= minimum_delegate
     return False

@@ -14,14 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH, \
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+from ...icon_constant import IISS_MAX_REWARD_RATE, IISS_ANNUAL_BLOCK, IISS_MONTH
 
 
 class IssueFormula(object):
-    def __init__(self,
-                 prep_count: int = PREP_MAIN_PREPS,
-                 sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS):
+    def __init__(self, prep_count: int, sub_prep_count: int):
         self._handler: dict = {
             'prep': self._handle_icx_issue_formula_for_prep
         }
