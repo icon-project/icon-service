@@ -71,12 +71,7 @@ class PRepContainer(object):
         :param prep:
         :return:
         """
-        if prep.status == PRepStatus.ACTIVE:
-            self._active_prep_list.add(prep)
-            self._total_prep_delegated += prep.delegated
-            assert self._total_prep_delegated >= 0
-
-        self._prep_dict[prep.address] = prep
+        self._add(prep)
 
     def freeze(self):
         """Freeze data in PRepContainer
@@ -99,21 +94,23 @@ class PRepContainer(object):
 
         :param prep: prep to add
         """
-        assert prep.status == PRepStatus.ACTIVE
-
         self._check_access_permission()
 
         if prep.address in self._prep_dict:
             raise InvalidParamsException(f"P-Rep already exists: {prep.address}")
 
-        self._prep_dict[prep.address] = prep
-        self._active_prep_list.add(prep)
-
-        # Update self._total_prep_delegated
-        self._total_prep_delegated += prep.delegated
-        assert self._total_prep_delegated >= 0
-
+        self._add(prep)
         self._flags |= PRepFlag.DIRTY
+
+    def _add(self, prep: 'PRep'):
+        self._prep_dict[prep.address] = prep
+
+        if prep.status == PRepStatus.ACTIVE:
+            self._active_prep_list.add(prep)
+
+            # Update self._total_prep_delegated
+            self._total_prep_delegated += prep.delegated
+            assert self._total_prep_delegated >= 0
 
     def remove(self,
                address: 'Address',
@@ -145,6 +142,31 @@ class PRepContainer(object):
         assert self._total_prep_delegated >= 0
 
         return prep
+
+    def _delete(self, address: 'Address'):
+        """Remove a prep indicated by address from self._active_prep_list and self._prep_dict
+
+        :param address:
+        :return:
+        """
+        prep: 'PRep' = self._prep_dict.get(address)
+        if prep is None:
+            return
+
+        if prep.status == PRepStatus.ACTIVE:
+            self._active_prep_list.remove(prep)
+            self._total_prep_delegated -= prep.delegated
+
+        del self._prep_dict[address]
+
+    def replace(self, new_prep: 'PRep'):
+        """Replace old_prep with new_prep
+
+        :param new_prep:
+        :return:
+        """
+        self._delete(new_prep.address)
+        self._add(new_prep)
 
     def set_delegated_to_prep(self, address: 'Address', delegated: int):
         """Update the delegated amount of P-Rep, sorting the P-Rep in ascending order by prep.order()
