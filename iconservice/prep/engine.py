@@ -28,7 +28,7 @@ from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
 from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
-from ..icon_constant import PRepGrade, PrepResultState
+from ..icon_constant import PRepGrade, PrepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
 from ..icx.icx_account import Account
@@ -445,17 +445,9 @@ class Engine(EngineBase, IISSEngineListener):
         :param _params:
         :return:
         """
-        prep_storage: 'PRepStorage' = context.storage.prep
         address: 'Address' = context.tx.origin
 
-        # Remove a given P-Rep from context.preps
-        context.preps.remove(address)
-
-        # Update stateDB
-        prep_storage.delete_prep(context, address)
-
-        # Update rcDB
-        self._put_unreg_prep_for_iiss_db(context, address)
+        self.unregister_prep(context, address)
 
         # EventLog
         EventLogEmitter.emit_event_log(
@@ -465,6 +457,19 @@ class Engine(EngineBase, IISSEngineListener):
             arguments=[address],
             indexed_args_count=0
         )
+
+    def unregister_prep(self, context: 'IconScoreContext', address: 'Address',
+                        status: 'PRepStatus' = PRepStatus.UNREGISTERED):
+        prep_storage: 'PRepStorage' = context.storage.prep
+
+        # Remove a given P-Rep from context.preps
+        context.preps.remove(address, status)
+
+        # Update stateDB
+        prep_storage.delete_prep(context, address)
+
+        # Update rcDB
+        self._put_unreg_prep_for_iiss_db(context, address)
 
     @staticmethod
     def _put_unreg_prep_for_iiss_db(context: 'IconScoreContext', address: 'Address'):

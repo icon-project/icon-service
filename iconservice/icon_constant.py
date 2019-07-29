@@ -246,11 +246,12 @@ PREP_PENALTY_SIGNATURE = "PenaltyImposed(Address,int,int)"
 
 class PRepStatus(Enum):
     ACTIVE = 0
+    # Unregistered by P-Rep itself
     UNREGISTERED = 1
     # "prep disqualification penalty"
-    PENALTY1 = 2
+    DISQUALIFIED = 2
     # "low productivity penalty"
-    PENALTY2 = 3
+    LOW_PRODUCTIVITY = 3
 
 
 class PRepGrade(Enum):

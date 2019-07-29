@@ -124,7 +124,7 @@ def test_get_inactive_prep_by_address(create_prep_container):
     size = 11
     preps = create_prep_container(size)
 
-    for prep_status in (PRepStatus.UNREGISTERED, PRepStatus.PENALTY1, PRepStatus.PENALTY2):
+    for prep_status in (PRepStatus.UNREGISTERED, PRepStatus.DISQUALIFIED, PRepStatus.LOW_PRODUCTIVITY):
         # Make sure that the prep to remove is active
         index: int = random.randint(0, len(preps) - 1)
         prep: 'PRep' = preps.get_by_index(index)

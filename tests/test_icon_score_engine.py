@@ -93,7 +93,6 @@ class TestIconScoreEngine(unittest.TestCase):
         data_type = ''
 
         IconScoreEngine.invoke(context, contract_address, data_type, data)
-        mocked_score_engine_validate_score_blacklist.assert_called_with(context, contract_address)
         mocked_score_engine_call.assert_not_called()
         mocked_score_engine_fallback.assert_called()
 
