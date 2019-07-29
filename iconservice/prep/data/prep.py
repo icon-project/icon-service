@@ -461,7 +461,9 @@ class PRep(Sortable):
             "stake": self._stake,
             "delegated": self._delegated,
             "totalBlocks": self._total_blocks,
-            "validatedBlocks": self._validated_blocks
+            "validatedBlocks": self._validated_blocks,
+            "irep": self._irep,
+            "irepUpdateBlockHeight": self._irep_block_height
         }
 
         if dict_type == PRepDictType.FULL:
