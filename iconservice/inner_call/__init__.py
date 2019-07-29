@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 def get_main_preps(context: 'IconScoreContext', **_kwargs):
     term: 'Term' = context.engine.prep.term
-    preps: dict = context.engine.prep.get_main_preps_in_dict(context, term.main_preps)
+    preps: dict = context.engine.prep.get_main_preps_in_dict(context.main_prep_count, term.main_preps)
     if preps is None:
         preps = {}
 

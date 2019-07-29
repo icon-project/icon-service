@@ -380,6 +380,10 @@ class TestIntegrateBase(TestCase):
         response = self.icon_service_engine.query(method, request)
         return response
 
+    def inner_call(self, request: dict) -> Any:
+        response = self.icon_service_engine.inner_call(request)
+        return response
+
     def _create_invalid_block(self, block_height: int = None) -> 'Block':
         if block_height is None:
             block_height: int = self._block_height
