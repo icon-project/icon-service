@@ -194,7 +194,7 @@ class TestIISSBase(TestIntegrateBase):
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getMainPRepList",
+                "method": "getMainPReps",
                 "params": {}
             }
         }
@@ -207,7 +207,7 @@ class TestIISSBase(TestIntegrateBase):
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getSubPRepList",
+                "method": "getSubPReps",
                 "params": {}
             }
         }
@@ -228,7 +228,7 @@ class TestIISSBase(TestIntegrateBase):
             "to": ZERO_SCORE_ADDRESS,
             "dataType": "call",
             "data": {
-                "method": "getPRepList",
+                "method": "getPReps",
                 "params": params
             }
         }

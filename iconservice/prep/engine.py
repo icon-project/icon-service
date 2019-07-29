@@ -63,9 +63,9 @@ class Engine(EngineBase, IISSEngineListener):
 
         self._query_handler: dict = {
             "getPRep": self.handle_get_prep,
-            "getMainPRepList": self.handle_get_main_prep_list,
-            "getSubPRepList": self.handle_get_sub_prep_list,
-            "getPRepList": self.handle_get_prep_list
+            "getMainPReps": self.handle_get_main_prep_list,
+            "getSubPReps": self.handle_get_sub_prep_list,
+            "getPReps": self.handle_get_prep_list
         }
 
         self.preps = PRepContainer()
