@@ -322,7 +322,6 @@ class PRepInfo(object):
         self.delegated = delegated
 
 
-@staticmethod
 def __create_prep_info_from_prep(prep: 'PRep') -> 'PRepInfo':
     return PRepInfo(prep.address, prep.delegated)
 
