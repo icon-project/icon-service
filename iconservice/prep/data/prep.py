@@ -62,6 +62,7 @@ class PRep(Sortable):
         PUBLIC_KEY = auto()
         IREP = auto()
         IREP_BLOCK_HEIGHT = auto()
+        LAST_GENERATE_BLOCK_HEIGHT = auto()
 
         BLOCK_HEIGHT = auto()
         TX_INDEX = auto()
@@ -87,6 +88,7 @@ class PRep(Sortable):
             public_key: bytes = b"",
             irep: int = 0,
             irep_block_height: int = 0,
+            last_generate_block_height: int = -1,
             stake: int = 0,
             delegated: int = 0,
             block_height: int = 0,
@@ -146,6 +148,9 @@ class PRep(Sortable):
         self._irep: int = irep
         self._irep_block_height: int = irep_block_height
 
+        # The height of the last block which a P-Rep generated
+        self._last_generate_block_height: int = last_generate_block_height
+
         # registration time
         self._block_height: int = block_height
         self._tx_index: int = tx_index
@@ -153,6 +158,9 @@ class PRep(Sortable):
         # stats
         self._total_blocks: int = total_blocks
         self._validated_blocks: int = validated_blocks
+
+    def is_dirty(self) -> bool:
+        return bool(self._flags & PRepFlag.DIRTY)
 
     @property
     def status(self) -> 'PRepStatus':
@@ -263,6 +271,15 @@ class PRep(Sortable):
     @property
     def irep_block_height(self) -> int:
         return self._irep_block_height
+
+    @property
+    def last_generate_block_height(self) -> int:
+        return self._last_generate_block_height
+
+    @last_generate_block_height.setter
+    def last_generate_block_height(self, value: int):
+        assert value >= 0
+        self._last_generate_block_height = value
 
     @property
     def block_height(self) -> int:
@@ -379,6 +396,8 @@ class PRep(Sortable):
             self._irep,
             self._irep_block_height,
 
+            self._last_generate_block_height,
+
             self._block_height,
             self._tx_index,
 
@@ -405,6 +424,7 @@ class PRep(Sortable):
             public_key=items[cls.Index.PUBLIC_KEY],
             irep=items[cls.Index.IREP],
             irep_block_height=items[cls.Index.IREP_BLOCK_HEIGHT],
+            last_generate_block_height=items[cls.Index.LAST_GENERATE_BLOCK_HEIGHT],
             block_height=items[cls.Index.BLOCK_HEIGHT],
             tx_index=items[cls.Index.TX_INDEX],
             total_blocks=items[cls.Index.TOTAL_BLOCKS],
@@ -463,7 +483,8 @@ class PRep(Sortable):
             "totalBlocks": self._total_blocks,
             "validatedBlocks": self._validated_blocks,
             "irep": self._irep,
-            "irepUpdateBlockHeight": self._irep_block_height
+            "irepUpdateBlockHeight": self._irep_block_height,
+            "lastGenerateBlockHeight": self._last_generate_block_height,
         }
 
         if dict_type == PRepDictType.FULL:

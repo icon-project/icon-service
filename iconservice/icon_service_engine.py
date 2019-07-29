@@ -417,6 +417,7 @@ class IconServiceEngine(ContextContainer):
             tx_requests.insert(0, base_transaction)
 
         self._update_productivity(context, prev_block_generator, prev_block_validators)
+        self._update_last_generate_block_height(context, prev_block_generator)
 
         if block.height == 0:
             # Assume that there is only one tx in genesis_block
@@ -557,6 +558,16 @@ class IconServiceEngine(ContextContainer):
             return context.engine.prep.check_end_block_height_of_term(context)
         else:
             return check_decentralization_condition(context)
+
+    @staticmethod
+    def _update_last_generate_block_height(
+            context: 'IconScoreContext', prev_block_generator: Optional['Address']):
+        if prev_block_generator is None:
+            return
+
+        prep: 'PRep' = context.preps.get_by_address(prev_block_generator, mutable=True)
+        if prep:
+            prep.last_generate_block_height = context.block.height - 1
 
     @staticmethod
     def _sync_end_block_height_of_calc_and_term(context: 'IconScoreContext', next_term: 'Term'):
