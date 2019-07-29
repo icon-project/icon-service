@@ -36,7 +36,7 @@ class TestEngine(unittest.TestCase):
             self.assertEqual(PRepGrade.CANDIDATE, prep.grade)
             self.assertEqual(0, prep.delegated)
 
-            self.new_preps.add(prep)
+            self.new_preps.register(prep)
 
     def tearDown(self) -> None:
         self.new_preps = None

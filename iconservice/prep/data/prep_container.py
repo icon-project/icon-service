@@ -63,16 +63,6 @@ class PRepContainer(object):
         assert self._total_prep_delegated >= 0
         return self._total_prep_delegated
 
-    def put(self, prep: 'PRep'):
-        """Put a P-Rep object loaded from db into PRepContainer
-
-        DO NOT CALL this method anywhere but for PRepEngine.open()
-
-        :param prep:
-        :return:
-        """
-        self._add(prep)
-
     def freeze(self):
         """Freeze data in PRepContainer
         Freezing makes all data in PRepContainer immutable
@@ -87,13 +77,15 @@ class PRepContainer(object):
         for prep in self._prep_dict.values():
             prep.freeze()
 
-    def add(self, prep: 'PRep'):
+    def register(self, prep: 'PRep'):
         """Add a new active P-Rep through registerPRep JSON-RPC API
 
         It is not allowed to a P-Rep which has been already registered
 
         :param prep: prep to add
         """
+        assert prep.status == PRepStatus.ACTIVE
+
         self._check_access_permission()
 
         if prep.address in self._prep_dict:
@@ -102,20 +94,10 @@ class PRepContainer(object):
         self._add(prep)
         self._flags |= PRepFlag.DIRTY
 
-    def _add(self, prep: 'PRep'):
-        self._prep_dict[prep.address] = prep
-
-        if prep.status == PRepStatus.ACTIVE:
-            self._active_prep_list.add(prep)
-
-            # Update self._total_prep_delegated
-            self._total_prep_delegated += prep.delegated
-            assert self._total_prep_delegated >= 0
-
-    def remove(self,
-               address: 'Address',
-               status: 'PRepStatus' = PRepStatus.UNREGISTERED) -> Optional['PRep']:
-        """Remove a prep
+    def unregister(self,
+                   address: 'Address',
+                   status: 'PRepStatus' = PRepStatus.UNREGISTERED) -> Optional['PRep']:
+        """Unregister a prep
 
         * Remove a prep from active_prep_dict and active_prep_list
         * Add a prep to inactive_prep_dict with frozen flag
@@ -143,12 +125,32 @@ class PRepContainer(object):
 
         return prep
 
-    def _delete(self, address: 'Address'):
+    def add(self, prep: 'PRep'):
+        if prep.address in self._prep_dict:
+            raise InvalidParamsException("P-Rep already exists")
+
+        self._add(prep)
+
+    def _add(self, prep: 'PRep'):
+        self._prep_dict[prep.address] = prep
+
+        if prep.status == PRepStatus.ACTIVE:
+            self._active_prep_list.add(prep)
+
+            # Update self._total_prep_delegated
+            self._total_prep_delegated += prep.delegated
+            assert self._total_prep_delegated >= 0
+
+    def remove(self, address: 'Address'):
         """Remove a prep indicated by address from self._active_prep_list and self._prep_dict
 
         :param address:
         :return:
         """
+        self._check_access_permission()
+        self._remove(address)
+
+    def _remove(self, address: 'Address'):
         prep: 'PRep' = self._prep_dict.get(address)
         if prep is None:
             return
@@ -165,7 +167,8 @@ class PRepContainer(object):
         :param new_prep:
         :return:
         """
-        self._delete(new_prep.address)
+        self._check_access_permission()
+        self._remove(new_prep.address)
         self._add(new_prep)
 
     def set_delegated_to_prep(self, address: 'Address', delegated: int):

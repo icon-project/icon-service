@@ -94,7 +94,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep.stake = account.stake
             prep.delegated = account.delegated_amount
 
-            self.preps.put(prep)
+            self.preps.add(prep)
 
         self.preps.freeze()
 
@@ -228,7 +228,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep.set_irep(self._initial_irep, context.block.height)
 
         # Update preps in context
-        context.preps.add(prep)
+        context.preps.register(prep)
 
         # Update stateDB
         prep_storage.put_prep(context, prep)
@@ -463,7 +463,7 @@ class Engine(EngineBase, IISSEngineListener):
         prep_storage: 'PRepStorage' = context.storage.prep
 
         # Remove a given P-Rep from context.preps
-        context.preps.remove(address, status)
+        context.preps.unregister(address, status)
 
         # Update stateDB
         prep_storage.delete_prep(context, address)
