@@ -24,7 +24,10 @@ from ..base.block import Block
 from ..base.message import Message
 from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
-from ..icon_constant import IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION
+from ..icon_constant import (
+    IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+)
 
 if TYPE_CHECKING:
     from .icon_score_base import IconScoreBase
@@ -104,6 +107,9 @@ class IconScoreContext(object):
 
     engine: 'ContextEngine' = None
     storage: 'ContextStorage' = None
+
+    main_prep_count: int = PREP_MAIN_PREPS
+    main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
 
     """Contains the useful information to process user's JSON-RPC request
     """

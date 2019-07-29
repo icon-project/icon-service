@@ -17,7 +17,7 @@ import random
 from unittest.mock import Mock
 
 from iconservice.base.address import Address
-from iconservice.icon_constant import PREP_MAIN_AND_SUB_PREPS, IconScoreContextType, PREP_MAIN_PREPS
+from iconservice.icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, IconScoreContextType
 from iconservice.iconscore.icon_score_context import IconScoreContext
 from iconservice.icx import IcxStorage
 from iconservice.prep import PRepStorage
@@ -48,6 +48,8 @@ def test_save():
     assert term.irep == -1
     assert term.start_block_height == -1
     assert term.end_block_height == -1
+    assert term._main_prep_count == PREP_MAIN_PREPS
+    assert term._main_and_sub_prep_count == PREP_MAIN_AND_SUB_PREPS
 
     for _ in range(5):
         next_sequence = term.sequence + 1
@@ -56,8 +58,8 @@ def test_save():
         term.save(context)
         assert term.sequence == next_sequence
         assert term.total_supply == total_supply
-        assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
-        assert term.sub_preps == PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
+        assert term.main_preps == PREPS[:term._main_prep_count]
+        assert term.sub_preps == PREPS[term._main_prep_count:term._main_and_sub_prep_count]
         assert term.irep == irep
         assert term.start_block_height == current_block + 1
         assert term.end_block_height == term.start_block_height + term.period - 1
@@ -78,6 +80,8 @@ def test_save_and_load():
     assert term.irep == -1
     assert term.start_block_height == -1
     assert term.end_block_height == -1
+    assert term._main_prep_count == PREP_MAIN_PREPS
+    assert term._main_and_sub_prep_count == PREP_MAIN_AND_SUB_PREPS
 
     context.storage.prep.get_term = Mock(return_value=None)
     context.storage.icx.get_total_supply = Mock(return_value=total_supply)
@@ -91,6 +95,8 @@ def test_save_and_load():
     assert term.sub_preps == []
     assert term.start_block_height == -1
     assert term.end_block_height == -1
+    assert term._main_prep_count == context.main_prep_count
+    assert term._main_and_sub_prep_count == context.main_and_sub_prep_count
 
     # cases when term data is not None
     for _ in range(5):
@@ -101,11 +107,13 @@ def test_save_and_load():
         term.save(context)
         assert term.sequence == next_sequence
         assert term.total_supply == total_supply
-        assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
-        assert term.sub_preps == PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
+        assert term.main_preps == PREPS[:term._main_prep_count]
+        assert term.sub_preps == PREPS[term._main_prep_count:term._main_and_sub_prep_count]
         assert term.irep == irep
         assert term.start_block_height == current_block + 1
         assert term.end_block_height == term.start_block_height + term.period - 1
+        assert term._main_prep_count == context.main_prep_count
+        assert term._main_and_sub_prep_count == context.main_and_sub_prep_count
         saved_sequence = next_sequence
 
         context.storage.prep.get_term = Mock(return_value=[
@@ -114,8 +122,10 @@ def test_save_and_load():
         term.load(context, period)
         assert term.sequence == saved_sequence
         assert term.total_supply == total_supply
-        assert term.main_preps == PREPS[:PREP_MAIN_PREPS]
-        assert term.sub_preps == PREPS[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
+        assert term.main_preps == PREPS[:term._main_prep_count]
+        assert term.sub_preps == PREPS[term._main_prep_count:term._main_and_sub_prep_count]
         assert term.irep == irep
         assert term.start_block_height == current_block + 1
         assert term.end_block_height == term.start_block_height + term.period - 1
+        assert term._main_prep_count == context.main_prep_count
+        assert term._main_and_sub_prep_count == context.main_and_sub_prep_count

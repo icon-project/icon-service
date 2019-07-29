@@ -130,6 +130,8 @@ class ConfigKey:
     IISS_CALCULATE_PERIOD = "iissCalculatePeriod"
     TERM_PERIOD = 'termPeriod'
     INITIAL_IREP = 'initialIRep'
+    PREP_MAIN_PREPS = 'mainPRepCount'
+    PREP_MAIN_AND_SUB_PREPS = 'mainAndSubPRepCount'
 
     # log
     LOG = 'log'

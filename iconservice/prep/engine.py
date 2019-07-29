@@ -27,7 +27,6 @@ from ..base.exception import InvalidParamsException, MethodNotFoundException
 from ..base.type_converter import TypeConverter, ParamType
 from ..base.type_converter_templates import ConstantKeys
 from ..icon_constant import IISS_MAX_DELEGATIONS, REV_DECENTRALIZATION, IISS_MIN_IREP
-from ..icon_constant import PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
 from ..icon_constant import PRepGrade, PrepResultState, PRepStatus
 from ..iconscore.icon_score_context import IconScoreContext
 from ..iconscore.icon_score_event_log import EventLogEmitter
@@ -140,7 +139,10 @@ class Engine(EngineBase, IISSEngineListener):
 
         Update P-Rep grades according to PRep.delegated
         """
-        self._update_prep_grades(old_preps=self.term.preps, new_preps=context.preps)
+        self._update_prep_grades(main_prep_count=context.main_prep_count,
+                                 main_and_sub_prep_count=context.main_and_sub_prep_count,
+                                 old_preps=self.term.preps,
+                                 new_preps=context.preps)
         main_preps_as_dict: dict = self.get_next_main_preps(context)
         next_term: 'Term' = self._create_next_term(context)
         next_term.save(context)
@@ -148,7 +150,8 @@ class Engine(EngineBase, IISSEngineListener):
         return main_preps_as_dict, next_term
 
     @staticmethod
-    def _update_prep_grades(old_preps: List['PRep'], new_preps: 'PRepContainer'):
+    def _update_prep_grades(main_prep_count: int, main_and_sub_prep_count: int,
+                            old_preps: List['PRep'], new_preps: 'PRepContainer'):
         prep_grades: Dict['Address', Tuple['PRepGrade', 'PRepGrade']] = {}
 
         # Put the address and grade of a old P-Rep to prep_grades dict
@@ -157,7 +160,7 @@ class Engine(EngineBase, IISSEngineListener):
             prep_grades[prep.address] = (prep.grade, PRepGrade.CANDIDATE)
 
         # Remove the P-Reps which preserve the same grade in the next term from prep_grades dict
-        for i in range(PREP_MAIN_AND_SUB_PREPS):
+        for i in range(main_and_sub_prep_count):
             prep: 'PRep' = new_preps.get_by_index(i, mutable=False)
             if prep is None:
                 Logger.warning(tag="PREP", msg=f"Not enough P-Reps: {len(new_preps)}")
@@ -167,7 +170,7 @@ class Engine(EngineBase, IISSEngineListener):
             grades: tuple = prep_grades.get(prep_address, (PRepGrade.CANDIDATE, PRepGrade.CANDIDATE))
 
             old_grade: 'PRepGrade' = grades[0]
-            new_grade: 'PRepGrade' = PRepGrade.MAIN if i < PREP_MAIN_PREPS else PRepGrade.SUB
+            new_grade: 'PRepGrade' = PRepGrade.MAIN if i < main_prep_count else PRepGrade.SUB
 
             if old_grade == new_grade:
                 del prep_grades[prep_address]
@@ -278,7 +281,7 @@ class Engine(EngineBase, IISSEngineListener):
         :return:
         """
         prep_as_dict: Optional[dict] = \
-            self.get_main_preps_in_dict(context.preps.get_preps(0, PREP_MAIN_PREPS))
+            self.get_main_preps_in_dict(context.main_prep_count, context.preps.get_preps(0, context.main_prep_count))
 
         if prep_as_dict:
             prep_as_dict['irep'] = self.term.irep
@@ -287,8 +290,8 @@ class Engine(EngineBase, IISSEngineListener):
         return prep_as_dict
 
     @staticmethod
-    def get_main_preps_in_dict(preps: List['PRep']) -> Optional[dict]:
-        count: int = min(len(preps), PREP_MAIN_PREPS)
+    def get_main_preps_in_dict(main_prep_count: int, preps: List['PRep']) -> Optional[dict]:
+        count: int = min(len(preps), main_prep_count)
         if count == 0:
             Logger.warning(tag="PREP", msg="No P-Rep candidates")
             return None
@@ -319,7 +322,7 @@ class Engine(EngineBase, IISSEngineListener):
         next_term.update(
             self.term.sequence + 1,
             context.block.height,
-            context.preps.get_preps(start_index=0, size=PREP_MAIN_AND_SUB_PREPS),
+            context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count),
             context.total_supply,
             self.term.period,
             irep
@@ -334,7 +337,7 @@ class Engine(EngineBase, IISSEngineListener):
         total_delegated = 0  # total delegated of top 22 preps
         total_weighted_irep = 0
 
-        for i in range(PREP_MAIN_PREPS):
+        for i in range(context.main_prep_count):
             prep: 'PRep' = preps.get_by_index(i, mutable=False)
             total_weighted_irep += prep.irep * prep.delegated
             total_delegated += prep.delegated

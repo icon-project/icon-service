@@ -35,6 +35,8 @@ class Term(object):
         self._period: int = -1
         # Main and Sub P-Reps
         self._preps: List['PRep'] = []
+        self._main_prep_count: int = PREP_MAIN_PREPS
+        self._main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
         self._irep: int = -1
         self._total_supply: int = -1
 
@@ -56,11 +58,11 @@ class Term(object):
 
     @property
     def main_preps(self) -> List['PRep']:
-        return self._preps[:PREP_MAIN_PREPS]
+        return self._preps[:self._main_prep_count]
 
     @property
     def sub_preps(self) -> List['PRep']:
-        return self._preps[PREP_MAIN_PREPS:PREP_MAIN_AND_SUB_PREPS]
+        return self._preps[self._main_prep_count:self._main_and_sub_prep_count]
 
     @property
     def preps(self) -> List['PRep']:
@@ -94,6 +96,9 @@ class Term(object):
         else:
             self._irep = 0
             self._total_supply = context.total_supply
+
+        self._main_prep_count = context.main_prep_count
+        self._main_and_sub_prep_count = context.main_and_sub_prep_count
 
     @staticmethod
     def _make_main_and_sub_preps(context: 'IconScoreContext', data: list) -> List['PRep']:
@@ -142,7 +147,7 @@ class Term(object):
         self._start_block_height = current_block_height + 1
         self._end_block_height = current_block_height + term_period
         self._period = term_period
-        self._preps = preps[:PREP_MAIN_AND_SUB_PREPS]  # shallow copy
+        self._preps = preps[:self._main_and_sub_prep_count]  # shallow copy
         self._total_supply = total_supply
         self._irep = irep
 
@@ -150,7 +155,7 @@ class Term(object):
     #     total_delegated = 0  # total delegated of top 22 preps
     #     total_weighted_irep = 0
     #
-    #     for i in range(PREP_MAIN_PREPS):
+    #     for i in range(self._main_prep_count):
     #         prep: 'PRep' = self._preps[i]
     #         total_weighted_irep += prep.irep * prep.delegated
     #         total_delegated += prep.delegated
