@@ -209,9 +209,9 @@ PREP_METHOD_TABLE = [
     "setPRep",
     "setGovernanceVariables",
     "getPRep",
-    "getMainPRepList",
-    "getSubPRepList",
-    "getPRepList"
+    "getMainPReps",
+    "getSubPReps",
+    "getPReps"
 ]
 
 DEBUG_METHOD_TABLE = [
