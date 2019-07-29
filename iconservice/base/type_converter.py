@@ -141,7 +141,10 @@ class TypeConverter:
         elif value_type == ValueType.BOOL:
             converted_value = TypeConverter._convert_value_bool(value)
         elif value_type == ValueType.ADDRESS:
-            converted_value = TypeConverter._convert_value_address(value)
+            if len(value) == 0:
+                converted_value = None
+            else:
+                converted_value = TypeConverter._convert_value_address(value)
         elif value_type == ValueType.ADDRESS_OR_MALFORMED_ADDRESS:
             converted_value = TypeConverter._convert_value_address_or_malformed_address(value)
         elif value_type == ValueType.BYTES:  # hash...(block_hash, tx_hash)
