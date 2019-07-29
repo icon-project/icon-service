@@ -321,6 +321,8 @@ class Engine(EngineBase, IISSEngineListener):
         next_term = Term()
         next_term.update(
             self.term.sequence + 1,
+            context.main_prep_count,
+            context.main_and_sub_prep_count,
             context.block.height,
             context.preps.get_preps(start_index=0, size=context.main_and_sub_prep_count),
             context.total_supply,
@@ -484,7 +486,7 @@ class Engine(EngineBase, IISSEngineListener):
         context.storage.rc.put(rc_tx_batch, iiss_tx_data)
 
     def handle_get_main_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
-        """Returns 22 P-Rep list in the current term
+        """Returns main P-Rep list in the current term
 
         :param _context:
         :param _params:
@@ -508,7 +510,7 @@ class Engine(EngineBase, IISSEngineListener):
         }
 
     def handle_get_sub_prep_list(self, _context: 'IconScoreContext', _params: dict) -> dict:
-        """Returns 22 P-Rep list in the present term
+        """Returns sub P-Rep list in the present term
 
         :param _context:
         :param _params:

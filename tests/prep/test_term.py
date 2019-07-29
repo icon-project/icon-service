@@ -54,7 +54,8 @@ def test_save():
     for _ in range(5):
         next_sequence = term.sequence + 1
         current_block += 1
-        term.update(next_sequence, current_block, PREPS, total_supply, term_period, irep)
+        term.update(next_sequence, PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, current_block, PREPS, total_supply,
+                    term_period, irep)
         term.save(context)
         assert term.sequence == next_sequence
         assert term.total_supply == total_supply
@@ -103,7 +104,8 @@ def test_save_and_load():
         next_sequence = term.sequence + 1
         current_block += 1
         term._period = period
-        term.update(next_sequence, current_block, PREPS, total_supply, period, irep)
+        term.update(next_sequence, context.main_prep_count, context.main_and_sub_prep_count, current_block, PREPS,
+                    total_supply, period, irep)
         term.save(context)
         assert term.sequence == next_sequence
         assert term.total_supply == total_supply

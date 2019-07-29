@@ -131,11 +131,12 @@ class Term(object):
 
         return prep_list
 
-    def update(
-            self, sequence: int, current_block_height: int, preps: List['PRep'],
-            total_supply: int, term_period: int, irep: int):
+    def update( self, sequence: int, main_prep_count: int, main_and_sub_prep_count: int,
+                current_block_height: int, preps: List['PRep'], total_supply: int, term_period: int, irep: int):
         """
         :param sequence:
+        :param main_prep_count
+        :param main_and_sub_prep_count
         :param current_block_height:
         :param preps:
         :param irep:
@@ -144,6 +145,8 @@ class Term(object):
         :return:
         """
         self._sequence = sequence
+        self._main_prep_count = main_prep_count
+        self._main_and_sub_prep_count = main_and_sub_prep_count
         self._start_block_height = current_block_height + 1
         self._end_block_height = current_block_height + term_period
         self._period = term_period
