@@ -321,9 +321,10 @@ class PRepInfo(object):
         self.address = address
         self.delegated = delegated
 
-    @staticmethod
-    def from_prep(prep: 'PRep') -> 'PRepInfo':
-        return PRepInfo(prep.address, prep.delegated)
+
+@staticmethod
+def __create_prep_info_from_prep(prep: 'PRep') -> 'PRepInfo':
+    return PRepInfo(prep.address, prep.delegated)
 
 
 def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
@@ -333,7 +334,7 @@ def get_main_prep_info() -> Tuple[List[PRepInfo], int]:
     if context:
         prep_info_list: List[PRepInfo] = []
         for prep in context.engine.prep.term.main_preps:
-            prep_info_list.append(PRepInfo.from_prep(prep))
+            prep_info_list.append(__create_prep_info_from_prep(prep))
         return prep_info_list, context.engine.prep.term.end_block_height
     else:
         return [], -1
@@ -346,7 +347,7 @@ def get_sub_prep_info() -> Tuple[List[PRepInfo], int]:
     if context:
         prep_info_list: List[PRepInfo] = []
         for prep in context.engine.prep.term.sub_preps:
-            prep_info_list.append(PRepInfo.from_prep(prep))
+            prep_info_list.append(__create_prep_info_from_prep(prep))
         return prep_info_list, context.engine.prep.term.end_block_height
     else:
         return [], -1
