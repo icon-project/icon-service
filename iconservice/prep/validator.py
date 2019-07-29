@@ -28,11 +28,17 @@ if TYPE_CHECKING:
     from .data import PRep
     from .term import Term
 
-PORT_REGEX = r'(:[0-9]{1,5})?'
-IP_REGEX = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'\
-           + PORT_REGEX
-HOST_NAME_REGEX = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])' + PORT_REGEX
-EMAIL_REGEX = r'^[a-zA-Z0-9-_.]+@[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\w$'
+scheme_pattern = r'^(http:\/\/|https:\/\/)'
+path_pattern = r'(\/\S*)?$'
+port_regex = r'(:[0-9]{1,5})?'
+ip_regex = r'(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
+host_name_regex = r'(localhost|(?:[\w\d](?:[\w\d-]{0,61}[\w\d])\.)+[\w\d][\w\d-]{0,61}[\w\d])'
+email_regex = '^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*@'+host_name_regex+'$'
+ENDPOINT_DOMAIN_NAME_PATTERN = re.compile(f'^{host_name_regex}{port_regex}$')
+ENDPOINT_IP_PATTERN = re.compile(f'^{ip_regex}{port_regex}$')
+WEBSITE_DOMAIN_NAME_PATTERN = re.compile(f'{scheme_pattern}{host_name_regex}{port_regex}{path_pattern}$')
+WEBSITE_IP_PATTERN = re.compile(f'{scheme_pattern}{ip_regex}{port_regex}{path_pattern}$')
+EMAIL_PATTERN = re.compile(email_regex)
 
 
 def validate_prep_data(tx_origin, data: dict, set_prep: bool = False):
@@ -84,21 +90,18 @@ def _validate_p2p_endpoint(p2p_endpoint: str):
 
     _validate_port(network_locate_info[1], ConstantKeys.P2P_ENDPOINT)
 
-    if re.match('^'+IP_REGEX+'$', p2p_endpoint):
+    if ENDPOINT_IP_PATTERN.match(p2p_endpoint):
         return
 
-    if not re.match('^'+HOST_NAME_REGEX+'$', p2p_endpoint):
+    if not ENDPOINT_DOMAIN_NAME_PATTERN.match(p2p_endpoint.lower()):
         raise InvalidParamsException("Invalid endpoint format")
 
 
 def _validate_uri(uri: str):
-    scheme_pattern = r'^(http:\/\/|https:\/\/)'
-    path_pattern = r'(\/\S*)?$'
-    uri_for_domain = scheme_pattern + HOST_NAME_REGEX + path_pattern
-    uri_for_ip = scheme_pattern + IP_REGEX + path_pattern
-    if re.match(uri_for_domain, uri):
+    uri = uri.lower()
+    if WEBSITE_DOMAIN_NAME_PATTERN.match(uri):
         return
-    if re.match(uri_for_ip, uri):
+    if WEBSITE_IP_PATTERN.match(uri):
         return
 
     raise InvalidParamsException("Invalid uri format")
@@ -115,9 +118,8 @@ def _validate_port(port: str, validating_field: str):
 
 
 def _validate_email(email: str):
-    if re.match(EMAIL_REGEX, email):
-        return
-    raise InvalidParamsException("Invalid email format")
+    if not EMAIL_PATTERN.match(email):
+        raise InvalidParamsException("Invalid email format")
 
 
 def _validate_country(country_code: str):

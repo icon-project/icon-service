@@ -118,18 +118,20 @@ def test_validate_endpoint():
 
 def test_validate_email():
     invalid_email_list = ['invalid email', 'invalid.com', 'invalid@', 'invalid@a', 'invalid@a.', 'invalid@.com',
-                          'invalid.@asdf.com-', "email@domain..com", "invalid@abcd@abcd.com"]
+                          'invalid.@asdf.com-', "email@domain..com", "invalid@abcd@abcd.com",
+                          'john..doe@example.com', ".invalid@email.com"]
 
     for email in invalid_email_list:
         with pytest.raises(InvalidParamsException) as e:
             _validate_email(email)
         assert e.value.message == "Invalid email format"
 
-    valid_email = "valid@valid.com"
-    try:
-        _validate_email(valid_email)
-    except BaseException:
-        pytest.fail("Validating email test failed")
+    valid_email_list = ['example@localhost', 'user@email.com']
+    for email in valid_email_list:
+        try:
+            _validate_email(email)
+        except BaseException:
+            pytest.fail("Validating email test failed")
 
 
 def test_validate_country():
