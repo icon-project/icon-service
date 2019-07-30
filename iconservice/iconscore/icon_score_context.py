@@ -18,7 +18,7 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
-from ..base.exception import FatalException
+from ..base.exception import FatalException, InvalidParamsException
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.message import Message
@@ -26,7 +26,7 @@ from ..base.transaction import Transaction
 from ..database.batch import BlockBatch, TransactionBatch
 from ..icon_constant import (
     IconScoreContextType, IconScoreFuncType, REV_DECENTRALIZATION,
-    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS
+    PREP_MAIN_PREPS, PREP_MAIN_AND_SUB_PREPS, ConfigKey
 )
 
 if TYPE_CHECKING:
@@ -98,7 +98,6 @@ class ContextGetter(object):
 
 
 class IconScoreContext(object):
-
     score_root_path: str = None
     icon_score_mapper: 'IconScoreMapper' = None
     icon_service_flag: int = 0
@@ -110,6 +109,9 @@ class IconScoreContext(object):
 
     main_prep_count: int = PREP_MAIN_PREPS
     main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
+
+    min_delegation_percent_for_decentralize_numerator: int = 0
+    min_delegation_percent_for_decentralize_dominator: int = 0
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -143,6 +145,18 @@ class IconScoreContext(object):
 
         # PReps to update on invoke
         self.preps: Optional['PRepContainer'] = None
+
+    @classmethod
+    def set_min_delegation_percent_for_decentralize(cls, min_del_percent_for_decentralize: dict):
+        min_del_percent_for_decentralize_numerator: int = min_del_percent_for_decentralize.get(ConfigKey.NUMERATOR)
+        min_del_percent_for_decentralize_denominator: int = min_del_percent_for_decentralize.get(ConfigKey.DENOMINATOR)
+        if not min_del_percent_for_decentralize_numerator or not min_del_percent_for_decentralize_denominator:
+            raise InvalidParamsException(f"Insufficient min delegation percent for decentralize config")
+        if min_del_percent_for_decentralize_numerator > min_del_percent_for_decentralize_denominator:
+            raise InvalidParamsException(f"Invalid min delegation percent for decentralize config. Do not exceed 100%")
+        IconScoreContext.min_delegation_percent_for_decentralize_numerator = min_del_percent_for_decentralize_numerator
+        IconScoreContext.min_delegation_percent_for_decentralize_dominator = \
+            min_del_percent_for_decentralize_denominator
 
     @property
     def readonly(self):
