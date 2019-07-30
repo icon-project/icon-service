@@ -150,7 +150,7 @@ class IconScoreContext(object):
     def set_min_delegation_percent_for_decentralize(cls, min_del_percent_for_decentralize: dict):
         min_del_percent_for_decentralize_numerator: int = min_del_percent_for_decentralize.get(ConfigKey.NUMERATOR)
         min_del_percent_for_decentralize_denominator: int = min_del_percent_for_decentralize.get(ConfigKey.DENOMINATOR)
-        if not min_del_percent_for_decentralize_numerator or not min_del_percent_for_decentralize_denominator:
+        if min_del_percent_for_decentralize_numerator is None or min_del_percent_for_decentralize_denominator is None:
             raise InvalidParamsException(f"Insufficient min delegation percent for decentralize config")
         if min_del_percent_for_decentralize_numerator > min_del_percent_for_decentralize_denominator:
             raise InvalidParamsException(f"Invalid min delegation percent for decentralize config. Do not exceed 100%")
