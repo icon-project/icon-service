@@ -39,11 +39,7 @@ def check_decentralization_condition(context: 'IconScoreContext'):
 
 def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext'):
     """Minimum delegate default value = total_supply * 0.002 ICX"""
-    if context.min_delegation_percent_for_decentralize_numerator == 0 or \
-            context.min_delegation_percent_for_decentralize_denominator == 0:
-        return 0
     total_supply = context.storage.icx.get_total_supply(context)
 
-    minimum_delegate = total_supply * context.min_delegation_percent_for_decentralize_numerator \
-                       // context.min_delegation_percent_for_decentralize_denominator
+    minimum_delegate = int(total_supply * context.decentralize_trigger)
     return minimum_delegate

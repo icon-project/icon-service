@@ -110,8 +110,7 @@ class IconScoreContext(object):
     main_prep_count: int = PREP_MAIN_PREPS
     main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
 
-    min_delegation_percent_for_decentralize_numerator: int = 0
-    min_delegation_percent_for_decentralize_denominator: int = 0
+    decentralize_trigger: float = 0
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -147,16 +146,13 @@ class IconScoreContext(object):
         self.preps: Optional['PRepContainer'] = None
 
     @classmethod
-    def set_min_delegation_percent_for_decentralize(cls, min_del_percent_for_decentralize: dict):
-        min_del_percent_for_decentralize_numerator: int = min_del_percent_for_decentralize.get(ConfigKey.NUMERATOR)
-        min_del_percent_for_decentralize_denominator: int = min_del_percent_for_decentralize.get(ConfigKey.DENOMINATOR)
-        if min_del_percent_for_decentralize_numerator is None or min_del_percent_for_decentralize_denominator is None:
-            raise InvalidParamsException(f"Insufficient min delegation percent for decentralize config")
-        if min_del_percent_for_decentralize_numerator > min_del_percent_for_decentralize_denominator:
-            raise InvalidParamsException(f"Invalid min delegation percent for decentralize config. Do not exceed 100%")
-        IconScoreContext.min_delegation_percent_for_decentralize_numerator = min_del_percent_for_decentralize_numerator
-        IconScoreContext.min_delegation_percent_for_decentralize_denominator = \
-            min_del_percent_for_decentralize_denominator
+    def set_decentralize_trigger(cls, decentralize_trigger: float):
+        decentralize_trigger: float = decentralize_trigger
+
+        if decentralize_trigger > 1 or decentralize_trigger < 0:
+            raise InvalidParamsException(f"Invalid min delegation percent for decentralize: {decentralize_trigger}."
+                                         f"Do not exceed 100% or negative value")
+        IconScoreContext.decentralize_trigger = decentralize_trigger
 
     @property
     def readonly(self):

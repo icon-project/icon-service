@@ -147,9 +147,7 @@ class ConfigKey:
 
     PREP_REGISTRATION_FEE = "prepRegistrationFee"
 
-    MIN_DELEGATION_PERCENT_FOR_DECENTRALIZE = "minDelegationPercentForDecentralize"
-    NUMERATOR = "numerator"
-    DENOMINATOR = "denominator"
+    DECENTRALIZE_TRIGGER = "decentralizeTrigger"
 
 
 class EnableThreadFlag(IntFlag):

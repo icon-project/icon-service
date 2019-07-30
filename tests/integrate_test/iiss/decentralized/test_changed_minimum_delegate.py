@@ -22,10 +22,7 @@ from tests.integrate_test.test_integrate_base import TOTAL_SUPPLY
 class TestChangedMinimumDelegate(TestIISSBase):
     def _make_init_config(self) -> dict:
         config: dict = super()._make_init_config()
-        config[ConfigKey.MIN_DELEGATION_PERCENT_FOR_DECENTRALIZE] = {
-            ConfigKey.NUMERATOR: 0,
-            ConfigKey.DENOMINATOR: 0
-        }
+        config[ConfigKey.DECENTRALIZE_TRIGGER] = 0
         return config
 
     def test_decentralized_minimum_delegation_set_zero(self):
