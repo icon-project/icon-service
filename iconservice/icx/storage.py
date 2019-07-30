@@ -168,15 +168,16 @@ class Storage(StorageBase):
         coin_part: 'CoinPart' = CoinPart(coin_part_type)
         account: 'Account' = Account(address, context.block.height, coin_part=coin_part)
         account.deposit(int(amount))
-
-        if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
-            self._put_special_account(context, account)
+        if not account.coin_part.is_dirty():
+            account.coin_part.set_dirty(True)
         self.put_account(context, account)
 
         if account.balance > 0:
             total_supply = self.get_total_supply(context)
             total_supply += account.balance
             context.storage.icx.put_total_supply(context, total_supply)
+        if coin_part_type in [CoinPartType.GENESIS, CoinPartType.TREASURY]:
+            self._put_special_account(context, account)
 
     def _put_special_account(self,
                              context: 'IconScoreContext',
