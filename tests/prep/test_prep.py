@@ -30,10 +30,14 @@ WEBSITE = "https://banana.example.com"
 DETAILS = "https://banana.example.com/details"
 P2P_END_POINT = "banana.example.com:7100"
 IREP = IISS_INITIAL_IREP
+LAST_GENERATE_BLOCK_HEIGHT = 50
 STAKE = 100
 DELEGATED = 100
 BLOCK_HEIGHT = 777
 TX_INDEX = 0
+TOTAL_BLOCKS = 1000
+VALIDATED_BLOCKS = 900
+IREP_BLOCK_HEIGHT = BLOCK_HEIGHT
 
 
 @pytest.fixture
@@ -51,11 +55,14 @@ def prep():
         p2p_endpoint=P2P_END_POINT,
         public_key=public_key,
         irep=IREP,
-        irep_block_height=BLOCK_HEIGHT,
+        irep_block_height=IREP_BLOCK_HEIGHT,
+        last_generate_block_height=LAST_GENERATE_BLOCK_HEIGHT,
         stake=STAKE,
         delegated=DELEGATED,
         block_height=BLOCK_HEIGHT,
-        tx_index=TX_INDEX
+        tx_index=TX_INDEX,
+        total_blocks=TOTAL_BLOCKS,
+        validated_blocks=VALIDATED_BLOCKS,
     )
 
     assert prep.address == address
@@ -72,8 +79,8 @@ def prep():
     assert prep.irep_block_height == BLOCK_HEIGHT
     assert prep.stake == STAKE
     assert prep.delegated == DELEGATED
-    assert prep.total_blocks == 0
-    assert prep.validated_blocks == 0
+    assert prep.total_blocks == TOTAL_BLOCKS
+    assert prep.validated_blocks == VALIDATED_BLOCKS
 
     return prep
 
@@ -135,18 +142,19 @@ def test_from_bytes_and_to_bytes(prep):
     prep2 = PRep.from_bytes(data)
 
     assert prep.address == prep2.address
-    assert prep.name == prep2.name
-    assert prep.country == prep2.country
-    assert prep.city == prep2.city
-    assert prep.email == prep2.email
-    assert prep.website == prep2.website
-    assert prep.details == prep2.details
-    assert prep.p2p_endpoint == prep2.p2p_endpoint
+    assert prep.name == prep2.name == NAME
+    assert prep.country == prep2.country == COUNTRY
+    assert prep.city == prep2.city == CITY
+    assert prep.email == prep2.email == EMAIL
+    assert prep.website == prep2.website == WEBSITE
+    assert prep.details == prep2.details == DETAILS
+    assert prep.p2p_endpoint == prep2.p2p_endpoint == P2P_END_POINT
     assert prep.public_key == prep2.public_key
-    assert prep.irep == prep2.irep
-    assert prep.irep_block_height == prep2.irep_block_height
-    assert prep.total_blocks == prep2.total_blocks
-    assert prep.validated_blocks == prep2.validated_blocks
+    assert prep.irep == prep2.irep == IREP
+    assert prep.irep_block_height == prep2.irep_block_height == IREP_BLOCK_HEIGHT
+    assert prep.last_generate_block_height == prep2.last_generate_block_height == LAST_GENERATE_BLOCK_HEIGHT
+    assert prep.total_blocks == prep2.total_blocks == TOTAL_BLOCKS
+    assert prep.validated_blocks == prep2.validated_blocks == VALIDATED_BLOCKS
 
     # Properties which is not serialized in PRep.to_bytes()
     assert prep2.stake == 0
