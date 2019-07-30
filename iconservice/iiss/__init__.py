@@ -40,6 +40,7 @@ def check_decentralization_condition(context: 'IconScoreContext') -> bool:
 def get_minimum_delegate_for_bottom_prep(context: 'IconScoreContext') -> int:
     """Minimum delegate default value = total_supply * 0.002 ICX"""
     assert 1.0 > context.decentralize_trigger >= 0
+
     str_float: str = str(context.decentralize_trigger)
     decimal: str = str_float[str_float.find('.') + 1:]
     numerator = int(decimal)

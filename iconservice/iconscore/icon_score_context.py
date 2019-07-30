@@ -18,7 +18,7 @@ import threading
 import warnings
 from typing import TYPE_CHECKING, Optional, List
 
-from ..base.exception import FatalException, InvalidParamsException
+from ..base.exception import FatalException
 from .icon_score_trace import Trace
 from ..base.block import Block
 from ..base.message import Message
@@ -149,9 +149,9 @@ class IconScoreContext(object):
     def set_decentralize_trigger(cls, decentralize_trigger: float):
         decentralize_trigger: float = decentralize_trigger
 
-        if decentralize_trigger > 1 or decentralize_trigger < 0:
-            raise InvalidParamsException(f"Invalid min delegation percent for decentralize: {decentralize_trigger}."
-                                         f"Do not exceed 100% or negative value")
+        if not 1.0 > decentralize_trigger >= 0:
+            raise FatalException(f"Invalid min delegation percent for decentralize: {decentralize_trigger}."
+                                 f"Do not exceed 100% or negative value")
         IconScoreContext.decentralize_trigger = decentralize_trigger
 
     @property
