@@ -111,7 +111,7 @@ class IconScoreContext(object):
     main_and_sub_prep_count: int = PREP_MAIN_AND_SUB_PREPS
 
     min_delegation_percent_for_decentralize_numerator: int = 0
-    min_delegation_percent_for_decentralize_dominator: int = 0
+    min_delegation_percent_for_decentralize_denominator: int = 0
 
     """Contains the useful information to process user's JSON-RPC request
     """
@@ -155,7 +155,7 @@ class IconScoreContext(object):
         if min_del_percent_for_decentralize_numerator > min_del_percent_for_decentralize_denominator:
             raise InvalidParamsException(f"Invalid min delegation percent for decentralize config. Do not exceed 100%")
         IconScoreContext.min_delegation_percent_for_decentralize_numerator = min_del_percent_for_decentralize_numerator
-        IconScoreContext.min_delegation_percent_for_decentralize_dominator = \
+        IconScoreContext.min_delegation_percent_for_decentralize_denominator = \
             min_del_percent_for_decentralize_denominator
 
     @property
